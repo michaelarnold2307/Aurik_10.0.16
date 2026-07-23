@@ -772,6 +772,8 @@ class InteractionGuardState:
     material_type: str = "unknown"
     # §2.56 Song-Goal-Importance: per-goal weights for weighted drift
     goal_weights: dict[str, float] | None = None
+    # §v10.117 Chain-Depth für GDD-Schwelle
+    transfer_chain_depth: int = 1
 
 
 class CumulativeInteractionGuard:
@@ -797,6 +799,7 @@ class CumulativeInteractionGuard:
         n_active_phases: int = 10,
         n_carrier_phases: int = 3,
         goal_weights: dict[str, float] | None = None,
+        transfer_chain_depth: int = 1,
     ) -> None:
         """Set the pre-pipeline P1/P2 baseline scores before any phases run.
 
@@ -843,6 +846,7 @@ class CumulativeInteractionGuard:
         # Persist for adaptive GDD threshold in _check_group_delay (§2.54)
         state.restorability_score = float(restorability_score)
         state.material_type = str(material_type)
+        state.transfer_chain_depth = max(1, int(transfer_chain_depth))  # §v10.117_
         # §2.56 Song-Goal-Importance: store for weighted drift in check_after_phase
         state.goal_weights = dict(goal_weights) if goal_weights else None
 
@@ -1297,7 +1301,10 @@ class CumulativeInteractionGuard:
             mat_factor = 1.4
         else:
             mat_factor = 1.0
-        return base * rest_factor * mat_factor
+        # §v10.117 Chain-Depth: tiefere Ketten → mehr kumulierte Phasenrotation
+        depth = max(1, int(getattr(state, "transfer_chain_depth", 1)))
+        chain_factor = 1.0 + max(0, depth - 2) * 0.15  # depth=1-2:1.0, 3:1.15, 4:1.30, 5:1.45
+        return base * rest_factor * mat_factor * chain_factor
 
     def _measure_group_delay_ms(
         self,
