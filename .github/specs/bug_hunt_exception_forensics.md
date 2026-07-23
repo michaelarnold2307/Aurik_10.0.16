@@ -292,4 +292,60 @@ Gleiches Muster für STFT (`safe_stft`) und andere scipy-Funktionen anwendbar.
 | `noise_texture_resynth.py` | `materialtype.`-Prefix-Strip | 8 |
 | 18 weitere Dateien | `filtfilt` → `safe_filtfilt` | 6 |
 
-**Alle Dateien kompilieren fehlerfrei. 26 Tests bestanden.**
+---
+
+## §v10.115: Geschlossener Forensik-Kreislauf (August 2026)
+
+### Architektur
+
+```
+Pipeline-Lauf → oom_phase_forensics.ndjson
+       ↓
+ExceptionAggregator (exception_forensics.py)
+  ├─ aggregate(): Liest NDJSON, dedupliziert, klassifiziert
+  ├─ summary(): Statistik-Report (Pattern-Verteilung, Hotspots)
+  └─ get_cursor(): Inkrementelles Lesen (nur neue Einträge)
+       ↓
+PatternMiner (exception_forensics.py)
+  ├─ discover(): Extrahiert neue Pattern-Kandidaten
+  ├─ _extract_regex_candidate(): Regex aus Exception-Message
+  └─ Export → logs/discovered_patterns.json
+       ↓
+scan_anti_patterns.py
+  ├─ _load_discovered_patterns(): Lädt dynamische Patterns
+  └─ 6 statische + N dynamische Checks
+       ↓
+QualityRegressionDetector (quality_regression_detector.py)
+  ├─ record(q_score): Snapshot Exception-Rate + Q-Score
+  ├─ compare(): Vorher/Nachher-Vergleich
+  └─ trend(): Gleitender Durchschnitt über letzte N Läufe
+```
+
+### Neue Module
+
+| Modul | Zeilen | Funktion |
+|-------|--------|----------|
+| `backend/core/exception_forensics.py` | 460 | ExceptionAggregator + PatternMiner + ContinuousAnalysis |
+| `backend/core/quality_regression_detector.py` | 390 | Q-Score-Korrelation + Trend-Erkennung |
+| `scripts/forensics_dashboard.py` | 214 | CLI-Dashboard (summary/top/trend/qscore/watch) |
+| `backend/core/audio_utils.py` | +63 | safe_stft + safe_istft (Zero-Crash-Wrapper) |
+| `.agents/.../scan_anti_patterns.py` | +50 | Dynamische Pattern-Erkennung (_load_discovered_patterns) |
+
+### Geschlossene Lücken
+
+| # | Lücke | Lösung | Datei |
+|---|-------|--------|-------|
+| L1 | Kein Feedback-Loop | ExceptionAggregator mit inkrementellem Cursor | exception_forensics.py |
+| L2 | Kein safe_stft | safe_stft/safe_istft mit auto-Clamp | audio_utils.py |
+| L3 | Kein Exception-Dashboard | CLI: summary, top, trend, qscore, watch | forensics_dashboard.py |
+| L4 | Kein Pattern-Mining | PatternMiner → discovered_patterns.json | exception_forensics.py |
+| L5 | Keine Q-Score-Korrelation | QualityRegressionDetector: record/compare/trend | quality_regression_detector.py |
+| L6 | Keine Continuous Analysis | Scanner lädt dynamische Patterns | scan_anti_patterns.py |
+
+### Nächste Schritte
+
+1. **Exception-Rate auf 0 bringen:** Verbleibende ~115 unerklärte Exceptions
+   aus dem nächsten Pipeline-Lauf via `forensics_dashboard.py top` analysieren
+2. **safe_stft-Migration:** Phasen von `scipy.signal.stft` auf `safe_stft` migrieren
+3. **Q-Score-Baseline:** Ersten Q-Score-Snapshot nach Migration aufnehmen
+4. **Pattern-Miner aktivieren:** `PatternMiner(agg).discover()` nach jedem Lauf
