@@ -82,8 +82,9 @@ class PsychoacousticArtifactDetector:
         audio_f = audio.astype(np.float64)
         n_fft = min(1024, len(audio_f))
         hop = n_fft // 2
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
-        _, _, S = scipy.signal.stft(audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=n_fft - hop, boundary="even")
+        _, _, S = scipy.signal.stft(audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=_noverlap, boundary="even")
         power = np.abs(S) ** 2  # (n_bins, n_frames)
         n_bins = power.shape[0]
 
@@ -150,8 +151,9 @@ class PsychoacousticArtifactDetector:
         audio_f = audio.astype(np.float64)
         n_fft = min(1024, len(audio_f))
         hop = n_fft // 4  # Feineres Zeitraster für Transienten
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
-        _, _, S = scipy.signal.stft(audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=n_fft - hop, boundary="even")
+        _, _, S = scipy.signal.stft(audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=_noverlap, boundary="even")
         mag = np.abs(S)  # (n_bins, n_frames)
 
         if mag.shape[1] < 3:
@@ -235,15 +237,16 @@ class PsychoacousticArtifactDetector:
             # Sanftes Whitening: Divide-by-Envelope im FFT-Bereich
             n_fft = min(2048, len(audio_f))
             hop = n_fft // 4
+            _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
             _, _, S = scipy.signal.stft(
-                audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=n_fft - hop, boundary="even"
+                audio_f, fs=sr, window="hann", nperseg=n_fft, noverlap=_noverlap, boundary="even"
             )
             mag = np.abs(S) + 1e-30
             # Glatte Hüllkurve (Median über Frequenz)
             envelope = np.median(mag, axis=0, keepdims=True) + 1e-30
             strength = 0.2 * (1 - transparency / 0.3)  # max 20% Whitening
             S_w = S / (1 + strength * envelope / (mag + 1e-30))
-            _, audio_f = scipy.signal.istft(S_w, fs=sr, window="hann", nperseg=n_fft, noverlap=n_fft - hop)
+            _, audio_f = scipy.signal.istft(S_w, fs=sr, window="hann", nperseg=n_fft, noverlap=_noverlap)
             audio_f = audio_f[: len(audio)]
             if len(audio_f) < len(audio):
                 audio_f = np.pad(audio_f, (0, len(audio) - len(audio_f)))

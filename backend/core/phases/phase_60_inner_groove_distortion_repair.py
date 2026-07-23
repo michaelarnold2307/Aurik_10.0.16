@@ -184,7 +184,8 @@ def apply(
             continue
 
         # Vectorized STFT per segment — replaces inner Python frame-loop
-        _, _, seg_stft = sps.stft(segment, fs=sr, window="hann", nperseg=n_fft, noverlap=n_fft - hop, boundary="even")
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
+        _, _, seg_stft = sps.stft(segment, fs=sr, window="hann", nperseg=n_fft, noverlap=_noverlap, boundary="even")
         seg_stft = seg_stft.astype(np.complex64)
 
         seg_mag = np.abs(seg_stft).astype(np.float32)

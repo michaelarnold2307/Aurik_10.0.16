@@ -371,8 +371,9 @@ class HarmonicContextAnalyzer:
 
         n_fft = self.N_FFT
         hop = self.HOP_LENGTH
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
         try:
-            _, _, Zxx = stft(mono, sr, nperseg=n_fft, noverlap=n_fft - hop, boundary="even")
+            _, _, Zxx = stft(mono, sr, nperseg=n_fft, noverlap=_noverlap, boundary="even")
         except Exception:
             # Fallback: full protect (never gate anything)
             n_fft_bins = n_fft // 2 + 1

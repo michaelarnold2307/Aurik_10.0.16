@@ -110,9 +110,10 @@ def apply(
     # STFT parameters
     n_fft = 2048
     hop = n_fft // 4
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
     # Vectorized STFT via scipy — replaces Python frame-loop (~21 000 iterations for 225 s)
-    _, _, stft = sps.stft(x, fs=sample_rate, window="hann", nperseg=n_fft, noverlap=n_fft - hop, boundary="even")
+    _, _, stft = sps.stft(x, fs=sample_rate, window="hann", nperseg=n_fft, noverlap=_noverlap, boundary="even")
     stft = stft.astype(np.complex64)
 
     mag = np.abs(stft).astype(np.float32)

@@ -70,8 +70,11 @@ def check_filtfilt_without_guard(filepath: str, source: str) -> list[str]:
             continue
         # Bare filtfilt( calls (nicht safe_filtfilt, nicht sosfiltfilt)
         if re.search(r'(?<!safe_)(?<!sos)(?<!_)(?<!\.)\bfiltfilt\(', stripped):
-            # Prüfe ob safe_filtfilt importiert ist
-            if 'from backend.core.audio_utils import safe_filtfilt' not in source:
+            # Skip files that DEFINE safe_filtfilt (audio_utils.py)
+            if 'def safe_filtfilt' in source:
+                continue
+            # Prüfe ob safe_filtfilt importiert oder im File definiert ist
+            if 'from backend.core.audio_utils import safe_filtfilt' not in source and 'safe_filtfilt' not in source:
                 issues.append(
                     f"{filepath}:{i}: P2 filtfilt() ohne Längen-Guard "
                     f"(→ padlen-Crash bei kurzem Audio). "

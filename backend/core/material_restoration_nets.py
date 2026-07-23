@@ -306,10 +306,11 @@ def _tape_noise_reduction(audio: np.ndarray, sample_rate: int) -> np.ndarray:
     n_fft = 2048
     hop = 512
     window = np.hanning(n_fft)
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
     def _process_channel(ch: np.ndarray) -> np.ndarray:
         # STFT
-        _, _, Zxx = sig.stft(ch, fs=sample_rate, window=window, nperseg=n_fft, noverlap=n_fft - hop)
+        _, _, Zxx = sig.stft(ch, fs=sample_rate, window=window, nperseg=n_fft, noverlap=_noverlap)
         mag = np.abs(Zxx)
 
         # Rauschprofil: Minimum-Statistics (untere 10% der Energie je Frequenzband)
@@ -324,7 +325,7 @@ def _tape_noise_reduction(audio: np.ndarray, sample_rate: int) -> np.ndarray:
         phase = np.angle(Zxx)
         Zxx_clean = suppressed_mag * np.exp(1j * phase)
 
-        _, ch_clean = sig.istft(Zxx_clean, fs=sample_rate, window=window, nperseg=n_fft, noverlap=n_fft - hop)
+        _, ch_clean = sig.istft(Zxx_clean, fs=sample_rate, window=window, nperseg=n_fft, noverlap=_noverlap)
         return ch_clean[: len(ch)]  # type: ignore[no-any-return]
 
     if audio.ndim == 1:

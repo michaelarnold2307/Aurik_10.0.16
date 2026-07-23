@@ -1028,12 +1028,13 @@ class TonalCurve:
             # Apply via STFT/ISTFT on each channel
             hop = 512
             window = "hann"
+            _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
             def _apply_mono(ch: np.ndarray) -> np.ndarray:
                 n_orig = len(ch)
-                _, _, Z = _stft(ch.astype(np.float64), fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window=window)
+                _, _, Z = _stft(ch.astype(np.float64), fs=sr, nperseg=n_fft, noverlap=_noverlap, window=window)
                 Z_steered = Z * gain_mask[:, np.newaxis]
-                _, out = _istft(Z_steered, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window=window)
+                _, out = _istft(Z_steered, fs=sr, nperseg=n_fft, noverlap=_noverlap, window=window)
                 out = np.real(out)
                 # §2.61 Output-Length-Guard
                 if len(out) >= n_orig:
@@ -1235,12 +1236,13 @@ def _apply_bark_ceiling(
     # Apply via STFT/ISTFT on each channel
     hop = 512
     window = "hann"
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
 
     def _apply_mono(ch: np.ndarray) -> np.ndarray:
         n_orig = len(ch)
-        _, _, Z = _stft(ch.astype(np.float64), fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window=window)
+        _, _, Z = _stft(ch.astype(np.float64), fs=sr, nperseg=n_fft, noverlap=_noverlap, window=window)
         Z_masked = Z * gain_mask[:, np.newaxis]
-        _, out = _istft(Z_masked, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window=window)
+        _, out = _istft(Z_masked, fs=sr, nperseg=n_fft, noverlap=_noverlap, window=window)
         out = np.real(out)
         # Trim/pad to original length (§2.61 Output-Length-Guard)
         if len(out) >= n_orig:

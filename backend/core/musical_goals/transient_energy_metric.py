@@ -426,7 +426,8 @@ def _hpss_percussive(
         # Rekonstruktion via ISTFT mit Original-Phase
         phase = np.angle(stft)
         perc_stft = perc_mag * np.exp(1j * phase)
-        _, perc_audio = sps.istft(perc_stft, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
+        _, perc_audio = sps.istft(perc_stft, nperseg=n_fft, noverlap=_noverlap, window="hann")
         # Länge angleichen
         perc_audio = perc_audio[: len(mono)]
         if len(perc_audio) < len(mono):

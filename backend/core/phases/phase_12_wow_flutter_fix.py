@@ -215,8 +215,9 @@ class WowFlutterFix(PhaseInterface):
         """
         _qm = str(quality_mode or "balanced").lower().replace("-", "_")
         _rest = float(np.clip(restorability_score, 0.0, 100.0))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
 
-        _det_base = WowFlutterFix.DETECTION_THRESHOLD.get(material, 0.5)
+        _det_base = WowFlutterFix.DETECTION_THRESHOLD.get(_mk, 0.5)
         _yin_base = float(WowFlutterFix.YIN_THRESHOLD)
 
         _ml_conf_base_by_mat = {
@@ -228,7 +229,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.CD_DIGITAL: 0.58,
             MaterialType.STREAMING: 0.60,
         }
-        _ml_conf_base = float(_ml_conf_base_by_mat.get(material, 0.60))
+        _ml_conf_base = float(_ml_conf_base_by_mat.get(_mk, 0.60))
 
         _min_conf_base_by_mat = {
             MaterialType.SHELLAC: 0.30,
@@ -239,7 +240,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.CD_DIGITAL: 0.30,
             MaterialType.STREAMING: 0.32,
         }
-        _min_conf_base = float(_min_conf_base_by_mat.get(material, 0.26))
+        _min_conf_base = float(_min_conf_base_by_mat.get(_mk, 0.26))
 
         _mode_det_adj = {
             "fast": +0.25,
@@ -532,8 +533,9 @@ class WowFlutterFix(PhaseInterface):
             )
 
         # Get material-specific parameters
-        strength = float(self.CORRECTION_STRENGTH.get(material, 0.7) * _effective_strength)
-        threshold = self.DETECTION_THRESHOLD.get(material, 0.5)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        strength = float(self.CORRECTION_STRENGTH.get(_mk, 0.7) * _effective_strength)
+        threshold = self.DETECTION_THRESHOLD.get(_mk, 0.5)
 
         is_stereo = audio.ndim == 2
         mono = safe_to_mono(audio).astype(np.float32) if is_stereo else audio.copy()
@@ -1664,7 +1666,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.MP3_HIGH: 2.0,
             MaterialType.AAC: 2.0,
             MaterialType.STREAMING: 2.0,
-        }.get(material, 1.8)
+        }.get(_mk, 1.8)
         _max_rms_lift_db = 1.0
 
         # §2.45a-I: Gated RMS — only frames > -50 dBFS (kein Stille-inflationierter RMS)

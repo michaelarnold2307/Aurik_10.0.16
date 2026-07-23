@@ -425,7 +425,8 @@ def _pghi_phase_reconstruction(mag: np.ndarray, n_fft: int, hop: int) -> np.ndar
             _phase_out = np.angle(_result.stft).astype(np.float32)
         else:
             # fallback: compute phase from reconstructed audio via STFT
-            _, _, _stft_r = signal.stft(_result.audio, fs=48000, nperseg=n_fft, noverlap=n_fft - hop)
+            _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
+            _, _, _stft_r = signal.stft(_result.audio, fs=48000, nperseg=n_fft, noverlap=_noverlap)
             _phase_out = np.angle(_stft_r).astype(np.float32)
         # Ensure shape matches input
         if _phase_out.shape == mag.shape:
