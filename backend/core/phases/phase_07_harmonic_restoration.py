@@ -949,6 +949,27 @@ class HarmonicRestorationPhase(PhaseInterface):
                 # Over-restoration: zu viele Harmonics → Dry-Wet-Blend (§0 Primum non nocere)
                 _h2_excess_07 = (_h2_actual_07 - _h2_target_07) / max(_h2_target_07 + 1e-6, 0.001)
                 _h2_blend_07 = float(np.clip(_h2_excess_07 * 0.5, 0.0, 0.40))
+                # §v10.117 Anti-Echo-Guard: Harmonic synthesis can introduce delayed copies.
+                # Measure echo correlation of restored vs original at lags > 15ms.
+                # If echo detected, increase dry blend to suppress audible slapback.
+                try:
+                    _diff_07 = restored.astype(np.float64) - audio.astype(np.float64)
+                    _n_07 = min(len(_diff_07), sample_rate * 3)
+                    _diff_seg_07 = _diff_07[:_n_07] if _diff_07.ndim == 1 else _diff_07[0, :_n_07]
+                    _lag_min_07 = max(1, int(0.015 * sample_rate))
+                    _auto_07 = np.correlate(_diff_seg_07, _diff_seg_07, mode='full')
+                    _mid_07 = len(_auto_07) // 2
+                    _search_07 = _auto_07[_mid_07 + _lag_min_07 : _mid_07 + int(0.050 * sample_rate)]
+                    if len(_search_07) > 0:
+                        _echo_peak_07 = float(np.max(np.abs(_search_07))) / max(float(np.max(np.abs(_auto_07))), 1e-12)
+                        if _echo_peak_07 > 0.5:
+                            _h2_blend_07 = min(0.60, _h2_blend_07 * 1.5)
+                            logger.info(
+                                "§v10.117 Anti-Echo: echo_corr=%.3f → blend boosted to %.2f",
+                                _echo_peak_07, _h2_blend_07,
+                            )
+                except Exception:
+                    pass  # Non-blocking echo guard
                 restored = np.clip(
                     (1.0 - _h2_blend_07) * restored + _h2_blend_07 * audio,
                     -1.0,

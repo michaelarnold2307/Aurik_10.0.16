@@ -2717,11 +2717,26 @@ class DeEsserPhase(PhaseInterface):
                             _ac_f0,
                             _f0_delta * 100,
                         )
-                        # Re-klassifiziere mit pYIN-F0
+                        # Re-klassifiziere mit pYIN-F0 + Formant-Tiebreaker
                         f0 = _pyin_f0
                         formants = chars.formants
-                        # Einfache Klassifikation mit pYIN-F0
-                        if f0 < 150:
+                        # §v10.117: Formant-Tiebreaker für tiefe Frauenstimmen
+                        # MP3/Kassette kann F0 unter 150 Hz drücken (Bass-Instrument-Masking).
+                        # Formanten (F1, F2) sind robuster gegen Kompression.
+                        _f1_val = float(formants[0]) if formants and len(formants) > 0 else 0.0
+                        _f2_val = float(formants[1]) if formants and len(formants) > 1 else 0.0
+                        _formant_ratio = _f2_val / max(_f1_val, 1.0) if _f1_val > 0 else 0.0
+                        if f0 < 150 and chars.confidence < 0.5:
+                            # Ambiguous F0 — use formant structure as tiebreaker
+                            if _f1_val > 450 or _formant_ratio > 2.3:
+                                gender_str = VocalGender.FEMALE  # Female formant pattern
+                                logger.info(
+                                    "🎤 Formant-Tiebreaker: F0=%.0f Hz F1=%.0f F2=%.0f ratio=%.2f → FEMALE (contralto)",
+                                    f0, _f1_val, _f2_val, _formant_ratio,
+                                )
+                            else:
+                                gender_str = VocalGender.MALE
+                        elif f0 < 150:
                             gender_str = VocalGender.MALE
                         elif f0 < 300:
                             gender_str = VocalGender.FEMALE
