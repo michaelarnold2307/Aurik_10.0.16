@@ -94,6 +94,10 @@ def run_phase_per_segment(
         seg_start = max(0, s_start - left_pad)
         seg_end = min(n_total, s_end + right_pad)
 
+        # §v10.117: Skip empty segments (causes broadcast (0,) (N,) errors)
+        if seg_start >= seg_end:
+            continue
+
         if is_1d:
             segments_audio.append(audio_work[seg_start:seg_end].copy())
         else:
