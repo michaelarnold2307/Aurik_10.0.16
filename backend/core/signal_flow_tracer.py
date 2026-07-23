@@ -1098,7 +1098,10 @@ def calibrate_sft_thresholds(
     _mat_lower = str(material_type).lower()
     _is_tape = any(t in _mat_lower for t in ("cassette", "reel_tape", "tape"))
     _ECHO_CORR_THRESH = 0.45 if _is_tape else 0.35
-    logger.info("§v10.43 SFT-Echo: mat=%s → ECHO=%.2f", _mat_lower, _ECHO_CORR_THRESH)
+    # §v10.117: Deep chains accumulate more phase rotation → higher echo baseline
+    if _depth >= 3:
+        _ECHO_CORR_THRESH += 0.10 * (_depth - 2)  # depth=3→0.55, depth=4→0.65
+    logger.info("§v10.43 SFT-Echo: mat=%s depth=%d → ECHO=%.2f", _mat_lower, _depth, _ECHO_CORR_THRESH)
 
     # HNR: Vocal-Material braucht strengere Grenzwerte (Gesangsschaden hörbarer)
     if vocal_confidence > 0.30:
