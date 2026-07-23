@@ -1,7 +1,44 @@
 # §v10.117 Pre-Run Briefing — Nächster Pipeline-Lauf
 
-> Commit `7ca95334` | 12 Commits seit Baseline | 0 Compile-Fehler | 0 Scanner-Warnungen
-> 931 Dateien gescannt | 136.507 NDJSON-Einträge | 69 Phasen safe_stft
+> **AKTUALISIERT** nach Real-Run-Analyse (21:00–21:10, 2026-08-03)
+> Commit `8182f0b8` | 14 Commits seit Baseline | 0 Compile-Fehler | 0 Scanner-Warnungen
+
+## Real-Run-Erkenntnisse (Kassette, 4-stufig, Schlager)
+
+### Aufgetretene Bugs (alle behoben)
+
+| Bug | Impact | Fix-Commit |
+|-----|--------|------------|
+| `NameError: Any` in audio_utils.py | UV3 + alle Denker ausgefallen → Pipeline im Notfall-Modus | `2c63c8b0` |
+| `NameError: MaterialType` in causal_defect_reasoner | DefektDenker.reason() crashte | `8182f0b8` |
+
+### Root Cause Analyse
+
+**Bug 1 — `Any`:** safe_stft/safe_istft verwendet `**kwargs: Any` aber
+`from typing import cast` statt `from typing import Any, cast`.
+→ audio_utils.py → ImportError → UV3 unladbar → StrategieDenker, RestaurierDenker,
+PhaseInteractionDenker alle im Fallback → Export crasht → Forensik-Hook nie erreicht.
+
+**Bug 2 — `MaterialType`:** Der §v10.113 P6-Auto-Fixer fügte
+`_mk = material.value if isinstance(material, MaterialType) else material`
+in 63 Dateien ein, aber NUR die `.get()`-Ersetzung, NICHT den Import.
+9 Dateien referenzierten `MaterialType` ohne es zu importieren.
+
+**Lehre:** Ein Auto-Fixer muss BEIDES tun: Referenz ersetzen UND Import hinzufügen.
+Der Scanner hätte das finden können, aber P6 prüft nur Dict-Lookups, nicht
+Import-Vollständigkeit. → Neuer Pattern-Kandidat für Scanner: P9 Import-Consistency.
+
+### Run-Metriken (trotz Bugs)
+
+| Metrik | Wert | Kontext |
+|--------|------|---------|
+| Material | Kassette (4-stufig: reel_tape→vinyl→cassette→mp3_low) | Deep-Chain-Boost relevant |
+| Genre | Deutscher Schlager | JND-Faktor 2.20 |
+| Restorability | 64/100 (Mäßig) | MP3-Quelle, 4-stufige Kette |
+| Exzellenz | 0.873 | 12/15 Goals (ohne UV3!) |
+| VERSA MOS | 4.526 | Studioqualität |
+| Phasen | 15 | Sparsam (Notfall-Modus) |
+| Artifact Freedom | 0.800 | Unter 0.95 → Export blockiert |
 
 ---
 
