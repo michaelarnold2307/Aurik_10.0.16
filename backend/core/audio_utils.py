@@ -1,5 +1,5 @@
 import logging
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 
