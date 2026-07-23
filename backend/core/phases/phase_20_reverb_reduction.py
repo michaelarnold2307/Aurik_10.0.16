@@ -1423,7 +1423,7 @@ class ReverbReduction(PhaseInterface):
         REF_HOP = REF_WIN - self.WINDOW_SIZE + self.HOP_SIZE  # preserves original 512-hop
         REF_NOVERLAP = REF_WIN - REF_HOP
 
-        f_ref, _, Zxx_ref = signal.stft(
+        f_ref, _, Zxx_ref = signal.safe_stft(
             _audio_padded_20,  # §2.63: reflect-padded input
             fs=sample_rate,
             window="hann",
@@ -1464,7 +1464,7 @@ class ReverbReduction(PhaseInterface):
                 # Use zone-specific STFT if audio is long enough
                 if n_audio >= zone_win * 2:
                     zone_noverlap = zone_win - zone_hop
-                    f_z, _, Zxx_z = signal.stft(
+                    f_z, _, Zxx_z = signal.safe_stft(
                         _audio_padded_20,  # §2.63: reflect-padded input
                         fs=sample_rate,
                         window="hann",
@@ -1665,7 +1665,7 @@ class ReverbReduction(PhaseInterface):
         # Direct ISTFT is semantically correct and 50-100× faster than PGHI.
         Zxx_processed = G_combined * np.abs(Zxx_ref) * np.exp(1j * np.angle(Zxx_ref))
         try:
-            _, audio_out = signal.istft(
+            _, audio_out = signal.safe_istft(
                 np.asarray(Zxx_processed, dtype=np.complex64),
                 fs=sample_rate,
                 window="hann",

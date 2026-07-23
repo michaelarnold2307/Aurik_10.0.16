@@ -1568,7 +1568,7 @@ class DropoutRepairPhase(PhaseInterface):
         # STFT
         nperseg = min(2048, len(audio))  # Cap nperseg to audio length
         noverlap = nperseg // 2
-        _f, _t, Zxx = signal.stft(audio, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
+        _f, _t, Zxx = signal.safe_stft(audio, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
 
         # Total spectral energy per frame
         energy_per_frame = np.sum(np.abs(Zxx) ** 2, axis=0)
@@ -2115,7 +2115,7 @@ class DropoutRepairPhase(PhaseInterface):
             eff_hop = max(1, int(hop * eff_win / win))  # Scale hop proportionally
 
             try:
-                from scipy.signal import stft as _stft_fn  # pylint: disable=import-outside-toplevel
+                from backend.core.audio_utils import safe_stft as _stft_fn  # pylint: disable=import-outside-toplevel
 
                 _, _, Z_bef = _stft_fn(ctx_bef, sr, nperseg=eff_win, noverlap=eff_win - eff_hop, boundary="even")
                 _, _, Z_aft = _stft_fn(ctx_aft, sr, nperseg=eff_win, noverlap=eff_win - eff_hop, boundary="even")
@@ -2141,8 +2141,8 @@ class DropoutRepairPhase(PhaseInterface):
 
             # Represent fill signal at zone resolution
             try:
-                from scipy.signal import istft as _istft_fn  # pylint: disable=import-outside-toplevel
-                from scipy.signal import stft as _stft_fn  # pylint: disable=import-outside-toplevel
+                from backend.core.audio_utils import safe_istft as _istft_fn  # pylint: disable=import-outside-toplevel
+                from backend.core.audio_utils import safe_stft as _stft_fn  # pylint: disable=import-outside-toplevel
 
                 _, _, Zxx_fill = _stft_fn(audio_fill, sr, nperseg=eff_win, noverlap=eff_win - eff_hop, boundary="even")
             except Exception:
@@ -2225,8 +2225,8 @@ class DropoutRepairPhase(PhaseInterface):
         TOP_K = 20  # Top-Sinusoide pro Frame
 
         try:
-            _, _, Z_bef = signal.stft(before, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
-            _, _, Z_aft = signal.stft(after, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
+            _, _, Z_bef = signal.safe_stft(before, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
+            _, _, Z_aft = signal.safe_stft(after, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
 
             mag_bef = np.abs(Z_bef[:, -1])  # Letzter Frame vor Lücke
             phase_bef = np.angle(Z_bef[:, -1])
@@ -2254,7 +2254,7 @@ class DropoutRepairPhase(PhaseInterface):
                 phase_cur += phase_increment  # Alle Bins propagieren
 
             # ISTFT → Zeitsignal
-            _, audio_fill = signal.istft(Zxx_fill, self.sample_rate, nperseg=nperseg, noverlap=noverlap)
+            _, audio_fill = signal.safe_istft(Zxx_fill, self.sample_rate, nperseg=nperseg, noverlap=noverlap)
 
             # Auf gap_length trimmen/padden
             if len(audio_fill) >= gap_length:
@@ -2320,7 +2320,7 @@ class DropoutRepairPhase(PhaseInterface):
 
         try:
             context = np.concatenate([before, after])
-            _, _, Z_ctx = signal.stft(context, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
+            _, _, Z_ctx = signal.safe_stft(context, self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary="even")
             V = np.abs(Z_ctx) ** 2 + EPS  # Leistungsspektrum (F×T, positiv)
             n_freq, n_frames_ctx = V.shape
 
@@ -2368,7 +2368,7 @@ class DropoutRepairPhase(PhaseInterface):
             phase_fill = rng.uniform(-np.pi, np.pi, mag_fill.shape)
             Zxx_fill = mag_fill * np.exp(1j * phase_fill)
 
-            _, audio_fill = signal.istft(Zxx_fill, self.sample_rate, nperseg=nperseg, noverlap=noverlap)
+            _, audio_fill = signal.safe_istft(Zxx_fill, self.sample_rate, nperseg=nperseg, noverlap=noverlap)
 
             if len(audio_fill) >= gap_length:
                 audio_fill = audio_fill[:gap_length]

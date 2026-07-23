@@ -1510,7 +1510,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         Returns:
             np.ndarray: Komplexe STFT-Matrix, Form (T, F).
         """
-        _, _, Zxx = sig.stft(
+        _, _, Zxx = sig.safe_stft(
             audio,
             fs=1,  # normierte Frequenzachse — absolute Werte nicht benötigt
             window=window,
@@ -1536,7 +1536,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         Returns:
             np.ndarray: 1D-Ausgangssignal, Länge = orig_len, clip[-1, 1].
         """
-        _, out = sig.istft(
+        _, out = sig.safe_istft(
             stft.T,  # intern (T, F) → scipy erwartet (F, T)
             fs=1,
             window=window,

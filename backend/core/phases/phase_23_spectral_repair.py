@@ -1755,7 +1755,7 @@ class SpectralRepair(PhaseInterface):
 
         _report(8.0, "STFT")
         # Compute STFT
-        _f, _t, Zxx = signal.stft(
+        _f, _t, Zxx = signal.safe_stft(
             audio,
             fs=sample_rate,
             window="hann",
@@ -1951,7 +1951,7 @@ class SpectralRepair(PhaseInterface):
                 _F_p, _T_p = _Zxx_pocs.shape
                 for _pocs_i in range(_pocs_n_iter):
                     # Step 1: STFT → Zeitsignal (ISTFT)
-                    _, _sig_pocs = signal.istft(
+                    _, _sig_pocs = signal.safe_istft(
                         _Zxx_pocs,
                         fs=sample_rate,
                         window="hann",
@@ -1967,7 +1967,7 @@ class SpectralRepair(PhaseInterface):
                     else:
                         _sig_pocs = np.pad(_sig_pocs, (0, _n_needed - len(_sig_pocs)))
                     # Step 2: Zeitsignal → neues STFT (physikalisch konsistente Phase)
-                    _, _, _Zxx_new = signal.stft(
+                    _, _, _Zxx_new = signal.safe_stft(
                         _sig_pocs,
                         fs=sample_rate,
                         window="hann",
@@ -2005,7 +2005,7 @@ class SpectralRepair(PhaseInterface):
         # Direct ISTFT reconstruction — Zxx_blended retains phase info from original STFT.
         # ISTFT is semantically correct and 50-100× faster than PGHI.
         try:
-            _, audio_repaired = signal.istft(
+            _, audio_repaired = signal.safe_istft(
                 np.asarray(Zxx_blended, dtype=np.complex64),
                 fs=sample_rate,
                 window="hann",

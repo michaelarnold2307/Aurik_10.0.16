@@ -2096,7 +2096,7 @@ class DenoisePhase(PhaseInterface):
         if _dfn_applied and _panns_singing >= 0.10:
             try:
                 from backend.core.dsp.noise_estimator import compute_imcra_noise_estimate as _imcra_p03  # pylint: disable=import-outside-toplevel  # noqa: I001
-                from scipy.signal import stft as _stft_p03, istft as _istft_p03  # pylint: disable=import-outside-toplevel
+                from backend.core.audio_utils import safe_stft as _stft_p03, istft as _istft_p03  # pylint: disable=import-outside-toplevel
 
                 _g3_mono = (
                     result_audio.mean(axis=0).astype(np.float32)
@@ -2744,7 +2744,7 @@ class DenoisePhase(PhaseInterface):
         REF_HOP = REF_WIN * 3 // 4
         REF_NOVERLAP = REF_WIN - REF_HOP
 
-        f_ref, t_ref, Zxx_ref = signal.stft(
+        f_ref, t_ref, Zxx_ref = signal.safe_stft(
             audio.astype(np.float64), sr, nperseg=REF_WIN, noverlap=REF_NOVERLAP, boundary="even"
         )
         n_bins, n_t = f_ref.shape[0], Zxx_ref.shape[1]
@@ -2792,7 +2792,7 @@ class DenoisePhase(PhaseInterface):
                 # Use zone-specific STFT if audio is long enough; fall back to reference STFT
                 if n_samples >= zone_win * 2:
                     zone_noverlap = zone_win - zone_hop
-                    f_z, t_z, Zxx_z = signal.stft(
+                    f_z, t_z, Zxx_z = signal.safe_stft(
                         audio.astype(np.float64), sr, nperseg=zone_win, noverlap=zone_noverlap, boundary="even"
                     )
                 else:
@@ -2953,7 +2953,7 @@ class DenoisePhase(PhaseInterface):
         # Direct ISTFT reconstruction — Zxx_processed retains full phase information.
         # Direct ISTFT is both semantically correct and 50-100× faster than PGHI.
         try:
-            _, audio_out = signal.istft(
+            _, audio_out = signal.safe_istft(
                 np.asarray(Zxx_processed, dtype=np.complex64),
                 sr,
                 nperseg=REF_WIN,
