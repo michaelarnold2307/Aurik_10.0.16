@@ -37,6 +37,9 @@ EXCLUDE_FILES = {
 
 MIN_SEVERITY = "warning"  # "error" stoppt Commit, "warning" warnt nur
 
+# §v10.115: Continuous Analysis — Scanner lädt neue Patterns aus Exception-Forensik
+_PATTERN_FEED_PATH = Path(__file__).resolve().parents[3] / "logs" / "discovered_patterns.json"
+
 # ── P1: shape[0] <= shape[1] Anti-Pattern ─────────────────────────────────
 
 def check_shape_anti_pattern(filepath: str, source: str) -> list[str]:
@@ -191,6 +194,51 @@ def check_enum_as_dict_key(filepath: str, source: str) -> list[str]:
     return issues
 
 
+# ── §v10.115 Continuous Analysis: Dynamische Pattern-Erkennung ────────────────
+
+def _load_discovered_patterns() -> list[str]:
+    """Lädt vom Pattern-Miner entdeckte Patterns aus logs/discovered_patterns.json."""
+    import json
+    if not _PATTERN_FEED_PATH.exists():
+        return []
+    try:
+        with open(_PATTERN_FEED_PATH) as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return []
+
+    issues = []
+    for pattern in data.get("patterns", []):
+        if pattern.get("status") != "active":
+            continue
+        regex = pattern.get("regex")
+        if not regex:
+            continue
+        message = pattern.get("message", "P7 Dynamisch entdecktes Anti-Pattern")
+        for root in data.get("scan_roots", ["backend/core"]):
+            repo_root = _PATTERN_FEED_PATH.parents[1]
+            scan_dir = repo_root / root
+            if not scan_dir.exists():
+                continue
+            for dirpath, _dirnames, filenames in os.walk(scan_dir):
+                for fn in filenames:
+                    if not fn.endswith('.py'):
+                        continue
+                    fp = os.path.join(dirpath, fn)
+                    try:
+                        with open(fp, encoding='utf-8') as fh:
+                            src = fh.read()
+                    except (UnicodeDecodeError, IsADirectoryError):
+                        continue
+                    for i, line in enumerate(src.split('\n'), 1):
+                        s = line.strip()
+                        if s.startswith('#'):
+                            continue
+                        if re.search(regex, s):
+                            issues.append(f"{fp}:{i}: {message}")
+    return issues
+
+
 # ── Main ───────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -243,6 +291,10 @@ def main() -> int:
                 all_issues.extend(check_asarray_tuple(filepath, source))
                 all_issues.extend(check_enum_as_dict_key(filepath, source))
     
+    # §v10.115: Lade dynamisch entdeckte Patterns aus Exception-Forensik
+    discovered = _load_discovered_patterns()
+    all_issues.extend(discovered)
+
     # Ausgabe
     if all_issues:
         print(f"\n🔍 Aurik SOTA Bug-Scan: {len(all_issues)} potentielle Bugs gefunden "

@@ -113,6 +113,66 @@ def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
     return np.asarray(x)
 
 
+def safe_stft(
+    x: np.ndarray,
+    fs: float = 1.0,
+    window: str = "hann",
+    nperseg: int = 256,
+    noverlap: int | None = None,
+    **kwargs: Any,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """§v10.115 Zero-crash STFT with automatic short-signal fallback.
+
+    scipy.signal.stft crasht mit "noverlap must be less than nperseg"
+    wenn das Signal kürzer als nperseg ist oder noverlap >= nperseg.
+    safe_stft clamt noverlap und skaliert nperseg automatisch.
+
+    Returns (f, t, Zxx) wie scipy.signal.stft.
+    """
+    from scipy.signal import stft as _scipy_stft
+    n = x.shape[-1] if x.ndim > 0 else len(x)
+    # Clamp nperseg to signal length
+    _nperseg = min(nperseg, max(2, n))
+    # Clamp noverlap: 0 <= noverlap < nperseg
+    if noverlap is None:
+        _noverlap = _nperseg // 2
+    else:
+        _noverlap = min(noverlap, max(0, _nperseg - 1))
+    try:
+        return _scipy_stft(x, fs=fs, window=window, nperseg=_nperseg, noverlap=_noverlap, **kwargs)
+    except ValueError:
+        # Last resort: minimum viable STFT
+        _nperseg = max(2, n)
+        _noverlap = _nperseg // 4
+        return _scipy_stft(x, fs=fs, window="hann", nperseg=_nperseg, noverlap=_noverlap)
+
+
+def safe_istft(
+    Zxx: np.ndarray,
+    fs: float = 1.0,
+    window: str = "hann",
+    nperseg: int = 256,
+    noverlap: int | None = None,
+    **kwargs: Any,
+) -> tuple[np.ndarray, np.ndarray]:
+    """§v10.115 Zero-crash ISTFT with automatic short-signal fallback.
+
+    Companion to safe_stft. Clamps parameters identically.
+    Returns (t, x) wie scipy.signal.istft.
+    """
+    from scipy.signal import istft as _scipy_istft
+    # Clamp noverlap: 0 <= noverlap < nperseg
+    if noverlap is None:
+        _noverlap = nperseg // 2
+    else:
+        _noverlap = min(noverlap, max(0, nperseg - 1))
+    try:
+        return _scipy_istft(Zxx, fs=fs, window=window, nperseg=nperseg, noverlap=_noverlap, **kwargs)
+    except ValueError:
+        _noverlap = nperseg // 4
+        return _scipy_istft(Zxx, fs=fs, window="hann", nperseg=nperseg, noverlap=_noverlap)
+
+
 def audio_sample_count(audio: np.ndarray) -> int:
     """Gibt the time-axis sample count for mono or stereo audio zurück."""
     if audio.ndim == 1:
