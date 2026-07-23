@@ -41,6 +41,7 @@ import numpy as np
 
 from backend.core.musical_goals.musical_goals_metrics import MusicalGoalsChecker
 from backend.core.musical_goals.processing_modes import PROCESSING_MODE_CONFIGS, ProcessingMode
+from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
 
@@ -401,7 +402,7 @@ class EdgeCaseHandler:
         nyquist = sr / 2
         cutoff = min(8000, nyquist - 100)
         b, a = cast(tuple[np.ndarray, np.ndarray], butter(4, cutoff / nyquist, btype="high", output="ba"))
-        filtered = filtfilt(b, a, audio)
+        filtered = safe_filtfilt(b, a, audio)
 
         # Detect energy spikes (only very large spikes are defects)
         window_size = int(sr * 0.005)  # 5ms windows
@@ -509,7 +510,7 @@ class EdgeCaseHandler:
         nyquist = sr / 2
         cutoff = min(50, nyquist - 10)
         b, a = cast(tuple[np.ndarray, np.ndarray], butter(4, cutoff / nyquist, btype="low", output="ba"))
-        rumble = filtfilt(b, a, audio)
+        rumble = safe_filtfilt(b, a, audio)
 
         rumble_energy = np.mean(rumble**2)
         total_energy = np.mean(audio**2)
@@ -523,7 +524,7 @@ class EdgeCaseHandler:
         nyquist = sr / 2
         cutoff = min(6000, nyquist - 100)
         b, a = cast(tuple[np.ndarray, np.ndarray], butter(4, cutoff / nyquist, btype="high", output="ba"))
-        hiss = filtfilt(b, a, audio)
+        hiss = safe_filtfilt(b, a, audio)
 
         hiss_energy = np.mean(hiss**2)
         total_energy = np.mean(audio**2)
@@ -538,7 +539,7 @@ class EdgeCaseHandler:
 
         nyquist = sr / 2
         b, a = cast(tuple[np.ndarray, np.ndarray], butter(4, 4000 / nyquist, btype="high", output="ba"))
-        filtered = filtfilt(b, a, audio)
+        filtered = safe_filtfilt(b, a, audio)
 
         # Zero crossing rate
         if not _LIBROSA_AVAILABLE:

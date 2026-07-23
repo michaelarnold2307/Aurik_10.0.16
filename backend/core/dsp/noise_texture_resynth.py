@@ -61,6 +61,12 @@ _ANALOG_CD_FLOOR_TARGETS = frozenset(
 def _material_resynth_target(material_type: str) -> tuple[str, float | None]:
     """Liefert Textur-Zielmaterial und optionalen Maximalboden für Resynthese."""
     key = str(material_type or "unknown").lower().strip()
+    # Normalisiere Enum-Präfixe (MaterialType.CASSETTE → cassette),
+    # die von Callern wie phase_03/phase_29/unified_restorer_v3 ankommen können.
+    for _prefix in ("materialtype.",):
+        if key.startswith(_prefix):
+            key = key[len(_prefix):]
+            break
     if key in _ANALOG_CD_FLOOR_TARGETS:
         return "cd_digital", _CD_LIKE_FLOOR_DBFS
     return key, None

@@ -70,6 +70,7 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
+import os
 import logging
 import time
 from typing import Any

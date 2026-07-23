@@ -34,6 +34,7 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
+import os
 import logging
 import threading
 import time
@@ -41,7 +42,7 @@ import time
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_to_mono, stereo_channel_view, stereo_like
+from backend.core.audio_utils import safe_filtfilt,  safe_to_mono, stereo_channel_view, stereo_like
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -266,8 +267,13 @@ class AirBandEnhancement(PhaseInterface):
             "cassette",
             "lacquer_disc",
         }
+        # §CD-Quality: bandwidth_loss > 0.5 → Air-Band rekonstruieren (Original hatte bereits HF-Verlust)
+        _bw_loss_39 = float(kwargs.get("bandwidth_loss", 0.0) or 0.0)
+        if _bw_loss_39 <= 0.0:
+            _defect_scores_39 = kwargs.get("defect_scores", {}) or {}
+            _bw_loss_39 = float(_defect_scores_39.get("bandwidth_loss", 0.0) or 0.0)
         _mat_name_39 = str(getattr(material, "name", str(material))).lower().replace(" ", "_").replace("-", "_")
-        if _proc_mode_39 == "restoration" and _mat_name_39 in _ANALOG_RESTORATION_SKIP:
+        if _proc_mode_39 == "restoration" and _mat_name_39 in _ANALOG_RESTORATION_SKIP and _bw_loss_39 <= 0.5:
             _skip_audio = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
             _skip_audio = np.clip(_skip_audio, -1.0, 1.0)
             logger.info(
@@ -673,7 +679,7 @@ class AirBandEnhancement(PhaseInterface):
         # §2.51 Anti-Zeitversatz: filtfilt (Zero-Phase) statt lfilter — Shelf-EQ darf keine
         # Gruppenlatenz erzeugen (hörbar als Zeitversatz auf HF-Transienten/Vokaleinsätzen).
         if len(audio) >= 9:
-            return signal.filtfilt(b, a, audio)  # type: ignore[no-any-return]
+            return safe_filtfilt(b, a, audio)  # type: ignore[no-any-return]
         return signal.lfilter(b, a, audio)  # type: ignore[no-any-return]
 
     def _apply_exciter(self, audio: np.ndarray, sample_rate: int, mix: float, drive: float) -> np.ndarray:

@@ -17,6 +17,7 @@ Artifacts"; Godsill & Rayner (1998) "Digital Audio Restoration".
 
 from __future__ import annotations
 
+import os
 import logging
 import time as _time
 

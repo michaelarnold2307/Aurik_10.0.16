@@ -226,6 +226,14 @@ repos:
         pass_filenames: false
         files: ^(backend|plugins)/.*\.py$
 
+      # §v10.105 Bug-Prevention: Exception-Forensik Anti-Pattern Scanner
+      - id: aurik-bug-prevention
+        name: "§v10.105 Bug-Prevention (shape-Detection, padlen, noverlap, tuple-ndim)"
+        entry: .venv_aurik/bin/python .agents/skills/bug-prevention/scan_anti_patterns.py
+        language: system
+        pass_filenames: false
+        files: ^backend/core/.*\.py$
+
       # Crossfire-Guard (phase_21/35/42 nie in CAUSE_TO_PHASES)
       - id: aurik-crossfire-guard
         name: "Crossfire-Guard (phase_21/35/42 nie in CAUSE_TO_PHASES)"
@@ -333,6 +341,14 @@ repos:
       - id: aurik-perceptual-guard
         name: "§v10.101 Perceptual-Guard (Bark/LUFS/JND im Code)"
         entry: .venv_aurik/bin/python scripts/compliance/check_perceptual_consistency.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # §v10.101 Import-Shadow-Guard: verhindert UnboundLocalError durch import-shadowing
+      - id: aurik-import-shadow-guard
+        name: "§v10.101 Import-Shadow-Guard (kein import-shadowing)"
+        entry: .venv_aurik/bin/python scripts/lint_import_shadow.py --strict
         language: system
         pass_filenames: false
         always_run: true

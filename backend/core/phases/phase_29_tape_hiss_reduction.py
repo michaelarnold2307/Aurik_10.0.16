@@ -113,7 +113,7 @@ def _rms_dbfs_gated(sig: np.ndarray) -> float:
     Stereo → Mono-Downmix vor Framing. Gibt -96.0 zurück wenn kein aktiver Frame.
     """
     if sig.ndim == 2:
-        _mono = sig.mean(axis=0).astype(np.float64) if sig.shape[0] <= 2 else sig.mean(axis=1).astype(np.float64)
+        _mono = sig.mean(axis=0).astype(np.float64) if (sig.shape[0] <= 2 and sig.shape[1] > 2) else sig.mean(axis=1).astype(np.float64)
     else:
         _mono = sig.astype(np.float64)
     _frame = 480  # 10 ms @ 48 kHz
@@ -711,6 +711,11 @@ class TapeHissReductionPhase(PhaseInterface):
         _goal_hint_scalar = self._goal_hint_strength_scalar(kwargs)
         _effective_strength = float(np.clip(_effective_strength * _goal_hint_scalar, 0.0, 1.0))
 
+        # §G78 CalibrationContext: Kalibrierter Cap aus Messwerten.
+        _calib_cap = kwargs.get("phase29_strength_cap")
+        if _calib_cap is not None:
+            _effective_strength = min(_effective_strength, float(_calib_cap))
+
         # §K-2 Pre-Phase ACF-Authentizitaet-Cap (§2.45b Minimal-Intervention):
         # Wenn das Input-Audio bereits hohe ACF-Periodizität zeigt (hochwertiges Signal),
         # wird _effective_strength gekappt — verhindert Over-Processing.
@@ -1181,7 +1186,8 @@ class TapeHissReductionPhase(PhaseInterface):
                 _corr29 = _fec29(audio, audio_processed, sample_rate, frame_ms=10.0)
                 if _corr29 < 0.97:
                     _need29 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
-                    _wet29 = _recommend_mkk_wet(_corr29, _p29_panns, global_need=_need29)
+                    # §v10.101 Material-adaptiv
+                    _wet29 = _recommend_mkk_wet(_corr29, _p29_panns, global_need=_need29, material=material_key)
                     audio_processed = (_wet29 * audio_processed + (1.0 - _wet29) * audio).astype(np.float32)
                     logger.warning(
                         "Phase29 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",

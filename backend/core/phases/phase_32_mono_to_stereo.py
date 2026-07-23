@@ -71,6 +71,7 @@ Performance Target: <0.20× realtime
 Quality Target: 0.86 (Professional-Grade)
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import time
 
@@ -540,7 +541,7 @@ class MonoToStereoPhaseV2(PhaseInterface):
 
             # Zero-phase all-pass: prevents timing smear in mono-to-stereo decorrelation
             _n_out32 = len(output)
-            output = signal.filtfilt(b, a_coeff, output) if _n_out32 >= 9 else signal.lfilter(b, a_coeff, output)
+            output = safe_filtfilt(b, a_coeff, output) if _n_out32 >= 9 else signal.lfilter(b, a_coeff, output)
 
         return output
 

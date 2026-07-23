@@ -39,8 +39,8 @@ class GlobalGainBudget:
         # 4-generation chains where cumulative headroom loss exceeds 12 dB.
         self._total_budget_db: float = self._TOTAL_BUDGET_DB
 
-    def configure_for_chain_depth(self, transfer_depth: int) -> None:
-        """Scale the total gain budget based on transfer chain depth.
+    def configure_for_chain_depth(self, transfer_depth: int, snr_db: float = 30.0, material: str = "unknown") -> None:
+        """Scale the total gain budget based on transfer chain depth and SNR.
 
         Each generation adds ~3 dB of cumulative gain loss:
           depth=1 (single source):  6.0 dB (default)
@@ -48,8 +48,21 @@ class GlobalGainBudget:
           depth=3:                  10.0 dB
           depth≥4:                  12.0 dB
 
+        §v10.101 SNR-adaptive scaling: noisy material (SNR < 20 dB) needs
+        more headroom because aggressive NR phases request more makeup gain.
+        Each 5 dB below 30 dB adds 2 dB to the budget.
+          SNR ≥ 30 dB:  ×1.00  (no adjustment)
+          SNR = 25 dB:  ×1.33
+          SNR = 20 dB:  ×1.67
+          SNR = 14 dB:  ×2.13  (cassette with heavy noise)
+
+        Material-specific floor: cassette/tape gets +2 dB extra.
+
         Called once per pipeline run from UV3/Denker after chain detection.
         """
+        # §v10.101: Reset before configuring — singleton accumulates across runs!
+        self.reset()
+
         depth = max(1, int(transfer_depth))
         if depth >= 4:
             self._total_budget_db = 12.0
@@ -59,11 +72,38 @@ class GlobalGainBudget:
             self._total_budget_db = 8.0
         else:
             self._total_budget_db = 6.0
+
+        # §v10.101 SNR-adaptive scaling
+        snr = float(max(1.0, snr_db))
+        if snr < 30.0:
+            snr_factor = 1.0 + (30.0 - snr) / 15.0
+            if str(material).lower() in ("cassette", "reel_tape", "tape"):
+                snr_factor += 0.30
+            self._total_budget_db = float(max(self._total_budget_db, min(self._total_budget_db * snr_factor, 24.0)))
+
         logger.info(
-            "§GGB-1: chain-depth=%d → total budget = %.1f dB",
-            depth,
-            self._total_budget_db,
+            "§GGB-1: chain-depth=%d snr=%.1fdB mat=%s → total budget = %.1f dB",
+            depth, snr, material, self._total_budget_db,
         )
+
+    def configure_snr(self, snr_db: float, material: str = "unknown") -> None:
+        """§v10.101 Adjust total budget for SNR and material type.
+
+        Noisy material (SNR < 20 dB) needs more headroom because aggressive
+        NR phases request more makeup gain. Call AFTER configure_for_chain_depth().
+        """
+        snr = float(max(1.0, snr_db))
+        if snr < 30.0:
+            snr_factor = 1.0 + (30.0 - snr) / 15.0
+            if str(material).lower() in ("cassette", "reel_tape", "tape"):
+                snr_factor += 0.30
+            new_budget = float(max(self._total_budget_db, min(self._total_budget_db * snr_factor, 24.0)))
+            if new_budget > self._total_budget_db:
+                logger.info(
+                    "§GGB-1 SNR-adapt: snr=%.1fdB mat=%s → budget %.1f→%.1f dB (×%.2f)",
+                    snr, material, self._total_budget_db, new_budget, snr_factor,
+                )
+                self._total_budget_db = new_budget
 
     def request(self, phase_id: str, requested_db: float, priority: str = "normal") -> float:
         """Request gain budget for a phase. Returns approved gain in dB.

@@ -1257,9 +1257,11 @@ def compute_masking_threshold_iso11172(
     bark = 13.0 * np.arctan(0.76 * f_khz) + 3.5 * np.arctan((f_khz / 7.5) ** 2)
 
     # --- STFT des Signals ---
+    # §v10.103 noverlap-Guard: clamp für kurzes Audio / dynamisches n_fft
+    _noverlap = min(n_fft - hop_length, max(0, n_fft - 1))
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        _, _, Zxx = _sp_signal.stft(audio, fs=sr, nperseg=n_fft, noverlap=n_fft - hop_length, window="hann")
+        _, _, Zxx = _sp_signal.stft(audio, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     power = np.abs(Zxx) ** 2  # (n_freq, n_frames)
     power_db = 10.0 * np.log10(np.maximum(power, 1e-20))  # dB
 

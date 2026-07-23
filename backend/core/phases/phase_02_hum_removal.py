@@ -69,7 +69,7 @@ from typing import Any
 import numpy as np
 import scipy.signal as signal
 
-from backend.core.audio_utils import compute_gated_rms_dbfs as _gated_rms_dbfs_02
+from backend.core.audio_utils import compute_gated_rms_dbfs as _gated_rms_dbfs_02, safe_filtfilt  # §v10.101
 from backend.core.audio_utils import to_channels_last
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -768,14 +768,14 @@ class HumRemovalPhase(PhaseInterface):
                 # correct axis: axis=0 for channels-first, axis=1 for channels-last.
                 if audio.shape[0] == 2 and audio.shape[1] > 2:
                     # channels-first (2, N): filter along axis 0 (samples)
-                    filtered = np.row_stack([signal.filtfilt(b, a, audio[ch, :]) for ch in range(audio.shape[0])])
+                    filtered = np.row_stack([safe_filtfilt(b, a, audio[ch, :]) for ch in range(audio.shape[0])])
                 elif audio.shape[1] == 2 and audio.shape[0] > 2:
                     # channels-last (N, 2): filter each column
-                    filtered = np.column_stack([signal.filtfilt(b, a, audio[:, ch]) for ch in range(audio.shape[1])])
+                    filtered = np.column_stack([safe_filtfilt(b, a, audio[:, ch]) for ch in range(audio.shape[1])])
                 else:
-                    filtered = signal.filtfilt(b, a, audio)
+                    filtered = safe_filtfilt(b, a, audio)
             else:
-                filtered = signal.filtfilt(b, a, audio)
+                filtered = safe_filtfilt(b, a, audio)
         except Exception:
             # Fallback to forward filter if filtfilt fails
             if audio.ndim == 2:

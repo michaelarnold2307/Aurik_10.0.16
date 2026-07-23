@@ -45,6 +45,9 @@ class PipelineGuard:
         self._phase_count: int = 0
         self._warnings: list[str] = []
         self._criticals: list[str] = []
+        # §v10.106 Bug-Pattern-Watchdog: Zählt klassifizierte Exceptions
+        self._bug_patterns: dict[str, int] = {}
+        self._bug_phases: dict[str, set[str]] = {}  # pattern → {phase_ids}
 
     def _wd(self) -> Any:
         if self._watchdog is None:
@@ -147,6 +150,54 @@ class PipelineGuard:
             self._wd().record_silent_exception(context)
         except Exception as e:
             logger.debug("PipelineGuard: record_silent_exception error: %s", e)
+
+    # ── §v10.106 Bug-Pattern-Klassifikation ────────────────────────────
+    # Klassifiziert Exceptions nach den 6 bekannten Anti-Patterns aus der
+    # Exception-Forensik (Juli 2026). Ermöglicht Echtzeit-Erkennung von
+    # systematischen Bugs während des Pipeline-Laufs.
+
+    BUG_PATTERNS: dict[str, str] = {
+        "tuple-ndim": "'tuple' object has no attribute 'ndim'",
+        "inhomogeneous": "setting an array element with a sequence",
+        "broadcast": "operands could not be broadcast",
+        "padlen": "greater than padlen",
+        "noverlap": "noverlap must be less than nperseg",
+        "os-unbound": "local variable 'os' referenced before assignment",
+        "skip-result": "_SkipResult",
+        "stereo-template": "Stereo template must be 2D",
+        "enum-keyerror": "MaterialType.",
+    }
+
+    def classify_exception(self, phase_id: str, error_msg: str) -> str | None:
+        """Ordnet eine Exception einem Bug-Pattern zu, oder None."""
+        for pattern, keyword in self.BUG_PATTERNS.items():
+            if keyword in error_msg:
+                self._bug_patterns[pattern] = self._bug_patterns.get(pattern, 0) + 1
+                if pattern not in self._bug_phases:
+                    self._bug_phases[pattern] = set()
+                self._bug_phases[pattern].add(phase_id)
+
+                # Schwellwerte für Mid-Pipeline-Warnungen
+                count = self._bug_patterns[pattern]
+                if count >= 10 and count % 10 == 0:
+                    logger.warning(
+                        "🐛 Bug-Pattern '%s': %d× in %d Phasen (%s)",
+                        pattern, count, len(self._bug_phases[pattern]),
+                        ', '.join(sorted(self._bug_phases[pattern])[:5]),
+                    )
+                return pattern
+        return None
+
+    def get_bug_pattern_report(self) -> dict[str, Any]:
+        """Gibt Bug-Pattern-Statistik für post_flight."""
+        return {
+            "total_bugs": sum(self._bug_patterns.values()),
+            "patterns": dict(self._bug_patterns),
+            "affected_phases": {k: sorted(v) for k, v in self._bug_phases.items()},
+            "critical_patterns": [
+                p for p, c in self._bug_patterns.items() if c >= 20
+            ],
+        }
 
     # ── Post-Restore: Whisper-Blending + Dynamics-Recovery ─────────────
 
@@ -333,6 +384,18 @@ class PipelineGuard:
 
         elapsed = time.perf_counter() - self._start_time
         report["guard_overhead_ms"] = round(elapsed * 1000)
+
+        # §v10.106 Bug-Pattern-Report: Klassifizierte Exceptions
+        bug_report = self.get_bug_pattern_report()
+        if bug_report["total_bugs"] > 0:
+            report["bug_patterns"] = bug_report
+            if bug_report["critical_patterns"]:
+                self._criticals.append(
+                    f"{bug_report['total_bugs']} Exceptions in "
+                    f"{len(bug_report['patterns'])} Bug-Patterns: "
+                    f"{', '.join(bug_report['critical_patterns'])}"
+                )
+                report["criticals"] = list(self._criticals)
 
         if report.get("criticals"):
             logger.warning(

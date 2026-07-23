@@ -50,15 +50,16 @@ Version: 2.0.0 (Professional)
 Quality Impact: 0.65 → 0.92 (+42%)
 """
 
+import os
 import logging
 import time
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import apply_musical_gain_envelope as _amge_17
-from backend.core.audio_utils import compute_gated_rms_linear as _gated_rms_17
-from backend.core.audio_utils import to_channels_last
+from backend.core.audio_utils import safe_filtfilt,  apply_musical_gain_envelope as _amge_17
+from backend.core.audio_utils import safe_filtfilt,  compute_gated_rms_linear as _gated_rms_17
+from backend.core.audio_utils import safe_filtfilt,  to_channels_last
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -556,7 +557,7 @@ class MasteringPolishPhase(PhaseInterface):
                     # Zero-phase filtfilt: boost applied at exact transient position
                     _n_eq17 = eq_audio.shape[0] if eq_audio.ndim > 1 else len(eq_audio)
                     filtered = (
-                        signal.filtfilt(b, a, eq_audio, axis=0)
+                        safe_filtfilt(b, a, eq_audio, axis=0)
                         if _n_eq17 >= 9
                         else signal.lfilter(b, a, eq_audio, axis=0)
                     )
@@ -567,7 +568,7 @@ class MasteringPolishPhase(PhaseInterface):
                     # Invertiere Signal bei Center-Freq und addiere mit Attenuation
                     _n_eq17c = eq_audio.shape[0] if eq_audio.ndim > 1 else len(eq_audio)
                     filtered = (
-                        signal.filtfilt(b, a, eq_audio, axis=0)
+                        safe_filtfilt(b, a, eq_audio, axis=0)
                         if _n_eq17c >= 9
                         else signal.lfilter(b, a, eq_audio, axis=0)
                     )

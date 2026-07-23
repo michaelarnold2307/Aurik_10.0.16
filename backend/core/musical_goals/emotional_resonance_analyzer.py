@@ -30,6 +30,7 @@ Dieser Analyzer erweitert die vorhandene EmotionalitaetMetric mit:
 **Date:** 13. Februar 2026
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 from dataclasses import dataclass
 from typing import cast
@@ -464,9 +465,9 @@ class EmotionalResonanceEnhancer:
         if audio.ndim == 2:
             filtered = np.zeros_like(audio)
             for ch in range(audio.shape[1]):
-                filtered[:, ch] = signal.filtfilt(b, a, audio[:, ch])
+                filtered[:, ch] = safe_filtfilt(b, a, audio[:, ch])
         else:
-            filtered = signal.filtfilt(b, a, audio)
+            filtered = safe_filtfilt(b, a, audio)
 
         # Mix with dry (apply gain)
         gain_linear = 10 ** (gain_db / 20.0)
@@ -513,9 +514,9 @@ class EmotionalResonanceEnhancer:
         if audio.ndim == 2:
             filtered = np.zeros_like(audio)
             for ch in range(audio.shape[1]):
-                filtered[:, ch] = signal.filtfilt(b, a, audio[:, ch])
+                filtered[:, ch] = safe_filtfilt(b, a, audio[:, ch])
         else:
-            filtered = signal.filtfilt(b, a, audio)
+            filtered = safe_filtfilt(b, a, audio)
 
         # Mix to apply gain
         enhanced = audio + (filtered * (gain_linear - 1.0))

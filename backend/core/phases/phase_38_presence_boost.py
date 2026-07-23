@@ -35,13 +35,14 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
+import os
 import logging
 import time
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like
+from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -543,7 +544,7 @@ class PresenceBoost(PhaseInterface):
         # lfilter (minimum-phase) is default; filtfilt (zero-phase) only for crossovers.
         if len(audio) >= 9:
             if zero_phase:
-                filtered = signal.filtfilt(b, a, audio)
+                filtered = safe_filtfilt(b, a, audio)
             else:
                 filtered = signal.lfilter(b, a, audio)
         else:

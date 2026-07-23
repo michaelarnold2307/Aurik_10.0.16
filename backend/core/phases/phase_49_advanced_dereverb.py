@@ -48,6 +48,7 @@ Version: 3.0.0 (scipy.signal.stft/istft, kein np.fft.rfft mehr)
 
 from __future__ import annotations
 
+import os
 import logging
 import time
 
@@ -1091,7 +1092,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         """Frame-wise RMS over active music frames only (§2.45a-I)."""
         _x = np.asarray(audio, dtype=np.float32)
         if _x.ndim == 2:
-            _mono = _x.mean(axis=0) if _x.shape[0] <= 2 else _x.mean(axis=1)
+            _mono = _x.mean(axis=0) if (_x.shape[0] <= 2 and _x.shape[1] > 2) else _x.mean(axis=1)
         else:
             _mono = _x
         if _mono.size < 480:

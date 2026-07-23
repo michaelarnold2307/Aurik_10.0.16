@@ -18,6 +18,7 @@ from __future__ import annotations
 import importlib
 import logging
 from typing import Any
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 logger = logging.getLogger(__name__)
 
@@ -174,8 +175,7 @@ def validate_defect_contracts(
         logger.warning("⚠️ SOTA ContractValidator: ML-Health-Check skipped")
 
     # ── 6. Keine toten Verzeichnisse mehr ──────────────────────────────
-    import os
-
+    # import os → module level (§v10.105)
     dead_paths = [
         "backend/adaptive_pipeline.py",
         "backend/defect_detection/",

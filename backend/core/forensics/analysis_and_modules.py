@@ -9,6 +9,7 @@ import concurrent.futures
 import logging
 import time
 from typing import Any, Optional
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 
@@ -245,7 +246,7 @@ class FeatureExtractor:
 
         def panns_features() -> dict[str, Any]:
             try:
-                import os
+                # import os → module level (§v10.105)
                 import tempfile
 
                 import soundfile as sf
@@ -786,7 +787,7 @@ class AnalysisEngineAdapter:
         instruments = []
 
         try:
-            import os
+            # import os → module level (§v10.105)
             import tempfile
             from collections import Counter
 

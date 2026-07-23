@@ -508,7 +508,8 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 _corr28 = _fec28(audio, denoised_audio, sample_rate, frame_ms=10.0)
                 if _corr28 < 0.97:
                     _need28 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
-                    _wet28 = _recommend_mkk_wet(_corr28, _p28_panns, global_need=_need28)
+                    # §v10.101 Material-adaptiv
+                    _wet28 = _recommend_mkk_wet(_corr28, _p28_panns, global_need=_need28, material=_material_key)
                     denoised_audio = (_wet28 * denoised_audio + (1.0 - _wet28) * audio).astype(np.float32)
                     logger.warning("§V20 phase_28: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr28, _wet28)
             except Exception as _v20_28_exc:

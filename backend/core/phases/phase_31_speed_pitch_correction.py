@@ -60,6 +60,7 @@ ML-Hybrid v3.0:
 - Adaptive: CREPE wenn Konfidenz <0.70, sonst pYIN
 """
 
+import os
 import logging
 import time
 from typing import Any, cast

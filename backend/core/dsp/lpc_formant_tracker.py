@@ -565,6 +565,208 @@ class _LPCFormantTracker:
             logger.debug("lpc_formant_tracker.py::track AA-filter: %s", e)
             return {"f1_mean": 0.0, "f2_mean": 0.0, "f3_mean": 0.0, "f4_mean": 0.0}
 
+    # ── §2.8 Gender-Classification via Formants ──────────────────────────
+    # Wird von phase_19_de_esser._detect_gender_robust() als Fallback
+    # aufgerufen, wenn GenderDetector aus vocal_ai_enhancement nicht
+    # verfügbar ist oder UNKNOWN liefert.
+
+    # Formant- und F0-Bereiche (identisch mit GenderDetector.formant_ranges,
+    # zentral definiert in vocal_ai_enhancement.py §2.8).
+    _GENDER_RANGES: dict[str, dict[str, tuple[float, float]]] = {
+        "male": {
+            "f0": (85, 180),
+            "f1": (270, 730),
+            "f2": (840, 2290),
+            "f3": (1690, 3010),
+        },
+        "female": {
+            "f0": (165, 700),
+            "f1": (310, 860),
+            "f2": (920, 2790),
+            "f3": (1890, 3310),
+        },
+        "child": {
+            "f0": (250, 600),
+            "f1": (370, 1030),
+            "f2": (1170, 3330),
+            "f3": (2590, 4990),
+        },
+    }
+
+    @staticmethod
+    def _scan_f0_voiced(audio_mono: np.ndarray, sr: int) -> float:
+        """Scannt durch das Audio (100ms-Fenster, 50ms Hop) bis ein voiced
+        Segment mit zuverlässigem F0 gefunden wird.  Vermeidet den
+        Fehler, dass ein instrumentales Intro die F0-Detektion blockiert.
+
+        Returns:
+            F0 in Hz, oder 0.0 wenn kein voiced segment gefunden wurde.
+        """
+        chunk_samples = max(int(sr * 0.1), 512)   # 100 ms
+        hop_samples = chunk_samples // 2            # 50 ms Überlappung
+        max_chunks = min(60, max(1, (len(audio_mono) - chunk_samples) // hop_samples + 1))
+        best_f0 = 0.0
+        best_peak_height = 0.0
+        for chunk_idx in range(max_chunks):
+            start = chunk_idx * hop_samples
+            if start + chunk_samples > len(audio_mono):
+                break
+            segment = audio_mono[start : start + chunk_samples].astype(np.float64)
+            rms = float(np.sqrt(np.mean(segment**2) + 1e-12))
+            if rms < 1e-6:
+                continue  # silence
+            # FFT-based autocorrelation
+            n = len(segment)
+            fft = np.fft.rfft(segment, n=2 * n)
+            autocorr = np.fft.irfft(fft * np.conj(fft))[:n]
+            autocorr = autocorr / (autocorr[0] + 1e-10)
+            min_period = int(sr / 500)
+            max_period = int(sr / 50)
+            if max_period <= min_period or max_period > len(autocorr):
+                continue
+            autocorr_search = autocorr[min_period:max_period]
+            if len(autocorr_search) < 2:
+                continue
+            peaks, props = signal.find_peaks(autocorr_search, height=0.12)
+            if len(peaks) == 0:
+                continue
+            best_peak = peaks[np.argmax(autocorr_search[peaks])]
+            peak_height = float(autocorr_search[best_peak])
+            period = best_peak + min_period
+            f0 = float(sr) / float(period)
+            # Plausibilitätscheck: F0 im Stimmumfang
+            if f0 < 70.0 or f0 > 800.0:
+                continue
+            if peak_height > best_peak_height:
+                best_peak_height = peak_height
+                best_f0 = f0
+        return best_f0
+
+    @staticmethod
+    def _estimate_formants_from_voiced(
+        audio_mono: np.ndarray, sr: int, max_frames: int = 40
+    ) -> list[float]:
+        """Extrahiert mittlere Formanten (F1–F3) aus voiced Frames via
+        Burg-LPC.  Scannt das Audio, sammelt voiced Frames und mittelt.
+        """
+        frame_samples = max(int(sr * 0.025), 64)    # 25 ms
+        hop_samples = frame_samples // 2              # 50 % Überlappung
+        ds = max(1, sr // _LPC_ANALYSIS_SR)
+        sr_ds = max(1, sr // ds)
+        all_formants: list[list[float]] = []
+        max_iter = min(max_frames * 4, max(1, (len(audio_mono) - frame_samples) // hop_samples + 1))
+        collected = 0
+        for i in range(max_iter):
+            start = i * hop_samples
+            if start + frame_samples > len(audio_mono):
+                break
+            frame = audio_mono[start : start + frame_samples].astype(np.float64)
+            rms = float(np.sqrt(np.mean(frame**2) + 1e-12))
+            if rms < 1e-6:
+                continue
+            windowed = frame * np.hanning(len(frame))
+            # Downsample für LPC
+            _mono_aa = windowed
+            if ds > 1:
+                _aa_sos = butter(4, (sr / (2.0 * ds)) * 0.90, btype="low", fs=sr, output="sos")
+                _mono_aa = sosfiltfilt(_aa_sos, windowed)
+            mono_ds = _mono_aa[::ds]
+            if mono_ds.size <= (_LPC_ORDER + 1):
+                continue
+            try:
+                lpc_a = _burg_lpc(mono_ds * np.hanning(len(mono_ds)), _LPC_ORDER)
+                fmts = _lpc_to_formants(lpc_a, sr_ds, max_formants=3)
+                if len(fmts) >= 2 and all(80.0 < f < 5500.0 for f in fmts[:3]):
+                    all_formants.append(fmts[:3])
+                    collected += 1
+                    if collected >= max_frames:
+                        break
+            except Exception:
+                continue
+        if not all_formants:
+            return []
+        max_len = max(len(f) for f in all_formants)
+        padded = [np.pad(np.asarray(f), (0, max_len - len(f)), constant_values=0.0)
+                  for f in all_formants]
+        avg = np.mean(padded, axis=0)
+        return [float(v) for v in avg if v > 0.0]
+
+    def classify_gender_via_formants(self, audio: np.ndarray, sr: int) -> str:
+        """Klassifiziert das Stimmgeschlecht anhand von F0 + Formanten (LPC).
+
+        Scannt durch das Audio nach voiced Segmenten, extrahiert F0 und
+        Formanten (F1–F3) und klassifiziert nach den gleichen Bereichen
+        wie GenderDetector in vocal_ai_enhancement.py.
+
+        Args:
+            audio: Mono- oder Stereo-Audio (wird automatisch zu Mono gemittelt).
+            sr: Sample-Rate in Hz.
+
+        Returns:
+            Eines von ``"male"``, ``"female"``, ``"child"``, ``"unknown"``.
+        """
+        try:
+            mono = np.asarray(audio, dtype=np.float64)
+            if mono.ndim == 2:
+                mono = np.mean(mono, axis=0) if mono.shape[0] == 2 and mono.shape[1] > 2 \
+                       else np.mean(mono, axis=1)
+            if mono.size < int(sr * 0.05):
+                return "unknown"
+
+            f0 = self._scan_f0_voiced(mono, sr)
+            formants = self._estimate_formants_from_voiced(mono, sr)
+
+            if f0 <= 0.0 and len(formants) < 2:
+                return "unknown"
+
+            # Score each gender
+            scores: dict[str, float] = {}
+            for gender, ranges in self._GENDER_RANGES.items():
+                score = 0.0
+                count = 0
+                # F0 score
+                if f0 > 0.0:
+                    f0_lo, f0_hi = ranges["f0"]
+                    if f0_lo <= f0 <= f0_hi:
+                        score += 1.0
+                    else:
+                        dist = (f0_lo - f0) / f0_lo if f0 < f0_lo else (f0 - f0_hi) / f0_hi
+                        score += max(0.0, 1.0 - dist)
+                    count += 1
+                # Formant scores (F1, F2, F3)
+                for fi, fmt_val in enumerate(formants[:3], 1):
+                    fk = f"f{fi}"
+                    if fk not in ranges:
+                        continue
+                    flo, fhi = ranges[fk]
+                    if flo <= fmt_val <= fhi:
+                        score += 1.0
+                    else:
+                        dist = (flo - fmt_val) / flo if fmt_val < flo \
+                               else (fmt_val - fhi) / fhi
+                        score += max(0.0, 1.0 - dist * 0.5)
+                    count += 1
+                scores[gender] = score / count if count > 0 else 0.0
+
+            if not scores:
+                return "unknown"
+            best = max(scores.items(), key=lambda x: x[1])
+            if best[1] < 0.4:
+                return "unknown"
+
+            # Tie-breaking: CHILD vs FEMALE bei knappem Score und F0 < 350 Hz
+            sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+            if (len(sorted_scores) >= 2
+                    and sorted_scores[0][0] == "child"
+                    and sorted_scores[1][0] == "female"
+                    and (sorted_scores[0][1] - sorted_scores[1][1]) < 0.05
+                    and f0 < 350.0):
+                return "female"
+            return best[0]
+        except Exception as e:
+            logger.debug("lpc_formant_tracker::classify_gender_via_formants: %s", e)
+            return "unknown"
+
 
 _tracker_instance: _LPCFormantTracker | None = None
 _tracker_lock = threading.Lock()

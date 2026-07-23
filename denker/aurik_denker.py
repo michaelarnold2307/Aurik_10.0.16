@@ -2821,6 +2821,29 @@ class AurikDenker:
             len(warnings),
         )
 
+        # §ORCHESTRATOR P4: Assessment-Resolver — EINE ehrliche Bewertung.
+        # Löst MUSHRA-vs-QualityGate-vs-HPI-Widersprüche auf.
+        try:
+            from backend.core.aurik_orchestrator import get_orchestrator as _get_orch_final
+
+            _orch_final = _get_orch_final()
+            _final = _orch_final.resolve(
+                mushra_score=float(getattr(_rest_metadata, "mushra_score", 50.0) or 50.0),
+                quality_gate_delta=float(getattr(_rest_metadata, "quality_delta", 0.0) or 0.0),
+                hpi_score=float(getattr(_rest_metadata, "hpi_score", quality_estimate) or quality_estimate),
+                artifact_freedom=float(getattr(_rest_metadata, "artifact_freedom", 0.5) or 0.5),
+                naturalness=float(getattr(_rest_metadata, "naturalness", 0.5) or 0.5),
+                restorability_score=float(getattr(defekt, "restorability_score", 50.0) if defekt else 50.0),
+                was_reverted=bool(_rest_rollback),
+                phases_run=len(phases_executed),
+            )
+            logger.info(
+                "§ORCHESTRATOR FINAL: %s (%.0f/100, conf=%.2f)",
+                _final.overall_verdict, _final.quality_score, _final.confidence,
+            )
+        except Exception as _orf_exc:
+            logger.debug("§ORCHESTRATOR resolve non-blocking: %s", _orf_exc)
+
         note = (
             f"Aurik 10 Restaurierung abgeschlossen: "
             f"Material={material}, RT={rt_factor:.2f}×, "

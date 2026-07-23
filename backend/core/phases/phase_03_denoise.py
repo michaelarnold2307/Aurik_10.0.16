@@ -65,6 +65,7 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
+import os
 import logging
 import time
 from typing import Any
@@ -505,6 +506,11 @@ class DenoisePhase(PhaseInterface):
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
         effective_strength = float(np.clip(effective_strength * phase_locality_factor, 0.0, 1.0))
+
+        # §G78 CalibrationContext: Kalibrierter Stärke-Cap aus Messwerten.
+        _calib_cap = kwargs.get("phase03_strength_cap")
+        if _calib_cap is not None:
+            effective_strength = min(effective_strength, float(_calib_cap))
 
         if effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -2373,12 +2379,15 @@ class DenoisePhase(PhaseInterface):
                 _corr03 = _fec03(_post_nr_guard_ref_audio, result_audio, sample_rate, frame_ms=10.0)
                 if _corr03 < 0.97:
                     _need03 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
-                    _wet03 = _recommend_mkk_wet(_corr03, _panns_singing, global_need=_need03)
+                    # §v10.101 Material-adaptiv: Kassette/Tape brauchen höheren Wet-Floor
+                    _wet03 = _recommend_mkk_wet(_corr03, _panns_singing, global_need=_need03, material=_mat03_str)
                     result_audio = (_wet03 * result_audio + (1.0 - _wet03) * _post_nr_guard_ref_audio).astype(
                         np.float32
                     )
-                    logger.warning(
-                        "Phase03 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                    # §v10.110: V20 ist ein Qualitäts-GUARD, kein Fehler.
+                    # Die Mikrodynamik-Blendung arbeitet korrekt — INFO statt WARNING.
+                    logger.info(
+                        "Phase03 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend (Schutz aktiv)",
                         _corr03,
                         _wet03,
                     )
@@ -2403,7 +2412,9 @@ class DenoisePhase(PhaseInterface):
                 check_spectral_color_preservation as _scg_03,
             )
 
-            _sc_result_03 = _scg_03(_post_nr_guard_ref_audio, result_audio, sample_rate)
+            # §v10.101 Chain-Depth-Adaptiv: 0.97 für depth=1, 0.73 für depth=4
+            _sc_threshold_03 = float(np.clip(0.97 - (_transfer_depth_p03 - 1) * 0.08, 0.65, 0.97))
+            _sc_result_03 = _scg_03(_post_nr_guard_ref_audio, result_audio, sample_rate, threshold=_sc_threshold_03)
             if not _sc_result_03.ok:
                 _sc_wet_03 = 0.70  # Phase-Strength −30 % (§V24)
                 result_audio = (_sc_wet_03 * result_audio + (1.0 - _sc_wet_03) * _post_nr_guard_ref_audio).astype(

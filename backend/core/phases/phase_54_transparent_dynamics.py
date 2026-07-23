@@ -56,6 +56,7 @@ Version: 1.0.0
 Date: 16. Februar 2026
 """
 
+import os
 import logging
 import time
 

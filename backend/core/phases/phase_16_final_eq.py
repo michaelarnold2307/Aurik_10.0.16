@@ -44,6 +44,7 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
+import os
 import logging
 import time
 from typing import Any
@@ -51,7 +52,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like
+from backend.core.audio_utils import safe_filtfilt,  audio_sample_count, stereo_channel_view, stereo_like
 from backend.core.defect_scanner import MaterialType
 from backend.core.phase_strength_contract import resolve_phase_strength_contract
 
@@ -474,7 +475,7 @@ class FinalEQ(PhaseInterface):
 
         # Zero-phase filtering prevents phase shift on vocal transients.
         if len(audio) >= 9:
-            filtered = signal.filtfilt(b, a, audio)
+            filtered = safe_filtfilt(b, a, audio)
         else:
             filtered = signal.lfilter(b, a, audio)
 
@@ -499,6 +500,6 @@ class FinalEQ(PhaseInterface):
         a = np.array([1, a1 / a0, a2 / a0])
 
         # Apply filter (forward-backward for zero-phase)
-        filtered = signal.filtfilt(b, a, audio)
+        filtered = safe_filtfilt(b, a, audio)
 
         return filtered  # type: ignore[no-any-return]

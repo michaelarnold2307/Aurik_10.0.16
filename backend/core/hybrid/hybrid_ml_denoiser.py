@@ -35,6 +35,7 @@ Version: 1.0.0
 Date: 16. Februar 2026
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import os
 import tempfile
@@ -474,7 +475,7 @@ class HybridMLDenoiser:
             noise_rms = float(np.sqrt(np.mean(audio**2)))
             signal_rms = noise_rms
         else:
-            noise = filtfilt(b, a, audio)
+            noise = safe_filtfilt(b, a, audio)
             noise_rms = np.sqrt(np.mean(noise**2))
             signal_rms = np.sqrt(np.mean(audio**2))
 

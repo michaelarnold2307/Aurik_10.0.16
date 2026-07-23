@@ -54,6 +54,7 @@ Performance Target: <0.25× realtime
 Quality Target: 0.87 (Professional-Grade)
 """
 
+import os
 import logging
 import time
 from dataclasses import dataclass

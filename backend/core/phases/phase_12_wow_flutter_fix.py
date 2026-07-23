@@ -804,7 +804,7 @@ class WowFlutterFix(PhaseInterface):
 
                         def _stabilize_envelope(sig: np.ndarray) -> np.ndarray:
                             env = np.abs(sig.astype(np.float64))
-                            env_smooth = filtfilt(b_mod, a_mod, env)
+                            env_smooth = safe_filtfilt(b_mod, a_mod, env)
                             env_out = _mod_strength * env_smooth + (1.0 - _mod_strength) * env
                             gain = np.divide(env_out, env, out=np.ones_like(env), where=env > 1e-10)
                             gain = np.clip(gain, 0.7, 1.3)

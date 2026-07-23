@@ -28,6 +28,7 @@ Aktivierungsgate: panns_singing ≥ 0.25 AND (ΔHNR > 2.5 OR |tilt_delta| > 1.5)
 
 from __future__ import annotations
 
+import os
 import logging
 import threading
 import time

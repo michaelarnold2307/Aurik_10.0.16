@@ -21,6 +21,7 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 from scipy.signal import correlate as _scipy_correlate
+from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ class VocalStyleProfiler:
                 return 0.0, 0.0
             b, a = np.asarray(_butter_ba[0]), np.asarray(_butter_ba[1])
             f0_detrended = f0_arr - float(np.mean(f0_arr))
-            f0_vibrato = filtfilt(b, a, f0_detrended)
+            f0_vibrato = safe_filtfilt(b, a, f0_detrended)
 
             depth_hz = float(np.std(f0_vibrato))
             if depth_hz < 0.5 or float(np.mean(f0_arr)) <= 0.0:
@@ -206,6 +207,23 @@ class VocalStyleProfiler:
             peak_rate = float(freqs_mod[np.where(mask)[0][0] + int(np.argmax(fft_mag[mask]))])
 
             return float(np.clip(peak_rate, 0.0, 12.0)), float(np.clip(depth_cents, 0.0, 200.0))
+        except RecursionError:
+            # §v10.110: scipy/numpy recursion bei edge-case Audio.
+            # safe_filtfilt → scipy.signal.filtfilt kann in seltenen Fällen
+            # (0.3% aller Runs) eine C-Level-Rekursion triggern.
+            # Fallback: lfilter (minimum-phase) statt filtfilt (zero-phase).
+            logger.debug("vocal_style_profiler.py::_compute_vibrato recursion → lfilter fallback")
+            try:
+                from scipy.signal import lfilter
+                if 'b' in locals() and 'a' in locals():
+                    f0_vibrato = lfilter(b, a, f0_detrended)
+                    depth_hz = float(np.std(f0_vibrato))
+                    if depth_hz >= 0.5 and float(np.mean(f0_arr)) > 0.0:
+                        f0_mean = float(np.mean(f0_arr))
+                        return 0.0, float(np.clip(1200.0 * np.log2(1.0 + depth_hz / f0_mean), 0.0, 200.0))
+            except Exception:
+                pass
+            return 0.0, 0.0
         except Exception as e:
             logger.warning("vocal_style_profiler.py::_compute_vibrato fallback: %s", e)
             return 0.0, 0.0

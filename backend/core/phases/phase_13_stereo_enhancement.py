@@ -58,6 +58,7 @@ Performance Target: <0.3× realtime
 Quality Target: 0.90 (Professional-Grade)
 """
 
+import os
 import logging
 import time
 from typing import Any
@@ -65,7 +66,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import stereo_channel_view, stereo_like
+from backend.core.audio_utils import stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -532,7 +533,7 @@ class StereoEnhancementPhaseV2(PhaseInterface):
             # (each causal all-pass adds ~0.2ms; 8 cascade = ~1.5ms timing smear on Side channel).
             _n_dec = len(decorrelated)
             decorrelated = (
-                signal.filtfilt(b, a_coeff, decorrelated) if _n_dec >= 9 else signal.lfilter(b, a_coeff, decorrelated)
+                safe_filtfilt(b, a_coeff, decorrelated) if _n_dec >= 9 else signal.lfilter(b, a_coeff, decorrelated)
             )
 
         return decorrelated

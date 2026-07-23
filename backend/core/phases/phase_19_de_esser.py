@@ -734,12 +734,48 @@ class DeEsserPhase(PhaseInterface):
             _hf_w = float(np.sum(_spec_w[np.fft.rfftfreq(_fft_len, 1.0 / sample_rate) >= 4000.0] ** 2))
             _hf_ratios.append(_hf_w / _total_w)
         # Median statt Mean: resistent gegen Ausreißer (z.B. ein einziger Hi-Hat-Hit)
-        _hf_ratio = float(np.median(_hf_ratios)) if _hf_ratios else 0.0
+        # §v10.108: nanmedian verhindert NaN-Propagation bei korruptem Audio
+        _hf_ratio = float(np.nanmedian(_hf_ratios)) if _hf_ratios else 0.0
         # Adaptiver Schwellwert: material-adaptive Kalibrierung.
         # Band/Dunkel-Material hat weniger HF — zu hoher Threshold
         # würde Sibilanten als "kein HF" klassifizieren und De-Essing skippen.
-        _bw_loss = kwargs.get("bandwidth_loss", 0.0)
-        _hf_threshold = 0.01 if float(_bw_loss) > 0.5 else 0.05
+        _bw_loss = float(kwargs.get("bandwidth_loss", 0.0) or 0.0)
+        # §v10.95 SOTA: Fallback auf defect_scores wenn bandwidth_loss nicht direkt injiziert
+        if _bw_loss <= 0.0:
+            _defect_scores = kwargs.get("defect_scores", {}) or {}
+            _bw_loss = float(_defect_scores.get("bandwidth_loss", 0.0) or 0.0)
+        _hf_threshold = 0.01 if _bw_loss > 0.5 else 0.05
+
+        # §v10.95 SOTA MP3-Adaptive: Terminal-Codec mp3_low → Sibilanz-Schwelle ×3,
+        # Gain-Reduction-Cap halbiert. MP3 Pre-Echo-Artefakte werden sonst als
+        # Sibilanten fehlinterpretiert und der De-Esser produziert 17+ Artefakte.
+        _transfer_chain_p19 = list(kwargs.get("transfer_chain", []) or [])
+        _is_mp3_terminal = bool(
+            _transfer_chain_p19
+            and str(_transfer_chain_p19[-1]).lower() in {"mp3_low", "mp3_high"}
+        )
+        _mp3_strength_cap = 0.35  # default: kein MP3-Cap
+        _mp3_sibilance_threshold_mult = 1.0
+        if _is_mp3_terminal:
+            # MP3 hat bereits HF-Begrenzung + Pre-Echo-Smearing → Sibilanten
+            # sind schwer von Codec-Artefakten zu unterscheiden.
+            _mp3_sibilance_threshold_mult = 3.0
+            _mp3_strength_cap = 0.25
+            if _bw_loss > 0.7:
+                # Extremfall: mp3_low + starke Bandbreitenbegrenzung →
+                # fast keine echten Sibilanten mehr übrig, nur Codec-Artefakte
+                _mp3_sibilance_threshold_mult = 5.0
+                _mp3_strength_cap = 0.15
+            logger.info(
+                "§v10.95 MP3-Adaptive: terminal=%s bw_loss=%.2f → "
+                "sib_thr×%.0f strength_cap=%.2f",
+                _transfer_chain_p19[-1] if _transfer_chain_p19 else "unknown",
+                _bw_loss,
+                _mp3_sibilance_threshold_mult,
+                _mp3_strength_cap,
+            )
+        _hf_threshold *= _mp3_sibilance_threshold_mult
+
         _era_decade_th = int(kwargs.get("decade", 1980) or 1980)
         _mat_str_th = str(getattr(material, "value", material) or "").lower()
         if _mat_str_th in ("cassette", "reel_tape", "tape"):
@@ -1009,6 +1045,24 @@ class DeEsserPhase(PhaseInterface):
                 _deessing_cap,
             )
         if _deessing_cap is not None:
+            # §v10.95 SOTA MP3-Adaptive: Terminal lossy codec → zusätzliche Cap-Reduktion.
+            # MP3 Pre-Echo-Artefakte werden sonst als Sibilanten fehlinterpretiert
+            # und der De-Esser produziert 17+ Artefakte (ArtifactFreedomGate → Rollback).
+            _transfer_chain_cap = list(kwargs.get("transfer_chain", []) or [])
+            if _transfer_chain_cap and str(_transfer_chain_cap[-1]).lower() in {"mp3_low", "mp3_high"}:
+                _bw_loss_cap = float(kwargs.get("bandwidth_loss", 0.0) or 0.0)
+                if _bw_loss_cap <= 0.0:
+                    _defect_scores_cap = kwargs.get("defect_scores", {}) or {}
+                    _bw_loss_cap = float(_defect_scores_cap.get("bandwidth_loss", 0.0) or 0.0)
+                _mp3_cap_factor = 0.55 if _bw_loss_cap > 0.7 else 0.70
+                _deessing_cap = float(_deessing_cap) * _mp3_cap_factor
+                logger.info(
+                    "§v10.95 MP3-DeEsser-Cap: terminal=%s bw_loss=%.2f → cap×%.2f → %.3f",
+                    _transfer_chain_cap[-1],
+                    _bw_loss_cap,
+                    _mp3_cap_factor,
+                    _deessing_cap,
+                )
             _cap_db = -12.0 * float(_deessing_cap)  # 0.45 → -5.4 dB max
             max_reduction_db = max(max_reduction_db, _cap_db)
             logger.debug(
@@ -1102,38 +1156,75 @@ class DeEsserPhase(PhaseInterface):
             _mid = (enhanced_audio[:, 0] + enhanced_audio[:, 1]) / _sqrt2
             _side = (enhanced_audio[:, 0] - enhanced_audio[:, 1]) / _sqrt2
 
-            deessed_mid, _ = self._process_channel_multiband_gender_aware(
-                _mid,
-                sample_rate,
-                material,
-                band_weights,
-                max_reduction_db,
-                threshold_ratio,
-                lookahead_samples,
+            # §v10.95 SOTA Adaptive Blend: Frequenzbereich (präzise aber artefaktanfällig)
+            # vs Zeitbereich (sicher aber gröber). Mischungsverhältnis kontinuierlich
+            # aus bandwidth_loss + SNR + terminal_codec abgeleitet (§V25).
+            _freq_weight = self._compute_frequency_domain_safety(
+                bandwidth_loss=float(_bw_loss),
+                snr_db=float(kwargs.get("snr_db", 30.0)),
+                is_mp3_terminal=_is_mp3_terminal,
+                hf_ratio=_hf_ratio,
             )
-            deessed_side, _ = self._process_channel_multiband_gender_aware(
-                _side,
-                sample_rate,
-                material,
-                band_weights,
-                max(0.5, float(max_reduction_db) * 0.5),
-                float(threshold_ratio) * 1.15,
-                lookahead_samples,
-            )
+            if _freq_weight <= 0.05:
+                # Rein Zeitbereich — kein Frequenzbereich-Risiko
+                deessed_mid = self._time_domain_deess(_mid, sample_rate, max_reduction_db,
+                                                      threshold_ratio, lookahead_samples)
+                deessed_side = self._time_domain_deess(_side, sample_rate,
+                                                       max(0.5, float(max_reduction_db) * 0.5),
+                                                       float(threshold_ratio) * 1.15,
+                                                       lookahead_samples)
+            elif _freq_weight >= 0.95:
+                # Rein Frequenzbereich — maximale Präzision
+                deessed_mid, _ = self._process_channel_multiband_gender_aware(
+                    _mid, sample_rate, material, band_weights,
+                    max_reduction_db, threshold_ratio, lookahead_samples,
+                )
+                deessed_side, _ = self._process_channel_multiband_gender_aware(
+                    _side, sample_rate, material, band_weights,
+                    max(0.5, float(max_reduction_db) * 0.5),
+                    float(threshold_ratio) * 1.15, lookahead_samples,
+                )
+            else:
+                # Adaptiver Blend: beide laufen, gewichtet mischen
+                _freq_mid, _ = self._process_channel_multiband_gender_aware(
+                    _mid, sample_rate, material, band_weights,
+                    max_reduction_db, threshold_ratio, lookahead_samples,
+                )
+                _time_mid = self._time_domain_deess(_mid, sample_rate, max_reduction_db,
+                                                    threshold_ratio, lookahead_samples)
+                deessed_mid = _freq_weight * _freq_mid + (1.0 - _freq_weight) * _time_mid
+
+                _freq_side, _ = self._process_channel_multiband_gender_aware(
+                    _side, sample_rate, material, band_weights,
+                    max(0.5, float(max_reduction_db) * 0.5),
+                    float(threshold_ratio) * 1.15, lookahead_samples,
+                )
+                _time_side = self._time_domain_deess(_side, sample_rate,
+                                                     max(0.5, float(max_reduction_db) * 0.5),
+                                                     float(threshold_ratio) * 1.15,
+                                                     lookahead_samples)
+                deessed_side = _freq_weight * _freq_side + (1.0 - _freq_weight) * _time_side
+                logger.debug(
+                    "§v10.95 Adaptive-Blend: freq_weight=%.2f (bw=%.2f snr=%.1f mp3=%s hf=%.4f)",
+                    _freq_weight, _bw_loss, kwargs.get("snr_db", 30.0),
+                    _is_mp3_terminal, _hf_ratio,
+                )
 
             _left = (deessed_mid + deessed_side) / _sqrt2
             _right = (deessed_mid - deessed_side) / _sqrt2
             deessed_audio = np.column_stack((_left, _right))
         else:
-            deessed_audio, _gender_bands_used = self._process_channel_multiband_gender_aware(
-                enhanced_audio,
-                sample_rate,
-                material,
-                band_weights,
-                max_reduction_db,
-                threshold_ratio,
-                lookahead_samples,
-            )
+            # §v10.95 MP3-TimeDomain: Mono-Pfad ebenfalls schützen
+            if _is_mp3_terminal and _hf_ratio < 0.01:
+                deessed_audio = self._time_domain_deess(
+                    enhanced_audio, sample_rate, max_reduction_db,
+                    threshold_ratio, lookahead_samples,
+                )
+            else:
+                deessed_audio, _gender_bands_used = self._process_channel_multiband_gender_aware(
+                    enhanced_audio, sample_rate, material, band_weights,
+                    max_reduction_db, threshold_ratio, lookahead_samples,
+                )
 
         logger.debug("  ✅ Sibilance reduced: %.1f dB", self.stats["max_gain_reduction_db"])
 
@@ -2259,6 +2350,103 @@ class DeEsserPhase(PhaseInterface):
 
         return total_energy
 
+    @staticmethod
+    def _compute_frequency_domain_safety(
+        *,
+        bandwidth_loss: float,
+        snr_db: float,
+        is_mp3_terminal: bool,
+        hf_ratio: float,
+    ) -> float:
+        """§V25-konform: Kontinuierliche Sicherheit des Frequenzbereich-De-Essers.
+
+        Returns 0.0–1.0: 0 = nur Zeitbereich, 1 = nur Frequenzbereich.
+        Alle Faktoren sind kontinuierliche Funktionen der Messwerte.
+        """
+        # Basis: bandwidth_loss → je höher, desto unsicherer
+        # bw=0 → safety=1.0, bw=1.0 → safety=0.0
+        bw_safety = 1.0 - bandwidth_loss
+
+        # SNR-Modifikator: niedriges SNR → Frequenzbereich riskanter
+        # snr=40 → factor=1.0, snr=10 → factor=0.5
+        snr_factor = float(np.clip((snr_db - 10.0) / 30.0, 0.3, 1.0))
+
+        # HF-Ratio-Modifikator: kein HF → Frequenzbereich sinnlos
+        # hf=0.05 → factor=1.0, hf=0.001 → factor=0.1
+        hf_factor = float(np.clip((hf_ratio - 0.001) / 0.049, 0.05, 1.0))
+
+        # MP3-Terminal-Modifikator: mp3_low → grundsätzlich vorsichtiger
+        mp3_penalty = 0.40 if is_mp3_terminal else 1.0
+
+        # Kombinierte Sicherheit: alle Faktoren multiplikativ
+        safety = bw_safety * snr_factor * hf_factor * mp3_penalty
+        return float(np.clip(safety, 0.0, 1.0))
+
+    def _time_domain_deess(
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        max_reduction_db: float,
+        threshold_ratio: float,
+        lookahead_samples: int,
+    ) -> np.ndarray:
+        """§v10.95 Zeitbereich-De-Esser für mp3_low/degradiertes Material.
+
+        KEINE FFT, keine spektrale Filterung, keine Phasenverschiebung.
+        Nur sanfte Pegelabsenkung in erkannten Sibilanz-Regionen via
+        RMS-basierter Detection + Gain-Envelope mit Crossfade.
+
+        Produziert NULL Pre-Echo-Artefakte — im Gegensatz zum
+        Frequenzbereich-De-Esser, der auf mp3_low 17 PE-Artefakte erzeugt.
+        """
+        audio = np.asarray(audio, dtype=np.float64)
+        n = len(audio)
+        if n < 256:
+            return audio.astype(np.float32)
+
+        # RMS in kurzen Fenstern (5ms) für Sibilanz-Detektion
+        frame_len = max(int(sample_rate * 0.005), 64)
+        hop = frame_len // 2
+        n_frames = (n - frame_len) // hop + 1
+
+        rms = np.zeros(n_frames, dtype=np.float64)
+        for i in range(n_frames):
+            seg = audio[i * hop : i * hop + frame_len]
+            rms[i] = np.sqrt(np.mean(seg**2)) + 1e-12
+
+        # Schwellwert: threshold_ratio × mittleres RMS
+        rms_threshold = np.mean(rms) * float(threshold_ratio)
+
+        # Gain-Envelope: 1.0 (keine Änderung) → reduction (in Sibilanz-Regionen)
+        reduction_linear = 10.0 ** (float(max_reduction_db) / 20.0)
+        gain = np.ones(n_frames, dtype=np.float64)
+        for i in range(n_frames):
+            if rms[i] > rms_threshold:
+                # Sanftes Gain: je lauter, desto stärker die Reduktion
+                excess = (rms[i] - rms_threshold) / (rms_threshold + 1e-12)
+                excess = min(excess, 3.0)
+                gain[i] = reduction_linear + (1.0 - reduction_linear) * (1.0 - excess / 3.0)
+
+        # Crossfade-Glättung (10ms): verhindert hörbare Sprünge
+        fade_frames = max(1, int(sample_rate * 0.010 / hop))
+        gain_smooth = np.copy(gain)
+        for i in range(1, n_frames):
+            alpha = min(1.0, 1.0 / fade_frames)
+            gain_smooth[i] = alpha * gain[i] + (1.0 - alpha) * gain_smooth[i - 1]
+
+        # Gain-Envelope auf Sample-Ebene expandieren (lineare Interpolation)
+        out = np.zeros(n, dtype=np.float64)
+        for i in range(n_frames):
+            start = i * hop
+            end = min(start + frame_len, n)
+            out[start:end] = audio[start:end] * gain_smooth[i]
+        # Letzte Samples (falls nicht abgedeckt)
+        last_start = n_frames * hop
+        if last_start < n:
+            out[last_start:] = audio[last_start:]
+
+        return np.clip(out, -1.0, 1.0).astype(np.float32)
+
     def _process_channel_multiband_gender_aware(
         self,
         audio: np.ndarray,
@@ -2466,33 +2654,591 @@ class DeEsserPhase(PhaseInterface):
             description="World-Class Gender-Aware De-Esser v4.0: Multi-Band De-Esser",
         )
 
+
+
     def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int) -> str:
-        """Fallback gender detection via LPC formant analysis."""
+        """
+        Gender-Detection: Robuster Detektor (F0 + Formanten + WORLD) bevorzugt,
+        Fallback auf einfache Autocorrelation.
+
+        §2.11: Librosa pYIN F0-Integration — pYIN (Mauch & Dixon 2014) liefert
+        per-frame F0 mit Voicing-Confidence und ist speziell für polyphones
+        Material und Vibrato robust. Die mediane F0 über voiced frames ersetzt
+        die einfache Autocorrelation-basierte Schätzung für präzisere Gender-
+        Klassifikation, besonders bei tiefen Frauenstimmen.
+        """
+        mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio
+
+        # ── §2.11 Librosa pYIN F0 (wenn verfügbar) ─────────────────
+        _pyin_f0: float | None = None
+        try:
+            import librosa as _librosa
+
+            _mono_f32 = mono.astype(np.float32)[: min(len(mono), sample_rate * 10)]
+            _f0_pyin, _voiced_flag, _voiced_prob = _librosa.pyin(
+                _mono_f32,
+                fmin=60.0,
+                fmax=700.0,
+                sr=sample_rate,
+                frame_length=2048,
+                win_length=1024,
+            )
+            # Median über voiced frames (voiced_prob > 0.8)
+            _voiced_f0 = _f0_pyin[_voiced_prob > 0.8]
+            if len(_voiced_f0) > 10:
+                _pyin_f0 = float(np.median(_voiced_f0))
+                logger.debug(
+                    "🎤 pYIN F0: %.0f Hz (median over %d voiced frames)",
+                    _pyin_f0,
+                    len(_voiced_f0),
+                )
+        except Exception as _pyin_exc:
+            logger.debug("pYIN F0 failed (%s) — using autocorrelation", _pyin_exc)
+
+        # ── Primär: Robuster Multi-Feature GenderDetector (§2.8) ──
+        if _HAS_ROBUST_GENDER and _RobustGenderDetector is not None:
+            try:
+                detector = _RobustGenderDetector(sample_rate=sample_rate)
+                chars = detector.detect(mono)
+
+                # §2.11: Wenn pYIN-F0 verfügbar und signifikant anders als
+                # autocorrelation-F0 → pYIN bevorzugen (robuster gegen Vibrato,
+                # Rauschen, polyphones Material). pYIN ist ein probabilistisches
+                # Modell mit Voicing-Confidence; Autocorrelation ist anfällig
+                # für Oktav-Fehler bei tiefen Stimmen.
+                if _pyin_f0 is not None and _pyin_f0 > 0:
+                    _ac_f0 = chars.fundamental_freq
+                    _f0_delta = abs(_pyin_f0 - _ac_f0) / max(_ac_f0, 1.0)
+                    if _f0_delta > 0.15:  # >15% Abweichung → pYIN bevorzugen
+                        logger.debug(
+                            "🎤 pYIN F0 override: %.0f Hz vs autocorr %.0f Hz (delta=%.0f%%)",
+                            _pyin_f0,
+                            _ac_f0,
+                            _f0_delta * 100,
+                        )
+                        # Re-klassifiziere mit pYIN-F0
+                        f0 = _pyin_f0
+                        formants = chars.formants
+                        # Einfache Klassifikation mit pYIN-F0
+                        if f0 < 150:
+                            gender_str = VocalGender.MALE
+                        elif f0 < 300:
+                            gender_str = VocalGender.FEMALE
+                        else:
+                            gender_str = VocalGender.CHILD
+                        confidence = chars.confidence
+                    else:
+                        gender_str = chars.gender.value
+                        confidence = chars.confidence
+                        f0 = chars.fundamental_freq
+                        formants = chars.formants
+                else:
+                    gender_str = chars.gender.value
+                    confidence = chars.confidence
+                    f0 = chars.fundamental_freq
+                    formants = chars.formants
+
+                # ── §2.9 Contralto-Erkennung ─────────────────────────────
+                # Eine Kontra-Altistin (tiefe Frauenstimme, z. B. Tracy Chapman,
+                # Cher, Nina Simone) hat F0 im männlichen Bereich (150–180 Hz),
+                # aber weibliche Formanten (kürzerer Vokaltrakt → höheres F1/F2).
+                # Der Classifier gewichtet F0 und Formanten gleich → F0=160 Hz
+                # drückt das Ergebnis oft Richtung "male", obwohl die Formanten
+                # eindeutig weiblich sind.
+                #
+                # §2.9.1: Formanten sind das anatomisch härtere Merkmal als F0
+                # (Vokaltrakt-Länge ist konstant; F0 variiert mit Tonhöhe).
+                # Daher: Kein Confidence-Gate mehr. Wenn F1 UND F2 weiblich-typisch
+                # sind und F0 im Überlappungsbereich liegt → override auf FEMALE.
+                _CONTRALTO_F0_LOW = 140.0
+                _CONTRALTO_F0_HIGH = 220.0  # bis A3 — deckt Alt/Mezzo ab
+                _FEMALE_F1 = (310.0, 860.0)
+                _FEMALE_F2 = (920.0, 2790.0)
+                _contralto_detected = False
+                if (
+                    gender_str == VocalGender.MALE
+                    and _CONTRALTO_F0_LOW <= f0 <= _CONTRALTO_F0_HIGH
+                    and len(formants) >= 2
+                ):
+                    f1_in_female = _FEMALE_F1[0] <= formants[0] <= _FEMALE_F1[1]
+                    f2_in_female = _FEMALE_F2[0] <= formants[1] <= _FEMALE_F2[1]
+                    if f1_in_female and f2_in_female:
+                        _contralto_detected = True
+                        logger.warning(
+                            "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz, "
+                            "confidence=%.2f) but formants are female-typical "
+                            "(F1=%.0f Hz in [%.0f–%.0f], F2=%.0f Hz in [%.0f–%.0f]). "
+                            "This is likely a deep female voice (contralto). "
+                            "→ Overriding to FEMALE. Use --gender male to force male.",
+                            f0,
+                            confidence,
+                            formants[0],
+                            _FEMALE_F1[0],
+                            _FEMALE_F1[1],
+                            formants[1],
+                            _FEMALE_F2[0],
+                            _FEMALE_F2[1],
+                        )
+                        gender_str = VocalGender.FEMALE
+                        confidence = max(confidence, 0.65)  # Mindest-Confidence für contralto
+
+                # §2.9.2 Contralto-Fallback: Wenn Formanten fehlgeschlagen sind
+                # (F1≈0), aber F0 im weiblichen Überlappungsbereich liegt,
+                # Vibrato-Analyse aus pYIN-F0-Zeitreihe zur Entscheidung nutzen.
+                # Vibrato-Rate: ♀ 4.8–5.8 Hz, ♂ 3.5–4.5 Hz
+                # Vibrato-Tiefe: ♀ 100–250 cents, ♂ 40–100 cents
+                _formants_failed = len(formants) < 2 or (formants[0] < 50.0 and formants[1] < 50.0)
+                if (
+                    gender_str == VocalGender.MALE
+                    and _CONTRALTO_F0_LOW <= f0 <= _CONTRALTO_F0_HIGH
+                    and _formants_failed
+                    and not _contralto_detected
+                ):
+                    _pyin_available = "_f0_pyin" in locals() and "_voiced_prob" in locals()
+                    _vib_rate, _vib_depth = _estimate_vibrato_from_pyin(
+                        _f0_pyin if _pyin_available else None,
+                        _voiced_prob if _pyin_available else None,
+                        sample_rate,
+                    )
+                    # Female-typical vibrato: rate ≥ 4.6 Hz AND depth ≥ 100 cents
+                    if _vib_rate is not None and _vib_depth is not None:
+                        _is_female_vibrato = _vib_rate >= 4.6 and _vib_depth >= 100.0
+                        logger.info(
+                            "🎤 §2.9.2 Vibrato-Analyse: rate=%.1f Hz depth=%.0f cents "
+                            "→ %s (F0=%.0f Hz, formants failed)",
+                            _vib_rate,
+                            _vib_depth,
+                            "FEMALE-TYPICAL → override" if _is_female_vibrato else "ambiguous",
+                            f0,
+                        )
+                        if _is_female_vibrato:
+                            _contralto_detected = True
+                            gender_str = VocalGender.FEMALE
+                            confidence = max(confidence, 0.60)
+                    # Auch ohne Vibrato-Daten: F0 im Contralto-Bereich + Formant-Failure
+                    # → statistisch eher female (tiefe Frauenstimme wahrscheinlicher als
+                    # hoher Tenor mit komplettem Formant-Versagen)
+                    elif _vib_rate is None:
+                        logger.info(
+                            "🎤 §2.9.2 Formant-Failure + F0=%.0f Hz in contralto range "
+                            "→ defaulting to FEMALE (no vibrato data available)",
+                            f0,
+                        )
+                        gender_str = VocalGender.FEMALE
+                        confidence = max(confidence, 0.55)
+
+                if gender_str in (VocalGender.MALE, VocalGender.FEMALE, VocalGender.CHILD):
+                    _contralto_tag = " [CONTRALTO→FEMALE]" if _contralto_detected else ""
+                    logger.info(
+                        "🎤 Robust GenderDetector: %s (confidence=%.2f, F0=%.0f Hz, F1=%.0f, F2=%.0f)%s",
+                        gender_str,
+                        confidence,
+                        f0,
+                        formants[0] if len(formants) > 0 else 0.0,
+                        formants[1] if len(formants) > 1 else 0.0,
+                        _contralto_tag,
+                    )
+                    # §v10.95 Degraded-Material-Guard: bandwidth_loss > 0.8 →
+                    # Formanten unzuverlässig (F1+F2 < 1000 Hz sind Messartefakte).
+                    # F0 ist robuster (tiefe Frequenzen überleben MP3-Kompression besser),
+                    # aber auch nicht perfekt. Statt "unknown": F0-basierte Entscheidung
+                    # mit REDUZIERTER Confidence → konservatives De-Essing.
+                    _bw_loss_gd = float(kwargs.get("bandwidth_loss", 0.0) or 0.0)
+                    if _bw_loss_gd <= 0.0:
+                        _ds = kwargs.get("defect_scores", {}) or {}
+                        _bw_loss_gd = float(_ds.get("bandwidth_loss", 0.0) or 0.0)
+                    _f1 = formants[0] if len(formants) > 0 else 9999.0
+                    _f2 = formants[1] if len(formants) > 1 else 9999.0
+                    if _bw_loss_gd > 0.8 and _f1 < 1000.0 and _f2 < 1000.0:
+                        # Confidence proportional zur verbleibenden Signalqualität
+                        _degraded_confidence = max(0.25, confidence * (1.0 - _bw_loss_gd * 0.6))
+                        logger.warning(
+                            "§v10.95 Gender-Degradation: bw_loss=%.2f F1=%.0f F2=%.0f <1000Hz → "
+                            "Formanten unzuverlässig. F0-basiert: %s (conf %.2f→%.2f)",
+                            _bw_loss_gd, _f1, _f2, gender_str, confidence, _degraded_confidence,
+                        )
+                        # F0-basierte Entscheidung beibehalten, aber Confidence reduziert.
+                        # Phase 19 arbeitet dann mit konservativen, gender-agnostischen Parametern.
+                        self.stats["degradation_uncertainty"] = round(_bw_loss_gd, 2)
+                        self.stats["confidence_raw"] = round(confidence, 3)
+                        self.stats["confidence_adjusted"] = round(_degraded_confidence, 3)
+                        confidence = _degraded_confidence
+                    return gender_str  # type: ignore[no-any-return]
+            except Exception as e:
+                logger.debug("Robust GenderDetector failed (%s) — LPC fallback", e)
+
+        # ── Fallback 1: LPC Formant Tracker (Burg-LPC + scanning F0) ──
+        # §2.8 SOTA: Wenn GenderDetector + pYIN beide versagen (z.B. kein librosa,
+        # kein WORLD, oder UNKNOWN), liefert der LPC-Formant-Tracker eine dritte,
+        # unabhängige Meinung via Burg-LPC-Formanten + gescanntem F0.
         try:
             from backend.core.dsp.lpc_formant_tracker import get_lpc_formant_tracker
 
-            mono = (
-                audio.mean(axis=0)
-                if audio.ndim == 2 and audio.shape[0] <= 2
-                else (audio.mean(axis=1) if audio.ndim == 2 else audio)
+            _lpc_gender = get_lpc_formant_tracker().classify_gender_via_formants(audio, sample_rate)
+            if _lpc_gender != "unknown" and _lpc_gender in ("male", "female", "child"):
+                logger.info("🎤 LPC Formant Gender: %s (Burg-LPC fallback)", _lpc_gender)
+                return _lpc_gender
+        except Exception as _lpc_exc:
+            logger.debug("LPC gender fallback failed: %s", _lpc_exc)
+
+        # ── Fallback 2: Einfache scannende Autocorrelation ──
+        return self._detect_gender_simple(audio, sample_rate)
+
+    def _detect_gender_simple(self, audio: np.ndarray, sample_rate: int) -> str:
+        """
+        Vereinfachte Gender-Detection über scannende F0-Schätzung.
+
+        Scannt durch das Audio in 2s-Fenstern (1s Hop), findet das voiced
+        Segment mit dem stärksten Autokorrelations-Peak und klassifiziert
+        ausschliesslich anhand der Grundfrequenz.
+
+        Ranges:
+        - MALE:   F0 < 150 Hz
+        - FEMALE: F0 150–300 Hz (Contralto 150-180 → prefer FEMALE)
+        - CHILD:  F0 ≥ 300 Hz
+        """
+        if audio.ndim == 2:
+            audio = np.mean(audio, axis=1)
+
+        # Scan through audio: 2s windows, 1s hop, max 12 windows (= 13s Audio)
+        win_samples = sample_rate * 2
+        hop_samples = sample_rate
+        max_windows = min(12, max(1, (len(audio) - win_samples) // hop_samples + 1))
+        best_f0 = 0.0
+        best_peak_height = 0.0
+        for wi in range(max_windows):
+            start = wi * hop_samples
+            if start + win_samples > len(audio):
+                break
+            segment = audio[start : start + win_samples].astype(np.float64)
+            rms = float(np.sqrt(np.mean(segment**2) + 1e-12))
+            if rms < 1e-6:
+                continue  # silence
+            # FFT-based autocorrelation
+            n = len(segment)
+            if _fft_autocorr_19 is not None:
+                autocorr = _fft_autocorr_19(segment)
+            else:
+                _full = signal.correlate(segment, segment, mode="full")
+                autocorr = _full[len(segment) - 1 :]
+            if autocorr[0] == 0.0:
+                continue
+            autocorr = autocorr / autocorr[0]
+            min_lag = max(1, int(sample_rate / 500))
+            max_lag = min(len(autocorr) - 1, int(sample_rate / 70))
+            if max_lag <= min_lag:
+                continue
+            search_range = autocorr[min_lag:max_lag]
+            if len(search_range) < 2:
+                continue
+            peak_idx = int(np.argmax(search_range))
+            peak_height = float(search_range[peak_idx])
+            lag = peak_idx + min_lag
+            f0 = float(sample_rate) / float(lag)
+            if f0 < 70.0 or f0 > 800.0:
+                continue
+            if peak_height > best_peak_height:
+                best_peak_height = peak_height
+                best_f0 = f0
+
+        if best_f0 <= 0.0:
+            return VocalGender.FEMALE  # kein voiced segment → neutraler Fallback
+
+        # Klassifiziere basierend auf F0
+        _CONTRALTO_ZONE_LOW = 150.0
+        _CONTRALTO_ZONE_HIGH = 180.0
+        if best_f0 < 150:
+            return VocalGender.MALE
+        elif best_f0 < 300:
+            if _CONTRALTO_ZONE_LOW <= best_f0 <= _CONTRALTO_ZONE_HIGH:
+                logger.info(
+                    "🎤 Simple GenderDetector: F0=%.0f Hz → FEMALE (contralto zone 150–180 Hz; "
+                    "if this is actually a male voice, use --gender male)",
+                    best_f0,
+                )
+            return VocalGender.FEMALE
+        else:
+            return VocalGender.CHILD
+
+    def _detect_gender_timeline(self, audio: np.ndarray, sample_rate: int) -> list[dict[str, object]]:
+        """Erkennt ALLE Gesangsstimmen im Song mit Zeitsegmenten.
+
+        Statt eines globalen 'male'/'female'/'child' liefert diese Methode
+        eine Timeline mit (t_start, t_end, gender, confidence, f0) pro
+        erkannter Stimme. Duette, Backing-Vocals, Männer-/Frauen-Passagen
+        werden als separate Segmente klassifiziert.
+
+        Algorithmus:
+          1. pYIN F0 + Voicing → voiced Segmente extrahieren
+          2. Pro Segment: F0-Median, Vibrato-Rate, Vibrato-Tiefe
+          3. Gender-Klassifikation pro Segment
+          4. Benachbarte Segmente gleichen Genders mergen
+          5. Timeline zurückgeben
+
+        Returns:
+            [{t_start_s, t_end_s, gender, confidence, f0_hz, vibrato_hz,
+              vibrato_cents}, ...]
+        """
+        if audio.ndim == 2:
+            mono = np.mean(audio, axis=1).astype(np.float32)
+        else:
+            mono = audio.astype(np.float32)
+
+        # OOM-Guard: max 60 s für pYIN
+        mono = mono[: min(len(mono), sample_rate * 60)]
+
+        timeline: list[dict[str, object]] = []
+
+        try:
+            import librosa as _librosa
+
+            _f0, _voiced_flag, _voiced_prob = _librosa.pyin(
+                mono,
+                fmin=60.0,
+                fmax=700.0,
+                sr=sample_rate,
+                frame_length=2048,
+                win_length=1024,
             )
-            return get_lpc_formant_tracker().classify_gender_via_formants(mono, sample_rate)
-        except Exception:
-            return "female"
+            if _f0 is None or len(_f0) < 10:
+                return timeline
 
-    def _detect_gender_timeline(self, audio, sample_rate, hop_length=256):
-        """Time-varying gender detection (returns empty on fallback)."""
-        return []
+            hop = 256  # librosa default pyin hop
+            _f0_arr = np.asarray(_f0, dtype=np.float64)
+            _vp_arr = np.asarray(_voiced_prob, dtype=np.float64)
 
-    def _process_per_gender_segments(self, audio, sample_rate, gender_segments, **kwargs):
-        """Segment-based gender processing (passthrough on fallback)."""
-        return audio
+            # ── 1. Voiced Segmente extrahieren ───────────────────────
+            voiced_mask = _vp_arr > 0.6
+            segments = _find_contiguous_segments(voiced_mask, hop, sample_rate)
+
+            if not segments:
+                return timeline
+
+            # ── 2. Pro Segment klassifizieren ────────────────────────
+            for seg_start_s, seg_end_s in segments:
+                f_start = max(0, int(seg_start_s * sample_rate / hop))
+                f_end = min(len(_f0_arr), int(seg_end_s * sample_rate / hop) + 1)
+                if f_end - f_start < 5:
+                    continue
+
+                seg_f0 = _f0_arr[f_start:f_end][_vp_arr[f_start:f_end] > 0.7]
+                if len(seg_f0) < 10:
+                    continue
+
+                f0_median = float(np.median(seg_f0))
+
+                # Vibrato im Segment
+                vib_rate, vib_depth = _estimate_vibrato_from_pyin(
+                    _f0_arr[f_start:f_end], _vp_arr[f_start:f_end], sample_rate, hop
+                )
+
+                # Spectral Tilt pro Segment (♀ flacher, ♂ steiler)
+                _s0 = int(seg_start_s * sample_rate)
+                _s1 = int(seg_end_s * sample_rate)
+                seg_audio = mono[_s0:_s1] if _s1 > _s0 else np.array([], dtype=np.float32)
+                seg_tilt = _compute_spectral_tilt(seg_audio, sample_rate) if len(seg_audio) > 0 else None
+
+                # Gender-Klassifikation (SOTA Multi-Feature Scoring)
+                gender, confidence = _classify_gender_segment(
+                    f0_median,
+                    vib_rate,
+                    vib_depth,
+                    spectral_tilt=seg_tilt,
+                )
+
+                timeline.append(
+                    {
+                        "t_start_s": seg_start_s,
+                        "t_end_s": seg_end_s,
+                        "gender": gender,
+                        "confidence": confidence,
+                        "f0_hz": f0_median,
+                        "vibrato_hz": vib_rate,
+                        "vibrato_cents": vib_depth,
+                        "spectral_tilt": seg_tilt,
+                    }
+                )
+
+        except Exception as exc:
+            logger.debug("GenderTimeline failed (%s)", exc)
+            return timeline
+
+        # ── 3. Benachbarte Segmente gleichen Genders mergen ──────────
+        timeline = _merge_adjacent_gender_segments(timeline)
+
+        # ── 4. Statistiken loggen ────────────────────────────────────
+        if timeline:
+            genders_found = {seg["gender"] for seg in timeline}
+            total_s = sum(float(seg["t_end_s"]) - float(seg["t_start_s"]) for seg in timeline)
+            gender_summary = ", ".join(
+                f"{g}={sum(1 for s in timeline if s['gender'] == g)}" for g in sorted(genders_found)
+            )
+            logger.info(
+                "🎤 GenderTimeline: %d Segmente, %.1fs voiced, genders=[%s]",
+                len(timeline),
+                total_s,
+                gender_summary,
+            )
+
+        return timeline
+
+    def _process_per_gender_segments(
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        gender_timeline: list[dict[str, object]],
+        **kwargs: Any,
+    ) -> np.ndarray:
+        """Verarbeitet Audio in Gender-spezifischen Segmenten mit Crossfades."""
+        if not gender_timeline:
+            return audio
+        is_stereo = audio.ndim == 2
+        n_samples = audio.shape[1] if is_stereo else len(audio)
+        output = np.zeros_like(audio, dtype=np.float32)
+        weight_accum = np.zeros(n_samples, dtype=np.float32)
+        fade = int(0.005 * sample_rate)
+
+        for i, seg in enumerate(gender_timeline):
+            gender = str(seg["gender"])
+            if gender not in VOCAL_PROFILES:
+                continue
+            t0, t1 = float(seg["t_start_s"]), float(seg["t_end_s"])
+            s0, s1 = max(0, int(t0 * sample_rate)), min(n_samples, int(t1 * sample_rate))
+            if s1 <= s0:
+                continue
+
+            _saved_profile = dict(self.vocal_profile)
+            _saved_gender = self.gender
+            self.vocal_profile = VOCAL_PROFILES[gender]
+            self.gender = gender
+
+            try:
+                seg_audio = audio[:, s0:s1] if is_stereo else audio[s0:s1]
+                if is_stereo:
+                    dm, _ = self._process_channel_multiband_gender_aware(seg_audio[0], sample_rate, **kwargs)
+                    ds, _ = self._process_channel_multiband_gender_aware(seg_audio[1], sample_rate, **kwargs)
+                    seg_proc = np.stack([dm, ds], axis=0)
+                else:
+                    seg_proc, _ = self._process_channel_multiband_gender_aware(seg_audio, sample_rate, **kwargs)
+
+                _fp = self.vocal_profile.get("formant_protect", 0.85)
+                _fr = self.vocal_profile.get("formant_range", (300, 2000))
+                seg_proc = self._apply_formant_preservation(
+                    seg_audio,
+                    seg_proc,
+                    sample_rate,
+                    float(_fr[0]),
+                    float(_fr[1]),
+                    float(_fp),
+                )
+
+                fl = min(fade, s1 - s0)
+                win = np.ones(s1 - s0, dtype=np.float32)
+                if i > 0 and fl > 0:
+                    win[:fl] = np.hanning(fl * 2)[:fl]
+                if i < len(gender_timeline) - 1 and fl > 0:
+                    win[-fl:] = np.hanning(fl * 2)[fl:]
+
+                if is_stereo:
+                    output[:, s0:s1] += seg_proc * win[np.newaxis, :]
+                else:
+                    output[s0:s1] += seg_proc * win
+                weight_accum[s0:s1] += win
+            finally:
+                self.vocal_profile = _saved_profile
+                self.gender = _saved_gender
+
+        valid = weight_accum > 0
+        if is_stereo:
+            output[:, valid] /= weight_accum[valid][np.newaxis, :]
+        else:
+            output[valid] /= weight_accum[valid]
+        gaps = weight_accum <= 0
+        if np.any(gaps):
+            if is_stereo:
+                output[:, gaps] = audio[:, gaps]
+            else:
+                output[gaps] = audio[gaps]
+        return np.clip(output, -1.0, 1.0).astype(np.float32)
 
     def _apply_formant_preservation(
-        self, original, processed, sample_rate, formant_low, formant_high, protection_factor
-    ):
-        """Preserve formant regions by blending original back."""
-        return processed
+        self,
+        original: np.ndarray,
+        processed: np.ndarray,
+        sample_rate: int,
+        formant_low: float,
+        formant_high: float,
+        protection_factor: float,
+    ) -> np.ndarray:
+        """
+        Schützt Formant-Bereiche durch Blend-Back mit Original.
+
+        🎯 Musikalische Ziele:
+        - Authentizität: Erhält Stimmidentität via Formanten
+        - Wärme: Schützt Mid-Range Resonanz
+        - Bass-Kraft: Schützt Chest-Resonance bei MALE
+
+        Args:
+            original: Original-Audio
+            processed: De-esstes Audio
+            formant_low: Untere Formant-Frequenz (Hz)
+            formant_high: Obere Formant-Frequenz (Hz)
+            protection_factor: 0.0-1.0 (0=kein Schutz, 1=voller Schutz)
+        """
+        if protection_factor < 0.1:
+            return processed
+
+        nyquist = sample_rate / 2.0
+        low = max(100, formant_low) / nyquist
+        high = min(formant_high, nyquist * 0.95) / nyquist
+
+        try:
+            # sosfiltfilt (zero-phase) required: formant bands are recombined additively;
+            # causal sosfilt would introduce group delay → timing skew
+            # in formant_protected − formant_processed (§2.51, V11)
+            sos = signal.butter(4, [low, high], btype="band", output="sos")
+            formant_original = signal.sosfiltfilt(sos, original)
+            formant_processed = signal.sosfiltfilt(sos, processed)
+
+            # Blend: mehr Original für höheren Schutz
+            formant_protected = protection_factor * formant_original + (1 - protection_factor) * formant_processed
+
+            # Ersetze Formant-Bereich in processed
+            result = processed.copy()
+            result += formant_protected - formant_processed
+
+        except Exception as e:
+            logger.warning("Formant preservation failed: %s", e)
+            return processed
+
+        return result
+
+    def get_metadata(self) -> PhaseMetadata:
+        """Gibt Metadaten für Phase 19 v4.0 zurück."""
+        return PhaseMetadata(
+            phase_id="phase_19_de_esser",
+            name="World-Class Gender-Aware De-Esser v4.0 Professional",
+            category=PhaseCategory.DYNAMICS,
+            priority=4,
+            dependencies=["04_eq_correction"],
+            estimated_time_factor=0.06,  # Schneller De-Esser (Aurik 10.0.0 disabled)
+            version="4.1.0",
+            memory_requirement_mb=50,  # Moderater Speicher (De-Esser only)
+            is_cpu_intensive=True,
+            is_io_intensive=False,
+            quality_impact=0.92,  # Weltklasse De-Esser mit Gender-Awareness & Threshold-Fix
+            description=(
+                "World-Class Gender-Aware De-Esser v4.0: Hochqualitativer Multi-Band De-Esser mit "
+                "gender-adaptiven Frequenzbereichen (female/male/child/auto), Threshold-Fix (band_rms), "
+                "und 7 Musikalischen Zielen (Brillanz, Wärme, Natürlichkeit, Authentizität, Emotionalität, "
+                "Transparenz, Bass-Kraft). Features: F0-basierte Gender-Detection, Side-Chain Detection, "
+                "Look-ahead Buffering (5ms), Soft-Knee Compression (6dB), Formant Lock (0.85), "
+                "Intelligibility Protection, Chest Resonance Protection (male vocals), Gender-adaptive "
+                "Sibilance Bands. Quality: 0.92 (weltklasse de-essing), Performance: ~0.6× realtime."
+            ),
+        )
+
+
 
 
 def _estimate_vibrato_from_pyin(
@@ -2789,541 +3535,6 @@ def _build_union_vocal_profile(genders: list[str]) -> dict:
         "harmonics_preserve": True,
         "breath_enhance": True,
     }
-
-    def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int) -> str:
-        """
-        Gender-Detection: Robuster Detektor (F0 + Formanten + WORLD) bevorzugt,
-        Fallback auf einfache Autocorrelation.
-
-        §2.11: Librosa pYIN F0-Integration — pYIN (Mauch & Dixon 2014) liefert
-        per-frame F0 mit Voicing-Confidence und ist speziell für polyphones
-        Material und Vibrato robust. Die mediane F0 über voiced frames ersetzt
-        die einfache Autocorrelation-basierte Schätzung für präzisere Gender-
-        Klassifikation, besonders bei tiefen Frauenstimmen.
-        """
-        mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio
-
-        # ── §2.11 Librosa pYIN F0 (wenn verfügbar) ─────────────────
-        _pyin_f0: float | None = None
-        try:
-            import librosa as _librosa
-
-            _mono_f32 = mono.astype(np.float32)[: min(len(mono), sample_rate * 10)]
-            _f0_pyin, _voiced_flag, _voiced_prob = _librosa.pyin(
-                _mono_f32,
-                fmin=60.0,
-                fmax=700.0,
-                sr=sample_rate,
-                frame_length=2048,
-                win_length=1024,
-            )
-            # Median über voiced frames (voiced_prob > 0.8)
-            _voiced_f0 = _f0_pyin[_voiced_prob > 0.8]
-            if len(_voiced_f0) > 10:
-                _pyin_f0 = float(np.median(_voiced_f0))
-                logger.debug(
-                    "🎤 pYIN F0: %.0f Hz (median over %d voiced frames)",
-                    _pyin_f0,
-                    len(_voiced_f0),
-                )
-        except Exception as _pyin_exc:
-            logger.debug("pYIN F0 failed (%s) — using autocorrelation", _pyin_exc)
-
-        # ── Primär: Robuster Multi-Feature GenderDetector (§2.8) ──
-        if _HAS_ROBUST_GENDER and _RobustGenderDetector is not None:
-            try:
-                detector = _RobustGenderDetector(sample_rate=sample_rate)
-                chars = detector.detect(mono)
-
-                # §2.11: Wenn pYIN-F0 verfügbar und signifikant anders als
-                # autocorrelation-F0 → pYIN bevorzugen (robuster gegen Vibrato,
-                # Rauschen, polyphones Material). pYIN ist ein probabilistisches
-                # Modell mit Voicing-Confidence; Autocorrelation ist anfällig
-                # für Oktav-Fehler bei tiefen Stimmen.
-                if _pyin_f0 is not None and _pyin_f0 > 0:
-                    _ac_f0 = chars.fundamental_freq
-                    _f0_delta = abs(_pyin_f0 - _ac_f0) / max(_ac_f0, 1.0)
-                    if _f0_delta > 0.15:  # >15% Abweichung → pYIN bevorzugen
-                        logger.debug(
-                            "🎤 pYIN F0 override: %.0f Hz vs autocorr %.0f Hz (delta=%.0f%%)",
-                            _pyin_f0,
-                            _ac_f0,
-                            _f0_delta * 100,
-                        )
-                        # Re-klassifiziere mit pYIN-F0
-                        f0 = _pyin_f0
-                        formants = chars.formants
-                        # Einfache Klassifikation mit pYIN-F0
-                        if f0 < 150:
-                            gender_str = VocalGender.MALE
-                        elif f0 < 300:
-                            gender_str = VocalGender.FEMALE
-                        else:
-                            gender_str = VocalGender.CHILD
-                        confidence = chars.confidence
-                    else:
-                        gender_str = chars.gender.value
-                        confidence = chars.confidence
-                        f0 = chars.fundamental_freq
-                        formants = chars.formants
-                else:
-                    gender_str = chars.gender.value
-                    confidence = chars.confidence
-                    f0 = chars.fundamental_freq
-                    formants = chars.formants
-
-                # ── §2.9 Contralto-Erkennung ─────────────────────────────
-                # Eine Kontra-Altistin (tiefe Frauenstimme, z. B. Tracy Chapman,
-                # Cher, Nina Simone) hat F0 im männlichen Bereich (150–180 Hz),
-                # aber weibliche Formanten (kürzerer Vokaltrakt → höheres F1/F2).
-                # Der Classifier gewichtet F0 und Formanten gleich → F0=160 Hz
-                # drückt das Ergebnis oft Richtung "male", obwohl die Formanten
-                # eindeutig weiblich sind.
-                #
-                # §2.9.1: Formanten sind das anatomisch härtere Merkmal als F0
-                # (Vokaltrakt-Länge ist konstant; F0 variiert mit Tonhöhe).
-                # Daher: Kein Confidence-Gate mehr. Wenn F1 UND F2 weiblich-typisch
-                # sind und F0 im Überlappungsbereich liegt → override auf FEMALE.
-                _CONTRALTO_F0_LOW = 140.0
-                _CONTRALTO_F0_HIGH = 220.0  # bis A3 — deckt Alt/Mezzo ab
-                _FEMALE_F1 = (310.0, 860.0)
-                _FEMALE_F2 = (920.0, 2790.0)
-                _contralto_detected = False
-                if (
-                    gender_str == VocalGender.MALE
-                    and _CONTRALTO_F0_LOW <= f0 <= _CONTRALTO_F0_HIGH
-                    and len(formants) >= 2
-                ):
-                    f1_in_female = _FEMALE_F1[0] <= formants[0] <= _FEMALE_F1[1]
-                    f2_in_female = _FEMALE_F2[0] <= formants[1] <= _FEMALE_F2[1]
-                    if f1_in_female and f2_in_female:
-                        _contralto_detected = True
-                        logger.warning(
-                            "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz, "
-                            "confidence=%.2f) but formants are female-typical "
-                            "(F1=%.0f Hz in [%.0f–%.0f], F2=%.0f Hz in [%.0f–%.0f]). "
-                            "This is likely a deep female voice (contralto). "
-                            "→ Overriding to FEMALE. Use --gender male to force male.",
-                            f0,
-                            confidence,
-                            formants[0],
-                            _FEMALE_F1[0],
-                            _FEMALE_F1[1],
-                            formants[1],
-                            _FEMALE_F2[0],
-                            _FEMALE_F2[1],
-                        )
-                        gender_str = VocalGender.FEMALE
-                        confidence = max(confidence, 0.65)  # Mindest-Confidence für contralto
-
-                # §2.9.2 Contralto-Fallback: Wenn Formanten fehlgeschlagen sind
-                # (F1≈0), aber F0 im weiblichen Überlappungsbereich liegt,
-                # Vibrato-Analyse aus pYIN-F0-Zeitreihe zur Entscheidung nutzen.
-                # Vibrato-Rate: ♀ 4.8–5.8 Hz, ♂ 3.5–4.5 Hz
-                # Vibrato-Tiefe: ♀ 100–250 cents, ♂ 40–100 cents
-                _formants_failed = len(formants) < 2 or (formants[0] < 50.0 and formants[1] < 50.0)
-                if (
-                    gender_str == VocalGender.MALE
-                    and _CONTRALTO_F0_LOW <= f0 <= _CONTRALTO_F0_HIGH
-                    and _formants_failed
-                    and not _contralto_detected
-                ):
-                    _pyin_available = "_f0_pyin" in locals() and "_voiced_prob" in locals()
-                    _vib_rate, _vib_depth = _estimate_vibrato_from_pyin(
-                        _f0_pyin if _pyin_available else None,
-                        _voiced_prob if _pyin_available else None,
-                        sample_rate,
-                    )
-                    # Female-typical vibrato: rate ≥ 4.6 Hz AND depth ≥ 100 cents
-                    if _vib_rate is not None and _vib_depth is not None:
-                        _is_female_vibrato = _vib_rate >= 4.6 and _vib_depth >= 100.0
-                        logger.info(
-                            "🎤 §2.9.2 Vibrato-Analyse: rate=%.1f Hz depth=%.0f cents "
-                            "→ %s (F0=%.0f Hz, formants failed)",
-                            _vib_rate,
-                            _vib_depth,
-                            "FEMALE-TYPICAL → override" if _is_female_vibrato else "ambiguous",
-                            f0,
-                        )
-                        if _is_female_vibrato:
-                            _contralto_detected = True
-                            gender_str = VocalGender.FEMALE
-                            confidence = max(confidence, 0.60)
-                    # Auch ohne Vibrato-Daten: F0 im Contralto-Bereich + Formant-Failure
-                    # → statistisch eher female (tiefe Frauenstimme wahrscheinlicher als
-                    # hoher Tenor mit komplettem Formant-Versagen)
-                    elif _vib_rate is None:
-                        logger.info(
-                            "🎤 §2.9.2 Formant-Failure + F0=%.0f Hz in contralto range "
-                            "→ defaulting to FEMALE (no vibrato data available)",
-                            f0,
-                        )
-                        gender_str = VocalGender.FEMALE
-                        confidence = max(confidence, 0.55)
-
-                if gender_str in (VocalGender.MALE, VocalGender.FEMALE, VocalGender.CHILD):
-                    _contralto_tag = " [CONTRALTO→FEMALE]" if _contralto_detected else ""
-                    logger.info(
-                        "🎤 Robust GenderDetector: %s (confidence=%.2f, F0=%.0f Hz, F1=%.0f, F2=%.0f)%s",
-                        gender_str,
-                        confidence,
-                        f0,
-                        formants[0] if len(formants) > 0 else 0.0,
-                        formants[1] if len(formants) > 1 else 0.0,
-                        _contralto_tag,
-                    )
-                    return gender_str  # type: ignore[no-any-return]
-            except Exception as e:
-                logger.debug("Robust GenderDetector failed (%s) — simple fallback", e)
-
-        # ── Fallback: Einfache Autocorrelation ──
-        return self._detect_gender_simple(audio, sample_rate)
-
-    def _detect_gender_simple(self, audio: np.ndarray, sample_rate: int) -> str:
-        """
-        Vereinfachte Gender-Detection über Fundamental-Frequenz-Schätzung.
-
-        Ranges:
-        - MALE: 80-180 Hz (F0 ~100 Hz)
-        - FEMALE: 160-300 Hz (F0 ~220 Hz)
-        - CHILD: 300-450 Hz (F0 ~330 Hz)
-        """
-        if audio.ndim == 2:
-            audio = np.mean(audio, axis=1)
-
-        # OOM-Guard: cap to 5 s — full-audio autocorrelation is O(N²) memory
-        max_samples = sample_rate * 5
-        if len(audio) > max_samples:
-            audio = audio[:max_samples]
-
-        # Autocorrelation für F0-Schätzung — FFT-based O(N log N)
-        n = len(audio)
-        if _fft_autocorr_19 is None:
-            _autocorr_full = signal.correlate(audio, audio, mode="full")
-            autocorr = _autocorr_full[len(audio) - 1 :]
-        else:
-            autocorr = _fft_autocorr_19(audio)
-        # Guard: autocorr[0] == 0 bei Stille => division by zero
-        if autocorr[0] == 0.0:
-            return VocalGender.FEMALE  # Stille: neutraler Fallback
-        autocorr = autocorr / autocorr[0]  # Normalize
-
-        # Suche nach Peak im F0-Bereich (80-450 Hz)
-        min_lag = int(sample_rate / 450)  # 450 Hz (child upper)
-        max_lag = int(sample_rate / 80)  # 80 Hz (male lower)
-
-        if max_lag >= n:
-            # Fallback: Female als default
-            return VocalGender.FEMALE
-
-        # Finde höchsten Peak
-        search_range = autocorr[min_lag:max_lag]
-        if len(search_range) == 0:
-            return VocalGender.FEMALE
-
-        peak_idx = np.argmax(search_range) + min_lag
-        f0_estimate = sample_rate / peak_idx
-
-        # Klassifiziere basierend auf F0
-        # Schwelle Child 300 Hz (nicht 250): Frauen haben F0 bis 255 Hz (§2.8)
-        # §2.9: F0-Schwelle auf 150 Hz gesenkt (vorher 160 Hz) — Kontra-Altistinnen
-        # (tiefe Frauenstimme) haben F0 im Bereich 150–180 Hz und würden sonst
-        # fälschlich als "male" klassifiziert. Ohne Formant-Information (Simple-
-        # Fallback) ist F0 das einzige Merkmal → prefer female im Grenzbereich.
-        _CONTRALTO_ZONE_LOW = 150.0
-        _CONTRALTO_ZONE_HIGH = 180.0
-        if f0_estimate < 150:
-            return VocalGender.MALE
-        elif f0_estimate < 300:
-            if _CONTRALTO_ZONE_LOW <= f0_estimate <= _CONTRALTO_ZONE_HIGH:
-                logger.info(
-                    "🎤 Simple GenderDetector: F0=%.0f Hz → FEMALE (contralto zone 150–180 Hz; "
-                    "if this is actually a male voice, use --gender male)",
-                    f0_estimate,
-                )
-            return VocalGender.FEMALE
-        else:
-            return VocalGender.CHILD
-
-    def _detect_gender_timeline(self, audio: np.ndarray, sample_rate: int) -> list[dict[str, object]]:
-        """Erkennt ALLE Gesangsstimmen im Song mit Zeitsegmenten.
-
-        Statt eines globalen 'male'/'female'/'child' liefert diese Methode
-        eine Timeline mit (t_start, t_end, gender, confidence, f0) pro
-        erkannter Stimme. Duette, Backing-Vocals, Männer-/Frauen-Passagen
-        werden als separate Segmente klassifiziert.
-
-        Algorithmus:
-          1. pYIN F0 + Voicing → voiced Segmente extrahieren
-          2. Pro Segment: F0-Median, Vibrato-Rate, Vibrato-Tiefe
-          3. Gender-Klassifikation pro Segment
-          4. Benachbarte Segmente gleichen Genders mergen
-          5. Timeline zurückgeben
-
-        Returns:
-            [{t_start_s, t_end_s, gender, confidence, f0_hz, vibrato_hz,
-              vibrato_cents}, ...]
-        """
-        if audio.ndim == 2:
-            mono = np.mean(audio, axis=1).astype(np.float32)
-        else:
-            mono = audio.astype(np.float32)
-
-        # OOM-Guard: max 60 s für pYIN
-        mono = mono[: min(len(mono), sample_rate * 60)]
-
-        timeline: list[dict[str, object]] = []
-
-        try:
-            import librosa as _librosa
-
-            _f0, _voiced_flag, _voiced_prob = _librosa.pyin(
-                mono,
-                fmin=60.0,
-                fmax=700.0,
-                sr=sample_rate,
-                frame_length=2048,
-                win_length=1024,
-            )
-            if _f0 is None or len(_f0) < 10:
-                return timeline
-
-            hop = 256  # librosa default pyin hop
-            _f0_arr = np.asarray(_f0, dtype=np.float64)
-            _vp_arr = np.asarray(_voiced_prob, dtype=np.float64)
-
-            # ── 1. Voiced Segmente extrahieren ───────────────────────
-            voiced_mask = _vp_arr > 0.6
-            segments = _find_contiguous_segments(voiced_mask, hop, sample_rate)
-
-            if not segments:
-                return timeline
-
-            # ── 2. Pro Segment klassifizieren ────────────────────────
-            for seg_start_s, seg_end_s in segments:
-                f_start = max(0, int(seg_start_s * sample_rate / hop))
-                f_end = min(len(_f0_arr), int(seg_end_s * sample_rate / hop) + 1)
-                if f_end - f_start < 5:
-                    continue
-
-                seg_f0 = _f0_arr[f_start:f_end][_vp_arr[f_start:f_end] > 0.7]
-                if len(seg_f0) < 10:
-                    continue
-
-                f0_median = float(np.median(seg_f0))
-
-                # Vibrato im Segment
-                vib_rate, vib_depth = _estimate_vibrato_from_pyin(
-                    _f0_arr[f_start:f_end], _vp_arr[f_start:f_end], sample_rate, hop
-                )
-
-                # Spectral Tilt pro Segment (♀ flacher, ♂ steiler)
-                _s0 = int(seg_start_s * sample_rate)
-                _s1 = int(seg_end_s * sample_rate)
-                seg_audio = mono[_s0:_s1] if _s1 > _s0 else np.array([], dtype=np.float32)
-                seg_tilt = _compute_spectral_tilt(seg_audio, sample_rate) if len(seg_audio) > 0 else None
-
-                # Gender-Klassifikation (SOTA Multi-Feature Scoring)
-                gender, confidence = _classify_gender_segment(
-                    f0_median,
-                    vib_rate,
-                    vib_depth,
-                    spectral_tilt=seg_tilt,
-                )
-
-                timeline.append(
-                    {
-                        "t_start_s": seg_start_s,
-                        "t_end_s": seg_end_s,
-                        "gender": gender,
-                        "confidence": confidence,
-                        "f0_hz": f0_median,
-                        "vibrato_hz": vib_rate,
-                        "vibrato_cents": vib_depth,
-                        "spectral_tilt": seg_tilt,
-                    }
-                )
-
-        except Exception as exc:
-            logger.debug("GenderTimeline failed (%s)", exc)
-            return timeline
-
-        # ── 3. Benachbarte Segmente gleichen Genders mergen ──────────
-        timeline = _merge_adjacent_gender_segments(timeline)
-
-        # ── 4. Statistiken loggen ────────────────────────────────────
-        if timeline:
-            genders_found = {seg["gender"] for seg in timeline}
-            total_s = sum(float(seg["t_end_s"]) - float(seg["t_start_s"]) for seg in timeline)
-            gender_summary = ", ".join(
-                f"{g}={sum(1 for s in timeline if s['gender'] == g)}" for g in sorted(genders_found)
-            )
-            logger.info(
-                "🎤 GenderTimeline: %d Segmente, %.1fs voiced, genders=[%s]",
-                len(timeline),
-                total_s,
-                gender_summary,
-            )
-
-        return timeline
-
-    def _process_per_gender_segments(
-        self,
-        audio: np.ndarray,
-        sample_rate: int,
-        gender_timeline: list[dict[str, object]],
-        **kwargs: Any,
-    ) -> np.ndarray:
-        """Verarbeitet Audio in Gender-spezifischen Segmenten mit Crossfades."""
-        if not gender_timeline:
-            return audio
-        is_stereo = audio.ndim == 2
-        n_samples = audio.shape[1] if is_stereo else len(audio)
-        output = np.zeros_like(audio, dtype=np.float32)
-        weight_accum = np.zeros(n_samples, dtype=np.float32)
-        fade = int(0.005 * sample_rate)
-
-        for i, seg in enumerate(gender_timeline):
-            gender = str(seg["gender"])
-            if gender not in VOCAL_PROFILES:
-                continue
-            t0, t1 = float(seg["t_start_s"]), float(seg["t_end_s"])
-            s0, s1 = max(0, int(t0 * sample_rate)), min(n_samples, int(t1 * sample_rate))
-            if s1 <= s0:
-                continue
-
-            _saved_profile = dict(self.vocal_profile)
-            _saved_gender = self.gender
-            self.vocal_profile = VOCAL_PROFILES[gender]
-            self.gender = gender
-
-            try:
-                seg_audio = audio[:, s0:s1] if is_stereo else audio[s0:s1]
-                if is_stereo:
-                    dm, _ = self._process_channel_multiband_gender_aware(seg_audio[0], sample_rate, **kwargs)
-                    ds, _ = self._process_channel_multiband_gender_aware(seg_audio[1], sample_rate, **kwargs)
-                    seg_proc = np.stack([dm, ds], axis=0)
-                else:
-                    seg_proc, _ = self._process_channel_multiband_gender_aware(seg_audio, sample_rate, **kwargs)
-
-                _fp = self.vocal_profile.get("formant_protect", 0.85)
-                _fr = self.vocal_profile.get("formant_range", (300, 2000))
-                seg_proc = self._apply_formant_preservation(
-                    seg_audio,
-                    seg_proc,
-                    sample_rate,
-                    float(_fr[0]),
-                    float(_fr[1]),
-                    float(_fp),
-                )
-
-                fl = min(fade, s1 - s0)
-                win = np.ones(s1 - s0, dtype=np.float32)
-                if i > 0 and fl > 0:
-                    win[:fl] = np.hanning(fl * 2)[:fl]
-                if i < len(gender_timeline) - 1 and fl > 0:
-                    win[-fl:] = np.hanning(fl * 2)[fl:]
-
-                if is_stereo:
-                    output[:, s0:s1] += seg_proc * win[np.newaxis, :]
-                else:
-                    output[s0:s1] += seg_proc * win
-                weight_accum[s0:s1] += win
-            finally:
-                self.vocal_profile = _saved_profile
-                self.gender = _saved_gender
-
-        valid = weight_accum > 0
-        if is_stereo:
-            output[:, valid] /= weight_accum[valid][np.newaxis, :]
-        else:
-            output[valid] /= weight_accum[valid]
-        gaps = weight_accum <= 0
-        if np.any(gaps):
-            if is_stereo:
-                output[:, gaps] = audio[:, gaps]
-            else:
-                output[gaps] = audio[gaps]
-        return np.clip(output, -1.0, 1.0).astype(np.float32)
-
-    def _apply_formant_preservation(
-        self,
-        original: np.ndarray,
-        processed: np.ndarray,
-        sample_rate: int,
-        formant_low: float,
-        formant_high: float,
-        protection_factor: float,
-    ) -> np.ndarray:
-        """
-        Schützt Formant-Bereiche durch Blend-Back mit Original.
-
-        🎯 Musikalische Ziele:
-        - Authentizität: Erhält Stimmidentität via Formanten
-        - Wärme: Schützt Mid-Range Resonanz
-        - Bass-Kraft: Schützt Chest-Resonance bei MALE
-
-        Args:
-            original: Original-Audio
-            processed: De-esstes Audio
-            formant_low: Untere Formant-Frequenz (Hz)
-            formant_high: Obere Formant-Frequenz (Hz)
-            protection_factor: 0.0-1.0 (0=kein Schutz, 1=voller Schutz)
-        """
-        if protection_factor < 0.1:
-            return processed
-
-        nyquist = sample_rate / 2.0
-        low = max(100, formant_low) / nyquist
-        high = min(formant_high, nyquist * 0.95) / nyquist
-
-        try:
-            # sosfiltfilt (zero-phase) required: formant bands are recombined additively;
-            # causal sosfilt would introduce group delay → timing skew
-            # in formant_protected − formant_processed (§2.51, V11)
-            sos = signal.butter(4, [low, high], btype="band", output="sos")
-            formant_original = signal.sosfiltfilt(sos, original)
-            formant_processed = signal.sosfiltfilt(sos, processed)
-
-            # Blend: mehr Original für höheren Schutz
-            formant_protected = protection_factor * formant_original + (1 - protection_factor) * formant_processed
-
-            # Ersetze Formant-Bereich in processed
-            result = processed.copy()
-            result += formant_protected - formant_processed
-
-        except Exception as e:
-            logger.warning("Formant preservation failed: %s", e)
-            return processed
-
-        return result
-
-    def get_metadata(self) -> PhaseMetadata:
-        """Gibt Metadaten für Phase 19 v4.0 zurück."""
-        return PhaseMetadata(
-            phase_id="phase_19_de_esser",
-            name="World-Class Gender-Aware De-Esser v4.0 Professional",
-            category=PhaseCategory.DYNAMICS,
-            priority=4,
-            dependencies=["04_eq_correction"],
-            estimated_time_factor=0.06,  # Schneller De-Esser (Aurik 10.0.0 disabled)
-            version="4.1.0",
-            memory_requirement_mb=50,  # Moderater Speicher (De-Esser only)
-            is_cpu_intensive=True,
-            is_io_intensive=False,
-            quality_impact=0.92,  # Weltklasse De-Esser mit Gender-Awareness & Threshold-Fix
-            description=(
-                "World-Class Gender-Aware De-Esser v4.0: Hochqualitativer Multi-Band De-Esser mit "
-                "gender-adaptiven Frequenzbereichen (female/male/child/auto), Threshold-Fix (band_rms), "
-                "und 7 Musikalischen Zielen (Brillanz, Wärme, Natürlichkeit, Authentizität, Emotionalität, "
-                "Transparenz, Bass-Kraft). Features: F0-basierte Gender-Detection, Side-Chain Detection, "
-                "Look-ahead Buffering (5ms), Soft-Knee Compression (6dB), Formant Lock (0.85), "
-                "Intelligibility Protection, Chest Resonance Protection (male vocals), Gender-adaptive "
-                "Sibilance Bands. Quality: 0.92 (weltklasse de-essing), Performance: ~0.6× realtime."
-            ),
-        )
-
-
 # §FIX: get_metadata ist als Modul-Level-Funktion definiert (außerhalb der Klasse).
 # Monkey-Patch in die Klasse, damit abstractmethod-Constraint erfüllt ist.
 

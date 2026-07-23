@@ -141,12 +141,13 @@ class DoNoHarmGuardian:
             self._input_snapshot.rms_dbfs,
         )
 
-    def evaluate(self, output_audio: np.ndarray, sr: int) -> GuardianVerdict:
+    def evaluate(self, output_audio: np.ndarray, sr: int, material: str = "unknown") -> GuardianVerdict:
         """Vergleicht Output mit Input und entscheidet: passed oder nicht.
 
         Args:
             output_audio: Das von der Pipeline verarbeitete Audio.
             sr: Sample-Rate.
+            material: Materialtyp (cassette, reel_tape, etc.) für adaptive Schwellwerte.
 
         Returns:
             GuardianVerdict mit passed=True wenn alle Metriken ok sind.
@@ -167,10 +168,12 @@ class DoNoHarmGuardian:
         if _brightness_drop > self._max_brightness_drop:
             degraded.append(f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop})")
 
-        # 2. Naturalness
+        # 2. Naturalness — §v10.101 material-adaptiv
+        _mat_nat = str(material).lower()
+        _nat_threshold = 0.30 if _mat_nat in ("cassette", "reel_tape", "tape") else self._max_naturalness_drop
         _nat_drop = input_snap.naturalness_estimate - output_snap.naturalness_estimate
-        if _nat_drop > self._max_naturalness_drop:
-            degraded.append(f"naturalness_drop={_nat_drop:.3f} (>{self._max_naturalness_drop})")
+        if _nat_drop > _nat_threshold:
+            degraded.append(f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold})")
 
         # 3. RMS Change
         _rms_change = abs(output_snap.rms_dbfs - input_snap.rms_dbfs)
@@ -184,10 +187,14 @@ class DoNoHarmGuardian:
         # feuert. Gain-Staging erhöht Peak UND RMS → Crest unverändert → PASS.
         # Schwellwert 3 dB: declarative Dynamics-Veränderung (Kompressor/Limiter).
         # Declipping (Peak↓, RMS≈) typischerweise nur 1–2 dB Crest-Änderung → PASS.
+        # §v10.101 Material-adaptiv: Kassette/Tape — Rauschentfernung reduziert
+        # Crest natürlich um 5–9 dB (Rausch-Peaks werden entfernt). Schwelle 6 dB.
+        _mat_crest = str(material).lower()
+        _crest_threshold = 6.0 if _mat_crest in ("cassette", "reel_tape", "tape") else 3.0
         _crest_input = input_snap.peak_dbfs - input_snap.rms_dbfs
         _crest_output = output_snap.peak_dbfs - output_snap.rms_dbfs
         _crest_drop = _crest_input - _crest_output
-        if _crest_drop > 3.0:
+        if _crest_drop > _crest_threshold:
             degraded.append(
                 f"peak_degraded: crest_drop={_crest_drop:.1f}dB "
                 f"(in={input_snap.peak_dbfs:.1f}/{input_snap.rms_dbfs:.1f} "

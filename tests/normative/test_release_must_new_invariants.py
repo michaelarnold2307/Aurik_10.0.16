@@ -112,3 +112,118 @@ def test_release_startup_suppresses_expected_framework_and_remediation_warnings(
     assert 'logger.info(\n                        "ActiveIntervention %s REJECTED: no beneficial score delta' in uv3_src
     assert 'logger.info(\n                    "ActiveIntervention %s REJECTED: quiet-zone target unmet' in uv3_src
     assert 'logger.info(\n                            "§Wall-Time-Budget: %.0f s non-exempt > %.0f s' in uv3_src
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §2.8 SOTA Gender Detection (Spec 19)
+# ═══════════════════════════════════════════════════════════════════════════
+
+LPC_TRACKER_FILE = ROOT / "backend" / "core" / "dsp" / "lpc_formant_tracker.py"
+VOCAL_AI_FILE = ROOT / "backend" / "core" / "vocal_ai_enhancement.py"
+PHASE_19_FILE = ROOT / "backend" / "core" / "phases" / "phase_19_de_esser.py"
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_classify_gender_via_formants_exists() -> None:
+    """§2.8a: classify_gender_via_formants must exist on LPCFormantTracker."""
+    src = LPC_TRACKER_FILE.read_text(encoding="utf-8")
+    assert "def classify_gender_via_formants" in src, (
+        "§2.8a classify_gender_via_formants fehlt in lpc_formant_tracker.py"
+    )
+    assert "_scan_f0_voiced" in src, (
+        "§2.8a _scan_f0_voiced (scanning F0 helper) fehlt"
+    )
+    assert "_estimate_formants_from_voiced" in src, (
+        "§2.8a _estimate_formants_from_voiced (LPC scanning helper) fehlt"
+    )
+    assert "_GENDER_RANGES" in src, (
+        "§2.8a _GENDER_RANGES (formant ranges) fehlt"
+    )
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_detect_f0_scans_audio() -> None:
+    """§2.8b: GenderDetector._detect_f0 must scan, not only check first 100ms."""
+    src = VOCAL_AI_FILE.read_text(encoding="utf-8")
+    # The old code used audio[:max_samples]; the new code uses a scanning loop
+    assert "chunk_samples" in src and "hop_samples" in src, (
+        "§2.8b _detect_f0: scanning implementation missing (chunk_samples/hop_samples)"
+    )
+    assert "best_f0" in src and "best_peak_height" in src, (
+        "§2.8b _detect_f0: best_f0 tracking missing — still only checks first window?"
+    )
+    # Verify the old brittle pattern is gone
+    assert "segment = audio[:max_samples]" not in src, (
+        "§2.8b _detect_f0: old audio[:max_samples] pattern still present — must scan!"
+    )
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_no_dead_methods_in_phase19() -> None:
+    """§2.8c: No dead/stub gender methods in phase_19_de_esser.py."""
+    src = PHASE_19_FILE.read_text(encoding="utf-8")
+    # These stubs were removed
+    assert '    def _detect_gender_timeline(self, audio, sample_rate, hop_length=256):\n        """Time-varying gender detection (returns empty on fallback)."""\n        return []' not in src, (
+        "§2.8c Dead stub _detect_gender_timeline (return []) still present!"
+    )
+    assert 'def _process_per_gender_segments(self, audio, sample_rate, gender_segments, **kwargs):' not in src, (
+        "§2.8c Dead stub _process_per_gender_segments still present!"
+    )
+    assert 'def _apply_formant_preservation(\n        self, original, processed, sample_rate, formant_low, formant_high, protection_factor\n    ):\n        """Preserve formant regions by blending original back."""\n        return processed' not in src, (
+        "§2.8c Dead stub _apply_formant_preservation still present!"
+    )
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_methods_not_nested_in_build_union() -> None:
+    """§2.8d: _detect_gender_* must be on DeEsserPhase, not nested in _build_union_vocal_profile."""
+    src = PHASE_19_FILE.read_text(encoding="utf-8")
+    # Verify DeEsserPhase has the methods
+    from backend.core.phases.phase_19_de_esser import DeEsserPhase
+    dp = DeEsserPhase()
+    for method_name in [
+        "_detect_gender_robust",
+        "_detect_gender_simple",
+        "_detect_gender_timeline",
+        "_process_per_gender_segments",
+        "_apply_formant_preservation",
+    ]:
+        assert hasattr(dp, method_name), (
+            f"§2.8d {method_name} fehlt auf DeEsserPhase — "
+            "vermutlich noch in _build_union_vocal_profile gefangen!"
+        )
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_lpc_fallback_in_robust_chain() -> None:
+    """§2.8e: _detect_gender_robust must have LPC formant tracker fallback."""
+    src = PHASE_19_FILE.read_text(encoding="utf-8")
+    assert "classify_gender_via_formants" in src, (
+        "§2.8e _detect_gender_robust: LPC classify_gender_via_formants fallback fehlt!"
+    )
+    assert "Burg-LPC fallback" in src or "LPC Formant Gender" in src, (
+        "§2.8e _detect_gender_robust: LPC fallback log message fehlt!"
+    )
+
+
+@pytest.mark.normative
+@pytest.mark.timeout(20)
+def test_gender_sota_detect_gender_simple_scans() -> None:
+    """§2.8f: _detect_gender_simple must scan audio, not only first 5 seconds."""
+    src = PHASE_19_FILE.read_text(encoding="utf-8")
+    # New scanning pattern
+    assert "win_samples = sample_rate * 2" in src, (
+        "§2.8f _detect_gender_simple: scanning windows missing"
+    )
+    assert "best_f0" in src and "best_peak_height" in src, (
+        "§2.8f _detect_gender_simple: best_f0 tracking missing"
+    )
+    # Old brittle pattern must be gone
+    assert "max_samples = sample_rate * 5" not in src, (
+        "§2.8f _detect_gender_simple: old max_samples=5s pattern still present — must scan!"
+    )

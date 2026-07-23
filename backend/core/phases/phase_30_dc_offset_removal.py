@@ -53,7 +53,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like
+from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
 from backend.core.defect_scanner import MaterialType
 
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult
@@ -326,7 +326,7 @@ class DCOffsetRemoval(PhaseInterface):
         if filter_type == "iir" and cutoff_hz <= 5.0:
             b = np.array([1.0, -1.0], dtype=np.float64)
             a = np.array([1.0, -0.9995], dtype=np.float64)
-            return signal.filtfilt(b, a, audio).astype(np.float32)  # type: ignore[no-any-return]
+            return safe_filtfilt(b, a, audio).astype(np.float32)  # type: ignore[no-any-return]
 
         if filter_type == "fir":
             # Phase-linear FIR filter
@@ -347,7 +347,7 @@ class DCOffsetRemoval(PhaseInterface):
             )
 
             # Apply filter (already zero-phase due to symmetric design)
-            processed = signal.filtfilt(fir_coeffs, [1.0], audio)
+            processed = safe_filtfilt(fir_coeffs, [1.0], audio)
 
         else:  # IIR
             # Butterworth IIR filter (efficient for minimal processing)

@@ -19,6 +19,7 @@ WICHTIG: Keine Dummys/Mocks - nur reale, funktionsfähige Implementierungen.
 Pure Open Source reicht NICHT aus - Eigenentwicklung ist in allen Bereichen essenziell.
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import warnings
 from dataclasses import dataclass, field
@@ -833,9 +834,9 @@ class UnifiedAudioRestorer:
             # Apply to each channel
             if audio.ndim == 2:
                 for ch in range(audio.shape[1]):
-                    result[:, ch] = signal.filtfilt(b, a, result[:, ch])
+                    result[:, ch] = safe_filtfilt(b, a, result[:, ch])
             else:
-                result = signal.filtfilt(b, a, result)
+                result = safe_filtfilt(b, a, result)
 
         return result
 
@@ -973,9 +974,9 @@ class UnifiedAudioEnhancer:
         if audio.ndim == 2:
             result = np.zeros_like(audio)
             for ch in range(audio.shape[1]):
-                result[:, ch] = signal.filtfilt(b, a, audio[:, ch])
+                result[:, ch] = safe_filtfilt(b, a, audio[:, ch])
         else:
-            result = signal.filtfilt(b, a, audio)
+            result = safe_filtfilt(b, a, audio)
 
         return result  # type: ignore[no-any-return]
 
@@ -1007,9 +1008,9 @@ class UnifiedAudioEnhancer:
         if audio.ndim == 2:
             result = np.zeros_like(audio)
             for ch in range(audio.shape[1]):
-                result[:, ch] = signal.filtfilt(b, a, audio[:, ch])
+                result[:, ch] = safe_filtfilt(b, a, audio[:, ch])
         else:
-            result = signal.filtfilt(b, a, audio)
+            result = safe_filtfilt(b, a, audio)
 
         return result  # type: ignore[no-any-return]
 

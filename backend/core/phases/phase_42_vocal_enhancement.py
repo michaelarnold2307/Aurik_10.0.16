@@ -51,7 +51,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_to_mono
+from backend.core.audio_utils import safe_to_mono, safe_filtfilt  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.dsp.stem_routing_policy import prefer_demucs_native_from_material
 from backend.core.ml_model_readiness import check_ml_model_ready
@@ -2247,7 +2247,7 @@ class VocalEnhancement(PhaseInterface):
                 _a2h = 1.0 - _alpha_f / _A_half
                 _bh = np.array([_b0h, _b1, _b2h]) / _a0h
                 _ah = np.array([1.0, _a1 / _a0h, _a2h / _a0h])
-                enhanced = signal.filtfilt(_bh, _ah, enhanced)
+                enhanced = safe_filtfilt(_bh, _ah, enhanced)
             else:
                 enhanced = signal.lfilter(_b, _a, enhanced)
         enhanced = np.nan_to_num(enhanced, nan=0.0, posinf=0.0, neginf=0.0)
@@ -2352,7 +2352,7 @@ class VocalEnhancement(PhaseInterface):
         # Zero-phase filtering prevents phase shift on vocal transients (plosives, vowel onsets).
         # filtfilt needs at least 3*max(len(a),len(b)) = 9 samples; fall back to lfilter for tiny buffers.
         if len(audio) >= 9:
-            enhanced = signal.filtfilt(b, a, audio)
+            enhanced = safe_filtfilt(b, a, audio)
         else:
             enhanced = signal.lfilter(b, a, audio)
         return enhanced  # type: ignore[no-any-return]
@@ -2378,7 +2378,7 @@ class VocalEnhancement(PhaseInterface):
 
         # Zero-phase Bell-EQ — prevents group delay on chest resonance fundamentals.
         if len(audio) >= 9:
-            enhanced = signal.filtfilt(b, a, audio)
+            enhanced = safe_filtfilt(b, a, audio)
         else:
             enhanced = signal.lfilter(b, a, audio)
         return enhanced  # type: ignore[no-any-return]

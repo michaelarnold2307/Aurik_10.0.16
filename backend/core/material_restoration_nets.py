@@ -45,6 +45,7 @@ from typing import Any
 
 import numpy as np
 import scipy.signal as sig
+from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +117,11 @@ def _shellac_bandwidth_limit(audio: np.ndarray, sample_rate: int) -> np.ndarray:
     cutoff = min(8000.0, nyq * 0.95)
     b, a = sig.butter(4, cutoff / nyq, btype="low", output="ba")  # type: ignore[misc]
     if audio.ndim == 1:
-        result = sig.filtfilt(b, a, audio)
+        result = safe_filtfilt(b, a, audio)
     else:
         result = np.zeros_like(audio)
         for ch in range(audio.shape[0]):
-            result[ch] = sig.filtfilt(b, a, audio[ch])
+            result[ch] = safe_filtfilt(b, a, audio[ch])
     result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
     return np.clip(result, -1.0, 1.0)  # type: ignore[no-any-return]
 
@@ -192,7 +193,7 @@ def restore_shellac(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialRe
     # 4. Rumble-Filter (unter 50 Hz)
     nyq = sample_rate / 2
     b, a = sig.butter(2, 50 / nyq, btype="high", output="ba")  # type: ignore[misc]
-    out = sig.filtfilt(b, a, out)
+    out = safe_filtfilt(b, a, out)
     applied.append("rumble_filter_50Hz")
 
     return MaterialRestorationResult(
@@ -267,10 +268,10 @@ def restore_vinyl(audio: np.ndarray, sample_rate: int, apply_riaa: bool = False,
     nyq = sample_rate / 2
     b, a = sig.butter(3, 20 / nyq, btype="high", output="ba")  # type: ignore[misc]
     if out.ndim == 1:
-        out = sig.filtfilt(b, a, out)
+        out = safe_filtfilt(b, a, out)
     else:
         for ch in range(out.shape[0]):
-            out[ch] = sig.filtfilt(b, a, out[ch])
+            out[ch] = safe_filtfilt(b, a, out[ch])
     applied.append("rumble_filter_20Hz")
 
     # 4. Sanftes De-Essing (8–12 kHz)
@@ -280,11 +281,11 @@ def restore_vinyl(audio: np.ndarray, sample_rate: int, apply_riaa: bool = False,
         if high_cutoff > low_cutoff:
             b_s, a_s = sig.butter(2, [low_cutoff, high_cutoff], btype="band", output="ba")  # type: ignore[misc]
             if out.ndim == 1:
-                sib_band = sig.filtfilt(b_s, a_s, out)
+                sib_band = safe_filtfilt(b_s, a_s, out)
                 out = out - 0.15 * sib_band  # Sanfte Dämpfung
             else:
                 for ch in range(out.shape[0]):
-                    sib_band = sig.filtfilt(b_s, a_s, out[ch])
+                    sib_band = safe_filtfilt(b_s, a_s, out[ch])
                     out[ch] = out[ch] - 0.15 * sib_band
             applied.append("de_essing_8-12kHz")
 
@@ -482,19 +483,19 @@ def restore_lacquer(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialRe
     if nyq > 12000:
         b, a = sig.butter(4, 12000 / nyq, btype="low", output="ba")  # type: ignore[misc]
         if out.ndim == 1:
-            out = sig.filtfilt(b, a, out)
+            out = safe_filtfilt(b, a, out)
         else:
             for ch in range(out.shape[0]):
-                out[ch] = sig.filtfilt(b, a, out[ch])
+                out[ch] = safe_filtfilt(b, a, out[ch])
         applied.append("bandwidth_limit_12kHz")
 
     # Rumble unter 30 Hz
     b_hp, a_hp = sig.butter(3, 30 / nyq, btype="high", output="ba")  # type: ignore[misc]
     if out.ndim == 1:
-        out = sig.filtfilt(b_hp, a_hp, out)
+        out = safe_filtfilt(b_hp, a_hp, out)
     else:
         for ch in range(out.shape[0]):
-            out[ch] = sig.filtfilt(b_hp, a_hp, out[ch])
+            out[ch] = safe_filtfilt(b_hp, a_hp, out[ch])
     applied.append("rumble_filter_30Hz")
 
     return MaterialRestorationResult(

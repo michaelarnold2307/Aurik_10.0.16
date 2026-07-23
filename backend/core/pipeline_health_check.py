@@ -216,7 +216,7 @@ def _check_configuration() -> HealthCheckResult:
 
 
 def _check_error_statistics() -> HealthCheckResult:
-    """C5: Prüft Safe-Execution-Fehlerstatistiken aus letztem Lauf."""
+    """C5: Prüft Safe-Execution-Fehlerstatistiken + Bug-Patterns aus letztem Lauf."""
     t0 = time.monotonic()
     warnings: list[str] = []
 
@@ -227,14 +227,26 @@ def _check_error_statistics() -> HealthCheckResult:
         total = stats["total_errors"]
         if total > 100:
             warnings.append(f"Hohe Fehlerrate im letzten Lauf: {total} Errors")
+        
+        # §v10.106: Bug-Pattern-Erkennung aus OOM-Forensik
+        bug_patterns = stats.get("bug_patterns", {})
+        critical_patterns = [p for p, c in bug_patterns.items() if c >= 20]
+        if critical_patterns:
+            warnings.append(
+                f"Kritische Bug-Patterns: {', '.join(critical_patterns)} "
+                f"({sum(bug_patterns.values())} total)"
+            )
+        
         details = f"{total} Errors in {stats['unique_error_sites']} Sites"
-        passed = total < 500
+        if bug_patterns:
+            details += f", {len(bug_patterns)} Bug-Patterns"
+        passed = total < 500 and not critical_patterns
     except ImportError:
         passed = True
         details = "safe_execution nicht importierbar — keine Fehlerstatistik"
 
     return HealthCheckResult(
-        name="Fehler-Statistik",
+        name="Fehler-Statistik + Bug-Patterns",
         passed=passed,
         duration_ms=(time.monotonic() - t0) * 1000,
         details=details,

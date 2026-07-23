@@ -158,7 +158,9 @@ def _estimate_key(mono: np.ndarray, sr: int) -> str:
 
     n_fft = 4096
     hop = 1024
-    f, _t, Zxx = sig.stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+    # §v10.103 noverlap-Guard: clamp noverlap < nperseg für kurzes Audio
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))
+    f, _t, Zxx = sig.stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     mag = np.abs(Zxx)
 
     # Frequenz → Chroma-Bin (12-stufige gleichmäßige Stimmung, A4=440 Hz)

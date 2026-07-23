@@ -466,6 +466,13 @@ class HarmonicRestorationPhase(PhaseInterface):
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
 
+        # §G78 CalibrationContext: Kalibrierter Stärke-Cap aus Pre-Analysis-Messwerten.
+        # Kontinuierlich abgeleitet aus bandwidth_loss + Crest-Verlust (§G77).
+        _calib_cap = kwargs.get("phase07_strength_cap")
+        if _calib_cap is not None:
+            _effective_strength = min(_effective_strength, float(_calib_cap))
+            logger.debug("phase_07 §CALIB: strength capped at %.3f", float(_calib_cap))
+
         # §2.54 FlashSR post-processing guard: when FlashSR (phase_23) has already
         # extended the bandwidth + synthesised harmonics, additional harmonic
         # restoration at phase_07 is redundant and causes PMGG regressions
@@ -479,6 +486,23 @@ class HarmonicRestorationPhase(PhaseInterface):
                 "phase_07: flashsr_applied=True → strength scaled to %.3f (post-FlashSR guard)",
                 _effective_strength,
             )
+
+        # §v10.111 FeedbackChain-Silence-Guard: Wenn Phase 07 im FeedbackChain
+        # auf bereits sauberes Audio trifft (H2/H1 ≥ 0.5), produziert das
+        # harmonische Synthese-Modell near-silence (−86 dBFS). Grund: keine
+        # fehlenden Harmonischen zum Synthetisieren → Output = 0 → Blend = Stille.
+        # Fix: H2/H1-Check vor Synthese; bei gesättigtem Signal Strength drosseln.
+        if _effective_strength > 0.15:
+            try:
+                _h2h1_07 = self._measure_h2_ratio(audio, sample_rate)
+                if _h2h1_07 > 0.50:
+                    _effective_strength = float(np.clip(_effective_strength * 0.15, 0.0, 0.10))
+                    logger.info(
+                        "phase_07: H2/H1=%.3f ≥ 0.50 → strength auf %.3f gedrosselt (FeedbackChain-Guard)",
+                        _h2h1_07, _effective_strength,
+                    )
+            except Exception:
+                pass  # Non-blocking: H2/H1-Messung darf Phase nicht blockieren
 
         # §V41 ForwardMaskingGuard: Stärke in post-transienten Masking-Fenstern erhöhen.
         _panns_s_07 = float(kwargs.get("panns_singing", 0.0))

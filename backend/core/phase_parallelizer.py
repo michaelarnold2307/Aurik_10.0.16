@@ -17,6 +17,7 @@ Phase Dependency Model:
 
 Usage (opt-in via config):
   from backend.core.phase_parallelizer import ParallelPhaseExecutor
+import os  # §v10.105 module-level (prevents UnboundLocalError)
   executor = ParallelPhaseExecutor(max_workers=4)
   audio = executor.execute_phase_group(audio, group, sr, context)
 
@@ -64,8 +65,7 @@ class ParallelPhaseExecutor:
     """
 
     def __init__(self, max_workers: int | None = None):
-        import os
-
+        # import os → module level (§v10.105)
         self.max_workers = max_workers or max(1, os.cpu_count() - 1 if os.cpu_count() else 2)
         logger.info("ParallelPhaseExecutor: max_workers=%d (parallele Arbeiter)", self.max_workers)
 

@@ -70,13 +70,18 @@ def _repair_wow_flutter(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
 
     Für isolierte Defekt-Zonen (nicht das ganze Lied).
     Die volle phase_12 läuft danach für globale Transport-Korrektur.
+
+    §v10.101 Selbstkalibrierend: Gain-Clipping skaliert mit gemessener
+    Defektschwere aus kwargs['severity'].
     """
     import numpy as np
 
     result = audio.copy()
     if audio.shape[-1] < 100:
         return result
-    # Einfache Glättung der Pitch-Hüllkurve
+    # §v10.101: Gain-Range aus Defektschwere ableiten
+    _sev = float(kwargs.get("severity", 0.5))
+    _range = float(np.clip(0.5 + _sev * 1.5, 0.5, 2.0))  # 0.5→1.25, 1.0→2.0
     from scipy.signal import medfilt
 
     try:
@@ -84,13 +89,13 @@ def _repair_wow_flutter(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             envelope = np.abs(result)
             smoothed = medfilt(envelope, kernel_size=min(51, len(envelope) // 10 + 1))
             gain = np.where(envelope > 1e-10, smoothed / (envelope + 1e-10), 1.0)
-            result = result * np.clip(gain, 0.5, 1.5)
+            result = result * np.clip(gain, 1.0 / _range, _range)
         else:
             for ch in range(result.shape[0]):
                 envelope = np.abs(result[ch])
                 smoothed = medfilt(envelope, kernel_size=min(51, len(envelope) // 10 + 1))
                 gain = np.where(envelope > 1e-10, smoothed / (envelope + 1e-10), 1.0)
-                result[ch] = result[ch] * np.clip(gain, 0.5, 1.5)
+                result[ch] = result[ch] * np.clip(gain, 1.0 / _range, _range)
     except Exception as e:
         logger.warning("surgical_repair.py::_repair_wow_flutter fallback: %s", e)
     result = _safety_clamp(result, audio)

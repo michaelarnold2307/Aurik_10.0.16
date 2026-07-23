@@ -200,49 +200,54 @@ class GenderDetector:
         )
 
     def _detect_f0(self, audio: np.ndarray) -> float:
-        """Erkennt fundamental frequency using FFT-based autocorrelation.
+        """Erkennt fundamental frequency durch scannende FFT-Autokorrelation.
 
-        Uses a maximum of 100ms of audio so the cost is O(N log N)
-        for N ≤ sr*0.1, regardless of the actual audio length.
+        Scannt durch das Audio in 100ms-Fenstern (50ms Hop) bis ein voiced
+        Segment mit zuverlässigem Autokorrelations-Peak gefunden wird.
+        Vermeidet den §2.8-Bug, dass ein instrumentales Intro (erste 100ms
+        ohne Stimme) die gesamte F0-Detektion blockiert.
+
+        Kosten: O(chunks × N log N) mit N=sr*0.1, max 60 chunks ≈ 3 s Audio.
         """
-        # Limit to 100 ms — sufficient for pitch estimation, prevents O(N²)
-        max_samples = min(len(audio), int(self.sr * 0.1))
-        segment = audio[:max_samples]
-        if len(segment) < 2:
-            return 0.0
-
-        # FFT-based autocorrelation: O(N log N)
-        n = len(segment)
-        fft = np.fft.rfft(segment, n=2 * n)
-        autocorr = np.fft.irfft(fft * np.conj(fft))[:n]
-
-        # Normalize
-        autocorr = autocorr / (autocorr[0] + 1e-10)
-
-        # Find first peak (period)
-        min_period = int(self.sr / 500)  # Max 500 Hz
-        max_period = int(self.sr / 50)  # Min 50 Hz
-
-        autocorr_search = autocorr[min_period:max_period]
-        if len(autocorr_search) > 0:
-            # height=0.15 (lowered from 0.30): vintage tape material has low SNR and
-            # bandlimited content (BW ≤ 7 kHz); the normalized autocorrelation peak
-            # at the fundamental is weaker than for clean studio recordings.
-            # White noise autocorrelation fluctuations ≈ 1/√N ≈ 0.006 for 100 ms
-            # @ 48 kHz → 0.15 is still safely above the noise floor (de Cheveigné &
-            # Kawahara 2002, YIN pitch estimator, §4.3 minimum peak threshold).
-            peaks, _ = signal.find_peaks(autocorr_search, height=0.15)
-            if len(peaks) > 0:
-                # Use the peak with the HIGHEST autocorrelation value (= true fundamental),
-                # not peaks[0] (smallest lag = highest f0): for noisy vintage audio
-                # a false noise-peak at a harmonic frequency often appears first.
-                # McLeod & Wyvill 2005 — "A Smarter Way to Find Pitch"
-                best_peak = peaks[np.argmax(autocorr_search[peaks])]
-                period = best_peak + min_period
-                detected_f0 = self.sr / period
-                return float(detected_f0)
-
-        return 0.0  # No pitch detected
+        chunk_samples = max(int(self.sr * 0.1), 512)   # 100 ms
+        hop_samples = chunk_samples // 2                 # 50 ms Überlappung
+        max_chunks = min(60, max(1, (len(audio) - chunk_samples) // hop_samples + 1))
+        best_f0 = 0.0
+        best_peak_height = 0.0
+        for chunk_idx in range(max_chunks):
+            start = chunk_idx * hop_samples
+            if start + chunk_samples > len(audio):
+                break
+            segment = audio[start : start + chunk_samples].astype(np.float64)
+            rms = float(np.sqrt(np.mean(segment**2) + 1e-12))
+            if rms < 1e-6:
+                continue  # Stille
+            # FFT-based autocorrelation: O(N log N)
+            n = len(segment)
+            fft = np.fft.rfft(segment, n=2 * n)
+            autocorr = np.fft.irfft(fft * np.conj(fft))[:n]
+            autocorr = autocorr / (autocorr[0] + 1e-10)
+            min_period = int(self.sr / 500)  # Max 500 Hz
+            max_period = int(self.sr / 50)   # Min 50 Hz
+            if max_period <= min_period or max_period > len(autocorr):
+                continue
+            autocorr_search = autocorr[min_period:max_period]
+            if len(autocorr_search) < 2:
+                continue
+            peaks, _ = signal.find_peaks(autocorr_search, height=0.12)
+            if len(peaks) == 0:
+                continue
+            best_peak = peaks[np.argmax(autocorr_search[peaks])]
+            peak_height = float(autocorr_search[best_peak])
+            period = best_peak + min_period
+            f0 = float(self.sr) / float(period)
+            # Plausibilitätscheck: F0 im Stimmumfang (70–800 Hz)
+            if f0 < 70.0 or f0 > 800.0:
+                continue
+            if peak_height > best_peak_height:
+                best_peak_height = peak_height
+                best_f0 = f0
+        return best_f0
 
     def _detect_formants(self, audio: np.ndarray) -> list[float]:
         """

@@ -36,6 +36,7 @@ import threading
 from dataclasses import dataclass, field
 
 import numpy as np
+from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
 
@@ -180,7 +181,7 @@ class TFSPreservationGuard:
             # 4th-order Butterworth bandpass (zero-phase)
             try:
                 b, a = butter(4, [f_lo / nyquist, f_hi / nyquist], btype="band")
-                orig_band = filtfilt(b, a, orig_m)
+                orig_band = safe_filtfilt(b, a, orig_m)
             except Exception:
                 logger.debug("TFS: filter failed for fc=%.0f Hz, skipping", fc)
                 continue
@@ -209,7 +210,7 @@ class TFSPreservationGuard:
                 continue
 
             try:
-                rest_band = filtfilt(b, a, rest_m)
+                rest_band = safe_filtfilt(b, a, rest_m)
             except Exception:
                 logger.debug("TFS: restored-band filter failed for fc=%.0f Hz, skipping", fc)
                 continue

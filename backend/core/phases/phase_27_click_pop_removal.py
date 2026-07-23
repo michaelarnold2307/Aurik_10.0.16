@@ -34,6 +34,7 @@ Author: Aurik Development Team
 Version: 3.0.0 AR-Residual
 """
 
+import os
 import logging
 import time
 from typing import Any

@@ -144,7 +144,15 @@ class PhaseResult:
     def __post_init__(self) -> None:
         # Sicherheits-Invarianten: NaN/Inf bereinigen, soft-clipping (§v10.62)
         if not isinstance(self.audio, np.ndarray):
-            self.audio = np.asarray(self.audio, dtype=np.float32)
+            # §v10.95: Tuple→ndarray-Normalisierung. Phasen können versehentlich
+            # (audio_ndarray, metadata_dict) als self.audio setzen.
+            # np.asarray auf inhomogene Tupel crasht mit "setting an array element
+            # with a sequence". Daher erstes ndarray im Tupel extrahieren.
+            if isinstance(self.audio, (tuple, list)):
+                _candidates = [x for x in self.audio if isinstance(x, np.ndarray)]
+                self.audio = _candidates[0] if _candidates else np.zeros(1, dtype=np.float32)
+            else:
+                self.audio = np.asarray(self.audio, dtype=np.float32)
         self.audio = np.nan_to_num(self.audio, nan=0.0, posinf=0.0, neginf=0.0)
         # §v10.62: apply_soft_clip statt Hard-Clamp — verhindert hörbare
         # Rechteck-Clipping-Artefakte in allen 68 Phasen.

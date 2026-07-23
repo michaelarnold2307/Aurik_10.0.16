@@ -75,6 +75,7 @@ import threading
 import time
 from pathlib import Path
 from typing import Any
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 from scipy import signal
@@ -604,17 +605,23 @@ class CrackleRemovalPhase(PhaseInterface):
             raise RuntimeError("BANQUET ONNX session not available")
 
         # --- Channel handling (Mono/Stereo) ---
+        # §v10.99: audio.shape[0] <= audio.shape[1] ist für kurzes channels-last
+        # (N,2) mit N≤2 falsch-positiv → per-channel mean statt Mono-Mixdown
+        # → (2,) statt (N,) → Broadcast-Crash mit audio (2,N) vs gain (M,).
         if audio.ndim == 1:
             audio_mono = audio
             stereo_mode = False
-        elif audio.ndim == 2 and audio.shape[0] <= audio.shape[1]:
+        elif audio.ndim == 2 and audio.shape[0] <= 2 and audio.shape[1] > 2:
             # Shape (channels, samples) — e.g. (2, 144000)
             audio_mono = audio.mean(axis=0)
             stereo_mode = True
-        else:
+        elif audio.ndim == 2:
             # Shape (samples, channels) — e.g. (144000, 2)
             audio_mono = audio.mean(axis=-1)
             stereo_mode = True
+        else:
+            audio_mono = audio
+            stereo_mode = False
 
         # --- Resample auf BANQUET-Trainings-SR (48 kHz) ---
         need_resample = sample_rate != _BANQUET_SR
@@ -807,8 +814,7 @@ class CrackleRemovalPhase(PhaseInterface):
 
             finally:
                 # Cleanup
-                import os
-
+                # import os → module level (§v10.105)
                 with contextlib.suppress(Exception):
                     os.unlink(tmp_in_path)
                 with contextlib.suppress(Exception):

@@ -37,6 +37,7 @@ Version: 2.1.0
 
 from __future__ import annotations
 
+import os
 # v10.101 SOTA: Bark-kalibrierte Sibilanz-Erkennung, Pipeline-Gates geschützt.
 import logging
 import time

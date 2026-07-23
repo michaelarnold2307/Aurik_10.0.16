@@ -68,6 +68,7 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import os
 import sys
 import time
@@ -652,10 +653,10 @@ class RumbleFilterPhase(PhaseInterface):
         alpha = 0.9995  # 1 Hz cutoff @ 48 kHz
         b, a = [1.0, -1.0], [1.0, -alpha]
         if audio.ndim == 2:
-            return np.column_stack([_filtfilt_dc(b, a, audio[:, ch]) for ch in range(audio.shape[1])]).astype(  # type: ignore[no-any-return]
+            return np.column_stack([safe_filtfilt(b, a, audio[:, ch]) for ch in range(audio.shape[1])]).astype(  # type: ignore[no-any-return]
                 audio.dtype
             )
-        _result: np.ndarray = np.asarray(_filtfilt_dc(b, a, audio), dtype=audio.dtype)
+        _result: np.ndarray = np.asarray(safe_filtfilt(b, a, audio), dtype=audio.dtype)
         return _result
 
     def _detect_transients_professional(self, audio: np.ndarray, sensitivity: float) -> np.ndarray:
@@ -850,10 +851,10 @@ class RumbleFilterPhase(PhaseInterface):
         # Apply filter
         if audio.ndim == 2:
             filtered = np.zeros_like(audio)
-            filtered[:, 0] = signal.filtfilt(fir_coeffs, 1.0, audio[:, 0], padlen=_padlen_fir)
-            filtered[:, 1] = signal.filtfilt(fir_coeffs, 1.0, audio[:, 1], padlen=_padlen_fir)
+            filtered[:, 0] = safe_filtfilt(fir_coeffs, 1.0, audio[:, 0], padlen=_padlen_fir)
+            filtered[:, 1] = safe_filtfilt(fir_coeffs, 1.0, audio[:, 1], padlen=_padlen_fir)
         else:
-            filtered = signal.filtfilt(fir_coeffs, 1.0, audio, padlen=_padlen_fir)
+            filtered = safe_filtfilt(fir_coeffs, 1.0, audio, padlen=_padlen_fir)
 
         return filtered  # type: ignore[no-any-return]
 

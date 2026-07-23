@@ -43,6 +43,7 @@ from __future__ import annotations
 import logging
 import time
 from typing import Any
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 

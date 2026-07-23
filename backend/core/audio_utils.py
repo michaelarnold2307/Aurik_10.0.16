@@ -44,8 +44,10 @@ def safe_to_mono(audio: np.ndarray) -> np.ndarray:
 
 def stereo_channel_view(audio: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
     """Gibt stereo channels as 1D arrays for either (2, N) or (N, 2) layout zurück."""
+    if audio.ndim == 1:
+        return audio, audio.copy()
     if audio.ndim != 2:
-        raise ValueError(f"Stereo audio must be 2D, got shape {audio.shape}")
+        raise ValueError(f"Stereo audio must be 1D or 2D, got shape {audio.shape}")
     if audio.shape[0] == 2 and audio.shape[1] > 2:
         return audio[0], audio[1]
     if audio.shape[1] == 2:
@@ -57,8 +59,10 @@ def stereo_channel_view(audio: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def stereo_like(left: np.ndarray, right: np.ndarray, template: np.ndarray) -> np.ndarray:
     """Rebuild stereo audio while preserving the template orientation."""
+    if template.ndim == 1:
+        return np.column_stack([left, right])  # type: ignore[no-any-return]
     if template.ndim != 2:
-        raise ValueError(f"Stereo template must be 2D, got shape {template.shape}")
+        raise ValueError(f"Stereo template must be 1D or 2D, got shape {template.shape}")
     if template.shape[0] == 2 and template.shape[1] > 2:
         return np.vstack([left, right])  # type: ignore[no-any-return]
     if template.shape[1] == 2:
@@ -84,6 +88,29 @@ def restore_layout(audio: np.ndarray, was_transposed: bool) -> np.ndarray:
     if was_transposed and audio.ndim == 2:
         return audio.T
     return audio
+
+
+def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
+    """Zero-phase filter with automatic short-signal fallback.
+
+    §v10.101: scipy.signal.filtfilt crasht mit "The length of the input
+    vector x must be greater than padlen" wenn das Signal kürzer als
+    die Filter-Padlänge ist. safe_filtfilt prüft die Länge vorab und
+    fällt auf lfilter (minimum-phase) zurück, wenn filtfilt nicht möglich.
+    """
+    from scipy.signal import filtfilt, lfilter
+    n = x.shape[axis] if hasattr(x, 'shape') and x.ndim > 0 else len(x)
+    # padlen = 3 * max(len(b), len(a)) für b/a; 3 * order für SOS
+    if padlen is None:
+        padlen = 3 * max(len(b), len(a))
+    # Identity filter — no filtering needed
+    if len(b) == 1 and len(a) == 1 and np.allclose(b[0], 1.0) and np.allclose(a[0], 1.0):
+        return np.asarray(x)
+    if n > padlen:
+        return filtfilt(b, a, x, axis=axis, padtype=padtype, padlen=padlen)
+    if n > max(len(b), len(a)):
+        return lfilter(b, a, x, axis=axis)
+    return np.asarray(x)
 
 
 def audio_sample_count(audio: np.ndarray) -> int:

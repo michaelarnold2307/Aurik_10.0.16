@@ -22,6 +22,17 @@ logger = logging.getLogger(__name__)
 
 # Schwellwert: Korrelation ≥ 0.97 auf Voiced-Frames
 MIKRODYNAMIK_THRESHOLD = 0.97
+# §v10.101 Material-adaptive Korrelations-Schwellwerte:
+# Kassette/Tape haben physikalisch bedingt niedrigere Mikrodynamik-
+# Korrelation (0.67–0.85). Der Default 0.97 führt zum fast vollständigen
+# Verwerfen der Entrauschung. Material-adaptiver Floor garantiert
+# minimalen Wet-Blend auch bei strukturell niedriger Korrelation.
+_MATERIAL_FLOOR_THRESHOLD: dict[str, float] = {
+    "cassette": 0.75,
+    "reel_tape": 0.82,
+    "tape": 0.82,
+    "vinyl": 0.88,
+}
 # Voiced-Frame-Schwellwert: Frames mit Energie über diesem Wert
 _VOICED_ENERGY_PERCENTILE = 25.0
 
@@ -31,6 +42,7 @@ def recommend_mikrodynamik_wet(
     panns_singing: float = 0.0,
     *,
     global_need: float = 0.0,
+    material: str = "unknown",
 ) -> float:
     """Empfiehlt einen bedarfsorientierten Dry-Wet-Blend für V20-Mikrodynamik.
 
@@ -38,12 +50,18 @@ def recommend_mikrodynamik_wet(
     Restaurierungsbedarf des Songs. So bleibt Aurik bedarfsorientiert: hohe
     Korrelation allein erzwingt nicht automatisch mehr Wet, und hoher Song-Bedarf
     kann eine vorsichtige Phase stärker erhalten.
+
+    §v10.101: material-Parameter senkt effektiven Schwellwert für Kassette/Tape.
     """
 
     vocal_material = panns_singing >= 0.35
-    target_corr = 0.985 if vocal_material else 0.97
-    floor_corr = 0.93 if vocal_material else 0.90
-    base_min_wet = 0.20 if vocal_material else 0.15
+    # §v10.101 Material-adaptiver Floor: Kassette/Tape haben niedrigere
+    # physikalische Mikrodynamik-Korrelation — Schwellwert absenken.
+    mat_lower = str(material).lower()
+    mat_floor = _MATERIAL_FLOOR_THRESHOLD.get(mat_lower, MIKRODYNAMIK_THRESHOLD)
+    target_corr = max(mat_floor, 0.985 if vocal_material else 0.97)
+    floor_corr = max(mat_floor - 0.10, 0.93 if vocal_material else 0.90)
+    base_min_wet = 0.35 if mat_lower in ("cassette", "reel_tape", "tape") else (0.20 if vocal_material else 0.15)
     need = float(np.clip(global_need, 0.0, 1.0))
 
     if corr >= target_corr:

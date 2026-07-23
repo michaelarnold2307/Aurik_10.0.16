@@ -1818,11 +1818,30 @@ def warmup_models_background() -> None:
         # Fallback-Plugins (nach Bedarf)
         ("plugins.panns_plugin", "get_panns_plugin"),  # Audio-Tagging Fallback
         ("plugins.crepe_plugin", "get_crepe_plugin"),  # Pitch-Tracking Fallback
+        # Goal-Measurement-Plugins (§v10.101 — Vorladen verhindert Timeout bei Goal-Messung)
+        ("plugins.mert_plugin", "get_mert_plugin"),  # MERT-v1-330M (~1.2 GB, 160s Kaltstart → 0s)
     ]
     logger.info("bridge: warmup started (%d plugins) …", len(_plugins))
     _loaded = 0
     _failed = 0
     for _mod, _accessor in _plugins:
+        # §v10.101 MERT async: 330M-Parameter-Modell braucht ~160s Kaltstart.
+        # Synchrones Laden blockiert den Warmup-Thread → UI/Import verzögert.
+        # Daher: MERT in eigenem Thread laden, Warmup sofort fortsetzen.
+        if "mert" in _mod.lower():
+            def _load_mert_async(_m=_mod, _a=_accessor):
+                try:
+                    m = importlib.import_module(_m)
+                    fn = getattr(m, _a, None)
+                    if fn is not None:
+                        fn()
+                        logger.info("bridge: MERT async warmup complete (~160s)")
+                except Exception as _e:
+                    logger.warning("bridge: MERT async FEHLGESCHLAGEN: %s", _e)
+            _mert_thread = threading.Thread(target=_load_mert_async, daemon=True, name="aurik_warmup_mert")
+            _mert_thread.start()
+            logger.info("bridge: MERT async warmup started (background thread)")
+            continue
         try:
             m = importlib.import_module(_mod)
             fn = getattr(m, _accessor, None)

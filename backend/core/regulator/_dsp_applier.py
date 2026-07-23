@@ -7,6 +7,7 @@ Kanonisch zusammengeführt aus backend/_dsp_applier.py (Phase-Skip-Gate, Modul-D
 und backend/core/regulator/_dsp_applier.py (Biquad-EQ, Kompressor, Limiter, Enhancer).
 """
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 from collections.abc import Callable
 from typing import Any
@@ -265,7 +266,7 @@ def enhancer(audio: np.ndarray, sr: int, params: dict[str, Any]) -> np.ndarray:
     try:
         w_norm = min(freq_hz / nyq, 0.99)
         b_hp, a_hp = scipy.signal.butter(2, w_norm, btype="high")
-        hf = scipy.signal.filtfilt(b_hp, a_hp, audio_f64)
+        hf = scipy.safe_filtfilt(b_hp, a_hp, audio_f64)
     except Exception:
         hf = audio_f64.copy()
 

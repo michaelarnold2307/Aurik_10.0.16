@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import threading
 from collections.abc import Callable
@@ -257,7 +258,7 @@ class ContentAwareProcessor:
                     # §2.51: filtfilt (zero-phase) statt lfilter — Gruppenversatz IIR-BP
                     # erzeugte Comb-Filter wenn Band zum Original addiert wird
                     _lge_n = len(seg_out)
-                    seg_band = _lge_filtfilt(b, a_filt, seg_out) if _lge_n >= 15 else lfilter(b, a_filt, seg_out)
+                    seg_band = safe_filtfilt(b, a_filt, seg_out) if _lge_n >= 15 else lfilter(b, a_filt, seg_out)
                     seg_out = seg_out + strength * 0.30 * seg_band  # additive formant lift
             except Exception:
                 seg_out = seg.copy()
