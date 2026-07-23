@@ -29195,16 +29195,10 @@ class UnifiedRestorerV3:
                 phase_metadata.phase_id,
                 _final_strength,
             )
-            # §v10.11: Return proper result object via SimpleNamespace
-            from types import SimpleNamespace as _SN
-
-            _skip_result = _SN(
-                audio=audio,
-                success=True,
-                metadata={"skipped": True, "reason": "strength_below_min"},
-                warnings=[],
-            )
-            return _skip_result
+            # §v10.11 Return None — caller skips phase cleanly.
+            # §v10.117 FIX: SimpleNamespace returned before caused TypeError
+            # ('<' not supported between '_SkipResult' and 'float') in calling code.
+            return None
 
         try:
             _exec_strength = kwargs.get("strength")
