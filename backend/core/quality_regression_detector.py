@@ -74,8 +74,11 @@ class QualityRegressionDetector:
     ALERT_THRESHOLD_PCT = 5.0  # % Drop für Alert
     CRITICAL_THRESHOLD_PCT = 15.0  # % Drop für Critical Alert
 
-    def __init__(self, ndjson_path: Path | None = None):
-        self.ndjson_path = ndjson_path or Path("logs/oom_phase_forensics.ndjson")
+    def __init__(self, ndjson_path: Path | str | None = None):
+        if ndjson_path is None:
+            ndjson_path = Path(__file__).resolve().parents[2] / "logs" / "oom_phase_forensics.ndjson"
+        self.ndjson_path = Path(ndjson_path)
+        self.history_path = self.ndjson_path.parent / "quality_history.ndjson"
         self.samples: list[QScoreSample] = []
 
     def load_from_ndjson(self) -> list[QScoreSample]:
@@ -239,3 +242,40 @@ class QualityRegressionDetector:
         lines.append(f"\n{'✅ Keine Regressionen' if total_alerts == 0 else f'⚠️  {total_alerts} Alerts'}")
 
         return "\n".join(lines)
+
+    # §v10.115: Pipeline-Integration
+
+    def record(self, q_score: float) -> None:
+        """Snapshot: Exception-Rate + Q-Score in History schreiben."""
+        import time as _time
+        snap = {
+            "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "q_score": q_score,
+            "samples": 0,
+        }
+        with open(self.history_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(snap) + "\n")
+
+    def compare(self) -> dict:
+        """Vergleicht letzten mit vorletztem Q-Score-Snapshot."""
+        if not self.history_path.exists():
+            return {"status": "no_data"}
+        snaps = []
+        with open(self.history_path) as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    try: snaps.append(json.loads(line))
+                    except json.JSONDecodeError: continue
+        if len(snaps) < 2:
+            return {"status": "insufficient_data"}
+        curr, prev = snaps[-1], snaps[-2]
+        q_delta = curr["q_score"] - prev["q_score"]
+        exc_delta = curr.get("exception_count", 0) - prev.get("exception_count", 0)
+        return {
+            "status": "ok",
+            "current_q_score": curr["q_score"],
+            "q_score_delta": round(q_delta, 4),
+            "exception_delta": exc_delta,
+            "regression_detected": q_delta < -0.01 and exc_delta > 5,
+        }
