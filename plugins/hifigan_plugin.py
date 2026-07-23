@@ -196,7 +196,8 @@ def _mel_spec(
 ) -> np.ndarray:
     import scipy.signal as ss
 
-    _, _, Z = ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
+    _, _, Z = ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     mag = np.abs(Z[: n_fft // 2 + 1])
     mel_fb = _mel_filterbank(sr, n_fft, n_mels)
     mel = np.dot(mel_fb, mag)

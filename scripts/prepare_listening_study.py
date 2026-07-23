@@ -51,7 +51,7 @@ class StudySession:
 
 def _compute_anchor(audio_path: Path, output_dir: Path, cutoff_hz: float = 3500.0) -> Path:
     """Erzeugt 3.5-kHz-Tiefpass-Anchor (ITU-R BS.1534)."""
-    from scipy.signal import butter, filtfilt
+    from scipy.signal import butter, filtfilt, lfilter
 
     try:
         import soundfile as sf
@@ -63,7 +63,15 @@ def _compute_anchor(audio_path: Path, output_dir: Path, cutoff_hz: float = 3500.
     nyquist = sr / 2
     cutoff = min(cutoff_hz / nyquist, 0.99)
     b, a = butter(4, cutoff, btype="low")
-    filtered = filtfilt(b, a, audio, axis=0)
+    # §v10.113 safe_filtfilt: padlen-Guard für kurzes Audio
+    n = audio.shape[0]
+    padlen = 3 * max(len(b), len(a))
+    if n > padlen:
+        filtered = filtfilt(b, a, audio, axis=0)
+    elif n > max(len(b), len(a)):
+        filtered = lfilter(b, a, audio, axis=0)
+    else:
+        filtered = audio
 
     anchor_path = output_dir / f"anchor_{cutoff_hz}hz_{audio_path.stem}.wav"
     sf.write(str(anchor_path), filtered, sr)

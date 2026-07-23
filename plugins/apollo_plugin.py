@@ -522,7 +522,7 @@ class ApolloPlugin:
             "aac": 1.5,
             "minidisc": 2.0,
             "streaming": 1.0,
-        }.get(material, 1.5)
+        }.get(str(material), 1.5)  # _mat_enum_ — string-keyed dict
         gain_lin = 10.0 ** (boost_db / 20.0)
 
         result = np.zeros(n, dtype=np.float32)

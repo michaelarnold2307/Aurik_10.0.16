@@ -30,6 +30,9 @@ EXCLUDE_DIRS = {
 
 EXCLUDE_FILES = {
     "setup.py", "conftest.py",
+    # Fixer-Scripts beschreiben Anti-Patterns (nicht nutzen sie)
+    "fix_p6_material_lookups.py",
+    "fix_p6_v2.py",
 }
 
 MIN_SEVERITY = "warning"  # "error" stoppt Commit, "warning" warnt nur
@@ -191,47 +194,54 @@ def check_enum_as_dict_key(filepath: str, source: str) -> list[str]:
 # ── Main ───────────────────────────────────────────────────────────────────
 
 def main() -> int:
-    """Scannt alle Python-Dateien auf bekannte Bug-Patterns."""
-    root = Path(__file__).resolve().parents[2]  # .agents/skills/ → repo root
-    backend = root / "backend" / "core"
-    
-    if not backend.exists():
-        # Fallback: aktuelles Verzeichnis
-        backend = Path.cwd() / "backend" / "core"
-    
-    if not backend.exists():
-        print("ERROR: backend/core nicht gefunden. Bitte aus Repo-Root ausführen.")
-        return 2
-    
+    """Scannt alle Python-Dateien auf bekannte Bug-Patterns.
+
+    §v10.114: Scanner auf alle Layer ausgeweitet (backend/core, plugins, 
+    Aurik10, denker, scripts).
+    """
+    root = Path(__file__).resolve().parents[3]  # .agents/skills/bug-prevention/ → repo root
+
+    SCAN_ROOTS = [
+        root / "backend" / "core",
+        root / "plugins",
+        root / "Aurik10",
+        root / "denker",
+        root / "scripts",
+    ]
+
     all_issues: list[str] = []
     files_scanned = 0
-    
-    for dirpath, dirnames, filenames in os.walk(backend):
-        # Filtere Verzeichnisse
-        dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
-        
-        for filename in filenames:
-            if not filename.endswith('.py'):
-                continue
-            if filename in EXCLUDE_FILES:
-                continue
-            
-            filepath = os.path.join(dirpath, filename)
-            files_scanned += 1
-            
-            try:
-                with open(filepath, encoding='utf-8') as f:
-                    source = f.read()
-            except (UnicodeDecodeError, IsADirectoryError):
-                continue
-            
-            # Alle 6 Checks
-            all_issues.extend(check_shape_anti_pattern(filepath, source))
-            all_issues.extend(check_filtfilt_without_guard(filepath, source))
-            all_issues.extend(check_stft_without_clamp(filepath, source))
-            all_issues.extend(check_os_without_import(filepath, source))
-            all_issues.extend(check_asarray_tuple(filepath, source))
-            all_issues.extend(check_enum_as_dict_key(filepath, source))
+
+    for scan_root in SCAN_ROOTS:
+        if not scan_root.exists():
+            continue
+
+        for dirpath, dirnames, filenames in os.walk(scan_root):
+            # Filtere Verzeichnisse
+            dirnames[:] = [d for d in dirnames if d not in EXCLUDE_DIRS]
+
+            for filename in filenames:
+                if not filename.endswith('.py'):
+                    continue
+                if filename in EXCLUDE_FILES:
+                    continue
+
+                filepath = os.path.join(dirpath, filename)
+                files_scanned += 1
+
+                try:
+                    with open(filepath, encoding='utf-8') as f:
+                        source = f.read()
+                except (UnicodeDecodeError, IsADirectoryError):
+                    continue
+
+                # Alle 6 Checks
+                all_issues.extend(check_shape_anti_pattern(filepath, source))
+                all_issues.extend(check_filtfilt_without_guard(filepath, source))
+                all_issues.extend(check_stft_without_clamp(filepath, source))
+                all_issues.extend(check_os_without_import(filepath, source))
+                all_issues.extend(check_asarray_tuple(filepath, source))
+                all_issues.extend(check_enum_as_dict_key(filepath, source))
     
     # Ausgabe
     if all_issues:

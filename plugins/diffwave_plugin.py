@@ -162,7 +162,8 @@ class DiffwavePlugin:
 def _mel_spec(mono, sr, n_mels=80, n_fft=1024, hop=256, T=64):
     import scipy.signal as ss
 
-    _, _, Z = ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
+    _, _, Z = ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     mag = np.abs(Z[: n_fft // 2 + 1])
     n_bins = n_fft // 2 + 1
     mel_lo, mel_hi = 0.0, sr / 2.0
@@ -214,7 +215,8 @@ def _nmf_inpaint(mono: np.ndarray, mask: np.ndarray | None, sr: int = 22050) -> 
     # ── STFT ────────────────────────────────────────────────────────────────
     n_fft = 1024
     hop = 256
-    _, _, Z = _ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+    _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
+    _, _, Z = _ss.stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     mag = np.abs(Z).astype(np.float32)  # [n_bins, n_frames]
     n_bins, n_frames = mag.shape
 
@@ -273,8 +275,8 @@ def _nmf_inpaint(mono: np.ndarray, mask: np.ndarray | None, sr: int = 22050) -> 
     phase = rng.uniform(-np.pi, np.pi, region.shape)
     Z_gl = region * np.exp(1j * phase)
     for _ in range(32):
-        _, tmp = _ss.istft(Z_gl, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
-        _, _, Z_new = _ss.stft(tmp, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+        _, tmp = _ss.istft(Z_gl, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
+        _, _, Z_new = _ss.stft(tmp, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
         nc = min(region.shape[1], Z_new.shape[1])
         Z_gl = region[:, :nc] * np.exp(1j * np.angle(Z_new[:, :nc]))
 
@@ -282,7 +284,7 @@ def _nmf_inpaint(mono: np.ndarray, mask: np.ndarray | None, sr: int = 22050) -> 
     Z_recon[:, b_start : b_start + n_put] = Z_gl
 
     # ── iSTFT und nur Lücken-Samples einsetzen ────────────────────────────────
-    _, x_full = _ss.istft(Z_recon, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+    _, x_full = _ss.istft(Z_recon, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
     x_full = np.nan_to_num(x_full, nan=0.0, posinf=0.0, neginf=0.0)
     for i in idx:
         if 0 <= i < len(x_full):

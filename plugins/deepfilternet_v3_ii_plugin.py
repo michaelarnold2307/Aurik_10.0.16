@@ -404,13 +404,14 @@ class DeepFilterNetV3Plugin:
 
         n_fft = 1024
         hop = n_fft // 4
-        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann", padded=True)
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
+        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", padded=True)
         mag = np.abs(Zxx)
         noise_est = np.percentile(mag, 20, axis=1, keepdims=True)
         noise_est = np.maximum(noise_est, 1e-8)
         mask = np.clip((mag - 1.25 * noise_est) / (mag + 1e-10), 0.05, 1.0)
         Zxx_out = mask * mag * np.exp(1j * np.angle(Zxx))
-        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
         out = np.nan_to_num(out[: len(mono)], nan=0.0, posinf=0.0, neginf=0.0)
         return np.clip(out, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
@@ -431,7 +432,8 @@ class DeepFilterNetV3Plugin:
 
         n_fft = 1024
         hop = n_fft // 4
-        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann", padded=True)
+        _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
+        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", padded=True)
 
         mag = np.abs(Zxx)
         # MCRA-Rauschschätzung: Minima in gleitenden Fenstern (5 Frames)
@@ -453,7 +455,7 @@ class DeepFilterNetV3Plugin:
             gain = np.clip(gain * _ebias_factor, 0.0, 1.0)
 
         Zxx_out = gain * mag * np.exp(1j * np.angle(Zxx))
-        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=n_fft - hop, window="hann")
+        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
         return out[: len(mono)].astype(np.float32)  # type: ignore[no-any-return]
 
     @staticmethod

@@ -9,6 +9,7 @@ Usage: python scripts/validate_before_run.py
 Exit 0 = bereit, Exit 1 = Fehler — NICHT starten
 """
 
+import os
 import sys
 import time
 
