@@ -1287,7 +1287,7 @@ class CumulativeInteractionGuard:
         # mat_factor=1.4 → threshold only 18.5 ms → false rollback, 2000 s time lost.
         # Fix §2.54: spectral-subtraction on analog gets an elevated mat_factor (3.0) so
         # the threshold (≈40 ms) covers the typical NR-induced GDD range.
-        _ANALOG_MATERIALS = {"vinyl", "shellac", "tape", "reel_tape", "wire_recording", "wax_cylinder"}
+        _ANALOG_MATERIALS = {"vinyl", "shellac", "tape", "reel_tape", "cassette", "wire_recording", "wax_cylinder"}
         material = str(getattr(state, "material_type", "unknown"))
         _is_analog = material in _ANALOG_MATERIALS
         _is_spectral_sub = phase_id in _SPECTRAL_SUBTRACTION_PHASES
