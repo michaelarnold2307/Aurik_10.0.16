@@ -298,7 +298,8 @@ class AirBandEnhancement(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.AIR_CONFIG.get(material, self.AIR_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.AIR_CONFIG.get(_mk, self.AIR_CONFIG[MaterialType.CD_DIGITAL]))
 
         quality_mode = str(kwargs.get("quality_mode", "balanced")).lower()
         if quality_mode in ("quality", "maximum", "studio2026"):

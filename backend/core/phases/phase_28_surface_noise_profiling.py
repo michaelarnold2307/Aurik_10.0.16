@@ -366,7 +366,8 @@ class SurfaceNoiseProfiling(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.NOISE_CONFIG.get(material, self.NOISE_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.NOISE_CONFIG.get(_mk, self.NOISE_CONFIG[MaterialType.CD_DIGITAL]))
 
         # §GEBOT-G55: Adaptive VAD-Threshold via Noise-Floor-Analyse
         try:

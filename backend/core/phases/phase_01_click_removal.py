@@ -226,7 +226,8 @@ class ClickRemovalPhase(PhaseInterface):
             "cd_digital": 0.70,
             "mp3_low": 0.65,
         }
-        base_thr = _BASE_THRESHOLD.get(material, 0.57)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        base_thr = _BASE_THRESHOLD.get(_mk, 0.57)
 
         # Quality-mode adjustment
         qm = (quality_mode or "balanced").lower()
@@ -248,7 +249,7 @@ class ClickRemovalPhase(PhaseInterface):
             "cassette": 10,
             "cd_digital": 8,
         }
-        cubic_ctx = _BASE_CUBIC.get(material, 12)
+        cubic_ctx = _BASE_CUBIC.get(_mk, 12)
         if qm in ("quality", "maximum"):
             cubic_ctx = min(20, cubic_ctx + 4)
         elif qm == "fast":
@@ -264,7 +265,7 @@ class ClickRemovalPhase(PhaseInterface):
             "cassette": 128,
             "cd_digital": 96,
         }
-        spectral_ctx = _BASE_SPEC.get(material, 160)
+        spectral_ctx = _BASE_SPEC.get(_mk, 160)
         if qm in ("quality", "maximum"):
             spectral_ctx = min(256, spectral_ctx + 64)
         elif qm == "fast":

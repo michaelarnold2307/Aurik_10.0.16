@@ -215,7 +215,8 @@ class ReferenceAnchorSynthesizer:
         anchor_db = np.zeros(N_ANCHOR_BINS, dtype=np.float32)
 
         # Material-Tilt anwenden
-        tilt_db = self._MATERIAL_TILT.get(material, 0.0)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        tilt_db = self._MATERIAL_TILT.get(_mk, 0.0)
         # Linearer Tilt: tief = +tilt, hoch = −tilt (Wärme vs. Luft)
         tilt_curve = np.linspace(-tilt_db / 2, tilt_db / 2, N_ANCHOR_BINS)
         anchor_db += tilt_curve.astype(np.float32)

@@ -418,7 +418,8 @@ class NoiseGate(PhaseInterface):
                 logger.debug("Phase18 §2.17 SectionStrengthEnvelope non-blocking: %s", _env_exc_18)
 
         is_stereo = audio.ndim == 2
-        config = dict(self.GATE_CONFIG.get(material, self.GATE_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.GATE_CONFIG.get(_mk, self.GATE_CONFIG[MaterialType.CD_DIGITAL]))
         config["reductions_db"] = [float(r * _effective_strength) for r in config["reductions_db"]]  # type: ignore[attr-defined]
 
         # §GEBOT-G55: Adaptive Gate-Thresholds via Noise-Floor-Analyse

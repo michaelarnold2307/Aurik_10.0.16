@@ -3405,7 +3405,8 @@ class CausalDefectReasoner:
         material: str,
         codec_contamination: dict[str, float] | None = None,
     ) -> RestorationPlan:
-        priors = MATERIAL_PRIORS[material]
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        priors = MATERIAL_PRIORS.get(_mk, MATERIAL_PRIORS.get(MaterialType.UNKNOWN, {}))
         posteriors: dict[str, float] = {}
 
         # §CODEC: Adjustiere Bayesian-Priors für analoge Ursachen wenn Codec-Contamination vorliegt.
@@ -3509,7 +3510,8 @@ class CausalDefectReasoner:
         # §6.2b/c Material-Phase-Exclusion-Filter: Era-spezifische Verbote durchsetzen.
         # Entfernt materialspezifisch verbotene Phasen aus dem Restaurierungsplan
         # (z.B. wax_cylinder: phase_07 VERBOTEN per spec §ERA 1900-1925).
-        _mat_exclusions = _MATERIAL_PHASE_EXCLUSIONS.get(material, frozenset())
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        _mat_exclusions = _MATERIAL_PHASE_EXCLUSIONS.get(_mk, frozenset())
         if _mat_exclusions:
             _excluded = [_p for _p in ordered_phases if _p in _mat_exclusions]
             if _excluded:

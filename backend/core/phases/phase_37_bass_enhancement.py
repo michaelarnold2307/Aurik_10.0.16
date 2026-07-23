@@ -230,7 +230,8 @@ class BassEnhancement(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.ENHANCEMENT_CONFIG.get(material, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
         config["harmonic_2_gain"] = float(config["harmonic_2_gain"] * _effective_strength)
         config["harmonic_3_gain"] = float(config["harmonic_3_gain"] * _effective_strength)
 

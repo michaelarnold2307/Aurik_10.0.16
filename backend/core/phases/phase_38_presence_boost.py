@@ -234,7 +234,8 @@ class PresenceBoost(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.BOOST_CONFIG.get(material, self.BOOST_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.BOOST_CONFIG.get(_mk, self.BOOST_CONFIG[MaterialType.CD_DIGITAL]))
         config["lower_gain_db"] = float(config["lower_gain_db"] * _effective_strength)
         config["upper_gain_db"] = float(config["upper_gain_db"] * _effective_strength)
         # §v10.70 Modus-Trennung: Restoration → max +2 dB Presence-Boost.

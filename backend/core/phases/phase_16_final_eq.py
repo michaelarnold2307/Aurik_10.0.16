@@ -270,7 +270,8 @@ class FinalEQ(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = {k: dict(v) for k, v in self.EQ_CONFIG.get(material, self.EQ_CONFIG[MaterialType.CD_DIGITAL]).items()}
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = {k: dict(v) for k, v in self.EQ_CONFIG.get(_mk, self.EQ_CONFIG[MaterialType.CD_DIGITAL]).items()}
 
         # ── §v10 Spectrum-Aware Adaptation: Material-Referenz ≠ Song-IST ─────
         # Die EQ_CONFIG liefert die physikalisch ERWARTETE Korrektur für den

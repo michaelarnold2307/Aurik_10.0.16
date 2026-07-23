@@ -688,15 +688,16 @@ class TapeHissReductionPhase(PhaseInterface):
         # (core.defect_scanner vs. backend.core.defect_scanner erzeugen
         # verschiedene Enum-Klassen-Objekte, obwohl der Wert identisch ist)
         _mat_val = getattr(material, "value", str(material))
-        gate_threshold_db = self.GATE_THRESHOLD_DB.get(material) or next(
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        gate_threshold_db = self.GATE_THRESHOLD_DB.get(_mk) or next(
             (v for k, v in self.GATE_THRESHOLD_DB.items() if getattr(k, "value", None) == _mat_val),
             -10,
         )
-        reduction_depth_db = self.REDUCTION_DEPTH_DB.get(material) or next(
+        reduction_depth_db = self.REDUCTION_DEPTH_DB.get(_mk) or next(
             (v for k, v in self.REDUCTION_DEPTH_DB.items() if getattr(k, "value", None) == _mat_val),
             8,
         )
-        _hf = self.HF_FOCUS_RANGE.get(material) or next(
+        _hf = self.HF_FOCUS_RANGE.get(_mk) or next(
             (v for k, v in self.HF_FOCUS_RANGE.items() if getattr(k, "value", None) == _mat_val),
             (8000, 18000),
         )

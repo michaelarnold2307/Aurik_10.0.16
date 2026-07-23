@@ -299,11 +299,12 @@ class TapeSaturation(PhaseInterface):
             restorability_score,
         )
 
-        drive = self.SATURATION_DRIVE.get(material, 0.25)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        drive = self.SATURATION_DRIVE.get(_mk, 0.25)
         drive *= tape_saturation_profile["drive_gain_scalar"] / 10.0
-        mix_amount = self.SATURATION_MIX.get(material, 0.30)
-        tape_speed = self.TAPE_SPEED.get(material, "7.5_ips")
-        hysteresis = self.HYSTERESIS_AMOUNT.get(material, 0.10)
+        mix_amount = self.SATURATION_MIX.get(_mk, 0.30)
+        tape_speed = self.TAPE_SPEED.get(_mk, "7.5_ips")
+        hysteresis = self.HYSTERESIS_AMOUNT.get(_mk, 0.10)
 
         # §2.54 tape_speed_ips kwarg override (from UV3 _restoration_context → _infer_tape_speed_ips)
         _injected_ips = kwargs.get("tape_speed_ips")

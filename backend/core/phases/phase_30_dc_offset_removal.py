@@ -193,7 +193,8 @@ class DCOffsetRemoval(PhaseInterface):
         self.validate_input(audio)
 
         is_stereo = audio.ndim == 2
-        config = dict(self.HP_CONFIG.get(material, self.HP_CONFIG[MaterialType.VINYL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.HP_CONFIG.get(_mk, self.HP_CONFIG[MaterialType.VINYL]))
 
         # Locality-aware intensity control from UV3.
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
@@ -375,7 +376,7 @@ class DCOffsetRemoval(PhaseInterface):
             MaterialType.VINYL: 0.9,
             MaterialType.TAPE: 1.0,
             MaterialType.REEL_TAPE: 1.0,
-        }.get(material, 0.8)
+        }.get(_mk, 0.8)
         max_lift_db = 0.6
 
         # §2.45a-I: Gated RMS — nur Frames > -50 dBFS (kein Stille-inflationierter RMS)

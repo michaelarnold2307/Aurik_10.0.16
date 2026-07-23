@@ -325,8 +325,9 @@ class ReverbReduction(PhaseInterface):
             except Exception as e:
                 logger.warning("phase_20_reverb_reduction.py::process fallback: %s", e)
 
-        strength = self.REDUCTION_STRENGTH.get(material, 0.4)
-        damping = self.TAIL_DAMPING.get(material, 0.6)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        strength = self.REDUCTION_STRENGTH.get(_mk, 0.4)
+        damping = self.TAIL_DAMPING.get(_mk, 0.6)
 
         # Locality-aware intensity control from UV3.
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))

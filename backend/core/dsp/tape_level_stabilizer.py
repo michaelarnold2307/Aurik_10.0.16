@@ -79,7 +79,8 @@ def stabilize_tape_level(
         return audio.copy(), 0
 
     threshold_db = dip_threshold_db if dip_threshold_db is not None else _DIP_THRESHOLD_DB
-    gain_cap_db = max_gain_db if max_gain_db is not None else _MAX_GAIN_DB_BY_MATERIAL.get(material, 10.0)
+    _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+    gain_cap_db = max_gain_db if max_gain_db is not None else _MAX_GAIN_DB_BY_MATERIAL.get(_mk, 10.0)
 
     arr = np.asarray(audio, dtype=np.float64)
     is_stereo = arr.ndim == 2 and arr.shape[1] == 2

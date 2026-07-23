@@ -165,6 +165,9 @@ def check_enum_as_dict_key(filepath: str, source: str) -> list[str]:
         stripped = line.strip()
         if stripped.startswith('#'):
             continue
+        # Skip docstring/formula lines (inside triple-quoted strings)
+        if '·' in stripped or 'log10' in stripped:
+            continue
         # Pattern: DICT[material] oder DICT.get(material) wo MaterialType-Enum-Keys
         if re.search(r'\[material\]', stripped) or re.search(r'\.get\(material[,\)]', stripped):
             # Prüfe ob Normalisierung existiert

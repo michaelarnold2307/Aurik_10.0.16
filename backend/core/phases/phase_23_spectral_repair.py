@@ -685,8 +685,9 @@ class SpectralRepair(PhaseInterface):
         logger.info("phase_23: wall-deadline=%.0fs (audio=%.1fs)", min(300.0, max(90.0, 1.3 * _p23_dur_s)), _p23_dur_s)
 
         # Get material-specific parameters
-        stft_cfg = self.STFT_CONFIG.get(material, self.STFT_CONFIG[MaterialType.CD_DIGITAL])
-        thresholds = self.DETECTION_THRESHOLDS.get(material, self.DETECTION_THRESHOLDS[MaterialType.CD_DIGITAL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        stft_cfg = self.STFT_CONFIG.get(_mk, self.STFT_CONFIG[MaterialType.CD_DIGITAL])
+        thresholds = self.DETECTION_THRESHOLDS.get(_mk, self.DETECTION_THRESHOLDS[MaterialType.CD_DIGITAL])
 
         # §GEBOT-G55: Signal-adaptive Detection-Thresholds via Noise-Floor-Analyse
         # Zwei Vinyl-Platten können unterschiedliche Rauschböden haben.
@@ -704,7 +705,7 @@ class SpectralRepair(PhaseInterface):
             )
         except Exception as _e:
             logger.debug("%s: non-critical exception: %s", __name__, _e)
-        repair_strength = self.REPAIR_STRENGTH.get(material, 0.75)
+        repair_strength = self.REPAIR_STRENGTH.get(_mk, 0.75)
         _material_meta_key23 = self._material_key(material)
 
         # Locality-aware modulation from UV3.

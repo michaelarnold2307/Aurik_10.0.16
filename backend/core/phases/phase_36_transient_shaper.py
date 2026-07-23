@@ -230,7 +230,8 @@ class TransientShaper(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config_raw = self.SHAPING_CONFIG.get(material, self.SHAPING_CONFIG[MaterialType.CD_DIGITAL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config_raw = self.SHAPING_CONFIG.get(_mk, self.SHAPING_CONFIG[MaterialType.CD_DIGITAL])
         config = {
             "attack_gain_db": [  # type: ignore[attr-defined]
                 float(v * _effective_strength)

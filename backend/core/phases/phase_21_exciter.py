@@ -338,8 +338,10 @@ class Exciter(PhaseInterface):
             except Exception as _wsg_exc:
                 logger.debug("Phase 21 Wide-Stereo-Guard non-blocking: %s", _wsg_exc)
 
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+
         config: dict[str, Any] = copy.deepcopy(
-            self.EXCITER_CONFIG.get(material, self.EXCITER_CONFIG[MaterialType.CD_DIGITAL])
+            self.EXCITER_CONFIG.get(_mk, self.EXCITER_CONFIG[MaterialType.CD_DIGITAL])
         )
         for band_name in self.EXCITER_BANDS:
             config[band_name]["intensity"] = float(float(config[band_name]["intensity"]) * _effective_strength)

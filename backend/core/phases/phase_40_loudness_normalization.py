@@ -318,7 +318,8 @@ class LoudnessNormalizationPhase(PhaseInterface):
             max_true_peak_db = float(preset["max_true_peak_db"])  # type: ignore[arg-type]
             preset_name = preset["name"]
         else:
-            target_lufs = float(self.MATERIAL_TARGETS.get(material, self.MATERIAL_TARGETS[MaterialType.STREAMING]))
+            _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+            target_lufs = float(self.MATERIAL_TARGETS.get(_mk, self.MATERIAL_TARGETS[MaterialType.STREAMING]))
             max_true_peak_db = -1.0
             preset_name = None
 

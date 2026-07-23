@@ -988,7 +988,8 @@ class SpecConstitution:
         NIEDRIGER als die Defaults — sie respektieren die physikalischen Grenzen.
         """
         thresholds: dict[str, float] = {}
-        floor = self._material_floors.get(material, {})
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        floor = self._material_floors.get(_mk, {})
         for goal, cfg in self._musical_goals.items():
             floor_val = floor.get(goal, cfg["threshold"])
             # Floor ist das physikalisch maximal Erreichbare für dieses Material.
@@ -1097,7 +1098,8 @@ class SpecConstitution:
 
         # Physikalisches Limit: Floor = maximal erreichbarer Wert für dieses Material.
         # Das dynamische Modell darf den Floor NICHT überschreiten.
-        floor = self._material_floors.get(material, {})
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        floor = self._material_floors.get(_mk, {})
         for goal in computed:
             if goal in floor:
                 computed[goal] = min(computed[goal], floor[goal])

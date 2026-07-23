@@ -2041,7 +2041,8 @@ def get_material_initial_strength(material: str, phase_id: str) -> float:
     Returns:
         initial_strength ∈ (0, 1.0]; default = 1.0
     """
-    factors = _MATERIAL_PHASE_FACTORS.get(material, {})
+    _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+    factors = _MATERIAL_PHASE_FACTORS.get(_mk, {})
     return float(factors.get(phase_id, 1.0))
 
 

@@ -468,9 +468,10 @@ class MidSideProcessing(PhaseInterface):
         bands = self._split_bands(audio, sample_rate)
 
         # Get material-specific parameters
-        _mid_source = self.MID_DYNAMICS.get(material, self.MID_DYNAMICS[MaterialType.SHELLAC])
-        _side_source = self.SIDE_DYNAMICS.get(material, self.SIDE_DYNAMICS[MaterialType.SHELLAC])
-        _cross_source = self.CROSSFEED.get(material, self.CROSSFEED[MaterialType.SHELLAC])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        _mid_source = self.MID_DYNAMICS.get(_mk, self.MID_DYNAMICS[MaterialType.SHELLAC])
+        _side_source = self.SIDE_DYNAMICS.get(_mk, self.SIDE_DYNAMICS[MaterialType.SHELLAC])
+        _cross_source = self.CROSSFEED.get(_mk, self.CROSSFEED[MaterialType.SHELLAC])
         mid_params = {k: list(v) for k, v in _mid_source.items()}
         side_params = {k: list(v) for k, v in _side_source.items()}
         crossfeed_params = {k: list(v) for k, v in _cross_source.items()}

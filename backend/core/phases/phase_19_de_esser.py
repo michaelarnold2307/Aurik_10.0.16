@@ -972,14 +972,15 @@ class DeEsserPhase(PhaseInterface):
             except Exception as _snr_ref_exc:
                 logger.debug("SNR-Referenzmessung fehlgeschlagen, Skip: %s", _snr_ref_exc)
 
-        band_weights = self.BAND_WEIGHTS.get(material, {"low": 0.6, "mid": 0.7, "high": 0.8})
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        band_weights = self.BAND_WEIGHTS.get(_mk, {"low": 0.6, "mid": 0.7, "high": 0.8})
         _s_band_low, _s_band_high = self.vocal_profile.get("s_band", (5000.0, 10000.0))  # type: ignore[misc]
         _defect_scores_for_intensity = kwargs.get("defect_scores_raw", kwargs.get("defect_scores", {}))
         _ptl_19_hint = kwargs.get("phoneme_timeline")
 
         # Material/Gender-Basis: zwischen sanftem und assertivem Profil interpolieren,
         # statt pauschal den sanfteren Wert zu erzwingen.
-        material_max_reduction_db = self.MAX_REDUCTION_DB.get(material, -6.0)
+        material_max_reduction_db = self.MAX_REDUCTION_DB.get(_mk, -6.0)
         gender_max_reduction_db = self.vocal_profile.get("max_depth_db", -3.5)
         _gentle_abs = abs(max(material_max_reduction_db, gender_max_reduction_db))  # type: ignore[call-overload]
         _assertive_abs = abs(min(material_max_reduction_db, gender_max_reduction_db))  # type: ignore[call-overload]
@@ -1085,7 +1086,7 @@ class DeEsserPhase(PhaseInterface):
             )
 
         threshold_ratio = float(
-            self.SIBILANCE_THRESHOLD_RATIO.get(material, 1.8) * _intensity_profile.threshold_ratio_scale
+            self.SIBILANCE_THRESHOLD_RATIO.get(_mk, 1.8) * _intensity_profile.threshold_ratio_scale
         )
 
         if abs(max_reduction_db) < 1.0:

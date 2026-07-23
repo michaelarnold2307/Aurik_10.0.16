@@ -604,7 +604,8 @@ class DropoutRepairPhase(PhaseInterface):
             "reel_tape": "reel-to-reel tape, warm analog saturation",
             "cassette": "cassette tape, slightly muffled warm tone",
         }
-        material_hint = material_hints.get(material, "analog recording, vintage warmth")
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        material_hint = material_hints.get(_mk, "analog recording, vintage warmth")
 
         # Spectral heuristics: vocal vs instrumental
         # Voiced-speech / singing energy is concentrated in 300–3 400 Hz (ITU-T G.711)

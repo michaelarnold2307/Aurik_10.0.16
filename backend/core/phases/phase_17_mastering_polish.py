@@ -517,7 +517,8 @@ class MasteringPolishPhase(PhaseInterface):
         """
         Wendet Multi-Band Parametric EQ an — mit §v10 Spectrum-Aware Adaptation.
         """
-        eq_config = self.MASTERING_EQ.get(material, self.MASTERING_EQ[MaterialType.VINYL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        eq_config = self.MASTERING_EQ.get(_mk, self.MASTERING_EQ[MaterialType.VINYL])
 
         # ── §v10 Spectrum-Aware: Messe IST-Spektrum vor EQ ────────────
         # Das Material-Template ist der AUSGANGSPUNKT. Der tatsächliche
@@ -592,7 +593,8 @@ class MasteringPolishPhase(PhaseInterface):
         """
         Wendet Multi-Band Transient Enhancement an (Attack/Sustain Shaping).
         """
-        config = self.TRANSIENT_ENHANCEMENT.get(material, self.TRANSIENT_ENHANCEMENT[MaterialType.VINYL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = self.TRANSIENT_ENHANCEMENT.get(_mk, self.TRANSIENT_ENHANCEMENT[MaterialType.VINYL])
         attack_multipliers = config["attack"]
         sustain_multipliers = config["sustain"]
 
@@ -659,7 +661,8 @@ class MasteringPolishPhase(PhaseInterface):
         """
         Wendet Harmonic Excitation (Saturation) an.
         """
-        strength = self.HARMONIC_ENHANCEMENT.get(material, self.HARMONIC_ENHANCEMENT[MaterialType.VINYL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        strength = self.HARMONIC_ENHANCEMENT.get(_mk, self.HARMONIC_ENHANCEMENT[MaterialType.VINYL])
 
         # §v10 Harmonic-Aware: Messe vorhandene Sättigung vor Enhancement.
         # Ein bereits gesättigter Song (z.B. verzerrte Gitarre) braucht
@@ -671,7 +674,7 @@ class MasteringPolishPhase(PhaseInterface):
         logger.debug(
             "§v10 Harmonic-Aware: material=%s template=%.2f existing_sat=%.2f scale=%.2f final=%.2f",
             material.name if hasattr(material, "name") else str(material),
-            self.HARMONIC_ENHANCEMENT.get(material, 0.25),
+            self.HARMONIC_ENHANCEMENT.get(_mk, 0.25),
             _existing_saturation,
             _harmonic_scale,
             strength,
@@ -738,7 +741,8 @@ class MasteringPolishPhase(PhaseInterface):
         """
         Wendet Stereo Width Enhancement an (Mid/Side Processing).
         """
-        width = self.STEREO_WIDTH.get(material, self.STEREO_WIDTH[MaterialType.VINYL])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        width = self.STEREO_WIDTH.get(_mk, self.STEREO_WIDTH[MaterialType.VINYL])
         width = 1.0 + (width - 1.0) * strength  # Scale towards neutral by PMGG strength
 
         if abs(width - 1.0) < 0.01:
@@ -793,7 +797,8 @@ class MasteringPolishPhase(PhaseInterface):
         polished = signal.sosfiltfilt(sos, polished, axis=0)
 
         # 2. True Peak Safety Limiter (nur wenn über Target)
-        target_db = self.TARGET_LEVEL_DB.get(material, -0.5)
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        target_db = self.TARGET_LEVEL_DB.get(_mk, -0.5)
         ceiling_linear = 10 ** (target_db / 20)
 
         current_peak = np.abs(polished).max()

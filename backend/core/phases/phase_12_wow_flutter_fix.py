@@ -3765,7 +3765,7 @@ def _run_test() -> None:  # pragma: no cover
         else:
             logger.debug("⚠️  No significant wow/flutter detected")
             logger.debug("   Max Deviation: %.3f%%", result.metrics["max_deviation_percent"])
-            logger.debug("   Threshold: %s%%", phase.DETECTION_THRESHOLD[material])
+            logger.debug("   Threshold: %s%%", phase.DETECTION_THRESHOLD.get(material, 0.5))  # _mat_enum_
             logger.debug("")
 
     logger.debug("=" * 80)

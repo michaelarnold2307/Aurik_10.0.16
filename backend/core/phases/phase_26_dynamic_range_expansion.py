@@ -305,7 +305,8 @@ class DynamicRangeExpansion(PhaseInterface):
                 )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.EXPANSION_CONFIG.get(material, self.EXPANSION_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.EXPANSION_CONFIG.get(_mk, self.EXPANSION_CONFIG[MaterialType.CD_DIGITAL]))
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)

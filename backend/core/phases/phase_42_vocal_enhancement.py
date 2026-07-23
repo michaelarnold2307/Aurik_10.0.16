@@ -418,7 +418,8 @@ class VocalEnhancement(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        config = dict(self.ENHANCEMENT_CONFIG.get(material, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
         config["deess_reduction_db"] = float(config["deess_reduction_db"] * _effective_strength)
         config["presence_gain_db"] = float(config["presence_gain_db"] * _effective_strength)
         config["formant_gain_db"] = float(config["formant_gain_db"] * _effective_strength)
@@ -1017,8 +1018,8 @@ class VocalEnhancement(PhaseInterface):
         _intimacy_delta = float(_intimacy_post - _intimacy_pre)
         _intimacy_gate_triggered = False
         _intimacy_rescue_mix = 0.0
-        _intimacy_max_drop = float(self._INTIMACY_MAX_DROP_BY_MATERIAL.get(material, 0.04))
-        _intimacy_rescue_max = float(self._INTIMACY_RESCUE_MAX_BY_MATERIAL.get(material, 0.45))
+        _intimacy_max_drop = float(self._INTIMACY_MAX_DROP_BY_MATERIAL.get(_mk, 0.04))
+        _intimacy_rescue_max = float(self._INTIMACY_RESCUE_MAX_BY_MATERIAL.get(_mk, 0.45))
         if _intimacy_delta < -_intimacy_max_drop:
             _intimacy_gate_triggered = True
             # Mehr Rescue bei größerem Abfall, aber begrenzt um Effekt zu bewahren.

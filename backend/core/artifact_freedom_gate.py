@@ -1704,7 +1704,8 @@ class ArtifactFreedomGate:
 
     def _get_thresholds(self, material: str) -> dict:
         """Gibt zurück: material-adaptive thresholds."""
-        factors = _MATERIAL_FACTORS.get(material, _MATERIAL_FACTORS["digital"])
+        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        factors = _MATERIAL_FACTORS.get(_mk, _MATERIAL_FACTORS["digital"])
         thresholds = {}
         for key, base_val in _BASE_THRESHOLDS.items():
             factor = factors.get(key, 1.0)
