@@ -25,6 +25,7 @@ from backend.core.phase_ontology import (
     get_phase_type,
 )
 from backend.core.pipeline_health_state import make_fail_reason
+from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 

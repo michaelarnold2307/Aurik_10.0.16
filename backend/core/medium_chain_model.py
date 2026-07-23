@@ -44,6 +44,7 @@ import numpy as np
 from scipy import signal as sp_signal
 
 from backend.core.defect_scanner import DefectScore, DefectType, MaterialType
+from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 

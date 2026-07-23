@@ -65,6 +65,7 @@ from scipy.ndimage import median_filter
 from scipy.signal import lfilter
 
 from backend.core.audio_utils import limit_quiet_edge_boost, restore_layout, safe_to_mono, to_channels_last
+from backend.core.defect_scanner import MaterialType  # §v10.113
 from backend.core.dsp.silence_mask import apply_silence_preservation
 from backend.core.ml_model_readiness import check_ml_model_ready
 from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager

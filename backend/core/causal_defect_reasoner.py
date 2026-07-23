@@ -35,6 +35,8 @@ from __future__ import annotations
 
 import logging
 import math
+
+from backend.core.defect_scanner import MaterialType  # §v10.113
 import threading
 from dataclasses import dataclass
 from typing import Any

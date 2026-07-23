@@ -57,6 +57,7 @@ import threading
 from dataclasses import dataclass
 
 from backend.core.defect_scanner import DefectType
+from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 

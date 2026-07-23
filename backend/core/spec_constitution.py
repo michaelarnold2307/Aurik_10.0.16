@@ -9,6 +9,7 @@ WAS HIER STEHT, GILT. Keine Ausnahmen, keine Overrides ohne Spec-Änderung.
 
 Integration:
   from backend.core.spec_constitution import get_constitution
+from backend.core.defect_scanner import MaterialType  # §v10.113
   const = get_constitution()
   const.check_artifact_freedom(audio, sr)     → (bool, str)
   const.get_forbidden_patterns()               → list[ForbiddenPattern]

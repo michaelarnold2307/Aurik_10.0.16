@@ -85,6 +85,7 @@ from backend.core.audio_utils import (
     restore_layout,
     to_channels_last,
 )
+from backend.core.defect_scanner import MaterialType  # §v10.113
 from backend.core.ml_model_readiness import check_ml_model_ready
 
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult, create_phase_result
