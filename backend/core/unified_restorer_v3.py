@@ -38792,6 +38792,13 @@ class UnifiedRestorerV3:
         except Exception as _of_exc:
             logger.debug("§ORCHESTRATOR close non-blocking: %s", _of_exc)
 
+        # §v10.115 Post-Pipeline-Forensik: Exception-Analyse + Pattern-Mining + Q-Score
+        try:
+            from scripts.post_pipeline_forensics import run_forensics as _rf
+            _rf(q_score=None)  # Q-Score wird vom Denker/HPI gesetzt
+        except Exception as _fe_exc:
+            logger.debug("§v10.115 Forensik non-blocking: %s", _fe_exc)
+
         return current_audio, executed, skipped, deferred
 
     @staticmethod
