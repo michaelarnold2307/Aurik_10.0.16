@@ -42,7 +42,7 @@ def compute_perceptual_threshold(
     3. JND-Level (Minimal hörbare Pegeländerung)
 
     Returns:
-        threshold_db: (n_bark,) float32 — Pegel in dB, unter dem Änderungen unhörbar sind
+        threshold_db: (n_bark,) float32 - Pegel in dB, unter dem Änderungen unhörbar sind
     """
     from backend.core.dsp.bark_lufs_util import measure_lufs_per_bark
 
@@ -89,11 +89,17 @@ def should_skip_phase(
     sr: int,
     *,
     min_audible_bands: int = 2,
+    material_type: str = "unknown",
+    genre: str = "unknown",
 ) -> bool:
     """Prüft, ob eine Phase hörbare Änderungen bewirkt hat.
 
-    Spread-Masking ist für Codec-Design („kann ich Rauschen verstecken?"),
-    nicht für Restaurations-Validierung („hat die Phase etwas geändert?").
+    §v10.116: Material-adaptive JND + Genre-Tuning.
+    Kassette/Rauschen → höhere JND (Änderungen sind schwerer hörbar).
+    Klassik → niedrigere JND (Hörer sind kritischer).
+
+    Spread-Masking ist für Codec-Design ("kann ich Rauschen verstecken?"),
+    nicht für Restaurations-Validierung ("hat die Phase etwas geändert?").
 
     Algorithmus:
     1. Teile before/after in 24 Bark-Bänder
@@ -104,6 +110,12 @@ def should_skip_phase(
     Returns:
         True wenn Phase übersprungen werden sollte (keine hörbare Änderung)
     """
+    from backend.core.perceptual_tuning import get_material_jnd_factor, get_genre_jnd_factor
+
+    _mat_factor = get_material_jnd_factor(material_type)
+    _genre_factor = get_genre_jnd_factor(genre)
+    _combined_jnd_factor = _mat_factor * _genre_factor  # Multiplikativ: beide Faktoren wirken
+
     delta = audio_after.astype(np.float64) - audio_before.astype(np.float64)
     delta_rms = float(np.sqrt(np.mean(delta ** 2)) + 1e-12)
     if delta_rms < 1e-8:
@@ -135,7 +147,7 @@ def should_skip_phase(
             continue  # Beide unhörbar leise
 
         delta_db = float(abs(lufs_after[b] - lufs_before[b]))
-        jnd = float(_JND_DB_PER_BARK[b]) * 0.7  # §v10.101: konservativer Faktor — lieber Phase laufen lassen als hörbare Änderung verpassen
+        jnd = float(_JND_DB_PER_BARK[b]) * 0.7 * _combined_jnd_factor  # §v10.116: Material+Genre-adaptiv, §v10.101: ×0.7 konservativ
 
         # Eine Änderung ist hörbar wenn:
         # 1. Delta > JND des Bandes (Zwicker, ×0.7 konservativ)
