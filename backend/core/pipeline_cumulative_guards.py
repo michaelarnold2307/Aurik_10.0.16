@@ -150,6 +150,8 @@ class EarlyQualityGate:
         total_phases: int,
         restorability_score: float,
         original_crest_db: float | None = None,
+        material_type: str = "unknown",
+        chain_depth: int = 1,
     ) -> None:
         self._total = max(total_phases, 1)
         self._executed = 0
@@ -161,6 +163,13 @@ class EarlyQualityGate:
         # Snapshot vor Pipeline-Start
         self._snapshot_rms_db: float | None = None
         self._snapshot_crest_db: float | None = None
+        # §v10.102: Depth-adaptiver Crest-Abort-Threshold
+        _mat = str(material_type).lower()
+        _depth = max(1, int(chain_depth))
+        if _mat in ("cassette", "reel_tape", "tape"):
+            self._crest_abort_db: float = 4.0 + 2.0 * _depth  # depth=1→6, depth=4→12
+        else:
+            self._crest_abort_db: float = 4.0
 
     def set_pre_snapshot(self, audio: np.ndarray) -> None:
         """Speichert Pre-Pipeline-Metriken."""
@@ -205,11 +214,11 @@ class EarlyQualityGate:
                 rms = float(np.sqrt(np.mean(a * a))) + 1e-12
                 current_crest = float(20.0 * np.log10(peak / rms))
                 crest_drop = self._snapshot_crest_db - current_crest
-                if crest_drop > 4.0:
+                if crest_drop > self._crest_abort_db:
                     self._early_abort_triggered = True
                     result["should_abort"] = True
                     result["reason"] = (
-                        f"Crest-Einbruch {crest_drop:.1f} dB nach "
+                        f"Crest-Einbruch {crest_drop:.1f} dB > {self._crest_abort_db:.1f} dB nach "
                         f"{self._executed}/{self._total} Phasen — "
                         f"Material zu schlecht für Full-Pipeline"
                     )
@@ -537,6 +546,8 @@ class PipelineCumulativeGuard:
         sample_rate: int,
         total_phases: int = 0,
         restorability_score: float = 50.0,
+        material_type: str = "unknown",
+        chain_depth: int = 1,
     ) -> None:
         """Initialisiert/Resettet alle Guards vor einem Pipeline-Run."""
         self._original_audio = np.asarray(original_audio, dtype=np.float32)
@@ -550,7 +561,10 @@ class PipelineCumulativeGuard:
         self._initialized = True
         self.dynamics = CumulativeDynamicsTracker()
         self.dynamics.set_original(self._original_audio)
-        self.early_gate = EarlyQualityGate(total_phases, restorability_score)
+        self.early_gate = EarlyQualityGate(
+            total_phases, restorability_score,
+            material_type=material_type, chain_depth=chain_depth,
+        )
         self.early_gate.set_pre_snapshot(self._original_audio)
         self.noise_texture = CumulativeNoiseTextureTracker()
         self.groove = GrooveHardGuard()

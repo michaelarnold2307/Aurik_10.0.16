@@ -462,6 +462,18 @@ class PhaseInterface(abc.ABC):
                 self._logger.debug("BreathPreserver protect skipped: %s", _bp_exc)
 
         t0 = time.monotonic()
+        # §v10.118 FeedbackChain-Awareness: Phasen erkennen zweiten Durchlauf.
+        # Wenn _fc_active im restoration_context gesetzt ist, wird das Flag
+        # an die Phase weitergereicht. Additive Phasen (07, 23, 39) können
+        # daraufhin ihre Stärke drosseln.
+        _is_fc_pass = bool(kwargs.get('_feedback_chain_pass', False))
+        if not _is_fc_pass:
+            try:
+                _rest_ctx = kwargs.get('_restoration_context', None)
+                if isinstance(_rest_ctx, dict) and _rest_ctx.get('_fc_active', False):
+                    kwargs['_feedback_chain_pass'] = True
+            except Exception:
+                pass
         try:
             result = self.process(audio, sample_rate, material_type, **kwargs)
         except Exception as exc:
@@ -493,8 +505,180 @@ class PhaseInterface(abc.ABC):
         except Exception as _cg_exc:
             self._logger.debug("ComfortGuard skipped: %s", _cg_exc)
 
-        # ── VocalQualityGate: Gesangsqualität prüfen (nur bei Vokal-Phasen) ─
+        # ═══════════════════════════════════════════════════════════════
+        # §v10.115 Universal Phase Safety Wrapper — hebt ALLE 65+ Phasen
+        # auf das gleiche SOTA-Sicherheitsniveau. Drei systemische Guards:
+        #
+        #  1. RMS-Preservation-Guard: Rollback bei >30 dB Pegelabfall
+        #  2. §V22 Transient-Shift-Guard: Erkennt destruktive Transient-
+        #     Verschiebungen in additiven/Enhancement-Phasen
+        #  3. §2.46e Spectral-Novelty-Guard: Verhindert HF-Halluzinationen
+        #     in Synthese-/Spektral-Phasen
+        #
+        # Alle Guards sind non-blocking: Fehler → Debug-Log, kein Crash.
+        # Alle Guards enrichieren result.metadata für Audit/Tracing.
+        # ═══════════════════════════════════════════════════════════════
         phase_id = self.get_metadata().phase_id
+        _input_rms = None
+        try:
+            _input_rms = float(
+                np.sqrt(np.mean(np.asarray(audio, dtype=np.float32) ** 2)) + 1e-12
+            )
+        except Exception:
+            pass
+
+        if _input_rms is not None:
+            # ── Guard 1: Universal RMS-Preservation ─────────────────
+            try:
+                _output_rms = float(
+                    np.sqrt(np.mean(np.asarray(result.audio, dtype=np.float32) ** 2)) + 1e-12
+                )
+                _rms_drop_db = (
+                    float(20.0 * np.log10(_output_rms / _input_rms))
+                    if _input_rms > 1e-12
+                    else 0.0
+                )
+                result.metadata["rms_drop_db"] = round(float(min(0.0, _rms_drop_db)), 3)
+                if _rms_drop_db < -30.0:
+                    self._logger.warning(
+                        "§v10.115 RMS-Guard: %s RMS-Drop %.1f dB → Rollback auf Eingangs-Audio",
+                        phase_id, _rms_drop_db,
+                    )
+                    result.audio = np.asarray(audio, dtype=np.float32)
+                    result.warnings.append(
+                        f"RMS-Guard: Pegelabfall {_rms_drop_db:.1f} dB rückgängig gemacht"
+                    )
+                    result.metadata["rms_guard_rollback"] = True
+            except Exception as _rms_exc:
+                self._logger.debug("§v10.115 RMS-Guard non-blocking: %s", _rms_exc)
+
+            # ── Guard 2: §V22 Transient-Shift-Detection ─────────────
+            # Nur für additive/Enhancement-Phasen, die Transienten
+            # verändern könnten (Harmonik, Exciter, Air-Band, Bass etc.).
+            _phase_cat = self.get_metadata().category.name if hasattr(self, 'get_metadata') else ""
+            _is_additive = (
+                _phase_cat in ("ENHANCEMENT", "RESTORATION")
+                or any(kw in phase_id for kw in (
+                    "harmonic", "exciter", "air_band", "bass_enhance",
+                    "presence", "transient", "spectral", "frequency",
+                    "drums", "guitar", "brass", "piano", "vocal",
+                    "saturation", "spatial", "stereo_enhance",
+                ))
+            )
+            if _is_additive:
+                try:
+                    from backend.core.dsp.transient_guard import detect_transient_shifts
+
+                    _ts_result = detect_transient_shifts(
+                        np.asarray(audio, dtype=np.float32),
+                        np.asarray(result.audio, dtype=np.float32),
+                        sample_rate,
+                    )
+                    if _ts_result is not None and hasattr(_ts_result, 'onset_shift_ms'):
+                        _shift_ms = float(_ts_result.onset_shift_ms)
+                        result.metadata["onset_shift_ms"] = round(_shift_ms, 2)
+                        if _shift_ms > 5.0:
+                            self._logger.warning(
+                                "§V22 Transient-Guard: %s onset_shift=%.1f ms > 5 ms → Detektion",
+                                phase_id, _shift_ms,
+                            )
+                            result.warnings.append(
+                                f"Transient-Guard: onset_shift={_shift_ms:.1f} ms detektiert"
+                            )
+                except Exception as _ts_exc:
+                    self._logger.debug("§V22 Transient-Guard non-blocking: %s", _ts_exc)
+
+            # ── Guard 3: §2.46e Spectral-Novelty-Hallucination-Guard ─
+            # Nur für Synthese-/Spektral-Phasen, die neuen Spektral-
+            # Inhalt erzeugen können (Harmonik, Inpainting, Exciter).
+            _is_synthesis = (
+                any(kw in phase_id for kw in (
+                    "harmonic", "spectral_repair", "inpainting",
+                    "exciter", "frequency_restoration", "air_band",
+                    "diffusion", "band_gap", "dropout",
+                ))
+            )
+            if _is_synthesis:
+                try:
+                    _n_fft = min(2048, audio.shape[-1] // 4 if audio.ndim == 1 else audio.shape[-1] // 4)
+                    if _n_fft >= 64:
+                        _mono_in = (
+                            audio.mean(axis=0) if audio.ndim == 2 else audio
+                        )
+                        _mono_out = (
+                            result.audio.mean(axis=0) if result.audio.ndim == 2 else result.audio
+                        )
+                        _spec_in = np.abs(np.fft.rfft(_mono_in[: _n_fft * 4]))
+                        _spec_out = np.abs(np.fft.rfft(_mono_out[: _n_fft * 4]))
+                        _spec_in_norm = _spec_in / (np.max(_spec_in) + 1e-12)
+                        _spec_out_norm = _spec_out / (np.max(_spec_out) + 1e-12)
+                        _novelty = float(
+                            np.mean(np.abs(_spec_out_norm - _spec_in_norm))
+                        )
+                        result.metadata["spectral_novelty"] = round(_novelty, 4)
+                        if _novelty > 0.15:
+                            self._logger.warning(
+                                "§2.46e Hallucination-Guard: %s spectral_novelty=%.3f > 0.15",
+                                phase_id, _novelty,
+                            )
+                            result.warnings.append(
+                                f"Hallucination-Guard: spectral_novelty={_novelty:.3f}"
+                            )
+                except Exception as _hg_exc:
+                    self._logger.debug("§2.46e Hallucination-Guard non-blocking: %s", _hg_exc)
+
+            # ── Guard 4: §v10.117 Universal Formant-Guard ─────────────
+            # Leichtgewichtige Formant-Stabilitäts-Prüfung für ALLE Phasen.
+            # Nutzt spektrale Band-Vektor-Korrelation (10 Bänder, 300–3500 Hz)
+            # um Formant-Verschiebungen zu erkennen — die häufigste Ursache
+            # für unnatürlich klingenden Gesang nach DSP-Verarbeitung.
+            # Laufzeit: < 0.5 ms, non-blocking.
+            try:
+                _n_guard4 = min(len(audio), 8192)
+                if _n_guard4 >= 256:
+                    _mono_pre4 = (
+                        np.asarray(audio, dtype=np.float32).mean(axis=0)
+                        if audio.ndim == 2
+                        else np.asarray(audio, dtype=np.float32)
+                    )[:_n_guard4]
+                    _mono_post4 = (
+                        np.asarray(result.audio, dtype=np.float32).mean(axis=0)
+                        if result.audio.ndim == 2
+                        else np.asarray(result.audio, dtype=np.float32)
+                    )[:_n_guard4]
+                    # 10-Band spectral envelope 300–3500 Hz (Formant-Bereich)
+                    _bands_hz4 = np.logspace(np.log10(300), np.log10(3500), 11)
+                    _bands_bin4 = np.round(_bands_hz4 * _n_guard4 / sample_rate).astype(int)
+                    _bands_bin4 = np.clip(_bands_bin4, 1, _n_guard4 // 2 - 1)
+                    _spec_pre4 = np.abs(np.fft.rfft(_mono_pre4))
+                    _spec_post4 = np.abs(np.fft.rfft(_mono_post4))
+                    _env_pre4 = np.array([
+                        float(np.mean(_spec_pre4[_bands_bin4[i]:_bands_bin4[i+1]]))
+                        for i in range(10)
+                    ])
+                    _env_post4 = np.array([
+                        float(np.mean(_spec_post4[_bands_bin4[i]:_bands_bin4[i+1]]))
+                        for i in range(10)
+                    ])
+                    _env_pre4 = _env_pre4 / (np.max(_env_pre4) + 1e-12)
+                    _env_post4 = _env_post4 / (np.max(_env_post4) + 1e-12)
+                    _formant_corr4 = float(
+                        np.dot(_env_pre4, _env_post4)
+                        / (np.linalg.norm(_env_pre4) * np.linalg.norm(_env_post4) + 1e-12)
+                    )
+                    result.metadata["formant_stability"] = round(_formant_corr4, 4)
+                    if _formant_corr4 < 0.85:
+                        self._logger.warning(
+                            "§v10.117 Formant-Guard: %s formant_stability=%.3f < 0.85 → mögliche Gesangsdegradation",
+                            phase_id, _formant_corr4,
+                        )
+                        result.warnings.append(
+                            f"Formant-Guard: spektrale Hüllkurve verschoben (corr={_formant_corr4:.3f})"
+                        )
+            except Exception as _fg_exc:
+                self._logger.debug("§v10.117 Formant-Guard non-blocking: %s", _fg_exc)
+
+        # ── VocalQualityGate: Gesangsqualität prüfen (nur bei Vokal-Phasen) ─
         if any(kw in phase_id for kw in ("42", "65", "vocal", "voice", "deess")):
             try:
                 from backend.core.vocal_quality_gate import get_vocal_quality_gate

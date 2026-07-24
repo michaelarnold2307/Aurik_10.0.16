@@ -330,6 +330,15 @@ class PhaseProgressNarrator:
         self._context: dict[str, Any] = {}
         self._chain_story_told: bool = False
         self._chain_story_index: int = 0
+        # §v10.203 S1: Live-Chapter-Tracking
+        self._chapters_emitted: set[str] = set()
+        # §v10.203 S2: Chapter-Transition — letztes Kapitel
+        self._last_chapter: str = ""
+        # §v10.203 S4: Discovery-Tracking
+        self._discoveries_emitted: set[str] = set()
+        # §v10.203 S7: Phase-Start-Zeit für Entertainment-Timing
+        self._phase_start: dict[str, float] = {}
+        self._intermezzo_emitted: dict[str, float] = {}  # phase_key -> last emission time
 
     # ── Kontext setzen ──────────────────────────────────────────────────────
 
@@ -476,7 +485,569 @@ class PhaseProgressNarrator:
 
         return f"{praefix}{vorlage}"
 
-    # ── Hilfsfunktionen ─────────────────────────────────────────────────────
+    # ── §v10.203 S1: Live-Chapter-Narration ────────────────────────────────
+
+    def live_chapter(self, progress_pct: float) -> str | None:
+        """Liefert bei Fortschritt-Schwellen ein narratives Kapitel.
+
+        Returns None wenn keine Schwelle erreicht wurde oder das Kapitel
+        bereits erzählt wurde. Andernfalls einen mehrzeiligen narrativen Text,
+        der dem Nutzer erklärt, was Aurik gerade tut und WARUM.
+
+        Kapitel:
+          5%  — „Was wir vorgefunden haben" (Forensik-Erzählung)
+          18% — „Was wir reparieren" (Defekt-Geschichten)
+          45% — „Was wir verbessern" (Klang-Erzählung)
+          78% — „Der Feinschliff" (Mastering-Narrative)
+          95% — „Das Ergebnis" (Qualitäts-Vorschau)
+        """
+        pct = float(progress_pct)
+        ctx = self._context
+        chain = ctx.get("transfer_chain") or []
+        material = ctx.get("material", "")
+        defects = ctx.get("defects", [])
+        era = ctx.get("era_decade")
+        rest = ctx.get("restorability")
+
+        _schwellen = [
+            (5.0, "finding"),
+            (18.0, "repairing"),
+            (45.0, "enhancing"),
+            (78.0, "polishing"),
+            (95.0, "result"),
+        ]
+
+        for _schwelle, _kapitel_id in _schwellen:
+            if pct >= _schwelle and _kapitel_id not in self._chapters_emitted:
+                self._chapters_emitted.add(_kapitel_id)
+                return self._build_chapter(_kapitel_id, chain, material, defects, era, rest)
+
+        return None
+
+    def _build_chapter(
+        self,
+        chapter_id: str,
+        chain: list[str],
+        material: str,
+        defects: list[str],
+        era: int | None,
+        rest: float | None,
+    ) -> str:
+        """Baut ein narratives Kapitel aus Kontext-Daten."""
+        import random as _random
+        _rng = _random.Random(hash(chapter_id + self._session_key))
+
+        _mat_name = _TRÄGER_NAMEN.get(material, "diesem Tonträger")
+        _mat_kurz = _TRÄGER_KURZ.get(material, material or "Audio")
+        _era_str = f"aus den {era}ern" if era else ""
+        _rest_str = ""
+        if rest is not None:
+            if rest >= 70:
+                _rest_str = "Die Aufnahme ist in einem Zustand, der eine sehr gute Restaurierung erwarten lässt."
+            elif rest >= 45:
+                _rest_str = "Die Aufnahme hat einige Herausforderungen, aber Aurik ist zuversichtlich."
+            else:
+                _rest_str = "Die Aufnahme ist stark degradiert. Aurik wird das Beste herausholen, aber nicht jeder Schaden lässt sich vollständig beheben."
+        _chain_str = " → ".join([_TRÄGER_KURZ.get(c, c) for c in chain]) if chain else _mat_kurz
+        _num_stages = len(chain) if chain else 1
+        _first = _TRÄGER_NAMEN.get(chain[0], _mat_name) if chain else _mat_name
+
+        _defect_list = ""
+        if defects:
+            _def_names = {
+                "clicks": "Knackser", "crackle": "Knistern", "hum": "Netzbrummen",
+                "noise_level": "Grundrauschen", "wow": "Gleichlaufschwankungen",
+                "dropout": "Aussetzer", "clipping": "Übersteuerungen",
+                "sibilance": "Zischlaute", "pops": "Pops",
+            }
+            _def_human = [_def_names.get(d, d) for d in defects[:5]]
+            _defect_list = ", ".join(_def_human)
+
+        if chapter_id == "finding":
+            return self._chapter_finding(_mat_name, _chain_str, _num_stages, _first, _era_str, _rest_str, _rng)
+        elif chapter_id == "repairing":
+            return self._chapter_repairing(_mat_name, _defect_list, _era_str, _rng)
+        elif chapter_id == "enhancing":
+            return self._chapter_enhancing(_mat_name, _era_str, _chain_str, _rng)
+        elif chapter_id == "polishing":
+            return self._chapter_polishing(_mat_name, _era_str, _rng)
+        elif chapter_id == "result":
+            return self._chapter_result(_mat_name, _era_str, _rest_str, _rng)
+        return ""
+
+    def _chapter_finding(self, mat, chain, stages, first, era, rest, rng) -> str:
+        _templates = [
+            (
+                f"📀 Kapitel 1: Was wir vorgefunden haben\n\n"
+                f"Deine Musik stammt von {mat}. {era} — eine Zeit mit einem ganz "
+                f"eigenen, unverwechselbaren Klang. {rest}\n\n"
+                f"Deine Aufnahme hat {stages} Stationen durchlaufen: {chain}. "
+                f"Das ist wie ein altes Foto, das mehrfach kopiert wurde — "
+                f"jede Kopie hinterlässt ihre Spuren. Aurik hat diese Spuren "
+                f"erkannt und weiss jetzt genau, wie es Deine Musik behandeln muss."
+            ),
+            (
+                f"🔍 Kapitel 1: Die Spurensuche\n\n"
+                f"So wie ein Archäologe die Geschichte einer antiken Vase entschlüsselt, "
+                f"hat Aurik die Hörspuren in Deiner Musik untersucht. Das Ergebnis: "
+                f"Deine Aufnahme begann als {first} und durchlief {stages} weitere "
+                f"Stationen — {chain}.\n\n"
+                f"{era} — jedes Jahrzehnt hat seinen eigenen Klang-Charakter. "
+                f"{rest}"
+            ),
+            (
+                f"🎧 Kapitel 1: Deine Musik hat eine Geschichte\n\n"
+                f"{mat} {era} — das ist der Ursprung Deiner Aufnahme. "
+                f"Seitdem hat sie einen weiten Weg zurückgelegt: {chain}.\n\n"
+                f"Jede dieser Stationen hat Spuren hinterlassen — ein feines "
+                f"Rauschen hier, ein leichtes Knistern da. Aurik hat diese "
+                f"Spuren gelesen wie ein Detektiv. {rest}"
+            ),
+        ]
+        return _templates[rng.randint(0, len(_templates) - 1)]
+
+    def _chapter_repairing(self, mat, defects, era, rng) -> str:
+        _def_str = f"{defects}" if defects else "verschiedene altersbedingte Störungen"
+        _templates = [
+            (
+                f"🔧 Kapitel 2: Die Reparatur beginnt\n\n"
+                f"Jetzt geht es ans Eingemachte. Aurik hat bei Deiner {mat} "
+                f"{_def_str} entdeckt — die Spuren der Zeit.\n\n"
+                f"Wie ein Restaurator, der ein Gemälde Schicht für Schicht reinigt, "
+                f"entfernt Aurik jetzt jede einzelne Störung. Nicht mit Gewalt, "
+                f"sondern mit chirurgischer Präzision. Nichts von der Musik "
+                f"geht verloren — nur das, was nicht hingehört, wird entfernt."
+            ),
+            (
+                f"🩹 Kapitel 2: Chirurgische Präzision\n\n"
+                f"Deine {mat} hat {_def_str}. Aurik weiss genau, "
+                f"wie es diese spezifischen Störungen behandeln muss. "
+                f"{era} — das bedeutet besondere Sorgfalt.\n\n"
+                f"Jeder Arbeitsschritt ist so kalibriert, dass nur die Störung "
+                f"verschwindet. Die Musik dahinter bleibt unberührt — "
+                f"als wäre die Zeit spurlos an ihr vorübergegangen."
+            ),
+        ]
+        return _templates[rng.randint(0, len(_templates) - 1)]
+
+    def _chapter_enhancing(self, mat, era, chain, rng) -> str:
+        _templates = [
+            (
+                f"✨ Kapitel 3: Die Wiederbelebung\n\n"
+                f"Die gröbsten Störungen sind entfernt. Jetzt kommt der "
+                f"magische Moment: Aurik bringt zurück, was die Zeit genommen hat.\n\n"
+                f"Verlorene Höhen werden rekonstruiert, die natürliche Wärme "
+                f"kehrt zurück, und die Musik bekommt wieder den Raum und die "
+                f"Tiefe, die sie einmal hatte. Es ist, als würde man ein "
+                f"Fenster öffnen und frische Luft hereinlassen."
+            ),
+            (
+                f"🎚️ Kapitel 3: Der Klang erblüht\n\n"
+                f"Nach der Reinigung kommt die Wiederherstellung. Deine {mat} "
+                f"hat durch den Transfer über {chain} viel von ihrer ursprünglichen "
+                f"Brillanz verloren. Aurik holt diese verlorenen Klangfarben "
+                f"jetzt zurück — Frequenz für Frequenz, Obertöne für Obertöne.\n\n"
+                f"{era} — Aurik weiss, wie Musik aus dieser Zeit "
+                f"geklungen hat, und stellt diesen Charakter wieder her."
+            ),
+        ]
+        return _templates[rng.randint(0, len(_templates) - 1)]
+
+    def _chapter_polishing(self, mat, era, rng) -> str:
+        _templates = [
+            (
+                f"💎 Kapitel 4: Der Feinschliff\n\n"
+                f"Die grobe Arbeit ist getan. Jetzt wird Deine Musik poliert — "
+                f"wie ein Diamant, der den letzten Schliff bekommt.\n\n"
+                f"Die Lautstärke wird für jedes Wiedergabegerät optimiert, "
+                f"das Stereobild bekommt die perfekte Balance, und jedes "
+                f"kleine Detail wird noch einmal geprüft und verfeinert. "
+                f"Das ist der Unterschied zwischen 'gut' und 'atemberaubend'."
+            ),
+            (
+                f"🎯 Kapitel 4: Die Perfektion\n\n"
+                f"Deine {mat} aus den {era}ern — fast fertig. "
+                f"Jetzt geht es um die Details, die den Unterschied machen: "
+                f"Perfekte Lautstärke auf jedem Gerät, optimale Stereo-Balance, "
+                f"letzte Anpassungen der Klangfarbe. Aurik arbeitet jetzt mit "
+                f"der Sorgfalt eines Uhrmachers an den letzten Feinheiten."
+            ),
+        ]
+        return _templates[rng.randint(0, len(_templates) - 1)]
+
+    def _chapter_result(self, mat, era, rest, rng) -> str:
+        _templates = [
+            (
+                f"🎵 Kapitel 5: Das Ergebnis\n\n"
+                f"Deine {mat} aus den {era}ern ist fertig restauriert. "
+                f"Gleich siehst Du das Qualitätsergebnis.\n\n"
+                f"{rest}\n\n"
+                f"Egal wie das Ergebnis ausfällt — Aurik hat sein Bestes getan. "
+                f"Manche Aufnahmen sind zu stark beschädigt für eine perfekte "
+                f"Wiederherstellung. Aber Aurik hat nichts verschlechtert — "
+                f"das ist das wichtigste Prinzip."
+            ),
+        ]
+        return _templates[rng.randint(0, len(_templates) - 1)]
+
+    # ── Ende Live-Chapter-Narration ──────────────────────────────────────
+
+    # ── §v10.203 S2: Chapter-Übergänge ──────────────────────────────────
+
+    def chapter_transition(self, progress_pct: float) -> str | None:
+        """Liefert einen Übergangstext wenn ein Kapitel endet und das nächste beginnt."""
+        _transitions = {
+            ("finding", "repairing"): [
+                "Die Analyse ist abgeschlossen. Jetzt beginnt die eigentliche Arbeit — "
+                "Aurik macht sich an die Reparatur.",
+                "Aurik weiss jetzt genau, was zu tun ist. Die Reparatur-Phasen laufen an.",
+            ],
+            ("repairing", "enhancing"): [
+                "Die gröbsten Störungen sind beseitigt. Jetzt geht es darum, "
+                "den ursprünglichen Klang wiederherzustellen — die Seele der Musik.",
+                "Reparatur abgeschlossen. Aurik wechselt jetzt in den "
+                "Wiederherstellungs-Modus — hier entsteht der magische Klang.",
+            ],
+            ("enhancing", "polishing"): [
+                "Die Musik klingt schon viel besser. Jetzt kommt der Feinschliff — "
+                "der Unterschied zwischen 'gut' und 'hervorragend'.",
+                "Fast geschafft. Aurik poliert jetzt jedes einzelne Detail "
+                "auf Hochglanz. Das ist die Kür nach der Pflicht.",
+            ],
+            ("polishing", "result"): [
+                "Der letzte Schliff ist getan. Aurik prüft jetzt das Ergebnis "
+                "mit höchster Sorgfalt. Gleich siehst Du, was erreicht wurde.",
+            ],
+        }
+        # Nur auslösen wenn wir zwischen Kapiteln wechseln
+        _current = self._last_chapter
+        for (_from, _to), _msgs in _transitions.items():
+            if _current == _from and _to in self._chapters_emitted:
+                self._last_chapter = _to
+                import random as _rnd
+                return _msgs[_rnd.randint(0, len(_msgs) - 1)]
+        return None
+
+    # ── §v10.203 S3: Post-Processing & Denker Narrative ──────────────────
+
+    def post_processing_message(self, stage: str) -> str:
+        """Narrative für Post-Processing und Denker-Phasen."""
+        _msgs = {
+            "precision_dropout": [
+                "Präzisions-Feinabstimmung: Aurik entfernt letzte Artefakte, "
+                "die nur in extrem hochauflösender Analyse sichtbar sind.",
+            ],
+            "vocal_scratch": [
+                "Gesangs-Optimierung: Aurik verfeinert die Stimmklarheit — "
+                "jedes Wort, jede Nuance wird herausgearbeitet.",
+            ],
+            "tape_head": [
+                "Band-Kopf-Entzerrung: Aurik korrigiert die typischen "
+                "Frequenzgang-Veränderungen, die jeder Bandkopf verursacht.",
+            ],
+            "smart_tape": [
+                "Intelligente Band-Analyse: Aurik modelliert das exakte "
+                "Bandverhalten und gleicht es perfekt aus.",
+            ],
+            "azimuth": [
+                "Azimut-Präzisions-Korrektur: Aurik richtet die Stereo-Spuren "
+                "haargenau aus — für maximale räumliche Tiefe.",
+            ],
+            "echo_removal": [
+                "Echo-Entfernung: Aurik beseitigt unerwünschte Reflexionen, "
+                "ohne den natürlichen Raumklang zu zerstören.",
+            ],
+            "export": [
+                "Export-Vorbereitung: Aurik bereitet die Ausgabe im gewählten "
+                "Format vor. Jedes Sample wird mit höchster Präzision berechnet.",
+            ],
+            "goosebumps": [
+                "Gänsehaut-Optimierung: Aurik analysiert die emotionale "
+                "Wirkung und verstärkt die Momente, die unter die Haut gehen.",
+            ],
+            "mdem": [
+                "Multi-dimensionale Entzerrung: Aurik bearbeitet die letzte "
+                "Ebene der Klang-Verbesserung.",
+            ],
+            "denker": [
+                "Der Aurik-Denker prüft jetzt das gesamte Ergebnis: "
+                "MUSHRA-Qualitätsbewertung, VERSA-Klangtreue, HPI-Verbesserung. "
+                "Das ist der aufwendigste Teil — er dauert ein paar Minuten, "
+                "aber ohne ihn gäbe es keine Qualitätsgarantie.",
+            ],
+            "excellence": [
+                "Exzellenz-Prüfung: Aurik vergleicht das Ergebnis mit "
+                "Referenzaufnahmen aus der gleichen Ära und dem gleichen Genre. "
+                "Nur was diesen Vergleich besteht, wird ausgeliefert.",
+            ],
+        }
+        _opts = _msgs.get(stage, [f"Post-Processing: {stage} — Aurik verfeinert das Ergebnis."])
+        return _opts[hash(stage + self._session_key) % len(_opts)]
+
+    # ── §v10.203 S4: Entdeckungs-Narrative ──────────────────────────────
+
+    def discovery(self) -> str | None:
+        """Liefert faszinierende narrative Entdeckungen aus der Forensik."""
+        ctx = self._context
+        chain = ctx.get("transfer_chain") or []
+        material = ctx.get("material", "")
+        era = ctx.get("era_decade")
+        defects = ctx.get("defects", [])
+
+        _discoveries = []
+
+        if len(chain) >= 3 and "discovery_chain" not in self._discoveries_emitted:
+            self._discoveries_emitted.add("discovery_chain")
+            _chain_kurz = " → ".join([_TRÄGER_KURZ.get(c, c) for c in chain])
+            _discoveries.append(
+                f"🔎 Spannende Entdeckung: Deine Aufnahme hat {len(chain)} Generationen "
+                f"durchlaufen — {_chain_kurz}. Das ist selten! Aurik hat spezielle "
+                f"Mehrgenerationen-Algorithmen, die genau für solche Fälle entwickelt wurden."
+            )
+
+        if material == "mp3_low" and "discovery_mp3" not in self._discoveries_emitted:
+            self._discoveries_emitted.add("discovery_mp3")
+            _discoveries.append(
+                f"🔎 Interessant: Deine Aufnahme ist eine stark komprimierte MP3-Datei. "
+                f"Das bedeutet, dass beim Kodieren viele Klangdetails entfernt wurden. "
+                f"Aurik hat spezielle Algorithmen, um diese verlorenen Details zu "
+                f"rekonstruieren — fast wie ein Puzzle, bei dem die fehlenden Teile "
+                f"aus dem vorhandenen Bild erschlossen werden."
+            )
+
+        if era and era <= 1970 and "discovery_era" not in self._discoveries_emitted:
+            self._discoveries_emitted.add("discovery_era")
+            _discoveries.append(
+                f"🔎 Deine Aufnahme stammt aus den {era}ern — einer Zeit, in der Musik "
+                f"noch mit völlig anderen Mitteln aufgenommen wurde als heute. "
+                f"Aurik berücksichtigt die damalige Studiotechnik, die typischen "
+                f"Mikrofone und Mischpulte dieser Ära — und stellt den Klang so "
+                f"wieder her, wie er im Studio geklungen haben muss."
+            )
+
+        if defects and len(defects) >= 4 and "discovery_defects" not in self._discoveries_emitted:
+            self._discoveries_emitted.add("discovery_defects")
+            _discoveries.append(
+                f"🔎 Deine Aufnahme zeigt gleich mehrere Arten von Schäden — "
+                f"das deutet auf eine bewegte Geschichte hin. Aurik behandelt "
+                f"jeden Schadenstyp mit einem eigenen, spezialisierten Werkzeug. "
+                f"Kein One-Size-Fits-All — sondern 43 verschiedene Spezialisten."
+            )
+
+        if _discoveries:
+            import random as _rnd
+            return _discoveries[_rnd.randint(0, len(_discoveries) - 1)]
+        return None
+
+    # ── §v10.203 S5: Handlungsempfehlungen ──────────────────────────────
+
+    # ── §v10.203 S7: Entertainment-Intermezzo für lange Phasen ──────────
+
+    def entertainment_intermezzo(self, phase_id: str, phase_duration_s: float) -> str | None:
+        """Liefert bei langen Phasen ein unterhaltsames, song-individuelles Intermezzo.
+
+        Das Intermezzo fühlt sich wie ein natürlicher Teil der Erzählung an —
+        kein aus dem Kontext gerissenes Entertainment. Es knüpft an den aktuellen
+        Pipeline-Abschnitt an, nutzt die konkreten Song-Daten (Era, Genre, Material)
+        und leitet am Ende zurück zur laufenden Arbeit.
+
+        Triggerschwellen (damit es nicht nervt):
+          - Erstes Intermezzo nach 30s
+          - Weiteres alle 60s, aber nie zweimal dasselbe Thema
+        """
+        ctx = self._context
+        material = ctx.get("material", "")
+        era = ctx.get("era_decade")
+        chain = ctx.get("transfer_chain") or []
+        defects = ctx.get("defects", [])
+
+        # Nur bei wirklich langen Phasen (>30s)
+        if phase_duration_s < 30.0:
+            return None
+
+        # Nicht zu oft — mindestens 45s Abstand zwischen Intermezzi
+        _now = _time.monotonic()
+        _last_emission = self._intermezzo_emitted.get(phase_id, 0.0)
+        if _now - _last_emission < 45.0:
+            return None
+        self._intermezzo_emitted[phase_id] = _now
+
+        # Kategorie auswählen (rotiert, Material-bewusst)
+        _categories = self._available_categories(material, era, chain, defects)
+        if not _categories:
+            return None
+
+        import random as _rnd
+        _cat = _categories[hash(f"{phase_id}_{int(phase_duration_s // 30)}") % len(_categories)]
+
+        # Intermezzo zusammenbauen: Einleitung + Inhalt + Rückleitung
+        _intro = self._intermezzo_intro(phase_id)
+        _content = self._intermezzo_content(_cat, material, era, chain, defects, _rnd)
+        _outro = self._intermezzo_outro(phase_id)
+
+        return f"{_intro}\n\n{_content}\n\n{_outro}"
+
+    def _available_categories(self, material, era, chain, defects):
+        """Ermittelt verfügbare Intermezzo-Kategorien basierend auf Song-Daten."""
+        cats = ["general"]
+        if era and era <= 1970:
+            cats.append("era_vintage")
+        if era and 1971 <= era <= 1999:
+            cats.append("era_analog")
+        if material in ("vinyl", "shellac"):
+            cats.append("material_vinyl")
+        if material in ("cassette_tape", "reel_tape", "cassette"):
+            cats.append("material_tape")
+        if material in ("mp3_low", "mp3_high", "aac"):
+            cats.append("material_digital")
+        if len(chain) >= 3:
+            cats.append("chain_deep")
+        if defects and len(defects) >= 3:
+            cats.append("defects_rich")
+        return cats
+
+    def _intermezzo_intro(self, phase_id):
+        _intros = [
+            "Während Aurik weiterarbeitet, eine kleine Geschichte zu Deiner Musik:",
+            "Solange die Algorithmen rechnen — ein interessanter Fakt am Rande:",
+            "Die Analyse läuft. Zeit für einen kurzen Blick auf das, was Deine Musik so besonders macht:",
+            "Aurik ist noch beschäftigt. Hier ein Gedanke, der Dir beim nächsten Hören auffallen wird:",
+            "Im Hintergrund läuft die Arbeit. Wusstest Du eigentlich…",
+        ]
+        return _intros[hash(phase_id) % len(_intros)]
+
+    def _intermezzo_outro(self, phase_id):
+        _outros = [
+            "… und jetzt zurück zur Arbeit — Aurik ist fast fertig mit diesem Schritt.",
+            "… aber genug der Geschichten — die Algorithmen rufen. Gleich geht's weiter.",
+            "… so, weiter im Programm: Aurik arbeitet noch ein bisschen an diesem Abschnitt.",
+            "… und schon nähern wir uns dem nächsten Meilenstein. Aurik ist gleich durch.",
+        ]
+        return _outros[hash(phase_id + "outro") % len(_outros)]
+
+    def _intermezzo_content(self, cat, material, era, chain, defects, rng):
+        _content = {
+            "general": [
+                "Aurik analysiert Deine Musik mit über 60 verschiedenen Merkmalen — "
+                "vom leisesten Rauschen bis zur höchsten Höhe. Das ist mehr, als die "
+                "meisten menschlichen Toningenieure gleichzeitig im Ohr behalten können.",
+                "Die Algorithmen, die hier laufen, wurden an Tausenden von Aufnahmen "
+                "trainiert — aus allen Jahrzehnten, allen Genres, allen Tonträgern. "
+                "Deine Musik profitiert von diesem geballten Wissen.",
+            ],
+            "era_vintage": [
+                f"In den {era}ern wurde Musik noch mit Röhrenmikrofonen und "
+                f"Bandmaschinen aufgenommen — jedes Gerät hatte seinen eigenen, "
+                f"unverkennbaren Klang. Aurik kennt diese alten Schätze und "
+                f"weiss genau, wie sie geklungen haben müssen.",
+                f"Die {era}er — das war die Zeit von {self._era_factoid(era)}. "
+                f"Deine Aufnahme trägt den Klang dieser Ära in sich.",
+            ],
+            "era_analog": [
+                f"In den {era}ern war die Musikproduktion komplett analog — "
+                f"keine Computer, keine digitalen Effekte. Nur Bandmaschinen, "
+                f"Mischpulte und das geschulte Ohr des Toningenieurs. "
+                f"Aurik stellt diesen warmen, analogen Klang wieder her.",
+            ],
+            "material_vinyl": [
+                "Schallplatten sind faszinierend: Die Musik ist buchstäblich "
+                "in die Rillen eingraviert. Eine Nadel fährt hindurch und "
+                "übersetzt die Vibrationen zurück in Schall. Jede noch so "
+                "kleine Beschädigung der Rille wird hörbar — und Aurik "
+                "kann sie erkennen und reparieren.",
+                "Vinyl hat einen ganz eigenen, warmen Klang — das liegt am "
+                "RIAA-Entzerrungsstandard, der seit 1954 weltweit verwendet wird. "
+                "Aurik weiss das und behandelt Vinyl-Aufnahmen entsprechend.",
+            ],
+            "material_tape": [
+                "Kassetten wurden 1963 von Philips erfunden und eroberten die Welt "
+                "im Sturm. Endlich konnte man Musik überallhin mitnehmen! Der Preis: "
+                "ein höheres Rauschen und die berüchtigten Bandsalat-Momente. "
+                "Aurik kennt alle typischen Kassettenschäden auswendig.",
+                "Tonbänder speichern Musik als magnetische Muster. Mit der Zeit "
+                "verblassen diese Muster — die hohen Frequenzen verschwinden zuerst. "
+                "Aurik kann diese verlorenen Höhen aus dem verbleibenden Signal "
+                "rekonstruieren.",
+            ],
+            "material_digital": [
+                "MP3-Dateien sparen Platz, indem sie Töne weglassen, die das "
+                "menschliche Ohr angeblich nicht hört. Das Problem: Das Ohr hört "
+                "sie DOCH — zumindest indirekt. Aurik kann diese fehlenden "
+                "Informationen aus dem Kontext erschliessen und wiederherstellen.",
+                "Digitale Kompression ist wie ein Puzzle, bei dem 80% der Teile "
+                "fehlen. Aurik errät die fehlenden Teile aus den verbleibenden — "
+                "mit erstaunlicher Genauigkeit.",
+            ],
+            "chain_deep": [
+                f"Deine Aufnahme hat {len(chain)} Stationen durchlaufen. Jede "
+                f"davon hat Spuren hinterlassen — wie Schichten in einem "
+                f"archäologischen Fund. Aurik arbeitet sich durch diese Schichten "
+                f"hindurch, um zum ursprünglichen Klang vorzudringen.",
+                "Mehrgenerationen-Aufnahmen sind selten und wertvoll — sie erzählen "
+                "eine Geschichte. Von der ersten Aufnahme bis zur Datei, die Du "
+                "geöffnet hast, ist Deine Musik durch viele Hände gegangen. "
+                "Aurik ehrt diesen Weg.",
+            ],
+            "defects_rich": [
+                "Jede Art von Schaden erzählt eine eigene Geschichte: Knackser "
+                "von der Plattenspielernadel, Rauschen vom Band, dumpfer Klang "
+                "von der MP3-Kompression. Aurik liest diese Geschichten wie "
+                "ein Archäologe — und repariert sie Schicht für Schicht.",
+            ],
+        }
+        opts = _content.get(cat, _content["general"])
+        return opts[rng.randint(0, len(opts) - 1)]
+
+    @staticmethod
+    def _era_factoid(era):
+        _facts = {
+            1950: "Rock'n'Roll, Petticoats und der Beginn der Jugendkultur",
+            1960: "der Beatles, der Mondlandung und des Transistorradios",
+            1970: "von ABBA, Disco und dem Siegeszug der Musikkassette",
+            1980: "der CD, der ersten Synthesizer und MTV",
+            1990: "der ersten MP3s, des Internets und Napster",
+        }
+        decade = (era // 10) * 10
+        return _facts.get(decade, "einer ganz besonderen musikalischen Ära")
+
+    # ── Ende Entertainment-Intermezzo ───────────────────────────────────
+
+    def recommendation(self, was_reverted: bool = False, quality_score: float = 0.0) -> str | None:
+        """Liefert eine kontext-bewusste Handlungsempfehlung für den nächsten Lauf."""
+        ctx = self._context
+        material = ctx.get("material", "")
+        chain = ctx.get("transfer_chain") or []
+        era = ctx.get("era_decade")
+
+        if was_reverted:
+            _recs = [
+                "💡 Tipp fürs nächste Mal: Der Studio-2026-Modus erlaubt mehr "
+                "Eingriffstiefe und könnte bei dieser Aufnahme bessere Ergebnisse "
+                "erzielen. Er ist weniger konservativ als der Restoration-Modus.",
+                "💡 Diese Aufnahme ist stark degradiert. Die 'Leichte Reinigung' "
+                "könnte besser funktionieren als eine Vollrestauration — "
+                "manchmal ist weniger mehr.",
+            ]
+            import random as _rnd
+            return _rnd.choice(_recs)
+
+        if quality_score < 55.0:
+            return (
+                "💡 Das Ergebnis ist okay, aber nicht überragend. Beim nächsten Mal "
+                "könntest Du es mit dem Studio-2026-Modus versuchen — "
+                "er ist mutiger und holt oft mehr aus schwierigem Material heraus."
+            )
+
+        if len(chain) >= 3:
+            return (
+                "💡 Deine Musik hat mehrere Generationen durchlaufen. Für "
+                "zukünftige Restaurierungen: Wenn Du Zugang zu einer früheren "
+                "Generation hast (z.B. die Original-Kassette statt der MP3-Kopie), "
+                "wird das Ergebnis noch besser. Aurik arbeitet am liebsten "
+                "mit dem frühestmöglichen Träger."
+            )
+
+        return None
 
     def _warum(self, phase_id: str) -> str:
         pid = str(phase_id or "").lower()

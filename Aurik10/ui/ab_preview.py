@@ -81,8 +81,7 @@ class WaveformCanvas(QtWidgets.QWidget):
         painter.fillRect(0, 0, w, h, QtGui.QColor("#0d0d1f"))
 
         if self._audio is None or len(self._audio) == 0:
-            painter.setPen(QtGui.QColor("#555"))
-            painter.drawText(self.rect(), QtCore.Qt.AlignmentFlag.AlignCenter, "Kein Audio geladen")
+            # Kein Audio — Fläche bleibt leer für maximale Wellenform-Darstellung
             return
 
         # Wellenform zeichnen

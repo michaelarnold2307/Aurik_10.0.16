@@ -541,6 +541,7 @@ QRadioButton = QtWidgets.QRadioButton
 QScrollArea = QtWidgets.QScrollArea
 QShortcut = QtWidgets.QShortcut
 QSizePolicy = QtWidgets.QSizePolicy
+QSlider = QtWidgets.QSlider  # §v10.207: Transport-Scrubber
 QSystemTrayIcon = QtWidgets.QSystemTrayIcon
 QTabWidget = QtWidgets.QTabWidget
 QVBoxLayout = QtWidgets.QVBoxLayout
@@ -630,7 +631,7 @@ class QualityMeterWidget(QWidget):
         self.setAccessibleDescription("Zeigt Prognose, Live-Schätzung oder final gemessenen MOS-Wert an.")
         self._mos: float = 0.0
         self._max_mos: float = 5.0
-        self._measurement_state: str = "Noch nicht gemessen"
+        self._measurement_state: str = "Datei öffnen zum Start"  # §v10.204: kontextualisiert
         self._measurement_detail: str = ""
         self._refresh_tooltip()
 
@@ -9725,7 +9726,7 @@ class DefectStoryWidget(QFrame):
             sev = self._normalize(key, float(raw))
             sev_f = sev * 100.0  # 0.00–100.00, 2-decimal precision
             impact = self._impact_score(key, sev)
-            if sev_f >= 0.01 or bool(_active_defects_set):
+            if sev_f >= 1.0 or bool(_active_defects_set):  # §v10.204: >=1% statt 0.01% — Pseudopräzision vermeiden
                 n_active += 1
 
             title, what, why = self._DEFECT_META.get(key, (key, "Signalabweichung", "wahrnehmbare Klangabweichung"))
@@ -9828,7 +9829,7 @@ class DefectStoryWidget(QFrame):
         compact_limit = 12
         hidden_count = 0
         display_entries = [
-            e for e in entries if float(e["sev_pct"]) >= 0.01 or (status == "completed" and e["key"] in _explicit_keys)
+            e for e in entries if float(e["sev_pct"]) >= 1.0 or (status == "completed" and e["key"] in _explicit_keys)
         ]
         if len(display_entries) > compact_limit and status in ("detected", "correcting"):
             hidden_count = len(display_entries) - compact_limit
@@ -9844,13 +9845,15 @@ class DefectStoryWidget(QFrame):
                     "border-left:3px solid #7B68EE;"
                 )
                 _title_color = "#B8D4FF"
+                _title_style = "font-weight:bold;"  # §v10.203: Aktive Defekte FETT
             else:
                 _row_style = ""
                 _title_color = "#D9E6F7"
+                _title_style = ""
             rows.append(
                 f"<tr style='{_row_style}'>"
                 f"<td style='padding:2px 3px;'>{e['icon']}</td>"
-                f"<td style='padding:2px 3px;color:{_title_color};'><b>{e['title']}</b><br>"
+                f"<td style='padding:2px 3px;color:{_title_color};{_title_style}'><b>{e['title']}</b><br>"
                 f"WAS: {e['what']}<br>WESHALB: {e['why']}</td>"
                 f"<td style='padding:2px 3px;color:#B8C7DA;'>WO: {e['where']}<br>"
                 f"WIE: {e['method']}<br>WANN: {e['when']}<br>WARUM DIESER SCHRITT: {e['why_now']}</td>"
@@ -10030,33 +10033,127 @@ class RecordSleeveWidget(QtWidgets.QFrame):
         layout.setSpacing(8)
         layout.addWidget(QtWidgets.QLabel("<b style='font-size:11pt; color:#C8D8FF;'>🎧 Player</b>"))
         row = QtWidgets.QHBoxLayout()
-        for icon, tip in [("▶", "Original"), ("⏸", "Pause"), ("⏮", "Anfang"), ("⏭", "Ende")]:
-            btn = QtWidgets.QPushButton(icon)
-            btn.setToolTip(tip)
-            btn.setFixedSize(42, 36)
-            row.addWidget(btn)
+        # §v10.203: Player-Buttons mit echten Audio-Player-Funktionen verdrahtet
+        self._panel_btn_play = QtWidgets.QPushButton("▶")
+        self._panel_btn_play.setToolTip("Wiedergabe starten")
+        self._panel_btn_play.setFixedSize(42, 36)
+        self._panel_btn_play.clicked.connect(self._panel_play)
+        self._panel_btn_pause = QtWidgets.QPushButton("⏸")
+        self._panel_btn_pause.setToolTip("Pause")
+        self._panel_btn_pause.setFixedSize(42, 36)
+        self._panel_btn_pause.clicked.connect(self._panel_pause)
+        self._panel_btn_stop = QtWidgets.QPushButton("⏹")
+        self._panel_btn_stop.setToolTip("Stopp")
+        self._panel_btn_stop.setFixedSize(42, 36)
+        self._panel_btn_stop.clicked.connect(self._panel_stop)
+        for _b in [self._panel_btn_play, self._panel_btn_pause, self._panel_btn_stop]:
+            row.addWidget(_b)
         row.addStretch()
         layout.addLayout(row)
         layout.addStretch()
         self._stack.addWidget(page)
+
+    def _panel_play(self):
+        """Startet Wiedergabe des restaurierten Audios."""
+        if hasattr(self, '_rest_audio') and self._rest_audio is not None:
+            self._play_restored()
+        elif hasattr(self, 'batch_thread') and self.batch_thread is not None:
+            # Während Batch: Live-Preview
+            self._play_live_preview()
+
+    def _panel_pause(self):
+        """Pausiert die Wiedergabe."""
+        self._stop_song_playback_only()
+
+    def _panel_stop(self):
+        """Stoppt die Wiedergabe vollständig."""
+        self._stop_song_playback_only()
 
     def _build_info_panel(self):
         page = QtWidgets.QWidget()
         layout = QtWidgets.QVBoxLayout(page)
         layout.setSpacing(8)
         layout.addWidget(QtWidgets.QLabel("<b style='font-size:11pt; color:#C8D8FF;'>ℹ Aurik</b>"))
-        info = QtWidgets.QLabel(
+        # §v10.204: Dynamisches Info-Panel — wird nach Restauration aktualisiert
+        self._slide_info_label = QtWidgets.QLabel(
             "<span style='font-size:9pt; color:#8899bb;'>"
-            "🎵 <b>Restaurierung</b> — behutsam & originalgetreu<br>"
+            "🎵 <b>Restoration</b> — behutsam & originalgetreu<br>"
             "🎛 <b>Studio 2026</b> — modern & brillant<br><br>"
             "💿 CD-Rauschprofil aktiv<br>"
-            "🔍 62 Defekttypen erkannt<br>"
-            "📊 14 Qualitätsmetriken</span>"
+            "🔍 Material-adaptive Defekterkennung<br>"
+            "📊 MUSHRA + VERSA + HPI Qualitätsmetriken<br><br>"
+            "<i>Nach der Restauration erscheinen hier die Ergebnisse.</i></span>"
         )
-        info.setWordWrap(True)
-        layout.addWidget(info)
+        self._slide_info_label.setWordWrap(True)
+        layout.addWidget(self._slide_info_label)
         layout.addStretch()
         self._stack.addWidget(page)
+
+    def _update_slide_info_from_result(self, restoration_result=None):
+        """Aktualisiert das Slide-Info-Panel mit echten Ergebnissen."""
+        if restoration_result is None:
+            return
+        _meta = getattr(restoration_result, "metadata", {}) or {}
+        _q = float(getattr(restoration_result, "quality_estimate", 0.0) or 0.0)
+        _phases_done = len(getattr(restoration_result, "phases_executed", []) or [])
+        _phases_skip = len(getattr(restoration_result, "phases_skipped", []) or [])
+        _phases_total = int(_meta.get("phases_total", _phases_done + _phases_skip))
+        _mushra = float((_meta.get("mushra") or {}).get("mushra_score", 0.0))
+        _hpi = float(_meta.get("hpi_score", 0.0))
+        _reverted = bool((_meta.get("do_no_harm") or {}).get("reverted", False))
+        _dnh_reason = str((_meta.get("do_no_harm") or {}).get("reason", ""))
+        _time_s = float(getattr(restoration_result, "total_time_seconds", 0.0) or 0.0)
+        _rt = float(getattr(restoration_result, "rt_factor", 0.0) or 0.0)
+        _mat = str(_meta.get("primary_material", "") or "")
+        _af = float(_meta.get("artifact_freedom", 0.0))
+        # §v10.206: Technische Metriken in Klartext
+        _lufs = _meta.get("lufs_delta")  # LUFS-Änderung
+        _vqi = _meta.get("vqi")  # Vocal Quality Index
+        # §v10.207: Material-Namen auf Deutsch übersetzen
+        _MAT_DE: dict[str, str] = {
+            "cassette": "Kassette", "vinyl": "Schallplatte", "shellac": "Schellack",
+            "reel_tape": "Tonband", "mp3_low": "MP3 (niedrig)", "mp3_high": "MP3 (hoch)",
+            "cd_digital": "CD/Digital", "streaming": "Streaming", "unknown": "Unbekannt",
+        }
+        _mat_de = _MAT_DE.get(_mat, _mat) if _mat else ""
+
+        _parts = []
+        if _mat_de:
+            _parts.append(f"📀 Medium: {_mat_de}")
+        if _phases_done > 0:
+            _time_min = int(_time_s // 60)
+            _parts.append(f"🔧 {_phases_done} Phasen in {_time_min} Min")
+            if _phases_skip > 0:
+                _parts.append(f"   ({_phases_skip} übersprungen — kein Bedarf)")
+            if _rt > 0:
+                _parts.append(f"⏱ Echtzeit-Faktor: {_rt:.0f}×")
+        if _reverted:
+            _parts.append(f"⚠️ Bearbeitung verworfen")
+            if _dnh_reason:
+                _parts.append(f"   Grund: {_dnh_reason[:80]}")
+        else:
+            if _q > 0:
+                _parts.append(f"📊 Ergebnisqualität: {_q*100:.0f}%")
+            if _mushra > 0:
+                _parts.append(f"🎧 Klangqualität: {_mushra:.0f}/100")  # §v10.207: MUSHRA→Klangqualität
+            if _hpi > 0:
+                _parts.append(f"📈 Klangverbesserung: {_hpi:.0%}")  # §v10.207: HPI→Klangverbesserung
+        if _af > 0:
+            _parts.append(f"🛡️ Störungsfreiheit: {_af*100:.0f}%")  # §v10.207: Artefakt→Störung
+        # §v10.206: Technische Metriken — nur wenn vorhanden
+        if _lufs is not None:
+            _lufs_val = float(_lufs)
+            if abs(_lufs_val) > 0.1:
+                _dir = "angehoben" if _lufs_val > 0 else "gesenkt"
+                _parts.append(f"🔊 Lautheit: {abs(_lufs_val):.1f} LUFS {_dir}")
+        if _vqi is not None:
+            _vqi_val = float(_vqi)
+            if _vqi_val > 0:
+                _vqi_label = "hervorragend" if _vqi_val > 0.8 else ("gut" if _vqi_val > 0.6 else "ausreichend")
+                _parts.append(f"🎤 Stimmqualität: {_vqi_label}")
+
+        _html = "<span style='font-size:9pt; color:#8899bb;'>" + "<br>".join(_parts) + "</span>"
+        self._slide_info_label.setText(_html)
 
     def _build_export_panel(self):
         page = QtWidgets.QWidget()
@@ -13603,7 +13700,43 @@ class ModernMainWindow(QMainWindow):
         self._playback_time_label.setMinimumWidth(80)
         ab_row_layout.addWidget(self._playback_time_label)
 
+        # §v10.207: Playback-Speed-Regler
+        self._speed_label = QLabel("1×")
+        self._speed_label.setStyleSheet(
+            "color: #8894A8; font-size: 8pt; font-weight: bold; padding: 0 4px;"
+        )
+        self._speed_label.setFixedWidth(24)
+        self._speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ab_row_layout.addWidget(self._speed_label)
+
         ab_inner.addWidget(ab_row)
+
+        # §v10.207: Transport-Scrubber (klickbarer Fortschrittsbalken)
+        self._transport_scrubber = QSlider(QtCore.Qt.Horizontal)
+        self._transport_scrubber.setRange(0, 1000)
+        self._transport_scrubber.setValue(0)
+        self._transport_scrubber.setFixedHeight(18)
+        self._transport_scrubber.setStyleSheet("""
+            QSlider::groove:horizontal {
+                background: rgba(50,60,90,0.50); height: 4px; border-radius: 2px;
+            }
+            QSlider::handle:horizontal {
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #667eea, stop:1 #9FA8DA);
+                width: 10px; height: 14px; margin: -5px 0; border-radius: 7px;
+            }
+            QSlider::handle:horizontal:hover {
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #7B93F0, stop:1 #B8C4FF);
+            }
+            QSlider::sub-page:horizontal {
+                background: qlineargradient(x1:0,y1:0,x2:1,y2:0, stop:0 #4A5FC0, stop:1 #667eea);
+                height: 4px; border-radius: 2px;
+            }
+        """)
+        self._transport_scrubber.sliderPressed.connect(self._scrubber_pressed)
+        self._transport_scrubber.sliderReleased.connect(self._scrubber_released)
+        self._transport_scrubber.setEnabled(False)
+        ab_inner.addWidget(self._transport_scrubber)
+
         layout.addWidget(ab_card)
 
         # ── Magic Buttons ─────────────────────────────────────────────
@@ -13807,35 +13940,48 @@ class ModernMainWindow(QMainWindow):
         return f"  ·  {_text}" if with_leading_separator else _text
 
     def _long_phase_reassure_text(self, ui_pct: float, time_since_callback_s: float) -> str:
-        """Gibt an active, rotating reassurance text for long callback gaps zurück.
-
-        The message rotates every few seconds to avoid the impression of a frozen UI,
-        while keeping content stage-aware and concise.
-        """
+        """Gibt konkrete, phasen-bewusste Beruhigungstexte bei langen Pausen."""
         if time_since_callback_s < 12.0:
             return ""
 
-        _buckets = max(0, int(time_since_callback_s // 6))
-        if ui_pct < 19.0:
+        _mins = int(time_since_callback_s // 60)
+        _time_info = f"seit {_mins} min" if _mins >= 1 else ""
+        _buckets = max(0, int(time_since_callback_s // 8))
+
+        # §v10.202: Konkrete Abschnittsinfo statt generischer Floskeln
+        if ui_pct < 12.0:
             _msgs = [
-                t("status.processing_reassure_analysis"),
-                "Aufnahme wird weiter sorgfältig geprüft",
-                "Zwischenergebnisse werden vorbereitet",
+                "Voranalyse: Defekterkennung & Medium-Bestimmung",
+                "Forensik: Transferkette & Restaurierbarkeit werden berechnet",
+                "KI-Modelle werden geladen & konfiguriert",
             ]
-        elif ui_pct < 90.0:
+        elif ui_pct < 30.0:
             _msgs = [
-                t("status.processing_reassure_long_phase"),
-                "Audio wird weiter verfeinert, keine Unterbrechung",
-                "Zwischenstände werden berechnet und abgesichert",
-                "Aufwendiger Arbeitsschritt, gleich geht es weiter",
+                "Reparatur-Phase: Defekte werden chirurgisch entfernt",
+                "Entrauschung, De-Knistern & Klick-Entfernung laufen",
+                "Gleichlauf-Korrektur & Azimut-Optimierung aktiv",
+            ]
+        elif ui_pct < 75.0:
+            _msgs = [
+                "Verbesserungs-Phase: Frequenzgang & Dynamik werden optimiert",
+                "Spektrale Reparatur & Harmonische Restauration laufen",
+                "Stereo-Bild & Räumlichkeit werden verfeinert",
+            ]
+        elif ui_pct < 92.0:
+            _msgs = [
+                "Finalisierung: Mastering & Pegel-Optimierung",
+                "LUFS-Normalisierung & True-Peak-Begrenzung",
+                "CD-Rauschprofil & Export-Vorbereitung",
             ]
         else:
             _msgs = [
-                t("status.processing_reassure_finalize"),
-                "Export wird abgesichert",
-                "Abschlussphase aktiv, gleich fertig",
+                "Qualitätsprüfung: MUSHRA, VERSA & Exzellenz-Bewertung",
+                "Export: Format-Konvertierung & Metadaten",
+                "Abschluss: Ergebnis wird gesichert",
             ]
-        return _msgs[_buckets % len(_msgs)]
+
+        _msg = _msgs[_buckets % len(_msgs)]
+        return f"{_msg}{' · ' + _time_info if _time_info else ''}"
 
     def _phase_risk_focus_label(
         self,
@@ -15336,7 +15482,7 @@ class ModernMainWindow(QMainWindow):
             "Eine leise Ballade bekommt eine andere Bearbeitung als ein lautes Rockstück. "
             "Aurik analysiert jeden Song separat und passt alle Restaurierungsschritte individuell an.<br><br>"
             "<b style='color:#AFC3DA;'>Schritt 3 — Die Werkzeugkiste:</b> "
-            "Aurik hat 68 Spezialwerkzeuge. Es entscheidet für jeden Song, welche Werkzeuge es "
+            "Aurik hat material-adaptive Spezialwerkzeuge. Es entscheidet für jeden Song, welche Werkzeuge es "
             "wann und wie stark einsetzt: Entrauschen, Entknistern, Gleichlauf-Korrektur, "
             "Frequenz-Wiederherstellung, Gesangs-Optimierung, Stereo-Korrektur — jedes Problem "
             "bekommt das passende Werkzeug in der passenden Stärke.<br><br>"
@@ -15347,7 +15493,7 @@ class ModernMainWindow(QMainWindow):
             "genau wie bei einer echten CD. Das Ergebnis klingt, als wäre die Musik direkt "
             "vom analogen Masterband auf CD gepresst worden.<br><br>"
             "<b style='color:#AFC3DA;'>Schritt 5 — Qualitätssicherung:</b> "
-            "Aurik prüft das Ergebnis mit 14 verschiedenen Qualitätskriterien: Sind die Obertöne "
+            "Aurik prüft das Ergebnis mit material-adaptiven Qualitätskriterien: Sind die Obertöne "
             "erhalten? Sind die Anschläge knackig? Ist die Stereo-Breite erhalten? Sind neue "
             "Störgeräusche entstanden? Jeder Test liefert eine Note — Aurik weiß selbst, "
             "ob eine Restaurierung gelungen ist.</span>"
@@ -15656,9 +15802,9 @@ class ModernMainWindow(QMainWindow):
             ("Verarbeitung", "läuft" if _snapshot.processing_active else "bereit"),
             ("Qualitätsanzeige", _snapshot.quality_state),
             ("A/B-Quellen", self._format_ab_source_status(_snapshot)),
-            ("CD-Rauschprofil", "aktiv · Vor-Export appliziert"),
-            ("Qualitätsmetriken", "14 Scores verfügbar"),
-            ("Pipeline-Phasen", "68 · material-adaptiv"),
+            ("CD-Rauschprofil", "aktiv · wird vor Export appliziert"),
+            ("Qualitätsmetriken", "MUSHRA, VERSA, HPI — perzeptuell"),
+            ("Pipeline-Phasen", "Material-adaptiv"),
         ]
 
     def _capture_runtime_snapshot(self) -> UiRuntimeSnapshot:
@@ -17383,20 +17529,20 @@ class ModernMainWindow(QMainWindow):
                     _zeile1 = f"▶  Stark beschädigt  ({score100:.0f}\u202f/\u202f100)"
                     _detail = "Material ist sehr stark beschädigt – Aurik holt das physikalisch Mögliche heraus."
                 _mos_str = f"{predicted_mos:.1f}"
-                # MOS-Wert → Klartext-Qualitätsbewertung für Laien
+                # MOS-Wert → Klartext-Qualitätsbewertung (§v10.204: ehrliche Skala)
                 if predicted_mos >= 4.5:
                     _quality_label = "hervorragend"
                 elif predicted_mos >= 4.0:
                     _quality_label = "sehr gut"
                 elif predicted_mos >= 3.5:
-                    _quality_label = "gut"
-                elif predicted_mos >= 3.0:
-                    _quality_label = "ordentlich"
+                    _quality_label = "befriedigend"
+                elif predicted_mos >= 2.5:
+                    _quality_label = "ausreichend"
                 else:
                     _quality_label = "eingeschränkt"
                 _banner_txt = (
-                    f"{_zeile1}    ·    Erwartete Klangqualität:  {_quality_label}  "
-                    f"({_mos_str}\u202f/\u202f5,0)\n{_detail}"
+                    f"{_zeile1}    ·    Erwartete Klangqualität: ~ {_quality_label}  "
+                    f"(~{_mos_str}\u202f/\u202f5,0 Schätzung)\n{_detail}"
                 )
                 if limiting:
                     _banner_txt += f"    (Größte Schäden: {', '.join(str(d) for d in limiting[:2])})"
@@ -19324,7 +19470,10 @@ class ModernMainWindow(QMainWindow):
 
         if hasattr(self, "status_text"):
             _el_m, _el_s = divmod(int(_phase_elapsed), 60)
-            self.status_text.setText(f"Phase {_ph_cur}/{_ph_tot}: {_clean}  ·  {_el_m}:{_el_s:02d}")
+            if _ph_tot > 0:
+                self.status_text.setText(f"Phase {_ph_cur}/{_ph_tot}: {_clean}  ·  {_el_m}:{_el_s:02d}")
+            else:
+                self.status_text.setText(f"Phase {_ph_cur}: {_clean}  ·  {_el_m}:{_el_s:02d}")
 
         if hasattr(self, "_phase_step_label"):
             self._phase_step_label.setText(f"Stufe {_ph_cur}/{_ph_tot}  ·  {_clean}")
@@ -19541,11 +19690,16 @@ class ModernMainWindow(QMainWindow):
                                         t(f"progress.{_progress_mode}_eta", pct=_pct_de, eta=_eta_short)
                                     )
                             if _ui_pct < 19 and _eta_range:
-                                _full = (
-                                    f"Jetzt: {_base}  ·  {_el} · {_eta_range}  –  {_eta_str}"
-                                    if _base
-                                    else (f"{_el} · {_eta_range}  –  {_eta_str}")
-                                )
+                                # §v10.205: ETA nur zeigen wenn noch nicht überschritten
+                                _deadline_ok = (_raw_remaining_s > 0 and _raw_remaining_s < _exp_total * 0.9) if _exp_total else True
+                                if _deadline_ok:
+                                    _full = (
+                                        f"Jetzt: {_base}  ·  {_el} · ~{_eta_range}  –  {_eta_str}"
+                                        if _base
+                                        else (f"{_el} · ~{_eta_range}  –  {_eta_str}")
+                                    )
+                                else:
+                                    _full = f"Jetzt: {_base}  ·  {_el} · {_eta_str}" if _base else f"{_el} · {_eta_str}"
                             else:
                                 _full = f"Jetzt: {_base}  ·  {_el} · {_eta_str}" if _base else f"{_el} · {_eta_str}"
                             if _live_intel_hint:
@@ -19778,10 +19932,26 @@ class ModernMainWindow(QMainWindow):
         self._update_stats()
 
     def _resolve_batch_completion_status(self, item) -> dict[str, str]:
-        """Ermittelt Batch-Kurzstatus ohne degraded/recovered als Erfolg zu tarnen."""
+        """Ermittelt Batch-Kurzstatus. Guardian-Revert hat VORRANG."""
         _out_name = Path(getattr(item, "output_file", "") or "").name
         _result = getattr(item, "restoration_result", None)
         _metadata = getattr(_result, "metadata", {}) or {} if _result is not None else {}
+
+        # §v10.201: Guardian-Revert-Erkennung (höchste Priorität)
+        _dnh = _metadata.get("do_no_harm", {}) or {}
+        if _dnh.get("reverted"):
+            _reason = _dnh.get("reason", "Unbekannte Ursache")
+            _mushra = (_metadata.get("mushra") or {}).get("mushra_score", 0.0)
+            _mushra_info = f" · MUSHRA {_mushra:.0f}" if _mushra > 0 else ""
+            return {
+                "style": "warning",
+                "text": (
+                    f"⚠️ Bearbeitung verworfen — Original gespeichert: {_out_name}"
+                    f"{_mushra_info} · {_reason}"
+                ),
+            }
+
+        # Bestehende degradation_status-Logik (unverändert)
         _stage_notes = getattr(_result, "stage_notes", {}) or {} if _result is not None else {}
         _degradation_status = _bridge_normalize_pipeline_health_state(
             getattr(_result, "degradation_status", None)
@@ -19811,6 +19981,9 @@ class ModernMainWindow(QMainWindow):
                 _batch_status = self._resolve_batch_completion_status(_item_for_result)
                 self._apply_status_text_style(_batch_status["style"])
                 self.status_text.setText(_batch_status["text"])
+        # §v10.204: Slide-Panel mit echten Ergebnisdaten aktualisieren
+        if hasattr(self, "_update_slide_info_from_result"):
+            self._update_slide_info_from_result(restoration_result)
         # Sofort aus AurikErgebnis: A/B-Player aktivieren und Musical Goals anzeigen,
         # unabhängig vom Dateisystem-Zugriff (kein sf.read-Risiko hier).
         if restoration_result is not None and hasattr(restoration_result, "audio"):
@@ -20701,6 +20874,72 @@ class ModernMainWindow(QMainWindow):
     def _stop_song_playback_only(self) -> None:
         """Stop only the A/B song playback and never the restoration pipeline."""
         self._stop_playback()
+
+    # ── §v10.207: Transport-Scrubber ──────────────────────────────────
+    _scrubbing: bool = False
+
+    def _scrubber_pressed(self):
+        self._scrubbing = True
+
+    def _scrubber_released(self):
+        if self._scrubbing:
+            self._scrubbing = False
+            _frac = self._transport_scrubber.value() / 1000.0
+            # Seek in aktueller Audio-Quelle
+            _audio = getattr(self, '_play_audio_ref', None)
+            _sr = getattr(self, '_play_sr_ref', 48000)
+            if _audio is not None and _sr > 0:
+                _pos = int(_frac * len(_audio) if _audio.ndim == 1 else _frac * _audio.shape[-1])
+                self._seek_playback(_pos)
+
+    def _seek_playback(self, sample_pos: int):
+        """Springt an eine Sample-Position (falls vom Player unterstützt)."""
+        try:
+            _player = getattr(self, '_streaming_player', None)
+            if _player is not None and hasattr(_player, 'seek'):
+                _player.seek(sample_pos)
+        except Exception:
+            pass
+
+    # ── §v10.207: Tastatursteuerung ──────────────────────────────────
+    def keyPressEvent(self, event):
+        """Leertaste = Play/Pause, Pfeiltasten = Navigation, Escape = Stop."""
+        if event.key() == Qt.Key.Key_Space:
+            if hasattr(self, '_rest_audio') and self._rest_audio is not None:
+                self._play_restored_or_preview()
+            return
+        if event.key() == Qt.Key.Key_Escape:
+            self._stop_song_playback_only()
+            return
+        if event.key() == Qt.Key.Key_Left:
+            self._transport_scrubber.setValue(max(0, self._transport_scrubber.value() - 30))
+            return
+        if event.key() == Qt.Key.Key_Right:
+            self._transport_scrubber.setValue(min(1000, self._transport_scrubber.value() + 30))
+            return
+        if event.key() == Qt.Key.Key_1:
+            self._set_speed(0.5)
+            return
+        if event.key() == Qt.Key.Key_2:
+            self._set_speed(1.0)
+            return
+        if event.key() == Qt.Key.Key_3:
+            self._set_speed(1.5)
+            return
+        if event.key() == Qt.Key.Key_4:
+            self._set_speed(2.0)
+            return
+        super().keyPressEvent(event)
+
+    def _set_speed(self, factor: float):
+        """Setzt die Playback-Geschwindigkeit."""
+        self._speed_label.setText(f"{factor:.1f}×".replace(".0×", "×"))
+        try:
+            _player = getattr(self, '_streaming_player', None)
+            if _player is not None and hasattr(_player, 'set_speed'):
+                _player.set_speed(factor)
+        except Exception:
+            pass
 
     def _stop_playback(self):
         """Laufende Wiedergabe anhalten (mit Fade-Out bei StreamingPlayer)."""
@@ -23480,6 +23719,38 @@ class ModernMainWindow(QMainWindow):
                 active_tool=_active_tool,
                 experience_insights=_xp if isinstance(_xp, dict) else None,
             )
+        # §v10.203: Echtzeit-Defektzähler — zählt reparierte Defekte live runter
+        if hasattr(self, "defect_count_live_label"):
+            _def_state = getattr(self, "_defect_progress_state", None) or {}
+            _total_def = int(_def_state.get("total", 0) or 0)
+            _remaining_def = int(_def_state.get("remaining", _total_def) or 0)
+            _done_def = max(0, _total_def - _remaining_def)
+            _resolved_pct = int(_def_state.get("resolved_pct", 0) or 0)
+            if _total_def > 0 and _done_def > 0:
+                self.defect_count_live_label.setText(
+                    f"🔧 {_remaining_def} offen · {_done_def} erledigt ({_resolved_pct}%)"
+                )
+                self.defect_count_live_label.setStyleSheet(
+                    "color: #B8A068; font-size: 10pt; font-weight: bold;"
+                )
+                self.defect_count_live_label.setVisible(True)
+            elif _total_def > 0:
+                self.defect_count_live_label.setText(
+                    f"🔍 {_total_def} Störungen gefunden"  # §v10.204: "Defekte"→"Störungen" + Tooltip
+                )
+                self.defect_count_live_label.setToolTip(
+                    "Gesamtzahl erkannter akustischer Störungen (Knackser, Rauschen, Knistern etc.)"
+                )
+                self.defect_count_live_label.setStyleSheet(
+                    "color: #8894A8; font-size: 10pt;"
+                )
+                self.defect_count_live_label.setVisible(True)
+            elif _remaining_def == 0 and _total_def > 0:
+                self.defect_count_live_label.setText("✅ Alle Defekte behoben")
+                self.defect_count_live_label.setStyleSheet(
+                    "color: #82B89A; font-size: 10pt; font-weight: bold;"
+                )
+                self.defect_count_live_label.setVisible(True)
         self._refresh_defect_summary_height()
 
         # Nur wenn Batch-Restaurierung NICHT läuft: Buttons freischalten + UI zurücksetzen.

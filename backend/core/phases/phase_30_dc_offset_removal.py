@@ -376,7 +376,7 @@ class DCOffsetRemoval(PhaseInterface):
             MaterialType.VINYL: 0.9,
             MaterialType.TAPE: 1.0,
             MaterialType.REEL_TAPE: 1.0,
-        }.get(_mk, 0.8)
+        }.get(material.name if isinstance(material, MaterialType) else str(material), 0.8)
         max_lift_db = 0.6
 
         # §2.45a-I: Gated RMS — nur Frames > -50 dBFS (kein Stille-inflationierter RMS)

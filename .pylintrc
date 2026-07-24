@@ -1,0 +1,29 @@
+[MASTER]
+# §v10.118 pylint-Konfiguration für Aurik 10.0.16
+# Fokus: undefined-variable und used-before-assignment — die beiden
+# Scope-Bug-Klassen, die phase_23/30 monatelang unentdeckt blieben.
+
+ignore=phase_glue_stage.py,__init__.py
+ignore-patterns=test_.*\.py
+
+[MESSAGES CONTROL]
+# Nur die kritischsten Fehler — kein Style-Guide-Lärm
+disable=all
+enable=undefined-variable,
+       used-before-assignment,
+       no-member,
+       not-callable,
+       assignment-from-none,
+       no-name-in-module,
+       import-error
+
+[REPORTS]
+output-format=text
+reports=no
+score=no
+
+[BASIC]
+good-names=i,j,k,ex,Run,_,x,y,z,t,f,p,ch,sr,db,hz,n,s
+
+[VARIABLES]
+dummy-variables-rgx=_+$

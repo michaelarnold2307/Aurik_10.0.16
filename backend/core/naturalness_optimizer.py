@@ -489,7 +489,14 @@ def _measure_stereo_width(audio: np.ndarray) -> float:
 
 
 def _transient_preservation(audio: np.ndarray, original: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
-    """Erkennt und schützt Attack-Transienten vor Überglättung."""
+    """Erkennt und schützt Attack-Transienten vor Überglättung.
+
+    §v10.112 Groove-Guard: Bei hoher Transientendichte (groove > 1.5/s)
+    wird die Original-Blend-Rate drastisch reduziert, weil die Restauration
+    die Attack-Transienten verbessert hat und ein Ersetzen durch das
+    unverarbeitete Original den Groove zerstören würde (1673 geschützte
+    Transienten = zerstörter Punch).
+    """
     try:
         mono = audio.mean(axis=1) if audio.ndim == 2 else audio
         orig_mono = original.mean(axis=1) if original.ndim == 2 else original
@@ -511,14 +518,28 @@ def _transient_preservation(audio: np.ndarray, original: np.ndarray, sr: int) ->
         if len(attacks) == 0:
             return audio, 0
 
-        # For each attack, blend in original transient
+        # §v10.112 Groove-Guard: Transientendichte (attacks/sec) bestimmt Blend-Stärke.
+        # Je dichter die Transienten, desto mehr Punch hat der Song — und desto
+        # weniger darf das Original die restaurierten Transienten ersetzen.
+        _duration_s = len(mono) / sr
+        _transient_density = len(attacks) / max(_duration_s, 1.0)
+        if _transient_density > 5.0:
+            _blend_strength = 0.05  # 95% restauriert — Minimal-Eingriff
+        elif _transient_density > 3.0:
+            _blend_strength = 0.10  # 90% restauriert
+        elif _transient_density > 1.5:
+            _blend_strength = 0.18  # 82% restauriert
+        else:
+            _blend_strength = 0.30  # 70% restauriert (original, für ambient/klassik)
+
+        # For each attack, blend in original transient at groove-adaptive strength
         blend = np.ones(len(mono), dtype=np.float32)
         for a in attacks:
             start = a * win
             end = min((a + 2) * win, len(mono))
-            # Hanning crossfade: 70% original, 30% processed at attack peak
+            # Hanning crossfade: blend_strength original, (1-blend_strength) processed at attack peak
             t = np.linspace(0, 1, end - start)
-            fade = 1.0 - 0.3 * np.exp(-4.0 * t) * (1.0 - t)
+            fade = 1.0 - _blend_strength * np.exp(-4.0 * t) * (1.0 - t)
             blend[start:end] = np.minimum(blend[start:end], fade.astype(np.float32))
 
         if audio.ndim == 2:

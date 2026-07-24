@@ -806,7 +806,7 @@ class WowFlutterFix(PhaseInterface):
 
                         def _stabilize_envelope(sig: np.ndarray) -> np.ndarray:
                             env = np.abs(sig.astype(np.float64))
-                            env_smooth = safe_filtfilt(b_mod, a_mod, env)
+                            env_smooth = filtfilt(b_mod, a_mod, env)
                             env_out = _mod_strength * env_smooth + (1.0 - _mod_strength) * env
                             gain = np.divide(env_out, env, out=np.ones_like(env), where=env > 1e-10)
                             gain = np.clip(gain, 0.7, 1.3)
@@ -1666,7 +1666,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.MP3_HIGH: 2.0,
             MaterialType.AAC: 2.0,
             MaterialType.STREAMING: 2.0,
-        }.get(_mk, 1.8)
+        }.get(material.name if isinstance(material, MaterialType) else str(material), 1.8)
         _max_rms_lift_db = 1.0
 
         # §2.45a-I: Gated RMS — only frames > -50 dBFS (kein Stille-inflationierter RMS)

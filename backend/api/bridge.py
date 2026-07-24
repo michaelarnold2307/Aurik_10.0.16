@@ -1088,6 +1088,11 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
             "passed": bool(_degradation_status == "ok"),
             "degradation_status": str(_degradation_status),
             "primary_fail_reason": str(_primary_fail_reason or ""),
+            # §v10.202: Guardian-Revert-Info für Layman-Kommunikation
+            "do_no_harm_reverted": bool((_meta.get("do_no_harm") or {}).get("reverted", False)),
+            "do_no_harm_reason": str((_meta.get("do_no_harm") or {}).get("reason", "")),
+            "uqm_override_applied": bool((_meta.get("uqm") or {}).get("override_applied", False)),
+            "uqm_quality_score": float((_meta.get("uqm") or {}).get("quality_score", 0.0)),
             "root_cause": str(_root_cause),
             "failure_class": str(_failure_class),
             "primary_error_code": str(_primary_error_code),
@@ -2388,6 +2393,10 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
     fatigue = float(insights.get("fatigue_index", 0.5) or 0.5)
     frisson = float(insights.get("frisson_index", 0.5) or 0.5)
     degradation = str(insights.get("quality_gate", {}).get("degradation_status", "ok") or "ok")
+    # §v10.202: Guardian-Revert-Erkennung für ehrliche Kommunikation
+    _dnh_reverted = bool(insights.get("quality_gate", {}).get("do_no_harm_reverted", False))
+    _dnh_reason = str(insights.get("quality_gate", {}).get("do_no_harm_reason", "") or "")
+    _uqm_override = bool(insights.get("quality_gate", {}).get("uqm_override_applied", False))
     preserve = float(insights.get("quality_gate", {}).get("preserve_signal", 0.5) or 0.5)
     _cluster = str(insights.get("cluster_key", "") or "")
     fqf = dict(insights.get("fallback_quality_floor", {}) or {})
@@ -2517,7 +2526,32 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
         icon = _pick("❌", "⛔")
 
     # ── Headlines (20+ Varianten, kontextabhängig) ──────────────────────────
-    if fqf_triggered and fqf_recovered:
+    # §v10.202: Guardian-Revert — ehrliche, empathische Kommunikation
+    if _dnh_reverted:
+        if _uqm_override:
+            headline = _pick(
+                "Das Sicherheitssystem hatte Bedenken — aber die Klangqualität hat überzeugt 🛡️✨",
+                "Deine Aufnahme ist so gut geworden, dass wir das Sicherheitsvotum überstimmt haben",
+                "Grenzfall gemeistert — das Ergebnis spricht für sich",
+            )
+            quality_label = _pick(
+                "Perzeptuell exzellent (Sicherheitssystem überstimmt)",
+                "MUSHRA bestätigt: hervorragende Qualität",
+            )
+        else:
+            headline = _pick(
+                "Deine Aufnahme ist bereits am Limit des physikalisch Möglichen 🎚️",
+                "Aurik hat alles versucht — das Quellmaterial gibt nicht mehr her",
+                "Schwieriger Fall: Die Aufnahme konnte nicht verbessert werden",
+                "Nichts ist schlimmer als eine Verschlechterung — wir haben das Original bewahrt",
+            )
+            quality_label = _pick(
+                "Keine Verbesserung möglich (Sicherheitssystem hat verworfen)",
+                "Original unverändert — besser als eine Verschlechterung",
+                "Qualitätsschutz hat Vorrang",
+            )
+        icon = _pick("⚠️✨", "🛡️🎵", "⚖️")
+    elif fqf_triggered and fqf_recovered:
         headline = _pick(
             "Deine Musik wurde mit Schutzpriorität gerettet 🛡️",
             "Maximaler Schutz für Deine Aufnahme — Ergebnis gesichert",

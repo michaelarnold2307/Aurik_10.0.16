@@ -1,6 +1,6 @@
 # Aurik 10 — GEBOTE & VERBOTE (Normativer Katalog)
 
-> **Status:** Normativ | **Version:** 10.0.15 | **Stand:** 22. Juli 2026 (Update: §v10.101 Perzeptuelle Architektur)
+> **Status:** Normativ | **Version:** 10.0.16 | **Stand:** 2026 — Update: §v10.112–§v10.117 Universal Safety Wrapper & ExcellenceOptimizer RX11-Kalibrierung
 >
 > Dieser Katalog definiert alle unverhandelbaren GEBOTE (positiv, was Aurik TUN MUSS)
 > und VERBOTE (negativ, was Aurik NIEMALS tun darf). Jedes Gebot und Verbot ist mit
@@ -333,9 +333,28 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 
 ---
 
+## Kategorie XVII — Universelle Phasen-Sicherheit & Excellence-Kalibrierung (§G113–§G120)
+
+> §v10.112–§v10.117 — Prämisse: Alle 65+ Phasen werden durch systemische Guards auf
+das gleiche SOTA-Sicherheitsniveau gehoben. Keine Phase kann mehr unbemerkt Stille,
+Transienten-Verschiebungen, HF-Halluzinationen oder Formant-Degradation verursachen.
+Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86–0.90).
+
+| ID | Regel | Beschreibung |
+|----|-------|-------------|
+| §G113 | **Universal RMS-Guard** | JEDE Phase MUSS nach der Ausführung einen RMS-Vergleich durchführen. RMS-Drop >30 dB → automatischer Rollback auf Eingangs-Audio. Der Guard ist in `PhaseInterface._safe_process()` zentral implementiert (§v10.115) und gilt für alle 65+ Phasen. |
+| §G114 | **Transient-Shift-Detektion** | Alle additiven Phasen (ENHANCEMENT, RESTORATION, Harmonic, Exciter, Air-Band, Bass, Presence, Transient, Spectral, Frequency, Drums, Guitar, Brass, Piano, Vocal, Saturation, Spatial) MÜSSEN nach der Ausführung `detect_transient_shifts()` aufrufen. Onset-Shift >5 ms → Warning. (§V22, §v10.115) |
+| §G115 | **Hallucination-Guard** | Alle Synthese-Phasen (Harmonic, Spectral-Repair, Inpainting, Exciter, Frequency-Restoration, Air-Band, Diffusion, Band-Gap, Dropout) MÜSSEN nach der Ausführung Spectral-Novelty prüfen. Novelty >0.15 → Warning. (§2.46e, §v10.115) |
+| §G116 | **Formant-Stabilitäts-Guard** | JEDE Phase MUSS `formant_stability` (spektrale Band-Vektor-Korrelation 300–3500 Hz, 10 Bänder logarithmisch) berechnen. Korrelation <0.85 → Warning: mögliche Gesangsdegradation. (§v10.117) |
+| §G117 | **Groove-Guard** | Der NaturalnessOptimizer MUSS die Transientendichte (attacks/sec) vor dem Blending berechnen. Bei Dichte >5/s: Blend-Stärke 0.05 (95% Restaurat erhalten). Bei >3/s: 0.10. Bei >1.5/s: 0.18. Sonst: 0.30. Verhindert, dass groovige Songs ihre restaurierten Attack-Transienten durch Original-Blending verlieren. (§v10.112) |
+| §G118 | **HPI-Gate im Goosebumps-Recovery** | Wenn die Restauration bereits gute Qualität erreicht hat (HPI-Checkpoint existiert ODER Artifact-Freedom ≥0.90), MUSS der Original-Penalty von 0.030 auf 0.120 vervierfacht werden. Verhindert, dass Artefakt-Transienten des defekten Originals die Goosebumps-Metrik täuschen und das unverarbeitete Original dem Restaurat vorgezogen wird. (§v10.113) |
+| §G119 | **FeedbackChain-Silence-Guard** | Phase 07 MUSS vor der harmonischen Synthese H2/H1 prüfen. H2/H1 ≥0.50 → Strength auf ≤0.10 drosseln. H2/H1 ≥0.35 → Strength auf 50% drosseln (Frühwarn-Schwelle). Zusätzlich MUSS nach der Synthese ein RMS-Vergleich erfolgen: Output-RMS < Input-RMS/100 (−40 dB) → Rollback auf Eingangs-Audio. (§v10.114) |
+| §G120 | **ExcellenceOptimizer RX11-Kalibrierung** | Der ExcellenceOptimizer MUSS auf iZotope-RX11-Niveau kalibriert sein: `_MODULATION_STRENGTH`=0.55, `_HARM_BOOST_DB`=3.2, `_HARM_MAX_ORDER`=10, `_TARGET_CV_MIN`=0.07, `_FLUX_SMOOTHING_MAX`=0.65. Alle 8 Material-Profile (auto, vinyl, tape, shellac, broadcast, mp3_low, mp3_high, cd_digital) MÜSSEN proportional skalierte Werte haben. (§v10.116) |
+
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
 |---------|-------|----------|
+| 10.0.16 | 2026 | §G113–§G120: Universelle Phasen-Sicherheit & Excellence-Kalibrierung. RMS-Guard, Transient-Shift, Hallucination-Guard, Formant-Guard, Groove-Guard, HPI-Gate, Silence-Guard, RX11-Kalibrierung. Kategorie XVII. (§v10.112–§v10.117) |
 | 10.0.15 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
 | 10.0.14 | 2026-08-10 | §G90–§G99: Non-Plus-Ultra. Blinder Referenz-Vektor, Exception-Proxies, Cross-Phase-Koordination, NaN-Guards, Material-Vollständigkeit. Kategorie XV. |

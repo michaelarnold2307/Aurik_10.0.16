@@ -7228,6 +7228,32 @@ class UnifiedRestorerV3:
                     restorability=float(_rest) if _rest is not None else None,
                 )
                 _display = _narrator.message_for(phase, progress_pct=int(pct))
+                # §v10.203 S1: Live-Chapter
+                _chapter = _narrator.live_chapter(float(pct))
+                if _chapter:
+                    _display = _chapter
+                    # Track last chapter for transitions
+                    _all_ch = ["finding","repairing","enhancing","polishing","result"]
+                    _done = [c for c in _all_ch if c in _narrator._chapters_emitted]
+                    _narrator._last_chapter = _done[-1] if _done else ""
+                # §v10.203 S2: Chapter-Übergang
+                _transition = _narrator.chapter_transition(float(pct))
+                if _transition:
+                    _display = _transition
+                # §v10.203 S4: Entdeckungen
+                if float(pct) < 25.0:
+                    _disc = _narrator.discovery()
+                    if _disc:
+                        _display = _disc
+                # §v10.203 S7: Entertainment-Intermezzo bei langen Phasen
+                _now_mono = time.monotonic()
+                _pkey = phase or "_unknown"
+                if _pkey not in _narrator._phase_start:
+                    _narrator._phase_start[_pkey] = _now_mono
+                _phase_elapsed = _now_mono - _narrator._phase_start.get(_pkey, _now_mono)
+                _intermezzo = _narrator.entertainment_intermezzo(phase, _phase_elapsed)
+                if _intermezzo:
+                    _display = _intermezzo
             except Exception:
                 try:
                     from backend.core.phase_icons import phase_display as _pdisplay2
@@ -13437,8 +13463,26 @@ class UnifiedRestorerV3:
                         logger.debug("§GPP-WIRE: GoalPriorityProtocol FeedbackChain-Callback aktiv")
                 except Exception as _gpp_wire_exc:
                     logger.debug("§GPP-WIRE: nicht verfügbar — %s", _gpp_wire_exc)
+                # §v10.118 FeedbackChain-Awareness via Event-Bus:
+                # Phasen abonnieren "fc_pass_started"/"fc_pass_ended" um zu
+                # erkennen, dass sie im zweiten Durchlauf laufen.
+                # Zentraler Kommunikationskanal statt verteilter Flag-Setzung.
+                try:
+                    from backend.core.phase_event_bus import bus
+                    bus.emit("fc_pass_started")
+                except Exception:
+                    pass
+                if isinstance(getattr(self, "_restoration_context", None), dict):
+                    self._restoration_context["_fc_active"] = True  # Legacy compat
                 _fc_chain_result = _fc_chain.run(restored_audio, _fc_phases_list, ceiling=_fc_ceiling_val)
                 restored_audio = _fc_chain_result.audio
+                try:
+                    from backend.core.phase_event_bus import bus
+                    bus.emit("fc_pass_ended")
+                except Exception:
+                    pass
+                if isinstance(getattr(self, "_restoration_context", None), dict):
+                    self._restoration_context["_fc_active"] = False  # Legacy compat
                 # §Perf Fix 1: Flag für GEC — wenn FC konvergierte, überspringt §GOAL_EXPORT_COMPLIANCE.
                 _gec_fc_converged = bool(getattr(_fc_chain_result, "converged", False))
                 # Report analytics overhead to PerformanceGuard so goal-measurement
@@ -15859,7 +15903,44 @@ class UnifiedRestorerV3:
                 if getattr(self, "_best_carrier_checkpoint", None) is not None:
                     _gb_sources.append(("best_carrier_checkpoint", self._best_carrier_checkpoint, 0.015))
                 if original_audio_for_goals is not None:
-                    _gb_sources.append(("original_audio", original_audio_for_goals, 0.030))
+                    # §v10.113/§v10.118 Goosebumps-HPI-Gate + MetricArbiter:
+                    # Wenn die Restauration bereits gute Qualität erreicht hat,
+                    # wird der Original-Penalty via MetricArbiter bestimmt.
+                    # Der Arbiter löst Konflikte zwischen Goosebumps (quantitativ)
+                    # und HPI/VQI/artifact_freedom (qualitativ).
+                    _hpi_for_arbiter = getattr(self, "_hpi_best_rollback_audio", None)
+                    _af_for_arbiter = getattr(self, "_artifact_freedom_score", 0.0)
+                    _vqi_for_arbiter = float(
+                        (self._phase_metadata_accumulator or {}).get("vqi", 0.0)
+                    ) if hasattr(self, '_phase_metadata_accumulator') else 0.0
+                    _panns_for_arbiter = float(getattr(self, "_panns_singing", 0.0))
+
+                    try:
+                        from backend.core.metric_arbiter import resolve_metric_conflict
+                        _arbiter_verdict = resolve_metric_conflict(
+                            quantitative_score=float(_goosebumps_score),
+                            qualitative_score=float(_af_for_arbiter),
+                            hpi=0.85 if _hpi_for_arbiter is not None else None,
+                            artifact_freedom=_af_for_arbiter if _af_for_arbiter > 0 else None,
+                            vqi=_vqi_for_arbiter if _vqi_for_arbiter > 0 else None,
+                            panns_singing=_panns_for_arbiter,
+                        )
+                        _original_penalty = float(_arbiter_verdict.recommended_penalty)
+                        if _arbiter_verdict.confidence >= 0.85:
+                            logger.info(
+                                "§v10.118 MetricArbiter: %s (confidence=%.2f, penalty=%.3f)",
+                                _arbiter_verdict.reason,
+                                _arbiter_verdict.confidence,
+                                _original_penalty,
+                            )
+                    except Exception as _arb_exc:
+                        # Fallback: §v10.113 heuristic
+                        _has_good_restoration = (
+                            _hpi_for_arbiter is not None or _af_for_arbiter >= 0.90
+                        )
+                        _original_penalty = 0.120 if _has_good_restoration else 0.030
+                        logger.debug("MetricArbiter unavailable, fallback heuristic: %s", _arb_exc)
+                    _gb_sources.append(("original_audio", original_audio_for_goals, _original_penalty))
                 for _gb_name, _gb_audio_raw, _gb_penalty in _gb_sources:
                     try:
                         if (
@@ -19775,12 +19856,114 @@ class UnifiedRestorerV3:
 
                 _dnh_mode = "studio_2026" if getattr(self.config, "studio_2026", False) else "restoration"
                 _guardian = get_do_no_harm_guardian()
-                _guardian._mode = _dnh_mode  # §5/5: Modus-abhängige Schwellwerte
-                _guardian.capture_input(_dnh_original, target_sample_rate)
+                _guardian.mode = _dnh_mode  # §5/5: Modus-abhängige Schwellwerte (Property-Setter!)
+
+                # §v10.103 P2: Carrier-Checkpoint als Clean-Referenz
+                _dnh_carrier = getattr(self, "_best_carrier_checkpoint", None)
+                _guardian.capture_input(_dnh_original, target_sample_rate,
+                                        carrier_checkpoint=_dnh_carrier)
+
                 _dnh_mat = str(
                     getattr(self, "_restoration_context", {}).get("primary_material", "unknown")
                 ).lower()
-                _dnh_result = _guardian.evaluate(restored_audio, target_sample_rate, material=_dnh_mat)
+
+                # §v10.103 P1: Perzeptuelle Scores für Override
+                _dnh_mushra = float((_analytics_meta.get("mushra") or {}).get("mushra_score", 0.0))
+                _dnh_hpi = float(getattr(_hpi_result, "hpi", 0.0) if _hpi_result is not None else 0.0)
+
+                _dnh_result = _guardian.evaluate(
+                    restored_audio, target_sample_rate,
+                    material=_dnh_mat,
+                    chain_depth=int(getattr(self, "_restoration_context", {}).get("transfer_chain_depth", 1)),
+                    mushra_score=_dnh_mushra,
+                    hpi_score=_dnh_hpi,
+                )
+
+                # ═══ §v10.103 P3: UnifiedQualityModel — Zweitmeinung ═══
+                # Das UQM gewichtet perzeptuelle Metriken (60%) stärker als
+                # objektive Proxies (40%). Bei Dissens zwischen Guardian
+                # und UQM gewinnt die perzeptuell gestützte Entscheidung.
+                _uqm_override_applied = False
+                try:
+                    from backend.core.do_no_harm_guardian import (
+                        UnifiedQualityModel, UQMInput,
+                    )
+
+                    _uqm = UnifiedQualityModel()
+                    _uqm_in = UQMInput(
+                        mushra_score=_dnh_mushra,
+                        hpi_score=_dnh_hpi,
+                        brightness_drop=float(
+                            _dnh_result.metrics_input.spectral_brightness
+                            - _dnh_result.metrics_output.spectral_brightness
+                        ),
+                        naturalness_drop=float(
+                            _dnh_result.metrics_input.naturalness_estimate
+                            - _dnh_result.metrics_output.naturalness_estimate
+                        ),
+                        crest_drop_db=float(
+                            (_dnh_result.metrics_input.peak_dbfs - _dnh_result.metrics_input.rms_dbfs)
+                            - (_dnh_result.metrics_output.peak_dbfs - _dnh_result.metrics_output.rms_dbfs)
+                        ),
+                        rms_change_db=float(abs(
+                            _dnh_result.metrics_output.rms_dbfs - _dnh_result.metrics_input.rms_dbfs
+                        )),
+                        dynamic_range_drop_db=float(
+                            _dnh_result.metrics_input.dynamic_range_db
+                            - _dnh_result.metrics_output.dynamic_range_db
+                        ),
+                        material=_dnh_mat,
+                        chain_depth=int(getattr(self, "_restoration_context", {}).get("transfer_chain_depth", 1)),
+                        reference_mode=getattr(_guardian, "_reference_mode", "degraded_input"),
+                    )
+                    _uqm_decision = _uqm.assess(_uqm_in)
+
+                    # UQM Override: Wenn Guardian REVERT sagt aber UQM PASS,
+                    # vertraue dem UQM (perzeptuelle Metriken haben Vorrang).
+                    if not _dnh_result.passed and _uqm_decision.decision == "PASS":
+                        logger.warning(
+                            "§v10.103 UQM OVERRIDE: Guardian sagt REVERT (%s), "
+                            "aber UQM sagt PASS (quality=%.1f, conf=%.2f). "
+                            "Perzeptuelle Exzellenz hat Vorrang — Output wird durchgelassen.",
+                            _dnh_result.reason,
+                            _uqm_decision.quality_score,
+                            _uqm_decision.confidence,
+                        )
+                        _dnh_result = GuardianVerdict(
+                            passed=True,
+                            reason=f"uqm_override:{_uqm_decision.reason}",
+                            metrics_input=_dnh_result.metrics_input,
+                            metrics_output=_dnh_result.metrics_output,
+                            degraded_metrics=[],
+                            severity="none",
+                        )
+                        _uqm_override_applied = True
+
+                    # UQM Warn: Wenn Guardian PASS sagt aber UQM WARN,
+                    # logge die Warnung aber lass durch (keine isolierten Vetos mehr).
+                    elif _dnh_result.passed and _uqm_decision.decision == "WARN":
+                        logger.warning(
+                            "§v10.103 UQM ADVISORY: Guardian sagt PASS, "
+                            "aber UQM sagt WARN (quality=%.1f). "
+                            "Output wird durchgelassen — UQM-Warnungen: %s",
+                            _uqm_decision.quality_score,
+                            _uqm_decision.advisory_warnings,
+                        )
+
+                    # UQM REVERT: Wenn Guardian PASS sagt aber UQM REVERT,
+                    # logge ernste Warnung (konservativ: Guardian gewinnt).
+                    elif _dnh_result.passed and _uqm_decision.decision == "REVERT":
+                        logger.error(
+                            "§v10.103 UQM CONFLICT: Guardian sagt PASS, "
+                            "aber UQM sagt REVERT (quality=%.1f). "
+                            "Guardian-Entscheidung bleibt (konservativ). "
+                            "UQM-Reason: %s",
+                            _uqm_decision.quality_score,
+                            _uqm_decision.reason,
+                        )
+
+                except Exception as _uqm_exc:
+                    logger.debug("§v10.103 UQM non-blocking: %s", _uqm_exc)
                 if not _dnh_result.passed:
                     logger.warning(
                         "§5/5 DoNoHarmGuardian REVERT: %s — returning original audio instead",
@@ -20310,6 +20493,23 @@ class UnifiedRestorerV3:
                     else None
                 ),
                 "goal_recovery": locals().get("_goal_recovery_meta", {"attempted": False}),
+                # §v10.201 GUI-Transport: Guardian/UQM/Qualitäts-Daten für ehrliche Ergebnisanzeige
+                # Diese Felder waren VORHER lokale Variablen, die nach Funktionsende
+                # verschwanden. Jetzt sind sie im metadata-dict → PipelineStatus → GUI.
+                "do_no_harm": {
+                    "reverted": bool(_do_no_harm_reverted),
+                    "reason": str(_do_no_harm_reason or ""),
+                    "degraded_metrics": list(_do_no_harm_scores or []),
+                },
+                "uqm": {
+                    "override_applied": bool(_uqm_override_applied),
+                    "decision": str(getattr(_uqm_decision, "decision", "") if "_uqm_decision" in dir() else ""),
+                    "quality_score": float(getattr(_uqmd, "quality_score", 0.0)),
+                } if (_uqmd := locals().get("_uqm_decision")) is not None else {"override_applied": False},
+                "hpi_score": float(getattr(_hpi_result, "hpi", 0.0) if _hpi_result is not None else 0.0),
+                "artifact_freedom": float(getattr(self, "_artifact_freedom_score", 0.0) or 0.0),
+                "phases_total": len(executed_phases) + len(skipped_phases) + len(deferred_phases),
+                # §v10.201 ENDE GUI-Transport
                 **_analytics_meta,
                 # §0c Graceful-Stop Telemetrie: transparenter Status für UI + Tests
                 "graceful_stop": _graceful_stop_triggered,
@@ -32396,7 +32596,13 @@ class UnifiedRestorerV3:
             from backend.core.pipeline_cumulative_guards import get_cumulative_guards as _get_cg_init
 
             _cg_init = _get_cg_init()
-            _cg_init.reset(_pipeline_original_reference, sample_rate)
+            # §v10.102: Material+Depth für depth-adaptive EarlyGate-Schwellen
+            _rc_cg = getattr(self, "_restoration_context", {}) or {}
+            _eff_cg = _rc_cg.get("transfer_chain") or _rc_cg.get("effective_chain") or []
+            _depth_cg = int(_rc_cg.get("transfer_chain_depth") or len(_eff_cg) or 1)
+            _mat_cg = str(getattr(material_type, "value", material_type) or "unknown").lower()
+            _cg_init.reset(_pipeline_original_reference, sample_rate,
+                           material_type=_mat_cg, chain_depth=_depth_cg)
         except Exception:
             pass
         # §G76 CalibrationContext: Zentrale Kalibrierung aus Pre-Analysis-Messwerten.

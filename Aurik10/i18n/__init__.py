@@ -97,8 +97,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "action.listen_restored": "Restauriert hören",
         "action.stop": "Stopp",
         # Slide-Panel
-        "ui.slide_panel_open": "📀 Platte aus der Hülle ziehen",
-        "ui.slide_panel_close": "▶✕ Platte zurückschieben",
+        "ui.slide_panel_open": "📀 Details einblenden",
+        "ui.slide_panel_close": "▶✕ Details ausblenden",
         # Status
         "status.analyzing": "Analysiere Aufnahme…",
         "status.restoring": "Restaurierung läuft ({percent:.0f} %)…",
@@ -135,7 +135,7 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.album_tracks_loaded": "💿 {count} Titel. Ein Album nimmt Gestalt an — Aurik behandelt jeden Titel, als wäre er der wichtigste.",
         "status.album_import_ready": "📀 Das Album »{album}« steht. {count} Titel warten auf ihren großen Moment.",
         "status.path_copied": "📋 Pfad kopiert: {file}",
-        "status.processing_running": "🎧 Die Restaurierung beginnt. 68 Spezialwerkzeuge arbeiten jetzt Hand in Hand — jedes einzelne exakt auf deine Musik abgestimmt.",
+        "status.processing_running": "🎧 Die Restaurierung beginnt. Material-adaptive Phasen werden jetzt ausgeführt — jede einzelne exakt auf deine Musik abgestimmt.",
         "status.processing_running_spinner": "Verarbeitung läuft  {spin}",
         "status.processing_reassure_analysis": "Aurik prüft die Aufnahme weiter sorgfältig",
         "status.processing_reassure_long_phase": "Rechenintensive Phase aktiv - Fortschritt läuft stabil weiter",
@@ -179,6 +179,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.analysis_done_prompt": "✅ Die Analyse ist abgeschlossen. Aurik kennt jetzt jeden Defekt beim Namen und hat einen maßgeschneiderten Plan für {file} erstellt.",
         "status.export_summary": "💿 {count} Datei(en) im {ext}-Format exportiert. Fertig für die Welt.",
         "status.export_failed": "⚠ Export fehlgeschlagen",
+        # §v10.202: Guardian-Revert / No-Improvement / Quality-Unchanged
+        "status.reverted": "⚠️ Bearbeitung verworfen — Qualität nicht verbessert. Das Original wurde gespeichert: {file}",
+        "status.reverted_detail": "⚠️ Bearbeitung verworfen: {reason}. Original gespeichert: {file}",
+        "status.no_improvement": "ℹ️ Keine messbare Verbesserung — aber auch keine Verschlechterung. Original gespeichert.",
+        "status.no_improvement_detail": "ℹ️ Qualität unverändert ({before}%→{after}%). Die Aufnahme ist bereits so gut, wie es das Quellmaterial erlaubt.",
+        "status.quality_unchanged": "Qualität unverändert ({before}%→{after}%)",
+        "status.quality_improved": "Qualität verbessert: {before}% → {after}%",
+        "status.quality_perceptual": "MUSHRA {mushra:.0f} · HPI {hpi:.0%}",
+        "status.revert_uqm_conflict": "⚠️ Guardian hat verworfen, UQM hat überstimmt — Ergebnis durchgelassen. Grund: {reason}",
         # UI / Tabs
         "ui.tab_waveform": "Wellenform",
         "ui.tab_spectrogram": "Spektrogramm",
@@ -642,8 +651,8 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "action.listen_restored": "Listen to Restored",
         "action.stop": "Stop",
         # Slide-Panel
-        "ui.slide_panel_open": "📀 Pull Record from Sleeve",
-        "ui.slide_panel_close": "▶✕ Push Record Back",
+        "ui.slide_panel_open": "📀 Show Details",
+        "ui.slide_panel_close": "▶✕ Hide Details",
         # Status
         "status.analyzing": "Analyzing recording…",
         "status.restoring": "Restoration in progress ({percent:.0f} %)…",
@@ -724,6 +733,15 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.analysis_done_prompt": "✅ Analysis complete: {file}  –  Press one of the buttons now!",
         "status.export_summary": "Export: {count} file(s) → {ext}",
         "status.export_failed": "⚠ Export failed",
+        # §v10.202: Guardian revert / no-improvement / quality-unchanged (EN)
+        "status.reverted": "⚠️ Processing discarded — quality not improved. Original saved: {file}",
+        "status.reverted_detail": "⚠️ Processing discarded: {reason}. Original saved: {file}",
+        "status.no_improvement": "ℹ️ No measurable improvement — but no degradation either. Original saved.",
+        "status.no_improvement_detail": "ℹ️ Quality unchanged ({before}%→{after}%). The recording is already as good as the source material allows.",
+        "status.quality_unchanged": "Quality unchanged ({before}%→{after}%)",
+        "status.quality_improved": "Quality improved: {before}% → {after}%",
+        "status.quality_perceptual": "MUSHRA {mushra:.0f} · HPI {hpi:.0%}",
+        "status.revert_uqm_conflict": "⚠️ Guardian reverted, UQM overrode — output passed through. Reason: {reason}",
         # UI / Tabs
         "ui.tab_waveform": "Waveform",
         "ui.tab_spectrogram": "Spectrogram",

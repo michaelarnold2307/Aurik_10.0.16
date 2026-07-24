@@ -54,6 +54,7 @@ import time
 
 import numpy as np
 import scipy.signal as sig
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from scipy.ndimage import median_filter
 
 from backend.core.audio_utils import restore_layout, to_channels_last
@@ -1510,7 +1511,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         Returns:
             np.ndarray: Komplexe STFT-Matrix, Form (T, F).
         """
-        _, _, Zxx = sig.safe_stft(
+        _, _, Zxx = safe_stft(
             audio,
             fs=1,  # normierte Frequenzachse — absolute Werte nicht benötigt
             window=window,

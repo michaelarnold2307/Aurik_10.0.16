@@ -69,6 +69,7 @@ import time
 
 import numpy as np
 from scipy import signal
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from scipy.ndimage import minimum_filter1d as _min_filter1d_p20  # vectorised sliding-min
 from scipy.signal import lfilter as _lfilter_p20  # vectorised IIR smoothing
 
@@ -1423,7 +1424,7 @@ class ReverbReduction(PhaseInterface):
         REF_HOP = REF_WIN - self.WINDOW_SIZE + self.HOP_SIZE  # preserves original 512-hop
         REF_NOVERLAP = REF_WIN - REF_HOP
 
-        f_ref, _, Zxx_ref = signal.safe_stft(
+        f_ref, _, Zxx_ref = safe_stft(
             _audio_padded_20,  # §2.63: reflect-padded input
             fs=sample_rate,
             window="hann",
@@ -1464,7 +1465,7 @@ class ReverbReduction(PhaseInterface):
                 # Use zone-specific STFT if audio is long enough
                 if n_audio >= zone_win * 2:
                     zone_noverlap = zone_win - zone_hop
-                    f_z, _, Zxx_z = signal.safe_stft(
+                    f_z, _, Zxx_z = safe_stft(
                         _audio_padded_20,  # §2.63: reflect-padded input
                         fs=sample_rate,
                         window="hann",

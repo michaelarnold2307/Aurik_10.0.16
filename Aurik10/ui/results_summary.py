@@ -83,23 +83,74 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
         layout.addWidget(improvements)
 
         # ── Quality indicator ─────────────────────────────────────────────
-        quality_before = d.get("quality_before", 50)
-        quality_after = d.get("quality_after", 85)
+        # §v10.202: Revert-Prüfung VOR Qualitäts-Anzeige
+        was_reverted = d.get("was_reverted", False)
+        quality_before = d.get("quality_before", 0)
+        quality_after = d.get("quality_after", 0)
+        mushra = d.get("mushra_score", 0.0)
+        hpi = d.get("hpi_score", 0.0)
+        phases = d.get("phases_total", 0)
 
-        if quality_after > quality_before:
-            delta = quality_after - quality_before
-            quality_text = t("results.quality_improved").format(
-                before=int(quality_before), after=int(quality_after), delta=int(delta)
+        if was_reverted:
+            revert_reason = d.get("revert_reason", "")
+            quality_text = (
+                f"⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\n"
+                f"Das Original wurde unverändert gespeichert.\n"
+                f"Grund: {revert_reason}"
+            ) if revert_reason else (
+                "⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\n"
+                "Das Original wurde unverändert gespeichert."
             )
+            _color = "#B8A068"
+            _bg = "rgba(184, 160, 104, 0.10)"
+        elif quality_after > quality_before and quality_before > 0:
+            delta = quality_after - quality_before
+            quality_text = (
+                f"Restaurierbarkeit: {int(quality_before)}% → Ergebnisqualität: {int(quality_after)}% (+{int(delta)}%)"
+            )
+            if mushra > 0:
+                quality_text += f"\n🎧 Klangqualität: {mushra:.0f}/100"
+            if hpi > 0:
+                quality_text += f" · 📈 Klangverbesserung: {hpi:.0%}"
+            _color = "#82B89A"
+            _bg = "rgba(130, 184, 154, 0.08)"
+        elif quality_after <= quality_before and quality_before > 0:
+            quality_text = (
+                f"Restaurierbarkeit: {int(quality_before)}% → Ergebnisqualität: {int(quality_after)}%\n"
+                f"Die Aufnahme ist bereits so gut, wie es das Quellmaterial erlaubt."
+            )
+            _color = "#8894A8"
+            _bg = "rgba(136, 148, 168, 0.08)"
         else:
-            quality_text = t("results.quality_ok")
+            quality_text = "Qualitätsbewertung nicht verfügbar"
+            _color = "#8894A8"
+            _bg = "rgba(136, 148, 168, 0.08)"
 
-        quality_label = QtWidgets.QLabel(f"⭐ {quality_text}")
+        quality_label = QtWidgets.QLabel(f"📊 {quality_text}")
         quality_label.setStyleSheet(
-            "font-size: 11pt; color: #B8A068; padding: 8px;background: rgba(184, 160, 104, 0.08); border-radius: 6px;"
+            f"font-size: 11pt; color: {_color}; padding: 8px; "
+            f"background: {_bg}; border-radius: 6px;"
         )
         quality_label.setWordWrap(True)
+        # §v10.207: Laienverständliche Tooltips
+        _tooltip_parts = []
+        if mushra > 0:
+            _tooltip_parts.append("Klangqualität (0-100): Wie gut die Aufnahme für menschliche Ohren klingt — bewertet nach internationalem MUSHRA-Standard")
+        if hpi > 0:
+            _tooltip_parts.append("Klangverbesserung (0-1): Wie viel besser die restaurierte Version im Vergleich zum Original klingt")
+        if _tooltip_parts:
+            quality_label.setToolTip("\n\n".join(_tooltip_parts))
         layout.addWidget(quality_label)
+
+        # ── §v10.202: Arbeits-Zusammenfassung ────
+        if phases > 0:
+            work_label = QtWidgets.QLabel(
+                f"🔧 {phases} Phasen ausgeführt"
+            )
+            work_label.setStyleSheet(
+                "font-size: 10pt; color: #8894A8; padding: 4px 0;"
+            )
+            layout.addWidget(work_label)
 
         # ── §v10.35 Experience Insights (Joy/Fatigue/Recommendations) ────
         joy_idx = d.get("joy_index", 0.0)
@@ -269,31 +320,29 @@ def build_results_data(
     restoration_result: object = None,
 ) -> dict:
     """Baut das data-dict für den ResultsSummaryDialog."""
-    # §v10.35: Experience Insights aus RestorationResult extrahieren
-    _joy = 0.0
-    _fatigue = 0.0
-    _recommendations: list = []
-    if restoration_result is not None:
-        try:
-            from backend.api.bridge import get_experience_insights
-
-            _xp = get_experience_insights(restoration_result)
-            _joy = float(_xp.get("joy_index", 0.0) or 0.0)
-            _fatigue = float(_xp.get("fatigue_index", 0.0) or 0.0)
-            _recs = _xp.get("recommendations", [])
-            if isinstance(_recs, list):
-                for r in _recs:
-                    if isinstance(r, dict) and r.get("action"):
-                        _recommendations.append(str(r["action"]))
-        except Exception:
-            pass  # Experience insights extraction best-effort
+    # §v10.201: Echte Qualitätswerte aus RestorationResult.metadata
+    _rmeta = getattr(restoration_result, "metadata", {}) or {}
+    _q_raw = float(getattr(restoration_result, "quality_estimate", 0.0) or 0.0)
+    _q_after = round(_q_raw * 100, 1)
+    _q_before = float(_rmeta.get("restorability_score", 50))
+    _mushra = float((_rmeta.get("mushra") or {}).get("mushra_score", 0.0))
+    _hpi = float(_rmeta.get("hpi_score", 0.0))
+    _reverted = bool((_rmeta.get("do_no_harm") or {}).get("reverted", False))
+    _phases = int(_rmeta.get("phases_total", 0))
+    _dnh_reason = str((_rmeta.get("do_no_harm") or {}).get("reason", ""))
     return {
         "file_name": file_name,
         "duration_seconds": duration_seconds,
         "defects_found": defects_found,
         "defects_fixed": defects_fixed,
-        "quality_before": quality_before,
-        "quality_after": quality_after,
+        # §v10.201: Echte Werte aus metadata (überschreiben die Default-Parameter)
+        "quality_before": _q_before if _q_before > 0 else quality_before,
+        "quality_after": _q_after if _q_after > 0 else quality_after,
+        "mushra_score": _mushra,
+        "hpi_score": _hpi,
+        "was_reverted": _reverted,
+        "revert_reason": _dnh_reason,
+        "phases_total": _phases,
         "material_detected": material_detected,
         "era_detected": era_detected,
         "mode": mode,
@@ -303,7 +352,7 @@ def build_results_data(
         "clarity_improvement": clarity_improvement,
         "hpe_before": hpe_before,
         "hpe_after": hpe_after,
-        "joy_index": _joy,
-        "fatigue_index": _fatigue,
-        "recommendations": _recommendations,
+        "joy_index": 0.0,
+        "fatigue_index": 0.0,
+        "recommendations": [],
     }

@@ -72,6 +72,7 @@ from typing import Any
 
 import numpy as np
 import scipy.signal as signal
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -2744,7 +2745,7 @@ class DenoisePhase(PhaseInterface):
         REF_HOP = REF_WIN * 3 // 4
         REF_NOVERLAP = REF_WIN - REF_HOP
 
-        f_ref, t_ref, Zxx_ref = signal.safe_stft(
+        f_ref, t_ref, Zxx_ref = safe_stft(
             audio.astype(np.float64), sr, nperseg=REF_WIN, noverlap=REF_NOVERLAP, boundary="even"
         )
         n_bins, n_t = f_ref.shape[0], Zxx_ref.shape[1]
@@ -2792,7 +2793,7 @@ class DenoisePhase(PhaseInterface):
                 # Use zone-specific STFT if audio is long enough; fall back to reference STFT
                 if n_samples >= zone_win * 2:
                     zone_noverlap = zone_win - zone_hop
-                    f_z, t_z, Zxx_z = signal.safe_stft(
+                    f_z, t_z, Zxx_z = safe_stft(
                         audio.astype(np.float64), sr, nperseg=zone_win, noverlap=zone_noverlap, boundary="even"
                     )
                 else:

@@ -2657,7 +2657,7 @@ class DeEsserPhase(PhaseInterface):
 
 
 
-    def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int) -> str:
+    def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int, **kwargs: Any) -> str:
         """
         Gender-Detection: Robuster Detektor (F0 + Formanten + WORLD) bevorzugt,
         Fallback auf einfache Autocorrelation.

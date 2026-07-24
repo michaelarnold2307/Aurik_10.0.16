@@ -85,8 +85,11 @@ class DoNoHarmGuardian:
     # → lockere Schwellwerte — LUFS-Normalisierung und Air-Band sind gewollt.
 
     # Restoration-Schwellwerte (konservativ)
+    # §v10.102: Naturalness auf 0.70 für degradierte Quellen (MERT-Proxy ist
+    # bei MP3/Kassette unzuverlässig — Rauschen täuscht hohe Naturalness vor,
+    # sauberes Restaurat wird fälschlich als "unnatürlich" bewertet).
     REST_MAX_BRIGHTNESS_DROP: float = 0.20
-    REST_MAX_NATURALNESS_DROP: float = 0.15
+    REST_MAX_NATURALNESS_DROP: float = 0.70
     REST_MAX_RMS_CHANGE_DB: float = 8.0
 
     # Studio-2026-Schwellwerte (erlauben bewusste Änderungen)
@@ -101,6 +104,10 @@ class DoNoHarmGuardian:
         self._input_sr: int = 0
         self._input_snapshot: GuardianSnapshot | None = None
         self._captured: bool = False
+        # §v10.103 P2: Clean-Referenz (carrier_checkpoint)
+        self._clean_reference: np.ndarray | None = None
+        self._clean_snapshot: GuardianSnapshot | None = None
+        self._reference_mode: str = "degraded_input"
 
     @property
     def mode(self) -> str:
@@ -122,18 +129,48 @@ class DoNoHarmGuardian:
         self._input_sr: int = 0
         self._input_snapshot: GuardianSnapshot | None = None
         self._captured: bool = False
+        # §v10.103: Clean-Referenz bei Mode-Wechsel konsistent zurücksetzen
+        self._clean_reference = None
+        self._clean_snapshot = None
+        self._reference_mode = "degraded_input"
 
     # ── Public API ─────────────────────────────────────────────────────
 
-    def capture_input(self, audio: np.ndarray, sr: int) -> None:
+    def capture_input(self, audio: np.ndarray, sr: int, carrier_checkpoint: np.ndarray | None = None) -> None:
         """Speichert das Input-Audio und misst dessen Metriken.
 
         Muss VOR der Pipeline aufgerufen werden.
+
+        Args:
+            audio: Degradiertes Input-Audio (für Fallback-Vergleich).
+            sr: Sample-Rate.
+            carrier_checkpoint: Optional — sauberster Carrier-Checkpoint
+                (via BlindInternalReference). Wenn gesetzt, werden alle
+                Vergleiche gegen DIESE Referenz durchgeführt statt gegen
+                das degradierte Input (§v10.103 P2 Referenzrahmen-Korrektur).
         """
         self._input_audio = np.asarray(audio, dtype=np.float32).copy()
         self._input_sr = int(sr)
         self._input_snapshot = self._measure(audio, sr)
         self._captured = True
+
+        # §v10.103 P2: Clean-Referenz statt degradiertem Input
+        if carrier_checkpoint is not None:
+            self._clean_reference = np.asarray(carrier_checkpoint, dtype=np.float32).copy()
+            self._clean_snapshot = self._measure(carrier_checkpoint, sr)
+            self._reference_mode = "carrier_checkpoint"
+            logger.debug(
+                "DoNoHarmGuardian: input + carrier_checkpoint captured — "
+                "reference_mode=carrier_checkpoint "
+                "clean_naturalness=%.3f clean_brightness=%.3f",
+                self._clean_snapshot.naturalness_estimate,
+                self._clean_snapshot.spectral_brightness,
+            )
+        else:
+            self._clean_reference = None
+            self._clean_snapshot = None
+            self._reference_mode = "degraded_input"
+
         logger.debug(
             "DoNoHarmGuardian: input captured — brightness=%.3f naturalness=%.3f rms=%.1f dBFS",
             self._input_snapshot.spectral_brightness,
@@ -141,13 +178,24 @@ class DoNoHarmGuardian:
             self._input_snapshot.rms_dbfs,
         )
 
-    def evaluate(self, output_audio: np.ndarray, sr: int, material: str = "unknown") -> GuardianVerdict:
-        """Vergleicht Output mit Input und entscheidet: passed oder nicht.
+    def evaluate(
+        self,
+        output_audio: np.ndarray,
+        sr: int,
+        material: str = "unknown",
+        chain_depth: int = 1,
+        mushra_score: float = 0.0,
+        hpi_score: float = 0.0,
+    ) -> GuardianVerdict:
+        """Vergleicht Output mit Referenz und entscheidet: passed oder nicht.
 
         Args:
             output_audio: Das von der Pipeline verarbeitete Audio.
             sr: Sample-Rate.
             material: Materialtyp (cassette, reel_tape, etc.) für adaptive Schwellwerte.
+            chain_depth: Transfer-Chain-Tiefe (1-5) für depth-adaptive Schwellwerte.
+            mushra_score: MUSHRA-Score (0-100) des Outputs für Perceptual Override (P1).
+            hpi_score: HPI-Score (0-1) des Outputs für Perceptual Override (P1).
 
         Returns:
             GuardianVerdict mit passed=True wenn alle Metriken ok sind.
@@ -156,55 +204,103 @@ class DoNoHarmGuardian:
             logger.warning("DoNoHarmGuardian: evaluate() ohne capture_input() — lasse durch")
             return GuardianVerdict(passed=True, reason="no_input_captured")
 
+        self._chain_depth = max(1, int(chain_depth))  # §v10.102: für depth-adaptive Schwellwerte
+
         output = np.asarray(output_audio, dtype=np.float32)
-        input_snap = self._input_snapshot
-        assert input_snap is not None
         output_snap = self._measure(output, sr)
+
+        # ═══ §v10.103 P1: Perceptual Override ═══
+        # Wenn beide perzeptuellen Metriken unisono "exzellent" sagen,
+        # vertrauen wir dem menschlichen Ohr mehr als den objektiven Proxies.
+        # Schwellwerte: MUSHRA ≥ 85 (ITU-R BS.1534 "Excellent"),
+        # HPI ≥ 0.75 (hohe perzeptuelle Verbesserung).
+        _MUSHRA_EXCELLENT = 85.0
+        _HPI_HIGH = 0.75
+        if mushra_score >= _MUSHRA_EXCELLENT and hpi_score >= _HPI_HIGH:
+            logger.info(
+                "DoNoHarmGuardian: PERCEPTUAL OVERRIDE — "
+                "MUSHRA=%.0f≥%.0f HPI=%.3f≥%.2f → "
+                "objektive Proxy-Warnungen werden unterdrückt "
+                "(das menschliche Ohr hat Vorrang)",
+                mushra_score, _MUSHRA_EXCELLENT, hpi_score, _HPI_HIGH,
+            )
+            return GuardianVerdict(
+                passed=True,
+                reason=f"perceptual_override:MUSHRA={mushra_score:.0f}_HPI={hpi_score:.3f}",
+                metrics_input=self._input_snapshot,
+                metrics_output=output_snap,
+                degraded_metrics=[],
+                severity="none",
+            )
+
+        # ═══ §v10.103 P2: Referenzrahmen-Korrektur ═══
+        # Vergleiche Output gegen CLEAN-Referenz (carrier_checkpoint) statt
+        # gegen degradiertes Input. Restauration BEDEUTET, sich vom
+        # degradierten Input zu entfernen — der richtige Maßstab ist die
+        # Annäherung an die saubere Referenz.
+        if self._clean_snapshot is not None:
+            ref_snap = self._clean_snapshot
+            _ref_label = f"carrier_checkpoint (mode={self._reference_mode})"
+        else:
+            ref_snap = self._input_snapshot
+            _ref_label = "degraded_input (Fallback — kein Carrier-Checkpoint)"
+
+        logger.debug(
+            "DoNoHarmGuardian: referencing against %s", _ref_label,
+        )
 
         degraded: list[str] = []
 
-        # 1. Spectral Brightness
-        _brightness_drop = input_snap.spectral_brightness - output_snap.spectral_brightness
+        # 1. Spectral Brightness — §v10.103 P2: gegen REFERENZ statt Input
+        _brightness_drop = ref_snap.spectral_brightness - output_snap.spectral_brightness
         if _brightness_drop > self._max_brightness_drop:
-            degraded.append(f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop})")
-
-        # 2. Naturalness — §v10.101 material-adaptiv
-        _mat_nat = str(material).lower()
-        _nat_threshold = 0.30 if _mat_nat in ("cassette", "reel_tape", "tape") else self._max_naturalness_drop
-        _nat_drop = input_snap.naturalness_estimate - output_snap.naturalness_estimate
-        if _nat_drop > _nat_threshold:
-            degraded.append(f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold})")
-
-        # 3. RMS Change
-        _rms_change = abs(output_snap.rms_dbfs - input_snap.rms_dbfs)
-        if _rms_change > self._max_rms_change_db:
-            degraded.append(f"rms_change={_rms_change:.1f} dB (>{self._max_rms_change_db})")
-
-        # 4. Peak Integrity (Crest-Factor-basiert, §v10.101)
-        # Vorher: absoluter Peak-Vergleich — Peak-Anstieg durch Gain-Staging
-        # (z.B. OneTakeExport +6dB) wurde fälschlich als Degradation gewertet.
-        # Jetzt: Crest-Faktor (Peak/RMS-Ratio) — nur echte Dynamik-Kompression
-        # feuert. Gain-Staging erhöht Peak UND RMS → Crest unverändert → PASS.
-        # Schwellwert 3 dB: declarative Dynamics-Veränderung (Kompressor/Limiter).
-        # Declipping (Peak↓, RMS≈) typischerweise nur 1–2 dB Crest-Änderung → PASS.
-        # §v10.101 Material-adaptiv: Kassette/Tape — Rauschentfernung reduziert
-        # Crest natürlich um 5–9 dB (Rausch-Peaks werden entfernt). Schwelle 6 dB.
-        _mat_crest = str(material).lower()
-        _crest_threshold = 6.0 if _mat_crest in ("cassette", "reel_tape", "tape") else 3.0
-        _crest_input = input_snap.peak_dbfs - input_snap.rms_dbfs
-        _crest_output = output_snap.peak_dbfs - output_snap.rms_dbfs
-        _crest_drop = _crest_input - _crest_output
-        if _crest_drop > _crest_threshold:
             degraded.append(
-                f"peak_degraded: crest_drop={_crest_drop:.1f}dB "
-                f"(in={input_snap.peak_dbfs:.1f}/{input_snap.rms_dbfs:.1f} "
-                f"out={output_snap.peak_dbfs:.1f}/{output_snap.rms_dbfs:.1f})"
+                f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop}) [ref={_ref_label}]"
             )
 
-        # 5. Dynamic Range — darf nicht kollabieren
-        _dr_change = input_snap.dynamic_range_db - output_snap.dynamic_range_db
-        if _dr_change > 6.0:  # Mehr als 6 dB Dynamikverlust
-            degraded.append(f"dynamic_range_collapse={_dr_change:.1f} dB")
+        # 2. Naturalness — §v10.102 depth-adaptiv + §v10.103 P2: gegen REFERENZ
+        _mat_nat = str(material).lower()
+        _depth_nat = max(1, int(getattr(self, '_chain_depth', 1)))
+        if _mat_nat in ("cassette", "reel_tape", "tape"):
+            _nat_threshold = 0.30 + 0.10 * _depth_nat + (0.10 if _depth_nat >= 3 else 0.0)
+        else:
+            _nat_threshold = self._max_naturalness_drop
+        _nat_drop = ref_snap.naturalness_estimate - output_snap.naturalness_estimate
+        if _nat_drop > _nat_threshold:
+            degraded.append(
+                f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold}) [ref={_ref_label}]"
+            )
+
+        # 3. RMS Change — gegen REFERENZ
+        _rms_change = abs(output_snap.rms_dbfs - ref_snap.rms_dbfs)
+        if _rms_change > self._max_rms_change_db:
+            degraded.append(
+                f"rms_change={_rms_change:.1f} dB (>{self._max_rms_change_db}) [ref={_ref_label}]"
+            )
+
+        # 4. Peak Integrity (Crest-Factor-basiert, §v10.102 depth-adaptiv) — gegen REFERENZ
+        _mat_crest = str(material).lower()
+        _depth_crest = max(1, int(getattr(self, '_chain_depth', 1)))
+        if _mat_crest in ("cassette", "reel_tape", "tape"):
+            _crest_threshold = 2.0 + 2.0 * _depth_crest
+        else:
+            _crest_threshold = 3.0
+        _crest_ref = ref_snap.peak_dbfs - ref_snap.rms_dbfs
+        _crest_output = output_snap.peak_dbfs - output_snap.rms_dbfs
+        _crest_drop = _crest_ref - _crest_output
+        if _crest_drop > _crest_threshold:
+            degraded.append(
+                f"peak_degraded: crest_drop={_crest_drop:.1f}dB (>{_crest_threshold}) "
+                f"[ref={_ref_label} ref={ref_snap.peak_dbfs:.1f}/{ref_snap.rms_dbfs:.1f} "
+                f"out={output_snap.peak_dbfs:.1f}/{output_snap.rms_dbfs:.1f}]"
+            )
+
+        # 5. Dynamic Range — gegen REFERENZ
+        _dr_change = ref_snap.dynamic_range_db - output_snap.dynamic_range_db
+        if _dr_change > 6.0:
+            degraded.append(
+                f"dynamic_range_collapse={_dr_change:.1f} dB [ref={_ref_label}]"
+            )
 
         passed = len(degraded) == 0
 
@@ -221,17 +317,18 @@ class DoNoHarmGuardian:
             _severity = "none"
             _reason = "all_metrics_ok"
             logger.info(
-                "DoNoHarmGuardian: PASSED — brightness=%.3f→%.3f naturalness=%.3f→%.3f",
-                input_snap.spectral_brightness,
+                "DoNoHarmGuardian: PASSED — brightness=%.3f→%.3f naturalness=%.3f→%.3f [ref=%s]",
+                ref_snap.spectral_brightness,
                 output_snap.spectral_brightness,
-                input_snap.naturalness_estimate,
+                ref_snap.naturalness_estimate,
                 output_snap.naturalness_estimate,
+                _ref_label,
             )
 
         return GuardianVerdict(
             passed=passed,
             reason=_reason,
-            metrics_input=input_snap,
+            metrics_input=ref_snap,
             metrics_output=output_snap,
             degraded_metrics=degraded,
             severity=_severity,
@@ -268,32 +365,22 @@ class DoNoHarmGuardian:
         except Exception:
             brightness = 0.5
 
-        # 2. Naturalness Estimate — §SOTA: MERT-Embedding wenn verfügbar, sonst Wiener-Entropie
+        # 2. Naturalness Estimate — §v10.102: Wiener-Entropie als Primärmetrik
+        # MERT-basierte "Naturalness" ist für degradierte Quellen (MP3, Kassette)
+        # unzuverlässig: der willkürliche Referenzvektor (0.1·ones) hat keine
+        # perzeptuelle Validierung. Wiener-Entropie misst spektrale Dichte —
+        # ein sauberes Restaurat hat typischerweise höhere Entropie (reichere
+        # Harmonik) als das MP3-degradierte Original.
         try:
-            # Versuche MERT-basierte Naturalness (Deep-Learning, auf menschliche Urteile trainiert)
-            from backend.core.mert_mushra_proxy import _extract_onnx_embedding as _mert_embed
-            _mert_vec = _mert_embed(mono[:min(len(mono), sr*10)], sr)  # Max 10s
-            if _mert_vec is not None and len(_mert_vec) > 0:
-                # MERT-Embedding-Distanz zu einem generischen "natürlichen" Referenz-Vektor
-                # Höhere Kosinus-Ähnlichkeit = natürlicher
-                _ref_natural = np.ones_like(_mert_vec) * 0.1  # Generischer natürlicher Proxy
-                _cos_sim = float(np.dot(_mert_vec, _ref_natural) / (
-                    np.linalg.norm(_mert_vec) * np.linalg.norm(_ref_natural) + 1e-12))
-                naturalness = float(np.clip(0.3 + 0.7 * _cos_sim, 0.0, 1.0))
-            else:
-                raise ValueError("MERT embedding empty")
+            _spec_db = 20.0 * np.log10(spec + 1e-10)
+            _spec_db -= np.max(_spec_db)
+            _spec_lin = 10.0 ** (_spec_db / 20.0)
+            _spec_norm = _spec_lin / (np.sum(_spec_lin) + 1e-10)
+            _entropy = -np.sum(_spec_norm * np.log2(_spec_norm + 1e-10))
+            _max_entropy = np.log2(len(_spec_norm))
+            naturalness = float(np.clip(_entropy / max(_max_entropy, 1.0), 0.0, 1.0))
         except Exception:
-            # Fallback: Wiener-Entropie
-            try:
-                _spec_db = 20.0 * np.log10(spec + 1e-10)
-                _spec_db -= np.max(_spec_db)
-                _spec_lin = 10.0 ** (_spec_db / 20.0)
-                _spec_norm = _spec_lin / (np.sum(_spec_lin) + 1e-10)
-                _entropy = -np.sum(_spec_norm * np.log2(_spec_norm + 1e-10))
-                _max_entropy = np.log2(len(_spec_norm))
-                naturalness = float(np.clip(_entropy / max(_max_entropy, 1.0), 0.0, 1.0))
-            except Exception:
-                naturalness = 0.5
+            naturalness = 0.5
 
         # 3. RMS in dBFS
         rms = float(np.sqrt(np.mean(mono**2)) + 1e-10)
@@ -326,6 +413,176 @@ class DoNoHarmGuardian:
                 "rms_linear": float(rms),
                 "peak_linear": float(peak),
             },
+        )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# §v10.103 P3: UnifiedQualityModel — Ein System, eine Entscheidung
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class UQMInput:
+    """Eingabe-Metriken für das UnifiedQualityModel."""
+
+    # ── Perzeptuelle Metriken (60% Gewicht) ──
+    mushra_score: float = 50.0  # 0-100
+    hpi_score: float = 0.5  # 0-1
+
+    # ── Objektive Metriken (40% Gewicht) ──
+    brightness_drop: float = 0.0  # Referenz - Output (positiv = dunkler)
+    naturalness_drop: float = 0.0  # Referenz - Output (positiv = weniger natürlich)
+    crest_drop_db: float = 0.0  # Referenz-Crest - Output-Crest (positiv = flacher)
+    rms_change_db: float = 0.0  # |Output - Referenz| RMS
+    dynamic_range_drop_db: float = 0.0  # Referenz-DR - Output-DR
+
+    # ── Kontext ──
+    material: str = "unknown"
+    chain_depth: int = 1
+    reference_mode: str = "degraded_input"
+
+
+@dataclass
+class UQMDecision:
+    """Entscheidung des UnifiedQualityModel."""
+
+    decision: str  # "PASS", "WARN", "REVERT"
+    quality_score: float  # 0-100
+    perceptual_score: float  # 0-100
+    objective_score: float  # 0-100
+    confidence: float  # 0-1
+    reason: str
+    advisory_warnings: list[str]
+
+
+class UnifiedQualityModel:
+    """§v10.103 P3: Single Source of Truth für Restaurations-Qualität.
+
+    Architecture:
+      - Perzeptuelle Metriken (MUSHRA, HPI): 60% Gewicht
+        → Wir machen Audio für MENSCHEN, nicht für Spektrumanalysatoren.
+      - Objektive Metriken (Crest, Naturalness, Brightness, DR): 40% Gewicht
+        → Schützen vor Extremfällen (Clipping, Dynamik-Kollaps).
+      - Keine isolierten Vetos mehr — ALLE Metriken fließen in EINE Entscheidung.
+
+    Usage:
+        uqm = UnifiedQualityModel()
+        decision = uqm.assess(UQMInput(...))
+        if decision.decision == "REVERT":
+            return original_audio
+    """
+
+    # ── Gewichte (§v10.103 kalibriert) ──
+    PERCEPTUAL_WEIGHT: float = 0.60
+    OBJECTIVE_WEIGHT: float = 0.40
+
+    # ── Entscheidungsschwellen ──
+    QUALITY_PASS: float = 65.0  # quality_score ≥ 65 → PASS
+    QUALITY_WARN: float = 45.0  # quality_score ≥ 45 → WARN (noch ok)
+    # quality_score < 45 → REVERT
+
+    # ── Perzeptuelle Exzellenz (P1: Override-Schwelle) ──
+    MUSHRA_EXCELLENT: float = 85.0
+    HPI_HIGH: float = 0.75
+
+    def assess(self, inp: UQMInput) -> UQMDecision:
+        """Berechnet EINE gewichtete Qualitätsentscheidung."""
+
+        advisory: list[str] = []
+
+        # ── 1. Perzeptueller Score (0-100) ──
+        # MUSHRA direkt in [0,100], HPI skaliert auf [0,100]
+        perceptual_score = 0.50 * inp.mushra_score + 0.50 * (inp.hpi_score * 100.0)
+
+        # ── 2. Objektiver Score (0-100) ──
+        # Jede objektive Metrik: 100 = perfekt (kein Drop), 0 = katastrophal
+        _brightness_ok = max(0.0, 100.0 - inp.brightness_drop * 200.0)
+        _naturalness_ok = max(0.0, 100.0 - inp.naturalness_drop * 150.0)
+        _crest_ok = max(0.0, 100.0 - inp.crest_drop_db * 10.0)
+        _rms_ok = max(0.0, 100.0 - inp.rms_change_db * 5.0)
+        _dr_ok = max(0.0, 100.0 - inp.dynamic_range_drop_db * 10.0)
+
+        objective_score = (
+            0.20 * _brightness_ok
+            + 0.25 * _naturalness_ok
+            + 0.25 * _crest_ok
+            + 0.15 * _rms_ok
+            + 0.15 * _dr_ok
+        )
+
+        # ── 3. Gewichteter Gesamt-Score ──
+        quality_score = (
+            self.PERCEPTUAL_WEIGHT * perceptual_score
+            + self.OBJECTIVE_WEIGHT * objective_score
+        )
+
+        # ── 4. Material/Depth-Adaptivität ──
+        _mat = str(inp.material).lower()
+        _depth = max(1, int(inp.chain_depth))
+        if _mat in ("cassette", "reel_tape", "tape") and _depth >= 3:
+            # Deep-Chain-Kassetten: objektive Metriken sind weniger aussagekräftig
+            # → perzeptuelles Gewicht steigt auf 75%
+            _perceptual_w = 0.75
+            _objective_w = 0.25
+            quality_score = _perceptual_w * perceptual_score + _objective_w * objective_score
+            advisory.append(f"Deep-chain tape (depth={_depth}): perceptual weight increased to {_perceptual_w:.0%}")
+
+        # ── 5. Perzeptueller Override (P1 im UQM) ──
+        if inp.mushra_score >= self.MUSHRA_EXCELLENT and inp.hpi_score >= self.HPI_HIGH:
+            # Perzeptuelle Exzellenz → Floor bei 80
+            quality_score = max(quality_score, 80.0)
+            advisory.append(
+                f"Perceptual excellence (MUSHRA={inp.mushra_score:.0f}, HPI={inp.hpi_score:.3f}): "
+                f"quality floor raised to 80"
+            )
+
+        # ── 6. Entscheidung ──
+        if quality_score >= self.QUALITY_PASS:
+            decision = "PASS"
+        elif quality_score >= self.QUALITY_WARN:
+            decision = "WARN"
+        else:
+            decision = "REVERT"
+
+        # ── 7. Confidence ──
+        # Höhere Confidence bei Referenz-Mode "carrier_checkpoint" (echte Vergleichsbasis)
+        _base_conf = 0.75
+        if inp.reference_mode == "carrier_checkpoint":
+            _base_conf = 0.85
+        # Nähe an Schwellen reduziert Confidence
+        _dist_to_pass = abs(quality_score - self.QUALITY_PASS) / 20.0
+        confidence = float(np.clip(_base_conf - _dist_to_pass * 0.15, 0.5, 0.95))
+
+        # ── 8. Reason ──
+        if decision == "PASS":
+            _reason = (
+                f"UQM PASS: quality={quality_score:.1f} "
+                f"(perceptual={perceptual_score:.1f}, objective={objective_score:.1f})"
+            )
+        elif decision == "WARN":
+            _reason = (
+                f"UQM WARN: quality={quality_score:.1f} < {self.QUALITY_PASS:.0f} "
+                f"— output accepted with warnings"
+            )
+        else:
+            _reason = (
+                f"UQM REVERT: quality={quality_score:.1f} < {self.QUALITY_WARN:.0f} "
+                f"— returning original audio"
+            )
+
+        logger.info(
+            "UnifiedQualityModel: %s (perceptual=%.1f objective=%.1f combined=%.1f conf=%.2f)",
+            decision, perceptual_score, objective_score, quality_score, confidence,
+        )
+
+        return UQMDecision(
+            decision=decision,
+            quality_score=round(quality_score, 1),
+            perceptual_score=round(perceptual_score, 1),
+            objective_score=round(objective_score, 1),
+            confidence=round(confidence, 2),
+            reason=_reason,
+            advisory_warnings=advisory,
         )
 
 

@@ -55,6 +55,7 @@ except ImportError:
     psutil = None  # type: ignore[assignment]
     _PSUTIL_OK = False
 from scipy import interpolate, ndimage, signal
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 
 from backend.core.clipping_detection import ClippingType, classify_clipping
 from backend.core.defect_scanner import MaterialType
@@ -1743,6 +1744,7 @@ class SpectralRepair(PhaseInterface):
         repair_strength: float,
         progress_cb=None,
         phase_deadline: float = 0.0,
+        **kwargs: Any,
     ) -> np.ndarray:
         """Repariert a single audio channel using spectral inpainting."""
 
@@ -1755,7 +1757,7 @@ class SpectralRepair(PhaseInterface):
 
         _report(8.0, "STFT")
         # Compute STFT
-        _f, _t, Zxx = signal.safe_stft(
+        _f, _t, Zxx = safe_stft(
             audio,
             fs=sample_rate,
             window="hann",
@@ -1967,7 +1969,7 @@ class SpectralRepair(PhaseInterface):
                     else:
                         _sig_pocs = np.pad(_sig_pocs, (0, _n_needed - len(_sig_pocs)))
                     # Step 2: Zeitsignal → neues STFT (physikalisch konsistente Phase)
-                    _, _, _Zxx_new = signal.safe_stft(
+                    _, _, _Zxx_new = safe_stft(
                         _sig_pocs,
                         fs=sample_rate,
                         window="hann",

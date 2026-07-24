@@ -454,9 +454,12 @@ def resolve_assessment(
             warnings=all_warnings,
         )
 
-    # ── Fall 3: MUSHRA-HPI-Widerspruch ──
+    # ── Fall 3: MUSHRA-HPI-Widerspruch (nur bei niedrigem HPI) ──
+    # §v10.102: Bei HPI ≥ 0.7 sind MUSHRA und HPI konsistent (beide sagen
+    # "gute Qualität") — auch wenn MUSHRA > HPI*100+10. Der Widerspruch
+    # ist nur relevant wenn HPI niedrig ist und MUSHRA trotzdem hoch.
     expected_mushra = hpi_score * 100.0
-    if mushra_score > expected_mushra + 10 and quality_gate_delta < 10:
+    if mushra_score > expected_mushra + 10 and quality_gate_delta < 10 and hpi_score < 0.70:
         all_warnings.append(
             f"MUSHRA({mushra_score:.0f}) ≫ HPI({hpi_score:.3f}): "
             f"MUSHRA vermutlich false-positive"

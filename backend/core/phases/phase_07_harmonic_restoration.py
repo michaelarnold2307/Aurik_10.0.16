@@ -492,13 +492,37 @@ class HarmonicRestorationPhase(PhaseInterface):
         # harmonische Synthese-Modell near-silence (−86 dBFS). Grund: keine
         # fehlenden Harmonischen zum Synthetisieren → Output = 0 → Blend = Stille.
         # Fix: H2/H1-Check vor Synthese; bei gesättigtem Signal Strength drosseln.
-        if _effective_strength > 0.15:
+        # §v10.114 Erweiterung: Guard-Schwelle von 0.15 auf 0.05 gesenkt — auch
+        # bei niedriger Strength kann harmonic synthesis auf sauberem Audio
+        # Stille produzieren. Zusätzlich H2/H1 ≥ 0.35 als Frühwarn-Schwelle.
+        # §v10.118 FC-Awareness: Im FeedbackChain-Durchlauf sofort auf
+        # Passthrough schalten wenn H2/H1 ≥ 0.35 (keine Synthese nötig).
+        _is_fc_pass = bool(kwargs.get('_feedback_chain_pass', False))
+        if _is_fc_pass:
+            try:
+                _h2h1_fc = self._measure_h2_ratio(audio, sample_rate)
+                if _h2h1_fc >= 0.35:
+                    logger.info(
+                        "phase_07 §v10.118 FC-Awareness: H2/H1=%.3f ≥ 0.35 im zweiten Durchlauf → Passthrough",
+                        _h2h1_fc,
+                    )
+                    _effective_strength = 0.0
+            except Exception:
+                pass
+        if _effective_strength > 0.05:
             try:
                 _h2h1_07 = self._measure_h2_ratio(audio, sample_rate)
-                if _h2h1_07 > 0.50:
+                if _h2h1_07 >= 0.50:
                     _effective_strength = float(np.clip(_effective_strength * 0.15, 0.0, 0.10))
                     logger.info(
                         "phase_07: H2/H1=%.3f ≥ 0.50 → strength auf %.3f gedrosselt (FeedbackChain-Guard)",
+                        _h2h1_07, _effective_strength,
+                    )
+                elif _h2h1_07 >= 0.35:
+                    # Frühwarn-Schwelle: Obertongehalt bereits hoch → sanft drosseln
+                    _effective_strength = float(np.clip(_effective_strength * 0.50, 0.0, 1.0))
+                    logger.debug(
+                        "phase_07: H2/H1=%.3f ≥ 0.35 → strength auf %.3f gedrosselt (FeedbackChain-Frühwarn)",
                         _h2h1_07, _effective_strength,
                     )
             except Exception:
@@ -1102,6 +1126,23 @@ class HarmonicRestorationPhase(PhaseInterface):
                     )
             except Exception as _se_exc:
                 logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+
+        # §v10.114 Post-Synthesis RMS-Guard: Wenn die harmonische Synthese
+        # auf bereits sauberem Audio Stille produziert (FeedbackChain),
+        # Rollback auf Eingangs-Audio. Verhindert −86 dBFS nach Phase 07
+        # im zweiten Durchlauf.
+        try:
+            _input_rms = float(np.sqrt(np.mean(np.asarray(audio, dtype=np.float32) ** 2)) + 1e-12)
+            _output_rms = float(np.sqrt(np.mean(np.asarray(restored, dtype=np.float32) ** 2)) + 1e-12)
+            _rms_drop_db = float(20.0 * np.log10(_output_rms / _input_rms)) if _input_rms > 1e-12 else 0.0
+            if _rms_drop_db < -30.0:
+                logger.warning(
+                    "phase_07: RMS-Drop %.1f dB → Rollback auf Eingangs-Audio (FeedbackChain-Silence-Guard)",
+                    _rms_drop_db,
+                )
+                restored = np.asarray(audio, dtype=np.float32)
+        except Exception:
+            _rms_drop_db = 0.0
 
         return create_phase_result(
             audio=restored,

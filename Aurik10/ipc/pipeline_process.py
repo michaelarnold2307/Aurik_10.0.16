@@ -73,6 +73,15 @@ class PipelineStatus:
     error: str = ""
     timestamp: float = 0.0
 
+    # ── §v10.201 Ergebnis-Felder (nur bei state∈{completed,warning,failed}) ──
+    result_quality: float = 0.0       # quality_estimate * 100
+    result_reverted: bool = False     # do_no_harm.reverted
+    result_revert_reason: str = ""    # Guardian-Begründung
+    result_mushra: float = 0.0        # MUSHRA-Score (0-100)
+    result_hpi: float = 0.0           # HPI-Score (0-1)
+    result_phases_done: int = 0       # Tatsächliche Phasenzahl
+    result_warnings: list[str] = field(default_factory=list)
+
     def to_json(self) -> str:
         d = {
             "state": self.state,
@@ -83,6 +92,14 @@ class PipelineStatus:
             "mos_estimate": self.mos_estimate,
             "error": self.error,
             "timestamp": time.monotonic(),
+            # §v10.201 Ergebnis-Felder
+            "result_quality": self.result_quality,
+            "result_reverted": self.result_reverted,
+            "result_revert_reason": self.result_revert_reason,
+            "result_mushra": self.result_mushra,
+            "result_hpi": self.result_hpi,
+            "result_phases_done": self.result_phases_done,
+            "result_warnings": self.result_warnings,
         }
         return json.dumps(d, ensure_ascii=False)
 
@@ -249,7 +266,7 @@ def _run_restoration_job(
             progress_pct=0.0,
             current_phase="audio_loading",
             phase_index=0,
-            total_phases=66,
+            total_phases=0,  # §v10.202: wird vom ersten echten Progress-Callback gesetzt
         ).to_json()
     )
 
@@ -293,7 +310,7 @@ def _run_restoration_job(
             progress_pct=0.0,
             current_phase="restoration_start",
             phase_index=0,
-            total_phases=66,
+            total_phases=0,  # §v10.202: dynamisch — erster Progress-Callback setzt korrekte Zahl
         ).to_json()
     )
 
@@ -323,10 +340,26 @@ def _run_restoration_job(
                 "final",
             )
 
+        # §v10.201: Ergebnis-Metadaten aus RestorationResult extrahieren
+        _rmeta = getattr(result, "metadata", {}) or {}
+        _dnh = _rmeta.get("do_no_harm", {}) or {}
+        _uqm = _rmeta.get("uqm", {}) or {}
+        _mushra = (_rmeta.get("mushra") or {}).get("mushra_score", 0.0)
+        _q = float(getattr(result, "quality_estimate", 0.0) or 0.0)
+        _reverted = bool(_dnh.get("reverted", False))
+
         output_pipe.send(
             PipelineStatus(
-                state="completed",
+                state="completed" if not _reverted else "warning",
                 progress_pct=100.0,
+                result_quality=round(_q * 100, 1),
+                result_reverted=_reverted,
+                result_revert_reason=str(_dnh.get("reason", "")),
+                result_mushra=float(_mushra),
+                result_hpi=float(_rmeta.get("hpi_score", 0.0)),
+                result_phases_done=int(_rmeta.get("phases_total", 0)),
+                result_warnings=list(getattr(result, "warnings", []) or []),
+                error=str(_dnh.get("reason", "")) if _reverted else "",
             ).to_json()
         )
 

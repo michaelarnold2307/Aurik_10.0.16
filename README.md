@@ -1,6 +1,6 @@
 # 🎵 Aurik 10 — Intelligentes Musik-Restaurierungs- und Rekonstruktionssystem
 
-**Version:** 10.0.10 | **Status:** ✅ Produktionsbereit | **Stand:** 19. Juli 2026
+**Version:** 10.0.16 | **Status:** ✅ Produktionsbereit | **Stand:** 2026 — §v10.112–§v10.117 Universal Safety Wrapper & RX11-Kalibrierung
 
 > Normativer Ist-Stand: `.github/specs/`, `.github/copilot-instructions.md`, `CHANGELOG.md`, `denker/README.md`.
 
@@ -294,6 +294,16 @@ pip install -r requirements/requirements.txt
 ```
 
 > Hinweis: Diese Schritte sind nur fuer Entwicklung im Repository. Endnutzer verwenden die gebuendelte Desktop-App.
+
+### Präventiv-Quote (§v10.118)
+
+**Mindestens 40% jeder Entwicklungssession müssen präventive Maßnahmen sein**
+(Stabilität, Wartbarkeit, Linting, Audits, Scope-Bug-Detection).
+Die restlichen 60% dürfen hörbare Wohlklang-Verbesserungen sein.
+
+Diese Quote verhindert die "Feature-Falle" — immer neue Funktionen, nie stabiler.
+Sie ist in `.github/specs/22_wohlklang_strategie.md` dokumentiert und gilt
+für alle Contributors ab v10.0.16.
 
 ### GUI starten
 

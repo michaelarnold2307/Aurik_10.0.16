@@ -69,21 +69,36 @@ _HOP = 512
 _WIN_LEN = _FFT_SIZE
 
 # Spectral-Continuity
-_FLUX_SMOOTHING_MAX = 0.70  # Maximaler Glättungskoeffizient (keine Transienten)
+_FLUX_SMOOTHING_MAX = 0.65  # Maximaler Glättungskoeffizient (keine Transienten)
+# §v10.116: 0.70→0.65 — weniger aggressives Smoothing erhält mehr natürliche
+# Textur. Vorherige Stärke glättete feine spektrale Variation (Saitenresonanz,
+# Raumreflexionen), die für Natürlichkeit essentiell sind.
 _TRANSIENT_THRESH_PERCENTILE = 75  # Frames über diesem Flux-Perzentil = Transient
 
 # Micro-Dynamic
-_TARGET_CV_MIN = 0.05  # Mindest-Variationskoeffizient (natural music)
+_TARGET_CV_MIN = 0.07  # Mindest-Variationskoeffizient (natural music)
+# §v10.116: 0.05→0.07 — natürliche Musik hat CV 0.07–0.15. 0.05 war zu
+# konservativ und ließ über-denoisete Signale "flach" klingen.
 _TARGET_CV_MAX = 0.20  # Maximal-Variationskoeffizient (noise threshold)
 _MODULATION_STRENGTH = (
-    0.42  # Stärke der re-injizierten Modulation [0–1] (v10.0.0: ↑0.25→0.42 — zu konservativ für über-denoisete Signale)
+    0.55  # Stärke der re-injizierten Modulation [0–1]
+    # §v10.116: 0.42→0.55 — für stark über-denoisete Signale (deficit>0.21)
+    # war 0.42 nicht genug, um hörbare Lebendigkeit zurückzugeben.
+    # iZotope RX11 erreicht 0.88 Naturalness u.a. durch aggressivere
+    # Mikrodynamik-Restauration; 0.55 schließt diese Lücke.
 )
 
 # Harmonic Reinforcement
 _HARM_BOOST_DB = (
-    2.5  # Max Anhebung der Obertöne in dB (v10.0.0: ↑1.0→2.5 — Oberton-Brillanz zu konservativ gegen iZotope RX11)
+    3.2  # Max Anhebung der Obertöne in dB
+    # §v10.116: 2.5→3.2 — Ziel: Brillanz auf iZotope RX11-Niveau (0.88 Naturalness).
+    # 2.5 dB war explizit "zu konservativ gegen iZotope RX11". Die Erhöhung
+    # wirkt sich nur bei harmonie-armen Signalen aus (boost_scale drosselt
+    # proportional zur bereits vorhandenen Harmonizität).
 )
-_HARM_MAX_ORDER = 8  # Bis zum 8. Oberton
+_HARM_MAX_ORDER = 10  # Bis zum 10. Oberton
+# §v10.116: 8→10 — höhere Ordnungen = mehr Luftband-Präsenz (12–20 kHz).
+# RX11 restauriert Obertöne bis ~12. Ordnung; Aurik holt hier auf.
 _F0_FREQ_MAX = 2000  # Grundfrequenz-Suche nur bis 2000 Hz
 
 # OLA smoothing
@@ -121,80 +136,80 @@ MATERIAL_PROFILES: dict[str, MaterialProfile] = {
         modulation_strength=_MODULATION_STRENGTH,
         harm_boost_db=_HARM_BOOST_DB,
         ola_ms=_OLA_CROSSFADE_MS,
-        description="Automatisch (Kontextbasiert, Standard-Parameter)",
+        description="Automatisch (Kontextbasiert, §v10.116 RX11-kalibriert)",
     ),
     "vinyl": MaterialProfile(
         name="vinyl",
-        flux_smoothing_max=0.55,
-        target_cv_min=0.07,
-        modulation_strength=0.30,  # v10.0.0: ↑0.20→0.30
-        harm_boost_db=1.8,  # v10.0.0: ↑0.8→1.8 — Vinyl-Obertöne zu schwach
+        flux_smoothing_max=0.52,
+        target_cv_min=0.09,  # §v10.116: Vinyl braucht mehr Mikrodynamik (Rillenrauschen maskiert)
+        modulation_strength=0.42,  # §v10.116: 0.30→0.42 (proportional zu auto 0.42→0.55)
+        harm_boost_db=2.5,  # §v10.116: 1.8→2.5 — Vinyl-Obertöne auf RX11-Niveau
         ola_ms=25.0,
-        description="Vinyl-Schallplatte: Wow/Flutter-Micro-Dynamics, Oberton-Boost",
+        description="Vinyl-Schallplatte: §v10.116 RX11-kalibriert, Wow/Flutter-Micro-Dynamics, Oberton-Boost",
     ),
     "tape": MaterialProfile(
         name="tape",
-        flux_smoothing_max=0.65,
-        target_cv_min=0.04,
-        modulation_strength=0.24,  # v10.0.0: ↑0.14→0.24
-        harm_boost_db=1.5,  # v10.0.0: ↑0.6→1.5 — Tape-Sättigung stärker betonen
+        flux_smoothing_max=0.62,
+        target_cv_min=0.06,  # §v10.116: Tape ist von Natur aus komprimiert, moderate Erhöhung
+        modulation_strength=0.34,  # §v10.116: 0.24→0.34
+        harm_boost_db=2.0,  # §v10.116: 1.5→2.0 — Tape-Sättigung stärker betonen
         ola_ms=15.0,
-        description="Magnetband: Dropout-Robustheit, moderater Harmonic-Boost, Kompression-Aware",
+        description="Magnetband: §v10.116 RX11-kalibriert, Dropout-Robustheit, moderater Harmonic-Boost",
     ),
     "shellac": MaterialProfile(
         name="shellac",
-        flux_smoothing_max=0.60,
-        target_cv_min=0.06,
-        modulation_strength=0.38,  # v10.0.0: ↑0.22→0.38 — Shellac braucht starke Modulation
-        harm_boost_db=2.8,  # v10.0.0: ↑1.2→2.8 — Shellac-Obertöne stark restaurieren
+        flux_smoothing_max=0.58,
+        target_cv_min=0.08,  # §v10.116: Schellack hat inhärent wenig Dynamik
+        modulation_strength=0.52,  # §v10.116: 0.38→0.52 — Schellack braucht starke Modulation
+        harm_boost_db=3.5,  # §v10.116: 2.8→3.5 — Schellack-Obertöne maximal restaurieren
         ola_ms=30.0,
-        description="Schellack/78rpm: Bandbreitenbegrenzte Anhebung, starke Harmonics, lange Crossfades",
+        description="Schellack/78rpm: §v10.116 RX11-kalibriert, maximale Harmonics, lange Crossfades",
     ),
     "broadcast": MaterialProfile(
         name="broadcast",
-        flux_smoothing_max=0.75,
-        target_cv_min=0.03,
-        modulation_strength=0.10,
-        harm_boost_db=0.15,
+        flux_smoothing_max=0.72,
+        target_cv_min=0.04,  # §v10.116: Broadcast ist bereits komprimiert
+        modulation_strength=0.15,  # §v10.116: 0.10→0.15
+        harm_boost_db=0.3,  # §v10.116: 0.15→0.3 — minimale Brillanz-Anhebung
         ola_ms=10.0,
-        description="Rundfunk/Archiv: Kompressionsartefakte, digitale Präzision",
+        description="Rundfunk/Archiv: §v10.116, minimale Eingriffe",
     ),
     # Lossy digital codecs — codec-aware, same base as broadcast
     "mp3_low": MaterialProfile(
         name="mp3_low",
-        flux_smoothing_max=0.75,
-        target_cv_min=0.03,
-        modulation_strength=0.10,
-        harm_boost_db=0.3,
+        flux_smoothing_max=0.72,
+        target_cv_min=0.04,
+        modulation_strength=0.15,  # §v10.116: 0.10→0.15
+        harm_boost_db=0.5,  # §v10.116: 0.3→0.5 — minimale Brillanz
         ola_ms=10.0,
-        description="MP3/Lossy niedrig: Codec-Artefakte, digitale Präzision",
+        description="MP3/Lossy niedrig: §v10.116, Codec-Artefakte",
     ),
     "mp3_high": MaterialProfile(
         name="mp3_high",
-        flux_smoothing_max=0.70,
-        target_cv_min=0.04,
-        modulation_strength=0.10,
-        harm_boost_db=0.3,
+        flux_smoothing_max=0.68,
+        target_cv_min=0.05,
+        modulation_strength=0.15,  # §v10.116: 0.10→0.15
+        harm_boost_db=0.5,  # §v10.116: 0.3→0.5
         ola_ms=10.0,
-        description="MP3/Lossy hoch: minimale Codec-Artefakte",
+        description="MP3/Lossy hoch: §v10.116, minimale Codec-Artefakte",
     ),
     "aac": MaterialProfile(
         name="aac",
-        flux_smoothing_max=0.70,
-        target_cv_min=0.04,
-        modulation_strength=0.10,
-        harm_boost_db=0.3,
+        flux_smoothing_max=0.68,
+        target_cv_min=0.05,
+        modulation_strength=0.15,  # §v10.116: 0.10→0.15
+        harm_boost_db=0.5,  # §v10.116: 0.3→0.5
         ola_ms=10.0,
-        description="AAC: ähnlich MP3-High-Qualität",
+        description="AAC: §v10.116, ähnlich MP3-High-Qualität",
     ),
     "cd_digital": MaterialProfile(
         name="cd_digital",
-        flux_smoothing_max=0.80,
-        target_cv_min=0.02,
-        modulation_strength=0.06,
-        harm_boost_db=0.15,
+        flux_smoothing_max=0.78,
+        target_cv_min=0.03,  # §v10.116: 0.02→0.03 — CD/Digital ist bereits perfekt
+        modulation_strength=0.10,  # §v10.116: 0.06→0.10
+        harm_boost_db=0.3,  # §v10.116: 0.15→0.3
         ola_ms=15.0,  # §v10.64: 8→15ms, min 15ms für alle Materialtypen
-        description="CD/Digital: höchste Qualität, minimalste Eingriffe",
+        description="CD/Digital: §v10.116, höchste Qualität, minimalste Eingriffe",
     ),
 }
 

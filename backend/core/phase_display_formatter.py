@@ -77,6 +77,24 @@ PHASE_DISPLAY: dict[str, str] = {
     "phase_45_dc_offset": "🔌 DC-Offset",
     "phase_51_format_conversion": "🔄 Format-Konvertierung",
     "phase_52_metadata_embedding": "📋 Metadaten",
+    # §v10.202: Ergänzte fehlende Phasen
+    "phase_10_compression": "📉 Kompression",
+    "phase_11_limiting": "📏 Limiting",
+    "phase_21_exciter": "⚡ Exciter",
+    "phase_22_tape_saturation": "📼 Band-Sättigung",
+    "phase_30_dc_offset_removal": "🔌 DC-Offset-Entfernung",
+    "phase_32_mono_to_stereo": "🔊 Mono→Stereo",
+    "phase_33_stereo_width_limiter": "📐 Stereo-Weiten-Limiter",
+    "phase_35_multiband_compression": "🎚️ Multiband-Kompression",
+    "phase_42_vocal_enhancement": "🎤 Gesangs-Optimierung",
+    "phase_46_spatial_enhancement": "🌌 Räumlichkeit",
+    "phase_51_drums_enhancement": "🥁 Schlagzeug-Verbesserung",
+    "phase_52_piano_restoration": "🎹 Klavier-Restauration",
+    "phase_57_print_through_reduction": "📼 Kopiereffekt-Entfernung",
+    "phase_58_lyrics_guided_enhancement": "🎤 Textgeführte Optimierung",
+    "phase_63_intermodulation_reduction": "📉 Intermodulations-Reduktion",
+    "phase_glue_stage": "🔗 Zusammenführung",
+    "phase_07_declipper": "🔧 De-Clipping",
 }
 
 # ── Carrier chain display names ───────────────────────────────────
