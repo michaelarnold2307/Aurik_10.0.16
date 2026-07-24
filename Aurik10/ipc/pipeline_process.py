@@ -67,6 +67,7 @@ class PipelineStatus:
     state: str = "idle"  # PipelineState.name
     progress_pct: float = 0.0
     current_phase: str = ""
+    narrative: str = ""   # §v10.118: laienverständlicher Erzähltext vom PhaseProgressNarrator
     phase_index: int = 0
     total_phases: int = 0
     mos_estimate: float = 0.0
@@ -87,6 +88,7 @@ class PipelineStatus:
             "state": self.state,
             "progress_pct": self.progress_pct,
             "current_phase": self.current_phase,
+            "narrative": self.narrative,  # §v10.118: Erzähltext für GUI
             "phase_index": self.phase_index,
             "total_phases": self.total_phases,
             "mos_estimate": self.mos_estimate,
@@ -291,15 +293,24 @@ def _run_restoration_job(
         except Exception as e:
             logger.debug("SharedAudioRing write fehlgeschlagen: %s", e)
 
-    def _progress_callback(pct: float, phase_name: str, phase_idx: int, total: int) -> None:
-        """Wird bei Fortschrittsänderungen aufgerufen."""
+    def _progress_callback(pct: float, phase_name: str, phase_idx: int = 0, total: int = 0) -> None:
+        """Wird bei Fortschrittsänderungen aufgerufen.
+
+        §v10.118: Akzeptiert sowohl 3-arg (backend: pct, narrative, elapsed)
+        als auch 4-arg (frontend-legacy: pct, phase_name, phase_idx, total).
+        Der zweite Parameter wird immer als Erzähltext interpretiert.
+        """
+        # §v10.118: Erzähltext vom PhaseProgressNarrator kommt als phase_name an
+        _narrative = str(phase_name) if phase_name else ""
+        _phase_short = _narrative[:60] + "…" if len(_narrative) > 60 else _narrative
         output_pipe.send(
             PipelineStatus(
                 state="running",
                 progress_pct=pct,
-                current_phase=phase_name,
-                phase_index=phase_idx,
-                total_phases=total,
+                current_phase=_phase_short,
+                narrative=_narrative,  # §v10.118: vollständiger Erzähltext
+                phase_index=int(phase_idx) if isinstance(phase_idx, (int, float)) else 0,
+                total_phases=int(total) if isinstance(total, (int, float)) else 0,
             ).to_json()
         )
 
@@ -556,6 +567,7 @@ class PipelineProcess:
                         state=data.get("state", "idle"),
                         progress_pct=data.get("progress_pct", 0.0),
                         current_phase=data.get("current_phase", ""),
+                        narrative=data.get("narrative", data.get("current_phase", "")),  # §v10.118: Erzähltext, Fallback auf phase
                         phase_index=data.get("phase_index", 0),
                         total_phases=data.get("total_phases", 0),
                         mos_estimate=data.get("mos_estimate", 0.0),

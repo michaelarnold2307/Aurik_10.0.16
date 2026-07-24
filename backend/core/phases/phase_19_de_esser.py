@@ -2766,27 +2766,39 @@ class DeEsserPhase(PhaseInterface):
                 # (Vokaltrakt-Länge ist konstant; F0 variiert mit Tonhöhe).
                 # Daher: Kein Confidence-Gate mehr. Wenn F1 UND F2 weiblich-typisch
                 # sind und F0 im Überlappungsbereich liegt → override auf FEMALE.
-                _CONTRALTO_F0_LOW = 140.0
-                _CONTRALTO_F0_HIGH = 220.0  # bis A3 — deckt Alt/Mezzo ab
+                # §v10.119: Contralto-F0-Schwelle auf 120 Hz gesenkt (war 140).
+                # Sehr tiefe Frauenstimmen + Oktavfehler der F0-Detektion (94 Hz
+                # statt 188 Hz) wurden vorher nicht erkannt.
+                _CONTRALTO_F0_LOW = 120.0  # §v10.119: 140→120 — deckt tiefe Alte + Oktavfehler
+                _CONTRALTO_F0_HIGH = 240.0  # §v10.119: 220→240 — bis H3, deckt Mezzo ab
                 _FEMALE_F1 = (310.0, 860.0)
                 _FEMALE_F2 = (920.0, 2790.0)
                 _contralto_detected = False
+                # §v10.119: Oktavfehler-Erkennung — wenn F0 < 120 aber 2×F0
+                # im Contralto-Bereich liegt UND F1 weiblich ist → Oktavfehler.
+                _octave_candidate = f0 < _CONTRALTO_F0_LOW and (_CONTRALTO_F0_LOW <= 2.0 * f0 <= _CONTRALTO_F0_HIGH)
+                _effective_f0 = 2.0 * f0 if _octave_candidate else f0
                 if (
                     gender_str == VocalGender.MALE
-                    and _CONTRALTO_F0_LOW <= f0 <= _CONTRALTO_F0_HIGH
+                    and _CONTRALTO_F0_LOW <= _effective_f0 <= _CONTRALTO_F0_HIGH
                     and len(formants) >= 2
                 ):
                     f1_in_female = _FEMALE_F1[0] <= formants[0] <= _FEMALE_F1[1]
                     f2_in_female = _FEMALE_F2[0] <= formants[1] <= _FEMALE_F2[1]
-                    if f1_in_female and f2_in_female:
+                    # §v10.119: Bei MP3/Bandbreitenverlust ist F2 oft degradiert.
+                    # F1 allein ist dann ausreichend für Contralto-Erkennung.
+                    _f2_degraded = float(kwargs.get('bandwidth_loss', 0.0) or 0.0) > 0.5
+                    if f1_in_female and (f2_in_female or _f2_degraded):
                         _contralto_detected = True
+                        _octave_note = f" (Oktavkorrektur: {f0:.0f}→{2.0*f0:.0f} Hz)" if _octave_candidate else ""
                         logger.warning(
-                            "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz, "
+                            "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz%s, "
                             "confidence=%.2f) but formants are female-typical "
                             "(F1=%.0f Hz in [%.0f–%.0f], F2=%.0f Hz in [%.0f–%.0f]). "
                             "This is likely a deep female voice (contralto). "
                             "→ Overriding to FEMALE. Use --gender male to force male.",
                             f0,
+                            _octave_note,
                             confidence,
                             formants[0],
                             _FEMALE_F1[0],

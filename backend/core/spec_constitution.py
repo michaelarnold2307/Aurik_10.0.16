@@ -876,6 +876,8 @@ class SpecConstitution:
         hpi: float = 0.5,
         has_vocals: bool = False,
         vqi: float = 0.8,
+        chain_depth: int = 1,  # §v10.119: für depth-adaptiven artifact_freedom_min
+        restorability: float = 50.0,  # §v10.119: für material-adaptiven Schwellwert
     ) -> list[str]:
         """Prüft gegen §0 Klangwahrheit und Music-Death-Shield.
 
@@ -885,10 +887,20 @@ class SpecConstitution:
         issues: list[str] = []
 
         # §0h: Music-Death-Shield — Artifact Freedom ist primäres Veto
-        if artifact_freedom < self._shield["artifact_freedom_min"]:
+        # §v10.119: Depth-adaptiver Schwellwert. Studio-Master (depth=1)
+        # kann 0.95 erreichen, aber 4-stufige Transfer-Chain (depth≥4)
+        # ist physikalisch auf ~0.70 limitiert.
+        _af_min = self._shield["artifact_freedom_min"]
+        if chain_depth >= 4:
+            _af_min = 0.70
+        elif chain_depth == 3:
+            _af_min = 0.80
+        elif chain_depth == 2:
+            _af_min = 0.88
+        if artifact_freedom < _af_min:
             issues.append(
                 f"§0h VETO: artifact_freedom={artifact_freedom:.3f} < "
-                f"{self._shield['artifact_freedom_min']} — Export muss blockiert werden"
+                f"{_af_min} (depth={chain_depth}) — Export muss blockiert werden"
             )
 
         # §0h: HPI ≤ 0 → Over-Processing

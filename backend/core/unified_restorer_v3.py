@@ -7204,12 +7204,16 @@ class UnifiedRestorerV3:
             _denker_policy_input = {}
 
         def _cb(pct: float, phase: str) -> None:
-            """Sendet song-individuelle, kontext-sensitive Fortschrittsmeldung."""
+            """Sendet song-individuelle, kontext-sensitive Fortschrittsmeldung.
+
+            §v10.118: Baut fließende Erzähltexte aus allen verfügbaren Narrator-
+            Quellen (Phase, Kapitel, Übergang, Entdeckung, Intermezzo) — statt
+            nur einer Zeile. Die GUI zeigt den vollständigen Fließtext.
+            """
             try:
                 from backend.core.phase_progress_narrator import get_narrator as _get_narrator
 
                 _narrator = _get_narrator()
-                # §KONTEXT: Song-spezifische Personalisierung aus restoration_context
                 _rc = getattr(self, "_restoration_context", None) or {}
                 _mat = str(_rc.get("primary_material", "") or self.config.material_type or "")
                 _chain = list(_rc.get("transfer_chain", []) or [])
@@ -7227,25 +7231,29 @@ class UnifiedRestorerV3:
                     defects=_defs[:8],
                     restorability=float(_rest) if _rest is not None else None,
                 )
-                _display = _narrator.message_for(phase, progress_pct=int(pct))
-                # §v10.203 S1: Live-Chapter
+                # §v10.118: Fließtext aus allen Narrator-Quellen zusammenbauen
+                _parts: list[str] = []
+                # 1. Basis-Phasenmeldung (immer)
+                _msg = _narrator.message_for(phase, progress_pct=int(pct))
+                if _msg:
+                    _parts.append(_msg)
+                # 2. Kapitel — semantischer Abschnitt ("Reparatur", "Verfeinerung"...)
                 _chapter = _narrator.live_chapter(float(pct))
                 if _chapter:
-                    _display = _chapter
-                    # Track last chapter for transitions
+                    _parts.append("\n\n" + _chapter)
                     _all_ch = ["finding","repairing","enhancing","polishing","result"]
                     _done = [c for c in _all_ch if c in _narrator._chapters_emitted]
                     _narrator._last_chapter = _done[-1] if _done else ""
-                # §v10.203 S2: Chapter-Übergang
+                # 3. Kapitel-Übergang (zwischen den Abschnitten)
                 _transition = _narrator.chapter_transition(float(pct))
-                if _transition:
-                    _display = _transition
-                # §v10.203 S4: Entdeckungen
+                if _transition and _transition not in " ".join(_parts):
+                    _parts.append("\n\n" + _transition)
+                # 4. Entdeckungen (nur in der Analysephase)
                 if float(pct) < 25.0:
                     _disc = _narrator.discovery()
                     if _disc:
-                        _display = _disc
-                # §v10.203 S7: Entertainment-Intermezzo bei langen Phasen
+                        _parts.append("\n\n💡 " + _disc)
+                # 5. Intermezzo bei langen Phasen (>15s)
                 _now_mono = time.monotonic()
                 _pkey = phase or "_unknown"
                 if _pkey not in _narrator._phase_start:
@@ -7253,7 +7261,8 @@ class UnifiedRestorerV3:
                 _phase_elapsed = _now_mono - _narrator._phase_start.get(_pkey, _now_mono)
                 _intermezzo = _narrator.entertainment_intermezzo(phase, _phase_elapsed)
                 if _intermezzo:
-                    _display = _intermezzo
+                    _parts.append("\n\n📖 " + _intermezzo)
+                _display = "".join(_parts).strip()
             except Exception:
                 try:
                     from backend.core.phase_icons import phase_display as _pdisplay2

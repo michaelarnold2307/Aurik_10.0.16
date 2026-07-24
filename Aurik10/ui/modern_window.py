@@ -10243,9 +10243,12 @@ class ModernTitleBar(QWidget):
         # Stretch
         layout.addStretch()
 
-        # Status Indicator (versteckt – Status wird in der unteren Leiste angezeigt)
+        # Status Indicator — §v10.118: sichtbar, mehrzeilig für Erzähltexte
         self.status_label = QLabel("")
-        self.status_label.setVisible(False)
+        self.status_label.setVisible(True)
+        self.status_label.setWordWrap(True)
+        self.status_label.setMinimumHeight(50)
+        self.status_label.setMaximumHeight(120)
 
         # ── Recent Files button ──────────────────────────────────────────
         self.btn_recent = QPushButton("📋")

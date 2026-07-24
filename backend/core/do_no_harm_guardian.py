@@ -233,17 +233,16 @@ class DoNoHarmGuardian:
                 severity="none",
             )
 
-        # ═══ §v10.103 P2: Referenzrahmen-Korrektur ═══
-        # Vergleiche Output gegen CLEAN-Referenz (carrier_checkpoint) statt
-        # gegen degradiertes Input. Restauration BEDEUTET, sich vom
-        # degradierten Input zu entfernen — der richtige Maßstab ist die
-        # Annäherung an die saubere Referenz.
-        if self._clean_snapshot is not None:
-            ref_snap = self._clean_snapshot
-            _ref_label = f"carrier_checkpoint (mode={self._reference_mode})"
-        else:
-            ref_snap = self._input_snapshot
-            _ref_label = "degraded_input (Fallback — kein Carrier-Checkpoint)"
+        # ═══ §v10.119 Referenzrahmen-Korrektur ═══
+        # §v10.119: IMMER gegen das degradierte Original vergleichen.
+        # Der DoNoHarmGuardian prüft: "Ist der Output schlechter als der Input?"
+        # Ein Vergleich gegen carrier_checkpoint (Zwischenstand) ist IRRELEVANT —
+        # das fertige Restaurat SOLL sich vom Zwischenstand unterscheiden.
+        # §v10.103 P2 war falsch: Restauration bedeutet Verbesserung gegenüber
+        # dem DEGRADIERTEN Input, nicht Annäherung an einen Zwischenstand.
+        # Siehe: 8326s Restaurierung verworfen wegen carrier_checkpoint-Vergleich.
+        _ref_label = "degraded_input"
+        ref_snap = self._input_snapshot
 
         logger.debug(
             "DoNoHarmGuardian: referencing against %s", _ref_label,
