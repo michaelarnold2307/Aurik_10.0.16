@@ -246,9 +246,12 @@ def optimize_naturalness(
         applied.append("tonalness_boost")
 
     _progress("Masterband")
-    # ── 13. Restoration: Masterband-Qualität (§v10.6) ──────────────────
-    # Nur RESTORATION. Jede Stage analysiert zuerst, ob sie nötig ist.
-    if mode == "RESTORATION":
+    # ── 13. Studio 2026: Kreative Klangformung (§v10.119) ────────────
+    # §v10.119: Noise-Gate, Spektral-Balance und Stereo-Fokus sind
+    # KREATIVE Eingriffe, die die Original-Dynamik verändern.
+    # Sie laufen NUR im STUDIO_2026-Mode, nicht in RESTORATION.
+    # RESTORATION bewahrt die Original-Dynamik — Do No Harm.
+    if mode == "STUDIO_2026":
         if _detect_noise_floor(orig, sr):
             _r13a = arr.copy()
             arr = _noise_floor_gate(arr, sr, orig)
@@ -812,10 +815,12 @@ def _fallback_hpe(audio: np.ndarray) -> float:
 def _noise_floor_gate(audio: np.ndarray, sr: int, original: np.ndarray) -> np.ndarray:
     """Sanftes Noise-Gate: Rauschpegel in Signalpausen um 1-2 dB senken.
 
-    Nur aktiv wenn Signal-Pegel < −48 dB (echte Stille).
+    Nur aktiv wenn Signal-Pegel < −55 dB (echte Stille/Rauschen).
     Max −1.4 dB Reduktion, Attack 5 ms, Release 80 ms.
     Erhält natürlichen Raumton unter −60 dBFS — absolute Stille
     zwischen Noten klingt unnatürlich und ermüdend.
+    §v10.119: Schwelle −48→−55 dB, erster Audiosample ignoriert
+    (musikalische Intros sind keine Rauschpausen).
     """
     try:
         mono = audio.mean(axis=1) if audio.ndim == 2 else audio
@@ -826,9 +831,18 @@ def _noise_floor_gate(audio: np.ndarray, sr: int, original: np.ndarray) -> np.nd
         rms = np.array([float(np.sqrt(np.mean(mono[i * win : (i + 1) * win] ** 2)) + 1e-12) for i in range(n_win)])
         rms_db = 20.0 * np.log10(rms)
 
-        # Schwelle: −48 dB (Raumton-Erhalt unter −60 dBFS)
-        threshold_db = -48.0
+        # §v10.119: Schwelle auf −55 dB gesenkt (war −48).
+        # −48 dB erfasste musikalische Intros (leise Balladen-Anfänge)
+        # als 'Rauschen' und drosselte sie um −1.4 dB.
+        # −55 dB ist unterhalb jedes Musiksignals — nur echtes Rauschen.
+        threshold_db = -55.0
         is_noise = rms_db < threshold_db
+
+        # §v10.119: Intro-Guard — die ersten 3 Sekunden nie gaten.
+        # Ein musikalisch leiser Anfang (Fade-In, Ballade) ist KEIN Rauschen.
+        _intro_wins = int(3.0 * sr / win)
+        if _intro_wins < len(is_noise):
+            is_noise[:_intro_wins] = False
 
         # Smooth Gate: Attack 5ms, Release 80ms
         att = np.exp(-1.0 / (0.005 * sr / win))

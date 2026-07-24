@@ -1,6 +1,6 @@
 # Aurik 10 — GEBOTE & VERBOTE (Normativer Katalog)
 
-> **Status:** Normativ | **Version:** 10.0.16 | **Stand:** 2026 — Update: §v10.112–§v10.117 Universal Safety Wrapper & ExcellenceOptimizer RX11-Kalibrierung
+> **Status:** Normativ | **Version:** 10.0.17 | **Stand:** §v10.119 Mode-Differenzierung: RESTORATION = Do No Harm, STUDIO_2026 = kreativ
 >
 > Dieser Katalog definiert alle unverhandelbaren GEBOTE (positiv, was Aurik TUN MUSS)
 > und VERBOTE (negativ, was Aurik NIEMALS tun darf). Jedes Gebot und Verbot ist mit
@@ -350,11 +350,14 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 | §G118 | **HPI-Gate im Goosebumps-Recovery** | Wenn die Restauration bereits gute Qualität erreicht hat (HPI-Checkpoint existiert ODER Artifact-Freedom ≥0.90), MUSS der Original-Penalty von 0.030 auf 0.120 vervierfacht werden. Verhindert, dass Artefakt-Transienten des defekten Originals die Goosebumps-Metrik täuschen und das unverarbeitete Original dem Restaurat vorgezogen wird. (§v10.113) |
 | §G119 | **FeedbackChain-Silence-Guard** | Phase 07 MUSS vor der harmonischen Synthese H2/H1 prüfen. H2/H1 ≥0.50 → Strength auf ≤0.10 drosseln. H2/H1 ≥0.35 → Strength auf 50% drosseln (Frühwarn-Schwelle). Zusätzlich MUSS nach der Synthese ein RMS-Vergleich erfolgen: Output-RMS < Input-RMS/100 (−40 dB) → Rollback auf Eingangs-Audio. (§v10.114) |
 | §G120 | **ExcellenceOptimizer RX11-Kalibrierung** | Der ExcellenceOptimizer MUSS auf iZotope-RX11-Niveau kalibriert sein: `_MODULATION_STRENGTH`=0.55, `_HARM_BOOST_DB`=3.2, `_HARM_MAX_ORDER`=10, `_TARGET_CV_MIN`=0.07, `_FLUX_SMOOTHING_MAX`=0.65. Alle 8 Material-Profile (auto, vinyl, tape, shellac, broadcast, mp3_low, mp3_high, cd_digital) MÜSSEN proportional skalierte Werte haben. (§v10.116) |
+| §G121 | **Mode-Differenzierung: RESTORATION = Do No Harm** | Kreative Audio-Eingriffe (Noise-Gate, Spektral-Balance, Stereo-Fokus) dürfen NUR im STUDIO_2026-Mode laufen. In RESTORATION MUSS die Original-Dynamik unangetastet bleiben — der NaturalnessOptimizer darf das Originalsignal NICHT gate-bearbeiten, spektral umbalancieren oder im Stereo-Feld verschieben. (§v10.119) |
+| §V39 | **Noise-Gate-Verbot in RESTORATION** | Es ist VERBOTEN, das Noise-Gate, die Spektral-Balance oder den Stereo-Fokus im RESTORATION-Mode auszuführen. Diese sind kreative Werkzeuge, die die Original-Dynamik verändern — ein Verstoß gegen §0 „Do No Harm". (§v10.119) |
 
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
 |---------|-------|----------|
+| 10.0.17 | 2026 | §G121 + §V39: Mode-Differenzierung RESTORATION/STUDIO_2026. Noise-Gate, Spektral-Balance, Stereo-Fokus NUR in STUDIO_2026. DoNoHarm-Referenzkorrektur (carrier_checkpoint→degraded_input). Depth-adaptiver ArtifactFreedom-Schwellwert. (§v10.119) |
 | 10.0.16 | 2026 | §G113–§G120: Universelle Phasen-Sicherheit & Excellence-Kalibrierung. RMS-Guard, Transient-Shift, Hallucination-Guard, Formant-Guard, Groove-Guard, HPI-Gate, Silence-Guard, RX11-Kalibrierung. Kategorie XVII. (§v10.112–§v10.117) |
 | 10.0.15 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
 | 10.0.14 | 2026-08-10 | §G90–§G99: Non-Plus-Ultra. Blinder Referenz-Vektor, Exception-Proxies, Cross-Phase-Koordination, NaN-Guards, Material-Vollständigkeit. Kategorie XV. |

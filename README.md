@@ -1,6 +1,6 @@
 # 🎵 Aurik 10 — Intelligentes Musik-Restaurierungs- und Rekonstruktionssystem
 
-**Version:** 10.0.16 | **Status:** ✅ Produktionsbereit | **Stand:** 2026 — §v10.112–§v10.117 Universal Safety Wrapper & RX11-Kalibrierung
+**Version:** 10.0.17 | **Status:** ✅ Produktionsbereit | **Stand:** §v10.119 Mode-Differenzierung + DoNoHarm-Fix
 
 > Normativer Ist-Stand: `.github/specs/`, `.github/copilot-instructions.md`, `CHANGELOG.md`, `denker/README.md`.
 
