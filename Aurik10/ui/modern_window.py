@@ -19525,6 +19525,20 @@ class ModernMainWindow(QMainWindow):
         if hasattr(self, "status_text"):
             self.status_text.setText("  ·  ".join(_parts))
 
+        # §v10.306: Live-Update der Träger-Anzeige während Restauration
+        # "Erkannte Aufnahme:" zeigt nach Analyse-Start den Live-Phasenstatus
+        if hasattr(self, "detected_medium_label") and hasattr(self, "_carrier_bg_label"):
+            if _clean and _uv3 and isinstance(_uv3, dict) and _uv3.get("active"):
+                _ph_cur = _uv3["idx"] + 1
+                _ph_tot = _uv3["count"]
+                _live_info = f"🎧 Phase {_ph_cur}/{_ph_tot}: {_clean}"
+                if _phase_detail:
+                    _live_info += f"<br><span style='font-size:8pt;color:#8FA6C8;'>{_phase_detail.strip()}</span>"
+                self.detected_medium_label.setText(_live_info)
+            elif _def_total > 0:
+                _live_info = f"🎧 Restauration aktiv · {_def_resolved}/{_def_total} Defekte behoben"
+                self.detected_medium_label.setText(_live_info)
+
         # ── 4. Step-Label ─────────────────────────────────────────────
         if hasattr(self, "_phase_step_label") and _clean:
             _label = _clean
@@ -20569,6 +20583,11 @@ class ModernMainWindow(QMainWindow):
     def _on_all_finished(self):
         """Verarbeitet all items finished."""
         self._processing_transition = False
+        # §v10.306: Träger-Anzeige aus Live-Phase zurück auf Carrier-Info setzen
+        if hasattr(self, "_carrier_bg_label") and hasattr(self, "detected_medium_label"):
+            _ampel = self._render_ampel_html(int(getattr(self, "_carrier_bg_score", 0) or 0))
+            _badge = getattr(self, "_era_genre_badge", "") or ""
+            self.detected_medium_label.setText(f"{self._carrier_bg_label}   {_ampel}{_badge}")
         _stats = self.batch_queue.get_stats() if hasattr(self, "batch_queue") else {}
         logger.info(
             "Batch abgeschlossen: %d erfolgreich, %d fehlgeschlagen, %d gesamt",
