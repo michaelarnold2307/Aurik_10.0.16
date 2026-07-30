@@ -460,15 +460,21 @@ class MertPlugin:
             self._processor = Wav2Vec2FeatureExtractor.from_pretrained(
                 str(hf_dir), trust_remote_code=True, local_files_only=True
             )
-            self._model = AutoModel.from_pretrained(
-                str(hf_dir),
-                trust_remote_code=True,
-                local_files_only=True,
-                ignore_mismatched_sizes=True,
-            )  # nosec B615 — lokales, SHA256-verifiziertes Modell
-            # Note: MERT-v1-330M checkpoint uses legacy weight_norm names
-            # (weight_g/weight_v) which are auto-converted by torch>=2.0
-            # parametrizations. The model is fully functional.
+            # §v10.306: Unterdrücke Legacy-weight_norm-Logmeldungen.
+            # transformers loggt diese als WARNING, aber sie sind harmlos.
+            import logging as _mert_logging
+            _tf_logger = _mert_logging.getLogger("transformers.modeling_utils")
+            _prev_level = _tf_logger.level
+            _tf_logger.setLevel(_mert_logging.ERROR)
+            try:
+                self._model = AutoModel.from_pretrained(
+                    str(hf_dir),
+                    trust_remote_code=True,
+                    local_files_only=True,
+                    ignore_mismatched_sizes=True,
+                )  # nosec B615 — lokales, SHA256-verifiziertes Modell
+            finally:
+                _tf_logger.setLevel(_prev_level)
             self._model.eval()
             self._model.to(_mert_device)
             self._device = _mert_device
