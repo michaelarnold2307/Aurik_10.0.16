@@ -1896,6 +1896,10 @@ def warmup_models_background() -> None:
         ("plugins.crepe_plugin", "get_crepe_plugin"),  # Pitch-Tracking Fallback
         # Goal-Measurement-Plugins (§v10.101 — Vorladen verhindert Timeout bei Goal-Messung)
         ("plugins.mert_plugin", "get_mert_plugin"),  # MERT-v1-330M (~1.2 GB, 160s Kaltstart → 0s)
+        # §v10.306: Apollo Spectral Repair (~0.8 GB) — genutzt von Phase 23+40
+        # Kaltstart ~15-30s für ONNX-Modell. Ohne Warmup hängt der erste
+        # Phase-23-Aufruf beim Laden des Apollo-Modells.
+        ("plugins.apollo_plugin", "get_apollo"),
     ]
     logger.info("bridge: warmup started (%d plugins) …", len(_plugins))
     _loaded = 0
