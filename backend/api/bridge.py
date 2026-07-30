@@ -1930,10 +1930,20 @@ def warmup_models_background() -> None:
             import psutil
             vm = psutil.virtual_memory()
             avail_pct = vm.available / max(vm.total, 1)
-            # >20% frei (>6.2 GB bei 31 GB) = genug für große Modelle
-            return avail_pct > 0.20
+            # >28% frei (>8.7 GB bei 31 GB) = genug für große Modelle + Swap-Puffer
+            if avail_pct < 0.28:
+                return False
+            # Swap-Guard: bei >65% Swap keine großen Modelle mehr laden
+            # (Swap-Thrashing → C-Allokatoren crashen mit SIGSEGV)
+            try:
+                sw = psutil.swap_memory()
+                if sw.percent > 65.0:
+                    return False
+            except Exception:
+                pass
+            return True
         except Exception:
-            return True  # Im Zweifel versuchen
+            return False  # §v10.306: Im Zweifel NICHT laden — Segfault-Risiko
 
     # ── Tier 1: Alle kleinen Modelle sofort laden ────────────────────────
     for _mod, _accessor in _plugins_tier1:
