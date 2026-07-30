@@ -725,17 +725,21 @@ def run_pre_analysis(
                 _analog_in = [m for m in _chain if m in _analog]
                 if _analog_in:
                     _md.primary_material = _analog_in[-1]
-                # Chronological sort after all injections
+                # Chronological sort after all injections (§v10.306: robust, kein Singleton-Try)
+                # 1930+++++1950+++++1960+++++1980+++++1990+++++++++2000++
                 if len(_chain) > 1:
-                    try:
-                        _sorter = cast(
-                            Callable[[], Any], _load_symbol("forensics.medium_detector", "get_medium_detector")
-                        )()
-                        _sorted = sorted(_chain, key=lambda m: _sorter._MEDIUM_ORDER.get(m, 99))
-                        if _sorted != _chain:
-                            _chain = _sorted
-                    except Exception as _sort_exc:
-                        logger.debug("pre_analysis: transfer-chain sort failed (non-critical): %s", _sort_exc)
+                    _TIMELINE: dict[str, int] = {
+                        "wax_cylinder": 0, "lacquer_disc": 1, "shellac": 2,
+                        "wire_recording": 3, "reel_tape": 4, "vinyl": 5, "tape": 5,
+                        "cassette": 6, "cartridge_8track": 7,
+                        "cd_digital": 8, "dat": 9, "minidisc": 10,
+                        "mp3_high": 11, "mp3_low": 12, "aac": 12, "streaming": 13,
+                    }
+                    _sorted = sorted(_chain, key=lambda m: _TIMELINE.get(m, 99))
+                    if _sorted != _chain:
+                        logger.debug("pre_analysis: chain sorted: %s → %s",
+                                     " → ".join(_chain), " → ".join(_sorted))
+                        _chain = _sorted
 
                 logger.info(
                     "pre_analysis: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
