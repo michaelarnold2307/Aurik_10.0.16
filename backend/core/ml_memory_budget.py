@@ -613,15 +613,22 @@ def _attempt_quality_preserving_pressure_recovery(model_name: str, size_gb: floa
         still_thrashing = is_system_thrashing()
         still_heavy_block = _should_block_heavy_ml_load(float(max(size_gb, 0.0)))
         if not still_thrashing and not still_heavy_block:
+            # §v10.306: Nur akzeptieren wenn tatsächlich RAM freigeworden ist
+            if evicted > 0:
+                logger.warning(
+                    "ML-Budget: pressure recovery succeeded for '%s' after %d/%d attempt(s) "
+                    "(evicted=%d) — ML load retry statt DSP-fallback.",
+                    model_name,
+                    attempt,
+                    attempts,
+                    evicted,
+                )
+                return True
+            # Kein Plugin evicted → Druck nur transient gesunken → DSP-Fallback sicherer
             logger.warning(
-                "ML-Budget: pressure recovery succeeded for '%s' after %d/%d attempt(s) "
-                "(evicted=%d) — ML load retry statt DSP-fallback.",
+                "ML-Budget: pressure recovery transient for '%s' (evicted=0) — DSP-Fallback statt Risiko.",
                 model_name,
-                attempt,
-                attempts,
-                evicted,
             )
-            return True
 
         logger.warning(
             "ML-Budget: pressure recovery %d/%d for '%s' insufficient (evicted=%d, thrashing=%s, heavy_block=%s)",
