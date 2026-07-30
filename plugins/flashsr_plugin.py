@@ -39,8 +39,8 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 _FLASHSR_ONNX_PATH = Path(__file__).parent.parent / "models" / "nvsr" / "nvsr.onnx"
 
-# Chunk-Größe für speichereffiziente ONNX-Inferenz
-_FLASHSR_CHUNK_16K = 160000  # 10 s @ 16 kHz
+# Chunk-Größe für speichereffiziente ONNX-Inferenz (§v10.306: 10s→4s, RAM ~1.5GB→~600MB)
+_FLASHSR_CHUNK_16K = 64000  # 4 s @ 16 kHz
 _FLASHSR_OVERLAP_16K = 4000  # 250 ms Crossfade
 
 # Lazy-geladenes ONNX-Modell (einmal pro Prozess, Thread-gesichert)

@@ -493,14 +493,14 @@ class SpectralRepair(PhaseInterface):
         # Zone-based budget: _run_flashsr_ml() processes in 10-second zones, so only ONE
         # zone is in memory at a time.  Use zone duration (not full audio duration) to avoid
         # a false OOM-guard reject for long songs like 225 s tracks.
-        # Model: ~5.8 GB steady-state.  Per-zone DDIM inference (50 steps × 10 s): ~1.5 GB.
-        _FLASHSR_ZONE_SECONDS = 10
+        # §v10.306: Chunk 10s→4s → RAM ~1.5GB→~600MB pro Zone.
+        _FLASHSR_ZONE_SECONDS = 4
         duration_for_budget_s = min(duration_s, float(_FLASHSR_ZONE_SECONDS))
 
-        required_gb = 5.0  # Base model weight budget
+        required_gb = 2.5  # Base model weight budget (reduced from 5.0 with 4s chunks)
         if duration_for_budget_s >= 60.0:
-            required_gb += 1.0  # only reached if a zone were somehow > 60 s (never)
-        required_gb += 1.5 * (duration_for_budget_s / 60.0)  # per-zone inference overhead
+            required_gb += 1.0
+        required_gb += 0.6 * (duration_for_budget_s / 60.0)  # per-zone inference overhead (reduced from 1.5)
         required_gb = min(required_gb, 22.0)  # sanity cap
         # Note: n_channels multiplier removed — _repair_with_flashsr processes mono channels
         # individually (M/S in _repair_channel), so each call is always mono.
