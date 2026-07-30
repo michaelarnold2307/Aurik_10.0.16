@@ -36077,10 +36077,11 @@ class UnifiedRestorerV3:
                     except ValueError:
                         _win_start = len(executed)
                     _upcoming_window = list(selected_phases[_win_start:])
-                    # §v10.306: Nur nächste 5 Phasen schützen — nicht alle verbleibenden.
-                    # FlashSR z.B. wird in Phase 06 geladen, aber erst in Phase 23 wieder gebraucht.
-                    # 17 Phasen RAM-Halten kostet mehr als 2s Neuladen.
-                    _upcoming_window = _upcoming_window[:5]
+                    # §v10.306: Nur die DIREKT nächste Phase schützen.
+                    # Modelle werden nach jeder Phase entladen und nur bei
+                    # Bedarf neu geladen. Neuladen kostet 2s — RAM-Halten
+                    # kostet Segfault.
+                    _upcoming_window = _upcoming_window[:1]
                     _evict_for_phase_window(_upcoming_window or [phase_id])
                 except Exception as _exc:
                     logger.debug("evict_for_phase_window(%s) failed: %s", phase_id, _exc)
