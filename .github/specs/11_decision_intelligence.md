@@ -22,7 +22,7 @@ Einzelne Phasen treffen **keine** eigenständigen „sei konservativer"-Entschei
 ## §INV-2 [RELEASE_MUST]: SongCalibration — Multi-Faktor global_scalar
 
 | Faktor | Formel | Wirkung |
-|---|---|---|
+| --- | --- | --- |
 | Defekt-Diversität | `0.90 + 0.20 × defect_diversity` | Mehr Defekte → vorsichtiger |
 | Restorability | `0.88 + 0.24 × restorability_score` | Schlechter restaurierbar → vorsichtiger |
 | SNR | `0.90 + 0.10 × (1.0 − snr_norm)` | Mehr Rauschen → vorsichtiger |
@@ -69,13 +69,13 @@ Physical-Detektion schlägt statistischen Prior. Era-Information bleibt als Prec
 
 ## §INV-5 [RELEASE_MUST]: Defekt-Differenzierung pro Tonträger
 
-| Defekt | Cassette | Reel_Tape | Begründung |
-|---|---|---|---|
-| Transport-Bump | 0.15 | 0.95 | Pinch-Roller nur bei Kassette |
-| Print-Through | 0.40 | 0.10 | Spulentonband lagert gewickelt |
-| Tape-Head-Level-Dip | 0.15 | 0.65 | Kleine Köpfe → schneller Verschleiß |
-| Wow | 0.22 | 0.40 | Billiger Capstan-Motor |
-| Flutter | 0.25 | 0.35 | Schmale Bandführung |
+| Defekt              | Cassette | Reel_Tape | Begründung                          |
+|---------------------|----------|-----------|-------------------------------------|
+| Transport-Bump      | 0.15     | 0.95      | Pinch-Roller nur bei Kassette       |
+| Print-Through       | 0.40     | 0.10      | Spulentonband lagert gewickelt      |
+| Tape-Head-Level-Dip | 0.15     | 0.65      | Kleine Köpfe → schneller Verschleiß |
+| Wow                 | 0.22     | 0.40      | Billiger Capstan-Motor              |
+| Flutter             | 0.25     | 0.35      | Schmale Bandführung                 |
 
 ## §INV-6 [RELEASE_MUST]: Qualitätsmetriken mit Hörbarkeits-Gate
 

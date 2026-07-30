@@ -19,37 +19,56 @@ PHASE_DIR = Path("backend/core/phases")
 SOTA_FEATURES = {
     "safe_stft": {
         "check": lambda content: "safe_stft" in content or "scipy.signal.stft" not in content.replace("safe_stft", ""),
-        "relevance": lambda content, name: "scipy.signal.stft" in content or "signal.stft" in content or "scipy.signal.istft" in content,
+        "relevance": lambda content, name: (
+            "scipy.signal.stft" in content or "signal.stft" in content or "scipy.signal.istft" in content
+        ),
         "recommendation": "from backend.core.audio_utils import safe_stft, safe_istft",
         "impact": "Verhindert STFT-Crash bei kurzen Signalen (nperseg > input_length)",
     },
     "soft_clip": {
-        "check": lambda content: "apply_soft_clip" in content or "PhaseResult" in content or "create_phase_result" in content,
-        "relevance": lambda content, name: "np.clip" in content and "audio" in content and "phase_interface" not in name,
+        "check": lambda content: (
+            "apply_soft_clip" in content or "PhaseResult" in content or "create_phase_result" in content
+        ),
+        "relevance": lambda content, name: (
+            "np.clip" in content and "audio" in content and "phase_interface" not in name
+        ),
         "recommendation": "Nutze PhaseResult.__post_init__ (automatisches soft_clip) oder apply_soft_clip()",
         "impact": "Verhindert hörbare Rechteck-Clipping-Artefakte (tanh-basiert)",
     },
     "perceptual_blend": {
         "check": lambda content: "perceptual_blend" in content,
-        "relevance": lambda content, name: ("blend" in content.lower() or "wet" in content.lower() or "dry" in content.lower()) and "mastering" not in name and "limiting" not in name,
+        "relevance": lambda content, name: (
+            ("blend" in content.lower() or "wet" in content.lower() or "dry" in content.lower())
+            and "mastering" not in name
+            and "limiting" not in name
+        ),
         "recommendation": "from backend.core.dsp.perceptual_blend import perceptual_blend",
         "impact": "Frequenzabhängiger Blend nach Bark-Bändern — unhörbare Änderungen werden ausmaskiert",
     },
     "breath_preserver": {
         "check": lambda content: "breath_preserver" in content.lower() or "BreathPreserver" in content,
-        "relevance": lambda content, name: any(kw in name for kw in ("denoise", "noise", "hiss", "nr", "03", "29", "28")) or ("noise" in content.lower() and "reduction" in content.lower()),
+        "relevance": lambda content, name: (
+            any(kw in name for kw in ("denoise", "noise", "hiss", "nr", "03", "29", "28"))
+            or ("noise" in content.lower() and "reduction" in content.lower())
+        ),
         "recommendation": "BreathPreserver.protect_breath() vor NR, restore_breath() danach",
         "impact": "Atemgeräusche bleiben erhalten — essentiell für natürlichen Gesangsklang",
     },
     "safe_process": {
-        "check": lambda content: "_safe_process" in content or "phase_interface" in content or "PhaseInterface" in content,
-        "relevance": lambda content, name: "def process" in content and "phase_interface" not in name and "phase_glue" not in name,
+        "check": lambda content: (
+            "_safe_process" in content or "phase_interface" in content or "PhaseInterface" in content
+        ),
+        "relevance": lambda content, name: (
+            "def process" in content and "phase_interface" not in name and "phase_glue" not in name
+        ),
         "recommendation": "Nutze PhaseInterface._safe_process() statt process() direkt",
         "impact": "Aktiviert RMS-Guard, Formant-Guard, Transient-Guard, Hallucination-Guard",
     },
     "gated_rms": {
         "check": lambda content: "gated_rms" in content.lower() or "compute_gated" in content,
-        "relevance": lambda content, name: "rms" in content.lower() and "np.mean" in content and "phase_interface" not in name,
+        "relevance": lambda content, name: (
+            "rms" in content.lower() and "np.mean" in content and "phase_interface" not in name
+        ),
         "recommendation": "from backend.core.audio_utils import compute_gated_rms_linear",
         "impact": "Gated RMS (nur Frames > -50 dBFS) — akkuratere Lautheitsmessung als Raw-RMS",
     },
@@ -70,12 +89,14 @@ def audit_phase(filepath: Path) -> list[dict]:
         if feat_info["check"](content):
             continue  # Already using it
 
-        findings.append({
-            "phase": name,
-            "feature": feat_name,
-            "recommendation": feat_info["recommendation"],
-            "impact": feat_info["impact"],
-        })
+        findings.append(
+            {
+                "phase": name,
+                "feature": feat_name,
+                "recommendation": feat_info["recommendation"],
+                "impact": feat_info["impact"],
+            }
+        )
 
     return findings
 
@@ -111,13 +132,13 @@ def main():
         print(f"\n── {feat} ({len(items)} Phasen) ──")
         print(f"   {items[0]['impact']}")
         print(f"   Recommendation: {items[0]['recommendation']}")
-        phases_list = [i['phase'] for i in items[:5]]
+        phases_list = [i["phase"] for i in items[:5]]
         print(f"   Phases: {', '.join(phases_list)}")
         if len(items) > 5:
             print(f"   ... und {len(items) - 5} weitere")
 
     # Quick-win summary
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print("Quick-Win-Priorität (niedrigster Aufwand → höchste Wirkung):")
     print(f"  1. safe_process:    {len(by_feature.get('safe_process', []))} Phasen → systemische Guards aktivieren")
     print(f"  2. soft_clip:       {len(by_feature.get('soft_clip', []))} Phasen → Clipping-Artefakte eliminieren")

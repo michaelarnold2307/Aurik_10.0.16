@@ -704,6 +704,17 @@ REQUIRED_PATTERNS: list[RequiredPattern] = [
     RequiredPattern("G38", "Path", r"Path\(|pathlib", "pathlib.Path Pflicht", "warning"),
     RequiredPattern("G39", "Encoding", "encoding.*utf", "UTF-8 Pflicht", "warning"),
     RequiredPattern("G40", "License", "Aurik 10|Copyright.*Aurik", "Lizenzheader Pflicht", "warning"),
+    # ── §v10.305 Startup-Integrations-Vertrag (§G71–§G80) ──────────────
+    RequiredPattern("G71", "StartupEvent", "_detection_complete\\.set|complete\\.set", "Jedes threading.Event MUSS in finally/except-garantiert gesetzt werden", "critical"),
+    RequiredPattern("G72", "LockFreeImport", "# LOCK_FREE_IMPORT|NO_LOCK_DURING_IMPORT", "Lock NICHT während Import/I/O halten — in finally/ausserhalb importieren", "critical"),
+    RequiredPattern("G73", "WarmupValidator", "warmup.*validator|validate.*warmup.*accessor|_verify_warmup", "Warmup MUSS Plugin-Zugriffsnamen vor erstem Lauf validieren", "critical"),
+    RequiredPattern("G74", "WatchdogSelfTest", "watchdog.*self.*test|_self_test.*watchdog|_probe_rocm|_probe.*pad", "Jeder Watchdog/Probe MUSS Startup-Selbsttest haben + aufgerufen werden", "critical"),
+    RequiredPattern("G75", "CacheInvalidation", "__pycache__|PYTHONDONTWRITEBYTECODE|python.*-B", "Startup-Skript MUSS -B-Flag oder PYTHONDONTWRITEBYTECODE setzen", "warning"),
+    RequiredPattern("G76", "HappyPathGate", " detected_medium_label\\.setText|_update_all|_dispatch_to_gui.*_update_all", "GUI MUSS mindestens einen Pfad haben, der Analyse-Labels setzt — Warning bei stillem Skip", "critical"),
+    RequiredPattern("G77", "StartupSmokeTest", "test_startup_smoke|test_startup_integration|startup.*smoke", "Startup-Smoke-Test: GPU+Warmup+PreAnalysis in <60s", "warning"),
+    RequiredPattern("G78", "ImportCheck", "^import os$|^from os import", "Jedes Modul MUSS alle verwendeten Standard-Imports haben (ruff F821)", "critical"),
+    RequiredPattern("G79", "EventFinally", "finally:.*_detection_complete|except.*_detection_complete", "_detection_complete MUSS in finally-Block gesetzt werden", "critical"),
+    RequiredPattern("G80", "ProbeInvocation", "_probe_.*\\(\\)|self\\._probe_", "Jede _probe_*-Methode MUSS in __init__ oder _detect_backend aufgerufen werden", "critical"),
 ]
 
 
@@ -1147,10 +1158,21 @@ class SpecConstitution:
     def get_shield_thresholds(self) -> dict[str, float]:
         return dict(self._shield)
 
-    def is_export_blocked(self, artifact_freedom: float, hpi: float) -> tuple[bool, str]:
-        """Prüft ob der Export durch §0h blockiert wird."""
-        if artifact_freedom < self._shield["artifact_freedom_min"]:
-            return True, f"§0h: artifact_freedom={artifact_freedom:.3f} < {self._shield['artifact_freedom_min']}"
+    def is_export_blocked(self, artifact_freedom: float, hpi: float, chain_depth: int = 1) -> tuple[bool, str]:
+        """Prüft ob der Export durch §0h blockiert wird.
+
+        §v10.119: chain_depth relaxes the artifact_freedom threshold
+        for deep transfer chains (cassette=4 → 0.70 statt 0.95).
+        """
+        _af_min = self._shield["artifact_freedom_min"]
+        if chain_depth >= 4:
+            _af_min = 0.70
+        elif chain_depth == 3:
+            _af_min = 0.80
+        elif chain_depth == 2:
+            _af_min = 0.88
+        if artifact_freedom < _af_min:
+            return True, f"§0h: artifact_freedom={artifact_freedom:.3f} < {_af_min} (depth={chain_depth})"
         if hpi <= 0:
             return True, f"§0h: HPI={hpi:.3f} ≤ 0 — Over-Processing"
         return False, ""

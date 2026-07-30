@@ -30,10 +30,11 @@ Dieser Analyzer erweitert die vorhandene EmotionalitaetMetric mit:
 **Date:** 13. Februar 2026
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 from dataclasses import dataclass
 from typing import cast
+
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 
 try:
     import librosa

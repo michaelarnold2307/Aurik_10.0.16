@@ -100,13 +100,24 @@ def check_spectral_color_preservation(
         pre: Audio vor der Phase. Shape [N] oder [2, N].
         post: Audio nach der Phase (same shape as pre).
         sr: Sample-Rate (muss 48000 sein).
-        threshold: Korrelations-Schwellwert (default 0.97).
-                   §v10.99: Chain-Depth-adaptiv — 0.97 für depth=1, 0.73 für depth=4.
+        threshold: Korrelations-Schwellwert. None → auto-adaptiv aus CalibrationContext.
+                   §v10.303: 0.97 für depth=1, 0.73 für depth=4, linear interpoliert.
 
     Returns:
         SpectralColorResult. ok=False wenn correlation < threshold.
     """
     assert sr == 48000
+    # §v10.303: Restorability-adaptiver Default — bei degraded Material ist
+    # spektrale Abweichung vom Input ERWÜNSCHT (Rauschen wurde entfernt, BW erweitert).
+    if threshold == 0.97:  # Default-Wert → auto-adaptiv
+        try:
+            from backend.core.calibration_context import get_calibration_context
+            _ctx = get_calibration_context()
+            if _ctx is not None:
+                _rs = float(np.clip(_ctx.restorability_score, 0.0, 100.0))
+                threshold = float(np.clip(0.97 - (0.97 - 0.70) * (100.0 - _rs) / 100.0, 0.70, 0.97))
+        except Exception:
+            pass  # Fallback: 0.97
     _empty = [0.0] * len(_THIRD_OCT_CENTERS_HZ)
     _fallback = SpectralColorResult(correlation=1.0, ok=True, pre_profile_db=_empty, post_profile_db=_empty)
 

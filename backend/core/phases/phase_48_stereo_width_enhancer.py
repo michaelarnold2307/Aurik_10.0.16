@@ -24,8 +24,8 @@ Version: 2.1.0
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import time
 
 import numpy as np

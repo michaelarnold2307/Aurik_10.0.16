@@ -34,15 +34,15 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import threading
 import time
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_filtfilt,  safe_to_mono, stereo_channel_view, stereo_like
+from backend.core.audio_utils import safe_filtfilt, safe_to_mono, stereo_channel_view, stereo_like
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -543,6 +543,7 @@ class AirBandEnhancement(PhaseInterface):
                     sr=sample_rate,
                     mode=_hg_mode_39,
                     material_bw_ceiling_hz=_bw_cap_39,
+                    bw_extension_context=True,
                 )
                 if _hg_result39.requires_rollback:
                     logger.warning(

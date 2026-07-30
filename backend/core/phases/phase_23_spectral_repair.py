@@ -55,8 +55,8 @@ except ImportError:
     psutil = None  # type: ignore[assignment]
     _PSUTIL_OK = False
 from scipy import interpolate, ndimage, signal
-from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from backend.core.clipping_detection import ClippingType, classify_clipping
 from backend.core.defect_scanner import MaterialType
 from backend.core.dsp.hallucination_guard import check_hallucination
@@ -407,6 +407,10 @@ class SpectralRepair(PhaseInterface):
         super().__init__()
         self.name = "Spectral Repair v3 IMCRA"
         self._flashsr_plugin = None  # Lazy loading
+        # §v10.303: Early-Exit-Tracking — wenn FlashSR beim ersten Durchlauf
+        # <500 Hz Bandbreite gewinnt, wird der zweite Durchlauf übersprungen.
+        self._flashsr_last_bw_gain_hz: float = float("inf")
+        self._flashsr_pass_count: int = 0
         self._ml_guard_events: list[dict[str, Any]] = []
         self._current_material: MaterialType = MaterialType.CD_DIGITAL  # updated per process() call
         self._pressure_relax_ml_attempts: int = 0
@@ -1817,11 +1821,14 @@ class SpectralRepair(PhaseInterface):
                 self._THRASH_RELAX_ML_MAX_ATTEMPTS,
             )
 
-        # §v10.60 Depth-Aware Spectral Repair: Bei transfer_depth ≥ 3 ist FlashSR ML
-        # auf degradierten Signalen unzuverlässig (halluziniert Frequenzen).
+        # §v10.60 Depth-Aware Spectral Repair: Bei transfer_depth ≥ 5 (extreme chain)
+        # ist FlashSR ML auf degradierten Signalen unzuverlässig (halluziniert Frequenzen).
+        # §v10.120 Calibration-Shift: depth 4 (deep cassette) bekommt ML-Repair.
         # DSP-STFT-Bin-Interpolation ist sicherer und ausreichend präzise.
-        _chain_p23 = kwargs.get("transfer_chain") or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
-        if len(_chain_p23) >= 3 and use_ml:
+        _chain_p23 = kwargs.get("transfer_chain") or (kwargs.get("_restoration_context", {}) or {}).get(
+            "transfer_chain", []
+        )
+        if len(_chain_p23) >= 5 and use_ml:
             use_ml = False
             logger.info("Phase 23 depth=%d → DSP-only spectral inpainting (FlashSR ML übersprungen)", len(_chain_p23))
 
@@ -1831,11 +1838,33 @@ class SpectralRepair(PhaseInterface):
             else:
                 flashsr = self._get_flashsr_plugin()
             if flashsr is not None:
+                # §v10.303: Early-Exit wenn vorheriger FlashSR-Durchlauf <500 Hz BW-Gewinn brachte.
+                # Zwei Durchläufe kosten ~650s bei marginalem Nutzen — überspringe Wiederholung.
+                if self._flashsr_pass_count >= 1 and self._flashsr_last_bw_gain_hz < 500.0:
+                    logger.info(
+                        "phase_23 FlashSR Early-Exit: letzter BW-Gewinn=%.0f Hz < 500 Hz → "
+                        "überspringe Pass #%d (kein signifikanter Gewinn erwartet)",
+                        self._flashsr_last_bw_gain_hz, self._flashsr_pass_count + 1,
+                    )
+                    return audio
                 # ML-based repair with FlashSR
                 log_mode_decision("phase_23", True, f"Defect severity: {defect_severity:.2%}")
                 _report(55.0, "FlashSR")
                 repaired_audio = self._repair_with_flashsr(audio, sample_rate, defect_mask, repair_strength, flashsr)
                 _report(98.0, "FlashSR fertig")
+                # §v10.303: BW-Gewinn messen für Early-Exit-Entscheidung im nächsten Durchlauf
+                try:
+                    _bw_before = float(self._estimate_bandwidth(audio, sample_rate))
+                    _bw_after = float(self._estimate_bandwidth(repaired_audio, sample_rate))
+                    self._flashsr_last_bw_gain_hz = max(0.0, _bw_after - _bw_before)
+                    self._flashsr_pass_count += 1
+                    logger.debug(
+                        "phase_23 FlashSR Pass #%d: BW %.0f→%.0f Hz (Δ=%.0f Hz)",
+                        self._flashsr_pass_count, _bw_before, _bw_after,
+                        self._flashsr_last_bw_gain_hz,
+                    )
+                except Exception:
+                    pass  # Non-blocking
                 return repaired_audio
             else:
                 logger.warning("FlashSR unavailable, falling back to DSP")
@@ -2219,6 +2248,20 @@ class SpectralRepair(PhaseInterface):
                 _mrsa_gain_db - 3.0,
             )
         return result  # type: ignore[no-any-return]
+
+    def _estimate_bandwidth(self, audio: np.ndarray, sample_rate: int) -> float:
+        """§v10.303: Schätzt die effektive Bandbreite via 95%-Energie-Grenze."""
+        a = np.asarray(audio, dtype=np.float32)
+        if a.ndim > 1:
+            a = a.mean(axis=1)
+        n_fft = min(4096, len(a))
+        if n_fft < 64:
+            return float(sample_rate // 2)
+        spec = np.abs(np.fft.rfft(a[:n_fft] * np.hanning(n_fft)))
+        cumsum = np.cumsum(spec)
+        total = cumsum[-1] + 1e-12
+        idx = int(np.searchsorted(cumsum, 0.95 * total))
+        return float(idx / n_fft * sample_rate)
 
     def _repair_with_flashsr(
         self,

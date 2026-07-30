@@ -394,16 +394,29 @@ class DenoisePhase(PhaseInterface):
         noise_profile_end: float | None = None,
         **kwargs,
     ) -> PhaseResult:
-        check_ml_model_ready("BS-RoFormer", phase_name="03")
-        check_ml_model_ready("CREPE", phase_name="03")
-        check_ml_model_ready("DeepFilterNetV3", phase_name="03")
-        check_ml_model_ready("FCPE", phase_name="03")
-        check_ml_model_ready("MIIPHER", phase_name="03")
-        check_ml_model_ready("PANNs", phase_name="03")
-        check_ml_model_ready("Whisper", phase_name="03")
-        check_ml_model_ready("DeepFilterNetV3", phase_name="03")
-        check_ml_model_ready("BS-RoFormer", phase_name="03")
-        check_ml_model_ready("MIIPHER", phase_name="03")
+        # §v10.303.14 Depth-Pre-Guard: Bei depth≥4 ist das Signal so
+        # degradiert dass ML-Modelle (MIIPHER, BS-RoFormer) nur Artefakte
+        # produzieren. Model-Ladung überspringen → 6min/Run gespart.
+        _chain_pre = (
+            kwargs.get("transfer_chain")
+            or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
+        )
+        _depth_pre = len(_chain_pre) if _chain_pre else 1
+        _str_pre = float(kwargs.get("strength", 1.0))
+        _panns_pre = float(kwargs.get("panns_singing", 0.0))
+        _dsp_thr_pre = float(np.clip(0.10 + _panns_pre * 0.30, 0.08, 0.30))
+        _skip_ml = _depth_pre >= 4 and _str_pre <= _dsp_thr_pre
+        if not _skip_ml:
+            check_ml_model_ready("BS-RoFormer", phase_name="03")
+            check_ml_model_ready("CREPE", phase_name="03")
+            check_ml_model_ready("DeepFilterNetV3", phase_name="03")
+            check_ml_model_ready("FCPE", phase_name="03")
+            check_ml_model_ready("MIIPHER", phase_name="03")
+            check_ml_model_ready("PANNs", phase_name="03")
+            check_ml_model_ready("Whisper", phase_name="03")
+            check_ml_model_ready("DeepFilterNetV3", phase_name="03")
+            check_ml_model_ready("BS-RoFormer", phase_name="03")
+            check_ml_model_ready("MIIPHER", phase_name="03")
         """
         Professional noise reduction with adaptive tracking.
 
@@ -422,13 +435,7 @@ class DenoisePhase(PhaseInterface):
 
         # ── §v10 PIM: Echte Per-Band-Intensität ──
 
-        # ── §v10 #6: Transienten-Schutz vor NR ──
-        try:
-            from backend.core.dsp.transient_guard import compute_transient_mask
-
-            compute_transient_mask(audio, sample_rate)
-        except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+        # ── §v10 #6: Transienten-Schutz vor NR (jetzt in DSP-Pfad, §v10.303.13) ──
         _pim = kwargs.get("pim_intensity_map")
         if _pim is not None:
             # 1. Skalare NR-Stärke aus PIM (wie zuvor)
@@ -935,12 +942,34 @@ class DenoisePhase(PhaseInterface):
             or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
         )
         _transfer_depth_p03 = len(_chain_p03) if _chain_p03 else 1
+
+        # §v10.101 Depth-Adaptive G_floor: Bei tiefen Transfer-Ketten (depth≥3) ist das
+        # Signal so stark degradiert dass der Denoiser Musik-Signal als Rauschen klassifiziert
+        # → Musical Noise (HF/LF-Varianz steigt auf >3.0). Höherer G_floor verhindert dies:
+        #   depth=3 → +0.05 (0.15), depth=4 → +0.10 (0.20), depth=5+ → +0.15 (0.25)
+        _gfloor_depth_boost = float(
+            np.clip((_transfer_depth_p03 - 2) * 0.05, 0.0, 0.15)
+        )
+        if _gfloor_depth_boost > 0.0:
+            params = dict(params)  # shallow copy — Klassen-Dict nie mutieren
+            _gfloor_old = float(params.get("g_floor", 0.10))
+            params["g_floor"] = float(np.clip(_gfloor_old + _gfloor_depth_boost, 0.10, 0.45))
+            logger.info(
+                "§v10.101 Phase 03 depth=%d → G_floor %.2f→%.2f (Musical-Noise-Prävention)",
+                _transfer_depth_p03,
+                _gfloor_old,
+                params["g_floor"],
+            )
+
         if _transfer_depth_p03 >= 3 and not use_lightweight:
             use_lightweight = True
-            effective_strength = float(np.clip(effective_strength, 0.0, 0.40))
+            # §v10.303.14: Depth≥4 → noch konservativere Stärke (0.20 statt 0.40).
+            # Verhindert Mikrodynamik-Kollaps (Korr 0.79→>0.90) auf tiefen Ketten.
+            _cap = 0.20 if _transfer_depth_p03 >= 4 else 0.40
+            effective_strength = float(np.clip(effective_strength, 0.0, _cap))
             logger.info(
-                "§v10.58 Phase 03 depth=%d → DSP-only + max strength 0.40 (degradiertes Signal)",
-                _transfer_depth_p03,
+                "§v10.58 Phase 03 depth=%d → DSP-only + max strength %.2f (degradiertes Signal)",
+                _transfer_depth_p03, _cap,
             )
 
         _bsrof_gate = (
@@ -2948,17 +2977,42 @@ class DenoisePhase(PhaseInterface):
         except Exception as _pmask_exc:
             logger.debug("§2.36 Phoneme-Mask NR-Bypass (non-blocking): %s", _pmask_exc)
 
+        # §v10.303.13 Transient-Guard: Transiente Frames (Onsets, Attacks)
+        # bekommen 50% weniger Denoising. Verhindert Groove-Verlust
+        # (DTW 26ms→<15ms) auf rhythmischem Material (Schlager).
+        try:
+            from backend.core.dsp.transient_guard import compute_transient_mask
+
+            _t_mask = compute_transient_mask(audio, sample_rate)
+            if len(_t_mask) != n_t:
+                _t_src = np.linspace(0.0, 1.0, len(_t_mask))
+                _t_dst = np.linspace(0.0, 1.0, n_t)
+                _t_mask = np.interp(_t_dst, _t_src, _t_mask)
+            _n_transient = int(np.sum(_t_mask > 0.3))
+            if _n_transient > 0:
+                _tm2d = np.clip(_t_mask, 0.0, 1.0)[np.newaxis, :]
+                G_combined = G_combined * (1.0 - _tm2d * 0.5) + _tm2d * 0.5
+                logger.info(
+                    "§v10.303.13 Transient-Guard: %d/%d Frames (%.1f%%) vor Denoise geschützt",
+                    _n_transient, n_t, 100.0 * _n_transient / max(1, n_t),
+                )
+        except Exception as _texc:
+            logger.debug("§v10.303.13 Transient-Guard (non-blocking): %s", _texc)
+
         # Apply MRSA gain with gain-gradient phase correction (Prusa & Holighaus 2017 §3.4)
         Zxx_processed = self._apply_gain_gradient_phase_correction(Zxx_ref, G_combined, REF_HOP, sr)
 
         # Direct ISTFT reconstruction — Zxx_processed retains full phase information.
         # Direct ISTFT is both semantically correct and 50-100× faster than PGHI.
+        # §v10.303: Adaptive noverlap — wenn scipy nperseg reduziert (Chunk < nperseg),
+        # muss noverlap mitreduziert werden, sonst "noverlap must be less than nperseg".
         try:
+            _safe_noverlap = min(REF_NOVERLAP, max(REF_WIN // 4, (Zxx_processed.shape[0] * 3) // 4))
             _, audio_out = signal.safe_istft(
                 np.asarray(Zxx_processed, dtype=np.complex64),
                 sr,
                 nperseg=REF_WIN,
-                noverlap=REF_NOVERLAP,
+                noverlap=_safe_noverlap,
                 boundary=True,
             )
             audio_out = np.asarray(audio_out, dtype=np.float32)

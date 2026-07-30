@@ -28,7 +28,7 @@ import numpy as np
 
 try:
     import psutil as _psutil
-except Exception:
+except ImportError:
     _psutil = None
 
 if TYPE_CHECKING:
@@ -81,10 +81,13 @@ try:
     from backend.api.bridge import get_deferred_refinement_job_class as _get_drj_class
 
     DeferredRefinementJob = _get_drj_class()
-except Exception as _bridge_exc:
+except ImportError as _bridge_exc:
 
     class DeferredRefinementJob:  # type: ignore[no-redef]
         """UI-lokaler Fallback-Typ bei fehlender Bridge (nur fuer Typvertrag-Tests)."""
+
+        def release_buffer(self) -> None:
+            """No-op im Fallback: kein ML-Memory-Budget zu releasen."""
 
     logger = logging.getLogger(__name__)
     logger.warning(
@@ -163,7 +166,7 @@ class MLRefinementThread(QThread):
 
         # Set low OS priority (§2.38: do not compete with UI)
         try:
-            self.setPriority(QThread.LowPriority)
+            self.setPriority(getattr(QThread, "LowPriority", 2))  # type: ignore[arg-type]  # Qt::LowPriority, int fallback vs Priority enum stub
         except Exception:
             logger.debug("KMV Stufe 2: QThread-Prioritaet konnte nicht gesetzt werden", exc_info=True)
         try:
@@ -194,7 +197,7 @@ class MLRefinementThread(QThread):
                 )
                 self.refinement_cancelled.emit(output_path)
                 return
-        except Exception as _be:
+        except ImportError as _be:
             logger.debug("ml_memory_budget nicht verfügbar (KMV): %s", _be)
             # Continue without budget guard if module absent (test environments)
             _budget_registered = False
@@ -216,7 +219,7 @@ class MLRefinementThread(QThread):
                 )
 
                 _denker = _get_denker()
-            except Exception as _imp_err:
+            except ImportError as _imp_err:
                 logger.error("KMV Stufe 2: AurikDenker nicht verfügbar: %s", _imp_err)
                 self.refinement_cancelled.emit(output_path)
                 return

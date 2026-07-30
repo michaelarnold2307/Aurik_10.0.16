@@ -247,6 +247,26 @@ class LoudnessNormalizationPhase(PhaseInterface):
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
 
+        # ── §v10.303.36 Phase-0-Aware Skip ──
+        # Nach Phase 0 (Apollo+DFN+Resemble) ist Loudness bereits nahe am Target.
+        # Schnelle LUFS-Prüfung spart ~500s Rechenzeit.
+        try:
+            import pyloudnorm as _pyln
+
+            _p0_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+            _p0_lufs = float(_pyln.measure_loudness(_p0_mono.astype(np.float64), sample_rate))
+            if abs(_p0_lufs - (-14.0)) < 3.0:
+                logger.info(
+                    "§v10.303.36 Loudness-Skip: LUFS=%.1f (Δ%.1f LU) → bereits optimal",
+                    _p0_lufs, abs(_p0_lufs + 14.0),
+                )
+                return PhaseResult(
+                    success=True, audio=audio, execution_time_seconds=0.0,
+                    metadata={"algorithm": "skipped_near_target", "integrated_lufs": _p0_lufs},
+                )
+        except ImportError:
+            pass
+
         # ── §ISO-226: Lautstärke-Kompensation für Ziel-Hörpegel ──
         # Ohne Kompensation klingt eine auf 80 phon gemasterte Aufnahme
         # bei Zimmerlautstärke (~60 phon) in Höhen schneidend und im Bass
@@ -352,8 +372,15 @@ class LoudnessNormalizationPhase(PhaseInterface):
                     # Build inverse trend: if slope > 0 (rising), apply attenuating gain
                     # Hard cap: max ±6 dB total correction over entire track
                     _total_correction_db = float(np.clip(-_drift_slope * (_n / sample_rate / 60.0), -6.0, 6.0))
-                    # Ramp from 0 to _total_correction_db across windows
-                    _gain_envelope_db = np.linspace(0.0, _total_correction_db, _n_windows, dtype=np.float32)
+                    # §v10.127 FIX: linspace(0, correction) startet bei 0 dB → erste
+                    # Sekunden unbeeinflusst, nur das Ende bekommt die volle Korrektur.
+                    # §v10.128 FIX: 70%→15% Start-Korrektur. 70% erzeugte bei −6 dB
+                    # Gesamtkorrektur sofort −4.2 dB in den ersten Sekunden → hörbarer
+                    # Lautstärkeeinbruch. 15% gibt −0.9 dB initial → psychoakustisch
+                    # unter der Wahrnehmbarkeitsschwelle (<1 dB), mit sanftem Ramp-Up.
+                    _gain_envelope_db = np.linspace(
+                        _total_correction_db * 0.15, _total_correction_db, _n_windows, dtype=np.float32
+                    )
                     # Smooth the gain envelope
                     _sg_window = max(5, _n_windows // 5 | 1)  # odd window
                     if _sg_window >= _n_windows:
@@ -493,11 +520,14 @@ class LoudnessNormalizationPhase(PhaseInterface):
                 logger.debug("Phase 40: uniform gain applied (analog+vocal, no gate envelope)")
             else:
                 # §2.45a-II v10.0.0: reference_for_gate=audio → signal-relative gate (P15+9 dB)
+                # §v10.128 FIX: crossfade_ms 10.0→200.0 — Spec §2.45a-II schreibt 200 ms
+                # Crossfade für musikalisch transparente Übergänge vor. 10 ms war ein
+                # Click-Avoidance-Fenster, das hörbare Sprünge an Gate-Grenzen erzeugte.
                 normalized = apply_musical_gain_envelope(
                     audio,
                     gain_linear,
                     gate_dbfs=-36.0,
-                    crossfade_ms=10.0,
+                    crossfade_ms=200.0,
                     sr=sample_rate,
                     reference_for_gate=audio,
                 )
@@ -851,9 +881,9 @@ class LoudnessNormalizationPhase(PhaseInterface):
         # One-pole lowpass für Release (exponentieller Decay)
         from scipy.signal import lfilter as _lfilter
 
-        smoothed_gain = _lfilter(
-            [alpha_release], [1.0, alpha_release - 1.0], gain.astype(np.float64)
-        ).astype(np.float32)
+        smoothed_gain = _lfilter([alpha_release], [1.0, alpha_release - 1.0], gain.astype(np.float64)).astype(
+            np.float32
+        )
 
         # Instant-Attack-Override: wenn gain unter den smoothed-Wert fällt,
         # sofort übernehmen (Peak-Limiter-Attack).

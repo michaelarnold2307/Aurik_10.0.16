@@ -283,6 +283,17 @@ def _register_all() -> None:
 
     register_ml_check("AST-Perceptual-ONNX", _ast_ready)
 
+    # §v10.304 AST AudioSet-527 Classifier
+    def _ast_classifier_ready() -> bool:
+        try:
+            from backend.core.ast_audio_set_classifier import is_ast_loaded
+
+            return is_ast_loaded()
+        except ImportError:
+            return False
+
+    register_ml_check("AST-AudioSet-Classifier", _ast_classifier_ready)
+
     # --- Speech Enhancement / Separation ---
     register_ml_check("SGMSE+", _probe_plugin("plugins.sgmse_plugin", "get_sgmse_plus_plugin", "_model_loaded"))
     register_ml_check(

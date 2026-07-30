@@ -22,8 +22,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -50,8 +51,7 @@ class AdaptiveStrengthResult:
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-def _adaptive_config(restorability_score: float, transfer_chain_depth: int,
-                     bandwidth_loss: float) -> dict[str, Any]:
+def _adaptive_config(restorability_score: float, transfer_chain_depth: int, bandwidth_loss: float) -> dict[str, Any]:
     """Leitet adaptive Optimierungs-Parameter aus Pre-Analysis-Messwerten ab.
 
     Returns:
@@ -196,8 +196,7 @@ def optimize_phase_strength(
     Returns:
         AdaptiveStrengthResult mit optimaler Stärke und History.
     """
-    cfg = _adaptive_config(restorability_score, transfer_chain_depth,
-                           bandwidth_loss)
+    cfg = _adaptive_config(restorability_score, transfer_chain_depth, bandwidth_loss)
 
     # Phasen-Typ-Modifikatoren
     floor = cfg["floor"]
@@ -205,13 +204,13 @@ def optimize_phase_strength(
     step = cfg["step"]
 
     if is_repair_phase:
-        floor *= 1.5   # Reparatur darf stärker starten
+        floor *= 1.5  # Reparatur darf stärker starten
         ceiling = min(ceiling * 1.2, 0.90)
     elif is_enhancement_phase:
-        floor *= 0.8   # Enhancement vorsichtiger
+        floor *= 0.8  # Enhancement vorsichtiger
         ceiling *= 0.8
     elif is_risky_phase:
-        floor *= 0.4   # Riskant SEHR vorsichtig
+        floor *= 0.4  # Riskant SEHR vorsichtig
         ceiling *= 0.5
         step *= 0.7
 
@@ -236,8 +235,7 @@ def optimize_phase_strength(
         try:
             audio_after = phase_runner(audio_input, current)
         except Exception as e:
-            logger.debug("AdaptiveStrength %s @ %.3f failed: %s",
-                         phase_id, current, e)
+            logger.debug("AdaptiveStrength %s @ %.3f failed: %s", phase_id, current, e)
             current += step
             continue
 
@@ -288,14 +286,19 @@ def optimize_phase_strength(
     if was_skipped:
         logger.info(
             "§ADAPTIVE SKIP %s: best_delta=%.4f < -0.05 @ strength=%.3f → Phase übersprungen",
-            phase_id, best_delta, best_strength,
+            phase_id,
+            best_delta,
+            best_strength,
         )
     else:
         logger.info(
-            "§ADAPTIVE %s: optimal_strength=%.3f delta=%.4f iterations=%d "
-            "range=[%.2f-%.2f]",
-            phase_id, best_strength, best_delta, iteration,
-            floor, ceiling,
+            "§ADAPTIVE %s: optimal_strength=%.3f delta=%.4f iterations=%d range=[%.2f-%.2f]",
+            phase_id,
+            best_strength,
+            best_delta,
+            iteration,
+            floor,
+            ceiling,
         )
 
     return AdaptiveStrengthResult(
@@ -394,7 +397,10 @@ def optimize_pipeline(
 
         logger.debug(
             "§ADAPTIVE %s: %.3f @ %.3fs (%d iter)",
-            pid, result.optimal_strength, elapsed, result.iterations,
+            pid,
+            result.optimal_strength,
+            elapsed,
+            result.iterations,
         )
 
     executed = sum(1 for r in results if r.was_executed)

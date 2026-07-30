@@ -86,6 +86,12 @@ class OneTakeExport:
         result = OneTakeResult(audio=audio)
         current = np.asarray(audio, dtype=np.float64)
 
+        # §v10.303.12 Denoise-Learning-Kompensation: Phase 03 lernt das
+        # Rauschprofil aus den ersten Sekunden und dämpft dort aggressiver.
+        # Ergebnis: Anfang 3-6dB leiser als der Rest. Ein sanfter Fade-In
+        # über die ersten 3-5s gleicht das aus.
+        current = _compensate_denoise_learning_dip(current, sr)
+
         for attempt in range(_MAX_RETRIES + 1):
             check = ExportQualityGate.check(current.astype(np.float32), sr, is_studio_2026=is_studio_2026)
             result.quality_report = {
@@ -166,7 +172,20 @@ class OneTakeExport:
             if not check.lufs_in_range or abs(check.integrated_lufs - lufs_target) > 1.0:
                 if attempt < _MAX_RETRIES - 2:  # Nur in Versuch 0-1 Gain anpassen
                     gain_db = lufs_target - check.integrated_lufs
-                    gain_db = float(np.clip(gain_db, -6.0, 6.0))
+                    # §v10.131 Depth-adaptive: tiefe Ketten vertragen weniger Gain
+                    _gain_cap_db = 6.0
+                    try:
+                        from backend.core.calibration_context import get_calibration_context
+                        _ctx = get_calibration_context()
+                        if _ctx is not None and _ctx.transfer_chain_depth >= 4:
+                            _gain_cap_db = 3.0  # Kassette ist fragiler
+                    except Exception:
+                        pass
+                    # §v10.303.9 Adaptive-Override: >4dB Abweichung → Caps lockern
+                    _deviation = abs(gain_db)
+                    if _deviation > 4.0:
+                        _gain_cap_db = max(_gain_cap_db, _deviation * 1.05)
+                    gain_db = float(np.clip(gain_db, -_gain_cap_db, _gain_cap_db))
                     if abs(gain_db) > 0.5:
                         current *= 10.0 ** (gain_db / 20.0)
                         corrections_this_round.append(
@@ -273,6 +292,65 @@ class OneTakeExport:
 
 
 # ── Convenience ────────────────────────────────────────────────────────
+
+
+def _compensate_denoise_learning_dip(audio: np.ndarray, sr: int) -> np.ndarray:
+    """§v10.303.12: Kompensiert den Pegel-Abfall am Song-Anfang.
+
+    Phase 03 (Denoise) lernt das Rauschprofil aus den ersten Sekunden
+    und dämpft dort 3-6dB aggressiver als im Mittelteil. Ergebnis:
+    der Anfang klingt leiser als der Import.
+
+    Misst LUFS der ersten 3s vs integrierten LUFS. Bei >2dB Differenz
+    wird ein sanfter Fade-In-Gain über 4s angewendet.
+    """
+    import numpy as np
+
+    _audio = np.asarray(audio, dtype=np.float64)
+    _n_start = int(sr * 3.0)  # Erste 3s
+    _n_fade = int(sr * 4.0)   # Fade-In über 4s
+
+    if _audio.ndim == 2:
+        _mono = _audio.mean(axis=0) if _audio.shape[0] <= 2 else _audio.mean(axis=1)
+    else:
+        _mono = _audio
+
+    _n_total = len(_mono)
+    if _n_total < _n_start * 2:
+        return np.asarray(audio, dtype=np.float64)  # Zu kurz
+
+    # RMS der ersten 3s vs Gesamt-RMS
+    _rms_start = float(np.sqrt(np.mean(_mono[:_n_start] ** 2) + 1e-12))
+    _rms_total = float(np.sqrt(np.mean(_mono ** 2) + 1e-12))
+    _rms_ratio = _rms_start / _rms_total
+
+    if _rms_ratio > 0.80:  # Weniger als 20% Unterschied → kein Handlungsbedarf
+        return np.asarray(audio, dtype=np.float64)
+
+    # Gain-Kompensation: max +4dB am Anfang, linear abfallend über _n_fade Samples
+    _max_gain_db = float(np.clip((1.0 - _rms_ratio) * 8.0, 0.0, 4.0))
+    if _max_gain_db < 1.0:
+        return np.asarray(audio, dtype=np.float64)
+
+    _gain_linear = 10.0 ** (_max_gain_db / 20.0)
+    # Exponentieller Fade (klingt natürlicher als linear)
+    _fade_samples = min(_n_fade, _n_total)
+    _t = np.linspace(0, 1, _fade_samples)
+    _envelope = 1.0 + (_gain_linear - 1.0) * np.exp(-_t * 3.0)
+    _envelope = np.concatenate([_envelope, np.ones(_n_total - _fade_samples)])
+
+    _out = _audio.copy()
+    if _out.ndim == 2:
+        _envelope = _envelope[np.newaxis, :] if _out.shape[0] <= 2 else _envelope[:, np.newaxis]
+    _out = _out * _envelope
+
+    from backend.core.logging_utils import get_logger
+    get_logger(__name__).info(
+        "§v10.303.12 Denoise-Learning-Kompensation: Anfang RMS=%.1f%% vom Gesamt → "
+        "+%.1fdB Fade-In über %.1fs",
+        _rms_ratio * 100, _max_gain_db, _n_fade / sr,
+    )
+    return np.clip(_out.astype(np.float64), -1.0, 1.0)
 
 
 def one_take_prepare(

@@ -123,8 +123,7 @@ def resolve_metric_conflict(
     else:
         return ArbiterVerdict(
             decision=ArbiterDecision.WEIGHTED_BLEND,
-            reason=f"Gewichtetes Mittel {weighted:.3f} < 0.70 — "
-            "beide Scores niedrig, konservativer Penalty",
+            reason=f"Gewichtetes Mittel {weighted:.3f} < 0.70 — beide Scores niedrig, konservativer Penalty",
             confidence=0.50,
             recommended_penalty=0.015,
             details=details,

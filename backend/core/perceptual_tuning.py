@@ -31,7 +31,6 @@ from typing import ClassVar
 
 import numpy as np
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Material-adaptive JND-Faktoren
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -40,102 +39,103 @@ import numpy as np
 # Quelle: Bark-Lautheit + Maskierung durch Trägermaterial-Rauschen.
 # Höheres Rauschen → höhere JND (Änderungen werden maskiert).
 MATERIAL_JND_FACTOR: dict[str, float] = {
-    "cd_digital":   1.0,   # Digital — keine Maskierung
-    "dat":          1.0,
-    "streaming":    1.05,  # Leichte Kompression
-    "mp3_high":     1.1,   # MP3-Artefakte maskieren leicht
-    "aac":          1.1,
-    "mp3_low":      1.3,
-    "minidisc":     1.2,   # ATRAC-Kompression
-    "vinyl":        1.4,   # Oberflächenrauschen ~-60 dB
-    "tape":         1.6,   # Bandrauschen ~-55 dB
-    "reel_tape":    1.5,   # Studioband — weniger Rauschen
-    "cassette":     2.0,   # Kompaktkassette ~-45 dB Rauschen
-    "shellac":      2.5,   # 78rpm — höchstes Grundrauschen
+    "cd_digital": 1.0,  # Digital — keine Maskierung
+    "dat": 1.0,
+    "streaming": 1.05,  # Leichte Kompression
+    "mp3_high": 1.1,  # MP3-Artefakte maskieren leicht
+    "aac": 1.1,
+    "mp3_low": 1.3,
+    "minidisc": 1.2,  # ATRAC-Kompression
+    "vinyl": 1.4,  # Oberflächenrauschen ~-60 dB
+    "tape": 1.6,  # Bandrauschen ~-55 dB
+    "reel_tape": 1.5,  # Studioband — weniger Rauschen
+    "cassette": 2.0,  # Kompaktkassette ~-45 dB Rauschen
+    "shellac": 2.5,  # 78rpm — höchstes Grundrauschen
     "lacquer_disc": 2.0,
     "wire_recording": 2.5,
-    "wax_cylinder": 3.0,   # Wachszylinder — extremstes Rauschen
-    "unknown":      1.2,   # Konservativ
+    "wax_cylinder": 3.0,  # Wachszylinder — extremstes Rauschen
+    "unknown": 1.2,  # Konservativ
 }
 
 # §v10.116: Kassette-Spezialparameter für Transfer-Chain-Tiefe ≥ 3
 CASSETTE_DEEP_CHAIN_BOOST: dict[str, float] = {
-    "noise_reduction_strength":  1.35,  # +35% Rauschunterdrückung
-    "wow_flutter_sensitivity":   1.50,  # +50% Gleichlauf-Korrektur
-    "azimuth_correction_boost":  1.40,  # +40% Azimut-Fehler
+    "noise_reduction_strength": 1.35,  # +35% Rauschunterdrückung
+    "wow_flutter_sensitivity": 1.50,  # +50% Gleichlauf-Korrektur
+    "azimuth_correction_boost": 1.40,  # +40% Azimut-Fehler
     "dropout_repair_aggression": 1.30,  # +30% Dropout-Reparatur
-    "hf_restoration_boost":      1.25,  # +25% Höhen-Wiederherstellung (Dolby)
+    "hf_restoration_boost": 1.25,  # +25% Höhen-Wiederherstellung (Dolby)
     "stereo_balance_correction": 1.20,  # +20% Kanalgleichlauf
 }
 
 # §v10.116: Genre-Perceptual-Tuning
 GENRE_JND_FACTOR: dict[str, float] = {
-    "classical":       0.8,   # Kritischstes Hören
-    "orchestral":      0.8,
-    "opera":           0.85,
-    "chamber":         0.8,
-    "solo_piano":      0.75,  # Extrem kritisch — jeder Fehler hörbar
-    "jazz":            0.9,   # Akustische Instrumente
-    "blues":           0.95,
-    "folk":            0.9,
-    "acoustic":        0.85,
-    "rock":            1.0,   # Standard
-    "pop":             1.0,
-    "metal":           1.1,   # Laute Mischung maskiert
-    "punk":            1.2,
-    "schlager":        1.1,   # Vocal-forward
-    "volksmusik":      1.1,
-    "electronic":      1.2,   # Synthetisch
-    "edm":             1.25,
-    "hip_hop":         1.1,
-    "rnb":             1.0,
-    "soul":            0.95,
-    "funk":            1.0,
-    "reggae":          1.0,
-    "latin":           1.0,
-    "world":           1.0,
-    "spoken_word":     0.7,   # Sprache — extrem kritisch
-    "podcast":         0.8,
-    "audiobook":       0.7,
-    "unknown":         1.0,
+    "classical": 0.8,  # Kritischstes Hören
+    "orchestral": 0.8,
+    "opera": 0.85,
+    "chamber": 0.8,
+    "solo_piano": 0.75,  # Extrem kritisch — jeder Fehler hörbar
+    "jazz": 0.9,  # Akustische Instrumente
+    "blues": 0.95,
+    "folk": 0.9,
+    "acoustic": 0.85,
+    "rock": 1.0,  # Standard
+    "pop": 1.0,
+    "metal": 1.1,  # Laute Mischung maskiert
+    "punk": 1.2,
+    "schlager": 1.1,  # Vocal-forward
+    "volksmusik": 1.1,
+    "electronic": 1.2,  # Synthetisch
+    "edm": 1.25,
+    "hip_hop": 1.1,
+    "rnb": 1.0,
+    "soul": 0.95,
+    "funk": 1.0,
+    "reggae": 1.0,
+    "latin": 1.0,
+    "world": 1.0,
+    "spoken_word": 0.7,  # Sprache — extrem kritisch
+    "podcast": 0.8,
+    "audiobook": 0.7,
+    "unknown": 1.0,
 }
 
 # §v10.116: Dynamik-Präferenz pro Genre (1.0 = neutral, >1 = mehr Dynamik, <1 = mehr Kompression)
 GENRE_DYNAMICS_PREFERENCE: dict[str, float] = {
-    "classical":       1.3,   # Maximale Dynamik
-    "orchestral":      1.3,
-    "opera":           1.2,
-    "chamber":         1.25,
-    "solo_piano":      1.3,
-    "jazz":            1.15,  # Lebendige Dynamik
-    "blues":           1.1,
-    "folk":            1.1,
-    "acoustic":        1.15,
-    "rock":            1.0,
-    "pop":             0.9,   # Moderate Kompression
-    "metal":           0.85,  # Stärkere Kompression
-    "punk":            0.8,
-    "schlager":        0.9,
-    "volksmusik":      0.95,
-    "electronic":      0.8,
-    "edm":             0.7,   # Stärkste Kompression
-    "hip_hop":         0.85,
-    "rnb":             0.9,
-    "soul":            1.0,
-    "funk":            1.0,
-    "reggae":          1.0,
-    "latin":           1.0,
-    "world":           1.0,
-    "spoken_word":     1.0,
-    "podcast":         0.95,
-    "audiobook":       1.0,
-    "unknown":         1.0,
+    "classical": 1.3,  # Maximale Dynamik
+    "orchestral": 1.3,
+    "opera": 1.2,
+    "chamber": 1.25,
+    "solo_piano": 1.3,
+    "jazz": 1.15,  # Lebendige Dynamik
+    "blues": 1.1,
+    "folk": 1.1,
+    "acoustic": 1.15,
+    "rock": 1.0,
+    "pop": 0.9,  # Moderate Kompression
+    "metal": 0.85,  # Stärkere Kompression
+    "punk": 0.8,
+    "schlager": 0.9,
+    "volksmusik": 0.95,
+    "electronic": 0.8,
+    "edm": 0.7,  # Stärkste Kompression
+    "hip_hop": 0.85,
+    "rnb": 0.9,
+    "soul": 1.0,
+    "funk": 1.0,
+    "reggae": 1.0,
+    "latin": 1.0,
+    "world": 1.0,
+    "spoken_word": 1.0,
+    "podcast": 0.95,
+    "audiobook": 1.0,
+    "unknown": 1.0,
 }
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def get_material_jnd_factor(material: str) -> float:
     """§v10.116: JND-Multiplikator für Trägermaterial.
@@ -180,9 +180,10 @@ def get_combined_jnd_factor(material: str = "unknown", genre: str = "unknown") -
 
 
 def get_cassette_deep_chain_boost(param: str) -> float:
-    """§v10.116: Boost-Faktor für Kassette mit Transfer-Chain-Tiefe ≥ 3.
+    """§v10.116: Boost-Faktor für Kassette mit Transfer-Chain-Tiefe ≥ 5.
 
-    Nur anwenden wenn transfer_chain_depth >= 3.
+    Nur anwenden wenn transfer_chain_depth >= 5 (§v10.120 Calibration-Shift:
+    extreme chains ≥5 Stufen).
     """
     return CASSETTE_DEEP_CHAIN_BOOST.get(param, 1.0)
 
@@ -206,8 +207,8 @@ def apply_perceptual_jnd(
     """
     factor = get_combined_jnd_factor(material, genre)
 
-    # Kassette mit tiefer Chain: zusätzlicher Boost
-    if "cassette" in str(material).lower() and transfer_chain_depth >= 3:
+    # Kassette mit extremer Chain (depth≥5): zusätzlicher Boost
+    if "cassette" in str(material).lower() and transfer_chain_depth >= 5:
         factor *= 1.15  # +15% für tiefe Ketten
 
     # Clamp: JND nie unter 0.3 dB (physiologisches Limit)
@@ -233,10 +234,7 @@ class PerceptualTuningProfile:
 
     @property
     def is_deep_chain_cassette(self) -> bool:
-        return (
-            "cassette" in self.material.lower()
-            and self.transfer_chain_depth >= 3
-        )
+        return "cassette" in self.material.lower() and self.transfer_chain_depth >= 5
 
     @property
     def cassette_boosts(self) -> dict[str, float]:
@@ -250,7 +248,7 @@ class PerceptualTuningProfile:
         parts = [self.material.replace("_", " ").title()]
         if self.genre != "unknown":
             parts.append(self.genre.replace("_", " ").title())
-        if self.transfer_chain_depth >= 3:
+        if self.transfer_chain_depth >= 5:
             parts.append(f"Chain-{self.transfer_chain_depth}")
         return " · ".join(parts)
 

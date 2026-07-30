@@ -27,6 +27,7 @@ implementiert. Der `except Exception: return "female"`-Fallback verschleierte de
 komplett — jede Stimme wurde als weiblich klassifiziert.
 
 **Fix:** `classify_gender_via_formants(audio, sr) → str` implementiert mit:
+
 - `_scan_f0_voiced()` — scanned durch Audio in 100ms-Fenstern
 - `_estimate_formants_from_voiced()` — Burg-LPC Formanten (F1–F3) aus voiced Frames
 - Gleiche `_GENDER_RANGES` wie `GenderDetector.formant_ranges`
@@ -60,6 +61,7 @@ endete nicht nach seinem `return {…}`, sondern absorbierte alle folgenden inde
 als Funktionskörper. Der `return` verhinderte die Ausführung, aber nicht die Definition.
 
 **Fix:**
+
 1. 4 Stub-Methoden entfernt
 2. 560 Zeilen echter Methoden aus `_build_union_vocal_profile` extrahiert
 3. Methoden korrekt in `DeEsserPhase`-Klasse platziert
@@ -82,6 +84,7 @@ False war, fiel die Kette direkt auf `_detect_gender_simple` zurück — ohne de
 LPC-Formant-Tracker als zweite Meinung zu konsultieren.
 
 **Fix:** Dreistufige Fallback-Kette:
+
 1. GenderDetector + pYIN + Contralto
 2. LPC Formant Tracker (Burg-LPC + scanning F0) ← **NEU**
 3. `_detect_gender_simple` (scanning)
@@ -172,17 +175,21 @@ Quellen: Titze 1994 (singing ranges), Klatt & Klatt 1990 (speech formants).
 ## §19.4 Invarianten & Contracts
 
 ### I-19.1: classify_gender_via_formants existiert
+
 `get_lpc_formant_tracker().classify_gender_via_formants(audio, sr)` MUSS ohne
 `AttributeError` aufrufbar sein und einen der Strings `"male"`, `"female"`,
 `"child"`, `"unknown"` zurückgeben.
 
 ### I-19.2: Scanning-F0 überlebt Intros
+
 `GenderDetector._detect_f0(audio_with_intro)` MUSS einen F0-Wert > 0 liefern,
 wenn IRGENDWO im Audio ein voiced Segment existiert. Getestet mit 1.5s Stille
 vor einem 220Hz-Ton.
 
 ### I-19.3: Alle 5 Methoden auf DeEsserPhase
+
 `DeEsserPhase` MUSS folgende Methoden besitzen:
+
 - `_detect_gender_robust`
 - `_detect_gender_simple`
 - `_detect_gender_timeline`
@@ -190,15 +197,18 @@ vor einem 220Hz-Ton.
 - `_apply_formant_preservation`
 
 ### I-19.4: Keine toten Stubs
+
 Keine der o.g. Methoden darf `return []` oder `return audio` als einzige
 Implementierung haben (ausser wenn sinnvoll — z.B. `_apply_formant_preservation`
 darf `return processed` als Fallback, aber nicht als permanente Stub-Implementierung).
 
 ### I-19.5: _build_union_vocal_profile ist clean
+
 `_build_union_vocal_profile` MUSS nach seinem `return {…}` enden und darf KEINE
 nachfolgenden Methodendefinitionen absorbieren.
 
 ### I-19.6: Dreistufige Fallback-Kette
+
 `_detect_gender_robust` MUSS nach GenderDetector-Failure den LPC-Formant-Tracker
 konsultieren, bevor es auf `_detect_gender_simple` zurückfällt.
 

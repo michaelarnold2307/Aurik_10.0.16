@@ -442,7 +442,11 @@ class GuitarEnhancementPhase(PhaseInterface):
                 else (processed.mean(axis=1) if processed.ndim == 2 else processed)
             )
             _hg44 = _chk_hg44(
-                _pre44_mono.astype(np.float32), _post44_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_44
+                _pre44_mono.astype(np.float32),
+                _post44_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_44,
+                bw_extension_context=True,
             )
             if _hg44.requires_rollback:
                 processed = audio.copy()

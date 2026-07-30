@@ -37,9 +37,9 @@ Version: 2.1.0
 
 from __future__ import annotations
 
-import os
 # v10.101 SOTA: Bark-kalibrierte Sibilanz-Erkennung, Pipeline-Gates geschützt.
 import logging
+import os
 import time
 
 import numpy as np
@@ -576,6 +576,11 @@ class AdaptiveDeEsserPhase(PhaseInterface):
         strength_cap = float(max(strength_cap, 1.0 - 0.55 * _effective_strength))
 
         # Stimmtyp-adaptive Frequenzauswahl (§2.8); explizite freq_low/freq_high überschreiben
+        # §v10.303.37 Phase-43 Gender-Inheritance: Erbt Gender von Phase 19
+        _ctx_gender = kwargs.get("phase19_gender")
+        if _ctx_gender and gender == "unknown":
+            gender = str(_ctx_gender)
+            logger.debug("Phase 43: gender inherited from Phase 19: %s", gender)
         default_low, default_high = GENDER_FREQ_MAP.get(gender, GENDER_FREQ_MAP["unknown"])
         # §2.36a PhonemeTimeline: language-specific sibilant band overrides gender-freq defaults
         _ptl_43 = kwargs.get("phoneme_timeline")

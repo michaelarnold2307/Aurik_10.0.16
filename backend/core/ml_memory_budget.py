@@ -706,15 +706,18 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
             _total_gb,
             ML_MAX_GB,
         )
-        # §C2: Invalidate ml_model_readiness failure cache so subsequent
-        # readiness checks reflect the newly loaded state.
-        try:
-            from backend.core.ml_model_readiness import invalidate_ml_readiness
+    # §C2: Invalidate ml_model_readiness failure cache so subsequent
+    # readiness checks reflect the newly loaded state.
+    # §v10.304.33: Import AUSSERHALB von _lock — ml_model_readiness
+    # braucht ~5-10s (webrtcvad→pkg_resources). Lock während Import
+    # gehalten → alle anderen try_allocate-Aufrufe blockieren.
+    try:
+        from backend.core.ml_model_readiness import invalidate_ml_readiness
 
-            invalidate_ml_readiness(model_name)
-        except Exception as _e:
-            logger.debug("ml_memory_budget: non-critical exception: %s", _e)
-        return True
+        invalidate_ml_readiness(model_name)
+    except Exception as _e:
+        logger.debug("ml_memory_budget: non-critical exception: %s", _e)
+    return True
 
 
 def release(model_name: str) -> None:

@@ -67,7 +67,7 @@ class PipelineStatus:
     state: str = "idle"  # PipelineState.name
     progress_pct: float = 0.0
     current_phase: str = ""
-    narrative: str = ""   # §v10.118: laienverständlicher Erzähltext vom PhaseProgressNarrator
+    narrative: str = ""  # §v10.118: laienverständlicher Erzähltext vom PhaseProgressNarrator
     phase_index: int = 0
     total_phases: int = 0
     mos_estimate: float = 0.0
@@ -75,12 +75,12 @@ class PipelineStatus:
     timestamp: float = 0.0
 
     # ── §v10.201 Ergebnis-Felder (nur bei state∈{completed,warning,failed}) ──
-    result_quality: float = 0.0       # quality_estimate * 100
-    result_reverted: bool = False     # do_no_harm.reverted
-    result_revert_reason: str = ""    # Guardian-Begründung
-    result_mushra: float = 0.0        # MUSHRA-Score (0-100)
-    result_hpi: float = 0.0           # HPI-Score (0-1)
-    result_phases_done: int = 0       # Tatsächliche Phasenzahl
+    result_quality: float = 0.0  # quality_estimate * 100
+    result_reverted: bool = False  # do_no_harm.reverted
+    result_revert_reason: str = ""  # Guardian-Begründung
+    result_mushra: float = 0.0  # MUSHRA-Score (0-100)
+    result_hpi: float = 0.0  # HPI-Score (0-1)
+    result_phases_done: int = 0  # Tatsächliche Phasenzahl
     result_warnings: list[str] = field(default_factory=list)
 
     def to_json(self) -> str:
@@ -567,7 +567,9 @@ class PipelineProcess:
                         state=data.get("state", "idle"),
                         progress_pct=data.get("progress_pct", 0.0),
                         current_phase=data.get("current_phase", ""),
-                        narrative=data.get("narrative", data.get("current_phase", "")),  # §v10.118: Erzähltext, Fallback auf phase
+                        narrative=data.get(
+                            "narrative", data.get("current_phase", "")
+                        ),  # §v10.118: Erzähltext, Fallback auf phase
                         phase_index=data.get("phase_index", 0),
                         total_phases=data.get("total_phases", 0),
                         mos_estimate=data.get("mos_estimate", 0.0),

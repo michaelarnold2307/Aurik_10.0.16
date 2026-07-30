@@ -25,18 +25,67 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Bark-Skala: 24 kritische Bänder (Zwicker 1961)
 # ---------------------------------------------------------------------------
-BARK_EDGES_HZ = np.array([
-    0, 100, 200, 300, 400, 510, 630, 770, 920, 1080,
-    1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700, 4400,
-    5300, 6400, 7700, 9500, 12000, 15500,
-], dtype=np.float32)
+BARK_EDGES_HZ = np.array(
+    [
+        0,
+        100,
+        200,
+        300,
+        400,
+        510,
+        630,
+        770,
+        920,
+        1080,
+        1270,
+        1480,
+        1720,
+        2000,
+        2320,
+        2700,
+        3150,
+        3700,
+        4400,
+        5300,
+        6400,
+        7700,
+        9500,
+        12000,
+        15500,
+    ],
+    dtype=np.float32,
+)
 
 # Menschliche Hörschwellen pro Bark-Band (ISO 226:2003, ~40 phon)
-BARK_HEARING_THRESHOLD_DB = np.array([
-    48.0, 34.0, 24.0, 18.0, 14.0, 11.0, 9.0, 7.5, 6.0,
-    5.0, 4.0, 3.0, 2.5, 2.0, 1.5, 1.0, 0.5, 0.0,
-    -1.0, -2.0, -3.0, -3.5, -4.0, -5.0,
-], dtype=np.float32)
+BARK_HEARING_THRESHOLD_DB = np.array(
+    [
+        48.0,
+        34.0,
+        24.0,
+        18.0,
+        14.0,
+        11.0,
+        9.0,
+        7.5,
+        6.0,
+        5.0,
+        4.0,
+        3.0,
+        2.5,
+        2.0,
+        1.5,
+        1.0,
+        0.5,
+        0.0,
+        -1.0,
+        -2.0,
+        -3.0,
+        -3.5,
+        -4.0,
+        -5.0,
+    ],
+    dtype=np.float32,
+)
 
 N_BARK = 24
 
@@ -84,12 +133,14 @@ def _make_gammatone_filter(fc: float, sr: int, order: int = 4) -> np.ndarray:
     carrier = np.cos(2.0 * np.pi * fc * t)
     # Normierung: Einheitsenergie
     h = env * carrier
-    h /= np.sqrt(np.sum(h ** 2) + 1e-12)
+    h /= np.sqrt(np.sum(h**2) + 1e-12)
     return h.astype(np.float32)
 
 
 def split_into_gammatone_bands(
-    audio: np.ndarray, sr: int, n_channels: int = N_GAMMATONE,
+    audio: np.ndarray,
+    sr: int,
+    n_channels: int = N_GAMMATONE,
 ) -> list[np.ndarray]:
     """§SOTA: Teilt Audio in Gammatone-gefilterte Kanäle (Cochlea-Simulation).
 
@@ -117,7 +168,7 @@ def split_into_gammatone_bands(
             bands.append(np.zeros_like(mono))
             continue
         h = _make_gammatone_filter(float(fc), sr)
-        filtered = fftconvolve(mono.astype(np.float64), h.astype(np.float64), mode='same')
+        filtered = fftconvolve(mono.astype(np.float64), h.astype(np.float64), mode="same")
         bands.append(filtered.astype(np.float32))
 
     return bands
@@ -136,12 +187,13 @@ def erb_to_hz(erb_num: float) -> float:
 
 def hz_to_bark(hz: np.ndarray) -> np.ndarray:
     """Zwicker-Formel: Hz → Bark."""
-    return (13.0 * np.arctan(0.00076 * hz.astype(np.float32))
-            + 3.5 * np.arctan((hz.astype(np.float32) / 7500.0) ** 2))
+    return 13.0 * np.arctan(0.00076 * hz.astype(np.float32)) + 3.5 * np.arctan((hz.astype(np.float32) / 7500.0) ** 2)
 
 
 def split_into_bark_bands(
-    audio: np.ndarray, sr: int, n_fft: int = 2048,
+    audio: np.ndarray,
+    sr: int,
+    n_fft: int = 2048,
 ) -> list[np.ndarray]:
     """§SOTA: Teilt Audio in 32 Gammatone-Bänder (Cochlea-Modell).
 
@@ -161,7 +213,8 @@ def split_into_bark_bands(
 
 
 def measure_lufs_per_bark(
-    band_signals: list[np.ndarray], sr: int,
+    band_signals: list[np.ndarray],
+    sr: int,
 ) -> np.ndarray:
     """Misst ITU-R BS.1770-4 Loudness pro Bark-Band.
 
@@ -179,8 +232,9 @@ def measure_lufs_per_bark(
 
         # K-Weighting: High-shelf @ 1.5kHz, High-pass @ 38Hz
         from scipy.signal import butter, sosfilt
+
         try:
-            sos_hp = butter(2, 38.0, 'highpass', fs=sr, output='sos')
+            sos_hp = butter(2, 38.0, "highpass", fs=sr, output="sos")
             sig_filtered = sosfilt(sos_hp, sig).astype(np.float64)
         except Exception:
             sig_filtered = sig.astype(np.float64)
@@ -206,8 +260,8 @@ def measure_lufs_per_bark(
         block_power = np.zeros(n_blocks, dtype=np.float64)
         for i in range(n_blocks):
             start = i * hop
-            chunk = sig_filtered[start:start + block_samples]
-            block_power[i] = np.mean(chunk ** 2) + 1e-12
+            chunk = sig_filtered[start : start + block_samples]
+            block_power[i] = np.mean(chunk**2) + 1e-12
 
         # Absolute gate: -70 LUFS
         abs_gate = 10.0 ** (-70.0 / 10.0)

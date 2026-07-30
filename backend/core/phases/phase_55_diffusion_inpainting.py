@@ -41,9 +41,9 @@ Version: 1.0.0
 from __future__ import annotations
 
 import logging
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 import time
 from typing import Any
-import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 
@@ -1660,6 +1660,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                         sr=sample_rate,
                         mode=_mode55,
                         material_bw_ceiling_hz=_bw_cap55,
+                        bw_extension_context=True,
                     )
                     if _hg_result55.requires_rollback:
                         logger.debug(

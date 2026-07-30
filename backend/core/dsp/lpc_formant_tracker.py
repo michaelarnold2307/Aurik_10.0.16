@@ -602,8 +602,8 @@ class _LPCFormantTracker:
         Returns:
             F0 in Hz, oder 0.0 wenn kein voiced segment gefunden wurde.
         """
-        chunk_samples = max(int(sr * 0.1), 512)   # 100 ms
-        hop_samples = chunk_samples // 2            # 50 ms Überlappung
+        chunk_samples = max(int(sr * 0.1), 512)  # 100 ms
+        hop_samples = chunk_samples // 2  # 50 ms Überlappung
         max_chunks = min(60, max(1, (len(audio_mono) - chunk_samples) // hop_samples + 1))
         best_f0 = 0.0
         best_peak_height = 0.0
@@ -643,14 +643,12 @@ class _LPCFormantTracker:
         return best_f0
 
     @staticmethod
-    def _estimate_formants_from_voiced(
-        audio_mono: np.ndarray, sr: int, max_frames: int = 40
-    ) -> list[float]:
+    def _estimate_formants_from_voiced(audio_mono: np.ndarray, sr: int, max_frames: int = 40) -> list[float]:
         """Extrahiert mittlere Formanten (F1–F3) aus voiced Frames via
         Burg-LPC.  Scannt das Audio, sammelt voiced Frames und mittelt.
         """
-        frame_samples = max(int(sr * 0.025), 64)    # 25 ms
-        hop_samples = frame_samples // 2              # 50 % Überlappung
+        frame_samples = max(int(sr * 0.025), 64)  # 25 ms
+        hop_samples = frame_samples // 2  # 50 % Überlappung
         ds = max(1, sr // _LPC_ANALYSIS_SR)
         sr_ds = max(1, sr // ds)
         all_formants: list[list[float]] = []
@@ -686,8 +684,7 @@ class _LPCFormantTracker:
         if not all_formants:
             return []
         max_len = max(len(f) for f in all_formants)
-        padded = [np.pad(np.asarray(f), (0, max_len - len(f)), constant_values=0.0)
-                  for f in all_formants]
+        padded = [np.pad(np.asarray(f), (0, max_len - len(f)), constant_values=0.0) for f in all_formants]
         avg = np.mean(padded, axis=0)
         return [float(v) for v in avg if v > 0.0]
 
@@ -708,8 +705,7 @@ class _LPCFormantTracker:
         try:
             mono = np.asarray(audio, dtype=np.float64)
             if mono.ndim == 2:
-                mono = np.mean(mono, axis=0) if mono.shape[0] == 2 and mono.shape[1] > 2 \
-                       else np.mean(mono, axis=1)
+                mono = np.mean(mono, axis=0) if mono.shape[0] == 2 and mono.shape[1] > 2 else np.mean(mono, axis=1)
             if mono.size < int(sr * 0.05):
                 return "unknown"
 
@@ -742,8 +738,7 @@ class _LPCFormantTracker:
                     if flo <= fmt_val <= fhi:
                         score += 1.0
                     else:
-                        dist = (flo - fmt_val) / flo if fmt_val < flo \
-                               else (fmt_val - fhi) / fhi
+                        dist = (flo - fmt_val) / flo if fmt_val < flo else (fmt_val - fhi) / fhi
                         score += max(0.0, 1.0 - dist * 0.5)
                     count += 1
                 scores[gender] = score / count if count > 0 else 0.0
@@ -756,11 +751,13 @@ class _LPCFormantTracker:
 
             # Tie-breaking: CHILD vs FEMALE bei knappem Score und F0 < 350 Hz
             sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
-            if (len(sorted_scores) >= 2
-                    and sorted_scores[0][0] == "child"
-                    and sorted_scores[1][0] == "female"
-                    and (sorted_scores[0][1] - sorted_scores[1][1]) < 0.05
-                    and f0 < 350.0):
+            if (
+                len(sorted_scores) >= 2
+                and sorted_scores[0][0] == "child"
+                and sorted_scores[1][0] == "female"
+                and (sorted_scores[0][1] - sorted_scores[1][1]) < 0.05
+                and f0 < 350.0
+            ):
                 return "female"
             return best[0]
         except Exception as e:

@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import importlib
 import itertools
+
 # v10.101 SOTA: FFT-basierte Ära-Klassifikation, Gammatone-geschützt.
 import logging
 import math
@@ -788,6 +789,7 @@ def _dsp_fingerprint_decade(
     noise_modulation: float = 0.20,
     lf_presence: float = 0.35,
     highband_presence: float = 0.12,
+    transfer_chain: list[str] | None = None,  # §v10.303.32
 ) -> tuple[int, float]:
     """Mappt Bandbreite + SNR auf Jahrzehnt via kalibrierter Schwellwert-Tabelle.
 
@@ -867,6 +869,40 @@ def _dsp_fingerprint_decade(
     elif snr_db < 25.0 and bw_khz < 8.0 and decade > 1940:
         decade = min(max(decade, 1920), 1940)  # Ribbon-microphone era
 
+    # §v10.303.32 Chain-Aware SNR Correction:
+    # Multi-Carrier-Ketten degradieren den gemessenen SNR systematisch.
+    # 3 analoge Träger + MP3 = 10–16 dB SNR-Verlust. Der EraClassifier
+    # muss diesen Verlust kompensieren, sonst wird 1977 als 1960 fehldatiert.
+    _chain_depth = len(transfer_chain) if transfer_chain else 1
+    _snr_correction_db = 0.0
+    if _chain_depth >= 2:
+        # Pro analogem Träger ~4 dB, pro Codec ~3 dB SNR-Verlust
+        _analog_steps = sum(1 for c in transfer_chain if c not in {"mp3_low", "mp3_high", "aac", "streaming", "minidisc", "cd_digital"})
+        _codec_steps = _chain_depth - _analog_steps
+        _snr_correction_db = _analog_steps * 4.0 + _codec_steps * 3.0
+        _snr_correction_db = min(_snr_correction_db, 18.0)  # Cap bei 18 dB
+    _snr_corrected = snr_db + _snr_correction_db
+
+    # §v10.303.32 Deep-Chain Bias: Bei ≥3 Trägern sind ALLE Features
+    # (SNR, BW, Stereo, Dynamic Range) systematisch degradiert.
+    # Die akkumulierte Degradation drückt die Fingerprint-Analyse um
+    # 1–2 Jahrzehnte nach unten. Korrektur: +10 Jahre wenn mindestens
+    # EIN Sekundärmerkmal (Stereo, DR, Tilt) auf spätere Ära hindeutet.
+    if _chain_depth >= 3 and decade < 1980:
+        _hints_later = 0
+        if is_stereo and stereo_width >= 0.08:
+            _hints_later += 1
+        if dynamic_range_db >= 22.0:
+            _hints_later += 1
+        if spectral_tilt > -6.0:
+            _hints_later += 1
+        if _hints_later >= 1:
+            decade = min(decade + 10, 1990)
+            logger.debug(
+                "EraClassifier: deep-chain bias +10y (depth=%d, hints=%d, SNR %.0f→%.0f)",
+                _chain_depth, _hints_later, snr_db, _snr_corrected,
+            )
+
     # SNR-based upward correction for 1950–1970 borderline cases:
     # A tape recording from 1977 with bandwidth loss (e.g. 13 kHz rolloff)
     # may land in decade=1960 by BW alone, but its SNR (~48–55 dB) clearly
@@ -879,7 +915,7 @@ def _dsp_fingerprint_decade(
         expected_snr_next = _decade_expected_snr(next_decade)
         threshold_bw = DECADE_HF_LIMITS.get(next_decade, 20000.0) / 1000.0 * 0.9
         bw_near_boundary = (threshold_bw - bw_khz) < 2.5  # within 2.5 kHz of next (covers tape→MP3 rolloff loss)
-        snr_favors_next = abs(snr_db - expected_snr_next) < abs(snr_db - expected_snr_cur)
+        snr_favors_next = abs(_snr_corrected - expected_snr_next) < abs(_snr_corrected - expected_snr_cur)
         if bw_near_boundary and snr_favors_next:
             decade = next_decade
 
@@ -1291,8 +1327,9 @@ class EraClassifier:
         audio = np.clip(audio, -1.0, 1.0)
         audio_mono = np.mean(audio, axis=-1 if audio.shape[-1] <= 2 else 0) if audio.ndim > 1 else audio.copy()
 
-        # RAM-Cache-Key aus SHA256-Prefix
-        sha = hashlib.sha256(audio_mono.tobytes()).hexdigest()[:16]
+        # RAM-Cache-Key aus SHA256-Prefix + Transfer-Chain (für Chain-Awareness)
+        _chain_str = ",".join(sorted(transfer_chain)) if transfer_chain else "nochain"
+        sha = hashlib.sha256((audio_mono.tobytes() + _chain_str.encode())).hexdigest()[:16]
         with self._ram_cache_lock:
             cached = self._ram_cache.get(sha)
         if cached is not None:
@@ -1470,6 +1507,7 @@ class EraClassifier:
             noise_modulation=noise_modulation,
             lf_presence=lf_presence,
             highband_presence=highband_presence,
+            transfer_chain=transfer_chain,  # §v10.303.32
         )
         if result is None or result.confidence < 0.40:
             result = _tier2_result
@@ -1692,6 +1730,7 @@ class EraClassifier:
         noise_modulation: float = 0.20,
         lf_presence: float = 0.35,
         highband_presence: float = 0.12,
+        transfer_chain: list[str] | None = None,  # §v10.303.32
     ) -> EraResult:
         """Tier-2: DSP-Fingerprint (multi-factor: BW + SNR + stereo + tilt + DR + modulation + LF + HB)."""
         decade, conf = _dsp_fingerprint_decade(
@@ -1704,8 +1743,16 @@ class EraClassifier:
             noise_modulation=noise_modulation,
             lf_presence=lf_presence,
             highband_presence=highband_presence,
+            transfer_chain=getattr(self, "_transfer_chain", None) or transfer_chain,
         )
         material = DECADE_MATERIAL_PRIOR.get(decade, "unknown")
+        # §v10.303.42 Reel-Tape-Aware: Studio-Aufnahmen wurden auf Tonband
+        # produziert, nicht auf Vinyl. Vinyl war das Vertriebsmedium.
+        _chain_for_era = transfer_chain or getattr(self, "_transfer_chain", None) or []
+        if "reel_tape" in _chain_for_era:
+            material = "reel_tape"
+            if decade < 1970:
+                decade = min(decade + 10, 1990)
         return EraResult(
             decade=decade,
             era_label=f"{decade}er",
@@ -1715,6 +1762,60 @@ class EraClassifier:
             tier_used=2,
             hf_rolloff_hz=rolloff_hz,
         )
+
+    def _apply_ast_constraints(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        result: EraResult,
+    ) -> EraResult:
+        """§v10.304: AST-Instrument-Constraints auf Era-Ergebnis anwenden.
+
+        AST ist deterministisch: Ein Song MIT Synthesizer kann NICHT von 1920 sein.
+        Diese Constraints haben VORRANG vor DSP-Klassifikation.
+
+        Returns:
+            EraResult mit AST-korrigierter Dekade (oder unverändert).
+        """
+        try:
+            from backend.core.ast_audio_set_classifier import (
+                ERA_AUDIOSET_PROXIES,
+                get_ast_classifier,
+            )
+
+            _clf = get_ast_classifier()
+            if not _clf.is_loaded():
+                return result
+            _ast_result = _clf.classify(audio, sr, top_k=20)
+            if _ast_result.model_used == "fallback":
+                return result
+
+            _min_decade = None
+            _max_decade = None
+            for _idx, (_era_min, _era_max) in ERA_AUDIOSET_PROXIES.items():
+                if _ast_result.get_prob(_idx) >= 0.15:
+                    if _min_decade is None or _era_min > _min_decade:
+                        _min_decade = _era_min
+                    if _max_decade is None or _era_max < _max_decade:
+                        _max_decade = _era_max
+
+            if _min_decade is not None and result.decade < _min_decade:
+                logger.info(
+                    "§v10.304 AST-Era-Floor: %d→%d (instrument constraint)",
+                    result.decade, _min_decade,
+                )
+                return EraResult(
+                    decade=_min_decade,
+                    era_label=f"{_min_decade}er",
+                    confidence=result.confidence,
+                    material_prior=result.material_prior,
+                    noise_profile=result.noise_profile,
+                    tier_used=result.tier_used,
+                    hf_rolloff_hz=result.hf_rolloff_hz,
+                )
+        except Exception as _exc:
+            logger.debug("AST-Era-Constraint fehlgeschlagen: %s", _exc)
+        return result
 
     def _tier3(self, bark: np.ndarray, rolloff_hz: float, _snr_db: float) -> EraResult:
         """Tier-3: Mikrofon-Typ-Heuristik."""
@@ -1876,11 +1977,16 @@ def classify_era(audio: np.ndarray, sr: int, transfer_chain: list[str] | None = 
     Args:
         audio: Audio-Signal (mono oder stereo, float32/64 [-1, 1]).
         sr:    Sample-Rate in Hz.
+        transfer_chain: Optionale Tonträgerkette für Chain-Awareness.
 
     Returns:
         EraResult mit Dekade, Confidence, Material-Prior und Noise-Profil.
     """
-    return get_era_classifier().classify(audio, sr)
+    _clf = get_era_classifier()
+    result = _clf.classify(audio, sr, transfer_chain=transfer_chain)
+    # §v10.304: AST-Instrument-Constraints NACH DSP-Klassifikation anwenden
+    result = _clf._apply_ast_constraints(audio, sr, result)
+    return result
 
 
 # Codec containers are encoding formats, not physical source media.

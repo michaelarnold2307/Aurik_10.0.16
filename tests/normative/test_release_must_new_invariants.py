@@ -131,15 +131,9 @@ def test_gender_sota_classify_gender_via_formants_exists() -> None:
     assert "def classify_gender_via_formants" in src, (
         "§2.8a classify_gender_via_formants fehlt in lpc_formant_tracker.py"
     )
-    assert "_scan_f0_voiced" in src, (
-        "§2.8a _scan_f0_voiced (scanning F0 helper) fehlt"
-    )
-    assert "_estimate_formants_from_voiced" in src, (
-        "§2.8a _estimate_formants_from_voiced (LPC scanning helper) fehlt"
-    )
-    assert "_GENDER_RANGES" in src, (
-        "§2.8a _GENDER_RANGES (formant ranges) fehlt"
-    )
+    assert "_scan_f0_voiced" in src, "§2.8a _scan_f0_voiced (scanning F0 helper) fehlt"
+    assert "_estimate_formants_from_voiced" in src, "§2.8a _estimate_formants_from_voiced (LPC scanning helper) fehlt"
+    assert "_GENDER_RANGES" in src, "§2.8a _GENDER_RANGES (formant ranges) fehlt"
 
 
 @pytest.mark.normative
@@ -166,15 +160,17 @@ def test_gender_sota_no_dead_methods_in_phase19() -> None:
     """§2.8c: No dead/stub gender methods in phase_19_de_esser.py."""
     src = PHASE_19_FILE.read_text(encoding="utf-8")
     # These stubs were removed
-    assert '    def _detect_gender_timeline(self, audio, sample_rate, hop_length=256):\n        """Time-varying gender detection (returns empty on fallback)."""\n        return []' not in src, (
-        "§2.8c Dead stub _detect_gender_timeline (return []) still present!"
-    )
-    assert 'def _process_per_gender_segments(self, audio, sample_rate, gender_segments, **kwargs):' not in src, (
+    assert (
+        '    def _detect_gender_timeline(self, audio, sample_rate, hop_length=256):\n        """Time-varying gender detection (returns empty on fallback)."""\n        return []'
+        not in src
+    ), "§2.8c Dead stub _detect_gender_timeline (return []) still present!"
+    assert "def _process_per_gender_segments(self, audio, sample_rate, gender_segments, **kwargs):" not in src, (
         "§2.8c Dead stub _process_per_gender_segments still present!"
     )
-    assert 'def _apply_formant_preservation(\n        self, original, processed, sample_rate, formant_low, formant_high, protection_factor\n    ):\n        """Preserve formant regions by blending original back."""\n        return processed' not in src, (
-        "§2.8c Dead stub _apply_formant_preservation still present!"
-    )
+    assert (
+        'def _apply_formant_preservation(\n        self, original, processed, sample_rate, formant_low, formant_high, protection_factor\n    ):\n        """Preserve formant regions by blending original back."""\n        return processed'
+        not in src
+    ), "§2.8c Dead stub _apply_formant_preservation still present!"
 
 
 @pytest.mark.normative
@@ -184,6 +180,7 @@ def test_gender_sota_methods_not_nested_in_build_union() -> None:
     src = PHASE_19_FILE.read_text(encoding="utf-8")
     # Verify DeEsserPhase has the methods
     from backend.core.phases.phase_19_de_esser import DeEsserPhase
+
     dp = DeEsserPhase()
     for method_name in [
         "_detect_gender_robust",
@@ -193,8 +190,7 @@ def test_gender_sota_methods_not_nested_in_build_union() -> None:
         "_apply_formant_preservation",
     ]:
         assert hasattr(dp, method_name), (
-            f"§2.8d {method_name} fehlt auf DeEsserPhase — "
-            "vermutlich noch in _build_union_vocal_profile gefangen!"
+            f"§2.8d {method_name} fehlt auf DeEsserPhase — vermutlich noch in _build_union_vocal_profile gefangen!"
         )
 
 
@@ -217,12 +213,8 @@ def test_gender_sota_detect_gender_simple_scans() -> None:
     """§2.8f: _detect_gender_simple must scan audio, not only first 5 seconds."""
     src = PHASE_19_FILE.read_text(encoding="utf-8")
     # New scanning pattern
-    assert "win_samples = sample_rate * 2" in src, (
-        "§2.8f _detect_gender_simple: scanning windows missing"
-    )
-    assert "best_f0" in src and "best_peak_height" in src, (
-        "§2.8f _detect_gender_simple: best_f0 tracking missing"
-    )
+    assert "win_samples = sample_rate * 2" in src, "§2.8f _detect_gender_simple: scanning windows missing"
+    assert "best_f0" in src and "best_peak_height" in src, "§2.8f _detect_gender_simple: best_f0 tracking missing"
     # Old brittle pattern must be gone
     assert "max_samples = sample_rate * 5" not in src, (
         "§2.8f _detect_gender_simple: old max_samples=5s pattern still present — must scan!"

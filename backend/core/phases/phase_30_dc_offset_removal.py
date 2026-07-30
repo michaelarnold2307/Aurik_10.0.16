@@ -53,7 +53,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
+from backend.core.audio_utils import audio_sample_count, safe_filtfilt, stereo_channel_view, stereo_like  # §v10.101
 from backend.core.defect_scanner import MaterialType
 
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult

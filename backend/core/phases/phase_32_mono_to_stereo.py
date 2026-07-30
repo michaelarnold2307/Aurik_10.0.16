@@ -71,13 +71,13 @@ Performance Target: <0.20× realtime
 Quality Target: 0.86 (Professional-Grade)
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import time
 
 import numpy as np
 from scipy import signal
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 from backend.core.defect_scanner import MaterialType
 from backend.core.dsp.hallucination_guard import check_hallucination
 from backend.core.phase_strength_contract import resolve_phase_strength_contract

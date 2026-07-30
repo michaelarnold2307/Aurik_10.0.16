@@ -17,6 +17,7 @@ Der Lauf vom 03.08.2026 (Elke Best, 225s, cassette/mp3_low, depth=4) produzierte
 bekommt `tuple` → `'tuple' object has no attribute 'ndim'` → Rollback auf Pre-Phase-Audio.
 
 **Fix**: Tuple-Entpackung direkt nach `phase.process()` in `_profiled_phase_call`:
+
 ```python
 if isinstance(result, tuple) and len(result) >= 1:
     _unwrapped = result[0]
@@ -30,6 +31,7 @@ if isinstance(result, tuple) and len(result) >= 1:
 Die Schwelle lag bei 0.43 für depth=4, rs=64 → alle Phasen triggern.
 
 **Fix**: Depth-Bonus 0.03→0.04 + Codec-Bonus +0.02 für MP3 in Transfer-Kette:
+
 ```python
 _codec_bonus = 0.02 if _cal_transfer_chain and any("mp3" in str(c).lower() for c in _cal_transfer_chain) else 0.0
 _cal_novelty = float(np.clip(0.20 + (1.0 - _rs / 100.0) * 0.40 + max(0, _depth - 1) * 0.04 + _codec_bonus, 0.18, 0.65))
@@ -53,6 +55,7 @@ Wiederholungsversuche, nicht in der Prioritätslogik.
 Gain schiebt LUFS auf Ziel, Limiter drückt Peak → LUFS wieder falsch → Gain erneut...
 
 **Fix**: Ab Versuch 2 nur noch Limiter, kein Gain:
+
 ```python
 if attempt < _MAX_RETRIES - 2:  # Nur in Versuch 0-1 Gain anpassen
     gain_db = lufs_target - check.integrated_lufs
@@ -65,6 +68,7 @@ if attempt < _MAX_RETRIES - 2:  # Nur in Versuch 0-1 Gain anpassen
 5 Folgephasen (14, 16, 17, 40, 07) werden via Early-Silence-Gate geskippt.
 
 **Fix**: Silence-Guard NACH der Phase (nicht nur davor):
+
 ```python
 if "phase_07" in _pid_str or "HarmonicRestoration" in str(type(_ph).__name__):
     _rms_db = float(20.0 * np.log10(...))

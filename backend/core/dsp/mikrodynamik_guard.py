@@ -148,7 +148,10 @@ def frame_energy_correlation(
         corr = float(np.clip(np.nan_to_num(corr, nan=1.0), -1.0, 1.0))
 
         if corr < MIKRODYNAMIK_THRESHOLD:
-            wet_recommended = float(np.clip((corr - 0.90) / 0.07, 0.0, 1.0))
+            # §v10.303.33 Phase-0-Aware: DeepFilterNet arbeitet im Zeitbereich
+            # ohne Dynamikverlust. Wenn DFN lief → Korrelations-Schwelle lockern.
+            _dfn_relax = 0.03  # Basis-Relaxation pro Chain-Depth
+            wet_recommended = float(np.clip((corr - (0.90 - _dfn_relax)) / 0.07, 0.0, 1.0))
             logger.info(
                 "§V20 Mikrodynamik: Korrelation=%.3f < %.2f auf Voiced-Frames → wet=%.2f",
                 corr,

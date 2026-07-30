@@ -15,16 +15,30 @@ Usage in modern_window.py:
 
 from __future__ import annotations
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QFrame, QHBoxLayout, QLabel, QSizePolicy, QVBoxLayout, QWidget
+from typing import Callable, cast
+
+from PyQt5.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)  # pylint: disable=no-name-in-module
 
 # §v10.70 Bridge: Phase-Display-Formatter über die Bridge, nicht direkt aus backend.core
 from backend.api.bridge import get_phase_display_formatter_fns
 
 _DISPLAY_FNS = get_phase_display_formatter_fns()
-get_carrier_display = _DISPLAY_FNS.get("get_carrier_display", lambda *a, **kw: "?")
-get_era_display = _DISPLAY_FNS.get("get_era_display", lambda *a, **kw: "?")
-get_phase_display = _DISPLAY_FNS.get("get_phase_display", lambda *a, **kw: "?")
+get_carrier_display: Callable[..., str] = cast(
+    Callable[..., str], _DISPLAY_FNS.get("get_carrier_display", lambda *_a, **_kw: "?")
+)
+get_era_display: Callable[..., str] = cast(
+    Callable[..., str], _DISPLAY_FNS.get("get_era_display", lambda *_a, **_kw: "?")
+)
+get_phase_display: Callable[..., str] = cast(
+    Callable[..., str], _DISPLAY_FNS.get("get_phase_display", lambda *_a, **_kw: "?")
+)
 
 
 class RestorationStatusPanel(QFrame):

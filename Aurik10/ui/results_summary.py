@@ -94,12 +94,15 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
         if was_reverted:
             revert_reason = d.get("revert_reason", "")
             quality_text = (
-                f"⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\n"
-                f"Das Original wurde unverändert gespeichert.\n"
-                f"Grund: {revert_reason}"
-            ) if revert_reason else (
-                "⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\n"
-                "Das Original wurde unverändert gespeichert."
+                (
+                    f"⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\n"
+                    f"Das Original wurde unverändert gespeichert.\n"
+                    f"Grund: {revert_reason}"
+                )
+                if revert_reason
+                else (
+                    "⚠️ Bearbeitung verworfen — keine Verbesserung möglich.\nDas Original wurde unverändert gespeichert."
+                )
             )
             _color = "#B8A068"
             _bg = "rgba(184, 160, 104, 0.10)"
@@ -128,28 +131,43 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
 
         quality_label = QtWidgets.QLabel(f"📊 {quality_text}")
         quality_label.setStyleSheet(
-            f"font-size: 11pt; color: {_color}; padding: 8px; "
-            f"background: {_bg}; border-radius: 6px;"
+            f"font-size: 11pt; color: {_color}; padding: 8px; background: {_bg}; border-radius: 6px;"
         )
         quality_label.setWordWrap(True)
         # §v10.207: Laienverständliche Tooltips
         _tooltip_parts = []
         if mushra > 0:
-            _tooltip_parts.append("Klangqualität (0-100): Wie gut die Aufnahme für menschliche Ohren klingt — bewertet nach internationalem MUSHRA-Standard")
+            _tooltip_parts.append(
+                "Klangqualität (0-100): Wie gut die Aufnahme für menschliche Ohren klingt — bewertet nach internationalem MUSHRA-Standard"
+            )
         if hpi > 0:
-            _tooltip_parts.append("Klangverbesserung (0-1): Wie viel besser die restaurierte Version im Vergleich zum Original klingt")
+            _tooltip_parts.append(
+                "Klangverbesserung (0-1): Wie viel besser die restaurierte Version im Vergleich zum Original klingt"
+            )
         if _tooltip_parts:
             quality_label.setToolTip("\n\n".join(_tooltip_parts))
         layout.addWidget(quality_label)
 
+        # ── Chain-Depth Kontext (nur bei tiefen Ketten) ──
+        _chain_depth = d.get("chain_depth", 1)
+        if _chain_depth >= 3:
+            _chain_note = (
+                f"🔗 {_chain_depth}-stufige Transfer-Kette — "
+                "Aurik hat die Restauration an die Mehrfach-Überspielung angepasst."
+                if _chain_depth >= 4 else
+                f"🔗 {_chain_depth}-stufige Transfer-Kette — leichte Anpassung der Restauration."
+            )
+            _depth_label = QtWidgets.QLabel(_chain_note)
+            _depth_label.setStyleSheet(
+                "font-size: 10pt; color: #8894A8; padding: 4px 8px;"
+            )
+            _depth_label.setWordWrap(True)
+            layout.addWidget(_depth_label)
+
         # ── §v10.202: Arbeits-Zusammenfassung ────
         if phases > 0:
-            work_label = QtWidgets.QLabel(
-                f"🔧 {phases} Phasen ausgeführt"
-            )
-            work_label.setStyleSheet(
-                "font-size: 10pt; color: #8894A8; padding: 4px 0;"
-            )
+            work_label = QtWidgets.QLabel(f"🔧 {phases} Phasen ausgeführt")
+            work_label.setStyleSheet("font-size: 10pt; color: #8894A8; padding: 4px 0;")
             layout.addWidget(work_label)
 
         # ── §v10.35 Experience Insights (Joy/Fatigue/Recommendations) ────
@@ -343,6 +361,7 @@ def build_results_data(
         "was_reverted": _reverted,
         "revert_reason": _dnh_reason,
         "phases_total": _phases,
+        "chain_depth": _rmeta.get("transfer_chain_depth", _rmeta.get("chain_depth", 1)),
         "material_detected": material_detected,
         "era_detected": era_detected,
         "mode": mode,

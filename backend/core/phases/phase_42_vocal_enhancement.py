@@ -51,7 +51,7 @@ from typing import Any
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_to_mono, safe_filtfilt  # §v10.101
+from backend.core.audio_utils import safe_filtfilt, safe_to_mono  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.dsp.stem_routing_policy import prefer_demucs_native_from_material
 from backend.core.ml_model_readiness import check_ml_model_ready
@@ -990,7 +990,13 @@ class VocalEnhancement(PhaseInterface):
                 check_hallucination as _check_hallucination_p42,
             )
 
-            _hg_result = _check_hallucination_p42(audio, enhanced_audio, sr=sample_rate, mode=_p42_mode)
+            _hg_result = _check_hallucination_p42(
+                audio,
+                enhanced_audio,
+                sr=sample_rate,
+                mode=_p42_mode,
+                bw_extension_context=True,
+            )
             if _hg_result.requires_rollback:
                 logger.warning(
                     "phase_42 §2.46e Hallucination-Guard: spectral_novelty=%.3f → Rollback (mode=%s, material=%s)",
@@ -1336,7 +1342,7 @@ class VocalEnhancement(PhaseInterface):
         # Direkt HPSS + Wiener — zuverlässig, schnell, keine ML-Halluzination.
         _chain_p42 = (getattr(self, "_restoration_context", {}) or {}).get("transfer_chain", [])
         _depth_p42 = len(_chain_p42) if _chain_p42 else 1
-        if _depth_p42 >= 3:
+        if _depth_p42 >= 5:
             logger.info(
                 "Phase42 depth=%d → Fast-Path HPSS+Wiener (ML-Stem-Sep übersprungen bei degradiertem Signal)",
                 _depth_p42,
@@ -1821,7 +1827,7 @@ class VocalEnhancement(PhaseInterface):
                 a0 = 1.0 + alpha / A
                 a1 = -2.0 * cos_w0
                 a2 = 1.0 - alpha / A
-                return np.array([[b0/a0, b1/a0, b2/a0, 1.0, a1/a0, a2/a0]], dtype=np.float64)
+                return np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]], dtype=np.float64)
 
             # §v10.65: Sammle alle Formant-Korrekturen in einem SOS-Array
             # und wende sie in EINEM lfilter-Durchlauf an — kein serielles

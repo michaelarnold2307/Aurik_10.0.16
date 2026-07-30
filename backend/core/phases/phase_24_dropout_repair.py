@@ -70,20 +70,20 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
-import os
 import logging
+import os
 import time
 from typing import Any
 
 import numpy as np
 import scipy.signal as signal
-from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from scipy.interpolate import CubicSpline
 
 from backend.core.audio_utils import (
     apply_musical_gain_envelope,
     compute_gated_rms_linear,
     restore_layout,
+    safe_stft,  # §v10.115 explicit wrapper (no monkey-patch)
     to_channels_last,
 )
 from backend.core.defect_scanner import MaterialType  # §v10.113
@@ -960,8 +960,16 @@ class DropoutRepairPhase(PhaseInterface):
         # ist die teure Inpainting-Pipeline (159 s) unnötig.
         # Gaps aus dem RekonstruktionsDenker (629 Stück) sind bereits repariert.
         _dropout_density = float(kwargs.get("dropout_density", kwargs.get("dropout_severity", 0.0)) or 0.0)
+        # §v10.200 Fallback: DefectScanner-Daten aus _restoration_context abrufen
+        if _dropout_density <= 0.0:
+            _rctx_fb24 = kwargs.get("_restoration_context", {}) or {}
+            _defect_scores_fb24 = _rctx_fb24.get("defect_scores", _rctx_fb24.get("defect_focus_scores", {})) or {}
+            _dropout_density = float(_defect_scores_fb24.get("dropout_oxide", _defect_scores_fb24.get("dropout", 0.0)) or 0.0)
         if _dropout_density < 0.001 and _effective_strength > 0.0:
-            logger.info(
+            # §v10.303: Erste Meldung als INFO, Wiederholungen als DEBUG (Log-Spam-Prävention)
+            _log_fn = logger.info if not getattr(self, "_dropout_skip_logged", False) else logger.debug
+            self._dropout_skip_logged = True
+            _log_fn(
                 "§v10.96 Dropout-Skip: dropout_density=%.4f < 0.001 → dropout repair skipped",
                 _dropout_density,
             )

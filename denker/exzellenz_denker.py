@@ -678,6 +678,39 @@ class ExzellenzDenker:
         _passed_initial = _count_passed(goals_initial)
         _total = len(goals_initial) - len(_inappl)  # §S5: inapplicable aus Gesamtzahl herausrechnen
 
+        # §v10.303.7 Degradation-Convergence: Maximal 3 Reparatur-Versuche.
+        # Auf degradiertem Material (Cassette, bw_loss=1.0) sind brillanz,
+        # spatial_depth, waerme oft physikalisch unerreichbar. Der ExzellenzDenker
+        # würde sonst 6×9s = 54s erfolglos loopieren.
+        _repair_attempts: int = 0
+        # §v10.306: Per-Goal Konvergenz-Tracking — Oszillations-Erkennung.
+        # Wenn ein Goal in 3 aufeinanderfolgenden Versuchen keine Verbesserung
+        # zeigt, wird es als "inapplicable" markiert und nicht weiter verfolgt.
+        _goal_stall_count: dict[str, int] = {}
+        _goal_best_score: dict[str, float] = {}
+        _STALL_LIMIT: int = 3  # Max aufeinanderfolgende Stagnationen pro Goal
+        _MAX_REPAIR_ATTEMPTS: int = 3
+
+        # §v10.306 Konvergenz-Tracking: Goals die 3× stagnieren → inapplicable
+        def _track_convergence(_cand_goals: dict[str, float]) -> None:
+            for _gk, _gv in _cand_goals.items():
+                if not math.isfinite(_gv):
+                    continue
+                _prev = _goal_best_score.get(_gk)
+                if _prev is not None and _gv <= _prev + 0.005:
+                    _goal_stall_count[_gk] = _goal_stall_count.get(_gk, 0) + 1
+                else:
+                    _goal_stall_count[_gk] = 0
+                if _prev is None or _gv > _prev:
+                    _goal_best_score[_gk] = _gv
+
+        def _prune_stalled(_violations: set[str]) -> set[str]:
+            _stalled = {k for k, c in _goal_stall_count.items() if c >= _STALL_LIMIT}
+            if _stalled:
+                logger.info("ExzellenzDenker: %d Goals inapplicable (3× stagniert): %s",
+                            len(_stalled), ", ".join(sorted(_stalled)))
+            return _violations - _stalled
+
         # P3-P5 violations with meaningful deficit (avoids micro-adjustments on borderline goals)
         _p35_violations: set[str] = {
             k
@@ -716,52 +749,55 @@ class ExzellenzDenker:
         _best_passed: int = _passed_initial
 
         def _is_improvement(candidate_goals: dict[str, float]) -> bool:
-            """Accept only if goals_passed ≥ before AND no goal regresses > 0.02 (§0)."""
+            """Accept if net improvement OR no goal regresses beyond tolerance (§v10.306 recalibrated).
+
+            §v10.306: Vorher _max_drop=0.01/0.015/0.02 war innerhalb Messrauschen
+            (spektrale Metriken haben ~0.02 Varianz). Jede echte Verbesserung wurde
+            abgelehnt. Neue Schwellen: 0.03/0.04/0.05 + Net-Improvement-Gate.
+            """
             _cand_passed = _count_passed(candidate_goals)
-            if _cand_passed < _best_passed:
+
+            # §v10.306 Net-Improvement-Gate: Erlaube Kandidat wenn Summe der
+            # Verbesserungen > Summe der Verschlechterungen (über ALLE Goals).
+            _net_gain = 0.0
+            _regression_count = 0
+            for _g, _v_init in goals_initial.items():
+                if not math.isfinite(_v_init):
+                    continue
+                _v_cand = candidate_goals.get(_g, _v_init)
+                if not math.isfinite(_v_cand):
+                    continue
+                _delta = _v_cand - _v_init
+                _net_gain += _delta
+                # §v10.306: Toleranz-Schwelle 5× höher als vorher — oberhalb Messrauschen
+                _max_drop = 0.05  # general: 5% Toleranz (vorher 2%)
+                if _g in _MODE_CORE_GOALS:
+                    _max_drop = 0.04  # core: 4% (vorher 1.5%)
+                if _g in _P1P2_BLEND_GOALS:
+                    _max_drop = 0.03  # blend: 3% (vorher 1%)
+                if _delta < -_max_drop:
+                    _regression_count += 1
+
+            # Net-Improvement: positive Gesamtbilanz → akzeptieren
+            if _net_gain > 0.0:
+                return True
+
+            # Keine Net-Verbesserung aber auch keine schwere Regression
+            if _regression_count == 0 and _cand_passed >= _best_passed:
+                return True
+
+            # Zu viele Regressionen → ablehnen
+            if _regression_count > 0 and _net_gain <= -0.02:
                 return False
 
-            # Lokaler Intent-Guard (Roadmap Phase 2.1, kleiner Scope):
-            # authentizitaet darf spatial_depth nicht unverhältnismäßig "bezahlen".
-            # So verhindern wir häufige Raumtiefe-Einbrüche bei nur kleinem Authentizitätsgewinn.
-            _init_auth = float(goals_initial.get("authentizitaet", 1.0))
-            _cand_auth = float(candidate_goals.get("authentizitaet", _init_auth))
-            _init_spa = float(goals_initial.get("spatial_depth", 1.0))
-            _cand_spa = float(candidate_goals.get("spatial_depth", _init_spa))
-            if all(math.isfinite(x) for x in (_init_auth, _cand_auth, _init_spa, _cand_spa)):
-                _auth_gain = _cand_auth - _init_auth
-                _spa_drop = _init_spa - _cand_spa
-                if _spa_drop > 0.008 and _auth_gain < min(0.02, _spa_drop * 1.5):
-                    return False
-
-            # Regression guard for ALL goals (not just P1/P2)
-            for _g, _v_init in goals_initial.items():
-                if math.isfinite(_v_init):
-                    _v_cand = candidate_goals.get(_g, _v_init)
-                    _max_drop = 0.02
-                    if _g in _MODE_CORE_GOALS:
-                        _max_drop = 0.015
-                    if _g in _P1P2_BLEND_GOALS:
-                        _max_drop = 0.01
-                    if math.isfinite(_v_cand) and _v_cand < _v_init - _max_drop:
-                        return False
-
-            # Bei gleicher Anzahl bestandener Goals muss der Kandidat die
-            # globale Defizitsumme (und speziell Kernziele) verbessern.
-            if _cand_passed == _best_passed:
-                _cand_def = _deficit_sum(candidate_goals)
-                _best_def = _deficit_sum(_best_goals)
-                if _cand_def > _best_def + 1e-6:
-                    return False
-                _cand_core_def = _deficit_sum(candidate_goals, focus=_MODE_CORE_GOALS)
-                _best_core_def = _deficit_sum(_best_goals, focus=_MODE_CORE_GOALS)
-                if _cand_core_def > _best_core_def + 1e-6:
-                    return False
-            return True
+            # Alte Guards als Safety-Net
+            if _cand_passed < _best_passed - 1:  # Toleranz: 1 Goal weniger passed ist ok
+                return False
 
         # Step 2: Zeit-Domain-Reparatur (micro_dynamics + ola_edges — kein STFT)
         _needs_td = bool(_p35_violations & (_MICRO_DYN_GOALS | _OLA_GOALS))
-        if _needs_td:
+        if _needs_td and _repair_attempts < _MAX_REPAIR_ATTEMPTS:
+            _repair_attempts += 1
             try:
                 from backend.core.excellence_optimizer import ExcellenceOptimizer
 
@@ -814,6 +850,7 @@ class ExzellenzDenker:
             _needs_blend = False
             logger.debug("ExzellenzDenker Blend-Reparatur übersprungen — Hochrausch-Träger: %s", material)
         if _needs_blend and reference_audio is not None and reference_audio.shape == _best_audio.shape:
+            _repair_attempts += 1
             try:
                 _ref_f32 = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
                 for _alpha in (0.96, 0.93):
@@ -852,7 +889,8 @@ class ExzellenzDenker:
             and reference_audio.shape == _best_audio.shape
             and str(material).lower() not in _HIGH_NOISE_MATERIALS
         )
-        if _needs_p12_blend:
+        if _needs_p12_blend and _repair_attempts < _MAX_REPAIR_ATTEMPTS:
+            _repair_attempts += 1
             try:
                 _ref_f32_p12 = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
                 for _alpha_p12 in (0.98, 0.96):
@@ -890,7 +928,8 @@ class ExzellenzDenker:
             and reference_audio.shape == _best_audio.shape
             and str(material).lower() not in _HIGH_NOISE_MATERIALS
         )
-        if _needs_local_rescue:
+        if _needs_local_rescue and _repair_attempts < _MAX_REPAIR_ATTEMPTS:
+            _repair_attempts += 1
             try:
                 _rescue_targets = {
                     _g

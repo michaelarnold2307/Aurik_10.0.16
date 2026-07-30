@@ -38,6 +38,22 @@
 - **Spectral Dynamic EQ (§2.10)**: Pro-FFT-Bin Soft-Knee, Soothe2-Niveau.
 - **Librosa pYIN Gender (§2.11)**: Voicing-Confidence + Contralto-Erkennung.
 
+### v10.303 Phase-0 ML-Pre-Processor (implementiert)
+
+- **Carrier-Chain-Inversion**: Apollo (Codec) → DeepFilterNet v3 (Noise) → Resemble Enhance (Spektrum). ML VOR DSP.
+- **Hallucination-Guard pro Stufe**: `spectral_novelty > threshold → Rollback`. Apollo=0.35, DFN=0.50, Resemble=0.40.
+- **Breath-Preservation**: DeepFilterNet läuft NUR außerhalb von BreathDetector-Segmenten (§2.8).
+- **Phase-0-Aware-Skips**: 12 redundante DSP-Phasen werden via `_should_skip_resolved_phase()` übersprungen.
+- **Goal-Recalibration**: Nach Phase 0 wird Goal-Baseline gegen Phase-0-Output gemessen, nicht gegen degradiertes Original.
+- **Precision-Phases**: Phase 40 (Loudness) + Phase 47 (True-Peak) umgehen Conductor/SongCal-Drossel.
+- **Watchdog-Referenz**: DoNoHarmGuardian prüft gegen Phase-0-Output, nicht degradiertes Original (§v10.303.25).
+- **Qualitäts-Baseline**: Nach Phase 0 wird `original_audio_for_goals` auf Phase-0-Referenz umgestellt (§v10.303.31).
+  Alle Post-Pipeline-Checks (Goals, Goosebumps, EmotionalArc, IAD, HPI, MUSHRA) vergleichen gegen
+  den ML-verbesserten Output — nicht gegen das physikalisch unerreichbare degradierte Original.
+- **Cache**: Hash-basierte Persistenz in `~/.aurik/cache/phase0/` für Batch-Imports (§v10.303.18).
+- **PLM-Lade-Reihenfolge**: DFN (34MB) → Apollo (67MB) → Resemble (722MB) — klein zu groß.
+- **MP3-resistente Gender-Detection**: `bandwidth_loss` an `_detect_gender_robust()` übergeben.
+
 ### v10 Roadmap (spezifiziert, nicht implementiert)
 
 | § | Konzept | Beschreibung |
@@ -77,6 +93,7 @@ Denker-Schicht (denker/*.py) [ZENTRALE ENTSCHEIDUNGSINTELLIGENZ]
   └─ ExzellenzDenker     — Musical Goals, Goal-Repair
   ↓
 UnifiedRestorerV3 (backend/core/unified_restorer_v3.py)
+  ├─ **Phase 0: Apollo→DFN→Resemble** (plugins/apollo_phase0_integration.py)
   ├─ SongCalibration     — global_scalar, family_scalars, ALLE Guards
   ├─ SectionStrengthEnvelope — kontinuierliche per-Segment-Hüllkurve
   ├─ Phase-Selektion     — Preservation Mode, Risk-Guard
@@ -109,10 +126,19 @@ mp3_low  (Physical)       → IQR-Guard, Bandbreiten-Cap, Pre-Echo-Schutz
 **Chain-Awareness über alle Detektoren hinweg:**
 
 - MediumDetector → physikalische Chain + `physical_analog_sources`
-- EraClassifier → `material_prior` als Precursor (nicht als Primary-Override)
-- DefectScanner → kettenadaptive Schwellwerte für ALLE 20 Defekttypen
+- EraClassifier → `material_prior` als Precursor, §v10.303.42 Deep-Chain-Korrektur (≥3 Träger → +10y/Stufe)
+- DefectScanner → kettenadaptive Schwellwerte für ALLE 20 Defekttypen + §v10.304 AST Defect-Music-Discriminator
 - SourceFidelityReconstructor → Bandbreiten-Ziel vom ältesten Träger
 - Phase-Selektion → `reel_tape`-Precursor aktiviert Phase 06 (Frequency Restoration)
+- LyricsGuidedEnhancement → §v10.303.50 HF-Whisper-Decoder (echte Wort-Transkription) + §v10.303.52 Semantic-DSP
+- CIG (CumulativeInteractionGuard) → §v10.304 GDD-Schwellen mit Material/Restorability/Chain-Depth-Context
+- AST AudioSet Classifier → §v10.304 zentraler 527-Klassen-Classifier, Goal-Mappings korrigiert
+- Strength-Floor-Gate → §v10.304.4 effective_strength < 0.15 → Phase skip („43→43" eliminiert)
+- AST-Transient-Guard → §v10.304.5 NR-Strength sinkt bei Instrument-Präsenz (Piano/Snare)
+- AST Pre-Filter → §v10.304.2 DefectScanner-Schwellen werden vor Scan angehoben
+- P5-Elimination → §v10.304.3 STFT-Längen-Drift in phase_29 + universell in guard_phase_output gefixt
+- Phase Contract Guard → §v10.304.3 Shape-Normalisierung für alle Phasen-Ausgaben
+- Genre-Adaptive Goals → §v10.304.7 6 Genres mit spezifischen Referenz-Indizes
 
 ## ✅ Qualitäts-Gating
 
@@ -191,5 +217,19 @@ Siehe `.github/VERBOTEN.md` — nicht verhandelbarer Sicherheits- & Qualitäts-K
   - `11_decision_intelligence.md` — Denker, SongCalibration, SectionEnvelope, Roadmap
   - `13_human_ear_quality.md` — Klangqualität fürs menschliche Ohr, Roadmap
   - `14_completeness_and_perfection.md` — Fehlertoleranz, Deterministik, Export, Batch-Lernen, Roadmap
+  - `v10.305_startup_integration_contract.md` — Startup-Sequenz, GPU-Detection, Unified Progress, Context-Aware Comm
+
+## 🖥️ Startup & Kommunikation (§v10.305)
+
+- **GPU-Detection im Hauptthread**: `get_ml_device_manager()` MUSS in `main.py` VOR `ModernMainWindow` aufgerufen werden. Kein `torch.zeros("cuda")` in der Erkennung.
+- **Warmup ohne GPU-Touch**: `warmup_models_background()` darf `get_ml_device_manager()` NICHT aufrufen. Singleton ist bereits initialisiert.
+- **Unified Progress**: `_sync_unified_progress()` ist die EINZIGE Methode, die `progress_bar.setValue()` und `phase_progress_bar.setValue()` aufruft. Fragmentierte Update-Pfade sind VERBOTEN.
+- **Kontextbewusste Kommunikation**: Jeder Importsong bekommt individuelle Status-Botschaften via `_build_context_status()`. Medium, Ära, Genre, Score fließen ein. Generische „Aurik arbeitet an {file}" ist nur Fallback.
+- **i18n-Pflicht**: Jeder benutzersichtbare String MUSS via `t()` internationalisiert sein. Hardcodierte Strings sind VERBOTEN (§G84).
+- **Cache-Safety**: Launcher mit `python3 -B` starten. `.pyc`-Caches können Source-Änderungen verschleiern.
+- **Lock-Disziplin**: `threading.Lock` DARF NICHT während `import`-Statements gehalten werden (§G72). Importe gehören VOR den Lock.
+- **Event-Garantie**: Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden (§G71).
+- **Plugin-Namen-Validierung**: Alle Zugriffsnamen in `warmup_models_background._plugins` MÜSSEN mit tatsächlichen Funktionen übereinstimmen (§G73).
+- **Watchdog-Selbsttest**: Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist (§G74).
 - Instruktionen: `.github/instructions/`
 - Copilot-Verhaltensrichtlinien: `.github/copilot-instructions.md`

@@ -33,9 +33,33 @@ import numpy.typing as npt
 
 logger = logging.getLogger(__name__)
 
-# §2.46e normative thresholds
-_ROLLBACK_THRESHOLD: float = 0.15  # spectral_novelty > this → rollback (Restoration)
-_PENALTY_THRESHOLD: float = 0.08  # spectral_novelty > this → score penalty -0.3
+# §2.46e normative thresholds (floors — may be raised by SFT adaptation)
+_ROLLBACK_THRESHOLD_FLOOR: float = 0.15  # spectral_novelty > this → rollback (Restoration)
+_PENALTY_FLOOR: float = 0.08  # spectral_novelty > this → score penalty -0.3
+
+
+def _get_adaptive_penalty_threshold() -> float:
+    """§v10.122 Penalty-Schwellwert skaliert mit dem adaptiven Rollback-Schwellwert.
+
+    Bei depth 4 (Rollback=0.40): Penalty = max(0.08, 0.40*0.5) = 0.20.
+    Verhindert Score-Penalties für legitime Carrier-Inversion-Neuheit.
+    """
+    return max(_PENALTY_FLOOR, _get_adaptive_rollback_threshold() * 0.5)
+
+
+def _get_adaptive_rollback_threshold() -> float:
+    """§v10.122 Liest den depth-adaptiven Schwellwert aus der SFT-Kalibrierung.
+
+    Der Wert wird von calibrate_sft_thresholds() pro Song gesetzt und
+    skaliert mit der Transfer-Chain-Tiefe (0.15 bei depth 1, 0.55 bei depth 5+).
+    Fallback auf 0.15 wenn die SFT-Kalibrierung nicht geladen werden kann.
+    """
+    try:
+        from backend.core.signal_flow_tracer import get_hallucination_guard_threshold
+
+        return max(_ROLLBACK_THRESHOLD_FLOOR, get_hallucination_guard_threshold())
+    except Exception:
+        return _ROLLBACK_THRESHOLD_FLOOR
 
 
 @dataclass
@@ -72,18 +96,23 @@ def check_hallucination(
     `backend.core.hallucination_guard.compute_spectral_novelty` and applies
     the normative threshold logic defined in §2.46e.
 
+    The rollback threshold is now depth-adaptive (§v10.122): the SFT
+    calibration sets a per-song base threshold (0.15 at depth 1,
+    0.55 at depth 5+) which is used as the floor.  Existing bandwidth
+    and BW-extension modifiers continue to raise the threshold further.
+
     Args:
         pre:   Audio array before the additive phase (mono float32).
         post:  Audio array after the additive phase (mono float32).
         sr:    Sample rate in Hz (must be 48 000 Hz in phase context).
-        mode:  Processing mode — "restoration" enforces hard rollback at 0.15;
+        mode:  Processing mode — "restoration" enforces hard rollback;
                "studio_2026" enforces MUSHRA check instead.
         material_bw_ceiling_hz: Physical BW ceiling of the carrier medium (Hz).
                If provided, energy growth above this frequency is checked for
                harmonic_ceiling_violation (> 8× increase = hard rollback).
         bw_extension_context: When True the phase intentionally adds new HF content
                as part of carrier-inverse BW restoration (AudioSR / NVSR). In this
-               case the rollback threshold is relaxed from 0.15 → 0.20, because new
+               case the rollback threshold is relaxed, because new
                spectral energy below the material ceiling is physically expected and
                not a hallucination. harmonic_ceiling_violation veto remains absolute.
 
@@ -121,6 +150,21 @@ def check_hallucination(
                     material_bw_ceiling_hz,
                     sr=sr,
                 )
+                # §v10.122 Depth-adaptive ceiling: tiefere Ketten haben niedrigeres
+                # BW-Ceiling → selbst kleine HF-Restauration triggert 8×-Schwelle.
+                # Skaliere die effektive Schwelle mit der Chain-Depth.
+                if harmonic_ceiling_violation:
+                    _hg_base = _get_adaptive_rollback_threshold()
+                    _ceiling_factor = _hg_base / _ROLLBACK_THRESHOLD_FLOOR  # 1.0–3.7
+                    _ceiling_ratio = float(ceiling_meta.get("ceiling_band_ratio", 999.0))
+                    if _ceiling_ratio < 8.0 * _ceiling_factor:
+                        harmonic_ceiling_violation = False
+                        logger.info(
+                            "§v10.122 Ceiling-Veto aufgehoben: ratio=%.1f < %.1f (depth-factor=%.2f)",
+                            _ceiling_ratio,
+                            8.0 * _ceiling_factor,
+                            _ceiling_factor,
+                        )
                 meta.update(ceiling_meta)
                 meta["bw_ceiling_hz"] = material_bw_ceiling_hz
                 meta["harmonic_ceiling_violation"] = harmonic_ceiling_violation
@@ -141,6 +185,9 @@ def check_hallucination(
     requires_rollback = False
     score_penalty = 0.0
 
+    # §v10.122 SFT-Integration: Depth-adaptiver Basis-Schwellwert statt hartem 0.15.
+    _base_rollback_threshold = _get_adaptive_rollback_threshold()
+
     # §2.46b Adaptive-Threshold: Je schmaler die Eingangs-Bandbreite,
     # desto mehr "neue" Spektralenergie ist legitime Restauration.
     _pre_bw = float(meta.get("pre_effective_bandwidth_hz", 20000.0) or 20000.0)
@@ -155,25 +202,26 @@ def check_hallucination(
         except Exception as _e:
             logger.debug("hallucination_guard: non-critical exception: %s", _e)
     if _pre_bw < 1000.0:
-        _ROLLBACK_THRESHOLD = 0.30
+        _base_rollback_threshold = max(_base_rollback_threshold, 0.30)
     elif _pre_bw < 4000.0:
-        _ROLLBACK_THRESHOLD = 0.20
+        _base_rollback_threshold = max(_base_rollback_threshold, 0.20)
 
     # BW-extension context: carrier-inverse HF restoration is expected to add new
     # spectral content below the material ceiling — raise rollback threshold.
     # harmonic_ceiling_violation (above-ceiling energy growth) veto remains absolute.
-    _effective_rollback_threshold = _ROLLBACK_THRESHOLD
+    _effective_rollback_threshold = _base_rollback_threshold
     if bw_extension_context:
         if material_bw_ceiling_hz is None:
             # Codec-Material ohne BW-Ceiling (mp3_low, mp3_high, aac, streaming):
             # HF-Rekonstruktion ist erwartete Carrier-Inversion des Codec-Verlustes —
             # AudioSR/NVSR synthetisiert Inhalt, der durch Encoder verworfen wurde.
-            # Kein Ceiling-Veto möglich → Schwellwert auf 0.50 anheben (§S2-brillanz-fix).
-            _effective_rollback_threshold = 0.50
+            # §v10.122: Skaliert mit depth-adaptivem Basis-Schwellwert (×2.5, min 0.50).
+            _effective_rollback_threshold = max(_base_rollback_threshold * 2.5, 0.50)
         else:
             # Analog-Material mit BW-Ceiling (Shellac, Vinyl, Kassette …):
-            # Moderater Anstieg auf 0.20 — Ceiling-Veto bleibt aktiv.
-            _effective_rollback_threshold = 0.20
+            # §v10.122: Skaliert mit depth-adaptivem Basis-Schwellwert (×1.5, min 0.20).
+            # Depth 4 (base=0.40) → 0.60 Toleranz für legitime HF-Restauration.
+            _effective_rollback_threshold = max(_base_rollback_threshold * 1.5, 0.20)
         meta["bw_extension_context"] = True
         meta["effective_rollback_threshold"] = _effective_rollback_threshold
 
@@ -197,12 +245,12 @@ def check_hallucination(
             "rollback" if requires_rollback else "penalty_only",
             score_penalty,
         )
-    elif spectral_novelty > _PENALTY_THRESHOLD:
+    elif spectral_novelty > _get_adaptive_penalty_threshold():
         score_penalty = 0.3
         logger.debug(
             "§2.46e HallucinationGuard: spectral_novelty=%.3f > %.2f → score_penalty=%.1f",
             spectral_novelty,
-            _PENALTY_THRESHOLD,
+            _get_adaptive_penalty_threshold(),
             score_penalty,
         )
 

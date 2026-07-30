@@ -174,6 +174,7 @@ class MusicalGoalsRadarWidget(QWidget):
         self._goals: list[GoalEntry] = copy.deepcopy(DEFAULT_GOALS)
         self._hovered_idx: int = -1
         self._has_data: bool = False  # False = vor erster Restaurierung
+        self._anim_scores: dict[str, float] = {}
 
         # Animation
         # inner imports were consolidated to module top to satisfy linters
@@ -288,6 +289,24 @@ class MusicalGoalsRadarWidget(QWidget):
         # Thin separator line
         painter.setPen(QPen(QColor(80, 100, 150, 60), 1))
         painter.drawLine(QPointF(self._PAD_X, self._PAD_TOP - 4), QPointF(w - self._PAD_X, self._PAD_TOP - 4))
+
+    @staticmethod
+    def _draw_icon(painter: QPainter, cx: float, cy: float, r: float, kind: str, col: QColor) -> None:
+        """Zeichnet ein kleines Icon (gefüllter Kreis) für die Legende."""
+        painter.setBrush(QBrush(col))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(QPointF(cx, cy), r, r)
+
+    def _row_y(self, idx: int) -> float:
+        """Y-Position einer Goal-Zeile."""
+        return float(self._PAD_TOP + idx * (self._ROW_H + self._ROW_GAP))
+
+    def _bar_rect(self, idx: int) -> QRectF:
+        """Rechteck für den Goal-Balken."""
+        y = self._row_y(idx)
+        bar_x = self._PAD_X + self._ICON_W + self._LABEL_W + 4
+        bar_w = self.width() - bar_x - self._PAD_X - self._SCORE_W - 4
+        return QRectF(bar_x, y, bar_w, self._ROW_H)
 
     def _draw_bars(self, painter: QPainter) -> None:
         """Zeichnet alle 15 Goal-Balken."""

@@ -40,8 +40,8 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
@@ -155,7 +155,10 @@ class DynamicRangeExpansion(PhaseInterface):
     )
 
     _BAND_NAMES: tuple[str, str, str, str] = (
-        "bass", "low_mid", "mid_high", "high",
+        "bass",
+        "low_mid",
+        "mid_high",
+        "high",
     )
 
     def __init__(self):
@@ -301,7 +304,10 @@ class DynamicRangeExpansion(PhaseInterface):
                 self._max_expansion_db_current = float(max(2.0, _old_max * _p10_factor))
                 logger.debug(
                     "P26: p10_per_band_gain_db=%s (total=%.1f dB) → max_expansion_db %.1f→%.1f",
-                    _p10_gain, _total_p10, _old_max, self._max_expansion_db_current,
+                    _p10_gain,
+                    _total_p10,
+                    _old_max,
+                    self._max_expansion_db_current,
                 )
 
         is_stereo = audio.ndim == 2
@@ -403,15 +409,10 @@ class DynamicRangeExpansion(PhaseInterface):
         config["downward_floor_db_per_band"] = list(self._CD_PER_BAND_FLOOR_DB)
         config["downward_floor_knee_db"] = 4.0
         try:
-            _mono_for_nf = (
-                audio if audio.ndim == 1 else audio.mean(axis=0).astype(np.float64)
-            )
-            _current_nf_db = self._estimate_noise_floor_mono(
-                _mono_for_nf, sample_rate
-            )
+            _mono_for_nf = audio if audio.ndim == 1 else audio.mean(axis=0).astype(np.float64)
+            _current_nf_db = self._estimate_noise_floor_mono(_mono_for_nf, sample_rate)
             logger.debug(
-                "Phase 26: NF_current=%.1fdB → per-band CD floors=%s, "
-                "downward_thresh=%.1fdB (mode)",
+                "Phase 26: NF_current=%.1fdB → per-band CD floors=%s, downward_thresh=%.1fdB (mode)",
                 _current_nf_db,
                 [f"{f:.0f}" for f in self._CD_PER_BAND_FLOOR_DB],
                 config.get("downward_threshold_db", -50.0),
@@ -516,6 +517,7 @@ class DynamicRangeExpansion(PhaseInterface):
                 _mono_26.astype(np.float32),
                 sr=sample_rate,
                 mode="restoration" if "studio" not in _mode_26 else "studio_2026",
+                bw_extension_context=True,
             )
             if _hg_result26.requires_rollback:
                 logger.warning(
@@ -619,7 +621,10 @@ class DynamicRangeExpansion(PhaseInterface):
         return [low, mid_low, mid_high, high]
 
     def _expand_band(
-        self, band: np.ndarray, sample_rate: int, config: dict[str, float],
+        self,
+        band: np.ndarray,
+        sample_rate: int,
+        config: dict[str, float],
         band_idx: int = 0,
     ) -> np.ndarray:
         """
@@ -826,9 +831,7 @@ class DynamicRangeExpansion(PhaseInterface):
 
         return float(dr_db)
 
-    def _estimate_noise_floor_mono(
-        self, mono: np.ndarray, sr: int
-    ) -> float:
+    def _estimate_noise_floor_mono(self, mono: np.ndarray, sr: int) -> float:
         """§v10.61 Schätzt Rauschboden aus 5. Perzentil der Frame-RMS [dBFS].
 
         Liefert den aktuellen Noise-Floor für die CD-Target-Koordination
@@ -841,9 +844,7 @@ class DynamicRangeExpansion(PhaseInterface):
             n_frames = max(1, len(mono) // frame_len)
             if n_frames < 8:
                 return -40.0  # zu kurz für Schätzung
-            frames = np.reshape(
-                mono[: n_frames * frame_len], (n_frames, frame_len)
-            )
+            frames = np.reshape(mono[: n_frames * frame_len], (n_frames, frame_len))
             rms = np.sqrt(np.mean(frames.astype(np.float64) ** 2, axis=1) + 1e-15)
             noise_floor_rms = float(np.percentile(rms, 5))
             return float(20.0 * np.log10(max(noise_floor_rms, 1e-12)))

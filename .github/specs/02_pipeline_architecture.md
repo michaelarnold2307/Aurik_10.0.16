@@ -15,6 +15,23 @@
 
 ---
 
+## §v10.303 Phase-0 ML-Pre-Processor (implementiert 2026-07-28)
+
+> **ML vor DSP:** Apollo (Codec-Decompression) → DeepFilterNet v3 (Noise-Floor) →
+> Resemble Enhance (Spektrale Reparatur). Wissenschaftliche Reihenfolge gemäß
+> Carrier-Chain-Inversion (§2.46). 12 redundante DSP-Phasen werden automatisch
+> übersprungen. Goal-Baseline wird nach Phase 0 neu kalibriert.
+>
+> **Referenzrahmen-Verschiebung (§v10.303.31):** Nach Phase 0 wird die
+> Qualitäts-Baseline (`original_audio_for_goals`) von degradiertem Original auf
+> Phase-0-Output umgestellt. Alle Post-Pipeline-Prüfungen (Goals, Goosebumps,
+> EmotionalArc, IAD, HPI) messen gegen das realistisch Erreichbare.
+>
+> Siehe `.github/specs/v10.303.17_phase0_architecture.md` für die vollständige
+> Architektur-Dokumentation.
+
+---
+
 ## §1.4 Restaurierungs-Modi
 
 | Modus | Ziel | Charakteristik |

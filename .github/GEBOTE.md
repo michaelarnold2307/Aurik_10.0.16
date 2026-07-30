@@ -14,7 +14,7 @@
 Jeder importierte Song wird individuell maximal für das menschliche Ohr verbessert.
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G1 | **Pro-Song-Kalibrierung** | Jeder Song durchläuft eine vollständige, isolierte SongCalibration (global_scalar, family_scalars, ALLE Guards). Kein Parameter aus einem vorherigen Song darf ungeprüft übernommen werden. |
 | §G2 | **Defekt-Vollständigkeit** | Alle 62 DefectTypes werden pro Song gescannt. Defekte werden über die gesamte Songdauer präzise behoben – nicht nur an Stichproben/Checkpoints. |
 | §G3 | **Gesangsintegrität** | Gesang darf NIE verzerrt, verschliffen oder mit Artefakten (Ghost-Echo, Phasing) versehen werden. Der Vocal-Safety-Wrapper muss in jeder Phase aktiv sein, die Frequenzen zwischen 80 Hz und 8 kHz bearbeitet. |
@@ -28,7 +28,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 ## Kategorie II — Psychoakustik & Natürlichkeit (§G10–§G19)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G10 | **ERB-Masking-First** | Jede spektrale Entscheidung muss das ERB-Masking-Modell (Equivalent Rectangular Bandwidth) konsultieren. Kein Gain, kein Filter, kein Dither ohne Masking-Check. |
 | §G11 | **Natürlicher Wohlklang** | Das Ziel jedes Processing-Schritts ist der Wohlklang für das menschliche Ohr – nicht mathematische Optimalität. Eine Verschlechterung des PQS-MOS < 3.0 löst Rollback aus. |
 | §G12 | **Lautheitskonsistenz** | LUFS-integrated nach EBU R128. Restoration-Ziel: −23 LUFS. Studio-2026-Ziel: −14 LUFS. Kein Hard-Limit ohne ISP-geschützten True-Peak-Limiter. |
@@ -43,7 +43,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 ## Kategorie III — Architektur & Datenfluss (§G20–§G29)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G20 | **Bridge-Bypass-Verbot** | Kein UI-/Frontend-Code importiert `backend/core/` direkt. Nur über `backend/api/bridge.py`. |
 | §G21 | **Denker-Zentralität** | Alle Stärke-Entscheidungen fließen zentral im Denker. Keine dezentralen "Magic Numbers" in Phasen. |
 | §G22 | **Determinismus** | Derselbe Input → derselbe Output. Jeder Zufallsgenerator wird mit fixem Seed aus dem Datei-Hash initialisiert. |
@@ -58,7 +58,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 ## Kategorie IV — CD-Rauschprofil & Export (§G30–§G39)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G30 | **L/R-Unkorreliertheit** | Das Rauschsignal für linken und rechten Kanal MUSS statistisch unabhängig (unkorreliert) sein. Korreliertes Rauschen erzeugt ein hörbares Mono-Rauschzentrum in der Stereomitte — das klingt unnatürlich und ist für CD-Wiedergabe untypisch. |
 | §G31 | **Maskierungs-Kanten-Glättung** | An Übergängen zwischen maskierten und unmaskierten Zeit-Frequenz-Regionen MUSS ein 500 ms Cosine-Fade-In/Out erfolgen. Abrupte Rauschpegel-Änderungen sind als "Pumpen" hörbar und verletzen §V1, §V2. |
 | §G32 | **ML-Device-Detection** | `next(model.parameters()).device` statt `model.device`. Letzteres ist nach partiellen `.cpu()`/`.to()`-Aufrufen auf Sub-Modulen unzuverlässig und verursacht NaN-Werte auf ROCm. |
@@ -73,7 +73,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 ## Kategorie V — Rauschprofil-Zeitpunkt & Übergänge (§G40–§G45)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G40 | **Rauschprofil-Zeitpunkt** | Das CD-Rauschprofil wird NACH allen 68 Restaurierungsphasen und VOR dem Dithering appliziert. Dies ist wissenschaftlich der optimale Zeitpunkt: Wird Rauschen früher injiziert, wird es von nachfolgenden Phasen (Denoising, Kompression, EQ) verändert oder verstärkt. Nach der Pipeline ist das Signal stabil und das Rauschen bleibt unverfälscht. |
 | §G41 | **Übergangs-Verifikation** | Jeder Übergang zwischen Rauschen und Stille/Musik MUSS verifiziert werden: Die Onset-Stärke (spectral-flux-basiert) darf 0.1 nicht überschreiten. Überschreitung → automatische Verbreiterung des Crossfades auf 500 ms und erneute Prüfung. |
 | §G42 | **CD-Produktions-Kohärenz** | Die komplette Export-Kette (Rauschprofil → Dither → Metadaten) MUSS ein Ergebnis liefern, das für einen geschulten Hörer von einer CD-Produktion (1982–2000) nicht unterscheidbar ist. A/B-Blindtest als Validierung. |
@@ -86,7 +86,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 ## VERBOTE — Katalog absoluter Verbote (§V1–§V24)
 
 | ID | Verbot | Beschreibung |
-|----|--------|-------------|
+| ---- | -------- | ------------- |
 | §V1 | **Gesangsverzerrung** | Es ist VERBOTEN, Gesang zu verzerren, zu verschleifen, zu robotisieren oder mit Vocoder-artigen Artefakten zu versehen. |
 | §V2 | **Ghost-Echo** | Es ist VERBOTEN, hörbare Echos, Pre-Echos oder Phasing-Artefakte in das restaurierte Signal einzutragen. |
 | §V3 | **Hard-Clamp auf Audio** | Es ist VERBOTEN, einen Hard-Clamp (`np.clip(audio, -1, 1)`) ohne Soft-Knee-Übergang (6 dB) auf das finale Audio anzuwenden. |
@@ -159,7 +159,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 ## Kategorie VI — Metriken & Qualitätssicherung (§G46–§G59)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G46 | **Harmonic Preservation Score** | HNR-basierte Metrik. Detektiert Obertonschäden durch Überglättung. |
 | §G47 | **Transient Preservation Score** | Crest-Faktor + Onset-Positionsabgleich. Detektiert Transienten-Verschleifung. |
 | §G48 | **Formant Preservation Score** | Cepstrale Hüllkurvendistanz. Detektiert Vokalcharakter-Änderungen. |
@@ -183,7 +183,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 > 13 Commits, 8 Root Causes identifiziert und behoben.
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G60 | **STCG Multi-Point-Primär** | STCG MUSS Multi-Point-GCC-PHAT (≥3 Song-Positionen, Median) als PRIMÄRE Messmethode verwenden. Single-Mid-Window nur als Fallback bei Audio < 30s. |
 | §G61 | **Chunk-Phasen-STCG-Pflicht** | Jede Chunk-basierte Phase (Phase 12, Phase 24 u.a.) MUSS für Lag-Erkennung und -Korrektur den zentralen STCG verwenden. Eigene Korrelations-Implementierungen (signal.correlate) sind VERBOTEN (§V27). |
 | §G62 | **Sub-Sample-Lag-Korrektur** | Lag-Korrektur MUSS `scipy.ndimage.shift` (cubic spline, Sub-Sample-Präzision) oder STCG direkt verwenden. `np.roll` (zirkulär), `np.concatenate` (ganzzahlig), und Audio-Trunkierung sind VERBOTEN (§V32). |
@@ -196,7 +196,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 ## Kategorie VIII — Neue VERBOTE Stereo-Lag (§V27–§V33)
 
 | ID | Verbot | Beschreibung |
-|----|--------|-------------|
+| ---- | -------- | ------------- |
 | §V27 | **Kein signal.correlate für Lag** | Es ist VERBOTEN, `scipy.signal.correlate` (Standard-Kreuzkorrelation ohne PHAT-Whitening) für Stereo-Lag-Messung zu verwenden. Nur GCC-PHAT (via STCG) ist statthaft. |
 | §V28 | **Kein begrenzter Lag-Suchraum** | Es ist VERBOTEN, den Lag-Suchraum für Stereo-Messungen auf < ±200ms (±9600 samples @48kHz) zu begrenzen. Kleinere Limits (z.B. 960 samples = 20ms) verfehlen echte Kanalversätze. |
 | §V29 | **Keine konkurrierenden Lag-Korrekturen** | Es ist VERBOTEN, nach erfolgreicher STCG-Korrektur eine zweite Lag-"Korrektur" durchzuführen. Der Onset-Energy-Fallback in `_preserve_phase_loudness` ist NUR bei STCG-Exception aktiv. |
@@ -208,7 +208,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 ## Kategorie IX — SFT-Adaptivität & Defekt-Audibilität (§G68–§G75)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G68 | **SFT-Novelty-Schwelle adaptiv pro Song** | Die NOVELTY_CRIT-Schwelle MUSS pro Song aus Transfer-Chain-Tiefe und Restorability-Tier kalibriert werden (§v10.40). Statische Schwellen sind VERBOTEN — ein fair-quality Kassette-Song mit 4-stufiger Kette hat fundamental andere Neuheits-Erwartungen als ein excellent Studio-Master mit 1-stufiger Kette. |
 | §G69 | **Defekt-Reparatur-Phasen-Klassifikation** | Jede Phase, die Defekte füllt/ersetzt/repariert (nicht nur entfernt), MUSS als Repair-Phase klassifiziert sein. Die Klassifikation steuert SFT-Wet-Minimum und Strength-Floor. Folgende Phasen sind MINDESTENS Repair: 01, 02, 09, 12, 23, 24, 27, 50, 56, 60, 61, 64. |
 | §G70 | **SFT-Prioritätskette: Zerstörung vor Neuheit** | Die SFT-ArtifactRescue MUSS in dieser Reihenfolge prüfen: LEVEL_COLLAPSE (wet=0.0) → ECHO_ARTIFACT (wet=0.30) → PEGELEXPLOSION_CRIT (wet=0.22) → NOVELTY_CRIT (adaptiv). LEVEL_COLLAPSE hat ABSOLUTEN Vorrang — zerstörtes Audio darf NIEMALS in die Pipeline getragen werden. |
@@ -221,7 +221,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 ## Kategorie X — Kalibrierungs-Dispatch: Zentrales Nervensystem (§G76–§G81)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G76 | **Zentraler Kalibrierungs-Kontext** | Es MUSS einen einzigen, zentralen `CalibrationContext` geben, der ALLE Pre-Analysis-Messwerte (restorability_score, transfer_chain_depth, material_type, SNR, bandwidth, era_decade, genre, vocal_confidence) in EINEM Objekt bündelt. JEDES Modul, das einen Schwellwert benötigt, MUSS diesen Kontext als Quelle verwenden — NIE eine eigene Konstante. |
 | §G77 | **Kontinuierliche Ableitung** | JEDER Schwellwert MUSS über eine kontinuierliche Funktion aus dem CalibrationContext abgeleitet werden. Die Funktion MUSS für jeden kontinuierlichen Eingabewert einen kontinuierlichen Ausgabewert liefern. Es ist VERBOTEN, diskrete Buckets (`if x > 0.4: ... elif x > 0.25: ...`) oder Lookup-Tabellen (`{1:0.25, 2:0.35}`) zu verwenden. |
 | §G78 | **Vollständigkeit der Kalibrierung** | ALLE Schwellwerte, Caps, Floors und Blend-Faktoren in der gesamten Pipeline MÜSSEN kalibriert sein. Kein Parameter darf auf einem nicht aus dem CalibrationContext abgeleiteten Default verharren. Ausnahme: Physikalische Konstanten (z.B. −60 dBFS = digital black, −0.3 dBTP = ITU-R BS.1770 Ceiling). |
@@ -234,37 +234,64 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 > **Prämisse:** Die Pre-Pipeline-Kalibrierung basiert auf Messwerten des DEGRADIERTEN Eingangssignals. Während der Pipeline verbessert sich das Audio jedoch — SNR steigt, Bandbreite wächst, Defekte verschwinden. Eine Kalibrierung, die nach Phase 03 (denoise) noch mit dem ursprünglichen SNR rechnet, ist FALSCH. Die Pipeline MUSS ihre Sicherheitsparameter kontinuierlich an den verbesserten Audio-Zustand anpassen.
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G82 | **Lebendiger CalibrationContext** | Der CalibrationContext ist NICHT statisch. Nach JEDER Phase MUSS Aurik prüfen, ob sich die für die Kalibrierung relevanten Messwerte (SNR, Bandbreite, Noise-Floor, Stereo-Kohärenz) signifikant geändert haben. Bei Änderung > Schwellwert MUSS der CalibrationContext aktualisiert und ALLE davon abhängigen Parameter neu berechnet werden. |
 | §G83 | **NOVELTY_CRIT-Rekalibrierung** | Die NOVELTY_CRIT-Schwelle MUSS nach jeder signifikanten Audio-Verbesserung (SNR +3 dB, Bandbreite +1 kHz) NEU berechnet werden. Ein saubereres Signal rechtfertigt eine NIEDRIGERE Toleranz — was vorher „erwartete Neuheit" war, ist jetzt „verdächtige Veränderung". Die Formel bleibt dieselbe (§v10.41), aber die Eingabewerte (insbesondere restorability_score und effektive Bandbreite) sind die AKTUELLEN, nicht die initialen. |
 | §G84 | **Phasen-Stärke-Drift-Korrektur** | Die Joint-Calibration berechnet Phasen-Stärken aus Goal-Gaps. Nach jeder Phase ändern sich die Goal-Proxies. Die Stärken der VERBLEIBENDEN Phasen MÜSSEN aus den AKTUELLEN Goal-Gaps neu berechnet werden — nicht aus den initialen. Der MidCalibrate-Mechanismus (33%/66%) ist ein MINIMUM — kritische Parameter (NOVELTY_CRIT, ECHO_THRESH) müssen nach JEDER Phase geprüft werden. |
 | §G85 | **Rekalibrierungs-Audit** | Jede Rekalibrierung MUSS im Log dokumentiert werden: `"§RECALIB phase=%s: rs %.1f→%.1f SNR %.1f→%.1f dB → NOVELTY_CRIT %.3f→%.3f"`. Dies macht sichtbar, WIE sich Auriks Sicherheitsparameter während der Pipeline an das zunehmend sauberere Audio anpassen. |
 | §G86 | **Monotonie-Garantie** | Die NOVELTY_CRIT-Schwelle darf während der Pipeline NUR sinken (konservativer werden) oder gleich bleiben — NIE steigen. Ein saubereres Signal rechtfertigt keine LASCHERE Toleranz. Die Monotonie MUSS im CalibrationContext erzwungen werden: `_NOVELTY_CRIT = min(current_calculation, previous_value)`. |
 
+## Kategorie XI-b — Maschinelle Durchsetzung (§G122–§G124)
+
+> **Prämisse:** Die GEBOTE der Kategorien X und XI formulieren architektonische Wahrheiten. Aber ohne maschinelle Durchsetzung sind sie Appelle. Jeder Default-Parameter `transfer_chain_depth: int = 1` ist eine Verletzung von §G76 und §G78, die darauf wartet, bei der nächsten Refaktorierung stillschweigend zuzuschlagen (§v10.131).
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G122 | **CalibrationContext-Dataclass** | Es MUSS eine einzige, zentrale `CalibrationContext`-Dataclass in `backend/core/calibration_context.py` geben, die ALLE Pre-Analysis-Messwerte als Felder deklariert. JEDE Funktion, die einen Schwellwert berechnet, MUSS einen `CalibrationContext` (oder die benötigten Einzelfelder daraus) als explizites Argument erhalten. Der Default `=1` für `transfer_chain_depth` ist AUSSCHLIESSLICH in dieser Dataclass erlaubt (§G76, §G78). |
+| §G123 | **Linter-Baseline** | Ein automatisierter Test (`test_calibration_context_linter.py`) MUSS den gesamten Code auf verbotene Default-Parameter (`transfer_chain_depth: int = 1`) scannen und gegen eine Baseline-Datei abgleichen. NEUE Verstöße (nicht in der Baseline) lassen den Test FEHLSCHLAGEN. Die Baseline wird bei bewusster Schuldenreduktion aktualisiert. Dies verhindert, dass der nächste Refactor denselben Fehler neu einführt. |
+| §G124 | **Cross-Depth-Validierung** | Ein parametrisierter Test (`test_cross_depth_validation.py`) MUSS für JEDE Chain-Depth (1–5) und JEDES Material validieren, dass ALLE depth-abhängigen Schwellwerte (GDD, artifact_freedom, REGRESSION_THRESHOLD) physikalisch plausible, monotone Werte liefern. Keine Depth-Stufe darf eine LASCHERE Toleranz haben als die vorherige. Der Test MUSS nach jeder Änderung an chain_factor-Formeln ausgeführt werden. |
+| §G125 | **Kalibrierte Konstanten** | ALLE Schwellwerte, Caps, Floors und Blend-Faktoren MÜSSEN in `calibrated_constants.py` als Properties der `CalibratedConstants`-Klasse definiert sein. JEDE Property MUSS ihren Wert AUSSCHLIESSLICH aus dem übergebenen `CalibrationContext` ableiten. Numerische Literale sind NUR in dieser Datei erlaubt. Module importieren `get_constants(ctx)` statt eigene Konstanten zu definieren. |
+| §G126 | **Blindtest-Pflicht** | JEDE Änderung an einer chain_factor-Formel oder einem depth-abhängigen Schwellwert MUSS durch einen automatisierten Blindtest (`blindtest_framework.py`) validiert werden. Der Test MUSS zeigen, dass die neue Formel auf synthetisch degradiertem Material eine messbare Verbesserung (PESQ ≥ 0.05 Zuwachs) gegenüber der alten Formel erzielt. Ohne diesen Nachweis darf die Formel nicht geändert werden. |
+
 ## Kategorie XII — Noise-Floor-Brücke Phase_03→Phase_26 (§G87)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G87 | **Phase_26 Per-Band-Noise-Floor-Guard** | Phase_26 (DR-Expansion) MUSS die Lücke zwischen Phase_03 (Denoise) und dem finalen CD-Rauschprofil schließen. Die Downward-Expansion wird durch einen dreidimensionalen Guard kontrolliert: **(D1) Per-Band spektrale Floor-Targets**: Jedes der 4 Frequenzbänder hat einen eigenen Studio-Raumton — Bass −65 dBFS (Raumresonanz), Low-Mid −72 dBFS (Wärme), Mid-High −76 dBFS (Präsenz), High −70 dBFS (Luft). **(D2) Psychoakustische Maskierung**: Der Floor wird adaptiv um +8/+5/+2/0 dB relaxiert, wenn die Band-Energie > −20/−30/−40 dBFS beträgt — laute Bänder maskieren ihren eigenen Rauschboden, leise exponierte Bänder sind streng. **(D3) Temporale EMA-Glättung**: Floor-Anstieg (Entspannung) folgt mit α=0.15 (Attack ~50ms), Floor-Abfall (Verschärfung) mit α=0.05 (Release ~200ms). Kein Hard-Clamp — der Floor-Approach ist asymptotisch (correction = deficit × exp(−deficit/knee), knee=4 dB). Ergebnis: klingt nach Neuaufnahme, nicht nach Vinyl mit aufgezwungener CD-Stille. |
 
 ## Kategorie XIII — Defektbehebungs-Module auf höchster Qualitätsstufe (§G88)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
-| §G88 | **Defektbehebung mit Depth-adaptiven DSP-Fallbacks** | Die vier Defektbehebungs-Module MÜSSEN bei transfer_depth≥3 und/oder unsicherer Gender-Detektion robuste, konservative DSP-Fallbacks verwenden — NIEMALS ungeprüfte ML-Inferenz auf degradierten Ketten oder gender-spezifische Annahmen ohne Fallback. **(1) Phase_07 Harmonic Restoration**: Tilt-Cap-Floor von 0.50 auf 0.35 absenken bei depth≥3 (§v10.60). Mehr harmonische Synthese durchlassen, da tiefe Ketten extreme Tilt-Abweichungen ohnehin erwarten. **(2) Phase_23 Spectral Repair**: FlashSR ML deaktivieren bei depth≥3 (§v10.60). ML halluciniert Frequenzen auf bereits 3× degradiertem Material. DSP-only spectral inpainting (PGHI + Wiener + NMF) ist robuster. **(3) Phase_19 De-Esser**: Bei Gender="unknown"/"" freq-agnostisches Band [4500–8000 Hz] statt gender-spezifischem Band (§v10.60). Verhindert Fehlklassifikation von männlichen Stimmen als weiblich (und umgekehrt) mit konsekutiver Über-/Unterbearbeitung. **(4) Phase_43 ML-DeEsser**: GENDER_FREQ_MAP["unknown"] = (5000, 9000 Hz) als konservativer Fallback (§v10.60). Breiteres, tieferes Band als gender-spezifische Bänder — fängt Sibilanz sicher ein, vermeidet aber Überbearbeitung. |
+| ---- | ------- | ------------- |
+| §G88 | **Defektbehebung mit Depth-adaptiven DSP-Fallbacks** | Die vier Defektbehebungs-Module MÜSSEN bei transfer_depth≥5 (extreme chain, §v10.120) und/oder unsicherer Gender-Detektion robuste, konservative DSP-Fallbacks verwenden — NIEMALS ungeprüfte ML-Inferenz auf extrem degradierten Ketten oder gender-spezifische Annahmen ohne Fallback. **(1) Phase_07 Harmonic Restoration**: Tilt-Cap-Floor von 0.50 auf 0.35 absenken bei depth≥5 (§v10.60, §v10.120). Mehr harmonische Synthese durchlassen, da extreme Ketten extreme Tilt-Abweichungen ohnehin erwarten. **(2) Phase_23 Spectral Repair**: FlashSR ML deaktivieren bei depth≥5 (§v10.60, §v10.120). ML halluciniert Frequenzen auf bereits 5× degradiertem Material. DSP-only spectral inpainting (PGHI + Wiener + NMF) ist robuster. Depth 4 (deep cassette, Novelty 0.55) bekommt volle ML-Repair. **(3) Phase_19 De-Esser**: Bei Gender="unknown"/"" freq-agnostisches Band [4500–8000 Hz] statt gender-spezifischem Band (§v10.60). Verhindert Fehlklassifikation von männlichen Stimmen als weiblich (und umgekehrt) mit konsekutiver Über-/Unterbearbeitung. **(4) Phase_43 ML-DeEsser**: GENDER_FREQ_MAP["unknown"] = (5000, 9000 Hz) als konservativer Fallback (§v10.60). Breiteres, tieferes Band als gender-spezifische Bänder — fängt Sibilanz sicher ein, vermeidet aber Überbearbeitung. |
 
 ## Kategorie XIV — Unsichtbare Signalintegrität (§G89)
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G89 | **Soft-Clipping-Pflicht für alle 68 Phasen** | Jede Phase MUSS ihre Ausgabe via `apply_soft_clip()` (tanh-basiert, material-adaptiv) statt `np.clip(audio, -1.0, 1.0)` begrenzen (§v10.62). Hard-Clipping auf ±1.0 erzeugt ein Rechteck-Fenster im Zeitbereich → sinc-Spektrum mit hörbaren Obertönen bis Nyquist. Tanh-Soft-Clipping erzeugt nur ungerade Harmonische, die das Ohr als „analoge Sättigung" statt „digitalen Clip" wahrnimmt. Die zentrale Durchsetzung erfolgt in `PhaseResult.__post_init__` und `create_phase_result()` — damit sind alle Phasen-Ausgaben automatisch geschützt. Material-adaptive Knee: Shellac/Vinyl 1.2 dB, Tape/Cassette 0.8 dB, Digital 0.4 dB. |
+
+## Kategorie XVIII — Startup-Integration & Kommunikation (§G71–§G80 spec_constitution, §v10.305)
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §SC-G71 | **Event-Garantie** | Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden. Kein Codepfad darf das Event ungesetzt lassen. Betrifft: `_detection_complete` in `MLDeviceManager.__init__`. |
+| §SC-G72 | **Lock-freie Importe** | `threading.Lock` DARF NICHT während `import`-Statements gehalten werden. Importe dauern 5–10s (pkg_resources, webrtcvad). Währenddessen sind alle anderen Lock-Warter blockiert. Betrifft: `try_allocate` in `ml_memory_budget.py`. |
+| §SC-G73 | **Plugin-Namen-Validierung** | Jeder Zugriffsname in `warmup_models_background._plugins` MUSS mit einer tatsächlichen Funktion im Zielmodul übereinstimmen. `_failed > 0` nach Warmup MUSS ein `logger.warning` auslösen. Betrifft: `bridge.py`. |
+| §SC-G74 | **Watchdog-Selbsttest** | Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist. `getattr(self, "_preanalysis_pending", False)` muss auf `self` gesetzt sein. Betrifft: `_preanalysis_liveness_check`. |
+| §SC-G75 | **Cache-Safety** | Launcher MUSS mit `python3 -B` starten. `.pyc`-Caches können nach Source-Änderungen veralteten Code ausführen. Betrifft: `main.py`, Shell-Launcher. |
+| §SC-G76 | **Happy-Path-Gate** | Mindestens ein Codepfad MUSS die Analyse-Labels (`detected_medium_label`, `restorability_banner`, `mode_recommendation_label`) setzen. Jeder Guard, der einen Pfad verwirft, MUSS ein `logger.warning` ausgeben. Betrifft: `_update_all`. |
+| §SC-G77 | **Startup-Smoke-Test** | Ein schneller (<60s) Test MUSS GPU-Erkennung, Warmup und Pre-Analysis prüfen. Betrifft: `tests/test_startup_smoke.py` (6 Assertions). |
+| §SC-G78 | **Import-Check** | Jedes Modul MUSS alle verwendeten Standard-Imports haben. `ruff F821` (undefined name) ist Null-Toleranz. Betrifft: `ml_device_manager.py` (`import os` fehlte). |
+| §SC-G79 | **GPU-Detection Safety** | GPU-Erkennung DARF KEINE blockierenden Operationen ausführen. `torch.zeros(device="cuda")` ist VERBOTEN. Nur Properties: `is_available()`, `version.hip`, `get_device_properties()`. Betrifft: `ml_device_manager.py._detect_cuda_or_rocm`. |
+| §SC-G80 | **Unified Progress** | Beide Fortschrittsbalken MÜSSEN aus derselben Methode (`_sync_unified_progress()`) aktualisiert werden. Fragmentierte Update-Pfade sind VERBOTEN. Defekt-Counts in Chips alle ~800ms refreshen. Betrifft: `_tick_heartbeat`. |
 
 ---
 
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
-|---------|-------|----------|
+| --------- | ------- | ---------- |
 | 10.0.13 | 2026-08-03 | §G89: Soft-Clipping-Pflicht für alle 68 Phasen (§v10.62). `apply_soft_clip()` + `crossfade_to_bypass()` in audio_utils.py. Kategorie XIV. |
 | 10.0.12 | 2026-08-03 | §G88: Defektbehebungs-Module (Phase_07/19/23/43) mit Depth-adaptiven DSP-Fallbacks. Kategorie XIII. |
 | 10.0.11 | 2026-08-03 | §G87: Phase_26 Per-Band-Noise-Floor-Guard (D1–D3). Schließt Phase_03→Phase_26 Noise-Floor-Lücke. Kategorie XII. |
@@ -283,7 +310,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 > **Prämisse:** Die vier unabhängigen Root-Causes für „43→43" (keine messbare Qualitätsverbesserung) sind identifiziert und behoben. Diese Kategorie kodifiziert die architektonischen Garantien, die verhindern, dass Aurik jemals wieder gegen den defekten Input vergleicht, Exception-Schlucker ohne Logging verwendet oder Phasen ohne Cross-Phase-Koordination laufen.
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G90 | **Blinder-Referenz-Vektor-Pflicht** | Der HPI MUSS einen blinden Referenz-Vektor (Mel-Embedding des saubersten 5s-Fensters via BlindInternalReference) als timbral_ref verwenden, wenn der GP-Memory keinen Referenz-Vektor für die aktuelle Genre×Material×Ära-Kombination hat. Es ist VERBOTEN, `reference_audio=None` still auf `original` (degraded_input) zurückfallen zu lassen, ohne mindestens den blinden Vektor versucht zu haben. (§v10.91, `holistic_perceptual_gate.py:_compute_blind_reference_vector`) |
 | §G91 | **Embedding-basierte-Referenz-Pflicht** | Audio-Referenzen für den HPI-Vergleich MÜSSEN als Embedding-Vektoren verwendet werden, NICHT als direkte Audio-Samples. Ein 5s-Audio-Slice als Vergleichsreferenz erzeugt Shape-Mismatch mit dem vollständigen restaurierten Audio (3–5 Min) → falsche Mel-Cosinus-Werte und Spektral-Proxies. (§v10.91) |
 | §G92 | **Material-adaptive-Confidence-Pflicht** | Die Confidence in `feasibility_controller.estimate_goal_feasibility()` MUSS `predict_quality_score()` aus `calibration_matrix` verwenden — KEINEN harten 0.95-Deckel. Shellac (Ceiling 0.70) erhält proportional niedrigere Confidence als CD (Ceiling 0.95). (§v10.92) |
@@ -297,7 +324,6 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 
 ---
 
-
 ## Kategorie XVI — Perzeptuelle Architektur: Das menschliche Ohr als Richter (§G100–§G112)
 
 > §v10.101 — Prämisse: Auriks Architektur wurde fundamental umgebaut.
@@ -306,7 +332,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 > bevor sie handelt. Das menschliche Ohr ist der einzige Richter über Qualität.
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G100 | **Hörbarkeit vor Mathematik** | JEDE Verarbeitungsentscheidung MUSS die Frage „Ist der Unterschied für das menschliche Ohr hörbar?" VOR der Frage „Ist der Unterschied mathematisch signifikant?" stellen. Eine unhörbare Verbesserung ist keine Verbesserung. Ein unhörbarer Defekt ist kein Defekt. |
 | §G101 | **Perzeptueller Wet/Dry-Blend** | Jeder Wet/Dry-Mix MUSS `perceptual_blend()` aus `backend.core.dsp.perceptual_blend.py` verwenden. Der Blend erfolgt frequenzabhängig nach Bark-Bändern: Nur in den kritischen Bändern, wo die Änderung oberhalb der simultanen Maskierungsschwelle (ISO 11172-3) liegt, wird das Wet-Signal übernommen. In maskierten Bändern bleibt das Dry-Signal erhalten — dort ist die Änderung unhörbar und birgt nur Artefakt-Risiko. |
 | §G102 | **Bark-Band-Verarbeitung** | Jede frequenzabhängige Verarbeitung (EQ, Dynamik, Spektralreparatur) MUSS in 24 kritischen Bark-Bändern (Zwicker 1961) arbeiten — NICHT in linearen Hz-Bändern. Das menschliche Ohr hat logarithmische Frequenzauflösung: 100 Hz Unterschied bei 100 Hz sind hörbar, 100 Hz Unterschied bei 10 kHz sind unhörbar. |
@@ -324,7 +350,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 ### Neue VERBOTE — Perzeptuelle Architektur (§V34–§V38)
 
 | ID | Verbot | Beschreibung |
-|----|--------|-------------|
+| ---- | -------- | ------------- |
 | §V34 | **Skalarer-Blend-Verbot** | Es ist VERBOTEN, einen skalaren Wet/Dry-Faktor (eine Zahl × alle Frequenzen) zu verwenden wenn `perceptual_blend()` verfügbar ist. |
 | §V35 | **Lineare-Frequenzband-Verbot** | Es ist VERBOTEN, neue Phasen mit linearen Frequenzbändern zu implementieren. Neue Phasen MÜSSEN `split_into_bark_bands()` verwenden. |
 | §V36 | **RMS-Lautheit-Verbot** | Es ist VERBOTEN, RMS als Proxy für wahrgenommene Lautheit zu verwenden, wenn LUFS via `measure_lufs_per_bark()` verfügbar ist. |
@@ -341,7 +367,7 @@ Transienten-Verschiebungen, HF-Halluzinationen oder Formant-Degradation verursac
 Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86–0.90).
 
 | ID | Regel | Beschreibung |
-|----|-------|-------------|
+| ---- | ------- | ------------- |
 | §G113 | **Universal RMS-Guard** | JEDE Phase MUSS nach der Ausführung einen RMS-Vergleich durchführen. RMS-Drop >30 dB → automatischer Rollback auf Eingangs-Audio. Der Guard ist in `PhaseInterface._safe_process()` zentral implementiert (§v10.115) und gilt für alle 65+ Phasen. |
 | §G114 | **Transient-Shift-Detektion** | Alle additiven Phasen (ENHANCEMENT, RESTORATION, Harmonic, Exciter, Air-Band, Bass, Presence, Transient, Spectral, Frequency, Drums, Guitar, Brass, Piano, Vocal, Saturation, Spatial) MÜSSEN nach der Ausführung `detect_transient_shifts()` aufrufen. Onset-Shift >5 ms → Warning. (§V22, §v10.115) |
 | §G115 | **Hallucination-Guard** | Alle Synthese-Phasen (Harmonic, Spectral-Repair, Inpainting, Exciter, Frequency-Restoration, Air-Band, Diffusion, Band-Gap, Dropout) MÜSSEN nach der Ausführung Spectral-Novelty prüfen. Novelty >0.15 → Warning. (§2.46e, §v10.115) |
@@ -356,8 +382,9 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
-|---------|-------|----------|
-| 10.0.17 | 2026 | §G121 + §V39: Mode-Differenzierung RESTORATION/STUDIO_2026. Noise-Gate, Spektral-Balance, Stereo-Fokus NUR in STUDIO_2026. DoNoHarm-Referenzkorrektur (carrier_checkpoint→degraded_input). Depth-adaptiver ArtifactFreedom-Schwellwert. (§v10.119) |
+| --------- | ------- | ---------- |
+| 10.0.18 | 2026-08 | **§v10.120–§v10.124: Depth-Threshold Calibration-Shift & Major-Version-Upgrade.** Chain-Depth-Paradigma §G71 flächendeckend: depth≥3=moderat, depth≥4=deep cassette, depth≥5=extrem. Alle 6 Quality-Gates depth-adaptiv. 18 Guard-Migrationen, 8 CIG-Exclusions, 17 Phasen mit bw_extension_context. MERT-Referenzspeicher depth-adaptiv (AF≥0.75 für Depth≥4). NaturalnessOptimizer Attack-Perzentil 90→95 adaptiv. Goosebumps-Recovery-HPI-Fix. 46 Dateien. Specs: §18, §19. |
 | 10.0.16 | 2026 | §G113–§G120: Universelle Phasen-Sicherheit & Excellence-Kalibrierung. RMS-Guard, Transient-Shift, Hallucination-Guard, Formant-Guard, Groove-Guard, HPI-Gate, Silence-Guard, RX11-Kalibrierung. Kategorie XVII. (§v10.112–§v10.117) |
 | 10.0.15 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
 | 10.0.14 | 2026-08-10 | §G90–§G99: Non-Plus-Ultra. Blinder Referenz-Vektor, Exception-Proxies, Cross-Phase-Koordination, NaN-Guards, Material-Vollständigkeit. Kategorie XV. |
+| 10.0.14 | 2026-07-30 | **§G71–§G80 (spec_constitution): Startup-Integration & Kommunikation.** GPU-Detection failsafe, Lock-Disziplin, Plugin-Namen-Validierung, Watchdog-Selbsttest, Cache-Safety, Happy-Path-Gate, Startup-Smoke-Test, Import-Check, Event-Garantie, Probe-Invocation. Kategorie XII. (§v10.305) |

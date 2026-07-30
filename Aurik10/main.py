@@ -450,6 +450,23 @@ def main():
         logger.warning("Splash screen could not be loaded (non-fatal): %s", _exc)
         splash = None
 
+    # ── GPU-Erkennung im Hauptthread (§v10.304.30) ─────────────────────────
+    # Muss VOR ModernMainWindow und VOR allen Worker-Threads laufen.
+    # torch.cuda.init() muss im Hauptthread erfolgen — sonst hängt
+    # ROCm/HIP bei der ersten GPU-Operation im Worker-Thread.
+    # AURIK_FORCE_CPU=1 überspringt die Erkennung komplett.
+    if splash:
+        splash.set_status("GPU wird erkannt...")
+        app.processEvents()
+    try:
+        from backend.core.ml_device_manager import get_ml_device_manager as _gpu_mgr
+
+        _mgr = _gpu_mgr()
+        _mgr.wait_for_detection(timeout=5.0)
+        logger.info("main: GPU-Erkennung abgeschlossen — %s", _mgr.gpu_name)
+    except Exception as _gpu_exc:
+        logger.debug("main: GPU-Erkennung fehlgeschlagen (CPU-only): %s", _gpu_exc)
+
     # ── Startup model check ───────────────────────────────────────────────────
     if splash:
         splash.set_status("Modelle werden geprüft...")

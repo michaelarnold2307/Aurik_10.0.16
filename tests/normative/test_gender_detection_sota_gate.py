@@ -32,8 +32,9 @@ SR = 48000
 # ---------------------------------------------------------------------------
 
 
-def _make_synthetic_voice(f0: float, f1: float, f2: float, f3: float,
-                          duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
+def _make_synthetic_voice(
+    f0: float, f1: float, f2: float, f3: float, duration_s: float = 3.0, sr: int = SR
+) -> np.ndarray:
     """Erzeugt ein synthetisches Stimmsignal mit Grundfrequenz + Formanten."""
     t = np.arange(int(sr * duration_s), dtype=np.float64) / sr
     # Grundton + 3 Obertöne mit abfallender Amplitude
@@ -45,8 +46,7 @@ def _make_synthetic_voice(f0: float, f1: float, f2: float, f3: float,
     return sig.astype(np.float32)
 
 
-def _add_silence_intro(audio: np.ndarray, silence_s: float = 1.5,
-                       sr: int = SR) -> np.ndarray:
+def _add_silence_intro(audio: np.ndarray, silence_s: float = 1.5, sr: int = SR) -> np.ndarray:
     """Fügt eine Stille-Passage vor das Audio (simuliert instrumentales Intro)."""
     silence = np.zeros(int(sr * silence_s), dtype=np.float32)
     return np.concatenate([silence, audio]).astype(np.float32)
@@ -83,9 +83,7 @@ class TestLPCGenderClassifier:
 
         tracker = get_lpc_formant_tracker()
         result = tracker.classify_gender_via_formants(_FEMALE_VOICE, SR)
-        assert result in ("male", "female", "child", "unknown"), (
-            f"Ungültiger Rückgabewert: {result}"
-        )
+        assert result in ("male", "female", "child", "unknown"), f"Ungültiger Rückgabewert: {result}"
 
     def test_g01_handles_silence(self):
         """G01c: Stille → 'unknown' ohne Crash."""
@@ -132,9 +130,7 @@ class TestGenderDetectorScanningF0:
 
         gd = GenderDetector(sample_rate=SR)
         f0 = gd._detect_f0(_FEMALE_WITH_INTRO)
-        assert f0 > 100.0, (
-            f"F0 sollte trotz Intro > 100 Hz sein (weiblich), war: {f0:.1f} Hz"
-        )
+        assert f0 > 100.0, f"F0 sollte trotz Intro > 100 Hz sein (weiblich), war: {f0:.1f} Hz"
 
     def test_g02_f0_direct_still_works(self):
         """G02b: Direkte F0-Erkennung (ohne Intro) funktioniert weiterhin."""
@@ -178,8 +174,7 @@ class TestDeEsserPhaseMethodsPresent:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         assert hasattr(dp, method_name), (
-            f"DeEsserPhase.{method_name} fehlt — "
-            f"möglicherweise in _build_union_vocal_profile gefangen"
+            f"DeEsserPhase.{method_name} fehlt — möglicherweise in _build_union_vocal_profile gefangen"
         )
 
     def test_g03_timeline_not_empty_stub(self):
@@ -188,11 +183,10 @@ class TestDeEsserPhaseMethodsPresent:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         import inspect
+
         src = inspect.getsource(dp._detect_gender_timeline)
         # Der Stub war: return [] — das darf nicht mehr vorkommen
-        assert "return []" not in src.replace(" ", ""), (
-            "_detect_gender_timeline ist immer noch ein Stub (return [])"
-        )
+        assert "return []" not in src.replace(" ", ""), "_detect_gender_timeline ist immer noch ein Stub (return [])"
         # Die echte Implementierung hat librosa/pYIN
         assert "librosa" in src.lower() or "pyin" in src.lower(), (
             "_detect_gender_timeline nutzt keine pYIN/librosa — Stub?"
@@ -213,9 +207,7 @@ class TestSimpleGenderScanning:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_simple(_FEMALE_WITH_INTRO, SR)
-        assert result == "female", (
-            f"Mit Intro sollte 'female' erkannt werden, nicht {result}"
-        )
+        assert result == "female", f"Mit Intro sollte 'female' erkannt werden, nicht {result}"
 
     def test_g04_detects_male_with_intro(self):
         """G04b: Männliche Stimme wird trotz Intro erkannt."""
@@ -223,9 +215,7 @@ class TestSimpleGenderScanning:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_simple(_MALE_WITH_INTRO, SR)
-        assert result == "male", (
-            f"Mit Intro sollte 'male' erkannt werden, nicht {result}"
-        )
+        assert result == "male", f"Mit Intro sollte 'male' erkannt werden, nicht {result}"
 
     def test_g04_simple_is_not_static_first_5s(self):
         """G04c: Der Code nimmt NICHT nur `audio[:sample_rate * 5]`."""
@@ -233,15 +223,14 @@ class TestSimpleGenderScanning:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         import inspect
+
         src = inspect.getsource(dp._detect_gender_simple)
         # Der alte Code hatte: max_samples = sample_rate * 5; audio = audio[:max_samples]
         assert "max_samples = sample_rate * 5" not in src, (
             "_detect_gender_simple nutzt immer noch das alte first-5s-Verfahren"
         )
         # Neuer Code scannt mit 2s-Fenstern
-        assert "win_samples" in src or "hop_samples" in src, (
-            "_detect_gender_simple hat keine Scanning-Logik"
-        )
+        assert "win_samples" in src or "hop_samples" in src, "_detect_gender_simple hat keine Scanning-Logik"
 
 
 # ===========================================================================
@@ -258,10 +247,9 @@ class TestRobustGenderChain:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         import inspect
+
         src = inspect.getsource(dp._detect_gender_robust)
-        assert "lpc_formant_tracker" in src, (
-            "LPC-Formant-Tracker-Fallback fehlt in _detect_gender_robust"
-        )
+        assert "lpc_formant_tracker" in src, "LPC-Formant-Tracker-Fallback fehlt in _detect_gender_robust"
         assert "classify_gender_via_formants" in src, (
             "classify_gender_via_formants-Aufruf fehlt in _detect_gender_robust"
         )
@@ -272,9 +260,7 @@ class TestRobustGenderChain:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_robust(_FEMALE_WITH_INTRO, SR)
-        assert result in ("male", "female", "child"), (
-            f"Chain sollte ein Gender erkennen, nicht {result}"
-        )
+        assert result in ("male", "female", "child"), f"Chain sollte ein Gender erkennen, nicht {result}"
 
 
 # ===========================================================================
@@ -291,6 +277,7 @@ class TestNoDeadStubs:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         import inspect
+
         src = inspect.getsource(dp._detect_gender_robust)
         # Der tote Code rief direkt classify_gender_via_formants
         # Der lebende Code hat pYIN + GenderDetector + Contralto + LPC-Fallback
@@ -306,10 +293,9 @@ class TestNoDeadStubs:
         #                 return []
         # Dieser exakte 2-Zeilen-Stub darf nicht mehr existieren
         import re
+
         stub_pattern = r"def _detect_gender_timeline\(self.*\):\s*return \[\]"
-        assert not re.search(stub_pattern, full_src), (
-            "Stub _detect_gender_timeline mit return [] existiert noch"
-        )
+        assert not re.search(stub_pattern, full_src), "Stub _detect_gender_timeline mit return [] existiert noch"
 
 
 # ===========================================================================
@@ -326,9 +312,7 @@ class TestGenderTimelineImplemented:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_timeline(_FEMALE_VOICE, SR)
-        assert isinstance(result, list), (
-            f"Timeline sollte list sein, nicht {type(result).__name__}"
-        )
+        assert isinstance(result, list), f"Timeline sollte list sein, nicht {type(result).__name__}"
 
     def test_g07_timeline_has_expected_keys(self):
         """G07b: Timeline-Einträge haben die erwarteten Keys."""
@@ -339,9 +323,7 @@ class TestGenderTimelineImplemented:
         if len(result) > 0:
             segment = result[0]
             for key in ("t_start_s", "t_end_s", "gender", "confidence"):
-                assert key in segment, (
-                    f"Timeline-Segment fehlt key '{key}': {list(segment.keys())}"
-                )
+                assert key in segment, f"Timeline-Segment fehlt key '{key}': {list(segment.keys())}"
 
 
 # ===========================================================================
@@ -358,9 +340,7 @@ class TestFullIntegration:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_robust(_FEMALE_WITH_INTRO, SR)
-        assert result in ("female", "male", "child"), (
-            f"Full chain failed with intro: {result}"
-        )
+        assert result in ("female", "male", "child"), f"Full chain failed with intro: {result}"
 
     def test_g08_male_behind_intro(self):
         """G08b: Männliche Stimme nach 1.5s Intro wird erkannt (full chain)."""
@@ -368,9 +348,7 @@ class TestFullIntegration:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         result = dp._detect_gender_robust(_MALE_WITH_INTRO, SR)
-        assert result in ("female", "male", "child"), (
-            f"Full chain failed with intro: {result}"
-        )
+        assert result in ("female", "male", "child"), f"Full chain failed with intro: {result}"
 
     def test_g08_f0_scanning_vs_old_behavior(self):
         """G08c: Scanning-F0 findet Wert wo alter Code 0 geliefert hätte."""
@@ -381,9 +359,7 @@ class TestFullIntegration:
 
         # Alter Code hätte nur audio[:4800] (100ms) geprüft = Stille = 0.0
         # Neuer Code scannt und findet F0 > 0
-        assert f0_with_intro > 0.0, (
-            "Scanning-F0 sollte mit Intro > 0 sein (alter Code hätte 0.0 geliefert)"
-        )
+        assert f0_with_intro > 0.0, "Scanning-F0 sollte mit Intro > 0 sein (alter Code hätte 0.0 geliefert)"
 
     def test_g08_lpc_fallback_in_chain(self):
         """G08d: LPC-Fallback-Aufruf ist im Code der _detect_gender_robust vorhanden."""
@@ -391,11 +367,8 @@ class TestFullIntegration:
 
         dp = DeEsserPhase(gender_type=VocalGender.AUTO)
         import inspect
+
         src = inspect.getsource(dp._detect_gender_robust)
         # Die SOTA-Kette: GenderDetector → pYIN → Contralto → LPC → Simple
-        assert "get_lpc_formant_tracker" in src, (
-            "LPC Formant Tracker nicht in der Chain"
-        )
-        assert "Burg-LPC fallback" in src.lower() or "lpc formant" in src.lower(), (
-            "LPC-Fallback-Log-Message fehlt"
-        )
+        assert "get_lpc_formant_tracker" in src, "LPC Formant Tracker nicht in der Chain"
+        assert "Burg-LPC fallback" in src.lower() or "lpc formant" in src.lower(), "LPC-Fallback-Log-Message fehlt"

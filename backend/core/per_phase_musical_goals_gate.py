@@ -120,8 +120,8 @@ _MATERIAL_THRESHOLD_BONUS: dict[str, float] = {
     "reel_tape": 0.020,
     "tape": 0.015,
     "radio_broadcast": 0.006,
-    "cassette": 0.006,
-    "kassette": 0.006,  # §v10.92: Deutsche Schreibweise — identische Physik
+    "cassette": 0.020,  # §v10.200: Kassette ist physikalisch degradierter als Reel-Tape → gleicher Bonus
+    "kassette": 0.020,  # §v10.200: Deutsche Schreibweise — identische Physik
     "mp3_low": 0.005,  # codec artefacts → repair changes look regressive to proxies
     "minidisc": 0.004,
     "mp3_high": 0.002,
@@ -1730,12 +1730,17 @@ def _phase20_is_ml_active() -> bool:
         return False  # Safe default: DSP path — must re-run
 
 
-def _get_adaptive_threshold(restorability_score: float, material_type: str = "unknown") -> float:
+def _get_adaptive_threshold(
+    restorability_score: float,
+    material_type: str = "unknown",
+    transfer_chain_depth: int = 1,
+) -> float:
     """§2.29/§2.54 Material- und Restorability-adaptiver REGRESSION_THRESHOLD.
 
     Args:
         restorability_score: RestorabilityEstimator-Score ∈ [0, 100]
         material_type: Carrier-Materialklasse (z.B. 'vinyl', 'shellac', 'cd_digital')
+        transfer_chain_depth: Chain-Depth für depth-adaptive Toleranz (§v10.120)
 
     Returns:
         Adaptiver Schwellwert ∈ [0.012, 0.070].
@@ -1751,9 +1756,13 @@ def _get_adaptive_threshold(restorability_score: float, material_type: str = "un
         base = REGRESSION_THRESHOLD_POOR
     # Material-Bonus: analog-physische Träger benötigen mehr Toleranz (§2.54)
     bonus = _MATERIAL_THRESHOLD_BONUS.get(material_type.lower(), 0.003)
-    threshold = base + bonus
-    # Hard-Cap: nie enger als 0.012 (Messrauschen), nie lockerer als 0.070
-    return float(np.clip(threshold, 0.012, 0.070))
+    # §v10.120 Depth-Bonus: tiefere Ketten → mehr legitime Regression (§2.44)
+    _depth = max(1, int(transfer_chain_depth))
+    _depth_bonus = max(0, _depth - 2) * 0.008  # +0.008 pro Depth-Stufe ab 3
+    threshold = base + bonus + _depth_bonus
+    # Hard-Cap: nie enger als 0.012 (Messrauschen), nie lockerer als 0.090
+    # §v10.200: Obergrenze 0.070→0.090 — Kassetten-Bonus (0.020) + depth≥5 (0.024) = 0.089
+    return float(np.clip(threshold, 0.012, 0.090))
 
 
 # All 15 Musical Goals are checked per-phase — DSP-only proxies, no ML (≤ 200 ms total §2.29).
@@ -4274,6 +4283,28 @@ class PerPhaseMusicalGoalsGate:
         if action == "sub_threshold":
             log_entry.metadata.setdefault("sub_threshold_phases", []).append(phase_id)
 
+        # §v10.303.18 Artikulations-Wächter: Dynamics-Phasen (Compression,
+        # Transient-Shaper) dürfen artikulation NIEMALS verschlechtern.
+        _ART_CRITICAL_PHASES = {
+            "phase_10_compression", "phase_11_limiting", "phase_26_dynamic_range_expansion",
+            "phase_35_multiband_compression", "phase_54_transparent_dynamics",
+            "phase_08_transient_preservation", "phase_36_transient_shaper",
+        }
+        if phase_id in _ART_CRITICAL_PHASES and "artikulation" in effective_goals:
+            _a_before = scores_before.get("artikulation", 1.0)
+            _a_after = scores_after.get("artikulation", 1.0)
+            if not isinstance(_a_before, float) or math.isnan(_a_before):
+                _a_before = 1.0
+            if not isinstance(_a_after, float) or math.isnan(_a_after):
+                _a_after = 1.0
+            _a_delta = _a_after - _a_before
+            if _a_delta < -0.02:
+                logger.warning(
+                    "§v10.303.18 Artikulations-Wächter: %s artikulation %.4f→%.4f (Δ=%.4f) → ROLLBACK",
+                    phase_id, _a_before, _a_after, _a_delta,
+                )
+                action = "rollback"
+
         return audio_out, scores_after, log_entry
 
     # ------------------------------------------------------------------
@@ -5113,7 +5144,17 @@ class PerPhaseMusicalGoalsGate:
         if isinstance(_team_thr_mult, (int, float)) and float(_team_thr_mult) > 1.0:
             _CATASTROPHIC_THRESHOLD = min(0.25, _CATASTROPHIC_THRESHOLD * float(_team_thr_mult))
 
+        # §v10.210 Closed-Loop: Emergency-Retries INCLUDING increased strengths.
+        # Wenn die Defect-to-Audibility-Engine sagt, der Defekt sei noch hörbar,
+        # wird auch mit ERHÖHTER Stärke wiederholt (nicht nur reduziert).
         _EMERGENCY_STRENGTHS = [0.15 * initial_strength, 0.10 * initial_strength]
+        _audibility_boost = float(kwargs.get("audibility_strength", 0.0) or 0.0)
+        if _audibility_boost > initial_strength * 1.1:
+            # Defekt ist noch hörbar — booste Richtung benötigter Stärke
+            _EMERGENCY_STRENGTHS = [
+                _audibility_boost * 0.80,  # 80% der benötigten Stärke
+                _audibility_boost,          # Volle benötigte Stärke
+            ] + _EMERGENCY_STRENGTHS
         # §0l: Emergency-Retries nur wenn Team netto negativ (oder nahe null) ist.
         # Wenn best_scores bereits Team-Net-Positiv sind und Regression unter
         # 1.5×_CATASTROPHIC_THRESHOLD liegt, würden Emergency-Retries Over-Processing

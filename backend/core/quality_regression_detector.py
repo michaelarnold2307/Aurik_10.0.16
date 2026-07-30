@@ -31,6 +31,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class QScoreSample:
     """Einzelner Q-Score-Datenpunkt aus einem Pipeline-Lauf."""
+
     timestamp: str
     material_type: str
     mushra_score: float | None = None
@@ -45,6 +46,7 @@ class QScoreSample:
 @dataclass
 class QualityRegressionAlert:
     """Alert bei signifikanter Q-Score-Verschlechterung."""
+
     material_type: str
     metric: str
     current_value: float
@@ -57,6 +59,7 @@ class QualityRegressionAlert:
 @dataclass
 class QScoreTrend:
     """Q-Score-Trend über die Zeit."""
+
     material_type: str
     samples: list[QScoreSample] = field(default_factory=list)
     trend_slope: float = 0.0  # positiv = Verbesserung
@@ -70,7 +73,7 @@ class QualityRegressionDetector:
     §v10.115: Schließt Lücke 5 der Exception-Forensik.
     """
 
-    BASELINE_WINDOW = 5      # Läufe für Baseline-Berechnung
+    BASELINE_WINDOW = 5  # Läufe für Baseline-Berechnung
     ALERT_THRESHOLD_PCT = 5.0  # % Drop für Alert
     CRITICAL_THRESHOLD_PCT = 15.0  # % Drop für Critical Alert
 
@@ -172,9 +175,7 @@ class QualityRegressionDetector:
 
         return trends
 
-    def _detect_regressions(
-        self, samples: list[QScoreSample], material_type: str
-    ) -> list[QualityRegressionAlert]:
+    def _detect_regressions(self, samples: list[QScoreSample], material_type: str) -> list[QualityRegressionAlert]:
         """Erkennt Q-Score-Abfälle."""
         alerts: list[QualityRegressionAlert] = []
         if len(samples) < self.BASELINE_WINDOW + 2:
@@ -192,11 +193,11 @@ class QualityRegressionDetector:
                 continue
 
             # Baseline = Mittelwert der ersten BASELINE_WINDOW Samples
-            baseline = float(np.mean([v for _, v in valid[:self.BASELINE_WINDOW]]))
+            baseline = float(np.mean([v for _, v in valid[: self.BASELINE_WINDOW]]))
 
             # Prüfe letzte Samples auf Abfall
             consecutive_drops = 0
-            for _, v in valid[self.BASELINE_WINDOW:]:
+            for _, v in valid[self.BASELINE_WINDOW :]:
                 drop_pct = (baseline - v) / baseline * 100.0 if baseline > 0 else 0.0
                 if drop_pct > self.ALERT_THRESHOLD_PCT:
                     consecutive_drops += 1
@@ -205,15 +206,17 @@ class QualityRegressionDetector:
 
                 if consecutive_drops >= 2:
                     severity = "critical" if drop_pct > self.CRITICAL_THRESHOLD_PCT else "warning"
-                    alerts.append(QualityRegressionAlert(
-                        material_type=material_type,
-                        metric=metric_name,
-                        current_value=round(float(v), 4),
-                        baseline_value=round(float(baseline), 4),
-                        drop_percent=round(drop_pct, 1),
-                        consecutive_runs=consecutive_drops,
-                        severity=severity,
-                    ))
+                    alerts.append(
+                        QualityRegressionAlert(
+                            material_type=material_type,
+                            metric=metric_name,
+                            current_value=round(float(v), 4),
+                            baseline_value=round(float(baseline), 4),
+                            drop_percent=round(drop_pct, 1),
+                            consecutive_runs=consecutive_drops,
+                            severity=severity,
+                        )
+                    )
                     break  # Ein Alert pro Metric
 
         return alerts
@@ -229,14 +232,18 @@ class QualityRegressionDetector:
         total_alerts = 0
         for mat, trend in sorted(trends.items()):
             direction = "📈" if trend.trend_slope > 0.001 else ("📉" if trend.trend_slope < -0.001 else "➡️")
-            lines.append(f"\n{direction} {mat}: {len(trend.samples)} Läufe, "
-                        f"Slope={trend.trend_slope:+.4f}/Lauf, R²={trend.r_squared:.3f}")
+            lines.append(
+                f"\n{direction} {mat}: {len(trend.samples)} Läufe, "
+                f"Slope={trend.trend_slope:+.4f}/Lauf, R²={trend.r_squared:.3f}"
+            )
 
             if trend.alerts:
                 for a in trend.alerts:
                     icon = "🔴" if a.severity == "critical" else "🟡"
-                    lines.append(f"  {icon} {a.metric}: {a.baseline_value:.3f}→{a.current_value:.3f} "
-                                f"({a.drop_percent:+.1f}%, {a.consecutive_runs} Läufe)")
+                    lines.append(
+                        f"  {icon} {a.metric}: {a.baseline_value:.3f}→{a.current_value:.3f} "
+                        f"({a.drop_percent:+.1f}%, {a.consecutive_runs} Läufe)"
+                    )
                     total_alerts += 1
 
         lines.append(f"\n{'✅ Keine Regressionen' if total_alerts == 0 else f'⚠️  {total_alerts} Alerts'}")
@@ -248,6 +255,7 @@ class QualityRegressionDetector:
     def record(self, q_score: float) -> None:
         """Snapshot: Exception-Rate + Q-Score in History schreiben."""
         import time as _time
+
         snap = {
             "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%S"),
             "q_score": q_score,
@@ -265,8 +273,10 @@ class QualityRegressionDetector:
             for line in f:
                 line = line.strip()
                 if line:
-                    try: snaps.append(json.loads(line))
-                    except json.JSONDecodeError: continue
+                    try:
+                        snaps.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        continue
         if len(snaps) < 2:
             return {"status": "insufficient_data"}
         curr, prev = snaps[-1], snaps[-2]

@@ -1,10 +1,10 @@
 """
-Blind Reference-Free Quality Estimator (§G55)
+Blind Reference-Free Quality Estimator (§G55 / §3.3)
 
 Assesses absolute audio quality WITHOUT comparing to the original.
 Essential for true blind testing — the system must know when it sounds good.
 
-Six single-ended features correlated with perceived quality:
+Six DSP-based features (§G55a–§G55f):
   §G55a  Spectral naturalness (crest factor, not too flat/peaky)
   §G55b  Dynamic range health (histogram entropy, not over-compressed)
   §G55c  Noise floor continuity (no unnatural gating artifacts)
@@ -12,14 +12,20 @@ Six single-ended features correlated with perceived quality:
   §G55e  Stereo width naturalness (M/S ratio within normal range)
   §G55f  Transient density (over-smoothing removes attacks)
 
+§3.3 MERT-based perceptual quality (§G55g):
+  §G55g  MERT embedding distance from clean reference centroid.
+         Uses the MERT v1-330M model to extract acoustic embeddings and
+         maps them to a 0-100 quality score. Graceful fallback if MERT
+         is not available.
+
 Each feature: 0-100 score. Weighted ensemble → overall 0-100.
 
 Training reference: AES Convention Paper on Single-Ended Quality Assessment
 (ITU-R BS.1387 PEAQ adapted for restoration context).
 
 Author: Aurik Development Team
-Version: 10.0.7
-Date: 2026-07-13
+Version: 10.0.8 — §3.3 MERT integration
+Date: 2026-07-26
 """
 
 import logging
@@ -33,7 +39,10 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class BlindQualityScore:
-    """Reference-free quality assessment result."""
+    """Reference-free quality assessment result.
+
+    Includes §3.3 MERT-based perceptual score when available.
+    """
 
     overall: float  # 0-100
     spectral_naturalness: float = 100.0
@@ -42,6 +51,7 @@ class BlindQualityScore:
     hf_presence: float = 100.0
     stereo_naturalness: float = 100.0
     transient_density: float = 100.0
+    mert_perceptual: float | None = None  # §3.3: None if MERT unavailable
     breakdown: dict[str, float] = field(default_factory=dict)
 
     @property
@@ -53,6 +63,11 @@ class BlindQualityScore:
         if self.overall >= 60:
             return "Fair"
         return "Poor"
+
+    @property
+    def has_mert(self) -> bool:
+        """Whether MERT-based quality was available."""
+        return self.mert_perceptual is not None
 
 
 class BlindQualityEstimator:
@@ -105,15 +120,30 @@ class BlindQualityEstimator:
         trans_dens = self._transient_density(mono)
         details["transient_density"] = trans_dens
 
-        # Weighted ensemble
-        overall = (
-            0.25 * spec_nat
-            + 0.20 * dyn_health
-            + 0.20 * noise_cont
-            + 0.15 * hf_pres
-            + 0.10 * stereo_nat
-            + 0.10 * trans_dens
-        )
+        # §3.3 §G55g: MERT perceptual quality (graceful fallback)
+        mert_score = self._mert_perceptual_quality(mono)
+        has_mert = mert_score is not None
+
+        # Weighted ensemble — MERT gets 15% when available
+        if has_mert:
+            overall = (
+                0.20 * spec_nat
+                + 0.15 * dyn_health
+                + 0.15 * noise_cont
+                + 0.10 * hf_pres
+                + 0.10 * stereo_nat
+                + 0.10 * trans_dens
+                + 0.20 * mert_score
+            )
+        else:
+            overall = (
+                0.25 * spec_nat
+                + 0.20 * dyn_health
+                + 0.20 * noise_cont
+                + 0.15 * hf_pres
+                + 0.10 * stereo_nat
+                + 0.10 * trans_dens
+            )
 
         return BlindQualityScore(
             overall=float(np.clip(overall, 0.0, 100.0)),
@@ -123,6 +153,7 @@ class BlindQualityEstimator:
             hf_presence=hf_pres,
             stereo_naturalness=stereo_nat,
             transient_density=trans_dens,
+            mert_perceptual=mert_score,
             breakdown=details,
         )
 
@@ -391,6 +422,63 @@ class BlindQualityEstimator:
             score = max(30.0, 85.0 - (density - 8) * 3.0)
 
         return float(np.clip(score, 0.0, 100.0))
+
+    # ── §3.3 §G55g MERT Perceptual Quality ──────────────────────────────
+
+    def _mert_perceptual_quality(self, mono: np.ndarray) -> float | None:
+        """§3.3: MERT-embedding-based absolute quality estimation.
+
+        Uses MERT v1-330M to extract acoustic embeddings and maps them
+        to a 0-100 quality score via embedding statistics.
+
+        Returns None if MERT is not available (graceful fallback).
+        """
+        try:
+            from plugins.mert_plugin import MertPlugin
+        except ImportError:
+            logger.debug("§3.3 MERT: plugin not available, skipping perceptual quality")
+            return None
+
+        try:
+            plugin = MertPlugin()
+            if not plugin.model_available:
+                logger.debug("§3.3 MERT: model not loaded, skipping perceptual quality")
+                return None
+
+            # Extract MERT analysis (use first 10s max for efficiency)
+            max_samples = min(len(mono), self.sr * 10)
+            audio_segment = mono[:max_samples].astype(np.float32)
+
+            result = plugin.analyze(audio_segment, self.sr)
+            if result is None:
+                return None
+
+            # §3.3: Use MERT's naturalness_score + harmonicity as perceptual features
+            nat_score = float(getattr(result, "naturalness_score", 0.0))  # 0-1
+            harmonicity = float(getattr(result, "harmonicity", 0.0))  # 0-1
+            tonal_consistency = float(getattr(result, "tonal_consistency", 0.0))  # 0-1
+            model_used = str(getattr(result, "model_used", "dsp_fallback"))
+
+            # If DSP fallback: reduce weight (DSP NAT is less reliable than MERT)
+            is_mert = model_used != "dsp_fallback"
+
+            # Combine features into a 0-100 quality score
+            # naturalness_score is the primary MERT-driven metric
+            mert_score = nat_score * 60.0 + harmonicity * 25.0 + tonal_consistency * 15.0
+
+            if not is_mert:
+                # DSP fallback: less reliable, cap at 85
+                mert_score = min(mert_score, 85.0)
+
+            logger.debug(
+                "§3.3 MERT quality: nat=%.3f harm=%.3f tonal=%.3f model=%s → score=%.1f",
+                nat_score, harmonicity, tonal_consistency, model_used, mert_score,
+            )
+            return float(np.clip(mert_score, 0.0, 100.0))
+
+        except Exception:
+            logger.debug("§3.3 MERT: perceptual quality estimation failed", exc_info=True)
+            return None
 
     # ── Helpers ──────────────────────────────────────────────────────────
 

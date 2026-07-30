@@ -173,6 +173,7 @@ class VocalGender:
     MALE = "male"
     CHILD = "child"
     AUTO = "auto"  # Automatische Detektion
+    UNKNOWN = "unknown"  # §v10.126: Gender-agnostischer Fallback (freq-agnostisch)
 
 
 class SibilantType:
@@ -211,6 +212,14 @@ VOCAL_PROFILES = {
         "max_depth_db": -4.0,  # Aggressivere Reduktion möglich
         "formant_protect": 0.80,  # Moderate Protection
         "brilliance_preserve": 0.95,  # Maximale HF-Preservation
+    },
+    VocalGender.UNKNOWN: {
+        "s_band": (4500, 8000),  # §v10.126: Frequenz-agnostisch (zwischen male/female)
+        "formant_range": (1800, 2800),  # Mitte
+        "chest_range": (130, 280),  # Breiter Bereich
+        "max_depth_db": -3.0,  # Moderate Reduktion
+        "formant_protect": 0.88,  # Ausgewogener Schutz
+        "brilliance_preserve": 0.88,  # Balance
     },
 }
 
@@ -579,6 +588,15 @@ class DeEsserPhase(PhaseInterface):
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
 
+        # §v10.120 Depth-aware de-essing: tiefe Transfer-Ketten haben fragilere
+        # Transienten — De-Essing-Stärke proportional zur Depth reduzieren.
+        _td_p19 = len(list(kwargs.get("transfer_chain", []) or []))
+        self._transfer_chain_depth_p19 = _td_p19  # §v10.131: für Filter-Typ-Wahl
+        if _td_p19 >= 4:
+            _depth_factor_19 = float(np.clip(1.0 - (_td_p19 - 3) * 0.15, 0.55, 1.0))
+            _effective_strength *= _depth_factor_19
+            logger.debug("Phase_19 depth=%d → strength ×%.2f", _td_p19, _depth_factor_19)
+
         # §2.17 SectionStrengthEnvelope: Kontinuierliche per-Segment-Modulation.
         # Reduziert De-Essing in Strophen (weniger Sibilanten), verstärkt in
         # Refrains (mehr Höhenenergie). Fließend, keine hörbaren Übergänge.
@@ -655,10 +673,42 @@ class DeEsserPhase(PhaseInterface):
 
         # Auto-Detection wenn Gender=AUTO (Fallback wenn kein Pipeline-Kontext)
         if self.gender == VocalGender.AUTO:
-            detected_gender = self._detect_gender_robust(audio, sample_rate)
-            self.vocal_profile = VOCAL_PROFILES[detected_gender]
-            self.stats["gender_profile"] = detected_gender
-            logger.info("🎤 Auto-detected gender: %s", detected_gender)
+            # §v10.303.11: bandwidth_loss früh extrahieren für robuste Gender-Detection.
+            # MP3/AAC-komprimiertes Material hat degradierte Formanten (F2 oft < 900 Hz).
+            # Ohne bw_loss-Info erkennt der Contralto-Detektor tiefe Frauenstimmen nicht.
+            _bw_loss_pre = float(kwargs.get("bandwidth_loss", 0.0) or 0.0)
+            if _bw_loss_pre <= 0.0:
+                _defect_scores_pre = kwargs.get("defect_scores", {}) or {}
+                _bw_loss_pre = float(_defect_scores_pre.get("bandwidth_loss", 0.0) or 0.0)
+                if _bw_loss_pre <= 0.0:
+                    for _k, _v in _defect_scores_pre.items():
+                        _key_str = _k.value if hasattr(_k, 'value') else str(_k)
+                        if _key_str == "bandwidth_loss":
+                            _bw_loss_pre = float(getattr(_v, 'severity', _v) if hasattr(_v, 'severity') else _v)
+                            break
+            # §v10.126 Depth-aware: tiefe Ketten (≥4) haben unzuverlässige
+            # F0- und Formant-Detektion → Oktavfehler (F0=94 Hz statt ~188 Hz).
+            # Gender-agnostischen Fallback erzwingen.
+            _td_gender_detect = len(kwargs.get("transfer_chain", []) or [])
+            if _td_gender_detect >= 4:
+                self.gender = VocalGender.UNKNOWN
+                self.vocal_profile = VOCAL_PROFILES[VocalGender.UNKNOWN]
+                logger.info(
+                    "🎤 §v10.126 Gender-Fallback: depth=%d ≥4 → F0/Formant unzuverlässig, "
+                    "gender=UNKNOWN (freq-agnostisch)",
+                    _td_gender_detect,
+                )
+            else:
+                detected_gender = self._detect_gender_robust(
+                    audio, sample_rate,
+                    bandwidth_loss=_bw_loss_pre,
+                    transfer_chain=kwargs.get("transfer_chain", []),
+                    defect_scores=kwargs.get("defect_scores", {}),
+                )
+                self.vocal_profile = VOCAL_PROFILES[detected_gender]
+                kwargs["phase19_gender"] = detected_gender  # §v10.303.37
+                self.stats["gender_profile"] = detected_gender
+                logger.info("🎤 Auto-detected gender: %s", detected_gender)
 
         # §2.9.4 Multi-Gender-Timeline: Erkennt ALLE Stimmen im Song
         _gender_timeline = self._detect_gender_timeline(audio, sample_rate)
@@ -667,7 +717,8 @@ class DeEsserPhase(PhaseInterface):
 
         # §2.9.5 Union-Profil: Wenn mehrere Gender erkannt wurden,
         # schütze ALLE Stimmbereiche durch kombinierte Parameter
-        if _multi_gender and _gender_timeline:
+        # §v10.126: Skip if gender was forced to UNKNOWN (deep chain)
+        if _multi_gender and _gender_timeline and self.gender != VocalGender.UNKNOWN:
             _genders_present = sorted({s["gender"] for s in _gender_timeline})
             _union_profile = _build_union_vocal_profile(_genders_present)
             self.vocal_profile = _union_profile
@@ -680,8 +731,9 @@ class DeEsserPhase(PhaseInterface):
                 _union_profile["formant_range"][1],
                 _union_profile.get("s_band", "all"),
             )
-        elif _gender_timeline:
+        elif _gender_timeline and self.gender != VocalGender.UNKNOWN:
             # Single gender confirmed by timeline
+            # §v10.126: Skip if gender was forced to UNKNOWN (deep chain)
             _timeline_gender = _gender_timeline[0]["gender"]
             if self.gender == VocalGender.AUTO or self.gender != _timeline_gender:
                 if _timeline_gender in VOCAL_PROFILES:
@@ -721,21 +773,40 @@ class DeEsserPhase(PhaseInterface):
         # für 225s Audio. Ein Song-Anfang ohne HF triggert falschen Skip,
         # ein anderer Abschnitt mit minimaler HF triggert falschen Process.
         # Fix: Median von 5 gleichverteilten Fenstern über das gesamte Audio.
+        # §v10.129 BUG-FIX: Median unterdrückt Sibilanz-Peaks (Sibilanz ist <1% der
+        # Frames → Median ≈ 0.0). Verwende 95. Perzentil statt Median, um Sibilanz-
+        # Spitzen zu erfassen, aber Rausch-Artefakte (Extrem-Ausreißer) zu ignorieren.
+        # Zusätzlich: Mehr Windows (20 statt 5) für bessere Abdeckung der 225 s.
         _n_mono = len(audio_mono)
         _fft_len = min(4096, _n_mono)
-        _n_windows = min(5, max(1, _n_mono // _fft_len))
+        _n_windows = min(20, max(5, _n_mono // (_fft_len * 10)))
         _hf_ratios: list[float] = []
         for _wi in range(_n_windows):
             _start = (_n_mono - _fft_len) * _wi // max(1, _n_windows - 1) if _n_windows > 1 else 0
             _start = max(0, min(_start, _n_mono - _fft_len))
-            _seg = audio_mono[_start:_start + _fft_len]
+            _seg = audio_mono[_start : _start + _fft_len]
             _spec_w = np.abs(np.fft.rfft(_seg))
             _total_w = float(np.sum(_spec_w**2)) + 1e-12
             _hf_w = float(np.sum(_spec_w[np.fft.rfftfreq(_fft_len, 1.0 / sample_rate) >= 4000.0] ** 2))
             _hf_ratios.append(_hf_w / _total_w)
-        # Median statt Mean: resistent gegen Ausreißer (z.B. ein einziger Hi-Hat-Hit)
-        # §v10.108: nanmedian verhindert NaN-Propagation bei korruptem Audio
-        _hf_ratio = float(np.nanmedian(_hf_ratios)) if _hf_ratios else 0.0
+        # §v10.129: 95. Perzentil statt Median — Sibilanz-Peaks sind keine Ausreißer,
+        # sie sind das Signal, das wir messen wollen. Median=0.003 bedeutet nicht
+        # "keine Sibilanz", sondern "nur 5% der Frames haben Sibilanz" — und genau
+        # diese 5% sind für das menschliche Ohr unangenehm.
+        _hf_ratio = float(np.nanpercentile(_hf_ratios, 95)) if _hf_ratios else 0.0
+        # §v10.303.5 Crest-Faktor: Sibilanten sind transient (hoher Crest),
+        # Codec-Artefakte sind stationär (niedriger Crest). Unterscheidet
+        # "echte Sibilanten auf MP3" von "MP3-Artefakte die aussehen wie Sibilanten".
+        _crest_ratios: list[float] = []
+        for _wi in range(_n_windows):
+            _start = (_n_mono - _fft_len) * _wi // max(1, _n_windows - 1) if _n_windows > 1 else 0
+            _start = max(0, min(_start, _n_mono - _fft_len))
+            _seg_c = audio_mono[_start : _start + _fft_len]
+            _peak_c = float(np.max(np.abs(_seg_c))) + 1e-12
+            _rms_c = float(np.sqrt(np.mean(_seg_c**2))) + 1e-12
+            _crest_ratios.append(_peak_c / _rms_c)
+        _crest_factor = float(np.nanpercentile(_crest_ratios, 90)) if _crest_ratios else 0.0
+
         # Adaptiver Schwellwert: material-adaptive Kalibrierung.
         # Band/Dunkel-Material hat weniger HF — zu hoher Threshold
         # würde Sibilanten als "kein HF" klassifizieren und De-Essing skippen.
@@ -744,16 +815,52 @@ class DeEsserPhase(PhaseInterface):
         if _bw_loss <= 0.0:
             _defect_scores = kwargs.get("defect_scores", {}) or {}
             _bw_loss = float(_defect_scores.get("bandwidth_loss", 0.0) or 0.0)
+            # §v10.303.5: DefectScores haben Enum-Keys (DefectType.BANDWIDTH_LOSS),
+            # nicht String-Keys. Fallback für beide Varianten.
+            if _bw_loss <= 0.0:
+                for _k, _v in _defect_scores.items():
+                    _key_str = _k.value if hasattr(_k, 'value') else str(_k)
+                    if _key_str == "bandwidth_loss":
+                        _bw_loss = float(getattr(_v, 'severity', _v) if hasattr(_v, 'severity') else _v)
+                        break
         _hf_threshold = 0.01 if _bw_loss > 0.5 else 0.05
+
+        # §v10.303.5 Sibilanz-Konfidenz: Kombiniert HF-Energie + Crest-Faktor + Gesang.
+        # - HF ratio:       wie viel Energie im Sibilanz-Bereich (4-10 kHz)
+        # - Crest factor:   wie transient das Signal ist (>8 = echte Sibilanten)
+        # - panns_singing:  ob überhaupt eine Stimme da ist
+        _panns_deess = float(kwargs.get("panns_singing", 0.0) or 0.0)
+
+        # §v10.303.5 Material-Adaptive Crest-Kalibrierung:
+        # Shellac-Knistern hat Crest 14-18 (höher als Sibilanten!) → braucht
+        # höhere Baseline. CD ist sauber → niedrigere Baseline reicht.
+        _mat_str_deess = str(getattr(material, "value", material) or "").lower()
+        _crest_config: dict[str, tuple[float, float, float]] = {
+            # (baseline, divisor, vocal_bonus_max)
+            "shellac":       (10.0, 6.0, 0.15),  # Knistern = hoher Crest → Baseline hoch
+            "vinyl":         (7.0, 8.0, 0.25),   # Surface noise moderat
+            "lacquer_disc":  (8.0, 7.0, 0.20),
+            "cassette":      (6.0, 8.0, 0.30),   # Tape hiss = niedriger Crest → Baseline tief
+            "reel_tape":     (6.0, 8.0, 0.30),
+            "tape":          (6.0, 8.0, 0.30),
+            "wax_cylinder":  (10.0, 6.0, 0.10),
+            "wire_recording":(9.0, 7.0, 0.15),
+        }
+        _crest_base, _crest_div, _vocal_max = _crest_config.get(_mat_str_deess, (6.0, 8.0, 0.30))
+        _crest_sibilance_bonus = float(np.clip(
+            (_crest_factor - _crest_base) / _crest_div, 0.0, 0.5
+        ))
+        _vocal_bonus = float(np.clip(_panns_deess / 0.5, 0.0, _vocal_max))
+        _sibilance_confidence = float(np.clip(
+            (_hf_ratio / max(_hf_threshold, 0.005)) * 0.5 + _crest_sibilance_bonus + _vocal_bonus,
+            0.0, 1.0
+        ))
 
         # §v10.95 SOTA MP3-Adaptive: Terminal-Codec mp3_low → Sibilanz-Schwelle ×3,
         # Gain-Reduction-Cap halbiert. MP3 Pre-Echo-Artefakte werden sonst als
         # Sibilanten fehlinterpretiert und der De-Esser produziert 17+ Artefakte.
         _transfer_chain_p19 = list(kwargs.get("transfer_chain", []) or [])
-        _is_mp3_terminal = bool(
-            _transfer_chain_p19
-            and str(_transfer_chain_p19[-1]).lower() in {"mp3_low", "mp3_high"}
-        )
+        _is_mp3_terminal = bool(_transfer_chain_p19 and str(_transfer_chain_p19[-1]).lower() in {"mp3_low", "mp3_high"})
         _mp3_strength_cap = 0.35  # default: kein MP3-Cap
         _mp3_sibilance_threshold_mult = 1.0
         if _is_mp3_terminal:
@@ -766,9 +873,33 @@ class DeEsserPhase(PhaseInterface):
                 # fast keine echten Sibilanten mehr übrig, nur Codec-Artefakte
                 _mp3_sibilance_threshold_mult = 5.0
                 _mp3_strength_cap = 0.15
+            # §v10.303.5 Vocal-Awareness: Wenn Sängerin vorhanden UND BW-Verlust,
+            # sind die Sibilanten REAL (nicht Codec-Artefakte). Threshold senken.
+            if _panns_deess > 0.25 and _bw_loss > 0.5:
+                _mp3_sibilance_threshold_mult = 1.2  # Fast keine Dämpfung
+                _mp3_strength_cap = 0.40  # Sanftes De-Essing erlauben
+                logger.info(
+                    "§v10.303.5 Vocal-Aware: panns=%.2f + bw_loss=%.2f → "
+                    "Sibilanten sind real, MP3-Schutz deaktiviert",
+                    _panns_deess, _bw_loss,
+                )
+            # §v10.303.5 Crest-Aware: Hoher Crest-Faktor bestätigt echte Sibilanten.
+            # Material-adaptiv: Shellac braucht Crest > 14 (Knistern), CD nur > 8.
+            _crest_mp3_unlock = {
+                "shellac": 14.0, "wax_cylinder": 13.0, "wire_recording": 12.0,
+                "vinyl": 9.0, "lacquer_disc": 9.5,
+                "cassette": 10.0, "reel_tape": 10.0, "tape": 10.0,
+            }.get(_mat_str_deess, 9.0)
+            if _crest_factor > _crest_mp3_unlock and _panns_deess > 0.2:
+                _mp3_sibilance_threshold_mult = min(_mp3_sibilance_threshold_mult, 1.5)
+                _mp3_strength_cap = max(_mp3_strength_cap, 0.35)
+                logger.info(
+                    "§v10.303.5 Crest-Aware: crest=%.1f > %.1f (mat=%s) + panns=%.2f → "
+                    "Transienten bestätigen echte Sibilanten, MP3-Schutz gelockert",
+                    _crest_factor, _crest_mp3_unlock, _mat_str_deess, _panns_deess,
+                )
             logger.info(
-                "§v10.95 MP3-Adaptive: terminal=%s bw_loss=%.2f → "
-                "sib_thr×%.0f strength_cap=%.2f",
+                "§v10.95 MP3-Adaptive: terminal=%s bw_loss=%.2f → sib_thr×%.0f strength_cap=%.2f",
                 _transfer_chain_p19[-1] if _transfer_chain_p19 else "unknown",
                 _bw_loss,
                 _mp3_sibilance_threshold_mult,
@@ -785,19 +916,33 @@ class DeEsserPhase(PhaseInterface):
         if _era_decade_th < 1970:
             _hf_threshold *= 0.7
         _hf_threshold = max(_hf_threshold, 0.005)  # nie unter 0.5%
-        _signal_has_sibilant_content = _hf_ratio > _hf_threshold
+
+        # §v10.303.5 Graduierte Response: Statt Binär-Gate (HF > threshold?)
+        # wird die De-Essing-Intensität kontinuierlich aus HF-Ratio, Crest und
+        # Vocal-Bonus berechnet. Kein "Alles oder Nichts" mehr.
         _signal_long_enough_for_aurik8 = len(audio_mono) >= int(sample_rate * 2.0)
         if not _signal_long_enough_for_aurik8:
             logger.info(
                 "Stage 2-6 gate: audio too short (%.1fs < 2.0s) — Aurik-8 stack skipped",
                 len(audio_mono) / float(sample_rate),
             )
+        # De-Essing-Intensität: 0.0 = skip, 0.0-0.3 = gentle, 0.3-0.7 = normal, 0.7-1.0 = aggressive
+        _deess_intensity = float(np.clip(
+            _sibilance_confidence * (_hf_ratio / max(_hf_threshold, 0.005)),
+            0.0, 1.0
+        ))
+        # Sanfter Floor: Auch knapp unter Threshold ein bisschen De-Essing
+        if _deess_intensity < 0.15 and _panns_deess > 0.25 and _crest_factor > 7.0:
+            _deess_intensity = 0.15  # Minimales De-Essing trotz unterschwelligem HF
+        _signal_has_sibilant_content = _deess_intensity > 0.10
         if not _signal_has_sibilant_content:
             logger.info(
-                "Stage 2-6 gate: HF ratio %.3f < %.3f (bw_loss=%.2f) — Aurik-8 stack skipped",
+                "Stage 2-6 gate: HF ratio %.3f < %.3f (bw_loss=%.2f, crest=%.1f, conf=%.2f) — Aurik-8 stack skipped",
                 _hf_ratio,
                 _hf_threshold,
                 float(_bw_loss),
+                _crest_factor,
+                _sibilance_confidence,
             )
             # §v10.95 Non-Plus-Ultra: Material+Codec-Aware Breath-Guard.
             # Auf MP3/AAC-Material mit starkem BW-Verlust führt Breath Processing
@@ -805,9 +950,17 @@ class DeEsserPhase(PhaseInterface):
             # verstärkt). Der ArtifactFreedomGate erkennt 17+ Artefakte → Rollback.
             # Fix: Hard-Skip für lossy Codecs bei HF < 2× Schwellwert.
             _transfer_chain = list(kwargs.get("transfer_chain", []) or [])
-            _is_lossy_terminal = bool(_transfer_chain and str(_transfer_chain[-1]).lower() in {
-                "mp3_low", "mp3_high", "aac", "streaming", "minidisc",
-            })
+            _is_lossy_terminal = bool(
+                _transfer_chain
+                and str(_transfer_chain[-1]).lower()
+                in {
+                    "mp3_low",
+                    "mp3_high",
+                    "aac",
+                    "streaming",
+                    "minidisc",
+                }
+            )
             _hf_severe_loss = _hf_ratio < _hf_threshold * 2.0
             if _is_lossy_terminal and _hf_severe_loss:
                 logger.info(
@@ -832,10 +985,17 @@ class DeEsserPhase(PhaseInterface):
             # §v10.0.5: HF ratio < 0.005 → Material hat quasi keine Höhen.
             # Breath-Processing (85s) würde nur spektrales Rauschen einführen,
             # das vom ArtifactFreedomGate gerollbackt wird. Phase komplett skippen.
-            elif _hf_ratio < 0.005:
+            # §v10.128 Depth-aware: bei depth ≥4 auch bei höherem HF-Ratio skippen —
+            # Kassetten-HF ist MP3-Artefakt, keine echte Sibilanz. Selbst Basic-
+            # De-Essing bei 0.094 Strength produziert 14 Pre-Echo-Artefakte.
+            _td_p19_hf = len(kwargs.get("transfer_chain", []) or [])
+            _hf_skip_threshold = 0.025 if _td_p19_hf >= 4 else 0.005
+            if _hf_ratio < _hf_skip_threshold:
                 logger.info(
-                    "§v10.0.5 DeEsser-Skip: HF=%.4f < 0.005 → phase fully skipped (no sibilant-capable HF)",
+                    "§v10.128 DeEsser-Skip: HF=%.4f < %.3f depth=%d → phase fully skipped",
                     _hf_ratio,
+                    _hf_skip_threshold,
+                    _td_p19_hf,
                 )
                 enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
                 enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
@@ -859,12 +1019,34 @@ class DeEsserPhase(PhaseInterface):
                 _signal_long_enough_for_aurik8,
             )
 
-        # ==============================================================
-        # STAGE 2-6: AURIK 8.0 ENHANCEMENT STACK
-        # ==============================================================
+        # ── §v10.303.35 Graduated Degradation-Aware De-Essing ──
+        # Ersetzt den binären Skip (§v10.303.10). Statt "Phase komplett
+        # überspringen" wird die De-Essing-Intensität kontinuierlich mit
+        # steigendem bw_loss reduziert:
+        #   bw_loss ≤ 0.5:  Normalbetrieb (Aurik-8 + Basic De-Essing)
+        #   bw_loss ≤ 0.7:  Aurik-8 skip, Basic De-Essing konservativ
+        #   bw_loss ≤ 0.85: Basic De-Essing sehr konservativ
+        #   bw_loss > 0.85:  Minimal-De-Essing (nur stärkste Sibilanten)
+        # Sibilanten sind AUCH bei bw_loss=1.0 real (panns+Spectral bestätigt) —
+        # komplettes Überspringen lässt sie unhörbar scharf durch.
+        _graduated_mode = "full"
+        if _bw_loss > 0.85:
+            _graduated_mode = "minimal"
+        elif _bw_loss > 0.70:
+            _graduated_mode = "very_conservative"
+        elif _bw_loss > 0.50:
+            _graduated_mode = "conservative"
 
+        if _graduated_mode != "full":
+            logger.info(
+                "§v10.303.35 Graduated De-Essing: bw_loss=%.2f → mode=%s",
+                _bw_loss, _graduated_mode,
+            )
+
+        # Skip Aurik-8 Enhancement Stack for degraded modes
+        _aurik8_allowed = AURIK_8_AVAILABLE and _graduated_mode == "full"
         if (
-            AURIK_8_AVAILABLE
+            _aurik8_allowed
             and self.breath_intelligence is not None
             and self.formant_system is not None
             and self.vocal_presence is not None
@@ -942,6 +1124,26 @@ class DeEsserPhase(PhaseInterface):
                 else:
                     enhanced_audio = _stage_audio
 
+                # §v10.303.5 Graduierte Intensity: Wet/Dry-Blend des Aurik-8-Stacks.
+                # Bei niedriger Sibilanz-Konfidenz wird der Stack-Output sanft
+                # mit dem Original gemischt. Verhindert "Alles-oder-Nichts"-Artefakte.
+                if 0.10 < _deess_intensity < 1.0:
+                    _original_ref = audio.copy()
+                    if _stage_cap_active:
+                        _original_ref = _original_ref[_cap_start:_cap_end]
+                        _stage_blend = enhanced_audio[_cap_start:_cap_end]
+                    else:
+                        _stage_blend = enhanced_audio
+                    _stage_blend = _stage_blend * _deess_intensity + _original_ref * (1.0 - _deess_intensity)
+                    if _stage_cap_active:
+                        enhanced_audio[_cap_start:_cap_end] = _stage_blend
+                    else:
+                        enhanced_audio = _stage_blend
+                    logger.debug(
+                        "§v10.303.5 Intensity-Blend: deess_intensity=%.2f → Aurik-8 Stack wet/dry mix",
+                        _deess_intensity,
+                    )
+
                 logger.info(
                     "✅ Aurik 10.0.0 Enhancement: %s breaths, %s formants, %s gaps%s",
                     self.stats["breath_events_detected"],
@@ -975,6 +1177,23 @@ class DeEsserPhase(PhaseInterface):
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
         band_weights = self.BAND_WEIGHTS.get(_mk, {"low": 0.6, "mid": 0.7, "high": 0.8})
         _s_band_low, _s_band_high = self.vocal_profile.get("s_band", (5000.0, 10000.0))  # type: ignore[misc]
+
+        # ── §v10.303.35 bw_loss-adaptive Sibilance-Band ──
+        # Je degradierter das Spektrum, desto schmaler das Sibilance-Band.
+        if _graduated_mode == "minimal":
+            _s_band_narrow_factor = 0.35
+        elif _graduated_mode == "very_conservative":
+            _s_band_narrow_factor = 0.50
+        elif _graduated_mode == "conservative":
+            _s_band_narrow_factor = 0.70
+        else:
+            _s_band_narrow_factor = 1.0
+        if _s_band_narrow_factor < 1.0:
+            _s_band_center = (_s_band_low + _s_band_high) / 2.0
+            _s_band_width = (_s_band_high - _s_band_low) * _s_band_narrow_factor / 2.0
+            _s_band_low = _s_band_center - _s_band_width
+            _s_band_high = _s_band_center + _s_band_width
+            logger.debug("§v10.303.35 Sibilance-Band narrowed: %.0f-%.0f Hz", _s_band_low, _s_band_high)
         _defect_scores_for_intensity = kwargs.get("defect_scores_raw", kwargs.get("defect_scores", {}))
         _ptl_19_hint = kwargs.get("phoneme_timeline")
 
@@ -998,6 +1217,32 @@ class DeEsserPhase(PhaseInterface):
         )
         _target_abs = float(_gentle_abs + _intensity_profile.reduction_mix * (_assertive_abs - _gentle_abs))
         max_reduction_db = float(-_target_abs * _effective_strength)
+        # §v10.131 Depth-adaptive reduction: tiefe Ketten vertragen weniger De-Essing
+        # weil HF-Transienten bereits durch NR gedämpft sind und zusätzliche
+        # Gain-Reduction Pre-Echo-Artefakte (PE) im 6-12kHz-Bereich erzeugt.
+        _td_red = len(list(kwargs.get("transfer_chain", []) or []))
+        if _td_red >= 4:
+            _red_depth_factor = float(np.clip(1.0 - (_td_red - 3) * 0.20, 0.40, 1.0))
+            max_reduction_db *= _red_depth_factor
+            logger.debug("Phase_19 depth=%d → reduction ×%.2f", _td_red, _red_depth_factor)
+
+        # ── §v10.303.35 bw_loss-adaptive De-Essing-Parameter ──
+        if _graduated_mode == "minimal":
+            max_reduction_db *= 0.25  # Nur 25% der normalen Reduktion
+            _deessing_cap_override = 0.15  # Sehr niedriger Cap
+        elif _graduated_mode == "very_conservative":
+            max_reduction_db *= 0.40
+            _deessing_cap_override = 0.25
+        elif _graduated_mode == "conservative":
+            max_reduction_db *= 0.60
+            _deessing_cap_override = 0.35
+        else:
+            _deessing_cap_override = None
+        if _deessing_cap_override is not None:
+            logger.debug(
+                "§v10.303.35 bw_loss-adaptive: mode=%s max_red=%.1f dB cap=%.2f",
+                _graduated_mode, max_reduction_db, _deessing_cap_override,
+            )
 
         # §2.20 Genre-adaptive de-essing cap: genre_profile.deessing_strength_cap
         # limits how aggressive de-essing can be (e.g. Schlager 0.45, Oper 0.35).
@@ -1065,6 +1310,10 @@ class DeEsserPhase(PhaseInterface):
                     _deessing_cap,
                 )
             _cap_db = -12.0 * float(_deessing_cap)  # 0.45 → -5.4 dB max
+            # §v10.303.35 bw_loss-Graduierung: Cap weiter reduzieren
+            if _deessing_cap_override is not None:
+                _deessing_cap = min(float(_deessing_cap), _deessing_cap_override)
+                _cap_db = -12.0 * float(_deessing_cap)
             max_reduction_db = max(max_reduction_db, _cap_db)
             logger.debug(
                 "Genre deessing_strength_cap=%.2f → max_red capped to %.1f dB", _deessing_cap, max_reduction_db
@@ -1085,9 +1334,7 @@ class DeEsserPhase(PhaseInterface):
                 max_reduction_db,
             )
 
-        threshold_ratio = float(
-            self.SIBILANCE_THRESHOLD_RATIO.get(_mk, 1.8) * _intensity_profile.threshold_ratio_scale
-        )
+        threshold_ratio = float(self.SIBILANCE_THRESHOLD_RATIO.get(_mk, 1.8) * _intensity_profile.threshold_ratio_scale)
 
         if abs(max_reduction_db) < 1.0:
             logger.debug("De-Esser skipped (max_reduction=%.1f dB < 1.0 dB)", max_reduction_db)
@@ -1168,47 +1415,76 @@ class DeEsserPhase(PhaseInterface):
             )
             if _freq_weight <= 0.05:
                 # Rein Zeitbereich — kein Frequenzbereich-Risiko
-                deessed_mid = self._time_domain_deess(_mid, sample_rate, max_reduction_db,
-                                                      threshold_ratio, lookahead_samples)
-                deessed_side = self._time_domain_deess(_side, sample_rate,
-                                                       max(0.5, float(max_reduction_db) * 0.5),
-                                                       float(threshold_ratio) * 1.15,
-                                                       lookahead_samples)
+                deessed_mid = self._time_domain_deess(
+                    _mid, sample_rate, max_reduction_db, threshold_ratio, lookahead_samples
+                )
+                deessed_side = self._time_domain_deess(
+                    _side,
+                    sample_rate,
+                    max(0.5, float(max_reduction_db) * 0.5),
+                    float(threshold_ratio) * 1.15,
+                    lookahead_samples,
+                )
             elif _freq_weight >= 0.95:
                 # Rein Frequenzbereich — maximale Präzision
                 deessed_mid, _ = self._process_channel_multiband_gender_aware(
-                    _mid, sample_rate, material, band_weights,
-                    max_reduction_db, threshold_ratio, lookahead_samples,
+                    _mid,
+                    sample_rate,
+                    material,
+                    band_weights,
+                    max_reduction_db,
+                    threshold_ratio,
+                    lookahead_samples,
                 )
                 deessed_side, _ = self._process_channel_multiband_gender_aware(
-                    _side, sample_rate, material, band_weights,
+                    _side,
+                    sample_rate,
+                    material,
+                    band_weights,
                     max(0.5, float(max_reduction_db) * 0.5),
-                    float(threshold_ratio) * 1.15, lookahead_samples,
+                    float(threshold_ratio) * 1.15,
+                    lookahead_samples,
                 )
             else:
                 # Adaptiver Blend: beide laufen, gewichtet mischen
                 _freq_mid, _ = self._process_channel_multiband_gender_aware(
-                    _mid, sample_rate, material, band_weights,
-                    max_reduction_db, threshold_ratio, lookahead_samples,
+                    _mid,
+                    sample_rate,
+                    material,
+                    band_weights,
+                    max_reduction_db,
+                    threshold_ratio,
+                    lookahead_samples,
                 )
-                _time_mid = self._time_domain_deess(_mid, sample_rate, max_reduction_db,
-                                                    threshold_ratio, lookahead_samples)
+                _time_mid = self._time_domain_deess(
+                    _mid, sample_rate, max_reduction_db, threshold_ratio, lookahead_samples
+                )
                 deessed_mid = _freq_weight * _freq_mid + (1.0 - _freq_weight) * _time_mid
 
                 _freq_side, _ = self._process_channel_multiband_gender_aware(
-                    _side, sample_rate, material, band_weights,
+                    _side,
+                    sample_rate,
+                    material,
+                    band_weights,
                     max(0.5, float(max_reduction_db) * 0.5),
-                    float(threshold_ratio) * 1.15, lookahead_samples,
+                    float(threshold_ratio) * 1.15,
+                    lookahead_samples,
                 )
-                _time_side = self._time_domain_deess(_side, sample_rate,
-                                                     max(0.5, float(max_reduction_db) * 0.5),
-                                                     float(threshold_ratio) * 1.15,
-                                                     lookahead_samples)
+                _time_side = self._time_domain_deess(
+                    _side,
+                    sample_rate,
+                    max(0.5, float(max_reduction_db) * 0.5),
+                    float(threshold_ratio) * 1.15,
+                    lookahead_samples,
+                )
                 deessed_side = _freq_weight * _freq_side + (1.0 - _freq_weight) * _time_side
                 logger.debug(
                     "§v10.95 Adaptive-Blend: freq_weight=%.2f (bw=%.2f snr=%.1f mp3=%s hf=%.4f)",
-                    _freq_weight, _bw_loss, kwargs.get("snr_db", 30.0),
-                    _is_mp3_terminal, _hf_ratio,
+                    _freq_weight,
+                    _bw_loss,
+                    kwargs.get("snr_db", 30.0),
+                    _is_mp3_terminal,
+                    _hf_ratio,
                 )
 
             _left = (deessed_mid + deessed_side) / _sqrt2
@@ -1218,13 +1494,21 @@ class DeEsserPhase(PhaseInterface):
             # §v10.95 MP3-TimeDomain: Mono-Pfad ebenfalls schützen
             if _is_mp3_terminal and _hf_ratio < 0.01:
                 deessed_audio = self._time_domain_deess(
-                    enhanced_audio, sample_rate, max_reduction_db,
-                    threshold_ratio, lookahead_samples,
+                    enhanced_audio,
+                    sample_rate,
+                    max_reduction_db,
+                    threshold_ratio,
+                    lookahead_samples,
                 )
             else:
                 deessed_audio, _gender_bands_used = self._process_channel_multiband_gender_aware(
-                    enhanced_audio, sample_rate, material, band_weights,
-                    max_reduction_db, threshold_ratio, lookahead_samples,
+                    enhanced_audio,
+                    sample_rate,
+                    material,
+                    band_weights,
+                    max_reduction_db,
+                    threshold_ratio,
+                    lookahead_samples,
                 )
 
         logger.debug("  ✅ Sibilance reduced: %.1f dB", self.stats["max_gain_reduction_db"])
@@ -1715,14 +1999,29 @@ class DeEsserPhase(PhaseInterface):
                 sos_detection = signal.butter(
                     3, [detection_low / nyquist, detection_high / nyquist], btype="band", output="sos"
                 )
-                detection_band = signal.sosfilt(sos_detection, audio)
 
                 # Processing Band
                 sos_processing = signal.butter(
                     4, [processing_low / nyquist, processing_high / nyquist], btype="band", output="sos"
                 )
-                # §2.51 Anti-Zeitversatz: sosfiltfilt — processing_band wird von audio subtrahiert.
-                processing_band = signal.sosfiltfilt(sos_processing, audio)
+                # §v10.131 Depth-aware filter type: safe_sosfiltfilt wählt
+                # minimum-phase (sosfilt) für chain_depth≥4, zero-phase sonst.
+                from backend.core.audio_utils import safe_sosfiltfilt
+
+                # §v10.131: _transfer_chain_depth_p19 wird in process() gesetzt.
+                # Falls es fehlt (anderer Code-Pfad), CalibrationContext als Fallback.
+                _p19_depth = getattr(self, '_transfer_chain_depth_p19', 0)
+                if _p19_depth <= 0:
+                    try:
+                        from backend.core.calibration_context import get_calibration_context
+                        _ctx = get_calibration_context()
+                        _p19_depth = _ctx.transfer_chain_depth if _ctx else 1
+                    except Exception:
+                        _p19_depth = 1
+                detection_band = signal.sosfilt(sos_detection, audio)
+                # Detection verwendet immer sosfilt (kausal) — Envelope-Timing
+                # ist unabhängig vom Processing-Filter-Typ.
+                processing_band = safe_sosfiltfilt(sos_processing, audio, chain_depth=_p19_depth)
 
             except Exception as e:
                 logger.warning("Band %s filter design failed: %s", band_name, e)
@@ -2655,8 +2954,6 @@ class DeEsserPhase(PhaseInterface):
             description="World-Class Gender-Aware De-Esser v4.0: Multi-Band De-Esser",
         )
 
-
-
     def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int, **kwargs: Any) -> str:
         """
         Gender-Detection: Robuster Detektor (F0 + Formanten + WORLD) bevorzugt,
@@ -2726,13 +3023,20 @@ class DeEsserPhase(PhaseInterface):
                         _f1_val = float(formants[0]) if formants and len(formants) > 0 else 0.0
                         _f2_val = float(formants[1]) if formants and len(formants) > 1 else 0.0
                         _formant_ratio = _f2_val / max(_f1_val, 1.0) if _f1_val > 0 else 0.0
-                        if f0 < 150 and chars.confidence < 0.5:
+                        # §v10.126 Depth-aware: tiefe Ketten verzerren F0 zuverlässig
+                        # → Formant-Tiebreaker auch bei höherer Confidence aktivieren
+                        _td_gender = len(kwargs.get("transfer_chain", []) or [])
+                        _conf_threshold = 0.75 if _td_gender >= 4 else 0.50
+                        if f0 < 150 and chars.confidence < _conf_threshold:
                             # Ambiguous F0 — use formant structure as tiebreaker
                             if _f1_val > 450 or _formant_ratio > 2.3:
                                 gender_str = VocalGender.FEMALE  # Female formant pattern
                                 logger.info(
                                     "🎤 Formant-Tiebreaker: F0=%.0f Hz F1=%.0f F2=%.0f ratio=%.2f → FEMALE (contralto)",
-                                    f0, _f1_val, _f2_val, _formant_ratio,
+                                    f0,
+                                    _f1_val,
+                                    _f2_val,
+                                    _formant_ratio,
                                 )
                             else:
                                 gender_str = VocalGender.MALE
@@ -2787,10 +3091,16 @@ class DeEsserPhase(PhaseInterface):
                     f2_in_female = _FEMALE_F2[0] <= formants[1] <= _FEMALE_F2[1]
                     # §v10.119: Bei MP3/Bandbreitenverlust ist F2 oft degradiert.
                     # F1 allein ist dann ausreichend für Contralto-Erkennung.
-                    _f2_degraded = float(kwargs.get('bandwidth_loss', 0.0) or 0.0) > 0.5
-                    if f1_in_female and (f2_in_female or _f2_degraded):
+                    _f2_degraded = float(kwargs.get("bandwidth_loss", 0.0) or 0.0) > 0.5
+                    # §v10.303.11: Auch ohne bw_loss-Info: Wenn F1 weiblich (>300 Hz)
+                    # und F0 extrem tief (<120 Hz = sicherer Oktavfehler) → Contralto.
+                    _strong_contralto_signal = (
+                        formants[0] > 300.0  # F1 im weiblichen Bereich (>300 Hz)
+                        and f0 < _CONTRALTO_F0_LOW  # F0 extrem tief → Oktavfehler
+                    )
+                    if f1_in_female and (f2_in_female or _f2_degraded or _strong_contralto_signal):
                         _contralto_detected = True
-                        _octave_note = f" (Oktavkorrektur: {f0:.0f}→{2.0*f0:.0f} Hz)" if _octave_candidate else ""
+                        _octave_note = f" (Oktavkorrektur: {f0:.0f}→{2.0 * f0:.0f} Hz)" if _octave_candidate else ""
                         logger.warning(
                             "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz%s, "
                             "confidence=%.2f) but formants are female-typical "
@@ -2883,7 +3193,12 @@ class DeEsserPhase(PhaseInterface):
                         logger.warning(
                             "§v10.95 Gender-Degradation: bw_loss=%.2f F1=%.0f F2=%.0f <1000Hz → "
                             "Formanten unzuverlässig. F0-basiert: %s (conf %.2f→%.2f)",
-                            _bw_loss_gd, _f1, _f2, gender_str, confidence, _degraded_confidence,
+                            _bw_loss_gd,
+                            _f1,
+                            _f2,
+                            gender_str,
+                            confidence,
+                            _degraded_confidence,
                         )
                         # F0-basierte Entscheidung beibehalten, aber Confidence reduziert.
                         # Phase 19 arbeitet dann mit konservativen, gender-agnostischen Parametern.
@@ -3267,8 +3582,6 @@ class DeEsserPhase(PhaseInterface):
         )
 
 
-
-
 def _estimate_vibrato_from_pyin(
     f0_pyin: np.ndarray | None,
     voiced_prob: np.ndarray | None,
@@ -3563,6 +3876,8 @@ def _build_union_vocal_profile(genders: list[str]) -> dict:
         "harmonics_preserve": True,
         "breath_enhance": True,
     }
+
+
 # §FIX: get_metadata ist als Modul-Level-Funktion definiert (außerhalb der Klasse).
 # Monkey-Patch in die Klasse, damit abstractmethod-Constraint erfüllt ist.
 

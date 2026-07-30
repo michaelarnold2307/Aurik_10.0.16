@@ -18,8 +18,8 @@ Cannam (2006) "Echo Removal in Gramophone Recordings".
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import time as _time
 
 import numpy as np

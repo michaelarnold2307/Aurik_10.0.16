@@ -86,9 +86,10 @@ class StreamingAudioPlayer:
         self._on_finished: Callable[[], None] | None = None
         self._fire_finished: bool = False
 
-        # Resample cache: list of (audio_id, source_sr, output_sr, prepared)
+        # Resample cache: list of (fingerprint, prepared_audio)
+        # fingerprint = (shape, hash_first_4KB, sr, output_sr)
         # Keeps last 3 entries — enough for original + restored + preview.
-        self._resample_cache: list[tuple[int, int, int, np.ndarray]] = []
+        self._resample_cache: list[tuple[tuple, np.ndarray]] = []
         self._MAX_CACHE = 3
 
     # ------------------------------------------------------------------
@@ -440,11 +441,16 @@ class StreamingAudioPlayer:
 
     def _prepare(self, audio: np.ndarray, sr: int, output_sr: int) -> np.ndarray | None:
         """Normalise + resample audio to output SR.  NOT locked (slow!)."""
-        # Cache lookup (by object identity)
-        audio_id = id(audio)
-        for entry in self._resample_cache:
-            if entry[0] == audio_id and entry[1] == sr and entry[2] == output_sr:
-                return entry[3]
+        # Cache lookup — uses content fingerprint (first 4 KB) + shape to avoid
+        # false-positive hits from GC-reused memory addresses (§v10.131 BUG-012).
+        try:
+            _fp = (audio.shape, hash(audio.data.tobytes()[:4096]) if audio.nbytes else 0, sr, output_sr)
+        except Exception:
+            _fp = None
+        if _fp is not None:
+            for entry in self._resample_cache:
+                if entry[0] == _fp:
+                    return entry[1]
 
         try:
             data = np.asarray(audio, dtype=np.float32)
@@ -488,10 +494,11 @@ class StreamingAudioPlayer:
 
         data = np.ascontiguousarray(data, dtype=np.float32)
 
-        # Update cache (FIFO eviction)
+        # Update cache (FIFO eviction) — stores (fingerprint, data) pairs
         if len(self._resample_cache) >= self._MAX_CACHE:
             self._resample_cache.pop(0)
-        self._resample_cache.append((audio_id, sr, output_sr, data))
+        if _fp is not None:
+            self._resample_cache.append((_fp, data))
 
         return data
 

@@ -39,9 +39,9 @@ except ImportError:
     _LIBROSA_AVAILABLE = False
 import numpy as np
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101
 from backend.core.musical_goals.musical_goals_metrics import MusicalGoalsChecker
 from backend.core.musical_goals.processing_modes import PROCESSING_MODE_CONFIGS, ProcessingMode
-from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
 

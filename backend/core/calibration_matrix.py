@@ -865,6 +865,20 @@ def estimate_song_goal_targets(
             _kappa_memory_boost = float(np.clip((_prior_hpi - 0.75) * 0.40, 0.0, 0.10))
             kappa = float(np.clip(kappa + _kappa_memory_boost, 0.0, kappa_base))
 
+    # §v10.200 Depth-adaptive kappa: tiefere Transfer-Ketten haben physikalisch
+    # begrenzte erreichbare Ziele. Der kappa-Faktor bestimmt, wie stark Era/Genre/
+    # Material-Bias vom kanonischen Floor abheben. Bei depth≥4 wird kappa reduziert.
+    _depth = max(1, len(transfer_chain or []))
+    if _depth >= 5:
+        _depth_kappa_factor = 0.50
+    elif _depth >= 4:
+        _depth_kappa_factor = 0.65
+    elif _depth >= 3:
+        _depth_kappa_factor = 0.85
+    else:
+        _depth_kappa_factor = 1.0
+    kappa *= _depth_kappa_factor
+
     # Provenance bias (4th layer) — kappa_provenance is fixed at 0.30 (conservative).
     # RecordingProductionKB adjustments are more specific but also more uncertain
     # than era/genre/material biases, so they are applied with smaller weight.

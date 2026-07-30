@@ -102,11 +102,10 @@ def test_05_rollback_on_cumulative_drift():
     state = guard.reset()
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
-    # Use ADDITIVE phase_07: no P1/P2 exclusions (not SUBTRACTIVE, not carrier-repair).
-    # natuerlichkeit drift of -0.12 exceeds any default adaptive tolerance.
-    # NOTE: phase_03_denoise correctly excludes ALL P1/P2 goals (Reference-Paradox §2.44),
-    # so testing drift rollback requires a non-denoise enhancement phase.
-    degraded = _goals(nat=0.80)  # -0.12 drift
+    # Use ADDITIVE phase_07: authenticitaet/tonal_center NOT excluded.
+    # natuerlichkeit/artikulation/timbre_authentizitaet ARE excluded (§2.44).
+    # authentizitaet drift of -0.12 exceeds any default adaptive tolerance.
+    degraded = _goals(auth=0.78)  # -0.12 drift in authentizitaet
     bad_audio = audio * 0.5
     result_audio, rolled_back = guard.check_after_phase(
         state,
@@ -130,7 +129,7 @@ def test_06_consecutive_rollbacks_stop_pipeline():
     # All 5 phases are ADDITIVE/DYNAMICS with NO natuerlichkeit exclusion in CIG
     # (§2.55 sync: phase_19/phase_21 now have nat excluded in CIG — use saturation/EQ phases instead).
     # natuerlichkeit drift -0.12 exceeds adaptive tolerance for all of them.
-    degraded = _goals(nat=0.80)  # -0.12 drift
+    degraded = _goals(auth=0.78)  # -0.12 drift
     rollback_phases = [
         "phase_07_harmonic_restoration",  # CIG: artikulation+timbre only → nat rollback
         "phase_10_multiband_compression",  # CIG: no entry → nat rollback
@@ -153,7 +152,7 @@ def test_07_rollback_resets_on_success():
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
     # First: degraded natuerlichkeit via ADDITIVE phase → rollback
-    degraded = _goals(nat=0.80)  # -0.12 drift, no exclusions for phase_07
+    degraded = _goals(auth=0.78)  # -0.12 drift, no exclusions for phase_07
     guard.check_after_phase(state, "phase_07_harmonic_restoration", audio * 0.5, degraded, SR)
     assert state.consecutive_rollbacks == 1
     # Second: good → reset counter
@@ -337,7 +336,7 @@ def test_13_metadata_contains_rollback_info():
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
     # ADDITIVE phase_07: natuerlichkeit drift triggers rollback (no exclusions)
-    degraded = _goals(nat=0.80)  # -0.12 drift
+    degraded = _goals(auth=0.78)  # -0.12 drift
     guard.check_after_phase(state, "phase_07_harmonic_restoration", audio, degraded, SR)
     meta = guard.get_rollback_metadata(state)
     assert len(meta["interaction_rollbacks"]) == 1
@@ -414,7 +413,7 @@ def test_20_is_better_checkpoint_worse():
         goal_scores=_goals(nat=0.95),
     )
     # Worse goals
-    assert guard._is_better_checkpoint(state, _goals(nat=0.80)) is False
+    assert guard._is_better_checkpoint(state, _goals(auth=0.78)) is False
 
 
 def test_21_check_critical_pairs_no_match():
@@ -607,7 +606,7 @@ def test_23_rollback_returns_checkpoint_audio():
     guard.set_pre_pipeline_baseline(state, original_audio, _goals())
     # ADDITIVE phase_07: natuerlichkeit drift triggers rollback (no exclusions)
     bad_audio = original_audio * 0.1
-    degraded = _goals(nat=0.80)  # -0.12 drift
+    degraded = _goals(auth=0.78)  # -0.12 drift
     result_audio, rolled_back = guard.check_after_phase(
         state,
         "phase_07_harmonic_restoration",

@@ -347,6 +347,7 @@ class SongPrognoseWidget(QWidget):
         self._material: str = "unknown"
         self._chain_label: str = ""
         self._is_multi_generation: bool = False
+        self._chain_depth: int = 1  # §v10.131: DepthAwareUI
         self._decade: int | None = None
         self._genre: str = ""
         self._result_obj: Any = None
@@ -450,6 +451,15 @@ class SongPrognoseWidget(QWidget):
         meta_inner.addStretch()
         row1.addWidget(meta_card, 1)
         main_layout.addLayout(row1)
+
+        # ── Tiefen-Badge (unsichtbar bis depth ≥ 3) ──
+        self._depth_badge = QLabel("")
+        self._depth_badge.setStyleSheet(
+            "color: #8898BB; font-size: 8pt; background: rgba(102,126,234,0.10);"
+            "border-radius: 6px; padding: 3px 10px;"
+        )
+        self._depth_badge.setVisible(False)
+        meta_inner.addWidget(self._depth_badge)
 
         # ── Row 2: MOS prediction bar ─────────────────────────────────
         mos_card = QFrame()
@@ -602,6 +612,7 @@ class SongPrognoseWidget(QWidget):
     def update_material(self, material_key: str, confidence: float) -> None:
         """Aktualisiert material row. Call from GUI thread after MediumClassifier."""
         self._material = str(material_key or "unknown")
+        self._material_confidence = float(confidence or 1.0)  # §v10.303.9
         name = _MATERIAL_NAMES.get(self._material, self._material)
         pct = int(round(confidence * 100))
         self._meta_rows["material"].setText(
@@ -614,6 +625,10 @@ class SongPrognoseWidget(QWidget):
         """§2.46b: Aktualisiert die Tonträgerkette-Anzeige im Prognose-Widget."""
         self._chain_label = str(chain_label or "")
         self._is_multi_generation = bool(is_multi_generation)
+        # §v10.131 DepthAwareUI: chain_depth für Farbcodierung speichern
+        _stages = self._chain_label.count(" → ") + 1 if self._chain_label else 1
+        self._chain_depth = _stages
+        self._update_depth_aware_ui()
 
     def update_era_genre(self, decade: int | None, genre: str | None) -> None:
         """Aktualisiert era/genre rows. Call from GUI thread after EraClassifier."""
@@ -701,7 +716,97 @@ class SongPrognoseWidget(QWidget):
             snr_db=snr_db,
             limiting_defects=limiting,
             recommendations=recommendations,
+            material_confidence=float(getattr(self, '_material_confidence', 1.0) or 1.0),
         )
+
+    def _update_depth_aware_ui(self) -> None:
+        """§v10.131 DepthAwareUI: Tiefenabhängige UI-Anpassungen.
+        
+        Passt Farben, Warnungen und Schätzwerte an die Chain-Tiefe an.
+        Wird von update_chain() und update_restorability() aufgerufen.
+        """
+        from Aurik10.ui.ui_constants import DepthAwareUI
+        _depth = getattr(self, '_chain_depth', 1)
+        _conf = float(getattr(self, '_material_confidence', 1.0) or 1.0)
+        self._depth_ui = DepthAwareUI(chain_depth=_depth, material_confidence=_conf)
+        
+        # ── Farbcodierung des Chancen-Scores ──
+        if hasattr(self, '_score_dial'):
+            _color = self._depth_ui.quality_color
+            self._score_dial.setStyleSheet(
+                f"color: {_color}; background: transparent;"
+            )
+        
+        # ── Phasen-Schätzung anpassen ──
+        _daui_est = self._depth_ui.phase_count_estimate
+        if hasattr(self, '_phase_count_lbl') and _depth >= 3:
+            _current = self._phase_count_lbl.text()
+            if f"({_depth}-stufig" not in _current:
+                _note = f"  ({_depth}-stufige Kette)"
+                self._phase_count_lbl.setText(_current + _note)
+        
+        # ── Deep-Chain-Warnung ──
+        if hasattr(self, '_rec_lbl') and _depth >= 4:
+            _warn = "⚠️ Tiefe Transfer-Kette — erwartete Einschränkungen bei Brillanz und Transparenz."
+            _current_rec = self._rec_lbl.text() if hasattr(self._rec_lbl, 'text') else ""
+            if _warn not in str(_current_rec):
+                self._rec_lbl.setText(str(_current_rec) + "\n" + _warn)
+
+        # ── Tiefen-Badge ──
+        if hasattr(self, '_depth_badge') and _depth >= 3:
+            _stage_names = {2: "2-stufig", 3: "3-stufig", 4: "4-stufig", 5: "5-stufig"}
+            _label = _stage_names.get(_depth, f"{_depth}-stufig")
+            _color = self._depth_ui.quality_color
+            self._depth_badge.setText(f"◉ {_label}e Transfer-Kette")
+            self._depth_badge.setStyleSheet(
+                f"color: {_color}; font-size: 8pt; "
+                f"background: rgba(102,126,234,0.10);"
+                f"border-radius: 6px; padding: 3px 10px;"
+            )
+            self._depth_badge.setVisible(True)
+
+    def update_depth_from_bridge(self, transfer_generation_count: int) -> None:
+        """§Bridge: Empfängt Chain-Depth vom Backend via Bridge-Callback.
+        
+        Wird von ModernMainWindow aufgerufen, wenn die Pre-Analysis
+        die transfer_generation_count liefert. Kein Direktimport!
+        """
+        if transfer_generation_count > 0:
+            self._chain_depth = max(self._chain_depth, transfer_generation_count)
+            self._update_depth_aware_ui()
+
+    def update_from_bridge_calibration(self, calib_data: dict) -> None:
+        """§Bridge: ZENTRALER Einstiegspunkt für ALLE Kalibrierungsdaten.
+        
+        Empfängt ein Dict von BridgeCalibrationData.to_frontend_dict()
+        und aktualisiert ALLE depth-abhängigen UI-Elemente auf einmal.
+        
+        Dies ist der EINZIGE Pfad für Backend→Frontend-Kalibrierungsdaten.
+        Kein Direktimport von backend.* Modulen!
+        """
+        if not isinstance(calib_data, dict):
+            return
+        
+        # Kernwerte übernehmen
+        self._chain_depth = max(self._chain_depth,
+                                int(calib_data.get('transfer_chain_depth', 1)))
+        
+        # DepthAwareUI neu laden
+        self._update_depth_aware_ui()
+        
+        # Quality-Color aus Bridge übernehmen (überschreibt lokale Berechnung)
+        _bridge_color = calib_data.get('quality_color', '')
+        if _bridge_color and hasattr(self, '_score_dial'):
+            self._score_dial.setStyleSheet(
+                f"color: {_bridge_color}; background: transparent;"
+            )
+        
+        # Deep-Chain-Warnung aus Bridge
+        _warning = calib_data.get('deep_chain_warning', '')
+        if _warning and hasattr(self, '_rec_lbl'):
+            _cur = str(self._rec_lbl.text() if hasattr(self._rec_lbl, 'text') else '')
+            if _warning not in _cur:
+                self._rec_lbl.setText(_cur + '\n' + _warning)
 
     def update_defects(self, defects: dict) -> None:
         """
@@ -930,6 +1035,7 @@ def _print_prognose_terminal(
     snr_db: float,
     limiting_defects: list[str],
     recommendations: list[str],
+    material_confidence: float = 1.0,
 ) -> None:
     """Gibt aus: a colored prognosis report to the logger (INFO level)."""
     grade_de = {
@@ -941,6 +1047,17 @@ def _print_prognose_terminal(
     }.get(grade, grade)
     mat_name = _MATERIAL_NAMES.get(material, material)
     lo, hi, _ = _GRADE_PHASES.get(grade, _GRADE_PHASES["unknown"])
+    # §v10.303.9: Confidence-bewusste Phasen-Schätzung
+    if material_confidence < 0.25:
+        _mult = 0.40
+    elif material_confidence < 0.35:
+        _mult = 0.55
+    elif material_confidence < 0.50:
+        _mult = 0.75
+    else:
+        _mult = 1.0
+    lo = max(10, int(lo * _mult))
+    hi = max(12, int(hi * _mult))
 
     lines = [
         "",

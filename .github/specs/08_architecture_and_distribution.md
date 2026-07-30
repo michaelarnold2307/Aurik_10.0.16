@@ -1023,6 +1023,12 @@ torch==2.2.2  --extra-index-url https://download.pytorch.org/whl/cpu
 
 **Singleton**: `backend/core/ml_device_manager.py` — `get_ml_device_manager()`
 
+**§v10.305 Initialisierungs-Zeitpunkt**: Der Singleton MUSS im **Hauptthread** vor
+`ModernMainWindow.__init__()` initialisiert werden (`Aurik10/main.py`).
+GPU-Erkennung DARF KEINE blockierenden Operationen (`torch.zeros("cuda")`) ausführen.
+Nur Property-Queries: `torch.cuda.is_available()`, `torch.version.hip`,
+`torch.cuda.get_device_properties()`.
+
 **Architektur-Erkennung**: `_detect_amd_architecture(device_name)` matcht GPU-Marketing-Namen und
 GFX-IDs gegen `_AMD_ARCH_PATTERNS` → `AMDArchitecture` (RDNA3, RDNA2, RDNA1, GCN5, GCN4, CDNA3/2/1).
 

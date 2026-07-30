@@ -74,24 +74,58 @@ def find_undefined_in_functions(tree: ast.AST, source_file: str) -> list[str]:
                             name = sub.id
                             # Is this name NOT a parameter of the inner function,
                             # NOT a builtin, and NOT assigned in the outer function?
-                            if (name not in inner_params
-                                    and name not in outer_assigned
-                                    and name not in self.current_func_params
-                                    and name not in __builtins__.__dict__
-                                    and not name.startswith('_')):
+                            if (
+                                name not in inner_params
+                                and name not in outer_assigned
+                                and name not in self.current_func_params
+                                and name not in __builtins__.__dict__
+                                and not name.startswith("_")
+                            ):
                                 # But IS used? This is suspicious
                                 # Check if it's a common module-level name
-                                if name in ('np', 'os', 'sys', 'time', 'logging', 'logger',
-                                           'math', 'json', 're', 'Path', 'Any', 'Optional',
-                                           'List', 'Dict', 'Tuple', 'Union', 'warnings',
-                                           'traceback', 'collections', 'itertools', 'functools',
-                                           'threading', 'abc', 'dataclass', 'field', 'Enum',
-                                           'auto', 'deepcopy', 'defaultdict', 'partial',
-                                           'TYPE_CHECKING', 'PhaseInterface', 'PhaseResult',
-                                           'PhaseMetadata', 'PhaseCategory', 'PhaseMode',
-                                           'create_phase_result', 'MaterialType', 'np'):
+                                if name in (
+                                    "np",
+                                    "os",
+                                    "sys",
+                                    "time",
+                                    "logging",
+                                    "logger",
+                                    "math",
+                                    "json",
+                                    "re",
+                                    "Path",
+                                    "Any",
+                                    "Optional",
+                                    "List",
+                                    "Dict",
+                                    "Tuple",
+                                    "Union",
+                                    "warnings",
+                                    "traceback",
+                                    "collections",
+                                    "itertools",
+                                    "functools",
+                                    "threading",
+                                    "abc",
+                                    "dataclass",
+                                    "field",
+                                    "Enum",
+                                    "auto",
+                                    "deepcopy",
+                                    "defaultdict",
+                                    "partial",
+                                    "TYPE_CHECKING",
+                                    "PhaseInterface",
+                                    "PhaseResult",
+                                    "PhaseMetadata",
+                                    "PhaseCategory",
+                                    "PhaseMode",
+                                    "create_phase_result",
+                                    "MaterialType",
+                                    "np",
+                                ):
                                     continue
-                                if name.isupper() and '_' in name:
+                                if name.isupper() and "_" in name:
                                     continue  # Constants
                                 self.issues.append(
                                     f"{child.name}(): '{name}' used but not in params, "

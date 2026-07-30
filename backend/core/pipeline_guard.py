@@ -182,8 +182,10 @@ class PipelineGuard:
                 if count >= 10 and count % 10 == 0:
                     logger.warning(
                         "🐛 Bug-Pattern '%s': %d× in %d Phasen (%s)",
-                        pattern, count, len(self._bug_phases[pattern]),
-                        ', '.join(sorted(self._bug_phases[pattern])[:5]),
+                        pattern,
+                        count,
+                        len(self._bug_phases[pattern]),
+                        ", ".join(sorted(self._bug_phases[pattern])[:5]),
                     )
                 return pattern
         return None
@@ -194,9 +196,7 @@ class PipelineGuard:
             "total_bugs": sum(self._bug_patterns.values()),
             "patterns": dict(self._bug_patterns),
             "affected_phases": {k: sorted(v) for k, v in self._bug_phases.items()},
-            "critical_patterns": [
-                p for p, c in self._bug_patterns.items() if c >= 20
-            ],
+            "critical_patterns": [p for p, c in self._bug_patterns.items() if c >= 20],
         }
 
     # ── Post-Restore: Whisper-Blending + Dynamics-Recovery ─────────────
@@ -234,7 +234,7 @@ class PipelineGuard:
 
     # ── Post-Flight ───────────────────────────────────────────────────
 
-    def post_flight(self, final_audio: np.ndarray, sr: int) -> dict[str, Any]:
+    def post_flight(self, final_audio: np.ndarray, sr: int, chain_depth: int = 1) -> dict[str, Any]:
         """Nach Pipeline-Ende: Watchdog-Report + Pleasantness-Check."""
         report: dict[str, Any] = {
             "phases_monitored": self._phase_count,
@@ -244,7 +244,7 @@ class PipelineGuard:
 
         # Watchdog post-flight
         try:
-            wd_report = self._wd().post_flight_validity(final_audio, sr)
+            wd_report = self._wd().post_flight_validity(final_audio, sr, chain_depth=chain_depth)
             report["watchdog"] = wd_report.to_dict()
             report["all_checks_passed"] = wd_report.all_checks_passed
             if wd_report.criticals:

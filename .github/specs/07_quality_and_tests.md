@@ -1072,6 +1072,7 @@ Admissibility-Gate platzieren.
 | `tests/normative/` | CI-Gate-Tests (RELEASE_MUST) | — | variabel |
 | `tests/regression/` | Regressions-Absicherung | — | variabel |
 | `tests/e2e/` | End-to-End mit echtem Audio | `e2e` | variabel |
+| `tests/test_startup_smoke.py` | Startup-Smoke-Test (§v10.305 §G77): GPU+Warmup+PreAnalysis | `smoke` | ≤ 60 s |
 
 ### Marker-System
 
@@ -1428,7 +1429,6 @@ Fuer psychoakustische Kern-Changes ist die konsolidierte Engineering-Basis in
 - Bridge-Compliance: 0 Bypasses in CLI und Batch
 - ML-Fallback-Audit: 54 Module, 3 Silent-Failures behoben
 
-
 ## §7.10 — Perzeptuelle Qualitätssicherung (§v10.101)
 
 ### §7.10.1 Perzeptuelle Qualitätsgewichtung
@@ -1448,6 +1448,7 @@ Der QualityAnalyzer gewichtet ab v10.101 perzeptuell:
 ### §7.10.2 Perzeptuelles Monitoring
 
 Die Final-Summary zeigt DREI perzeptuelle Dimensionen (§G112):
+
 - 📊 Signalqualität (technische Analyse)
 - 🎧 Hörerlebnis (MUSHRA/OQS, simuliertes Hörerpanel)
 - 🧠 Restaurations-Index (HPI, ganzheitlich)
@@ -1482,4 +1483,3 @@ Teil der perzeptuellen Architektur:
 | P2 | Bark/LUFS-Utility | §G102, §G103 |
 | P3 | JND-Gate in ProfiledPhaseCall | §G104, §V37 |
 | P4 | Perzeptuelle Konsistenz | §G100–§G112 |
-

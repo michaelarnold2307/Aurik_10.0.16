@@ -33,7 +33,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Started", "Gestartet"),
     ("starting", "starte"),
     ("Starting", "Starte"),
-    
     # Fehler/Probleme
     ("failed to", "konnte nicht"),
     ("Failed to", "Konnte nicht"),
@@ -51,7 +50,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Fallback", "Fallback"),
     ("ignoring", "ignoriert"),
     ("Ignoring", "Ignoriert"),
-    
     # Lade/Speicher-Operationen
     ("loading", "lade"),
     ("Loading", "Lade"),
@@ -69,7 +67,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Writing", "Schreibe"),
     ("reading", "lese"),
     ("Reading", "Lese"),
-    
     # Verarbeitung
     ("processing", "verarbeite"),
     ("Processing", "Verarbeite"),
@@ -109,7 +106,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Generating", "Generiere"),
     ("generated", "generiert"),
     ("Generated", "Generiert"),
-    
     # Status
     ("available", "verfügbar"),
     ("Available", "Verfügbar"),
@@ -129,7 +125,6 @@ REPLACEMENTS: list[tuple[str, str]] = [
     ("Ready", "Bereit"),
     ("pending", "ausstehend"),
     ("Pending", "Ausstehend"),
-    
     # Kalibrierung
     ("calibrated", "kalibriert"),
     ("Calibrated", "Kalibriert"),
@@ -154,7 +149,7 @@ REPLACEMENTS: list[tuple[str, str]] = [
 
 def _is_logger_line(line: str) -> bool:
     """Prüft ob eine Zeile einen Logger-Aufruf enthält."""
-    return bool(re.search(r'logger\.(debug|info|warning|error)\s*\(', line))
+    return bool(re.search(r"logger\.(debug|info|warning|error)\s*\(", line))
 
 
 def fix_file(filepath: Path, dry_run: bool = True) -> int:
@@ -164,14 +159,14 @@ def fix_file(filepath: Path, dry_run: bool = True) -> int:
             original = f.read()
     except Exception:
         return 0
-    
-    lines = original.split('\n')
+
+    lines = original.split("\n")
     changed = 0
-    
+
     for i, line in enumerate(lines):
         if not _is_logger_line(line):
             continue
-        
+
         new_line = line
         for en, de in REPLACEMENTS:
             # Nur innerhalb von String-Literalen ersetzen
@@ -183,38 +178,38 @@ def fix_file(filepath: Path, dry_run: bool = True) -> int:
                 suffix = m.group(3)
                 new_msg = msg
                 # Ersetze ganze Wörter (nicht Teilwörter)
-                pattern = re.compile(r'\b' + re.escape(en) + r'\b')
+                pattern = re.compile(r"\b" + re.escape(en) + r"\b")
                 new_msg = pattern.sub(de, new_msg)
                 if new_msg != msg:
-                    new_line = prefix + new_msg + suffix + new_line[m.end():]
+                    new_line = prefix + new_msg + suffix + new_line[m.end() :]
                     # Re-scan the rest of the line
                     continue
-        
+
         if new_line != line:
             lines[i] = new_line
             changed += 1
-    
+
     if changed > 0 and not dry_run:
-        with open(filepath, 'w') as f:
-            f.write('\n'.join(lines))
-    
+        with open(filepath, "w") as f:
+            f.write("\n".join(lines))
+
     return changed
 
 
 def main() -> int:
-    dry_run = '--dry' in sys.argv
+    dry_run = "--dry" in sys.argv
     mode = "DRY-RUN" if dry_run else "FIX"
     print(f"=== §v10.52 Bulk-Fix: Englische Logs → Deutsch ({mode}) ===\n")
-    
+
     total_files = 0
     total_changes = 0
-    
-    for root_dir in ['backend', 'denker', 'Aurik10']:
+
+    for root_dir in ["backend", "denker", "Aurik10"]:
         root = _PROJECT_ROOT / root_dir
         if not root.exists():
             continue
-        for filepath in sorted(root.rglob('*.py')):
-            if 'test' in str(filepath) or '__pycache__' in str(filepath):
+        for filepath in sorted(root.rglob("*.py")):
+            if "test" in str(filepath) or "__pycache__" in str(filepath):
                 continue
             changes = fix_file(filepath, dry_run=dry_run)
             if changes > 0:
@@ -222,11 +217,11 @@ def main() -> int:
                 print(f"  {changes:3d} Änderungen: {rel}")
                 total_files += 1
                 total_changes += changes
-    
-    print(f"\n{'='*60}")
+
+    print(f"\n{'=' * 60}")
     print(f"Dateien mit englischen Logs: {total_files}")
     print(f"Einzelne Log-Meldungen gefixt: {total_changes}")
-    
+
     if dry_run:
         print("\n📋 DRY-RUN — keine Änderungen vorgenommen.")
         print("   Zum Anwenden: python scripts/pre_commit_language_fix.py")
@@ -236,5 +231,5 @@ def main() -> int:
         return 0
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

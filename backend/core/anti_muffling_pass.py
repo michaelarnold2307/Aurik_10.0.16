@@ -46,14 +46,32 @@ class AntiMufflingPass:
     MUFFLED_HF_RATIO = 0.08  # HF-Anteil unter 8% = dumpf
     MAX_HF_BOOST_DB = 3.0  # Maximal +3 dB HF
     TILT_CORRECTION_MAX_DB = 2.5  # Maximaler Tilt-Korrektur
-    BRIGHTNESS_TARGET = 0.12  # Ziel-HF-Ratio
+    BRIGHTNESS_TARGET = 0.12  # Ziel-HF-Ratio (Basis, wird chain-depth-adaptiv)
     OVER_BRIGHT_CEILING = 0.30  # HF-Ratio > 30% = zu hell
+
+    # §v10.304: Chain-Depth-adaptive Brightness-Targets
+    # Tiefere Ketten (≥3 Träger) haben kumulierte HF-Dämpfung → höheres Target nötig.
+    DEPTH_BRIGHTNESS_TARGETS: dict[int, float] = {
+        1: 0.12,  # Studio/Digital
+        2: 0.15,  # eine analoge Generation
+        3: 0.25,  # zwei analoge Generationen (z.B. vinyl→cassette)
+        4: 0.38,  # drei analoge Generationen (z.B. reel_tape→vinyl→cassette)
+        5: 0.45,  # vier+ analoge Generationen
+    }
+    MAX_HF_BOOST_DEPTH: dict[int, float] = {
+        1: 3.0,
+        2: 4.0,
+        3: 5.0,
+        4: 6.0,
+        5: 7.0,
+    }
 
     def __init__(self) -> None:
         self._reports: list[AntiMufflingReport] = []
 
-    def detect_muffling(self, audio: np.ndarray, sr: int) -> AntiMufflingReport:
+    def detect_muffling(self, audio: np.ndarray, sr: int, brightness_target: float | None = None) -> AntiMufflingReport:
         """Erkennt Dumpfheit im gesamten Audio."""
+        _target = brightness_target if brightness_target is not None else self.BRIGHTNESS_TARGET
         report = AntiMufflingReport()
         mono = np.mean(audio, axis=0) if audio.ndim == 2 else audio
         n = len(mono)
@@ -85,7 +103,7 @@ class AntiMufflingPass:
         centroid_normalized = min(1.0, centroid / 4000.0)  # 4kHz = 1.0
 
         # ── 4. Muffling-Score ──
-        hf_score = min(1.0, hf_ratio / self.BRIGHTNESS_TARGET)
+        hf_score = min(1.0, hf_ratio / _target)
         tilt_score = min(1.0, (tilt_db + 20.0) / 20.0)  # tilt > -20 dB
         centroid_score = centroid_normalized
         report.muffling_score = float(np.mean([hf_score, tilt_score, centroid_score]))
@@ -99,6 +117,7 @@ class AntiMufflingPass:
         sr: int,
         *,
         manual_strength: float = 0.7,
+        chain_depth: int = 1,  # §v10.304: Transfer-Chain-Tiefe für adaptive Targets
     ) -> np.ndarray:
         """Führt Anti-Muffling durch — chirurgisch, nur in dumpfen Zonen.
 
@@ -106,13 +125,18 @@ class AntiMufflingPass:
             audio: float32 Audio
             sr: Sample-Rate
             manual_strength: 0.0-1.0, Override für automatische Stärke
+            chain_depth: Transfer-Chain-Tiefe (1-5), steuert Brightness-Target
         """
+        # §v10.304: Chain-Depth-adaptives Brightness-Target
+        _depth = max(1, min(5, int(chain_depth)))
+        _brightness_target = self.DEPTH_BRIGHTNESS_TARGETS.get(_depth, self.BRIGHTNESS_TARGET)
+        _max_hf_boost = self.MAX_HF_BOOST_DEPTH.get(_depth, self.MAX_HF_BOOST_DB)
         result = np.asarray(audio, dtype=np.float32).copy()
         mono = np.mean(result, axis=0) if result.ndim == 2 else result
         n = len(mono)
 
         # ── Detection ──
-        report = self.detect_muffling(result, sr)
+        report = self.detect_muffling(result, sr, brightness_target=_brightness_target)
         if not report.muffling_detected:
             report.warnings.append("No muffling detected — skipping")
             self._reports.append(report)
@@ -120,7 +144,7 @@ class AntiMufflingPass:
 
         # ── Adaptive Strength ──
         muffling_severity = 1.0 - report.muffling_score  # 0=ok, 1=extrem
-        hf_boost_db = muffling_severity * self.MAX_HF_BOOST_DB * manual_strength
+        hf_boost_db = muffling_severity * _max_hf_boost * manual_strength
         tilt_correction_db = muffling_severity * self.TILT_CORRECTION_MAX_DB * manual_strength
         report.hf_restoration_db = hf_boost_db
         report.tilt_correction_db = tilt_correction_db

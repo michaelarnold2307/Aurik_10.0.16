@@ -346,6 +346,21 @@ class ModulationNoiseReductionPhase(PhaseInterface):
             kwargs.get("quality_mode"),
             float(kwargs.get("restorability_score", 50.0)),
         )
+
+        # §v10.200 Depth-adaptive: tiefere Ketten brauchen höheren g_floor
+        # und sensitiveren Detection-Threshold (mehr Modulationsrauschen)
+        _td_p59 = max(1, int(kwargs.get("transfer_chain_depth", 1)))
+        if _td_p59 >= 4:
+            _profile_59["g_floor"] = float(np.clip(_profile_59["g_floor"] + 0.08, 0.10, 0.35))
+            _profile_59["min_modulation_noise_score"] = float(
+                np.clip(_profile_59["min_modulation_noise_score"] - 0.05, 0.05, 0.25)
+            )
+        elif _td_p59 >= 3:
+            _profile_59["g_floor"] = float(np.clip(_profile_59["g_floor"] + 0.04, 0.10, 0.30))
+            _profile_59["min_modulation_noise_score"] = float(
+                np.clip(_profile_59["min_modulation_noise_score"] - 0.03, 0.05, 0.25)
+            )
+
         phase_locality_factor = float(np.clip(float(kwargs.get("phase_locality_factor", 1.0)), 0.35, 1.0))
         _pmgg_strength = float(kwargs.get("strength", strength))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))

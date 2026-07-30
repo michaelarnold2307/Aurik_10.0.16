@@ -169,7 +169,21 @@ Das CD-Rauschprofil simuliert das thermische Rauschen eines 16-bit CD-Wandlers:
 - DSP-Spezialregeln: §III
 - Export-Pipeline: §IV
 - CD-Rauschprofil: §V
+- **Startup & Kommunikation: §VI — §v10.305 Startup-Integrations-Vertrag**
+
+### §VI — Startup-Integrations-Vertrag (§v10.305)
+
+1. **GPU-Detection im Hauptthread**: `get_ml_device_manager()` VOR `ModernMainWindow` aufrufen. Kein `torch.zeros("cuda")`.
+2. **Warmup ohne GPU**: `warmup_models_background()` darf `get_ml_device_manager()` NICHT aufrufen.
+3. **Unified Progress**: `_sync_unified_progress()` ist die EINZIGE Quelle für beide Fortschrittsbalken.
+4. **Kontextbewusste Kommunikation**: Jeder Song bekommt individuelle Statusmeldungen via `_build_context_status()`.
+5. **i18n-Pflicht**: Jeder benutzersichtbare String MUSS `t()` verwenden.
+6. **Cache-Safety**: `python3 -B` in allen Launch-Skripten.
+7. **Lock-Disziplin**: Kein `import` während `with lock:`.
+8. **Event-Garantie**: `threading.Event.set()` in `finally`.
+9. **Plugin-Namen-Validierung**: `_failed > 0` nach Warmup → Warning.
+10. **Startup-Smoke-Test**: `tests/test_startup_smoke.py` muss bestehen.
 
 ---
 
-*Letzte Änderung: 2026-08-03 — v10.0.12: §G88 Defektbehebungs-Module (Phase_07/19/23/43) Depth-adaptive DSP-Fallbacks (§v10.60) + §G87 Per-Band-Noise-Floor-Guard Phase_26 (§v10.61)*
+*Letzte Änderung: 2026-07-30 — v10.0.14: §v10.305 Startup-Integration, Unified Progress, Context-Aware Communication*

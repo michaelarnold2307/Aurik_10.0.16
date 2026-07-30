@@ -28,6 +28,7 @@ struktureller Absicherung gegen Regression.
 
 **Leitprinzip:** Jede Maßnahme muss mindestens eines dieser drei Ziele direkt
 verbessern:
+
 1. **Hörbarer Wohlklang** (Naturalness, Formant-Treue, Mikrodynamik)
 2. **Systemische Stabilität** (keine Regression, keine unbemerkte Degradation)
 3. **Nachhaltige Wartbarkeit** (keine Monkey-Patches, keine versteckten Abhängigkeiten)
@@ -46,6 +47,7 @@ ist eine architektonische Zeitbombe. Fünf Phasen (03, 20, 23, 24, 49) stürzen 
 wenn die Import-Reihenfolge sich ändert.
 
 **Maßnahme:**
+
 1. `backend/core/audio_utils.py`: `safe_stft()` und `safe_istft()` als öffentliche
    Funktionen deklarieren (existieren bereits, müssen nur exportiert werden).
 2. In allen fünf Phasen `signal.safe_stft(...)` durch `from backend.core.audio_utils
@@ -69,6 +71,7 @@ muss fehlschlagen (der Monkey-Patch wird entfernt).
 Linter sie erkannte. Beide hätten mit statischer Analyse gefunden werden können.
 
 **Maßnahme:**
+
 1. `.pylintrc` ergänzen um `--enable=undefined-variable`, `--enable=used-before-assignment`.
 2. CI-Pipeline (`pytest --pylint`) in `.github/workflows/` um Lint-Schritt erweitern.
 3. Bestehende False-Positives via `# pylint: disable=...` dokumentieren (nicht ignorieren).
@@ -89,6 +92,7 @@ explizit als "zu konservativ gegen iZotope RX11" kommentiert waren. Ein automati
 Check hätte das sofort erkannt.
 
 **Maßnahme:**
+
 1. `scripts/calibration_audit.py` — neues Skript, das:
    - Alle Parameter in `excellence_optimizer.py` liest
    - Gegen SOTA-Zielwerte prüft (z.B. `_HARM_BOOST_DB` ≥ 3.2)
@@ -120,6 +124,7 @@ emotionaler" vs. "Restaurat ist objektiv besser"), gab es keine Schiedsinstanz.
 Der Goosebumps-Score gewann immer — und das defekte Original wurde gewählt.
 
 **Maßnahme:**
+
 1. `backend/core/metric_arbiter.py` — neue Klasse `MetricArbiter` mit einer
    Methode `resolve(quantitative_score, qualitative_score, context) → decision`.
 2. Regeln (priorisiert):
@@ -149,6 +154,7 @@ FeedbackChain destruktiv, weil sie nicht wussten, dass sie im zweiten Durchlauf
 auf bereits sauberem Audio operieren.
 
 **Maßnahme:**
+
 1. `PhaseInterface._safe_process()`: Setzt `kwargs['_feedback_chain_pass'] = True`
    wenn die Phase im FeedbackChain-Kontext läuft (erkennbar via `_fc_active`-Flag
    im `_restoration_context`).
@@ -177,6 +183,7 @@ Durchlauf wird von einer Risikoquelle zu einem reinen Qualitätsgewinn.
 ist wissenschaftlich auf Sundberg-Niveau — aber vollständig undokumentiert.
 
 **Maßnahme:**
+
 1. `docs/VOCAL_SYSTEM.md` — umfassende Dokumentation:
    - Architektur-Übersicht (VocalDetector → VocalNaturalnessScorer → VocalQualityGate)
    - Die 6 Dimensionen: Formant-Integrität, Atem-Natürlichkeit, Sibilanz-Erhalt,
@@ -209,6 +216,7 @@ Kette zeigte, dass Parameter-Tuning ohne Verständnis der Interaktionen wirkungs
 ist. Diese Ketten müssen dokumentiert und automatisch prüfbar sein.
 
 **Maßnahme:**
+
 1. `scripts/parameter_impact_trace.py` — AST-basierte Analyse:
    - Extrahiert alle Parameter-Definitionen (Modul-Konstanten, Profile-Felder)
    - Verfolgt den Datenfluss bis zur tatsächlichen Anwendung (z.B. `_TARGET_CV_MIN`
@@ -236,6 +244,7 @@ wichtigste Sicherheitsinnovation. Ihre Korrektheit muss automatisch verifizierba
 sein — nicht nur durch manuelle Code-Review.
 
 **Maßnahme:**
+
 1. `PhaseInterface._safe_process(..., guard_test=False)` — neuer Parameter.
 2. Wenn `guard_test=True`:
    - Injiziert künstliche Degradation (RMS-Drop, Transient-Shift, Spectral-Novelty,

@@ -95,7 +95,7 @@ if __name__ == "__main__":
 else:
     from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult, create_phase_result
 
-from backend.core.audio_utils import safe_filtfilt,  to_channels_last  # pylint: disable=wrong-import-position
+from backend.core.audio_utils import safe_filtfilt, to_channels_last  # pylint: disable=wrong-import-position
 
 logger = logging.getLogger(__name__)
 
@@ -756,6 +756,7 @@ class EQCorrectionPhase(PhaseInterface):
                     material_type,
                     params.get("era", ""),  # type: ignore[arg-type]
                     _sot_strength,  # type: ignore[arg-type]
+                    transfer_chain=kwargs.get("transfer_chain", []) or [],
                 )
                 _sot_applied = True
         except Exception as _sot_exc:
@@ -853,6 +854,7 @@ class EQCorrectionPhase(PhaseInterface):
         material_type: str,
         _era: str,
         strength: float,
+        transfer_chain: list[str] | None = None,
     ) -> np.ndarray:
         """§C7 Spectral Optimal Transport — 1D Wasserstein spectral alignment.
 
@@ -911,6 +913,10 @@ class EQCorrectionPhase(PhaseInterface):
 
         # Build current vs reference band energies and compute transport correction
         eq_corrections: dict[str, float] = {}
+        # §v10.127 Depth-aware bass: tiefere Ketten verlieren mehr Bass →
+        # erlaube stärkere Korrektur im Bass-Band.
+        _td_p04 = len(transfer_chain) if transfer_chain else 0
+        _bass_depth_factor = float(np.clip(1.0 + max(0, _td_p04 - 2) * 0.25, 1.0, 2.0))
         for band_name, band_hz in _band_hz.items():
             _mask = (freqs >= band_hz * 0.5) & (freqs < band_hz * 2.0)
             if not np.any(_mask):
@@ -919,8 +925,18 @@ class EQCorrectionPhase(PhaseInterface):
             ref_delta_db = ref_profile.get(band_name, 0.0)
             # Transport correction: nudge current energy toward reference
             correction_db = ref_delta_db - current_energy_db
-            # Cap per-band OT correction to ±3 dB × strength (advisory, no over-EQ)
-            correction_db = float(np.clip(correction_db * strength, -3.0 * strength, 3.0 * strength))
+            # §v10.127: Bass-Korrektur mit Depth-Faktor verstärken
+            if band_name == "bass" and _td_p04 >= 3:
+                correction_db *= _bass_depth_factor
+            # §v10.127 Adaptive Bass-Restoration: Statt hartem ±3dB-Cap den
+            # tatsächlichen Bass-Verlust messen und proportional korrigieren.
+            # Kassetten mit 4 Generationen haben oft 10-20 dB Bass-Defizit —
+            # ein 3dB-Cap macht die Korrektur wirkungslos.
+            # Erlaube bis zu +8 dB für Bass (Shelf-Filter ist musikalisch transparent).
+            if band_name == "bass":
+                correction_db = float(np.clip(correction_db * strength, -3.0 * strength, 8.0 * strength))
+            else:
+                correction_db = float(np.clip(correction_db * strength, -3.0 * strength, 3.0 * strength))
             if abs(correction_db) > 0.5:
                 eq_corrections[band_name] = correction_db
 

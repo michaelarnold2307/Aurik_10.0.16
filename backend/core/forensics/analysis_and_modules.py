@@ -7,9 +7,9 @@ SOTA-konforme Analyse- und Policy-Module für Musikrestaurierung
 
 import concurrent.futures
 import logging
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 import time
 from typing import Any, Optional
-import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 

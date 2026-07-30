@@ -12,29 +12,29 @@ Wissenschaftliche Grundlage (normative Literatur, §6.9b):
 Analoge Defekte:
     - Godsill & Rayner (1998) Digital Audio Restoration, Springer
         AR-Prädiktionsmodell für Clicks, Bayesian-Crackle, probabilistisches
-        Defektmodell — Standardreferenz für alle analogen Defekttypen
+        Defektmodell - Standardreferenz für alle analogen Defekttypen
     - Janssen, Veldhuis & Vries (1986) IEEE TASLP 34:203
-        AR-basierte Click-Detektion via Prädiktionsfehler — Grundlage Click/Crackle
+        AR-basierte Click-Detektion via Prädiktionsfehler - Grundlage Click/Crackle
     - Maher (1993) J. Acoust. Soc. Am. 93:1679
-        Click- und Pop-Detektion im Zeitbereich — Laufzeit-Diskriminator
+        Click- und Pop-Detektion im Zeitbereich - Laufzeit-Diskriminator
     - Czyzewski & Kaczmarek (2003) AES Conv. 115
-        Parametrisches Vinyl-Wow/Flutter-Modell — Mehrband-WF-Detektion
+        Parametrisches Vinyl-Wow/Flutter-Modell - Mehrband-WF-Detektion
     - Bailey, Casebeer & Fazekas (2019) AES 147th Conv.
-        Neural Network Vinyl-Knistern-Detektion — SOTA-Validierung crackle 4σ-Schwelle
+        Neural Network Vinyl-Knistern-Detektion - SOTA-Validierung crackle 4σ-Schwelle
     - Esquef & Biscainho (2006) IEEE TASLP 14:1207
-        Modulations-Rauschen bei Bandaufnahmen — Basis MODULATION_NOISE
+        Modulations-Rauschen bei Bandaufnahmen - Basis MODULATION_NOISE
     - Dahimene, Richard & David (2008) IEEE TASLP 16:757
-        Dropout-Erkennung via Energietransiente — DROPOUTS-Schwellwert-Kalibrierung
+        Dropout-Erkennung via Energietransiente - DROPOUTS-Schwellwert-Kalibrierung
     - IEC 60386:1987
-        Wow/Flutter-Messnorm — definiert Frequenzgrenzen WOW (<0.5 Hz) / FLUTTER (0.5–200 Hz)
+        Wow/Flutter-Messnorm - definiert Frequenzgrenzen WOW (<0.5 Hz) / FLUTTER (0.5-200 Hz)
 
 Digitale Defekte:
     - Herre & Johnston (1996) AES Conv. 101
-        Pre-Echo-Artefakt im MPEG-Coding via temporales Masking — Primärquelle PRE_ECHO
+        Pre-Echo-Artefakt im MPEG-Coding via temporales Masking - Primärquelle PRE_ECHO
     - Bitto (2000) AES Conv. 109
-        Jitter-Messung und Perceptual Impact bei DAT/CD — JITTER_ARTIFACTS-Kalibrierung
+        Jitter-Messung und Perceptual Impact bei DAT/CD - JITTER_ARTIFACTS-Kalibrierung
     - Zölzer (2011) DAFX: Digital Audio Effects, 2nd ed., Wiley
-        Kapitel 8 (Codec-Artefakte) — vollständige Topologie digitaler Artefakttypen
+        Kapitel 8 (Codec-Artefakte) - vollständige Topologie digitaler Artefakttypen
 
 Author: Aurik 10.0.0 Development Team
 Version: 10.0.0
@@ -43,6 +43,7 @@ Date: 2026-02-15
 
 import contextlib
 import hashlib
+
 # v10.101 SOTA: Gammatone-geschützte Defektanalyse. Pipeline-Gates validieren.
 import logging
 import threading
@@ -71,7 +72,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# §9.7.1 SHA256-Ergebnis-Cache — verhindert redundante Berechnungen bei Batch
+# §9.7.1 SHA256-Ergebnis-Cache - verhindert redundante Berechnungen bei Batch
 # ---------------------------------------------------------------------------
 _scan_cache: dict[str, object] = {}
 _scan_cache_lock = threading.Lock()
@@ -124,12 +125,12 @@ class DefectType(Enum):
     """54 Defekttypen für weltklasse Audio-restoration.
 
     Kern-Defekte (alle analogen/digitalen Quellen):
-      CLIPPING        — Amplituden-Übersteuerung (Hard/Soft Clipping)
-      DC_OFFSET       — Gleichspannungsversatz (Null-Linien-Verschiebung)
-      BANDWIDTH_LOSS  — Hochfrequenz-Verlust (Shellac <7kHz, Kassette <14kHz, UKW/LP)
-      PITCH_DRIFT     — Konstanter Geschwindigkeitsfehler (Tape-Stretch, Motorfehler)
-      REVERB_EXCESS   — Unerwarteter/übermäßiger Raumhall (fehlerhafte Aufnahmeakustik)
-      PRINT_THROUGH   — Magnetisches Übersprechen auf Tape (Pre-Echo 100–300 ms vor Einsatz)
+      CLIPPING        - Amplituden-Übersteuerung (Hard/Soft Clipping)
+      DC_OFFSET       - Gleichspannungsversatz (Null-Linien-Verschiebung)
+      BANDWIDTH_LOSS  - Hochfrequenz-Verlust (Shellac <7kHz, Kassette <14kHz, UKW/LP)
+      PITCH_DRIFT     - Konstanter Geschwindigkeitsfehler (Tape-Stretch, Motorfehler)
+      REVERB_EXCESS   - Unerwarteter/übermäßiger Raumhall (fehlerhafte Aufnahmeakustik)
+      PRINT_THROUGH   - Magnetisches Übersprechen auf Tape (Pre-Echo 100-300 ms vor Einsatz)
 
     Analoge Tonträger:
       CLICKS, CRACKLE, HUM, WOW, FLUTTER, LOW_FREQ_RUMBLE, DROPOUTS
@@ -142,18 +143,18 @@ class DefectType(Enum):
     """
 
     # --- Ursprüngliche 11 ---
-    CLICKS = "clicks"  # Impulsartige Einzelstörungen — Janssen, Veldhuis & Vries (1986) IEEE TASLP 34:203
-    CRACKLE = "crackle"  # Hochdichte Impulsfolgen (Vinyl-Knistern) — Bailey, Casebeer & Fazekas (2019) AES 147th Conv.
+    CLICKS = "clicks"  # Impulsartige Einzelstörungen - Janssen, Veldhuis & Vries (1986) IEEE TASLP 34:203
+    CRACKLE = "crackle"  # Hochdichte Impulsfolgen (Vinyl-Knistern) - Bailey, Casebeer & Fazekas (2019) AES 147th Conv.
     HUM = "hum"
-    WOW = "wow"  # Tonhöhenschwankung < 0.5 Hz (IEC 60386 — Motorexzentrizität, Plattenteller-Gleichlaufschwankung)
-    FLUTTER = "flutter"  # Tonhöhenschwankung 0.5–200 Hz (IEC 60386 — mechanische Vibration, Führungsrolle, Bandantrieb)
+    WOW = "wow"  # Tonhöhenschwankung < 0.5 Hz (IEC 60386 - Motorexzentrizität, Plattenteller-Gleichlaufschwankung)
+    FLUTTER = "flutter"  # Tonhöhenschwankung 0.5-200 Hz (IEC 60386 - mechanische Vibration, Führungsrolle, Bandantrieb)
     STEREO_IMBALANCE = "stereo_imbalance"
     DIGITAL_ARTIFACTS = "digital_artifacts"
     LOW_FREQ_RUMBLE = "low_freq_rumble"
     HIGH_FREQ_NOISE = "high_freq_noise"
     COMPRESSION_ARTIFACTS = "compression_artifacts"
     PHASE_ISSUES = "phase_issues"
-    DROPOUTS = "dropouts"  # Kurzzeit-Pegeleinbrüche durch Bandmaterial-Aussetzer — Dahimene et al. (2008)
+    DROPOUTS = "dropouts"  # Kurzzeit-Pegeleinbrüche durch Bandmaterial-Aussetzer - Dahimene et al. (2008)
     # --- Weltklasse-Erweiterung Runde 1 ---
     CLIPPING = "clipping"  # Amplituden-Übersteuerung (Hard/Soft Clip)
     DC_OFFSET = "dc_offset"  # Gleichspannungsversatz
@@ -164,26 +165,26 @@ class DefectType(Enum):
     PRINT_THROUGH = "print_through"  # Magnetisches Übersprechen bei Tape (Pre-Echo)
     # --- Weltklasse-Erweiterung Runde 3 ---
     QUANTIZATION_NOISE = "quantization_noise"  # Quantisierungsrauschen (niedrige Bit-Tiefe / Resampling)
-    JITTER_ARTIFACTS = "jitter_artifacts"  # Zeitgitter-Fehler bei D/A-Wandlung (CD, DAT) — Bitto (2000) AES Conv. 109
+    JITTER_ARTIFACTS = "jitter_artifacts"  # Zeitgitter-Fehler bei D/A-Wandlung (CD, DAT) - Bitto (2000) AES Conv. 109
     DYNAMIC_COMPRESSION_EXCESS = "dynamic_compression_excess"  # Übermäßige Dynamikkompression (Loudness War)
     # --- Spec §6.3: fehlende DefectTypes für 24-Wert-Katalog ---
-    SOFT_SATURATION = "soft_saturation"  # Tube-/Tape-Sättigung (gerade Obertöne) — BEWAHREN! (§2.1, §6.3)
+    SOFT_SATURATION = "soft_saturation"  # Tube-/Tape-Sättigung (gerade Obertöne) - BEWAHREN! (§2.1, §6.3)
     HEAD_WEAR = "head_wear"  # Kopf-/Azimuth-Fehler, Frequenzband-Auslöschung → phase_56 (§4.5, §7.2)
     AZIMUTH_ERROR = "azimuth_error"  # Kopf-Schrägstellung → HF-Phasen-Slope L/R > 20°/kHz → phase_56
     TRANSIENT_SMEARING = "transient_smearing"  # Ansatz-Verschmierung durch Kompression/Limiter
-    PRE_ECHO = "pre_echo"  # MP3/AAC Temporal-Masking-Artefakt — Herre & Johnston (1996) AES Conv. 101 (§6.3)
+    PRE_ECHO = "pre_echo"  # MP3/AAC Temporal-Masking-Artefakt - Herre & Johnston (1996) AES Conv. 101 (§6.3)
     # --- Spec §6.3 v10.0.0c: 3 neue DefectTypes → 27 Gesamtanzahl ---
     RIAA_CURVE_ERROR = "riaa_curve_error"  # Falsche Disc-Entzerrungskurve (Shellac/Vinyl: AES/NAB/FFRR) → phase_04
     ALIASING = "aliasing"  # Spiegelfrequenzen durch unzureichenden AA-Filter bei ADC-Digitalisierung → phase_03
     BIAS_ERROR = "bias_error"  # Falscher Vormagnetisierungsstrom bei Bandaufnahme → phase_04 + phase_29
     # --- Spec §6.3 v10.0.0: Sibilanten-Überbetonung (ergibt 28 DefectTypes) ---
-    SIBILANCE = "sibilance"  # Zischlautüberbetonung (> 6 kHz) — De-Esser-Trigger (phase_19 + phase_43)
+    SIBILANCE = "sibilance"  # Zischlautüberbetonung (> 6 kHz) - De-Esser-Trigger (phase_19 + phase_43)
     # --- v10.0.0b: Transport-Bump (ergibt 29 DefectTypes) ---
-    TRANSPORT_BUMP = "transport_bump"  # Impulsartige Mikro-Geschwindigkeitssprünge 50–300 ms → phase_12
+    TRANSPORT_BUMP = "transport_bump"  # Impulsartige Mikro-Geschwindigkeitssprünge 50-300 ms → phase_12
     # --- v10.0.0: Vocal-Harshness (ergibt 30 DefectTypes) ---
-    VOCAL_HARSHNESS = "vocal_harshness"  # Vokale Härte/Kratzigkeit im 2–6 kHz Band → phase_42 + phase_19
+    VOCAL_HARSHNESS = "vocal_harshness"  # Vokale Härte/Kratzigkeit im 2-6 kHz Band → phase_42 + phase_19
     # --- v10.0.0.x: Dolby NR Mismatch (ergibt 31 DefectTypes) ---
-    DOLBY_NR_MISMATCH = "dolby_nr_mismatch"  # Dolby B/C/S encode ohne Dekodierung → +6–20 dB HF-Anhebung → phase_04
+    DOLBY_NR_MISMATCH = "dolby_nr_mismatch"  # Dolby B/C/S encode ohne Dekodierung → +6-20 dB HF-Anhebung → phase_04
     # --- v10.0.0.x: Tape Head Level Dip (ergibt 32 DefectTypes) ---
     TAPE_HEAD_LEVEL_DIP = "tape_head_level_dip"  # Graduelle Pegeleinbrüche durch Bandkopf-Kontaktdruckvariation
     # --- v10.0.0: 12 neue DefectTypes → 44 Gesamtanzahl (SOTA-Erweiterung) ---
@@ -202,19 +203,19 @@ class DefectType(Enum):
     STICKY_SHED_RESIDUE = "sticky_shed_residue"  # Binder-Hydrolyse-Residuen: moduliertes Rauschen → phase_24
     MULTIBAND_WOW_FLUTTER = "multiband_wow_flutter"  # Frequenzabhängiger Wow/Flutter (Kopfspalt-Geometrie) → phase_12
     GENERATION_LOSS = "generation_loss"  # Kumulativer Generationsverlust durch Tape-Dubbing
-    MOTOR_INTERFERENCE = "motor_interference"  # Plattenspieler-Motorinterferenz: 80–300 Hz → phase_02 + phase_05
+    MOTOR_INTERFERENCE = "motor_interference"  # Plattenspieler-Motorinterferenz: 80-300 Hz → phase_02 + phase_05
     # --- v10.0.0.x: Amplitude Drift (47. DefectType) ---
     AMPLITUDE_DRIFT = "amplitude_drift"  # Gradueller Pegelanstieg/-abfall über den Song:
     # Träger-AGC, Oxid-Drift → phase_40
-    # --- v10.0.0: 7 neue DefectTypes — Carrier-Ursachen-Lücken geschlossen (54 gesamt) ---
-    # Nahbesprechungseffekt (Richtmikrofon ≤30 cm): LF +6–12 dB ≤250 Hz; Olson (1948) → phase_04.
+    # --- v10.0.0: 7 neue DefectTypes - Carrier-Ursachen-Lücken geschlossen (54 gesamt) ---
+    # Nahbesprechungseffekt (Richtmikrofon ≤30 cm): LF +6-12 dB ≤250 Hz; Olson (1948) → phase_04.
     PROXIMITY_EFFECT_EXCESS = "proximity_effect_excess"
-    # Stehwellen-Raumresonanz 40–200 Hz ≠ diffuser Hall; Salter et al. (2003)
+    # Stehwellen-Raumresonanz 40-200 Hz ≠ diffuser Hall; Salter et al. (2003)
     # → phase_04 (Notch-Primary) + phase_16 + phase_05 (Tertiär).
-    # VERBOTEN: phase_05 allein als Primary — schmalbandige Resonanzen brauchen parametrischen Notch-EQ (§4.11, V31).
+    # VERBOTEN: phase_05 allein als Primary - schmalbandige Resonanzen brauchen parametrischen Notch-EQ (§4.11, V31).
     ROOM_MODE_RESONANCE = "room_mode_resonance"
     # Dolby/dbx NR Pumpen/Atmen (korrekt dekodiert); Dolby (1967) → phase_54 Envelope-Re-Smoothing + phase_08.
-    # VERBOTEN: phase_03_denoise / phase_29 als Primary — weiteres NR verstärkt Pumpen (§4.11, V28).
+    # VERBOTEN: phase_03_denoise / phase_29 als Primary - weiteres NR verstärkt Pumpen (§4.11, V28).
     NR_BREATHING_ARTIFACT = "nr_breathing_artifact"
     # Flutter-Seitenbänder ±flutter_rate Hz um Spektralpeaks → phase_12 Ergänzung + phase_23.
     FLUTTER_SPECTRAL_SIDEBANDS = "flutter_spectral_sidebands"
@@ -223,18 +224,18 @@ class DefectType(Enum):
     STEREO_FIELD_COLLAPSE = "stereo_field_collapse"  # Progressiver Stereofeld-Kollaps (Korrelation > 0.95)
     PHASE_ROTATION = "phase_rotation"  # Unnatürliche Phasenrotation (Allpass-Filter-Artefakte)
     # Dropout-Subtypen für differenzierte Reparatur:
-    DROPOUT_OXIDE = "dropout_oxide"  # Oxid-Dropout: 2–20 ms, partiell (30–70% Verlust) → Interpolation
-    DROPOUT_HEAD_CONTACT = "dropout_head_contact"  # Kopf-Kontakt-Dropout: 50–200 ms, moduliert → Gain-Komp.
+    DROPOUT_OXIDE = "dropout_oxide"  # Oxid-Dropout: 2-20 ms, partiell (30-70% Verlust) → Interpolation
+    DROPOUT_HEAD_CONTACT = "dropout_head_contact"  # Kopf-Kontakt-Dropout: 50-200 ms, moduliert → Gain-Komp.
     DROPOUT_SPLICE = "dropout_splice"  # Klebeband-Dropout: abrupt, >95% Verlust → Spektrale Inpainting
 
     # Systematischer fester Geschwindigkeitsfehler ≠ pitch_drift; IEC 60386 §5 → phase_12/phase_31.
     SPEED_CALIBRATION_ERROR = "speed_calibration_error"
     # Analoger Preamp/Console-Klirr: asymm. Verzerrung, H3/H5-dominant → phase_09/phase_23.
-    # VERBOTEN: phase_63_intermodulation_reduction — Harmonische ≠ Intermodulationsprodukte (§4.11, V29).
+    # VERBOTEN: phase_63_intermodulation_reduction - Harmonische ≠ Intermodulationsprodukte (§4.11, V29).
     OVERLOAD_DISTORTION = "overload_distortion"
     # Acetat-Zersetzung: Substrat-Rissbildung, Lackschicht-Oxidation; Hess (1988) → phase_03 + phase_09.
     LACQUER_DISC_DEGRADATION = "lacquer_disc_degradation"
-    # Hochfrequentes Tape-Scrape-Flutter (typ. 40–120 Hz) → phase_12 mit transport-spezifischer Korrektur.
+    # Hochfrequentes Tape-Scrape-Flutter (typ. 40-120 Hz) → phase_12 mit transport-spezifischer Korrektur.
     SCRAPE_FLUTTER = "scrape_flutter"
     # Temporäre Hochton-Auslöschung durch zugesetzten/verschmutzten Magnetkopf → phase_56 + phase_25.
     TAPE_HEAD_CLOG = "tape_head_clog"
@@ -256,9 +257,9 @@ class MaterialType(Enum):
     AAC = "aac"  # AAC/M4A (modern compressed)
     MINIDISC = "minidisc"  # ATRAC codec (90s/2000s)
     STREAMING = "streaming"
-    WAX_CYLINDER = "wax_cylinder"  # Phonograph-Wachswalze (1890–1930), HF ≤ 5 kHz
-    WIRE_RECORDING = "wire_recording"  # Drahtband (1940–1955), Jitter, Frequenzgang-Einbrüche
-    LACQUER_DISC = "lacquer_disc"  # Acetat-Lackfolien (1930–1950), Risse, Substrat-Rauschen
+    WAX_CYLINDER = "wax_cylinder"  # Phonograph-Wachswalze (1890-1930), HF ≤ 5 kHz
+    WIRE_RECORDING = "wire_recording"  # Drahtband (1940-1955), Jitter, Frequenzgang-Einbrüche
+    LACQUER_DISC = "lacquer_disc"  # Acetat-Lackfolien (1930-1950), Risse, Substrat-Rauschen
     UNKNOWN = "unknown"
 
 
@@ -293,15 +294,15 @@ class DefectAnalysisResult:
     transfer_chain_raw: dict = field(default_factory=dict)  # MediumDetector.detect()-Ausgabe
     is_multi_generation: bool = False  # Mehrstufige Überspielungskette
     transfer_chain_str: str = ""  # Lesbare Kette, z.B. "cassette → mp3"
-    # §6.6.1 Pflicht-Spektralfingerabdruck — 5 normierte Messgrößen (immer befüllt)
+    # §6.6.1 Pflicht-Spektralfingerabdruck - 5 normierte Messgrößen (immer befüllt)
     spectral_fingerprint: dict[str, float] = field(default_factory=dict)
     # spectral_fingerprint enthält:
-    #   rolloff_95_hz       — Rolloff-Frequenz 95% der Spektralenergie [Hz]
-    #   wow_flutter_index   — Pitch-Varianz-Index [0..∞, >1.5 = Kassette]
-    #   hf_energy_above_16k — Anteil Energie > 16 kHz an Gesamtenergie [0..1]
-    #   noise_floor_p5_db   — 5. Perzentil PSD als Rauschboden [dBFS]
-    #   effective_bandwidth_hz — HF-Rolloff bei −60 dBFS [Hz]
-    #   material_detected   — auto-erkanntes Material (auch wenn Hint übergeben)
+    #   rolloff_95_hz       - Rolloff-Frequenz 95% der Spektralenergie [Hz]
+    #   wow_flutter_index   - Pitch-Varianz-Index [0..∞, >1.5 = Kassette]
+    #   hf_energy_above_16k - Anteil Energie > 16 kHz an Gesamtenergie [0..1]
+    #   noise_floor_p5_db   - 5. Perzentil PSD als Rauschboden [dBFS]
+    #   effective_bandwidth_hz - HF-Rolloff bei -60 dBFS [Hz]
+    #   material_detected   - auto-erkanntes Material (auch wenn Hint übergeben)
     metadata: dict[str, object] = field(default_factory=dict)
 
     def get_top_defects(self, n: int = 5) -> list[DefectScore]:
@@ -313,7 +314,10 @@ class DefectAnalysisResult:
         return sum(score.severity * score.confidence for score in self.scores.values()) / len(self.scores)
 
     def get_top_defects_perceptual(
-        self, n: int = 5, audio: np.ndarray | None = None, sr: int = 48000,
+        self,
+        n: int = 5,
+        audio: np.ndarray | None = None,
+        sr: int = 48000,
     ) -> list[DefectScore]:
         """§v10.101 SOTA: Gibt Top-N Defekte nach perzeptueller Hörbarkeit.
 
@@ -321,7 +325,7 @@ class DefectAnalysisResult:
         Wahrnehmbarkeit für das menschliche Ohr. Nutzt Bark-Gewichtung,
         spektrale und temporale Maskierung.
 
-        Unhörbare Defekte werden depriorisiert — sie zu reparieren
+        Unhörbare Defekte werden depriorisiert - sie zu reparieren
         würde nur Artefakt-Risiko ohne akustischen Nutzen erzeugen.
         """
         try:
@@ -412,6 +416,36 @@ class DefectScanner:
     - Performance-optimiert (max 5% overhead)
     """
 
+    # §v10.306: Per-Defekt-Audibilität - JND-Schwellen pro Defekttyp
+    # Format: {defect_type: (jnd_db, masking_factor, material_factors_dict)}
+    # material_factors: Multiplikator - höher = schwerer hörbar (maskiert)
+    AUDIBILITY_THRESHOLDS: dict[str, tuple[float, float, dict[str, float]]] = {
+        # Impulsive Defekte
+        "clicks":            (-35.0, 0.30, {"shellac": 1.3, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        "pops":              (-28.0, 0.20, {"shellac": 1.3, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        "crackle":           (-40.0, 0.50, {"shellac": 1.4, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.3, "dat": 0.75}),
+        "dropout":           (-25.0, 0.10, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        "transport_bump":    (-30.0, 0.15, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        # Rausch-Defekte
+        "hum":               (-45.0, 0.60, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        "hiss":              (-38.0, 0.40, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        "rumble":            (-42.0, 0.70, {"shellac": 1.4, "vinyl": 1.3, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        "noise_level":       (-35.0, 0.35, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        "surface_noise":     (-40.0, 0.55, {"shellac": 1.5, "vinyl": 1.4, "tape": 1.0, "cassette": 1.0, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.3, "dat": 0.75}),
+        # Chirurgische Defekte - sehr hörbar, niedrige Schwellen
+        "sibilance":         (-30.0, 0.10, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 1.0, "reel_tape": 1.0, "cd": 1.0, "digital": 1.0, "mp3_low": 1.1, "dat": 1.0}),
+        "vocal_harshness":   (-32.0, 0.08, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 1.0, "reel_tape": 1.0, "cd": 1.0, "digital": 1.0, "mp3_low": 1.1, "dat": 1.0}),
+        "stereo_imbalance":  (1.5,   0.05, {"shellac": 1.0, "vinyl": 1.0, "tape": 1.0, "cassette": 1.0, "reel_tape": 0.9, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
+        "phase_issues":      (-25.0, 0.20, {"shellac": 1.1, "vinyl": 1.05, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
+        "dc_offset":         (-50.0, 0.90, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        # Spektrale Defekte
+        "bandwidth_loss":    (-3.0,  0.25, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.7, "digital": 0.7, "mp3_low": 1.0, "dat": 0.7}),
+        "pre_echo":          (-30.0, 0.10, {"shellac": 1.1, "vinyl": 1.05, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 0.9, "dat": 0.75}),
+        "aliasing":          (-35.0, 0.30, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
+        "quantization_noise":(-42.0, 0.50, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        "compression_artifacts": (-32.0, 0.25, {"shellac": 1.1, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 0.8, "dat": 0.75}),
+    }
+
     # Material-adaptive Sensitivity-Thresholds
     MATERIAL_SENSITIVITY = {
         MaterialType.SHELLAC: {
@@ -419,7 +453,7 @@ class DefectScanner:
             DefectType.CRACKLE: 0.3,
             DefectType.HUM: 0.6,
             DefectType.WOW: 0.40,  # Plattenteller-Gleichlaufschwankung (< 0.5 Hz)
-            DefectType.FLUTTER: 0.50,  # Nadelresonanz, Abtastarm-Vibration (0.5–200 Hz)
+            DefectType.FLUTTER: 0.50,  # Nadelresonanz, Abtastarm-Vibration (0.5-200 Hz)
             DefectType.STEREO_IMBALANCE: 1.0,  # N/A für Mono
             DefectType.DIGITAL_ARTIFACTS: 1.0,
             DefectType.LOW_FREQ_RUMBLE: 0.5,
@@ -436,27 +470,27 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.9,  # N/A: Shellac ist analog
             DefectType.JITTER_ARTIFACTS: 1.0,  # N/A: Shellac ist analog
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.9,  # Shellac-Ära: keine Loudness-War-Kompression
-            DefectType.SOFT_SATURATION: 0.3,  # Röhren-Mikrofon-Sättigung, Aufnahmetrichter — bewahren
+            DefectType.SOFT_SATURATION: 0.3,  # Röhren-Mikrofon-Sättigung, Aufnahmetrichter - bewahren
             DefectType.HEAD_WEAR: 1.0,  # N/A: Shellac ist kein Magnetband (kein Magnetkopf-Verschleiß)
-            DefectType.PRE_ECHO: 1.0,  # N/A: Shellac analog — kein Codec-Pre-Echo
+            DefectType.PRE_ECHO: 1.0,  # N/A: Shellac analog - kein Codec-Pre-Echo
             DefectType.TRANSIENT_SMEARING: 0.5,  # Mechanischer Trichter und schwere Nadel begrenzen Transientenbereich
-            DefectType.RIAA_CURVE_ERROR: 0.2,  # AES/NAB/Columbia-Kurve vor RIAA-Standard — Entzerrungs-Fehler häufig
+            DefectType.RIAA_CURVE_ERROR: 0.2,  # AES/NAB/Columbia-Kurve vor RIAA-Standard - Entzerrungs-Fehler häufig
             DefectType.ALIASING: 0.5,  # Archiv-Digitalisierung oft mit unzureichendem AA-Filter
-            DefectType.BIAS_ERROR: 1.0,  # N/A: Shellac ist kein Magnetband — kein Aufnahme-Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Shellac ist Disc-Format — kein Magnetkopf-Azimuth
+            DefectType.BIAS_ERROR: 1.0,  # N/A: Shellac ist kein Magnetband - kein Aufnahme-Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Shellac ist Disc-Format - kein Magnetkopf-Azimuth
             DefectType.SIBILANCE: 0.6,  # Schwere Nadel + begrenzter HF → Zischlaut-Verzerrung
             DefectType.TRANSPORT_BUMP: 0.5,  # Plattenteller-Transport: mechanisches Holpern bei 78 rpm
             DefectType.VOCAL_HARSHNESS: 0.5,  # Schwere Nadel + Trichter: Vokal-Verzerrung häufig
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Shellac-Ära vor Dolby NR (1966) — kein Mismatch möglich
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Shellac-Ära vor Dolby NR (1966) - kein Mismatch möglich
             DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Schellack hat keine Tape-Kopf-Mechanik
             # v10.0.0: 12 neue SOTA-DefectTypes
-            DefectType.MODULATION_NOISE: 1.0,  # N/A: Shellac mechanisch — kein Magnetband-Modulationsrauschen
+            DefectType.MODULATION_NOISE: 1.0,  # N/A: Shellac mechanisch - kein Magnetband-Modulationsrauschen
             DefectType.INNER_GROOVE_DISTORTION: 0.2,  # SEHR HÄUFIG: Schwere Nadel → IGD extrem ausgeprägt
             DefectType.GROOVE_ECHO: 0.3,  # Weiche Schellackmasse → Rillenverformung → Vorecho
             DefectType.CROSSTALK: 1.0,  # N/A: Shellac immer Mono
             DefectType.INTERMODULATION_DISTORTION: 0.3,  # Trichter-Aufnahme nichtlinear → IMD
-            DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: Shellac ist kein Band — kein Schnitt
-            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: Shellac mechanisch — keine magnetische Remanenz
+            DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: Shellac ist kein Band - kein Schnitt
+            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: Shellac mechanisch - keine magnetische Remanenz
             DefectType.STYLUS_DAMAGE: 0.2,  # SEHR HÄUFIG: Stahlnadeln zerstören Rillen bei Wiederholung
             DefectType.STICKY_SHED_RESIDUE: 1.0,  # N/A: Shellac hat keinen Binder wie Magnetband
             DefectType.MULTIBAND_WOW_FLUTTER: 0.5,  # Mechanischer Antrieb: frequenzunabhängiger Wow/Flutter
@@ -469,7 +503,7 @@ class DefectScanner:
             DefectType.CRACKLE: 0.5,
             DefectType.HUM: 0.5,  # 50Hz/60Hz hum häufig
             DefectType.WOW: 0.50,  # Plattenspieler-Motor-Gleichlauf (< 0.5 Hz)
-            DefectType.FLUTTER: 0.55,  # Arm-/Stylusresonanz, Riemengetriebe-Vibration (0.5–200 Hz)
+            DefectType.FLUTTER: 0.55,  # Arm-/Stylusresonanz, Riemengetriebe-Vibration (0.5-200 Hz)
             DefectType.STEREO_IMBALANCE: 0.6,
             DefectType.DIGITAL_ARTIFACTS: 1.0,
             DefectType.LOW_FREQ_RUMBLE: 0.4,  # Turntable rumble
@@ -486,32 +520,32 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.9,  # N/A: Vinyl ist analog
             DefectType.JITTER_ARTIFACTS: 1.0,  # N/A: Vinyl ist analog
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.6,  # Moderne Vinyl-Pressings manchmal überkomprimiert
-            DefectType.SOFT_SATURATION: 0.4,  # Schneidlack-Sättigung möglich — bewahren wenn authentisch
+            DefectType.SOFT_SATURATION: 0.4,  # Schneidlack-Sättigung möglich - bewahren wenn authentisch
             DefectType.HEAD_WEAR: 1.0,  # N/A: Vinyl ist kein Magnetband (kein Magnetkopf-Verschleiß)
-            DefectType.PRE_ECHO: 1.0,  # N/A: Vinyl analog — kein Codec-Pre-Echo
+            DefectType.PRE_ECHO: 1.0,  # N/A: Vinyl analog - kein Codec-Pre-Echo
             DefectType.TRANSIENT_SMEARING: 0.5,  # Schneidlack-Übertragungsfunktion: leichte Transientenverzerrung
             DefectType.RIAA_CURVE_ERROR: 0.3,  # Früh-Vinyl (vor 1954) nutzte verschiedene Kurven (AES, FFRR, Columbia)
-            DefectType.ALIASING: 0.5,  # Digitalisierungsqualität variiert stark — AA-Filter oft suboptimal
-            DefectType.BIAS_ERROR: 1.0,  # N/A: Schallplatte ist kein Magnetband — kein Aufnahme-Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Vinyl ist Disc-Format — kein Magnetkopf-Azimuth
+            DefectType.ALIASING: 0.5,  # Digitalisierungsqualität variiert stark - AA-Filter oft suboptimal
+            DefectType.BIAS_ERROR: 1.0,  # N/A: Schallplatte ist kein Magnetband - kein Aufnahme-Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Vinyl ist Disc-Format - kein Magnetkopf-Azimuth
             DefectType.SIBILANCE: 0.7,  # Sehr häufig: Tonabnehmer-Sibilanz + Phono-Stufe; De-Esser-Pflicht
             DefectType.TRANSPORT_BUMP: 0.4,  # Plattenspieler-Transport: mechanisches Holpern möglich
             DefectType.VOCAL_HARSHNESS: 0.4,  # Tonabnehmer-Verzerrung + Phono-Stufe → Vokal-Übersteuerung
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Vinyl nutzt kein Dolby NR — kein Mismatch
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Vinyl nutzt kein Dolby NR - kein Mismatch
             DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Vinyl hat keine Tape-Kopf-Mechanik
             # v10.0.0: 12 neue SOTA-DefectTypes
-            DefectType.MODULATION_NOISE: 1.0,  # N/A: Vinyl mechanisch — kein Magnetband-Modulationsrauschen
+            DefectType.MODULATION_NOISE: 1.0,  # N/A: Vinyl mechanisch - kein Magnetband-Modulationsrauschen
             DefectType.INNER_GROOVE_DISTORTION: 0.15,  # EXTREM HÄUFIG: Abtastverzerrung zum Platteninneren!
             DefectType.GROOVE_ECHO: 0.2,  # HÄUFIG: Laute Passagen deformieren Nachbarrille → Pre-Echo
-            DefectType.CROSSTALK: 0.5,  # Frühe Stereo-Vinyl: Kanaltrennung oft nur 15–20 dB
+            DefectType.CROSSTALK: 0.5,  # Frühe Stereo-Vinyl: Kanaltrennung oft nur 15-20 dB
             DefectType.INTERMODULATION_DISTORTION: 0.4,  # Schneidlack-Nichtlinearität → IMD bei Hochpegel
             DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: Vinyl hat keine Bandschnitte
-            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: Vinyl mechanisch — keine magnetische Remanenz
+            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: Vinyl mechanisch - keine magnetische Remanenz
             DefectType.STYLUS_DAMAGE: 0.3,  # Abgenutzte Nadel → asymmetrische Verzerrung
             DefectType.STICKY_SHED_RESIDUE: 1.0,  # N/A: Vinyl hat keinen Binder
             DefectType.MULTIBAND_WOW_FLUTTER: 0.6,  # Plattenspieler: frequenzunabhängig
             DefectType.GENERATION_LOSS: 0.7,  # Pressung: marginal (Master→Stamper)
-            DefectType.MOTOR_INTERFERENCE: 0.3,  # Plattenspieler-Motor: Gleichstrom-/Synchron-Störungen 80–300 Hz
+            DefectType.MOTOR_INTERFERENCE: 0.3,  # Plattenspieler-Motor: Gleichstrom-/Synchron-Störungen 80-300 Hz
             DefectType.AMPLITUDE_DRIFT: 0.60,  # Selten: Vinyl-Pressungs-Level-Drift unwahrscheinlich
         },
         MaterialType.TAPE: {
@@ -519,7 +553,7 @@ class DefectScanner:
             DefectType.CRACKLE: 0.8,
             DefectType.HUM: 0.4,  # AC hum häufig bei Tape
             DefectType.WOW: 0.22,  # Capstan-Gleichlaufschwankung (< 0.5 Hz); kalibriert v10.0.0 (war 0.30 → zu konservativ für 1980s Kassetten)
-            DefectType.FLUTTER: 0.25,  # Andruckrolle, Führungsrollen-Vibration (0.5–200 Hz)
+            DefectType.FLUTTER: 0.25,  # Andruckrolle, Führungsrollen-Vibration (0.5-200 Hz)
             DefectType.STEREO_IMBALANCE: 0.5,
             DefectType.DIGITAL_ARTIFACTS: 1.0,
             DefectType.LOW_FREQ_RUMBLE: 0.6,
@@ -529,16 +563,16 @@ class DefectScanner:
             DefectType.DROPOUTS: 0.4,  # Tape dropouts häufig
             DefectType.CLIPPING: 0.4,  # Tape-Sättigung durch Übersteuerung häufig
             DefectType.DC_OFFSET: 0.4,  # Kassettendecks mit DC-Bias im Signalweg
-            DefectType.BANDWIDTH_LOSS: 0.3,  # Kassette: Rolloff bei 12–14 kHz typisch
+            DefectType.BANDWIDTH_LOSS: 0.3,  # Kassette: Rolloff bei 12-14 kHz typisch
             DefectType.PITCH_DRIFT: 0.2,  # Tape-Stretch & Motorfehler sehr häufig
             DefectType.REVERB_EXCESS: 0.4,  # Kassette: Aufnahmeraum oft hörbar
             DefectType.PRINT_THROUGH: 0.2,  # Kassette: magnetisches Übersprechen möglich
             DefectType.QUANTIZATION_NOISE: 0.9,  # N/A: Kassette ist analog
             DefectType.JITTER_ARTIFACTS: 1.0,  # N/A: Kassette ist analog
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.8,  # Kassette: Dolby-Kompander aber selten exzessiv
-            DefectType.SOFT_SATURATION: 0.4,  # Bandsättigung (gerade Obertöne H2/H4) — BEWAHREN vs. Clipping
+            DefectType.SOFT_SATURATION: 0.4,  # Bandsättigung (gerade Obertöne H2/H4) - BEWAHREN vs. Clipping
             DefectType.HEAD_WEAR: 0.6,  # Kassettenköpfe durch Abnutzung → Hochton-Auslöschung häufig
-            DefectType.PRE_ECHO: 1.0,  # N/A: Kassette analog — kein Codec-Pre-Echo
+            DefectType.PRE_ECHO: 1.0,  # N/A: Kassette analog - kein Codec-Pre-Echo
             DefectType.TRANSIENT_SMEARING: 0.4,  # Dolby-Rauschreduktion und Bandsättigung → Transient-Smearing
             DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Magnetband nutzt keine RIAA-Disc-Entzerrungskurve
             DefectType.ALIASING: 0.4,  # Digitalisierungs-AA variiert; Resampling in der Verarbeitungskette
@@ -547,10 +581,10 @@ class DefectScanner:
             DefectType.SIBILANCE: 0.5,  # Kassettenkopf-HF-Sättigung → Zischlaut-Betonung
             DefectType.TRANSPORT_BUMP: 0.3,  # Kassetten-Transport: Capstan/Andruckrolle-Holpern häufig
             DefectType.VOCAL_HARSHNESS: 0.4,  # Bandsättigung + HF-Peaking → Vokal-Härte bei Hochpegel
-            DefectType.DOLBY_NR_MISMATCH: 0.25,  # SEHR HÄUFIG: Dolby B/C (1975–2000); ohne Dekoder → +6–20 dB HF
+            DefectType.DOLBY_NR_MISMATCH: 0.25,  # SEHR HÄUFIG: Dolby B/C (1975-2000); ohne Dekoder → +6-20 dB HF
             DefectType.TAPE_HEAD_LEVEL_DIP: 0.20,  # SEHR HÄUFIG: Capstan/Andruckrolle → Kopf-Kontakt-Druckvariation
             # v10.0.0: 12 neue SOTA-DefectTypes
-            DefectType.MODULATION_NOISE: 0.15,  # EXTREM HÄUFIG: Signal-abhängiges Rauschen — Esquef 2006
+            DefectType.MODULATION_NOISE: 0.15,  # EXTREM HÄUFIG: Signal-abhängiges Rauschen - Esquef 2006
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: Tape hat keine Rillen
             DefectType.GROOVE_ECHO: 1.0,  # N/A: Tape hat keine Rillen
             DefectType.CROSSTALK: 0.4,  # Kassette: Spur-Übersprechen bei schmalen 4-Spur-Kassetten
@@ -558,7 +592,7 @@ class DefectScanner:
             DefectType.TAPE_SPLICE_ARTIFACT: 0.2,  # HÄUFIG: Bandschnitte bei Heim- und Profi-Kassetten
             DefectType.HF_REMANENCE_LOSS: 0.15,  # SEHR HÄUFIG: Alterung → HF-Verlust über Jahrzehnte
             DefectType.STYLUS_DAMAGE: 1.0,  # N/A: Tape hat keine Nadel
-            DefectType.STICKY_SHED_RESIDUE: 0.2,  # HÄUFIG: Binder-Hydrolyse bei alten Kassetten (1970er–90er)
+            DefectType.STICKY_SHED_RESIDUE: 0.2,  # HÄUFIG: Binder-Hydrolyse bei alten Kassetten (1970er-90er)
             DefectType.MULTIBAND_WOW_FLUTTER: 0.2,  # HÄUFIG: Kopfspalt + Bandkontakt → frequenzabhängiges Flutter
             DefectType.GENERATION_LOSS: 0.2,  # HÄUFIG: Kassetten-Dubbing (Band→Band-Kopien häufig)
             DefectType.MOTOR_INTERFERENCE: 1.0,  # N/A: Kassettenmotor-Störung → über HUM/FLUTTER abgedeckt
@@ -620,8 +654,8 @@ class DefectScanner:
             DefectType.CLICKS: 0.8,
             DefectType.CRACKLE: 0.9,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 0.90,  # CD: Kristalloszillator — kein WOW (N/A)
-            DefectType.FLUTTER: 0.90,  # CD: kristallstabil — kein FLUTTER (N/A)
+            DefectType.WOW: 0.90,  # CD: Kristalloszillator - kein WOW (N/A)
+            DefectType.FLUTTER: 0.90,  # CD: kristallstabil - kein FLUTTER (N/A)
             DefectType.STEREO_IMBALANCE: 0.7,
             DefectType.DIGITAL_ARTIFACTS: 0.3,  # Häufig bei CD!
             DefectType.LOW_FREQ_RUMBLE: 0.8,
@@ -639,26 +673,26 @@ class DefectScanner:
             DefectType.JITTER_ARTIFACTS: 0.3,  # CD-Player/Laufwerk-Jitter sehr häufig!
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.25,  # Loudness War bei CD sehr häufig
             DefectType.SOFT_SATURATION: 0.9,  # Digitale Quelldatei: Soft-Saturation selten, aber möglich
-            DefectType.HEAD_WEAR: 1.0,  # N/A: CD digital — kein Magnetkopf
+            DefectType.HEAD_WEAR: 1.0,  # N/A: CD digital - kein Magnetkopf
             DefectType.PRE_ECHO: 0.3,  # Loudness-War-Mastering: Pre-Echo als Transient-Vorlauf möglich
             DefectType.TRANSIENT_SMEARING: 0.2,  # Loudness-War-Kompression → Transient-Smearing sehr häufig
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: CD digital — keine Disc-Entzerrungskurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: CD digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.3,  # CD digital-nativ; Resampling-Artefakte bei Formatketten möglich
-            DefectType.BIAS_ERROR: 1.0,  # N/A: CD digital — kein Wechselstrom-Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: CD digital — kein Magnetkopf
+            DefectType.BIAS_ERROR: 1.0,  # N/A: CD digital - kein Wechselstrom-Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: CD digital - kein Magnetkopf
             DefectType.SIBILANCE: 0.3,  # CD: geringe Sibilanz-Gefahr; De-Emphasis-Fehler möglich
-            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: CD digital — kein mechanischer Transport
+            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: CD digital - kein mechanischer Transport
             DefectType.VOCAL_HARSHNESS: 0.25,  # Loudness-War-Mastering → Vokal-Harshness SEHR häufig
             DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: CD ist digital, kein Dolby-Analogband-NR
             DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: CD ist digital, kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
-            DefectType.MODULATION_NOISE: 1.0,  # N/A: CD digital — kein analoges Modulationsrauschen
+            DefectType.MODULATION_NOISE: 1.0,  # N/A: CD digital - kein analoges Modulationsrauschen
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: CD hat keine Rillen
             DefectType.GROOVE_ECHO: 1.0,  # N/A: CD hat keine Rillen
             DefectType.CROSSTALK: 0.8,  # CD digital: Crosstalk nur bei schlechtem Mastering
             DefectType.INTERMODULATION_DISTORTION: 0.7,  # CD: IMD nur bei analogem Mastering-Signalpfad
             DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: CD hat keine Bandschnitte
-            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: CD digital — keine magnetische Remanenz
+            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: CD digital - keine magnetische Remanenz
             DefectType.STYLUS_DAMAGE: 1.0,  # N/A: CD hat keine Nadel
             DefectType.STICKY_SHED_RESIDUE: 1.0,  # N/A: CD hat keinen Binder
             DefectType.MULTIBAND_WOW_FLUTTER: 1.0,  # N/A: CD Crystal-Clock
@@ -671,7 +705,7 @@ class DefectScanner:
             DefectType.CRACKLE: 0.9,
             DefectType.HUM: 0.5,  # AC hum in professional gear
             DefectType.WOW: 0.40,  # Profi-Capstan-Gleichlauf (< 0.5 Hz)
-            DefectType.FLUTTER: 0.35,  # Profi-Führungsrollen-Vibration (0.5–200 Hz)
+            DefectType.FLUTTER: 0.35,  # Profi-Führungsrollen-Vibration (0.5-200 Hz)
             DefectType.STEREO_IMBALANCE: 0.6,
             DefectType.DIGITAL_ARTIFACTS: 1.0,
             DefectType.LOW_FREQ_RUMBLE: 0.7,
@@ -688,18 +722,18 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.9,  # N/A: Reel-Tape ist analog
             DefectType.JITTER_ARTIFACTS: 1.0,  # N/A: Reel-Tape ist analog
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.8,  # Professionelles Reel-Tape: Kompression selten exzessiv
-            DefectType.SOFT_SATURATION: 0.6,  # Profi-Bandsättigung (Röhren-Mischpult/Bandmaschine) — bewahren
+            DefectType.SOFT_SATURATION: 0.6,  # Profi-Bandsättigung (Röhren-Mischpult/Bandmaschine) - bewahren
             DefectType.HEAD_WEAR: 0.7,  # Profi-Banddeck Kopfverschleiß: breite Frequenzband-Auslöschung möglich
-            DefectType.PRE_ECHO: 1.0,  # N/A: Spulenband analog — kein Codec-Pre-Echo
+            DefectType.PRE_ECHO: 1.0,  # N/A: Spulenband analog - kein Codec-Pre-Echo
             DefectType.TRANSIENT_SMEARING: 0.4,  # Studio-Rauschreduktion (Dolby A/SR) → leichtes Transient-Smearing
             DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Spulenband nutzt keine RIAA-Disc-Entzerrungskurve
-            DefectType.ALIASING: 0.3,  # Professionelle Digitalisierung meist gut — AA-Filter vorhanden
+            DefectType.ALIASING: 0.3,  # Professionelle Digitalisierung meist gut - AA-Filter vorhanden
             DefectType.BIAS_ERROR: 0.3,  # Häufig: gemischte Bandsorten → falscher Bias-Strom beim Schnitt
             DefectType.AZIMUTH_ERROR: 0.25,  # Sehr häufig: Profi-Bandmaschinen mit verschiedenen Schnittköpfen
             DefectType.SIBILANCE: 0.4,  # Profi-Spulenband: HF-Sättigung → Zischlaut-Überbetonung
             DefectType.TRANSPORT_BUMP: 0.95,  # §v10.0.0: Profi-Capstan ohne Pinch-Roller → keine Transport-Bumps
             DefectType.VOCAL_HARSHNESS: 0.4,  # Profi-Bandsättigung → Vokal-Härte bei hohem Bandfluss
-            DefectType.DOLBY_NR_MISMATCH: 0.6,  # Möglich: Dolby A/SR — Broadcast-Dekoder fehlt oft
+            DefectType.DOLBY_NR_MISMATCH: 0.6,  # Möglich: Dolby A/SR - Broadcast-Dekoder fehlt oft
             DefectType.TAPE_HEAD_LEVEL_DIP: 0.65,  # §v10.0.0: Große Studio-Köpfe → allmählicher breitbandiger Pegelverlust  # Möglich: Kopfverschleiß/Alignmentfehler möglich
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 0.12,  # EXTREM HÄUFIG: Signal-abhängig bei hohem Bandfluss
@@ -710,7 +744,7 @@ class DefectScanner:
             DefectType.TAPE_SPLICE_ARTIFACT: 0.15,  # SEHR HÄUFIG: Professionelle Spulenbänder mit vielen Klebestellen
             DefectType.HF_REMANENCE_LOSS: 0.12,  # SEHR HÄUFIG: Profi-Spulenband altert → HF-Verlust
             DefectType.STYLUS_DAMAGE: 1.0,  # N/A: Tape hat keine Nadel
-            DefectType.STICKY_SHED_RESIDUE: 0.1,  # EXTREM HÄUFIG: Polyester-Urethan-Bänder (Ampex 456) — Sticky-Shed
+            DefectType.STICKY_SHED_RESIDUE: 0.1,  # EXTREM HÄUFIG: Polyester-Urethan-Bänder (Ampex 456) - Sticky-Shed
             DefectType.MULTIBAND_WOW_FLUTTER: 0.2,  # Profi-Kopfspalt + Bandkontakt → frequenzabhängig
             DefectType.GENERATION_LOSS: 0.15,  # SEHR HÄUFIG: Studio-Dubbing (Mix → Master → Copy)
             DefectType.MOTOR_INTERFERENCE: 1.0,  # N/A: Profi-Tape-Motor → über WOW/FLUTTER abgedeckt
@@ -720,8 +754,8 @@ class DefectScanner:
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 1.0,  # Digital, no crackle
             DefectType.HUM: 0.9,
-            DefectType.WOW: 1.0,  # DAT: digital, Crystal-Clock — kein WOW
-            DefectType.FLUTTER: 1.0,  # DAT: digital, Crystal-Clock — kein FLUTTER
+            DefectType.WOW: 1.0,  # DAT: digital, Crystal-Clock - kein WOW
+            DefectType.FLUTTER: 1.0,  # DAT: digital, Crystal-Clock - kein FLUTTER
             DefectType.STEREO_IMBALANCE: 0.7,
             DefectType.DIGITAL_ARTIFACTS: 0.4,  # Some digital artifacts
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -742,36 +776,36 @@ class DefectScanner:
             DefectType.HEAD_WEAR: 1.0,  # DAT-Rotationskopf: Verschleiß → Hochton-Dropout möglich
             DefectType.PRE_ECHO: 0.3,  # DAT digital: Pre-Echo aus Quell-Codec-Material möglich
             DefectType.TRANSIENT_SMEARING: 0.2,  # DAT digital: seltenes Transient-Smearing aus Quell-Kompression
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: DAT digital — keine Disc-Entzerrungskurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: DAT digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.3,  # DAT digital-nativ; Resampling bei Weiterverarbeitung möglich
-            DefectType.BIAS_ERROR: 1.0,  # N/A: DAT digital — kein analoger Bias erforderlich
+            DefectType.BIAS_ERROR: 1.0,  # N/A: DAT digital - kein analoger Bias erforderlich
             DefectType.AZIMUTH_ERROR: 0.50,  # DAT-Rotationskopf: Azimuth kann durch Kopfverschleiß driften
-            DefectType.SIBILANCE: 0.2,  # DAT digital — geringe Sibilanz-Gefahr
+            DefectType.SIBILANCE: 0.2,  # DAT digital - geringe Sibilanz-Gefahr
             DefectType.TRANSPORT_BUMP: 0.6,  # DAT-Laufwerk: Rotationskopf-Transport kann holpern
             DefectType.VOCAL_HARSHNESS: 0.3,  # DAT: digitale Übersteuerung + Quell-Material-Härte möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: DAT ist digital — kein analoger Dolby-NR-Kompander
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: DAT ist digital mit Drehtrommel — kein analoger Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: DAT ist digital - kein analoger Dolby-NR-Kompander
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: DAT ist digital mit Drehtrommel - kein analoger Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
-            DefectType.MODULATION_NOISE: 1.0,  # N/A: DAT digital — kein analoges Modulationsrauschen
+            DefectType.MODULATION_NOISE: 1.0,  # N/A: DAT digital - kein analoges Modulationsrauschen
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: DAT hat keine Rillen
             DefectType.GROOVE_ECHO: 1.0,  # N/A: DAT hat keine Rillen
             DefectType.CROSSTALK: 0.8,  # DAT digital: minimales Crosstalk
             DefectType.INTERMODULATION_DISTORTION: 0.8,  # DAT: IMD nur bei analogem Eingang
-            DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: DAT digital — kein physischer Schnitt
-            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: DAT digital — keine magnetische Remanenz
+            DefectType.TAPE_SPLICE_ARTIFACT: 1.0,  # N/A: DAT digital - kein physischer Schnitt
+            DefectType.HF_REMANENCE_LOSS: 1.0,  # N/A: DAT digital - keine magnetische Remanenz
             DefectType.STYLUS_DAMAGE: 1.0,  # N/A: DAT hat keine Nadel
             DefectType.STICKY_SHED_RESIDUE: 1.0,  # N/A: DAT-Kassette anderes Bindemittel
             DefectType.MULTIBAND_WOW_FLUTTER: 1.0,  # N/A: DAT Crystal-Clock
             DefectType.GENERATION_LOSS: 0.7,  # Selten: DAT-zu-DAT-Kopie möglich
             DefectType.MOTOR_INTERFERENCE: 1.0,  # N/A: DAT digital
-            DefectType.AMPLITUDE_DRIFT: 0.75,  # Selten: DAT digital — Drift nur aus analogem Quellmaterial
+            DefectType.AMPLITUDE_DRIFT: 0.75,  # Selten: DAT digital - Drift nur aus analogem Quellmaterial
         },
         MaterialType.MP3_LOW: {
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 1.0,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 1.0,  # MP3 digital — kein WOW
-            DefectType.FLUTTER: 1.0,  # MP3 digital — kein FLUTTER
+            DefectType.WOW: 1.0,  # MP3 digital - kein WOW
+            DefectType.FLUTTER: 1.0,  # MP3 digital - kein FLUTTER
             DefectType.STEREO_IMBALANCE: 0.8,
             DefectType.DIGITAL_ARTIFACTS: 0.3,  # Heavy codec artifacts
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -781,7 +815,7 @@ class DefectScanner:
             DefectType.DROPOUTS: 0.8,
             DefectType.CLIPPING: 0.5,  # Clipping im Quellmaterial vor Kodierung
             DefectType.DC_OFFSET: 0.9,  # MP3: DC im digitalen Originalmaterial
-            DefectType.BANDWIDTH_LOSS: 0.1,  # MP3 low: starker HF-Cutoff bei 10–14 kHz!
+            DefectType.BANDWIDTH_LOSS: 0.1,  # MP3 low: starker HF-Cutoff bei 10-14 kHz!
             DefectType.PITCH_DRIFT: 0.9,  # MP3: digital, kein Pitch-Drift
             DefectType.REVERB_EXCESS: 0.8,  # MP3: Reverb aus dem Quellmaterial, nicht Kodierung
             DefectType.PRINT_THROUGH: 1.0,  # N/A: MP3 digital
@@ -789,18 +823,18 @@ class DefectScanner:
             DefectType.JITTER_ARTIFACTS: 0.8,  # MP3: digital, Jitter selten
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.3,  # MP3 low: oft überkomprimierter Quell-Content
             DefectType.SOFT_SATURATION: 1.0,  # N/A: MP3 kennt keine Soft-Saturation (digital)
-            DefectType.HEAD_WEAR: 1.0,  # N/A: MP3 digital — kein Magnetkopf
+            DefectType.HEAD_WEAR: 1.0,  # N/A: MP3 digital - kein Magnetkopf
             DefectType.PRE_ECHO: 0.2,  # MP3 Temporal-Masking → Pre-Echo vor Transienten sehr häufig!
             DefectType.TRANSIENT_SMEARING: 0.2,  # MP3 Temporal-Masking → starkes Attack-Smearing bei Perkussion
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MP3 digital — keine Disc-Entzerrungskurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MP3 digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.4,  # Resampling-Kette im Codec erzeugt Aliasing-ähnliche Artefakte
-            DefectType.BIAS_ERROR: 1.0,  # N/A: MP3 digital — kein analoger Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: MP3 digital — kein Magnetkopf
+            DefectType.BIAS_ERROR: 1.0,  # N/A: MP3 digital - kein analoger Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: MP3 digital - kein Magnetkopf
             DefectType.SIBILANCE: 0.6,  # MP3 128 kbps: psychoakustitsche Maskierung → starke Sibilanzverzerrung typisch
-            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: MP3 digital — kein mechanischer Transport
+            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: MP3 digital - kein mechanischer Transport
             DefectType.VOCAL_HARSHNESS: 0.3,  # MP3-Low: Codec-Artefakte + Quell-Clipping → Vokal-Härte häufig
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MP3 digital — kein Dolby-Analogband-NR
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MP3 digital — kein Magnetband-Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MP3 digital - kein Dolby-Analogband-NR
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MP3 digital - kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: MP3 digital
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: MP3 hat keine Rillen
@@ -820,8 +854,8 @@ class DefectScanner:
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 1.0,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 1.0,  # MP3 digital — kein WOW
-            DefectType.FLUTTER: 1.0,  # MP3 digital — kein FLUTTER
+            DefectType.WOW: 1.0,  # MP3 digital - kein WOW
+            DefectType.FLUTTER: 1.0,  # MP3 digital - kein FLUTTER
             DefectType.STEREO_IMBALANCE: 0.8,
             DefectType.DIGITAL_ARTIFACTS: 0.4,  # Moderate artifacts
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -831,7 +865,7 @@ class DefectScanner:
             DefectType.DROPOUTS: 0.9,
             DefectType.CLIPPING: 0.5,  # Clipping im Quellmaterial
             DefectType.DC_OFFSET: 0.9,
-            DefectType.BANDWIDTH_LOSS: 0.3,  # MP3 high: HF-Cutoff bei 16–18 kHz
+            DefectType.BANDWIDTH_LOSS: 0.3,  # MP3 high: HF-Cutoff bei 16-18 kHz
             DefectType.PITCH_DRIFT: 0.9,
             DefectType.REVERB_EXCESS: 0.8,
             DefectType.PRINT_THROUGH: 1.0,
@@ -839,18 +873,18 @@ class DefectScanner:
             DefectType.JITTER_ARTIFACTS: 0.8,
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.3,  # MP3 high: Quell-Content oft überkomprimiert
             DefectType.SOFT_SATURATION: 1.0,  # N/A: MP3 kennt keine Soft-Saturation (digital)
-            DefectType.HEAD_WEAR: 1.0,  # N/A: MP3 digital — kein Magnetkopf
+            DefectType.HEAD_WEAR: 1.0,  # N/A: MP3 digital - kein Magnetkopf
             DefectType.PRE_ECHO: 0.3,  # MP3 (höheres Bitrate) → Pre-Echo weniger stark als Low
             DefectType.TRANSIENT_SMEARING: 0.3,  # MP3 high: Transient-Smearing weniger stark als Low
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MP3 digital — keine Disc-Entzerrungskurve
-            DefectType.ALIASING: 0.3,  # Höheres Bitrate — weniger Resampling-Artefakte als MP3-Low
-            DefectType.BIAS_ERROR: 1.0,  # N/A: MP3 digital — kein analoger Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: MP3 digital — kein Magnetkopf
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MP3 digital - keine Disc-Entzerrungskurve
+            DefectType.ALIASING: 0.3,  # Höheres Bitrate - weniger Resampling-Artefakte als MP3-Low
+            DefectType.BIAS_ERROR: 1.0,  # N/A: MP3 digital - kein analoger Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: MP3 digital - kein Magnetkopf
             DefectType.SIBILANCE: 0.3,  # MP3 ≥ 192 kbps: deutlich weniger Sibilanz-Artefakte als Low-Bitrate
-            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: MP3 digital — kein mechanischer Transport
+            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: MP3 digital - kein mechanischer Transport
             DefectType.VOCAL_HARSHNESS: 0.3,  # MP3-High: Quell-Mastering-Clipping → Vokal-Übersteuerung möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MP3 digital — kein Dolby-Analogband-NR
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MP3 digital — kein Magnetband-Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MP3 digital - kein Dolby-Analogband-NR
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MP3 digital - kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: MP3 digital
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: MP3 hat keine Rillen
@@ -870,8 +904,8 @@ class DefectScanner:
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 1.0,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 1.0,  # AAC digital — kein WOW
-            DefectType.FLUTTER: 1.0,  # AAC digital — kein FLUTTER
+            DefectType.WOW: 1.0,  # AAC digital - kein WOW
+            DefectType.FLUTTER: 1.0,  # AAC digital - kein FLUTTER
             DefectType.STEREO_IMBALANCE: 0.8,
             DefectType.DIGITAL_ARTIFACTS: 0.4,
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -888,19 +922,19 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.5,  # AAC: effizienter als MP3, weniger Quantisierungsfehler
             DefectType.JITTER_ARTIFACTS: 0.8,
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.35,  # AAC: Source-Content oft überkomprimiert
-            DefectType.SOFT_SATURATION: 1.0,  # N/A: AAC digital — Soft-Saturation nur aus Quellmaterial
-            DefectType.HEAD_WEAR: 1.0,  # N/A: AAC digital — kein Magnetkopf
+            DefectType.SOFT_SATURATION: 1.0,  # N/A: AAC digital - Soft-Saturation nur aus Quellmaterial
+            DefectType.HEAD_WEAR: 1.0,  # N/A: AAC digital - kein Magnetkopf
             DefectType.PRE_ECHO: 0.35,  # AAC: Temporal-Masking → Pre-Echo vor Transienten möglich
             DefectType.TRANSIENT_SMEARING: 0.3,  # AAC: Transient-Smearing bei hoher Kompression
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: AAC digital — keine Disc-Entzerrungskurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: AAC digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.3,  # AAC-Codec: Resampling-Artefakte in der Transkodierkette
-            DefectType.BIAS_ERROR: 1.0,  # N/A: AAC digital — kein analoger Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: AAC digital — kein Magnetkopf
+            DefectType.BIAS_ERROR: 1.0,  # N/A: AAC digital - kein analoger Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: AAC digital - kein Magnetkopf
             DefectType.SIBILANCE: 0.4,  # AAC-Codec kann bei mittleren Bitraten Zischlaut-Artefakte einführen
-            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: AAC digital — kein mechanischer Transport
+            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: AAC digital - kein mechanischer Transport
             DefectType.VOCAL_HARSHNESS: 0.3,  # AAC-Codec: Quell-Mastering-Härte + Codec-Artefakte möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: AAC digital — kein Dolby-Analogband-NR
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: AAC digital — kein Magnetband-Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: AAC digital - kein Dolby-Analogband-NR
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: AAC digital - kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: AAC digital
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: AAC hat keine Rillen
@@ -920,8 +954,8 @@ class DefectScanner:
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 1.0,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 1.0,  # MiniDisc digital ATRAC — kein WOW
-            DefectType.FLUTTER: 1.0,  # MiniDisc digital ATRAC — kein FLUTTER
+            DefectType.WOW: 1.0,  # MiniDisc digital ATRAC - kein WOW
+            DefectType.FLUTTER: 1.0,  # MiniDisc digital ATRAC - kein FLUTTER
             DefectType.STEREO_IMBALANCE: 0.8,
             DefectType.DIGITAL_ARTIFACTS: 0.35,  # ATRAC specific artifacts
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -938,19 +972,19 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.3,  # ATRAC: aggressive Quantisierung sehr häufig!
             DefectType.JITTER_ARTIFACTS: 0.5,  # MiniDisc: ATRAC Buffer-Timing-Pröbleme
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.5,  # MiniDisc: Aufnahmen variieren stark
-            DefectType.SOFT_SATURATION: 1.0,  # N/A: MiniDisc digital — Soft-Saturation nur aus Quellmaterial
-            DefectType.HEAD_WEAR: 1.0,  # N/A: MiniDisc digital — kein Magnetkopf im klassischen Sinne
+            DefectType.SOFT_SATURATION: 1.0,  # N/A: MiniDisc digital - Soft-Saturation nur aus Quellmaterial
+            DefectType.HEAD_WEAR: 1.0,  # N/A: MiniDisc digital - kein Magnetkopf im klassischen Sinne
             DefectType.PRE_ECHO: 0.35,  # ATRAC: aggressive Temporal-Masking → Pre-Echo häufig
-            DefectType.TRANSIENT_SMEARING: 0.2,  # ATRAC: starkes Transient-Smearing — GrooveMetric-relevant
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MiniDisc digital — keine Disc-Entzerrungskurve
+            DefectType.TRANSIENT_SMEARING: 0.2,  # ATRAC: starkes Transient-Smearing - GrooveMetric-relevant
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: MiniDisc digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.4,  # ATRAC-Codec: Resampling-Artefakte und Aliasing-Stufigkeit
-            DefectType.BIAS_ERROR: 1.0,  # N/A: MiniDisc ATRAC digital — kein analoger Bias
+            DefectType.BIAS_ERROR: 1.0,  # N/A: MiniDisc ATRAC digital - kein analoger Bias
             DefectType.AZIMUTH_ERROR: 0.60,  # MiniDisc Rotationskopf: Azimuth-Drift bei Alterung möglich
             DefectType.SIBILANCE: 0.5,  # ATRAC-Codec (MiniDisc): Sibilanz-Artefakte charakteristisch bei 132 kbps
             DefectType.TRANSPORT_BUMP: 0.7,  # MiniDisc-Laufwerk: Rotationstransport kann holpern
             DefectType.VOCAL_HARSHNESS: 0.4,  # ATRAC-Codec: Vokal-Artefakte bei 132 kbps → Härte möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MiniDisc ist ATRAC-digital — kein Dolby-Analogband-NR
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MiniDisc digital — kein Magnetband-Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: MiniDisc ist ATRAC-digital - kein Dolby-Analogband-NR
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: MiniDisc digital - kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: MiniDisc ATRAC digital
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: MiniDisc hat keine Rillen
@@ -964,14 +998,14 @@ class DefectScanner:
             DefectType.MULTIBAND_WOW_FLUTTER: 1.0,  # N/A: MiniDisc Crystal-Clock
             DefectType.GENERATION_LOSS: 0.3,  # ATRAC-Transkodierung möglich
             DefectType.MOTOR_INTERFERENCE: 1.0,  # N/A: MiniDisc digital
-            DefectType.AMPLITUDE_DRIFT: 0.75,  # Selten: MiniDisc digital — Drift aus Quellmaterial
+            DefectType.AMPLITUDE_DRIFT: 0.75,  # Selten: MiniDisc digital - Drift aus Quellmaterial
         },
         MaterialType.STREAMING: {
             DefectType.CLICKS: 0.9,
             DefectType.CRACKLE: 0.9,
             DefectType.HUM: 0.9,
-            DefectType.WOW: 0.90,  # Streaming digital — WOW N/A
-            DefectType.FLUTTER: 0.90,  # Streaming digital — FLUTTER N/A
+            DefectType.WOW: 0.90,  # Streaming digital - WOW N/A
+            DefectType.FLUTTER: 0.90,  # Streaming digital - FLUTTER N/A
             DefectType.STEREO_IMBALANCE: 0.8,
             DefectType.DIGITAL_ARTIFACTS: 0.4,
             DefectType.LOW_FREQ_RUMBLE: 0.9,
@@ -988,19 +1022,19 @@ class DefectScanner:
             DefectType.QUANTIZATION_NOISE: 0.4,  # Streaming: Transkodierungskette erzeugt Requantisierung
             DefectType.JITTER_ARTIFACTS: 0.4,  # Netzwerk-Jitter → Puffer-Underruns / Artefakte
             DefectType.DYNAMIC_COMPRESSION_EXCESS: 0.2,  # Streaming-Normalisierung → Loudness-War besonders sichtbar!
-            DefectType.SOFT_SATURATION: 1.0,  # N/A: Streaming digital — Soft-Saturation nur aus Quellmaterial
-            DefectType.HEAD_WEAR: 1.0,  # N/A: Streaming digital — kein Magnetkopf
+            DefectType.SOFT_SATURATION: 1.0,  # N/A: Streaming digital - Soft-Saturation nur aus Quellmaterial
+            DefectType.HEAD_WEAR: 1.0,  # N/A: Streaming digital - kein Magnetkopf
             DefectType.PRE_ECHO: 0.4,  # Streaming-Codec: Pre-Echo aus Transkodierkette möglich
             DefectType.TRANSIENT_SMEARING: 0.3,  # Streaming-Normalisierung + Codec → Transient-Smearing häufig
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Streaming digital — keine Disc-Entzerrungskurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Streaming digital - keine Disc-Entzerrungskurve
             DefectType.ALIASING: 0.4,  # Mehrfache Transkodierkette erzeugt kumulative Aliasing-Artefakte
-            DefectType.BIAS_ERROR: 1.0,  # N/A: Streaming digital — kein analoger Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Streaming digital — kein Magnetkopf
+            DefectType.BIAS_ERROR: 1.0,  # N/A: Streaming digital - kein analoger Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Streaming digital - kein Magnetkopf
             DefectType.SIBILANCE: 0.4,  # Streaming-Codec (Opus/AAC): variable Bitraten → Sibilanz-Artefakte möglich
-            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: Streaming digital — kein mechanischer Transport
+            DefectType.TRANSPORT_BUMP: 1.0,  # N/A: Streaming digital - kein mechanischer Transport
             DefectType.VOCAL_HARSHNESS: 0.3,  # Streaming: Quell-Mastering-Übersteuerung + Codec-Härte möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Streaming digital — kein Dolby-Analogband-NR
-            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Streaming digital — kein Magnetband-Kopf
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Streaming digital - kein Dolby-Analogband-NR
+            DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Streaming digital - kein Magnetband-Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: Streaming digital
             DefectType.INNER_GROOVE_DISTORTION: 1.0,  # N/A: Streaming hat keine Rillen
@@ -1014,16 +1048,16 @@ class DefectScanner:
             DefectType.MULTIBAND_WOW_FLUTTER: 1.0,  # N/A: Streaming digital
             DefectType.GENERATION_LOSS: 0.2,  # SEHR HÄUFIG: Streaming-Transkodierung (YouTube, Spotify)
             DefectType.MOTOR_INTERFERENCE: 1.0,  # N/A: Streaming digital
-            DefectType.AMPLITUDE_DRIFT: 0.80,  # Selten: Streaming digital — Drift nur aus Quellmaterial
+            DefectType.AMPLITUDE_DRIFT: 0.80,  # Selten: Streaming digital - Drift nur aus Quellmaterial
         },
         MaterialType.UNKNOWN: dict.fromkeys(DefectType, 0.6),
         MaterialType.WAX_CYLINDER: {
-            # Phonograph-Wachswalze (1890–1930): extremer Rauschboden, HF ≤ 5 kHz
+            # Phonograph-Wachswalze (1890-1930): extremer Rauschboden, HF ≤ 5 kHz
             DefectType.CLICKS: 0.2,  # Sehr häufig durch Zylinderoberfläche
             DefectType.CRACKLE: 0.2,  # Wachswalzen-Abrieb → starkes Crackle
             DefectType.HUM: 0.5,
             DefectType.WOW: 0.30,  # Wachswalzen-Laufungenauigkeit < 0.5 Hz
-            DefectType.FLUTTER: 0.40,  # Trichter-/Mechanik-Vibration 0.5–200 Hz
+            DefectType.FLUTTER: 0.40,  # Trichter-/Mechanik-Vibration 0.5-200 Hz
             DefectType.STEREO_IMBALANCE: 1.0,  # N/A: immer Mono
             DefectType.DIGITAL_ARTIFACTS: 1.0,  # N/A: analog
             DefectType.LOW_FREQ_RUMBLE: 0.4,  # Mechanisches Rumpeln der Walze
@@ -1044,14 +1078,14 @@ class DefectScanner:
             DefectType.HEAD_WEAR: 1.0,  # N/A: kein Magnetkopf
             DefectType.PRE_ECHO: 1.0,  # N/A: kein digitaler Codec auf Wachswalze
             DefectType.TRANSIENT_SMEARING: 0.5,  # Trägheit des Trichters begrenzt Transienten
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Wachswalze mechanisch — keine elektrische EQ-Kurve
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Wachswalze mechanisch - keine elektrische EQ-Kurve
             DefectType.ALIASING: 0.6,  # Sehr alte Digitalisierungen mit primitiven AA-Filtern
-            DefectType.BIAS_ERROR: 1.0,  # N/A: Wachswalze mechanisch — kein Magnetband-Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: mechanische Abtastung — kein Magnetkopf
+            DefectType.BIAS_ERROR: 1.0,  # N/A: Wachswalze mechanisch - kein Magnetband-Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: mechanische Abtastung - kein Magnetkopf
             DefectType.SIBILANCE: 1.0,  # N/A: HF ≤ 5 kHz, Zischlautbereich physikalisch nicht erreichbar
             DefectType.TRANSPORT_BUMP: 0.5,  # Walzen-Transportholpern bei mechanischer Abtastung
             DefectType.VOCAL_HARSHNESS: 0.6,  # Wachswalze: Mittelton-Verzerrung durch Trichter-Resonanz
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Wachswalze (1890–1930) — Dolby NR erst 1966 erfunden
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Wachswalze (1890-1930) - Dolby NR erst 1966 erfunden
             DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Wachswalze hat kein Band/Kopf
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: Wachswalze mechanisch
@@ -1069,12 +1103,12 @@ class DefectScanner:
             DefectType.AMPLITUDE_DRIFT: 0.40,  # Häufig: Federwerk-Motor → Drehzahlabfall → Pegelgradient
         },
         MaterialType.WIRE_RECORDING: {
-            # Drahtbandaufnahme (1940–1955): Jitter, Frequenzgang-Einbrüche, Magnetisierungs-Dropout
+            # Drahtbandaufnahme (1940-1955): Jitter, Frequenzgang-Einbrüche, Magnetisierungs-Dropout
             DefectType.CLICKS: 0.5,
             DefectType.CRACKLE: 0.4,
             DefectType.HUM: 0.4,  # Magnetfeld-Überkopplung
             DefectType.WOW: 0.20,  # Drahtjitter-Gleichlauf (< 0.5 Hz), sehr charakteristisch
-            DefectType.FLUTTER: 0.25,  # Drahtführungs-Vibration (0.5–200 Hz)
+            DefectType.FLUTTER: 0.25,  # Drahtführungs-Vibration (0.5-200 Hz)
             DefectType.STEREO_IMBALANCE: 1.0,  # N/A: immer Mono
             DefectType.DIGITAL_ARTIFACTS: 1.0,  # N/A: analog
             DefectType.LOW_FREQ_RUMBLE: 0.5,
@@ -1095,14 +1129,14 @@ class DefectScanner:
             DefectType.HEAD_WEAR: 0.3,  # Drahtkopfverschleiß typisch
             DefectType.PRE_ECHO: 1.0,  # N/A: kein digitaler Codec
             DefectType.TRANSIENT_SMEARING: 0.4,  # Begrenzte Bandbreite → Transientenverzerrung
-            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Drahtbandaufnahme — kein Disc-Format
+            DefectType.RIAA_CURVE_ERROR: 1.0,  # N/A: Drahtbandaufnahme - kein Disc-Format
             DefectType.ALIASING: 0.5,  # Frühe Digitalisierungen mit suboptimalen AA-Filtern
             DefectType.BIAS_ERROR: 0.4,  # AC-Bias oft falsch justiert bei primitiven Drahtbandgeräten
             DefectType.AZIMUTH_ERROR: 0.40,  # Draht-Magnetkopf: Azimuth-Fehler durch primitive Justierung häufig
             DefectType.SIBILANCE: 0.5,  # Drahtband: begrenzter HF-Frequenzgang → De-Esser teilweise relevant
             DefectType.TRANSPORT_BUMP: 0.3,  # Drahtbandfuehrung: Transportrueckeln durch primitive Mechanik
             DefectType.VOCAL_HARSHNESS: 0.5,  # Drahtband: Magnetisierungs-Verzerrung → Vokal-Härte möglich
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Drahtband (1940–1955) — Dolby NR erst 1966 erfunden
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Drahtband (1940-1955) - Dolby NR erst 1966 erfunden
             DefectType.TAPE_HEAD_LEVEL_DIP: 0.35,  # Möglich: Drahtband-Kopf-Kontakt instabil
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 0.2,  # Drahtband: magnetisches Modulationsrauschen vorhanden
@@ -1120,12 +1154,12 @@ class DefectScanner:
             DefectType.AMPLITUDE_DRIFT: 0.40,  # Häufig: Drahtband-Motor → AGC-ähnlicher Pegelanstieg/-abfall
         },
         MaterialType.LACQUER_DISC: {
-            # Acetat-Lackfolien-Heimaufnahme (1930–1950): Risse, Substrat-Rauschen, Rille-Ermüdung
+            # Acetat-Lackfolien-Heimaufnahme (1930-1950): Risse, Substrat-Rauschen, Rille-Ermüdung
             DefectType.CLICKS: 0.2,  # Rissbildung → sehr häufige Clicks
             DefectType.CRACKLE: 0.3,  # Rille-Ermüdung → Crackle
             DefectType.HUM: 0.5,
             DefectType.WOW: 0.30,  # Acetat-Verformung → Plattenteller-Gleichlauf < 0.5 Hz
-            DefectType.FLUTTER: 0.40,  # Heim-Abtastarm-Vibration 0.5–200 Hz
+            DefectType.FLUTTER: 0.40,  # Heim-Abtastarm-Vibration 0.5-200 Hz
             DefectType.STEREO_IMBALANCE: 1.0,  # N/A: meist Mono
             DefectType.DIGITAL_ARTIFACTS: 1.0,  # N/A: analog
             DefectType.LOW_FREQ_RUMBLE: 0.4,
@@ -1147,13 +1181,13 @@ class DefectScanner:
             DefectType.PRE_ECHO: 1.0,  # N/A: kein digitaler Codec
             DefectType.TRANSIENT_SMEARING: 0.4,  # Limitierte Heimaufnahme-Technique
             DefectType.RIAA_CURVE_ERROR: 0.2,  # Heimaufnahmen: verschiedene EQ-Kurven (AES/NAB/FFRR) häufig falsch
-            DefectType.ALIASING: 0.5,  # Heim-Digitalisierung variiert — AA-Filter fehlt oft
-            DefectType.BIAS_ERROR: 1.0,  # N/A: Lackfolie ist kein Magnetband — kein Aufnahme-Bias
-            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Lackfolie ist mechanisches Disc-Format — kein Magnetkopf
+            DefectType.ALIASING: 0.5,  # Heim-Digitalisierung variiert - AA-Filter fehlt oft
+            DefectType.BIAS_ERROR: 1.0,  # N/A: Lackfolie ist kein Magnetband - kein Aufnahme-Bias
+            DefectType.AZIMUTH_ERROR: 1.0,  # N/A: Lackfolie ist mechanisches Disc-Format - kein Magnetkopf
             DefectType.SIBILANCE: 0.4,  # Heimaufnahme-Nadel: Zischlaute bei HF-Überbetonung möglich
             DefectType.TRANSPORT_BUMP: 0.5,  # Plattenteller-Holpern bei Heimaufnahme-Technique
             DefectType.VOCAL_HARSHNESS: 0.5,  # Heimaufnahme: primitive Mikrofone → Vokal-Verzerrung häufig
-            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Lacquer Disc ist kein Magnetband — kein Dolby-Kompander
+            DefectType.DOLBY_NR_MISMATCH: 1.0,  # N/A: Lacquer Disc ist kein Magnetband - kein Dolby-Kompander
             DefectType.TAPE_HEAD_LEVEL_DIP: 1.0,  # N/A: Lacquer Disc hat kein Magnetband
             # v10.0.0: 12 neue SOTA-DefectTypes
             DefectType.MODULATION_NOISE: 1.0,  # N/A: Lacquer mechanisch
@@ -1233,7 +1267,7 @@ class DefectScanner:
         )
 
         logger.info("DefectScanner initialisiert: SR=%s, Material=%s", sample_rate, material_type)
-        # Welch-PSD-Cache (P1): gültig für Dauer eines scan()-Calls — wird in scan() gesetzt.
+        # Welch-PSD-Cache (P1): gültig für Dauer eines scan()-Calls - wird in scan() gesetzt.
         self._scan_welch_cache: dict[tuple[object, ...], tuple[np.ndarray, np.ndarray]] = {}
 
     def _cached_welch(
@@ -1270,6 +1304,128 @@ class DefectScanner:
         self._scan_welch_cache[_key] = _result
         return _result
 
+    def adjust_thresholds_for_ast(
+        self,
+        ast_classifier: Any = None,
+        audio: np.ndarray | None = None,
+        sr: int = 48000,
+    ) -> dict[str, float]:
+        """§v10.304: AST-basierte Schwellwert-Anpassung für Defekt-Detektoren.
+
+        Läuft VOR dem Scan. Prüft mit AST, welche Musikinstrumente im Audio
+        präsent sind, und hebt die Detektions-Schwellen für Defekttypen an,
+        die mit diesen Instrumenten verwechselt werden können.
+
+        Returns:
+            Dict mit angepassten Schwellwerten (Defekttyp → neuer Threshold).
+        """
+        if ast_classifier is None or audio is None:
+            return {}
+        try:
+            if not hasattr(ast_classifier, 'is_loaded') or not ast_classifier.is_loaded():
+                return {}
+            from backend.core.ast_audio_set_classifier import DEFECT_INSTRUMENT_DISCRIMINATOR
+
+            _result = ast_classifier.classify(audio, sr, top_k=15)
+            if _result.model_used == "fallback":
+                return {}
+
+            _adjustments: dict[str, float] = {}
+            for _defect_name, _instrument_indices in DEFECT_INSTRUMENT_DISCRIMINATOR.items():
+                # Beste Instrument-Konfidenz für diesen Defekttyp
+                _best_conf = max(
+                    (_result.get_prob(i) for i in _instrument_indices), default=0.0
+                )
+                if _best_conf >= 0.15:
+                    # Konfidenz → Schwellwert-Multiplikator: 0.15→1.3, 0.50→2.0, 0.80→3.0
+                    _mult = 1.0 + _best_conf * 2.5
+                    _defect_type = None
+                    for _dt in DefectType:
+                        if _dt.value == _defect_name:
+                            _defect_type = _dt
+                            break
+                    if _defect_type is not None:
+                        _old_thresh = self.thresholds.get(_defect_type, 0.5)
+                        _new_thresh = float(np.clip(_old_thresh * _mult, 0.1, 0.95))
+                        self.thresholds[_defect_type] = _new_thresh
+                        _adjustments[_defect_name] = _new_thresh
+                        logger.debug(
+                            "§v10.304 AST-Threshold: %s %.2f→%.2f (inst_conf=%.2f)",
+                            _defect_name, _old_thresh, _new_thresh, _best_conf,
+                        )
+            if _adjustments:
+                logger.info(
+                    "§v10.304 AST Pre-Filter: %d Defekt-Schwellen angehoben "
+                    "(Instrument-Erkennung)",
+                    len(_adjustments),
+                )
+            return _adjustments
+        except Exception as _exc:
+            logger.debug("AST Pre-Filter fehlgeschlagen: %s", _exc)
+            return {}
+
+    @classmethod
+    def is_audible(cls, defect_type: str, severity: float,
+                   material: str = "tape",
+                   signal_rms_db: float = -20.0,
+                   peak_frequency_hz: float = 3000.0) -> bool:  # 3 kHz = max Ohr-Sensitivität
+        """§v10.306: Prüft ob ein Defekt für das menschliche Ohr hörbar ist.
+
+        Berücksichtigt:
+        - JND-Schwellen pro Defekttyp (ISO 226, Zwicker/Fastl)
+        - Material-Maskierung (Shellac-Rauschen maskiert Knistern)
+        - Signal-Maskierung (laute Musik maskiert leise Defekte)
+        - Frequenzabhängige Hörschwelle (Presbyakusis)
+
+        Returns True wenn der Defekt wahrscheinlich hörbar ist.
+        """
+        _t = cls.AUDIBILITY_THRESHOLDS.get(defect_type)
+        if _t is None:
+            return severity >= 0.3  # Default: moderate threshold
+
+        _jnd_db, _masking, _mat_factors = _t
+
+        # Signal-Maskierung: Lautes Signal maskiert Defekte
+        _signal_mask = max(0.0, min(1.0, (signal_rms_db + 60.0) / 60.0))
+        _effective_jnd = _jnd_db * (1.0 - _masking * _signal_mask)
+
+        # Material-Faktor
+        _mat_factor = _mat_factors.get(str(material).lower(), 1.0)
+        _effective_jnd *= _mat_factor
+
+        # Frequenzgewichtung nach ISO 226:2003 Equal-Loudness-Contours
+        # Das Ohr ist bei 2–5 kHz am empfindlichsten → Defekte dort lauter.
+        # Bei <100 Hz und >10 kHz ist das Ohr unempfindlicher.
+        # Gewicht > 1.0 = Defekt erscheint lauter (Schwelle sinkt).
+        if peak_frequency_hz < 80:
+            _freq_gain = 0.10  # Sehr tief: kaum hörbar
+        elif peak_frequency_hz < 200:
+            _freq_gain = 0.25
+        elif peak_frequency_hz < 500:
+            _freq_gain = 0.55
+        elif peak_frequency_hz < 1000:
+            _freq_gain = 0.80
+        elif peak_frequency_hz < 2000:
+            _freq_gain = 0.95
+        elif peak_frequency_hz < 5000:
+            _freq_gain = 1.00  # Maximale Sensitivität
+        elif peak_frequency_hz < 8000:
+            _freq_gain = 0.90
+        elif peak_frequency_hz < 12000:
+            _freq_gain = 0.60
+        elif peak_frequency_hz < 16000:
+            _freq_gain = 0.25
+        else:
+            _freq_gain = 0.08  # >16 kHz: Presbyakusis
+        # Effektive JND mit Frequenzsensitivityität skalieren
+        # (niedrige Gain → JND näher an 0 dB → schwerer hörbar)
+        _effective_jnd *= _freq_gain
+
+        # Skaliere Severity in dB-Domäne: severity 0.0→−50dB, 1.0→0dB
+        # (typische Defekte liegen zwischen −50 dBFS und 0 dBFS)
+        _defect_db = -50.0 + severity * 50.0
+        return _defect_db >= _effective_jnd
+
     def scan(
         self,
         audio: np.ndarray,
@@ -1286,7 +1442,7 @@ class DefectScanner:
             audio: Audio-Daten (mono: shape=(n_samples,), stereo: shape=(n_samples, 2))
             sample_rate: Sample rate (falls nicht im Constructor gesetzt)
             material_type: Override für Material-Typ (falls nicht im Constructor gesetzt)
-            file_ext: Dateiendung der Quelldatei (z.B. '.mp3') — wird an ForensicMediumDetector
+            file_ext: Dateiendung der Quelldatei (z.B. '.mp3') - wird an ForensicMediumDetector
                       weitergegeben, um Analog-Posterior-Zeroing anzuwenden (Bug-15-Fix).
 
         Returns:
@@ -1301,7 +1457,7 @@ class DefectScanner:
                 material_type = MaterialType(canonical_material_key(material_type))
             except ValueError:
                 logger.debug(
-                    "DefectScanner.scan(): material_type='%s' unbekannt — auf None gesetzt.",
+                    "DefectScanner.scan(): material_type='%s' unbekannt - auf None gesetzt.",
                     material_type,
                 )
                 material_type = None
@@ -1315,7 +1471,7 @@ class DefectScanner:
                 audio.shape,
             )
 
-        # §9.7.1 SHA256-Cache — bei identischem Eingangssignal sofort zurückgeben
+        # §9.7.1 SHA256-Cache - bei identischem Eingangssignal sofort zurückgeben
         _sr_for_key = sample_rate if sample_rate is not None else self.sample_rate
         _cache_key = _audio_scan_cache_key(audio, _sr_for_key, material_type)
         with _scan_cache_lock:
@@ -1355,7 +1511,7 @@ class DefectScanner:
             # Rauschboden: 5. Perzentil PSD in dBFS
             _fp_p5 = float(np.percentile(_fp_psd, 5))
             _sf["noise_floor_p5_db"] = float(10.0 * np.log10(max(_fp_p5, 1e-20)))
-            # Effektive Bandbreite: Rolloff bei −60 dBFS
+            # Effektive Bandbreite: Rolloff bei -60 dBFS
             _fp_db = 10.0 * np.log10(np.maximum(_fp_psd, 1e-20))
             _fp_max_db = float(np.max(_fp_db))
             _fp_bw_mask = _fp_db >= (_fp_max_db - 60.0)
@@ -1378,7 +1534,7 @@ class DefectScanner:
         if material_type is None:
             material_type = self.material_type or _auto_material
 
-        # §9.7.5a — Update instance attribute so _detect_dropouts() can access
+        # §9.7.5a - Update instance attribute so _detect_dropouts() can access
         # the resolved material type for adaptive thresholds.
         self.material_type = material_type
 
@@ -1400,7 +1556,7 @@ class DefectScanner:
         #   Hohes SNR (clean)  → sensitiver (niedrigerer Threshold)
         #   Niedriges SNR (noisy) → konservativer (höherer Threshold)
         # Ausnahme: Defekttypen die physikalisch NUR bei bestimmten Materialien
-        # auftreten (z.B. WOW nur bei analog) — deren Thresholds bleiben unskaliert.
+        # auftreten (z.B. WOW nur bei analog) - deren Thresholds bleiben unskaliert.
         _NON_SCALING_DEFECTS: frozenset[DefectType] = frozenset(
             {
                 DefectType.WOW,
@@ -1420,7 +1576,7 @@ class DefectScanner:
             material_type.name if hasattr(material_type, "name") else str(material_type),
         )
 
-        # §9.x [RELEASE_MUST] Chain-adaptive threshold merge — Tonträgerkette darf niemals
+        # §9.x [RELEASE_MUST] Chain-adaptive threshold merge - Tonträgerkette darf niemals
         # ignoriert werden.  Wenn die Kette Stufen enthält, die für bestimmte Defekttypen
         # empfindlichere Schwellwerte haben (z. B. Tape-Stufe in shellac→tape→mp3_low),
         # werden die "gated" Schwellwerte des primären Materials (≥ 0.95 = N/A-Gate)
@@ -1428,7 +1584,7 @@ class DefectScanner:
         # Rationale: Wow/Flutter einer Tape-Stufe überlebt als spektrale Signatur auch
         # nach verlustbehafteter Transkodierung und muss detektierbar bleiben.
         # Invariante: Nur Schwellwerte, die auf dem primären Material wirksam gesperrt
-        # sind (≥ 0.95), werden überschrieben — aktive Schwellwerte bleiben unverändert.
+        # sind (≥ 0.95), werden überschrieben - aktive Schwellwerte bleiben unverändert.
         _chain_threshold_overrides: set[DefectType] = set()
         _chain_stage_materials: list[str] = []
         _forensic_material_confidence: float | None = None
@@ -1475,7 +1631,7 @@ class DefectScanner:
                     _primary_sensitivity = self.MATERIAL_SENSITIVITY[material_type]
                     _gated_defects: set[DefectType] = {_dt for _dt, _t in _primary_sensitivity.items() if _t >= 0.95}
                     # Für jeden gesperrten Defekttyp: sensitivsten (niedrigsten) Schwellwert
-                    # über alle Kettenstufen bestimmen — "most-sensitive-wins", nicht "first-wins".
+                    # über alle Kettenstufen bestimmen - "most-sensitive-wins", nicht "first-wins".
                     # Invariante: aktive Schwellwerte des primären Materials (< 0.95) bleiben unberührt.
                     _merged_thresh: dict[DefectType, float] = dict(self.thresholds)
                     for _dt in _gated_defects:
@@ -1525,8 +1681,8 @@ class DefectScanner:
         _DETECTOR_CAP_S = 60
         _detector_cap_n = _DETECTOR_CAP_S * sr
         _location_offset_s = 0.0  # seconds to add to all detector locations
-        # §9.7.5a — Full-audio reference for non-stationary defects (dropouts).
-        # Dropouts can occur anywhere (intro, outro, tape leader) — the 60 s
+        # §9.7.5a - Full-audio reference for non-stationary defects (dropouts).
+        # Dropouts can occur anywhere (intro, outro, tape leader) - the 60 s
         # center-crop would miss them.  Other detectors (noise, hum, flutter)
         # are stationary and still use the cropped audio for performance.
         _audio_mono_full = audio_mono  # kept for dropout detection
@@ -1604,7 +1760,7 @@ class DefectScanner:
             _frac = min(1.0, _tail_steps_done / float(_TAIL_STEP_BUDGET))
             _prog(_tail_start + _tail_span * _frac, name)
 
-        # Alle 28 Defekttypen sequentiell — nach jedem Schritt Fortschritt melden
+        # Alle 28 Defekttypen sequentiell - nach jedem Schritt Fortschritt melden
         # Welch-PSD-Cache zurücksetzen: neuer scan()-Call, neues audio_mono-Objekt.
         self._scan_welch_cache = {}
         scores = {}
@@ -1617,13 +1773,13 @@ class DefectScanner:
         scores[DefectType.HUM] = self._detect_hum(audio_mono)
         _prog(_lead_pct(20), "Tonhöhenschwankung")
         scores[DefectType.WOW] = self._detect_wow(audio_mono)  # IEC 60386 < 0.5 Hz
-        scores[DefectType.FLUTTER] = self._detect_flutter(audio_mono)  # IEC 60386 0.5–200 Hz
+        scores[DefectType.FLUTTER] = self._detect_flutter(audio_mono)  # IEC 60386 0.5-200 Hz
         # v10.0.0 §9.1b-ext: Tape-Intro-Supplement for WOW/FLUTTER.
-        # Center-cropped 60 s misses cassette motor startup instability (first 0–20 s).
+        # Center-cropped 60 s misses cassette motor startup instability (first 0-20 s).
         # For tape material: re-run WOW/FLUTTER on the first 20 s of full audio and
         # take max(center_crop_severity, intro_severity).  This catches capstan run-up
         # and head-engagement speed irregularities that are non-stationary in the intro.
-        # Scientific basis: IEC 60386:1972 §4.2.1 — short-term speed variations must
+        # Scientific basis: IEC 60386:1972 §4.2.1 - short-term speed variations must
         # be measured at representative positions including start-of-tape.
         if (
             self.material_type in (MaterialType.TAPE, MaterialType.CASSETTE, MaterialType.REEL_TAPE)
@@ -1667,7 +1823,7 @@ class DefectScanner:
             self._detect_phase_issues(audio) if is_stereo else DefectScore(DefectType.PHASE_ISSUES, 0.0, 0.0)
         )
         _prog(_lead_pct(59), "Aussetzer")
-        # §9.7.5a — Dropout detection runs on FULL audio (not center-cropped).
+        # §9.7.5a - Dropout detection runs on FULL audio (not center-cropped).
         # Tape dropouts occur anywhere (intro, leader, splice points).
         scores[DefectType.DROPOUTS] = self._detect_dropouts(_audio_mono_full)
         _prog(_lead_pct(64), "Übersteuerung")
@@ -1776,11 +1932,11 @@ class DefectScanner:
         scores[DefectType.LACQUER_DISC_DEGRADATION] = self._detect_lacquer_disc_degradation(audio_mono)
         _tail_tick("Lackfolien-Degradierung")
 
-        # §9.1a — TRANSPORT_BUMP is non-stationary (impulsive micro-speed jumps).
+        # §9.1a - TRANSPORT_BUMP is non-stationary (impulsive micro-speed jumps).
         # MUST run on FULL audio, same as DROPOUTS.
-        # §9.4a — Digital-only materials have no mechanical transport mechanism.
+        # §9.4a - Digital-only materials have no mechanical transport mechanism.
         # Their MATERIAL_SENSITIVITY threshold is 1.0 (never triggers). Skip the
-        # expensive full-audio frame analysis entirely to save ~15–40 s on long files.
+        # expensive full-audio frame analysis entirely to save ~15-40 s on long files.
         _DIGITAL_NO_BUMP: frozenset[MaterialType] = frozenset(
             {
                 MaterialType.CD_DIGITAL,
@@ -1800,7 +1956,7 @@ class DefectScanner:
             scores[DefectType.TRANSPORT_BUMP] = self._detect_transport_bump(_audio_mono_full)
         _tail_tick("Transport-Bump")
 
-        # §9.1a — TAPE_HEAD_LEVEL_DIP is non-stationary (gradual level dips from
+        # §9.1a - TAPE_HEAD_LEVEL_DIP is non-stationary (gradual level dips from
         # head-contact pressure variation).  MUST run on FULL audio.
         # Only relevant for tape-based materials with magnetic head mechanism.
         _TAPE_HEAD_DIP_MATERIALS: frozenset[MaterialType] = frozenset(
@@ -1866,7 +2022,7 @@ class DefectScanner:
             scores[DefectType.TAPE_HEAD_CLOG] = DefectScore(DefectType.TAPE_HEAD_CLOG, 0.0, 0.95)
         _tail_tick("Tape-Head-Clog")
 
-        # §9.1c — AMPLITUDE_DRIFT: Gradual level rise/fall over entire song.
+        # §9.1c - AMPLITUDE_DRIFT: Gradual level rise/fall over entire song.
         # Distinguishes artistic crescendo (preserve) from carrier drift (correct).
         # Runs on full mono audio for reliable trend detection (requires full duration).
         scores[DefectType.AMPLITUDE_DRIFT] = self._detect_amplitude_drift(_audio_mono_full)
@@ -1900,19 +2056,19 @@ class DefectScanner:
         # ── Full-Audio Location Re-Detection ───────────────────────────────────
         # The center-crop analysis (60 s) produces locations ONLY in the middle
         # section of the song.  For event-based defects (clicks, crackle, etc.)
-        # this is misleading — a 4-minute vinyl track shows markers only between
+        # this is misleading - a 4-minute vinyl track shows markers only between
         # ~90 s and ~150 s while defects actually occur throughout.
         #
         # Fix: Re-run the event-based detectors on the FULL mono audio to get
         # accurate full-range locations.  Severity values from the center-crop
         # are retained (they are statistically representative).
         # Semi-stationary defects (print_through, transient_smearing, pre_echo)
-        # have their locations cleared — they show as full-width tints instead.
+        # have their locations cleared - they show as full-width tints instead.
         if _location_offset_s > 0.0:
             # §9.7.5b Performance: analyze only non-center sections for location re-detection.
             # Center 60 s is already covered by the primary pass (locations offset-corrected below).
             # Event-detectors (location-critical): use FULL intro + FULL outro to ensure 100 % coverage.
-            # Severity-rechecks (statistical sample only): capped at 30 s per side — severity is not
+            # Severity-rechecks (statistical sample only): capped at 30 s per side - severity is not
             # location-dependent; a representative sample is sufficient.
             _center_begin = _dc_mid - _dc_half  # sample index where center-crop starts
             _center_end = _dc_mid + _dc_half  # sample index where center-crop ends
@@ -1985,7 +2141,7 @@ class DefectScanner:
                 _tail_tick("Vollaudio-Recheck (Events)")
 
             # Severity rescue for center-crop-sensitive defects.
-            # Severity is a statistical / global property — a 30 s intro + 30 s outro sample
+            # Severity is a statistical / global property - a 30 s intro + 30 s outro sample
             # is sufficient to catch intro/outro-concentrated defects without running the full
             # duration (e.g. 225 s) through expensive detectors like pitch_drift or reverb_excess.
             # §9.7.5b: use _sev_intro / _sev_outro (both ≤ 30 s) instead of _audio_mono_full.
@@ -2031,8 +2187,8 @@ class DefectScanner:
                     scores[_sdt].metadata["outside_center_crop_recheck"] = "non_center_sample_severity"
                 _tail_tick("Vollaudio-Recheck (Severity)")
 
-            # DROPOUTS + TRANSPORT_BUMP + TAPE_HEAD_LEVEL_DIP already use full audio — no correction needed.
-            # Event detectors re-detected above — no correction needed.
+            # DROPOUTS + TRANSPORT_BUMP + TAPE_HEAD_LEVEL_DIP already use full audio - no correction needed.
+            # Event detectors re-detected above - no correction needed.
             _SKIP_OFFSET = {
                 DefectType.DROPOUTS,
                 DefectType.TRANSPORT_BUMP,
@@ -2073,11 +2229,11 @@ class DefectScanner:
         #
         # v10.0.0: Two-tier intro boost for cassette/tape head pickup errors.
         # Tape head engagement & motor stabilization cause defects up to 20 s:
-        #   Tier 1 (0–5 s):  ×1.50 — perceptually critical (Zacharov 2001)
-        #   Tier 2 (5–20 s): ×1.25 — cassette head settling region (tape-only)
+        #   Tier 1 (0-5 s):  ×1.50 - perceptually critical (Zacharov 2001)
+        #   Tier 2 (5-20 s): ×1.25 - cassette head settling region (tape-only)
         # Scientific basis: McKnight (1969) "Tape Reproducer Response Measurements
         # with a Reproducer Test Tape", AES Convention 36; Camras (1988) Ch. 7
-        # "Transport Mechanisms — Start Transients".
+        # "Transport Mechanisms - Start Transients".
         #
         # IMPORTANT: This MUST run AFTER the full-audio location re-detection and
         # offset correction above, so that t0 values are in absolute song time.
@@ -2086,7 +2242,7 @@ class DefectScanner:
         _INTRO_SECONDS = 5.0
         _INTRO_SEVERITY_BOOST = 1.5  # 50% boost for intro defects
         _TAPE_EXTENDED_INTRO_S = 20.0  # extended intro region for tape head settling
-        _TAPE_EXTENDED_BOOST = 1.25  # 25% boost for tape extended intro (5–20 s)
+        _TAPE_EXTENDED_BOOST = 1.25  # 25% boost for tape extended intro (5-20 s)
         _is_tape_material = (
             self.material_type
             in (
@@ -2103,7 +2259,7 @@ class DefectScanner:
                 if not _ds.locations:
                     continue
                 _intro_events = [(t0, t1) for t0, t1 in _ds.locations if t0 < _INTRO_SECONDS]
-                # v10.0.0: tape-extended intro region (5–20 s) for head-settling defects
+                # v10.0.0: tape-extended intro region (5-20 s) for head-settling defects
                 _ext_intro_events = []
                 if _is_tape_material:
                     _ext_intro_events = [
@@ -2111,10 +2267,10 @@ class DefectScanner:
                     ]
                 if (_intro_events or _ext_intro_events) and _ds.severity > 0.0:
                     _n_total = max(len(_ds.locations), 1)
-                    # Tier 1: standard intro boost (0–5 s)
+                    # Tier 1: standard intro boost (0-5 s)
                     _intro_fraction = len(_intro_events) / _n_total
                     _tier1_boost = 1.0 + (_INTRO_SEVERITY_BOOST - 1.0) * _intro_fraction
-                    # Tier 2: tape-extended intro boost (5–20 s)
+                    # Tier 2: tape-extended intro boost (5-20 s)
                     _ext_fraction = len(_ext_intro_events) / _n_total
                     _tier2_boost = 1.0 + (_TAPE_EXTENDED_BOOST - 1.0) * _ext_fraction
                     # Combined: multiplicative (both tiers can contribute)
@@ -2190,8 +2346,8 @@ class DefectScanner:
                         _per_channel_locs.setdefault("sibilance", {})[_ch_label] = list(_ch_sib.locations)
                 except Exception as _exc:
                     logger.debug("Per-channel sibilance detection failed (%s): %s", _ch_label, _exc)
-                # Transport bumps per channel — skip for pure digital material
-                # (no tape/disc transport mechanism, §9.4a — same guard as main call)
+                # Transport bumps per channel - skip for pure digital material
+                # (no tape/disc transport mechanism, §9.4a - same guard as main call)
                 if material_type not in _DIGITAL_NO_BUMP:
                     try:
                         _ch_bump = self._detect_transport_bump(_ch_audio)
@@ -2217,7 +2373,7 @@ class DefectScanner:
         # RIAA-Entzerrungsfehler sind NUR auf Disc-Medien möglich (Vinyl, Shellac,
         # Lacquer-Disc, Wax-Cylinder).  Auf Magnetband / Digital / Codec-Quellen
         # ist ein Bass/Mid-Ungleichgewicht KEIN RIAA-Fehler, sondern ggf. ein
-        # EQ-Problem oder Aufnahme-Charakteristik — severity wird auf 0 gesetzt.
+        # EQ-Problem oder Aufnahme-Charakteristik - severity wird auf 0 gesetzt.
         _DISC_MEDIA = {
             MaterialType.VINYL,
             MaterialType.SHELLAC,
@@ -2230,7 +2386,7 @@ class DefectScanner:
             if _riaa_orig > 0.0:
                 logger.info(
                     "Medium-Gate: RIAA_CURVE_ERROR suppressed (material=%s, was=%.3f) "
-                    "— RIAA is disc-only, not applicable to %s",
+                    "- RIAA is disc-only, not applicable to %s",
                     material_type.value,
                     _riaa_orig,
                     material_type.value,
@@ -2248,8 +2404,8 @@ class DefectScanner:
                 )
             _tail_tick("Medium-Gate")
 
-        # ── §9.1c Perceptual Salience — psychoacoustic masking annotation ───────
-        # Annotates each defect with a 'perceptual_salience' score (0.0–1.0).
+        # ── §9.1c Perceptual Salience - psychoacoustic masking annotation ───────
+        # Annotates each defect with a 'perceptual_salience' score (0.0-1.0).
         # Masked defects (in loud passages) get reduced severity; exposed defects
         # (in quiet passages) keep full severity.  This prevents unnecessary repairs
         # on inaudible defects and focuses the pipeline on what the ear can detect.
@@ -2299,13 +2455,13 @@ class DefectScanner:
         # Forensische Tonträgerkettenerkennung (MediumDetector, DSP-basiert).
         # Wenn UV3 bereits ein vollständiges MediumDetectionResult aus dem Bridge-Cache
         # übergeben hat (forensic_medium_result), wird KEIN zweiter Detector-Aufruf
-        # ausgeführt — Redundanz-Fix (Erkennung einmalig nach Import, nicht nochmals beim
+        # ausgeführt - Redundanz-Fix (Erkennung einmalig nach Import, nicht nochmals beim
         # Klick auf Restoration / Studio 2026).
         _fmd_result: Any = {}
         if forensic_medium_result is not None and hasattr(forensic_medium_result, "transfer_chain"):
             _fmd_result = forensic_medium_result
             logger.debug(
-                "[SCAN] ForensicMediumDetector: gecachtes Ergebnis verwendet — kein erneuter Detect-Aufruf "
+                "[SCAN] ForensicMediumDetector: gecachtes Ergebnis verwendet - kein erneuter Detect-Aufruf "
                 "(primary_material=%s, chain=%s)",
                 getattr(_fmd_result, "primary_material", "?"),
                 getattr(_fmd_result, "transfer_chain", "?"),
@@ -2317,9 +2473,9 @@ class DefectScanner:
                 # Für lange Dateien: nur erste 30 s analysieren (Geschwindigkeit)
                 _max_forensic = sr * 30
                 _audio_forensic = audio_mono[:_max_forensic] if len(audio_mono) > _max_forensic else audio_mono
-                logger.debug("[SCAN] MediumDetector.detect() → %.1fs Audio …", len(_audio_forensic) / sr)
+                logger.debug("[SCAN] MediumDetector.detect() → %.1fs Audio ...", len(_audio_forensic) / sr)
                 _fmd_result = _ForensicMD().detect(_audio_forensic, sr, file_ext=file_ext)
-                # MediumDetectionResult ist ein Dataclass — getattr statt .get()
+                # MediumDetectionResult ist ein Dataclass - getattr statt .get()
                 _multi = getattr(_fmd_result, "is_multi_generation", None)
                 _chain_val = getattr(_fmd_result, "transfer_chain", None) or getattr(_fmd_result, "chain", "?")
                 logger.debug("[SCAN] MediumDetector OK: multi=%s, chain=%s", _multi, _chain_val)
@@ -2365,12 +2521,12 @@ class DefectScanner:
         #
         # Physikalisches Modell: Defekte einer Kettenstufe (z. B. Wow/Flutter auf Tape)
         # werden beim Transfer durch jede nachfolgende verlustbehaftete Stufe gedämpft.
-        # Der Detektor misst das Residual auf dem Endsignal — ohne Compensation wird die
+        # Der Detektor misst das Residual auf dem Endsignal - ohne Compensation wird die
         # Severity systematic zu niedrig ausgewiesen.
         #
         # Dämpfungsmodell (empirisch, Tsai & Välimäki 2003, Brixen 2007):
         #   Severity_korrigiert = Severity_gemessen / (Dämpfungsfaktor per Stufe ^ n_stufen_dahinter)
-        #   Dämpfung pro Codec-Stufe (mp3/aac/streaming): 0.55–0.65× je nach Bitrate
+        #   Dämpfung pro Codec-Stufe (mp3/aac/streaming): 0.55-0.65× je nach Bitrate
         #   Dämpfung pro digitale neutrale Stufe (cd/dat):  0.80×
         #   Dämpfung pro analoge Stufe als Zwischenstufe:   0.75×
         #
@@ -2463,7 +2619,7 @@ class DefectScanner:
                         continue
                     _cto_score = scores[_cto_dt]
                     if float(_cto_score.severity) <= 0.05:
-                        continue  # kein messbarer Defekt — nicht skalieren
+                        continue  # kein messbarer Defekt - nicht skalieren
                     # Severity-Kompensation für Kettendämpfung
                     _source_stages = _DEFECT_SOURCES.get(_cto_dt, ())
                     _scale = _chain_severity_scale(list(_source_stages), _ann_chain)
@@ -2498,7 +2654,7 @@ class DefectScanner:
             transfer_chain_raw=_fmd_result,
             is_multi_generation=bool(getattr(_fmd_result, "is_multi_generation", False)),
             transfer_chain_str=str(getattr(_fmd_result, "transfer_chain", "") or getattr(_fmd_result, "chain", "")),
-            spectral_fingerprint=_sf,  # §6.6.1 Pflicht-Fingerabdruck — 5 Messgrößen immer befüllt
+            spectral_fingerprint=_sf,  # §6.6.1 Pflicht-Fingerabdruck - 5 Messgrößen immer befüllt
             metadata={
                 "material_confidence": _forensic_material_confidence,
                 "chain_stage_materials": list(_chain_stage_materials),
@@ -2518,7 +2674,7 @@ class DefectScanner:
         except Exception as _focus_exc:
             logger.debug("focus_defect_map generation failed: %s", _focus_exc)
 
-        # §9.7.1 Cache-Write — Ergebnis für künftige identische Aufrufe sichern
+        # §9.7.1 Cache-Write - Ergebnis für künftige identische Aufrufe sichern
         with _scan_cache_lock:
             if len(_scan_cache) >= _SCAN_CACHE_MAX:
                 _scan_cache.pop(next(iter(_scan_cache)))  # FIFO-Trim
@@ -2587,7 +2743,7 @@ class DefectScanner:
             score.metadata["confidence_evidence_ratio"] = round(evidence_ratio, 4)
             score.metadata["confidence_material"] = material_type.value
 
-        # §MP3-GUARD: Chain-Contamination-Discount — wenn die Kette mit
+        # §MP3-GUARD: Chain-Contamination-Discount - wenn die Kette mit
         # verlustbehaftetem Codec endet, ahmen Kompressions-Artefakte analoge
         # Defekte nach. Ohne diesen Discount: 5715 False-Positive auf 225s Audio.
         self._apply_chain_contamination_discount(scores, forensic_medium_result)
@@ -2645,7 +2801,7 @@ class DefectScanner:
             DefectType.GROOVE_ECHO,  # MP3 temporal masking
             # TRANSPORT_BUMP REMOVED (§2.74): Broadband level dips cannot
             # be produced by MP3 encoding. These are genuine tape transport
-            # defects — the encoder passes them through transparently.
+            # defects - the encoder passes them through transparently.
         }
 
         _n_discounted = 0
@@ -2719,7 +2875,7 @@ class DefectScanner:
         # Crackle detection
         crackle_score = self._detect_crackle(audio).severity
 
-        # Wow/Flutter (beide analog — IEC 60386)
+        # Wow/Flutter (beide analog - IEC 60386)
         wow_flutter_score = max(
             self._detect_wow(audio if audio.ndim == 1 else audio.mean(axis=1)).severity,
             self._detect_flutter(audio if audio.ndim == 1 else audio.mean(axis=1)).severity,
@@ -2756,9 +2912,9 @@ class DefectScanner:
         tape_score += click_rate * 0.1  # Clicks schwach positive
         tape_score += 10.0  # Baseline-Bonus erhöht
 
-        # CASSETTE Score (Mono) — Compact Cassette IEC 60094-1 Type I/II/IV
+        # CASSETTE Score (Mono) - Compact Cassette IEC 60094-1 Type I/II/IV
         # Diskriminatoren vs. TAPE/Reel-Tape:
-        #   - Höheres Flutter (4.75 cm/s → typisch 0.10–0.30 % WRMS; Reel: 0.02–0.08 %)
+        #   - Höheres Flutter (4.75 cm/s → typisch 0.10-0.30 % WRMS; Reel: 0.02-0.08 %)
         #   - Niedrigere BW (≤ 12 kHz Type I vs. 15 kHz Reel-Tape) → stärkerer HF-Abfall
         #   - Kein/kaum Rumble (leichter Transportmechanismus)
         cassette_score = 0.0
@@ -2827,7 +2983,7 @@ class DefectScanner:
         # 6. Crackle (Vinyl-typisch)
         crackle_score = self._detect_crackle(audio_mono).severity
 
-        # 7. Wow/Flutter (analog media — IEC 60386)
+        # 7. Wow/Flutter (analog media - IEC 60386)
         wow_flutter_score = max(
             self._detect_wow(audio_mono).severity,
             self._detect_flutter(audio_mono).severity,
@@ -2854,7 +3010,7 @@ class DefectScanner:
         tape_score += hf_noise_score * 4.0  # Tape hiss sehr charakteristisch
         tape_score += wow_flutter_score * 2.0  # Noch typischer für Tape
         tape_score += click_score * 0.5  # Wenige Clicks
-        tape_score -= crackle_score * 0.5  # Gealtertes Tape kann Crackle haben (Oxidflaking) — leichte Penalty
+        tape_score -= crackle_score * 0.5  # Gealtertes Tape kann Crackle haben (Oxidflaking) - leichte Penalty
         tape_score -= rumble_energy * 5.0  # Tape hat keinen Rumble
         tape_score -= compression_score * 2.0  # Tape analog
         scores[MaterialType.TAPE] = max(0, tape_score)
@@ -2978,7 +3134,7 @@ class DefectScanner:
         cassette_score += click_score * 0.3  # Dropout/Oxidflaking-Clicks möglich
         cassette_score -= crackle_score * 0.3  # Cassette hat wenig Knistern (kein Vinyl)
         cassette_score -= rumble_energy * 8.0  # Leichter Transport → kein Rumble
-        cassette_score -= compression_score * 2.0  # Analog — kein Codec
+        cassette_score -= compression_score * 2.0  # Analog - kein Codec
         cassette_score -= digital_score * 2.0  # Analog
         # Boost: hohe Flutter + HF-Hiss → eindeutiger Cassetten-Fingerabdruck
         if wow_flutter_score > 0.2 and hf_noise_score > 0.15:
@@ -3117,7 +3273,7 @@ class DefectScanner:
                 },
             )
 
-        # Convert to timestamps — sample evenly across full duration (not just first 50)
+        # Convert to timestamps - sample evenly across full duration (not just first 50)
         MAX_LOCATIONS = self._LOCATION_CAP_UNCAPPED
         all_locations = [(group[0] / self.sample_rate, group[-1] / self.sample_rate) for group in verified_groups]
         locations = self._sample_locations_evenly(all_locations, MAX_LOCATIONS)
@@ -3127,8 +3283,8 @@ class DefectScanner:
         click_rate = len(verified_groups) / duration
 
         # Janssen (1986) / Godsill & Rayner (1998): AR-prediction-residual augmentation.
-        # LPC order 30 (spec §: 30–40 @ 48 kHz) detects clicks in harmonically rich
-        # signals where diff-based thresholding can miss them (false negatives for 1940s–
+        # LPC order 30 (spec §: 30-40 @ 48 kHz) detects clicks in harmonically rich
+        # signals where diff-based thresholding can miss them (false negatives for 1940s-
         # 1960s shellac/vinyl recordings with strong carrier noise masking impulsive clicks).
         try:
             ar_rate = self._ar_click_residual_rate(audio)
@@ -3166,10 +3322,10 @@ class DefectScanner:
     def _ar_click_residual_rate(self, audio: np.ndarray) -> float:
         """Janssen (1986) / Godsill & Rayner (1998) AR prediction-error click rate.
 
-        Fits LPC order 30 (spec §: 30–40 @ 48 kHz) to 50 ms non-overlapping blocks
+        Fits LPC order 30 (spec §: 30-40 @ 48 kHz) to 50 ms non-overlapping blocks
         and counts samples where the prediction residual exceeds 6× the block residual
         std. This catches clicks hidden in harmonically rich signals where inter-sample
-        difference thresholding underestimates click density (false negatives in 1920s–
+        difference thresholding underestimates click density (false negatives in 1920s-
         1960s material with simultaneous carrier noise and impulsive disturbances).
 
         Returns clicks-per-second (float). Analyses max. 30 s for efficiency.
@@ -3179,7 +3335,7 @@ class DefectScanner:
         except ImportError:
             return 0.0
 
-        lpc_order = 30  # spec: 30–40 @ 48 kHz
+        lpc_order = 30  # spec: 30-40 @ 48 kHz
         seg_n = max(lpc_order * 6, int(0.050 * self.sample_rate))  # ≥50 ms
         # Limit to first 30 s (representative for click rate estimation)
         max_samples = int(30 * self.sample_rate)
@@ -3217,7 +3373,7 @@ class DefectScanner:
 
             valid_resid = residual[lpc_order:]
             resid_std = float(np.std(valid_resid)) + 1e-10
-            # Janssen threshold: residual > 6× std (calibrated for k=5–8 range)
+            # Janssen threshold: residual > 6× std (calibrated for k=5-8 range)
             ar_clicks_mask = valid_resid > 6.0 * resid_std
             if ar_clicks_mask.any():
                 hits = np.where(ar_clicks_mask)[0]
@@ -3281,11 +3437,11 @@ class DefectScanner:
 
         kurtosis_discount = 1.0
         if hp_kurtosis < 4.0:
-            # Clearly tonal or Gaussian HF — NOT impulsive crackle.
+            # Clearly tonal or Gaussian HF - NOT impulsive crackle.
             # Hard cap severity to near-zero regardless of energy ratio.
             kurtosis_discount = 0.0
         elif hp_kurtosis < 6.0:
-            # Borderline zone — scale linearly
+            # Borderline zone - scale linearly
             kurtosis_discount = max(0.1, (hp_kurtosis - 4.0) / 2.0)
         # Kurtosis > 6 → impulsive, keep full weight
 
@@ -3415,13 +3571,13 @@ class DefectScanner:
         # Hum has SHARP peaks (Q > 50). Broadband bass content has low sharpness.
         # Sharpness < 1.5 means energy is spread, NOT hum.
         if best_sharpness < 1.5:
-            best_ratio *= 0.15  # Massively discount — likely bass content
+            best_ratio *= 0.15  # Massively discount - likely bass content
 
         # --- Anti-FP: Sub-50 Hz rumble confusion guard ---
         # If the dominant low-frequency energy is below 40 Hz, this is LOW_FREQ_RUMBLE,
         # not HUM. HUM is at 50/60 Hz (mains) with integer harmonics. Sub-40 Hz content
         # is transport rumble, acoustic feedback, or building vibration.
-        # Strategy: measure energy in <40 Hz band vs 40–80 Hz band; if sub-40 Hz
+        # Strategy: measure energy in <40 Hz band vs 40-80 Hz band; if sub-40 Hz
         # dominates AND the sharpness at 50/60 Hz is low → suppress.
         if len(audio) > self.sample_rate:
             try:
@@ -3516,7 +3672,7 @@ class DefectScanner:
         wow_ratio_rms = wow_power_rms / total_power
 
         # --- Track 2: Instantaneous frequency modulation (pitch WOW) ---
-        # Bandpass 80–4000 Hz to focus on pitched content
+        # Bandpass 80-4000 Hz to focus on pitched content
         try:
             bp_sos = signal.butter(
                 3,
@@ -3607,17 +3763,17 @@ class DefectScanner:
           1. Sudden energy anomaly (RMS envelope drop > 55% or spike > 2.5×)
           2. Low-frequency thump (< 80 Hz energy surge ≥ 2.5× local context)
           3. Spectral centroid disruption (> 40% shift from local baseline)
-          4. Spectral flux spike (≥ 3.5× local median — rapid timbral change)
-          5. Pitch instability (ZCR derivative spike — proxy for pitch jump)
+          4. Spectral flux spike (≥ 3.5× local median - rapid timbral change)
+          5. Pitch instability (ZCR derivative spike - proxy for pitch jump)
 
         Each candidate must satisfy:
           - Feature 1 (energy anomaly) MUST be present (mandatory)
-          - Plus ≥ 2 of features 2–5 (total ≥ 3 features)
+          - Plus ≥ 2 of features 2-5 (total ≥ 3 features)
         Musical transients (drum hits, note onsets) rarely show energy anomaly
         AND spectral centroid disruption AND LF thump simultaneously.
 
         Scientific basis:
-          - Godsill & Rayner (1998): Digital Audio Restoration — transport bump model
+          - Godsill & Rayner (1998): Digital Audio Restoration - transport bump model
           - Esquef et al. (2002): Frequency-domain analysis of mechanical artifacts
 
         Returns:
@@ -3697,7 +3853,7 @@ class DefectScanner:
         rms_ratio = rms_env / (rms_baseline + 1e-12)
         # Transport bumps manifest as energy DROPS (tape head lifting, groove skip).
         # Energy SPIKES (rms_ratio > 2.5) are musical transients (kick drum, snare,
-        # percussive attack) — using them as mandatory criterion caused 112 false
+        # percussive attack) - using them as mandatory criterion caused 112 false
         # positives on drum patterns at 120 BPM (29.8/min vs real max ~8/min).
         feat_energy = rms_ratio < 0.45  # mandatory: dropout/energy-dip only
         # Energy spike is an optional secondary indicator (non-mandatory, +1 score)
@@ -3748,7 +3904,7 @@ class DefectScanner:
         # Require energy + 2 more = total ≥ 3 features
         candidates = score_arr >= 3.0
 
-        # --- Group into events (30 ms – 500 ms), merge nearby (gap ≤ 50 ms) ---
+        # --- Group into events (30 ms - 500 ms), merge nearby (gap ≤ 50 ms) ---
         min_frames_evt = max(1, int(0.030 / hop_s))
         max_frames_evt = max(1, int(0.500 / hop_s))
         merge_gap = max(1, int(0.050 / hop_s))
@@ -3834,7 +3990,7 @@ class DefectScanner:
 
         # Anti-FP rhythm guard:
         # Dense, highly periodic event trains in beat-like ranges are usually
-        # musical transients (kick/snare at ~80–170 BPM), not transport bumps.
+        # musical transients (kick/snare at ~80-170 BPM), not transport bumps.
         _rhythm_guard_applied = False
         _interval_mean_s = 0.0
         _interval_cv = 1.0
@@ -3848,7 +4004,7 @@ class DefectScanner:
                 _beat_like = 0.35 <= _interval_mean_s <= 0.75 and _interval_cv < 0.25
                 # _too_dense_low_mag: Nur wenn die Bumps eine semi-reguläre Zeitstruktur haben
                 # (CV < 0.40), also auf Drum-Muster hindeuten. Kassetten-Laufwerk-Bumps sind
-                # zeitlich unregelmäßig (CV > 0.40) — diese darf der Guard nicht unterdrücken.
+                # zeitlich unregelmäßig (CV > 0.40) - diese darf der Guard nicht unterdrücken.
                 _too_dense_low_mag = bump_density > 20.0 and max_mag < 1.5 and _interval_cv < 0.40
                 if _beat_like or _too_dense_low_mag:
                     severity *= 0.25
@@ -3862,7 +4018,7 @@ class DefectScanner:
         _dur_max = float(np.max(_bump_durations_s)) if _bump_durations_s else 0.0
 
         logger.info(
-            "transport_bump: n=%d, density=%.1f/min, max_mag=%.3f, mean=%.2f, sev=%.3f, suppressed=%d, dur=%.0f–%.0fms (μ=%.0fms)",
+            "transport_bump: n=%d, density=%.1f/min, max_mag=%.3f, mean=%.2f, sev=%.3f, suppressed=%d, dur=%.0f-%.0fms (μ=%.0fms)",
             n_bumps,
             bump_density,
             max_mag,
@@ -3897,7 +4053,7 @@ class DefectScanner:
         )
 
     def _detect_flutter(self, audio: np.ndarray) -> DefectScore:
-        """Erkennt FLUTTER: rapid pitch modulation 0.5–200 Hz (IEC 60386).
+        """Erkennt FLUTTER: rapid pitch modulation 0.5-200 Hz (IEC 60386).
 
         Upgraded v10.0.0b: Spectral-centroid modulation analysis replaces
         primitive ZCR. Flutter causes rapid spectral centroid oscillation
@@ -3939,7 +4095,7 @@ class DefectScanner:
         fft_c = np.abs(np.fft.rfft(centroid_norm * centroid_win)) ** 2
         freqs_mod = np.fft.rfftfreq(len(centroid_norm), d=1.0 / frame_rate)
 
-        # Flutter band: 0.5–min(200, Nyquist) Hz
+        # Flutter band: 0.5-min(200, Nyquist) Hz
         flutter_hi = min(200.0, nyquist_mod * 0.95)
         flutter_mask = (freqs_mod >= 0.5) & (freqs_mod <= flutter_hi)
         total_power = float(np.sum(fft_c[1:]) + 1e-12)
@@ -3977,7 +4133,7 @@ class DefectScanner:
         periodicity_bonus = 1.0 + 0.4 * max(0.0, periodicity - 0.2)
 
         # --- Anti-FP: centroid variability in non-flutter range ---
-        # Musical content has centroid variation too — check if flutter-band
+        # Musical content has centroid variation too - check if flutter-band
         # is significantly MORE energetic than the rest
         non_flutter_mask = (freqs_mod >= 0.5) & (freqs_mod <= flutter_hi)
         non_flutter_mask = ~flutter_mask & (freqs_mod > 0.02)
@@ -4022,7 +4178,7 @@ class DefectScanner:
         )
 
     def _detect_wow_flutter(self, audio: np.ndarray) -> DefectScore:
-        """Kombinierter WOW+FLUTTER-Score – Maximum beider Sub-Detektoren.
+        """Kombinierter WOW+FLUTTER-Score - Maximum beider Sub-Detektoren.
 
         Convenience wrapper combining _detect_wow and _detect_flutter into a
         single DefectScore (worst-case severity) for legacy callers.
@@ -4127,7 +4283,7 @@ class DefectScanner:
         mean_phase = np.mean(np.array(phase_diffs), axis=0)  # (N_fft//2+1,)
         mean_phase_deg = np.degrees(np.unwrap(mean_phase))
 
-        # Linear fit in 1–8 kHz range (avoids DC and near-Nyquist noise)
+        # Linear fit in 1-8 kHz range (avoids DC and near-Nyquist noise)
         fit_mask = (freqs_hz >= 1000.0) & (freqs_hz <= 8000.0)
         if fit_mask.sum() < 4:
             return DefectScore(DefectType.AZIMUTH_ERROR, 0.0, 0.2)
@@ -4395,7 +4551,7 @@ class DefectScanner:
 
         confidence = 0.7
         if spectral_concentration > 0.80:
-            confidence = 0.3  # Narrowband signal — compression unlikely
+            confidence = 0.3  # Narrowband signal - compression unlikely
         elif hf_penalty < 0.5 and sfm_std < 0.08:
             confidence = 0.5  # HF present + low variance → uncertain
         elif hf_penalty >= 0.9 and sfm_std < 0.06:
@@ -4624,8 +4780,8 @@ class DefectScanner:
         """Klassifiziert einen Dropout in einen von drei Subtypen.
 
         Kriterien:
-        - Oxid-Dropout: 2–20 ms, partiell (30–70% Pegelverlust)
-        - Kopf-Kontakt-Dropout: 50–200 ms, moduliert (wellenförmiger Pegelverlauf)
+        - Oxid-Dropout: 2-20 ms, partiell (30-70% Pegelverlust)
+        - Kopf-Kontakt-Dropout: 50-200 ms, moduliert (wellenförmiger Pegelverlauf)
         - Klebeband-Dropout: abrupt, >95% Pegelverlust
 
         Returns:
@@ -4664,11 +4820,11 @@ class DefectScanner:
         if loss_ratio > 0.95:
             return DefectType.DROPOUT_SPLICE
 
-        # DROPOUT_OXIDE: 2–20 ms, partiell (30–70%), geringe Modulation
+        # DROPOUT_OXIDE: 2-20 ms, partiell (30-70%), geringe Modulation
         if dur_ms <= 20.0 and 0.30 <= loss_ratio <= 0.70 and modulation < 0.25:
             return DefectType.DROPOUT_OXIDE
 
-        # DROPOUT_HEAD_CONTACT: 50–200 ms, moduliert (wellenförmig)
+        # DROPOUT_HEAD_CONTACT: 50-200 ms, moduliert (wellenförmig)
         if dur_ms >= 50.0 and dur_ms <= 200.0 and modulation > 0.15:
             return DefectType.DROPOUT_HEAD_CONTACT
 
@@ -4754,7 +4910,7 @@ class DefectScanner:
                 splice_locs.append((start_s, end_s))
                 splice_total_s += dur
             else:
-                # Generic dropout — attribute to most likely based on duration
+                # Generic dropout - attribute to most likely based on duration
                 if dur * 1000.0 <= 20.0:
                     oxide_locs.append((start_s, end_s))
                     oxide_total_s += dur
@@ -4904,7 +5060,7 @@ class DefectScanner:
         """Erkennt Hard Clipping vs. SOFT_SATURATION via THD analysis (§6.3).
 
         Uses classify_clipping() from clipping_detection module (THD-based) when
-        available.  SOFT_SATURATION (even harmonics — tube/tape character) → zero
+        available.  SOFT_SATURATION (even harmonics - tube/tape character) → zero
         severity DefectScore with SOFT_SATURATION type; pipeline skips repair.
         CLIPPING (odd harmonics dominant + flat-tops > 0.1 %) → severity derived
         from flat_top ratio, DefectType.CLIPPING returned for repair.
@@ -4927,7 +5083,7 @@ class DefectScanner:
                 _clip_type = _classify_clipping(audio, self.sample_rate)
                 hard_flat_top_override = hard_clip_ratio >= 0.001
                 if _clip_type == _ClippingType.SOFT_SATURATION and not hard_flat_top_override:
-                    # V47: Sub-Ceiling-Clipping-Check — Loudness-War-Material geclippt bei ±0.85–0.97
+                    # V47: Sub-Ceiling-Clipping-Check - Loudness-War-Material geclippt bei ±0.85-0.97
                     # fälschlich als SOFT_SATURATION klassifiziert → adjacent_ratio-Methode Pflicht
                     _sub_ceil_detected, _sub_ceil_level = _detect_sub_ceiling_clipping(audio)
                     if _sub_ceil_detected:
@@ -4936,7 +5092,7 @@ class DefectScanner:
                         # Severity proportional zum Abstand vom Ceiling (näher = schwerer)
                         _sub_sev = min(1.0, max(0.1, (1.0 - _sub_ceil_level) * 3.0) / max(threshold_factor, 1e-6))
                         logger.info(
-                            "§6.3 V47 Sub-Ceiling-Clip erkannt (level=%.3f, severity=%.3f) — "
+                            "§6.3 V47 Sub-Ceiling-Clip erkannt (level=%.3f, severity=%.3f) - "
                             "SOFT_SATURATION überschrieben → CLIPPING",
                             _sub_ceil_level,
                             _sub_sev,
@@ -4953,8 +5109,8 @@ class DefectScanner:
                                 "hard_clip_ratio": hard_clip_ratio,
                             },
                         )
-                    # Tube/tape character — preserve, do NOT repair
-                    logger.debug("§6.3 _detect_clipping: SOFT_SATURATION erkannt (even-harmonic profile) — kein Repair")
+                    # Tube/tape character - preserve, do NOT repair
+                    logger.debug("§6.3 _detect_clipping: SOFT_SATURATION erkannt (even-harmonic profile) - kein Repair")
                     return DefectScore(
                         defect_type=DefectType.SOFT_SATURATION,
                         severity=0.0,
@@ -4962,7 +5118,7 @@ class DefectScanner:
                         locations=[],
                         metadata={"clipping_type": "SOFT_SATURATION", "thd_discriminated": True},
                     )
-                # CLIPPING confirmed by THD analysis — compute severity from flat-tops
+                # CLIPPING confirmed by THD analysis - compute severity from flat-tops
                 threshold_factor = float(self.thresholds.get(DefectType.CLIPPING, 0.5))
                 severity = min(1.0, (hard_clip_ratio * 10) / max(threshold_factor, 1e-6))
                 clip_indices = np.where(hard_clip_mask)[0]
@@ -4975,7 +5131,7 @@ class DefectScanner:
                     for g in groups:
                         locations.append((float(g[0]) / self.sample_rate, float(g[-1]) / self.sample_rate))
                 logger.debug(
-                    "§6.3 _detect_clipping: CLIPPING erkannt (odd-harmonic profile) — severity=%.3f flat_tops=%.4f",
+                    "§6.3 _detect_clipping: CLIPPING erkannt (odd-harmonic profile) - severity=%.3f flat_tops=%.4f",
                     severity,
                     hard_clip_ratio,
                 )
@@ -5041,7 +5197,7 @@ class DefectScanner:
 
         Upgraded v10.0.0b: Segmentierte Analyse erkennt auch DC-Drift
         (Potentiometer-Alterung, Kondensator-Leckstrom). Absoluter DC-Schwellwert
-        zusätzlich zu relativem — leise Aufnahmen werden nicht fehlerkannt.
+        zusätzlich zu relativem - leise Aufnahmen werden nicht fehlerkannt.
         """
         if len(audio) == 0:
             return DefectScore(DefectType.DC_OFFSET, 0.0, 0.0)
@@ -5331,7 +5487,7 @@ class DefectScanner:
         # --- Combined severity ---
         # 10 cents = mild; 50 cents = moderate; 100 cents = severe
         sev_drift = float(np.clip(drift_cents / 60.0, 0.0, 1.0))
-        # R² indicates how well a linear drift model fits (high = true drift)
+        # R2 indicates how well a linear drift model fits (high = true drift)
         sev_fit = float(np.clip(r_squared, 0.0, 1.0))
         # Monotonicity bonus: consistent direction → more likely real drift
         raw_severity = sev_drift * (0.5 + 0.3 * sev_fit + 0.2 * monotonicity) - key_change_penalty
@@ -5364,7 +5520,7 @@ class DefectScanner:
         """Erkennt übermäßigen / unerwünschten Raumhall (Reverb Excess).
 
         Methodik (Schroeder-Integrationsverfahren, RT60-Schätzung):
-          1. Signal in kurze Segmente aufteilen (2–4 s)
+          1. Signal in kurze Segmente aufteilen (2-4 s)
           2. Energie-Abklingkurve pro Segment via Backward-Integration
           3. RT60 aus dem Abfall von -5 dB auf -65 dB schätzen (Sabine/ISO 3382)
           4. Material-unabhängige Grenzwerte: RT60 > 0.8 s = problematisch,
@@ -5376,7 +5532,7 @@ class DefectScanner:
         if len(audio) < int(2 * self.sample_rate):
             return DefectScore(DefectType.REVERB_EXCESS, 0.0, 0.3)
 
-        # Segmentlänge für RT60-Schätzung: 2–4 Sekunden
+        # Segmentlänge für RT60-Schätzung: 2-4 Sekunden
         seg_len = int(min(4.0, len(audio) / self.sample_rate * 0.5) * self.sample_rate)
         seg_len = max(seg_len, int(1.5 * self.sample_rate))
         if seg_len > len(audio):
@@ -5476,9 +5632,9 @@ class DefectScanner:
 
         Print-Through arises from magnetic flux transfer between adjacent tape layers.
         It produces:
-          - **Pre-echo  (alpha_pre)**: ghost signal 80–400 ms BEFORE a loud onset
+          - **Pre-echo  (alpha_pre)**: ghost signal 80-400 ms BEFORE a loud onset
             (winding/storage: lower layer magnetizes through to the current layer).
-          - **Post-echo (alpha_post)**: ghost signal 80–400 ms AFTER a loud onset
+          - **Post-echo (alpha_post)**: ghost signal 80-400 ms AFTER a loud onset
             (playback head: current layer partially magnetized from the preceding layer
             during playback).
 
@@ -5486,7 +5642,7 @@ class DefectScanner:
           pre_echo  ≈ alpha_pre  × x[n + lag]   → audible as ghost before onset
           post_echo ≈ alpha_post × x[n - lag]   → audible as ghost after onset
 
-        IEC 60094-3 / DIN 45 513: Pre-echo typically –20 to –35 dB relative to program.
+        IEC 60094-3 / DIN 45 513: Pre-echo typically -20 to -35 dB relative to program.
 
         Note: Only applicable for TAPE/REEL_TAPE (threshold = 1.0 for all other materials).
         """
@@ -5512,7 +5668,7 @@ class DefectScanner:
             return DefectScore(DefectType.PRINT_THROUGH, 0.0, 0.5)
 
         # Bidirektionale Print-Through-Detektion: Pre-Echo UND Post-Echo
-        # search window: 80–400 ms in both directions (IEC 60094-3)
+        # search window: 80-400 ms in both directions (IEC 60094-3)
         echo_delays_ms = [80, 120, 160, 200, 250, 320, 400]
         print_through_events = 0
         total_magnitude = 0.0
@@ -5598,7 +5754,7 @@ class DefectScanner:
         )
 
     # ------------------------------------------------------------------
-    # Detektoren — Runde 3: QUANTIZATION_NOISE, JITTER_ARTIFACTS, DYNAMIC_COMPRESSION_EXCESS
+    # Detektoren - Runde 3: QUANTIZATION_NOISE, JITTER_ARTIFACTS, DYNAMIC_COMPRESSION_EXCESS
     # ------------------------------------------------------------------
 
     def _detect_quantization_noise(self, audio: np.ndarray) -> DefectScore:
@@ -5731,7 +5887,7 @@ class DefectScanner:
             zc_mean = float(np.mean(zc_intervals))
             if zc_mean > 1.0:
                 zc_cv = float(np.std(zc_intervals) / zc_mean)  # coefficient of variation
-                # Natural music: CV ~0.5–1.5; jitter adds extra irregularity
+                # Natural music: CV ~0.5-1.5; jitter adds extra irregularity
                 zc_regularity = float(np.clip((zc_cv - 1.0) / 1.5, 0.0, 1.0))
 
         # --- 2. Instantaneous frequency variance (analytic signal) ---
@@ -5803,7 +5959,7 @@ class DefectScanner:
                 spec_b = np.abs(np.fft.rfft(spectrum_seg * win_b))
                 freqs_b = np.fft.rfftfreq(fft_n, 1.0 / self.sample_rate)
                 freq_res = self.sample_rate / fft_n  # Hz per bin
-                # Find peaks with local SNR > 20 dB  in 2–12 kHz range (jitter-sensitive)
+                # Find peaks with local SNR > 20 dB  in 2-12 kHz range (jitter-sensitive)
                 jitter_band = (freqs_b >= 2000) & (freqs_b <= 12000)
                 spec_jb = spec_b[jitter_band]
                 freqs_jb = freqs_b[jitter_band]
@@ -5827,7 +5983,7 @@ class DefectScanner:
                                     sideband_ratios_b.append(sb_energy / max(peak_amp, 1e-12))
                         if sideband_ratios_b:
                             mean_sb_ratio = float(np.mean(sideband_ratios_b))
-                            # Jitter sidebands: ratio typically 0.05–0.30; pure signal < 0.01
+                            # Jitter sidebands: ratio typically 0.05-0.30; pure signal < 0.01
                             sev_bitto = float(np.clip((mean_sb_ratio - 0.03) / 0.25, 0.0, 1.0))
         except Exception:
             logger.debug("Fallback in defect_scanner.py", exc_info=True)
@@ -5914,7 +6070,7 @@ class DefectScanner:
         Erkennt übermäßige Dynamikkompression ('Loudness War', DR-Wert < 6 dB).
 
         Charakteristika stark komprimierter Aufnahmen:
-        - Niedriger Crest Factor: Peak/RMS < 6 dB (ideal: 12–20 dB für Musik)
+        - Niedriger Crest Factor: Peak/RMS < 6 dB (ideal: 12-20 dB für Musik)
         - Histogramm-Clustering nahe ±1.0 (viele Samples nahe Maximum)
         - Geringe LRA (Loudness Range, EBU R128): LRA < 3 LU = exzessiv
 
@@ -6019,17 +6175,17 @@ class DefectScanner:
     # ------------------------------------------------------------------
 
     def _detect_soft_saturation(self, audio: np.ndarray) -> DefectScore:
-        """Erkennt SOFT_SATURATION: tube/tape even-harmonic distortion — preserve, do not repair.
+        """Erkennt SOFT_SATURATION: tube/tape even-harmonic distortion - preserve, do not repair.
 
         Per Spec §6.3: flat_tops < 0.1 % AND even harmonics (H2, H4) dominate odd (H3, H5).
         Returns severity > 0 only when soft-saturation profile is clearly present AND
-        hard clipping is absent — ensuring phase_23 (clipping repair) is NOT triggered.
+        hard clipping is absent - ensuring phase_23 (clipping repair) is NOT triggered.
         """
         n = len(audio)
         if n < self.sample_rate:
             return DefectScore(DefectType.SOFT_SATURATION, 0.0, 0.3)
 
-        # Flat-top clipping check — if hard clipping present, this is CLIPPING, not SOFT_SATURATION
+        # Flat-top clipping check - if hard clipping present, this is CLIPPING, not SOFT_SATURATION
         flat_top_threshold = 0.99
         flat_tops = float(np.sum(np.abs(audio) >= flat_top_threshold)) / max(n, 1)
         if flat_tops >= 0.001:  # ≥ 0.1 % flat-tops → hard clipping, not soft saturation
@@ -6045,7 +6201,7 @@ class DefectScanner:
             spec = np.abs(np.fft.rfft(audio_norm[:n_fft])) ** 2
             freqs = np.fft.rfftfreq(n_fft, 1.0 / self.sample_rate)
 
-            # Find fundamental (80–1000 Hz highest-energy bin)
+            # Find fundamental (80-1000 Hz highest-energy bin)
             fund_mask = (freqs >= 80.0) & (freqs <= 1000.0)
             if not fund_mask.any():
                 return DefectScore(DefectType.SOFT_SATURATION, 0.0, 0.3)
@@ -6121,18 +6277,18 @@ class DefectScanner:
                 sib_centroid = 7000.0
 
             # --- Anti-FP: distinguish sibilance from general brightness ---
-            # True sibilance: concentrated 5–9 kHz bursts. Cymbals: broadband > 8 kHz
+            # True sibilance: concentrated 5-9 kHz bursts. Cymbals: broadband > 8 kHz
             very_hf_mask = freqs > 12000.0
             very_hf_frac = float(np.sum(psd[very_hf_mask]) / total_power) if very_hf_mask.any() else 0.0
             # If very_hf energy is comparable to sibilance → it's broadband brightness, not sibilance
             brightness_ratio = very_hf_frac / max(sib_frac, 1e-6)
             if brightness_ratio > 0.6:
-                # Broadband bright signal — reduce sibilance severity
+                # Broadband bright signal - reduce sibilance severity
                 sib_frac *= 0.4
 
             # --- Psychoacoustic sharpness approximation (Zwicker model simplified) ---
             # Weight the sibilance band by critical-band rate (Bark scale)
-            # Sibilance zone 4–12 kHz ≈ Bark 17–24 → high Bark = high sharpness contribution
+            # Sibilance zone 4-12 kHz ≈ Bark 17-24 → high Bark = high sharpness contribution
             sharpness = 0.0
             if sib_mask.any():
                 # Bark-weighted energy
@@ -6153,7 +6309,7 @@ class DefectScanner:
             # A bright pop recording with lots of air (>8 kHz) has a naturally higher
             # sibilance fraction → the fixed 0.18 would flag it as sibilant.
             # Adapt the threshold upward relative to the signal's mean HF balance:
-            # if the signal already has >15% energy in 4–12 kHz, raise the threshold.
+            # if the signal already has >15% energy in 4-12 kHz, raise the threshold.
             _sib_adapt_base = 0.18
             if total_power > 1e-20:
                 _mean_sib_frac = float(np.sum(psd[sib_mask]) / total_power)
@@ -6227,15 +6383,15 @@ class DefectScanner:
             return DefectScore(DefectType.SIBILANCE, 0.0, 0.3)
 
     def _detect_vocal_harshness(self, audio: np.ndarray) -> DefectScore:
-        """Erkennt VOCAL_HARSHNESS: excessive energy, roughness, or distortion in 2–6 kHz vocal presence zone.
+        """Erkennt VOCAL_HARSHNESS: excessive energy, roughness, or distortion in 2-6 kHz vocal presence zone.
 
         Multi-indicator harshness detection combining:
         1. Crest factor analysis in harmonic band (low crest = compressed/distorted)
-        2. Spectral flux roughness in 2–6 kHz (high flux = harsh transient content)
+        2. Spectral flux roughness in 2-6 kHz (high flux = harsh transient content)
         3. Odd-harmonic dominance in presence band (clipping signature on vocals)
         4. Peak-to-average ratio in presence zone vs. rest (harshness concentrates energy)
 
-        Psychoacoustic basis: Harshness perception peaks at 2–6 kHz (Zwicker & Fastl 2007,
+        Psychoacoustic basis: Harshness perception peaks at 2-6 kHz (Zwicker & Fastl 2007,
         "sharpness" metric). Distorted vocals concentrate odd-harmonic energy in this zone,
         creating audible roughness even when flat-top clipping is absent.
 
@@ -6261,7 +6417,7 @@ class DefectScanner:
             # crest is misleading for tonal content.
             # V08: np.percentile robust gegen Click-Defekte
             crest_db = 20.0 * np.log10((float(np.percentile(np.abs(audio), 99.9)) + 1e-12) / (rms_total + 1e-12))
-            # Very compressed: <5 dB; normal: 8–15 dB
+            # Very compressed: <5 dB; normal: 8-15 dB
             crest_score = float(np.clip((6.0 - crest_db) / 4.0, 0.0, 1.0))
 
             # Presence band extraction (used for flux and location detection)
@@ -6273,7 +6429,7 @@ class DefectScanner:
             if rms_pres < 0.002:
                 return DefectScore(DefectType.VOCAL_HARSHNESS, 0.0, 0.5)
 
-            # --- Indicator 2: Spectral flux roughness in 2–6 kHz ---
+            # --- Indicator 2: Spectral flux roughness in 2-6 kHz ---
             # High frame-to-frame spectral variation = harsh/scratchy texture
             hop = max(1, int(0.020 * self.sample_rate))  # 20 ms hop
             win = max(256, int(0.040 * self.sample_rate))  # 40 ms window
@@ -6317,13 +6473,13 @@ class DefectScanner:
             below_energy = float(np.sum(psd[below_mask]) + 1e-20)
             # Harshness: presence band dominates relative to fundamentals
             pres_ratio = pres_energy / below_energy
-            # Normal vocals: ratio ~0.02–0.10; harsh: >0.25
+            # Normal vocals: ratio ~0.02-0.10; harsh: >0.25
             ratio_score = float(np.clip((pres_ratio - 0.10) / 0.30, 0.0, 1.0))
 
             # --- Indicator 4: Peak energy concentration in presence ---
             total_psd = float(np.sum(psd) + 1e-20)
             pres_fraction = pres_energy / total_psd
-            # Normal: ~0.02–0.08; harsh: >0.15
+            # Normal: ~0.02-0.08; harsh: >0.15
             concentration_score = float(np.clip((pres_fraction - 0.08) / 0.25, 0.0, 1.0))
 
             # --- Combined severity (weighted) ---
@@ -6392,18 +6548,18 @@ class DefectScanner:
         """Erkennt BIAS_ERROR: wrong AC-bias level on magnetic tape recording.
 
         Over-bias → HF rolloff earlier than expected (spectral slope too steep
-        above the bias frequency, typically 8–12 kHz on 38 cm/s tape).
+        above the bias frequency, typically 8-12 kHz on 38 cm/s tape).
         Under-bias → elevated uncorrelated HF noise floor (SNR collapse above 6 kHz).
 
         Upgraded v10.0.0c: Multi-band spectral slope measurement instead of
         simple 2-band ratio.  Slope is estimated from four logarithmically-spaced
-        bands spanning 2–14 kHz; linear regression in dB/octave identifies
+        bands spanning 2-14 kHz; linear regression in dB/octave identifies
         pathological rolloff patterns.  Under-bias confirmed via noise-correlation
         check (uncorrelated segment pairs above 6 kHz).
         Literature: Lindsey & Levy 1978, IEC 60094-1, Ampex/Studer bias specs.
         """
         material_name = str(getattr(self.material_type, "value", self.material_type)).lower()
-        # "cassette" is a MediumDetector alias that maps to MaterialType.TAPE="tape" — include both
+        # "cassette" is a MediumDetector alias that maps to MaterialType.TAPE="tape" - include both
         tape_materials = {"tape", "reel_tape", "wire_recording", "cassette"}
         if material_name not in tape_materials and not _bypass_material_gate:
             return DefectScore(
@@ -6422,7 +6578,7 @@ class DefectScanner:
             nperseg = min(8192, n)
             freqs, psd = self._cached_welch(audio, self.sample_rate, nperseg)
 
-            # --- Multi-band energy measurement (log-spaced 2–14 kHz) ---
+            # --- Multi-band energy measurement (log-spaced 2-14 kHz) ---
             # Bands: 2-3 kHz, 3-5 kHz, 5-8 kHz, 8-14 kHz
             band_def = [(2000.0, 3000.0), (3000.0, 5000.0), (5000.0, 8000.0), (8000.0, 14000.0)]
             band_centers_oct = [np.log2((lo + hi) / 2.0) for lo, hi in band_def]
@@ -6504,16 +6660,16 @@ class DefectScanner:
         Symptom: Dolby-encoded tape has a pre-emphasis of +6..+20 dB above 1 kHz
         (Dolby B: ~+6 dB at HF; Dolby C: ~+20 dB; Dolby S: ~+14 dB). When played
         back without the matching expander, high frequencies are severely elevated
-        relative to mid frequencies — the inverse of the expected tape-hiss-masking
+        relative to mid frequencies - the inverse of the expected tape-hiss-masking
         curve. This is distinct from HEAD_WEAR (which attenuates HF) and BIAS_ERROR
         (which shifts the energy above the bias frequency).
 
-        Detection (literature: Dolby Laboratories 1968–1995, Nakajima & Odaka 1983):
-        - Compute the energy ratio: E(2–16 kHz) / E(300 Hz–2 kHz)
-        - In normal music: ratio ≈ 0.1–0.5 (mid / presence / air balanced)
+        Detection (literature: Dolby Laboratories 1968-1995, Nakajima & Odaka 1983):
+        - Compute the energy ratio: E(2-16 kHz) / E(300 Hz-2 kHz)
+        - In normal music: ratio ≈ 0.1-0.5 (mid / presence / air balanced)
         - Dolby-B mismatch (mild):  ratio > 0.8
         - Dolby-C mismatch (severe): ratio > 1.5
-        - Anti-FP: speech/bright sources naturally have high HF — check that
+        - Anti-FP: speech/bright sources naturally have high HF - check that
           the HF excess is flat (Dolby-NR shapes a shelf), not peaky (instrument).
 
         Only triggered on tape materials (cassette/reel_tape).  All digital and
@@ -6640,6 +6796,17 @@ class DefectScanner:
             env_hop = max(1, int(0.010 * sr))  # 10 ms
             ref_win_s = 0.500  # 500 ms
             min_dip_frames = 3  # 30 ms minimum
+            # §v10.131 Depth-adaptive: Tiefe Ketten haben weichere, kürzere Dips
+            # durch MP3-Smoothing und Kassetten-Rauschboden.
+            try:
+                from backend.core.calibration_context import get_calibration_context
+                _dctx = get_calibration_context()
+                if _dctx is not None and _dctx.transfer_chain_depth >= 4:
+                    env_hop = max(1, int(0.008 * sr))  # 8 ms - feinere Auflösung
+                    ref_win_s = 0.350  # 350 ms - reagiert schneller
+                    min_dip_frames = 2  # 20 ms minimum - kürzere Dips
+            except Exception:
+                pass
 
             n_frames = max(0, (n - env_win) // env_hop)
             if n_frames < 10:
@@ -6664,7 +6831,9 @@ class DefectScanner:
             # laute Passagen → konservativer. Ein 3dB-Dip ist in leisen
             # Stellen hörbar, in lauten nicht.
             _local_dyn = float(np.percentile(rms_db, 90) - np.percentile(rms_db, 10) + 1.0)
-            dip_thresh_db = float(np.clip(_local_dyn / 8.0, 2.0, 5.0))
+            # §v10.131 Depth-adaptive floor: Kassette braucht sensitiveren Floor
+            _thresh_floor = 1.5 if (locals().get('_dctx') is not None and getattr(locals().get('_dctx'), 'transfer_chain_depth', 1) >= 4) else 2.0
+            dip_thresh_db = float(np.clip(_local_dyn / 8.0, _thresh_floor, 5.0))
 
             # Dip mask
             dip_mask = rms_db < (ref_db - dip_thresh_db)
@@ -6737,7 +6906,7 @@ class DefectScanner:
             confidence = float(np.clip(0.70 + 0.20 * min(1.0, severity), 0.70, 0.95))
 
             # ── Periodicity bonus (capstan-irregularity signature) ──────────
-            # Real capstan/pinch-roller dips recur at a stable interval (0.5–3.5 s).
+            # Real capstan/pinch-roller dips recur at a stable interval (0.5-3.5 s).
             # Musical dynamics also cause level dips but are NOT periodic.
             # A low coefficient-of-variation in inter-event intervals → confidence bonus.
             is_periodic = False
@@ -6748,7 +6917,7 @@ class DefectScanner:
                 if len(intervals) >= 2:
                     median_interval_s = float(np.median(intervals))
                     cv = float(np.std(intervals)) / max(median_interval_s, 1e-9)
-                    # Capstan cycle: 0.5–3.5 s, coefficient-of-variation < 0.35
+                    # Capstan cycle: 0.5-3.5 s, coefficient-of-variation < 0.35
                     if cv < 0.35 and 0.5 <= median_interval_s <= 3.5:
                         confidence = float(np.clip(confidence + 0.08, 0.70, 0.99))
                         is_periodic = True
@@ -6798,7 +6967,7 @@ class DefectScanner:
         """Erkennt temporäre HF-Auslöschungen durch verschmutzten oder zugesetzten Magnetkopf.
 
         Anders als HEAD_WEAR ist Tape-Head-Clog lokal und zeitlich begrenzt: der Mittelbandanteil
-        bleibt erhalten, während 4.5–12 kHz abrupt einbrechen. Das klingt dumpf, aber nicht leise.
+        bleibt erhalten, während 4.5-12 kHz abrupt einbrechen. Das klingt dumpf, aber nicht leise.
         """
         n = len(audio)
         sr = self.sample_rate
@@ -7206,7 +7375,7 @@ class DefectScanner:
         """Erkennt HEAD_WEAR: magnetic head degradation causing progressive HF rolloff.
 
         Worn head → progressive rolloff above the head-gap frequency (typically
-        10–16 kHz for 1/4" tape at 38 cm/s).  Characteristic signature:
+        10-16 kHz for 1/4" tape at 38 cm/s).  Characteristic signature:
           - Monotonically decreasing band energies from 4 kHz → 8 kHz → 12 kHz
           - dB/octave slope steeper than -18 dB/oct above 4 kHz
           - Smooth rolloff (no EQ bumps), distinguishable from intentional vintage EQ
@@ -7238,7 +7407,7 @@ class DefectScanner:
                 e = float(np.sum(psd[mask]) + 1e-20)
                 band_e_db.append(float(10.0 * np.log10(e)))
 
-            ref_db = band_e_db[0]  # 2–3.5 kHz reference
+            ref_db = band_e_db[0]  # 2-3.5 kHz reference
             relative_db = [e - ref_db for e in band_e_db[1:]]
             # relative_db[0] = upper-mid, [1] = presence, [2] = brilliance, [3] = air
 
@@ -7361,7 +7530,7 @@ class DefectScanner:
             selected_onsets.sort(key=lambda x: float(envelope[x]), reverse=True)
             selected_onsets = selected_onsets[:40]
 
-            # --- Measure 10%–90% rise time at each onset ---
+            # --- Measure 10%-90% rise time at each onset ---
             rise_times_ms: list[float] = []
             smear_locations: list[tuple[float, float]] = []
             for idx in selected_onsets:
@@ -7451,8 +7620,8 @@ class DefectScanner:
         """Erkennt PRE_ECHO: energy preceding a major transient.
 
         Upgraded v10.0.0b: Dual time-scale detection:
-        1. Short pre-echo (5–35 ms): codec temporal masking artifacts
-        2. Long pre-echo (100–600 ms): tape print-through ghost signals
+        1. Short pre-echo (5-35 ms): codec temporal masking artifacts
+        2. Long pre-echo (100-600 ms): tape print-through ghost signals
         Spectral similarity check (does pre-echo share spectrum with transient?),
         material-aware routing (tape→print-through, digital→codec pre-echo),
         robust baseline estimation with percentile-based floor.
@@ -7497,11 +7666,11 @@ class DefectScanner:
             _TAPE_MATS = {"tape", "reel_tape", "cassette"}
             is_tape = mat_name in _TAPE_MATS
 
-            # --- Short pre-echo analysis (codec, 5–35 ms before transient) ---
+            # --- Short pre-echo analysis (codec, 5-35 ms before transient) ---
             short_pre_ms = int(0.035 * self.sample_rate)
             short_gap_ms = int(0.003 * self.sample_rate)  # 3ms gap from transient onset
             short_ratios: list[float] = []
-            # --- Long pre-echo analysis (print-through, 100–600 ms before transient) ---
+            # --- Long pre-echo analysis (print-through, 100-600 ms before transient) ---
             long_pre_start_ms = int(0.600 * self.sample_rate)
             long_pre_end_ms = int(0.100 * self.sample_rate)
             long_ratios: list[float] = []
@@ -7710,10 +7879,10 @@ class DefectScanner:
         """Erkennt ALIASING: spurious near-Nyquist energy without natural musical source.
 
         Anti-aliasing filter failure during digitization → elevated spectral floor
-        in the 85–97 % Nyquist region that exceeds the expected HF rolloff.
+        in the 85-97 % Nyquist region that exceeds the expected HF rolloff.
         """
         # Digital sources (cd_digital, dat, mp3_*, aac, streaming, minidisc) have proper
-        # anti-aliasing filters by design — aliasing is not physically possible.
+        # anti-aliasing filters by design - aliasing is not physically possible.
         # Exception: cross-chain fallback (_bypass_material_gate=True) allows detection
         # for pre-1990s digitizations archived via digital format (missing AA filter).
         _DIGITAL_MATS = {"cd_digital", "dat", "mp3_low", "mp3_high", "aac", "streaming", "minidisc"}
@@ -7792,13 +7961,13 @@ class DefectScanner:
         """Erkennt signal-dependent modulation noise (tape recording artifact).
 
         Modulation noise is noise whose level varies proportionally to the signal
-        level — fundamentally different from stationary tape hiss.  Present in every
+        level - fundamentally different from stationary tape hiss.  Present in every
         analog tape recording.
 
         Algorithm (Esquef & Biscainho 2006):
         1. Compute short-time RMS envelope (10 ms frames)
         2. Compute short-time noise variance estimate (difference of adjacent frames)
-        3. Correlate noise variance with signal envelope — high positive correlation
+        3. Correlate noise variance with signal envelope - high positive correlation
            indicates modulation noise (noise tracks signal level)
         4. Severity derived from correlation coefficient and noise/signal power ratio
 
@@ -7876,7 +8045,7 @@ class DefectScanner:
         IGD increases towards the center of the disc due to decreasing linear
         velocity.  Algorithm:
         1. Split audio into 4 equal quarters (simulating disc radius progression)
-        2. Measure THD in 2–8 kHz range per quarter
+        2. Measure THD in 2-8 kHz range per quarter
         3. If THD increases monotonically from Q1→Q4 → IGD pattern detected
         4. Severity from THD slope and absolute Q4 distortion level
 
@@ -7904,7 +8073,7 @@ class DefectScanner:
                 n_fft = min(4096, len(segment))
                 freqs = np.fft.rfftfreq(n_fft, 1.0 / sr)
                 spec = np.abs(np.fft.rfft(segment[:n_fft]))
-                # THD in 2–8 kHz range (where IGD is most audible)
+                # THD in 2-8 kHz range (where IGD is most audible)
                 hf_mask = (freqs >= 2000) & (freqs <= 8000)
                 total_mask = freqs <= 8000
                 hf_energy = float(np.sum(spec[hf_mask] ** 2))
@@ -7942,17 +8111,17 @@ class DefectScanner:
     def _detect_groove_echo(self, audio: np.ndarray) -> DefectScore:
         """Erkennt groove echo (pre-echo from adjacent groove deformation on vinyl).
 
-        Groove echo occurs ~1.8 s before loud passages (one revolution at 33⅓ rpm).
+        Groove echo occurs ~1.8 s before loud passages (one revolution at 331⁄3 rpm).
         Algorithm:
         1. Find strong transients (top 10% envelope peaks)
         2. Search for correlated ghost signal at approximately one revolution delay
         3. Compute spectral similarity between ghost and transient
         4. Severity from ghost-to-noise ratio and spectral match
 
-        DISTINCT from codec pre-echo (PRE_ECHO: 5–35 ms) — groove echo is 1.5–2.2 s.
+        DISTINCT from codec pre-echo (PRE_ECHO: 5-35 ms) - groove echo is 1.5-2.2 s.
         """
         # N/A-Gate: Materialien ohne Rillengeometrie (Tape, Kassette, Digital etc.)
-        # haben physikalisch kein Groove-Echo — Detektor nicht anwenden.
+        # haben physikalisch kein Groove-Echo - Detektor nicht anwenden.
         if self.thresholds.get(DefectType.GROOVE_ECHO, 0.5) >= 0.95:
             return DefectScore(
                 DefectType.GROOVE_ECHO,
@@ -7967,7 +8136,7 @@ class DefectScanner:
             return DefectScore(DefectType.GROOVE_ECHO, 0.0, 0.3)
         try:
             # Revolution delays for different speeds
-            delays_s = [1.8, 1.35, 0.77]  # 33⅓, 45, 78 rpm
+            delays_s = [1.8, 1.35, 0.77]  # 331⁄3, 45, 78 rpm
             delay_samples = [int(d * sr) for d in delays_s]
 
             win = max(1, int(0.010 * sr))
@@ -8089,7 +8258,7 @@ class DefectScanner:
             auto_l = np.abs(spec_l) ** 2 + 1e-12
             auto_r = np.abs(spec_r) ** 2 + 1e-12
 
-            # Channel separation in bands (250–4000 Hz where crosstalk is most problematic)
+            # Channel separation in bands (250-4000 Hz where crosstalk is most problematic)
             band_mask = (freqs >= 250) & (freqs <= 4000)
             if not band_mask.any():
                 return DefectScore(DefectType.CROSSTALK, 0.0, 0.4)
@@ -8098,10 +8267,10 @@ class DefectScanner:
             mean_coherence = float(np.mean(coherence))
 
             # Very high coherence in mid-band = poor channel separation = crosstalk
-            # Normal stereo: coherence 0.3–0.7; Crosstalk: >0.85
+            # Normal stereo: coherence 0.3-0.7; Crosstalk: >0.85
             raw_sev = float(np.clip((mean_coherence - 0.75) / 0.20, 0.0, 1.0))
 
-            # Time-domain cross-correlation peak (delayed crosstalk) — FFT-based
+            # Time-domain cross-correlation peak (delayed crosstalk) - FFT-based
             max_delay = int(0.002 * sr)  # Max 2ms delay for mechanical crosstalk
             from backend.core.core_utils import fft_crosscorr  # pylint: disable=import-outside-toplevel
 
@@ -8403,7 +8572,7 @@ class DefectScanner:
             freqs = np.fft.rfftfreq(n_fft, 1.0 / sr)
             freq_res = float(freqs[1] - freqs[0]) if len(freqs) > 1 else 1.0
 
-            # Find fundamental frequency (strongest peak 80–1000 Hz)
+            # Find fundamental frequency (strongest peak 80-1000 Hz)
             fund_mask = (freqs >= 80) & (freqs <= 1000)
             if not fund_mask.any():
                 return DefectScore(DefectType.STYLUS_DAMAGE, 0.0, 0.3)
@@ -8459,7 +8628,7 @@ class DefectScanner:
         noise bursts, and specific harmonic distortion patterns.
 
         Algorithm:
-        1. Detect short-duration level dips (10–100 ms, characteristic of shed events)
+        1. Detect short-duration level dips (10-100 ms, characteristic of shed events)
         2. Measure noise modulation at dip boundaries
         3. Check for periodicity (shed events often correlate with tape wrap period)
 
@@ -8486,8 +8655,8 @@ class DefectScanner:
             rms_env = np.sqrt(np.mean(frames**2, axis=1) + 1e-12)
             rms_db = 20.0 * np.log10(rms_env + 1e-12)
 
-            # Detect short dips (10–100 ms duration, >4 dB depth)
-            # and longer contact-loss dips (100–300 ms, >2.5 dB depth).
+            # Detect short dips (10-100 ms duration, >4 dB depth)
+            # and longer contact-loss dips (100-300 ms, >2.5 dB depth).
             median_rms = float(np.median(rms_db))
             dip_threshold = median_rms - 4.0
             in_dip = rms_db < dip_threshold
@@ -8585,7 +8754,7 @@ class DefectScanner:
         if n < sr * 3:
             return DefectScore(DefectType.MULTIBAND_WOW_FLUTTER, 0.0, 0.3)
         try:
-            # Single full STFT — reused for all bands (no repeated filter-bank passes)
+            # Single full STFT - reused for all bands (no repeated filter-bank passes)
             n_fft = min(4096, n)
             hop = max(1, n_fft // 4)
             win = np.hanning(n_fft)
@@ -8753,10 +8922,10 @@ class DefectScanner:
             return DefectScore(DefectType.GENERATION_LOSS, 0.0, 0.3)
 
     def _detect_motor_interference(self, audio: np.ndarray) -> DefectScore:
-        """Erkennt turntable/tape motor interference (harmonics 80–300 Hz).
+        """Erkennt turntable/tape motor interference (harmonics 80-300 Hz).
 
-        Different from LOW_FREQ_RUMBLE (sub-bass <80 Hz) — motor interference
-        produces harmonics in the 80–300 Hz range from DC and synchronous motors.
+        Different from LOW_FREQ_RUMBLE (sub-bass <80 Hz) - motor interference
+        produces harmonics in the 80-300 Hz range from DC and synchronous motors.
 
         Algorithm:
         1. Analyze spectral peaks at motor-related frequencies (50, 60, 80, 100, 120 Hz etc.)
@@ -8777,7 +8946,7 @@ class DefectScanner:
             float(np.percentile(spec_db, 20))
             freq_res = float(freqs[1] - freqs[0]) if len(freqs) > 1 else 1.0
 
-            # Canonical motor-related harmonics in 80–300 Hz.
+            # Canonical motor-related harmonics in 80-300 Hz.
             # Keep this set sparse: a dense pseudo-continuous grid creates false
             # positives on musical harmonic stacks (bass/cello).
             motor_freqs = [80, 100, 120, 133, 150, 160, 180, 200, 240, 250, 267, 300]
@@ -8805,7 +8974,7 @@ class DefectScanner:
             raw_sev = float(np.clip(raw_sev, 0.0, 1.0))
 
             # Additional anti-false-positive guard for musical harmonic stacks:
-            # if one low-frequency fundamental explains most 80–400 Hz energy via
+            # if one low-frequency fundamental explains most 80-400 Hz energy via
             # its first harmonics, this is likely music (bass note), not motor hum.
             harmonic_series_energy_ratio = 0.0
             low_mask = (freqs >= 80.0) & (freqs <= 400.0)
@@ -8871,12 +9040,12 @@ class DefectScanner:
     def _detect_proximity_effect_excess(self, audio: np.ndarray) -> DefectScore:
         """Erkennt Nahbesprechungseffekt (proximity effect) bei Richtmikrofonen.
 
-        Typisch für Vokalaufnahmen mit RCA 44-BX, U47, C12 bei < 30 cm Abstand (1940–1970).
-        Erzeugt LF-Überhöhung +6–12 dB unterhalb ~250 Hz.  Olson (1948) JASAS 20:22.
+        Typisch für Vokalaufnahmen mit RCA 44-BX, U47, C12 bei < 30 cm Abstand (1940-1970).
+        Erzeugt LF-Überhöhung +6-12 dB unterhalb ~250 Hz.  Olson (1948) JASAS 20:22.
 
         Algorithmus:
-            1. LF-Energie (80–250 Hz) vs. Mittenlage (500–2000 Hz) messen
-            2. Anti-Rumble-Guard: Sub-Bass (20–60 Hz) darf nicht stärker als LF-Band sein
+            1. LF-Energie (80-250 Hz) vs. Mittenlage (500-2000 Hz) messen
+            2. Anti-Rumble-Guard: Sub-Bass (20-60 Hz) darf nicht stärker als LF-Band sein
             3. Spektralsteigung 250→500 Hz prüfen (Proximity: sanft fallend, ≤ +3 dB)
         """
         n = len(audio)
@@ -8939,15 +9108,15 @@ class DefectScanner:
             return DefectScore(DefectType.PROXIMITY_EFFECT_EXCESS, 0.0, 0.3)
 
     def _detect_room_mode_resonance(self, audio: np.ndarray) -> DefectScore:
-        """Erkennt stehende Wellenmodi (Room Modes) in 40–200 Hz.
+        """Erkennt stehende Wellenmodi (Room Modes) in 40-200 Hz.
 
         Unterschied zu REVERB_EXCESS (diffuser Hall) und ELECTRICAL_HUM (exakte 50/60 Hz
-        Harmonische): Room Modes sind schmalbandige Peaks Q > 8 in 40–200 Hz, deren
+        Harmonische): Room Modes sind schmalbandige Peaks Q > 8 in 40-200 Hz, deren
         Abstände Raumabmessungen entsprechen.  Salter et al. (2003).
 
         Algorithmus:
             1. Hochauflösendes FFT (32768 Punkte) für schmalbandige Peak-Detektion
-            2. Peaks mit Q > 5 in 40–200 Hz identifizieren
+            2. Peaks mit Q > 5 in 40-200 Hz identifizieren
             3. Brumm-Frequenzen (50/60 Hz Harmonische ±3 Hz) ausschließen
             4. ≥ 2 Non-Brumm-Peaks mit signifikanter Prominenz → Room Mode
         """
@@ -9114,7 +9283,7 @@ class DefectScanner:
 
         Algorithmus:
             1. Hochauflösendes FFT (65536 Punkte) für Seitenband-Detektion
-            2. Dominanten tonalen Peak (200–4000 Hz, > 15 dB über Rauschboden) finden
+            2. Dominanten tonalen Peak (200-4000 Hz, > 15 dB über Rauschboden) finden
             3. Seitenbänder bei ±[2, 4, 6, 8] Hz auf Prominenz prüfen
             4. ≥ 3 detektierte Seitenbänder → Flutter-Seitenband-Defekt
         """
@@ -9192,8 +9361,8 @@ class DefectScanner:
 
         Scrape flutter ist eine spezielle Transportstörung von Bandmaschinen und Kassetten:
         Kopf/Band-Reibung oder Bandführung erzeugen schnelle FM-Modulationen typischerweise
-        im Bereich 40–120 Hz. Im Spektrum erscheinen deshalb Seitenbänder deutlich weiter
-        entfernt als klassisches Flutter (2–8 Hz) und bevorzugt auf sustained vocals/strings.
+        im Bereich 40-120 Hz. Im Spektrum erscheinen deshalb Seitenbänder deutlich weiter
+        entfernt als klassisches Flutter (2-8 Hz) und bevorzugt auf sustained vocals/strings.
         """
         n = len(audio)
         sr = self.sample_rate
@@ -9284,8 +9453,8 @@ class DefectScanner:
         Algorithmus:
             1. 100 ms Frames → Zero-Crossing-Rate als Pitch-Proxy
             2. Nur aktive (nicht stille) Frames verwenden
-            3. Stabilität = 1 − std/median: Hoch = stabiler Versatz (Kalibrierungsfehler)
-            4. Abweichung vom erwarteten ZCR-Bereich (100–350 Hz) + Stabilität → Severity
+            3. Stabilität = 1 - std/median: Hoch = stabiler Versatz (Kalibrierungsfehler)
+            4. Abweichung vom erwarteten ZCR-Bereich (100-350 Hz) + Stabilität → Severity
         """
         n = len(audio)
         sr = self.sample_rate
@@ -9354,13 +9523,13 @@ class DefectScanner:
         """Erkennt analogen Preamp/Console-Klirr (≠ SOFT_SATURATION, ≠ CLIPPING).
 
         Analoger Eingangsverstärker-Klirr: asymmetrische Verzerrung mit H3/H5-dominantem
-        Spektrum, 5–15 % THD, nur in lauten Passagen. Unterschied zu SOFT_SATURATION
+        Spektrum, 5-15 % THD, nur in lauten Passagen. Unterschied zu SOFT_SATURATION
         (gerade H2/H4, minimal) und CLIPPING (harte Amplitude).
         Temme (1993) AES Conv. 95; Olsen & Hawksford (1995).
 
         Algorithmus:
             1. Laute Passagen (obere 30 % RMS) isolieren
-            2. Fundamental (100–2000 Hz) + H2–H5 messen
+            2. Fundamental (100-2000 Hz) + H2-H5 messen
             3. Odd-Dominanz: (H3+H5)/(H2+H3+H4+H5) → Overload ≥ 0.5
             4. Waveform-Asymmetrie als weiteres Merkmal
         """
@@ -9452,7 +9621,7 @@ class DefectScanner:
         """§T4.3: Parallele Defekt-Detektion via ThreadPoolExecutor.
 
         Führt unabhängige Detektoren parallel aus, reduziert Scan-Zeit um ~50-70%.
-        Nur für batch/offline-Verarbeitung — nicht streaming-geeignet.
+        Nur für batch/offline-Verarbeitung - nicht streaming-geeignet.
         """
         import concurrent.futures
 
@@ -9547,7 +9716,7 @@ class DefectScanner:
         Algorithmus:
             1. Material-Gate: nur LACQUER_DISC (sonst Confidence 0.95, Score 0.0)
             2. Click-Dichte (10 ms Frames, Peak/RMS > 6) → Substrat-Rissbildung
-            3. HF-Verlust 7–12 kHz vs. 1–5 kHz → Lackschicht-Oxidation
+            3. HF-Verlust 7-12 kHz vs. 1-5 kHz → Lackschicht-Oxidation
             4. Rauschboden-Modulation (std unter Signalschwelle) → Substrat-Rauschen
         """
         n = len(audio)
@@ -9616,7 +9785,7 @@ class DefectScanner:
 
 # ========== v10.0.0: MATERIAL_SENSITIVITY Defaults für neue DefectTypes ==========
 # Setzt Schwellwerte für alle 7 neuen DefectTypes via setdefault (keine Überschreibung bestehender Werte).
-# Analoge Träger: niedrigere Schwelle (empfindlicher). Digitale: 0.80–1.0 (kaum relevant).
+# Analoge Träger: niedrigere Schwelle (empfindlicher). Digitale: 0.80-1.0 (kaum relevant).
 
 _NEW_DEFECT_SENSITIVITY_DEFAULTS: dict[DefectType, dict[str, float]] = {
     DefectType.PROXIMITY_EFFECT_EXCESS: {
@@ -9855,7 +10024,7 @@ _NEW_DEFECT_SENSITIVITY_DEFAULTS: dict[DefectType, dict[str, float]] = {
         "streaming": 1.0,
     },
 }
-# Initialisierung: nur setdefault — bestehende Einträge bleiben unverändert
+# Initialisierung: nur setdefault - bestehende Einträge bleiben unverändert
 for _new_dt_v9129, _mat_defaults_v9129 in _NEW_DEFECT_SENSITIVITY_DEFAULTS.items():
     for _mat_type_v9129 in MaterialType:
         if _mat_type_v9129 not in DefectScanner.MATERIAL_SENSITIVITY:

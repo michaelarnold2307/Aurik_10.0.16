@@ -642,18 +642,38 @@ class MusicalQualityAssurance:
         # baseline forces destructive over-denoising that PMGG correctly prevents.
         # Smooth ramp: below _RAMP_LOW dB baseline → 0.3 dB min; above _RAMP_HIGH → 3.0 dB.
         _snr_target = medium_gates.min_snr_db
+        # §v10.131 Depth-adaptive SNR: tiefe Transfer-Ketten haben physikalisch
+        # niedrigere SNR-Ceilings. Bei depth≥4 wird das Target proportional relaxiert.
+        try:
+            from backend.core.calibration_context import get_calibration_context
+            _ctx = get_calibration_context()
+            if _ctx is not None and _ctx.transfer_chain_depth >= 4:
+                _depth = _ctx.transfer_chain_depth
+                _depth_factor = float(np.clip(1.0 - (_depth - 3) * 0.15, 0.50, 1.0))
+                _snr_target = float(max(_snr_target * _depth_factor, _snr_baseline * 0.95))
+        except Exception:
+            pass
         _snr_baseline = baseline.snr_db if baseline is not None else 0.0
+        # §v10.131 Depth-adaptive: bei tiefen Ketten mehr SNR-Verlust tolerieren
+        _snr_depth_relax = 0.0
+        try:
+            from backend.core.calibration_context import get_calibration_context
+            _ctx = get_calibration_context()
+            if _ctx is not None and _ctx.transfer_chain_depth >= 4:
+                _snr_depth_relax = (_ctx.transfer_chain_depth - 3) * 1.0  # +1dB pro Stufe ab 4
+        except Exception:
+            pass
         _SNR_RAMP_LOW = 28.0  # below this baseline SNR: only 0.3 dB min improvement
         _SNR_RAMP_HIGH = 38.0  # above this baseline SNR: standard 3.0 dB min improvement
         # §v10.0.4: Bei sehr niedriger Baseline (≤28dB) ist eine leichte SNR-Verschlechterung
         # (−0.5 dB) akzeptabel, da NR bei schwachem Signal auch Signalenergie entfernen kann.
         if _snr_baseline <= _SNR_RAMP_LOW:
-            _min_snr_improvement = -0.5  # allow slight SNR loss for very noisy sources
+            _min_snr_improvement = -0.5 - _snr_depth_relax  # allow slight SNR loss for very noisy sources
         elif _snr_baseline >= _SNR_RAMP_HIGH:
             _min_snr_improvement = 3.0
         else:
             _t = (_snr_baseline - _SNR_RAMP_LOW) / (_SNR_RAMP_HIGH - _SNR_RAMP_LOW)
-            _min_snr_improvement = -0.5 + 3.5 * _t**1.5
+            _min_snr_improvement = -0.5 + 3.5 * _t**1.5 - _snr_depth_relax
 
         # Target-floor-Rampe (statt fixer 55%):
         # Bei sehr niedriger Baseline darf das harte Medium-Ziel nicht als implizite

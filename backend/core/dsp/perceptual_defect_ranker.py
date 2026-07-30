@@ -17,25 +17,60 @@ Algorithmus:
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 from backend.core.dsp.bark_lufs_util import (
-    BARK_EDGES_HZ, BARK_HEARING_THRESHOLD_DB, N_GAMMATONE,
-    split_into_gammatone_bands, measure_lufs_per_bark,
+    BARK_EDGES_HZ,
+    BARK_HEARING_THRESHOLD_DB,
+    N_GAMMATONE,
+    measure_lufs_per_bark,
+    split_into_gammatone_bands,
 )
 
 # ---------------------------------------------------------------------------
 # Bark-Gewichtung: Relative Sensitivität des Ohrs pro Frequenzband
 # Normiert auf 1.0 bei maximaler Sensitivität (3-4 kHz, Bark 17-18)
 # ---------------------------------------------------------------------------
-_BARK_SENSITIVITY = np.array([
-    0.05, 0.08, 0.12, 0.18, 0.25, 0.35, 0.45, 0.55, 0.65,
-    0.75, 0.82, 0.88, 0.92, 0.95, 0.98, 1.00, 1.00, 0.98,
-    0.95, 0.90, 0.82, 0.72, 0.58, 0.42, 0.30, 0.20, 0.14,
-    0.10, 0.07, 0.05, 0.03, 0.02,
-], dtype=np.float32)
+_BARK_SENSITIVITY = np.array(
+    [
+        0.05,
+        0.08,
+        0.12,
+        0.18,
+        0.25,
+        0.35,
+        0.45,
+        0.55,
+        0.65,
+        0.75,
+        0.82,
+        0.88,
+        0.92,
+        0.95,
+        0.98,
+        1.00,
+        1.00,
+        0.98,
+        0.95,
+        0.90,
+        0.82,
+        0.72,
+        0.58,
+        0.42,
+        0.30,
+        0.20,
+        0.14,
+        0.10,
+        0.07,
+        0.05,
+        0.03,
+        0.02,
+    ],
+    dtype=np.float32,
+)
 
 
 def _freq_to_bark_band(freq_hz: float) -> int:
@@ -103,11 +138,11 @@ def compute_perceptual_severity(
             if level_diff > 20:
                 severity *= 0.05  # Signal 20dB+ lauter → Defekt komplett maskiert
             elif level_diff > 10:
-                severity *= 0.2   # Signal 10-20dB lauter → stark maskiert
+                severity *= 0.2  # Signal 10-20dB lauter → stark maskiert
             elif level_diff > 5:
-                severity *= 0.5   # Signal 5-10dB lauter → moderat maskiert
+                severity *= 0.5  # Signal 5-10dB lauter → moderat maskiert
             elif level_diff < -10:
-                severity *= 1.0   # Defekt lauter als Signal → voll hörbar
+                severity *= 1.0  # Defekt lauter als Signal → voll hörbar
 
     # ── 4. Temporale Maskierung ─────────────────────────────────────
     if onset_positions_s and defect_position_s > 0:
@@ -145,7 +180,7 @@ def rerank_defects_perceptual(
     # Bark-Band LUFS für Maskierungsberechnung
     try:
         mono = audio if audio.ndim == 1 else np.mean(audio, axis=0)
-        bands = split_into_gammatone_bands(mono[:min(len(mono), sr*30)].astype(np.float32), sr)
+        bands = split_into_gammatone_bands(mono[: min(len(mono), sr * 30)].astype(np.float32), sr)
         signal_lufs = measure_lufs_per_bark(bands, sr)
     except Exception:
         signal_lufs = None
@@ -153,9 +188,12 @@ def rerank_defects_perceptual(
     # Onset-Detektion für temporale Maskierung
     try:
         import librosa
+
         onset_frames = librosa.onset.onset_detect(
-            y=mono[:min(len(mono), sr*30)], sr=sr,
-            hop_length=512, backtrack=False,
+            y=mono[: min(len(mono), sr * 30)],
+            sr=sr,
+            hop_length=512,
+            backtrack=False,
         )
         onset_positions = [float(f * 512 / sr) for f in onset_frames]
     except Exception:

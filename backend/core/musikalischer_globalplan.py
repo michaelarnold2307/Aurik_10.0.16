@@ -442,13 +442,13 @@ def _estimate_warmth(mono: np.ndarray, sr: int) -> float:
     if len(mono) < 512:
         # §v10.92: Statt hartem 0.5 — Zeitdomain-Wärme aus RMS-Ratio
         # Kurze Signale: Low/Mid-Approximation via subsample-Energie
-        rms_full = float(np.sqrt(np.mean(mono.astype(np.float64)**2) + 1e-12))
+        rms_full = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
         if len(mono) >= 64:
             # Approximiere via Lowpass-Residuum
             lp_kernel = np.ones(min(64, len(mono))) / min(64, len(mono))
-            lp_signal = np.convolve(np.abs(mono), lp_kernel, mode='same')
-            low_power = float(np.mean(lp_signal[:min(256, len(mono))]**2) + 1e-12)
-            total_power = float(np.mean(mono.astype(np.float64)**2) + 1e-12)
+            lp_signal = np.convolve(np.abs(mono), lp_kernel, mode="same")
+            low_power = float(np.mean(lp_signal[: min(256, len(mono))] ** 2) + 1e-12)
+            total_power = float(np.mean(mono.astype(np.float64) ** 2) + 1e-12)
             return float(np.clip(low_power / (low_power + total_power), 0.0, 1.0))
         return float(np.clip(rms_full * 5.0, 0.0, 1.0))  # RMS-basierter Fallback
     try:
@@ -462,7 +462,7 @@ def _estimate_warmth(mono: np.ndarray, sr: int) -> float:
         logger.warning("musikalischer_globalplan.py::_estimate_warmth fallback: %s", e, exc_info=True)
         # §v10.92: Statt hartem 0.5 — Zeitdomain-Proxy aus Signal-Energie
         try:
-            rms = float(np.sqrt(np.mean(mono.astype(np.float64)**2) + 1e-12))
+            rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
             return float(np.clip(rms * 5.0, 0.3, 0.7))
         except Exception:
             return 0.5
@@ -486,7 +486,7 @@ def _estimate_brightness(mono: np.ndarray, sr: int) -> float:
     if len(mono) < 512:
         # §v10.92: Statt hartem 0.5 — Zeitdomain-Brillanz via Zero-Crossing-Rate
         if len(mono) >= 32:
-            zcr = float(np.mean(np.abs(np.diff(np.sign(mono[:min(512, len(mono))])))) / 2.0)
+            zcr = float(np.mean(np.abs(np.diff(np.sign(mono[: min(512, len(mono))])))) / 2.0)
             return float(np.clip(zcr * 3.0, 0.0, 1.0))  # ZCR ~0.15 → Brillanz ~0.45
         return 0.5
     try:
@@ -522,7 +522,7 @@ def _estimate_dynamic_range(mono: np.ndarray) -> float:
     if len(mono) < 128:
         # §v10.92: Statt hartem 0.5 — Peak/RMS-Ratio als DR-Proxy
         peak = float(np.max(np.abs(mono)) + 1e-12)
-        rms = float(np.sqrt(np.mean(mono.astype(np.float64)**2) + 1e-12))
+        rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
         crest = peak / rms if rms > 0 else 1.0
         return float(np.clip((crest - 1.0) / 10.0, 0.0, 1.0))  # Crest ~10 → DR ~0.9
     try:
@@ -543,7 +543,7 @@ def _estimate_dynamic_range(mono: np.ndarray) -> float:
         # §v10.92: Peak/RMS-Crest-Faktor als DR-Proxy
         try:
             peak = float(np.max(np.abs(mono)) + 1e-12)
-            rms = float(np.sqrt(np.mean(mono.astype(np.float64)**2) + 1e-12))
+            rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
             crest = peak / rms if rms > 0 else 1.0
             return float(np.clip((crest - 1.0) / 10.0, 0.3, 0.7))
         except Exception:

@@ -45,7 +45,6 @@ Diese Invariante konkretisiert §0 Klangwahrheit für den gesamten Produktbetrie
 
 ---
 
-
 ## §v10.101 — Perzeptuelle Architektur (2026-08-10)
 
 > **Das menschliche Ohr ist der einzige Richter.** Aurik v10.101 wurde fundamental umgebaut:
@@ -79,7 +78,6 @@ Technische Messwerte (SNR, THD) sind nur im Bereich oberhalb der Hörschwelle au
 Ein Goal wird nur dann als „verletzt" gewertet, wenn die Abweichung vom Target
 in ≥2 Bark-Bändern die Just-Noticeable-Difference (JND) überschreitet (§G104).
 Unhörbare Abweichungen lösen kein Recovery aus.
-
 
 ## §1.2 Die 15 Musikalischen Ziele (Musical Goals) — vollständige Tabelle
 
@@ -1225,4 +1223,3 @@ metadata["emotional_arc"] = _arc_result
 | brillanz | Artifact-Schwelle 0.95→0.90 | Weniger False-Positives |
 | transient_energie | Crest-Faktor-Guard | Kein Gain-Staging-Fehlalarm |
 | spatial_depth | IACC-basierte Warnung | Mono-Kompatibilität |
-

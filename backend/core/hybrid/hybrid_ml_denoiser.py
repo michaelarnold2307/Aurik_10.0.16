@@ -35,7 +35,6 @@ Version: 1.0.0
 Date: 16. Februar 2026
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import os
 import tempfile
@@ -46,6 +45,7 @@ from typing import Any, cast
 
 import numpy as np
 
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 from dsp.adaptive_omlsa import AdaptiveOMLSA
 from plugins.resemble_enhance_plugin import (
     ResembleEnhancePlugin,

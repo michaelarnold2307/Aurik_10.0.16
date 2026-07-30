@@ -1,6 +1,7 @@
 {
   "exclude": [
     "**/node_modules",
+    "**/__pycache__",
     "**/.*",
     ".venv_aurik",
     ".venv_sota",
@@ -8,10 +9,7 @@
     ".venv_encodec",
     ".venv_matplotlib",
     ".venv_singmos",
-    "**/__pycache__",
     "**/*.pyc",
-    ".mypy_cache",
-    ".pytest_cache",
     "build",
     "dist",
     "datasets",

@@ -56,8 +56,8 @@ Version: 1.0.0
 Date: 16. Februar 2026
 """
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
@@ -468,6 +468,14 @@ class TransparentDynamicsV1(PhaseInterface):
             hard_norm = float(np.clip((compression_pressure - 0.45) / 0.55, 0.0, 1.0))
             threshold_db = float(np.clip(threshold_db - (2.0 + 6.0 * hard_norm), -36.0, -6.0))
             ratio = float(np.clip(ratio + (0.4 + 1.2 * hard_norm), 1.5, 5.0))
+            # §v10.303.17 Cassette-Guard: Bereits komprimiertes Material (MP3/Cassette)
+            # verträgt keine harte Kompression. Ratio auf max 2.5 deckeln.
+            if material_enum in {MaterialType.CASSETTE, MaterialType.TAPE, MaterialType.REEL_TAPE}:
+                ratio = float(np.clip(ratio, 1.1, 2.5))
+                logger.info(
+                    "§v10.303.17 Cassette-Guard: ratio auf %.1f:1 gedeckelt (Material bereits komprimiert)",
+                    ratio,
+                )
             attack_ms = float(np.clip(attack_ms * (1.05 + 0.30 * hard_norm), 3.0, 120.0))
             release_ms = float(np.clip(release_ms * (1.15 + 0.55 * hard_norm), 40.0, 1400.0))
             min_mix = float(np.clip(0.45 + 0.40 * hard_norm, 0.45, 0.90))

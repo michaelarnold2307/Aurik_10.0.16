@@ -113,7 +113,11 @@ def _rms_dbfs_gated(sig: np.ndarray) -> float:
     Stereo → Mono-Downmix vor Framing. Gibt -96.0 zurück wenn kein aktiver Frame.
     """
     if sig.ndim == 2:
-        _mono = sig.mean(axis=0).astype(np.float64) if (sig.shape[0] <= 2 and sig.shape[1] > 2) else sig.mean(axis=1).astype(np.float64)
+        _mono = (
+            sig.mean(axis=0).astype(np.float64)
+            if (sig.shape[0] <= 2 and sig.shape[1] > 2)
+            else sig.mean(axis=1).astype(np.float64)
+        )
     else:
         _mono = sig.astype(np.float64)
     _frame = 480  # 10 ms @ 48 kHz
@@ -812,12 +816,11 @@ class TapeHissReductionPhase(PhaseInterface):
         # §v10.58 Depth-Aware Tape-Hiss: Bei transfer_depth ≥ 3 DSP-only + max strength 0.40.
         # DeepFilterNet auf stark degradierten Signalen produziert Musical Noise und Dropouts
         # (identisches Problem wie Phase_03). OMLSA ist sicherer.
-        _chain_p29 = (
-            kwargs.get("transfer_chain")
-            or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
+        _chain_p29 = kwargs.get("transfer_chain") or (kwargs.get("_restoration_context", {}) or {}).get(
+            "transfer_chain", []
         )
         _transfer_depth_p29 = len(_chain_p29) if _chain_p29 else 1
-        if _transfer_depth_p29 >= 3:
+        if _transfer_depth_p29 >= 5:
             _effective_strength = float(np.clip(_effective_strength, 0.0, 0.40))
             logger.info(
                 "§v10.58 Phase 29 depth=%d → max strength 0.40 + DSP-only (degradiertes Signal)",
@@ -1023,6 +1026,8 @@ class TapeHissReductionPhase(PhaseInterface):
                 )
                 from backend.core.musical_goals.vocal_quality_index import (
                     compute_vqi as _compute_vqi_p29,
+                )
+                from backend.core.musical_goals.vocal_quality_index import (
                     get_vqi_material_floor as _gvmf_p29,
                 )
 
@@ -1044,12 +1049,16 @@ class TapeHissReductionPhase(PhaseInterface):
                 _vqi_thr_p29 = float(np.clip(_vqi_floor_p29 + 0.10, 0.82, 0.92))
                 if _vqi_p29 < _vqi_thr_p29:
                     _vqi_blend_p29 = float(np.clip(_vqi_p29 / max(_vqi_thr_p29, 0.01), 0.15, 0.85))
-                    audio_processed = (
-                        _vqi_blend_p29 * audio_processed + (1.0 - _vqi_blend_p29) * audio
-                    ).astype(np.float32)
+                    audio_processed = (_vqi_blend_p29 * audio_processed + (1.0 - _vqi_blend_p29) * audio).astype(
+                        np.float32
+                    )
                     logger.info(
                         "phase_29: VQI-Blend vqi=%.3f < thr=%.2f (floor=%.2f) blend=%.2f panns=%.2f",
-                        _vqi_p29, _vqi_thr_p29, _vqi_floor_p29, _vqi_blend_p29, _p29_panns,
+                        _vqi_p29,
+                        _vqi_thr_p29,
+                        _vqi_floor_p29,
+                        _vqi_blend_p29,
+                        _p29_panns,
                     )
             except Exception as _vqi_exc_p29:
                 logger.debug("VQI per-phase phase29 (non-blocking): %s", _vqi_exc_p29)
@@ -1776,6 +1785,12 @@ class TapeHissReductionPhase(PhaseInterface):
             logger.debug("§2.36 phase_29 _omlsa Phonem-Mask (non-blocking): %s", _pm_29o_exc)
 
         processed_result: np.ndarray = processed
+        # §v10.304: STFT/ISTFT produces frame-boundary length drift — normalize to input.
+        if len(processed_result) != len(channel):
+            _min_len = min(len(processed_result), len(channel))
+            processed_result = processed_result[:_min_len]
+            if _min_len < len(channel):
+                processed_result = np.pad(processed_result, (0, len(channel) - _min_len))
         return processed_result
 
     def _process_channel_omlsa_mrsa(
@@ -2159,6 +2174,27 @@ class TapeHissReductionPhase(PhaseInterface):
                     )
         except Exception as _pm29_exc:
             logger.debug("§2.36 phase_29 Phonem-Mask (non-blocking): %s", _pm29_exc)
+
+        # §v10.303.13 Transient-Guard: Schützt Onsets vor Überdämpfung
+        try:
+            from backend.core.dsp.transient_guard import compute_transient_mask
+
+            _tm29 = compute_transient_mask(channel.astype(np.float32), sample_rate)
+            if len(_tm29) > 0:
+                if len(_tm29) != G_combined.shape[1]:
+                    _t_src = np.linspace(0.0, 1.0, len(_tm29))
+                    _t_dst = np.linspace(0.0, 1.0, G_combined.shape[1])
+                    _tm29 = np.interp(_t_dst, _t_src, _tm29)
+                _n_tm29 = int(np.sum(_tm29 > 0.3))
+                if _n_tm29 > 0:
+                    _tm2 = np.clip(_tm29, 0.0, 1.0)[np.newaxis, :]
+                    G_combined = G_combined * (1.0 - _tm2 * 0.5) + _tm2 * 0.5
+                    logger.info(
+                        "§v10.303.13 Transient-Guard Phase29: %d Frames vor Hiss-Reduktion geschützt",
+                        _n_tm29,
+                    )
+        except Exception as _tm29_exc:
+            logger.debug("§v10.303.13 Phase29 Transient-Guard (non-blocking): %s", _tm29_exc)
 
         # Apply gain + iSTFT reconstruction.
         # NOTE: Zxx_proc preserves the original phase from Zxx_ref (G_combined is real positive,

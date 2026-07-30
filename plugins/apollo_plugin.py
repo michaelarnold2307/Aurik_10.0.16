@@ -66,6 +66,32 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+# ── §2.46e Hallucination-Guard: Spectral Novelty ──────────────────────
+def _compute_spectral_novelty(original: np.ndarray, processed: np.ndarray, sr: int) -> float:
+    """Misst wie viel NEUES Spektrum Apollo hinzugefügt hat.
+
+    0.0 = identisch (gut), >0.15 = Halluzination (Rollback).
+    Verwendet Kurzzeit-STFT-Differenz normalisiert auf Original-Energie.
+    """
+    _mono_orig = original if original.ndim == 1 else np.mean(original, axis=0)
+    _mono_proc = processed if processed.ndim == 1 else np.mean(processed, axis=0)
+    _n_fft = 2048
+    _hop = 512
+    _orig_frames = np.abs(
+        np.array([np.fft.rfft(_mono_orig[i : i + _n_fft]) for i in range(0, len(_mono_orig) - _n_fft, _hop)])
+    )
+    _proc_frames = np.abs(
+        np.array([np.fft.rfft(_mono_proc[i : i + _n_fft]) for i in range(0, len(_mono_proc) - _n_fft, _hop)])
+    )
+    _min_len = min(_orig_frames.shape[0], _proc_frames.shape[0])
+    _orig_frames = _orig_frames[:_min_len]
+    _proc_frames = _proc_frames[:_min_len]
+    _diff = np.abs(_proc_frames - _orig_frames)
+    _novelty = float(np.mean(_diff) / (np.mean(_orig_frames) + 1e-10))
+    return float(np.clip(_novelty, 0.0, 1.0))
+
+
 # ---------------------------------------------------------------------------
 # Ergebnis-Datenklasse
 # ---------------------------------------------------------------------------
@@ -155,6 +181,9 @@ class ApolloPlugin:
         self._model_loaded: bool = False
         self._fallback_active: bool = False
         self._device: str = "cpu"  # set by _try_load_model
+        self._hallucination_threshold: float = float(
+            _os.environ.get("AURIK_APOLLO_HALLUCINATION_THRESHOLD", "0.35")
+        )
         self._try_load_model()
 
     _BUDGET_NAME: str = "Apollo"
@@ -450,6 +479,17 @@ class ApolloPlugin:
             # Trim padded short-audio result to original length
             if _orig_len < len(result):
                 result = result[:_orig_len]
+
+            # ── §2.46e Hallucination-Guard (MIIPHER-Prinzip) ──
+            _novelty = _compute_spectral_novelty(audio_f32[:_orig_len], result, sr)
+            _threshold = float(getattr(self, '_hallucination_threshold', 0.15))
+            if _novelty > _threshold:
+                logger.warning(
+                    "§2.46e Apollo Hallucination-Guard: spectral_novelty=%.3f > %.2f → Rollback auf Original",
+                    _novelty, _threshold,
+                )
+                return audio_f32[:_orig_len].astype(np.float32)
+
             return result.astype(np.float32)
 
         except Exception as exc:

@@ -389,7 +389,11 @@ class BrassEnhancementPhase(PhaseInterface):
                 else (processed.mean(axis=1) if processed.ndim == 2 else processed)
             )
             _hg45 = _chk_hg45(
-                _pre45_mono.astype(np.float32), _post45_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_45
+                _pre45_mono.astype(np.float32),
+                _post45_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_45,
+                bw_extension_context=True,
             )
             if _hg45.requires_rollback:
                 processed = audio.copy()

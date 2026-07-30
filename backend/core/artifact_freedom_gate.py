@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from scipy.signal import hilbert
 
+from backend.core.defect_scanner import MaterialType  # §v10.113
 from backend.core.phase_ontology import (
     NOISE_TEXTURE_VALID_TYPES,
     PRE_ECHO_VALID_TYPES,
@@ -25,7 +26,6 @@ from backend.core.phase_ontology import (
     get_phase_type,
 )
 from backend.core.pipeline_health_state import make_fail_reason
-from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 
@@ -350,6 +350,7 @@ class ArtifactFreedomGate:
         phase_id: str = "",
         goal_weights: dict[str, float] | None = None,
         restorability_score: float | None = None,
+        transfer_chain_depth: int = 1,
     ) -> ArtifactFreedomResult:
         """Bewertet artifact freedom of restored audio vs original.
 
@@ -361,6 +362,7 @@ class ArtifactFreedomGate:
             phase_id: phase identifier — used to select detector set (restorative vs enhancement)
             goal_weights: optional §2.56 per-song goal-weights for adaptive annoyance guard
             restorability_score: optional restorability context (0-100) for adaptive tolerance
+            transfer_chain_depth: chain depth for depth-adaptive artifact tolerance
 
         Returns:
             ArtifactFreedomResult with artifact_freedom score and details
@@ -379,6 +381,22 @@ class ArtifactFreedomGate:
 
         mat_key = self._normalize_material(material_type)
         thresholds = self._get_thresholds(mat_key)
+
+        # §v10.121 Depth-adaptive artifact detection: deeper transfer chains accumulate
+        # more temporal smear (tape flutter, vinyl pre-ringing, multi-generation phase
+        # rotation). This carrier-inherent smear triggers false pre-echo detections.
+        # Scale the pre-echo threshold proportionally to chain depth so only genuine
+        # restoration-induced pre-echo is flagged.
+        _depth_pe = int(max(1, transfer_chain_depth))
+        if _depth_pe >= 4:
+            _depth_pe_factor = 1.0 + (_depth_pe - 3) * 0.3  # depth 4→1.3×, depth 5→1.6×
+        elif _depth_pe == 3:
+            _depth_pe_factor = 1.15
+        elif _depth_pe == 2:
+            _depth_pe_factor = 1.08
+        else:
+            _depth_pe_factor = 1.0
+        thresholds["pre_echo_rel_attack_db"] *= _depth_pe_factor
 
         # §2.48a Architektur-Inversion: Guards feuern nur wenn ihre Voraussetzung
         # strukturell erfüllt ist — abgeleitet aus dem intrinsischen Phase-Typ
@@ -585,6 +603,13 @@ class ArtifactFreedomGate:
             _rest_clamped = float(np.clip(restorability_score, 0.0, 100.0))
             _restorative_tol_factor = 1.0 + max(0.0, (80.0 - _rest_clamped) / 80.0) * 0.8
             _max_tolerance *= _restorative_tol_factor
+
+        # §v10.121 Depth-adaptive max_tolerance: deeper chains have inherently more
+        # carrier-born temporal anomalies (flutter, multi-gen smear, phase rotation)
+        # that artifact detectors mistake for restoration damage. Scale tolerance so
+        # scoring reflects genuine new artifacts only.
+        _depth_tol_factor = float(np.clip(1.0 + (_depth_pe - 1) * 0.22, 1.0, 2.50))
+        _max_tolerance *= _depth_tol_factor
 
         artifact_freedom = float(np.clip(1.0 - (weighted_sum / _max_tolerance), 0.0, 1.0))
         artifact_freedom = artifact_freedom + noise_penalty  # penalty is negative or 0

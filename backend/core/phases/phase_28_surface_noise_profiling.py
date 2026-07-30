@@ -313,7 +313,8 @@ class SurfaceNoiseProfiling(PhaseInterface):
         if _mat_str in _digital_mats or _snr_28 > 40.0:
             _reason = f"digital_material={_mat_str}" if _mat_str in _digital_mats else f"snr={_snr_28:.0f}dB"
             logger.info(
-                "§v10.96 Surface-Noise-Skip: %s → surface noise profiling skipped", _reason,
+                "§v10.96 Surface-Noise-Skip: %s → surface noise profiling skipped",
+                _reason,
             )
             _effective_strength = 0.0
 
@@ -368,6 +369,16 @@ class SurfaceNoiseProfiling(PhaseInterface):
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
         config = dict(self.NOISE_CONFIG.get(_mk, self.NOISE_CONFIG[MaterialType.CD_DIGITAL]))
+
+        # §v10.200 Depth-adaptive: tiefere Ketten brauchen höheren spectral_floor
+        # und sensitiveren VAD-Threshold (mehr Rauschen → mehr erkennen)
+        _td_p28 = max(1, int(kwargs.get("transfer_chain_depth", 1)))
+        if _td_p28 >= 4:
+            config["spectral_floor"] = float(np.clip(config["spectral_floor"] + 0.08, 0.10, 0.35))
+            config["vad_threshold_db"] = float(np.clip(config["vad_threshold_db"] + 6.0, -60.0, -25.0))
+        elif _td_p28 >= 3:
+            config["spectral_floor"] = float(np.clip(config["spectral_floor"] + 0.04, 0.10, 0.30))
+            config["vad_threshold_db"] = float(np.clip(config["vad_threshold_db"] + 3.0, -60.0, -25.0))
 
         # §GEBOT-G55: Adaptive VAD-Threshold via Noise-Floor-Analyse
         try:

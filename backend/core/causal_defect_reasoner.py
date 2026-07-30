@@ -35,13 +35,13 @@ from __future__ import annotations
 
 import logging
 import math
-
-from backend.core.defect_scanner import MaterialType  # §v10.113
 import threading
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
+
+from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 

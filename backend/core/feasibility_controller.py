@@ -59,6 +59,7 @@ def estimate_goal_feasibility(
     material: str = "unknown",
     restorability: float = 65.0,
     transfer_chain: list[str] | None = None,
+    is_studio_2026: bool = False,
 ) -> dict[str, GoalFeasibility]:
     """Schätzt Erreichbarkeit aller 15 Musical Goals (§2.79).
 
@@ -80,7 +81,7 @@ def estimate_goal_feasibility(
         from backend.core.calibration_matrix import get_material_floor  # pylint: disable=import-outside-toplevel  # noqa: I001
         from backend.core.calibration_matrix import (
             predict_quality_score,  # §v10.92: material-adaptive confidence
-        )  # pylint: disable=import-outside-toplevel  # noqa: I001
+        )  # pylint: disable=import-outside-toplevel
         from backend.core.physical_ceiling_estimator import estimate_physical_ceiling  # pylint: disable=import-outside-toplevel
         from backend.core.song_goal_importance import ALL_GOAL_NAMES  # pylint: disable=import-outside-toplevel
 
@@ -103,11 +104,13 @@ def estimate_goal_feasibility(
         _mat_ceiling = predict_quality_score(mat_str, float(restorability), 0.0, is_studio_2026)
         # Normiere auf CD-Maximum (0.95) damit CD-Material weiterhin Confidence 0.95 erreicht
         _mat_conf_factor = float(np.clip(_mat_ceiling / 0.95, 0.50, 1.0))
-        confidence = float(np.clip(
-            float(restorability) / 100.0 * _mat_conf_factor - chain_penalty,
-            0.05,
-            float(np.clip(_mat_ceiling, 0.55, 0.95)),
-        ))
+        confidence = float(
+            np.clip(
+                float(restorability) / 100.0 * _mat_conf_factor - chain_penalty,
+                0.05,
+                float(np.clip(_mat_ceiling, 0.55, 0.95)),
+            )
+        )
 
         result: dict[str, GoalFeasibility] = {}
         for goal in ALL_GOAL_NAMES:

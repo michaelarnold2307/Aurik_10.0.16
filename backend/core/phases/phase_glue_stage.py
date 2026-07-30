@@ -80,6 +80,8 @@ class GlueStagePhase(PhaseInterface):
         )
 
         # NaN/Inf protection for audio output (safety-in-depth; PhaseResult.__post_init__ also sanitizes)
+        if not np.isfinite(result.audio).all():
+            logger.warning("phase_glue_stage: NaN/Inf im Output — wird mit nan_to_num bereinigt")
         output_audio = np.nan_to_num(result.audio, nan=0.0, posinf=0.0, neginf=0.0)
 
         return PhaseResult(

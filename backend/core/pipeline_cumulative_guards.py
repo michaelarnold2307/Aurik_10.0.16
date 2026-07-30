@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # M1: CumulativeDynamicsTracker
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class CumulativeDynamicsTracker:
     """Trackt Crest-Faktor über die gesamte Pipeline.
 
@@ -51,9 +52,7 @@ class CumulativeDynamicsTracker:
         self._original_crest_db = self._measure_crest(audio)
         self._current_crest_db = self._original_crest_db
         if self._original_crest_db is not None:
-            logger.info(
-                "§CUMUL-Dyn Original-Crest: %.1f dB", self._original_crest_db
-            )
+            logger.info("§CUMUL-Dyn Original-Crest: %.1f dB", self._original_crest_db)
 
     def check(self, audio: np.ndarray, phase_id: str) -> dict[str, Any]:
         """Prüft nach einer Phase den kumulativen Crest-Verlust.
@@ -72,9 +71,7 @@ class CumulativeDynamicsTracker:
             self._phase_losses.append((phase_id, phase_loss))
 
         self._current_crest_db = new_crest
-        self._cumulative_loss_db = (
-            (self._original_crest_db or 0.0) - new_crest
-        )
+        self._cumulative_loss_db = (self._original_crest_db or 0.0) - new_crest
 
         result: dict[str, Any] = {
             "ok": True,
@@ -88,8 +85,7 @@ class CumulativeDynamicsTracker:
         if self._cumulative_loss_db >= 3.0 and not self._warned:
             self._warned = True
             logger.warning(
-                "§CUMUL-Dyn WARNING: %.1f dB kumulativer Crest-Verlust "
-                "(%d Phasen: %s)",
+                "§CUMUL-Dyn WARNING: %.1f dB kumulativer Crest-Verlust (%d Phasen: %s)",
                 self._cumulative_loss_db,
                 len(self._phase_losses),
                 ", ".join(f"{p}({l:.1f})" for p, l in self._phase_losses[-5:]),
@@ -100,9 +96,7 @@ class CumulativeDynamicsTracker:
             self._blocked = True
             result["ok"] = False
             result["should_block_subtractive"] = True
-            result["reason"] = (
-                f"Crest-Verlust {self._cumulative_loss_db:.1f} dB ≥ 6 dB"
-            )
+            result["reason"] = f"Crest-Verlust {self._cumulative_loss_db:.1f} dB ≥ 6 dB"
             logger.error(
                 "§CUMUL-Dyn BLOCK: %.1f dB Crest-Verlust → "
                 "alle subtraktiven Phasen gesperrt! "
@@ -130,20 +124,23 @@ class CumulativeDynamicsTracker:
 # M2: EarlyQualityGate
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 class EarlyQualityGate:
     """Bricht die Pipeline früh ab, wenn nach 15% der Reparatur-Phasen
     keine Verbesserung messbar ist.
     """
 
     # Phasen, nach denen der Early-Check läuft (Reparatur-Phasen)
-    _GATE_AFTER_PHASES: frozenset[str] = frozenset({
-        "phase_01_click_removal",
-        "phase_02_hum_removal",
-        "phase_03_denoise",
-        "phase_04_eq_correction",
-        "phase_05_rumble_filter",
-        "phase_09_crackle_removal",
-    })
+    _GATE_AFTER_PHASES: frozenset[str] = frozenset(
+        {
+            "phase_01_click_removal",
+            "phase_02_hum_removal",
+            "phase_03_denoise",
+            "phase_04_eq_correction",
+            "phase_05_rumble_filter",
+            "phase_09_crackle_removal",
+        }
+    )
 
     def __init__(
         self,
@@ -182,9 +179,7 @@ class EarlyQualityGate:
         except Exception:
             pass
 
-    def after_phase(
-        self, phase_id: str, audio: np.ndarray, phase_failed: bool = False
-    ) -> dict[str, Any]:
+    def after_phase(self, phase_id: str, audio: np.ndarray, phase_failed: bool = False) -> dict[str, Any]:
         """Wird nach jeder Phase aufgerufen. Prüft Early-Abort-Bedingungen."""
         self._executed += 1
         if phase_id in self._GATE_AFTER_PHASES:
@@ -222,9 +217,7 @@ class EarlyQualityGate:
                         f"{self._executed}/{self._total} Phasen — "
                         f"Material zu schlecht für Full-Pipeline"
                     )
-                    logger.warning(
-                        "§EARLY-GATE ABORT: %s", result["reason"]
-                    )
+                    logger.warning("§EARLY-GATE ABORT: %s", result["reason"])
             except Exception:
                 pass
 
@@ -238,6 +231,7 @@ class EarlyQualityGate:
 # ═══════════════════════════════════════════════════════════════════════════
 # M3: Phase07PreFlightSafety
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def phase07_preflight_safety(
     bandwidth_loss: float,
@@ -260,21 +254,15 @@ def phase07_preflight_safety(
         result["safe"] = False
         result["strength_cap"] = 0.15
         result["warnings"].append(
-            f"bandwidth_loss={bandwidth_loss:.2f} > 0.9 → extreme BW loss, "
-            f"harmonic restoration capped at 15%"
+            f"bandwidth_loss={bandwidth_loss:.2f} > 0.9 → extreme BW loss, harmonic restoration capped at 15%"
         )
     elif bandwidth_loss > 0.7:
         result["strength_cap"] = 0.35
-        result["warnings"].append(
-            f"bandwidth_loss={bandwidth_loss:.2f} > 0.7 → "
-            f"harmonic restoration capped at 35%"
-        )
+        result["warnings"].append(f"bandwidth_loss={bandwidth_loss:.2f} > 0.7 → harmonic restoration capped at 35%")
 
     if current_rms_db < -30:
         result["strength_cap"] = min(result["strength_cap"], 0.15)
-        result["warnings"].append(
-            f"RMS={current_rms_db:.1f} dBFS sehr leise → zusätzlicher Cap"
-        )
+        result["warnings"].append(f"RMS={current_rms_db:.1f} dBFS sehr leise → zusätzlicher Cap")
 
     return result
 
@@ -282,6 +270,7 @@ def phase07_preflight_safety(
 # ═══════════════════════════════════════════════════════════════════════════
 # M4: CumulativeNoiseTextureTracker
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class CumulativeNoiseTextureTracker:
     """Trackt Noise-Texture-Guard-Trigger über die Pipeline.
@@ -306,8 +295,7 @@ class CumulativeNoiseTextureTracker:
         if self._trigger_count >= 3:
             self._blocked = True
             logger.error(
-                "§CUMUL-NT BLOCK: %d Noise-Texture-Trigger → "
-                "subtraktive Phasen gesperrt! Trigger: %s",
+                "§CUMUL-NT BLOCK: %d Noise-Texture-Trigger → subtraktive Phasen gesperrt! Trigger: %s",
                 self._trigger_count,
                 ", ".join(self._trigger_phases),
             )
@@ -319,8 +307,7 @@ class CumulativeNoiseTextureTracker:
 
         if self._trigger_count >= 2:
             logger.warning(
-                "§CUMUL-NT WARNING: %d Noise-Texture-Trigger — "
-                "Rauschboden kumulativ deformiert. Trigger: %s",
+                "§CUMUL-NT WARNING: %d Noise-Texture-Trigger — Rauschboden kumulativ deformiert. Trigger: %s",
                 self._trigger_count,
                 ", ".join(self._trigger_phases),
             )
@@ -331,6 +318,7 @@ class CumulativeNoiseTextureTracker:
 # ═══════════════════════════════════════════════════════════════════════════
 # M5: GrooveHardGuard
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class GrooveHardGuard:
     """Harter Guard: >50% Onset-Verlust nach einer Phase → Rollback.
@@ -347,9 +335,7 @@ class GrooveHardGuard:
         """Erfasst Onset-Count vor der Phase."""
         self._pre_onset_count = self._count_onsets(audio, sr)
 
-    def check_post(
-        self, phase_id: str, audio: np.ndarray, sr: int
-    ) -> dict[str, Any]:
+    def check_post(self, phase_id: str, audio: np.ndarray, sr: int) -> dict[str, Any]:
         """Prüft Onset-Verlust nach der Phase."""
         if self._pre_onset_count is None or self._pre_onset_count < 10:
             return {"ok": True, "onset_loss_pct": 0.0}
@@ -358,11 +344,7 @@ class GrooveHardGuard:
         if post_count <= 0:
             return {"ok": True, "onset_loss_pct": 0.0}
 
-        loss_pct = (
-            (self._pre_onset_count - post_count)
-            / self._pre_onset_count
-            * 100.0
-        )
+        loss_pct = (self._pre_onset_count - post_count) / self._pre_onset_count * 100.0
 
         result: dict[str, Any] = {
             "ok": True,
@@ -375,13 +357,8 @@ class GrooveHardGuard:
             self._total_rollbacks += 1
             result["ok"] = False
             result["should_rollback"] = True
-            result["reason"] = (
-                f"Groove-Verlust {loss_pct:.0f}% "
-                f"({self._pre_onset_count}→{post_count} Onsets)"
-            )
-            logger.error(
-                "§GROOVE-GUARD ROLLBACK %s: %s", phase_id, result["reason"]
-            )
+            result["reason"] = f"Groove-Verlust {loss_pct:.0f}% ({self._pre_onset_count}→{post_count} Onsets)"
+            logger.error("§GROOVE-GUARD ROLLBACK %s: %s", phase_id, result["reason"])
 
         return result
 
@@ -396,17 +373,12 @@ class GrooveHardGuard:
             )
             frame_len = int(sr * 0.010)  # 10ms
             hop = frame_len // 2
-            energy = np.array([
-                np.sum(mono[i:i+frame_len]**2)
-                for i in range(0, len(mono) - frame_len, hop)
-            ])
+            energy = np.array([np.sum(mono[i : i + frame_len] ** 2) for i in range(0, len(mono) - frame_len, hop)])
             if len(energy) < 3:
                 return 0
             # Onset = Energie-Anstieg > Faktor 2 zum Vorgänger
             energy_prev = np.concatenate([[energy[0]], energy[:-1]])
-            onsets = np.sum(
-                (energy > energy_prev * 2.0) & (energy > 1e-8)
-            )
+            onsets = np.sum((energy > energy_prev * 2.0) & (energy > 1e-8))
             return int(onsets)
         except Exception:
             return 0
@@ -416,9 +388,8 @@ class GrooveHardGuard:
 # M6: Phase40PerfGuard
 # ═══════════════════════════════════════════════════════════════════════════
 
-def diagnose_phase40_performance(
-    phase_id: str, elapsed_s: float, audio_duration_s: float
-) -> None:
+
+def diagnose_phase40_performance(phase_id: str, elapsed_s: float, audio_duration_s: float) -> None:
     """Diagnostiziert abnormale Phase-40-Laufzeit."""
     if phase_id != "phase_40_loudness_normalization":
         return
@@ -437,6 +408,7 @@ def diagnose_phase40_performance(
 # ═══════════════════════════════════════════════════════════════════════════
 # M7: CrossValidator
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def cross_validate_assessment(
     mushra_score: float,
@@ -485,8 +457,7 @@ def cross_validate_assessment(
         result["consistent"] = False
         result["flags"].append("mushra_afg_mismatch")
         logger.warning(
-            "§CROSS-VALIDATE: MUSHRA=%.0f aber AFG=%.3f → "
-            "subjektive Bewertung ignoriert hörbare Artefakte.",
+            "§CROSS-VALIDATE: MUSHRA=%.0f aber AFG=%.3f → subjektive Bewertung ignoriert hörbare Artefakte.",
             mushra_score,
             artifact_freedom,
         )
@@ -497,6 +468,7 @@ def cross_validate_assessment(
 # ═══════════════════════════════════════════════════════════════════════════
 # Pipeline-Integration: Sammel-Guard
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 class PipelineCumulativeGuard:
     """Sammel-Instanz aller kumulativen Guards für die Pipeline-Integration."""
@@ -562,8 +534,10 @@ class PipelineCumulativeGuard:
         self.dynamics = CumulativeDynamicsTracker()
         self.dynamics.set_original(self._original_audio)
         self.early_gate = EarlyQualityGate(
-            total_phases, restorability_score,
-            material_type=material_type, chain_depth=chain_depth,
+            total_phases,
+            restorability_score,
+            material_type=material_type,
+            chain_depth=chain_depth,
         )
         self.early_gate.set_pre_snapshot(self._original_audio)
         self.noise_texture = CumulativeNoiseTextureTracker()
@@ -579,19 +553,21 @@ class PipelineCumulativeGuard:
         self._crest_tolerance_db = calib.crest_tolerance_db
         self._crest_block_db = calib.crest_block_db
         self._early_abort_pct = calib.early_abort_phase_pct
-        self._conservative_mode = (
-            calib.restorability_score < calib.conservative_mode_threshold
-        )
+        self._conservative_mode = calib.restorability_score < calib.conservative_mode_threshold
         self._nt_tolerance = calib.nt_tolerance_per_trigger
         self._nt_max_triggers = calib.nt_max_triggers_before_block
         self._onset_tolerance_pct = calib.onset_loss_tolerance_pct
         self._onset_block_pct = calib.onset_loss_block_pct
         logger.info(
             "§CALIBRATED crest=%.1f/%.1fdB nt=%.3f/%d onset=%.0f/%.0f%% early=%.0f%% cons=%s",
-            self._crest_tolerance_db, self._crest_block_db,
-            self._nt_tolerance, self._nt_max_triggers,
-            self._onset_tolerance_pct, self._onset_block_pct,
-            self._early_abort_pct * 100, self._conservative_mode,
+            self._crest_tolerance_db,
+            self._crest_block_db,
+            self._nt_tolerance,
+            self._nt_max_triggers,
+            self._onset_tolerance_pct,
+            self._onset_block_pct,
+            self._early_abort_pct * 100,
+            self._conservative_mode,
         )
 
     def record_noise_texture_trigger(self) -> None:
@@ -647,8 +623,8 @@ class PipelineCumulativeGuard:
 
         # ── M1: Cumulative Dynamics ──
         # §V25: crest_tolerance aus Mikrodynamik, nicht hartcodiert
-        _tolerance = getattr(self, '_crest_tolerance_db', 4.0)
-        _block = getattr(self, '_crest_block_db', 6.0)
+        _tolerance = getattr(self, "_crest_tolerance_db", 4.0)
+        _block = getattr(self, "_crest_block_db", 6.0)
         dyn_result = self.dynamics.check(audio, phase_id)
         # Override with calibrated thresholds
         dyn_result["calibrated_tolerance"] = _tolerance
@@ -656,16 +632,12 @@ class PipelineCumulativeGuard:
         _crest_loss = self.dynamics._cumulative_loss_db
         if _crest_loss >= _block:
             result["block_subtractive"] = True
-            result["warnings"].append(
-                f"M1: Crest-Verlust {_crest_loss:.1f} dB ≥ {_block:.1f} dB"
-            )
+            result["warnings"].append(f"M1: Crest-Verlust {_crest_loss:.1f} dB ≥ {_block:.1f} dB")
         elif _crest_loss >= _tolerance:
-            result["warnings"].append(
-                f"M1: Crest-Verlust {_crest_loss:.1f} dB ≥ {_tolerance:.1f} dB (Warnung)"
-            )
+            result["warnings"].append(f"M1: Crest-Verlust {_crest_loss:.1f} dB ≥ {_tolerance:.1f} dB (Warnung)")
 
         # ── M2: Early Quality Gate ──
-        _early_pct = getattr(self, '_early_abort_pct', 0.15)
+        _early_pct = getattr(self, "_early_abort_pct", 0.15)
         _progress = self._executed_count / max(self._total_phases, 1)
         if _progress >= _early_pct and self.early_gate is not None:
             eqg_result = self.early_gate.after_phase(phase_id, audio, phase_failed)
@@ -674,21 +646,17 @@ class PipelineCumulativeGuard:
                 result["abort_reason"] = eqg_result["reason"]
 
         # ── M4: Cumulative Noise Texture ──
-        _nt_max = getattr(self, '_nt_max_triggers', 3)
-        _nt_tol = getattr(self, '_nt_tolerance', 0.15)
+        _nt_max = getattr(self, "_nt_max_triggers", 3)
+        _nt_tol = getattr(self, "_nt_tolerance", 0.15)
         if noise_texture_dist is not None and noise_texture_dist > _nt_tol:
-            nt_result = self.noise_texture.record_trigger(
-                phase_id, noise_texture_dist
-            )
+            nt_result = self.noise_texture.record_trigger(phase_id, noise_texture_dist)
             if self.noise_texture._trigger_count >= _nt_max:
                 result["block_subtractive"] = True
-                result["warnings"].append(
-                    f"M4: {self.noise_texture._trigger_count} NT-Trigger ≥ {_nt_max}"
-                )
+                result["warnings"].append(f"M4: {self.noise_texture._trigger_count} NT-Trigger ≥ {_nt_max}")
 
         # ── M5: Groove Hard Guard ──
-        _onset_block = getattr(self, '_onset_block_pct', 50.0)
-        _onset_tol = getattr(self, '_onset_tolerance_pct', 25.0)
+        _onset_block = getattr(self, "_onset_block_pct", 50.0)
+        _onset_tol = getattr(self, "_onset_tolerance_pct", 25.0)
 
         # ── M5: Groove Hard Guard ──
         if phase_id in {
@@ -699,14 +667,10 @@ class PipelineCumulativeGuard:
         }:
             groove_result = self.groove.check_post(phase_id, audio, sr)
             if groove_result.get("should_rollback"):
-                result["warnings"].append(
-                    f"M5: {groove_result.get('reason')} → Rollback empfohlen"
-                )
+                result["warnings"].append(f"M5: {groove_result.get('reason')} → Rollback empfohlen")
 
         # ── M6: Phase 40 Perf Guard ──
-        diagnose_phase40_performance(
-            phase_id, elapsed_s, self._audio_duration_s
-        )
+        diagnose_phase40_performance(phase_id, elapsed_s, self._audio_duration_s)
 
         return result
 
@@ -716,9 +680,7 @@ class PipelineCumulativeGuard:
         return {
             "total_phases": self._executed_count,
             "total_time_s": round(total_elapsed, 1),
-            "crest_loss_db": round(
-                self.dynamics._cumulative_loss_db, 1
-            ),
+            "crest_loss_db": round(self.dynamics._cumulative_loss_db, 1),
             "nt_triggers": self.noise_texture._trigger_count,
             "groove_rollbacks": self.groove._total_rollbacks,
             "early_abort": self.early_gate.aborted,

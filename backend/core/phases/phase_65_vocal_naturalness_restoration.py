@@ -28,8 +28,8 @@ Aktivierungsgate: panns_singing ≥ 0.25 AND (ΔHNR > 2.5 OR |tilt_delta| > 1.5)
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import threading
 import time
 from typing import Any
@@ -622,7 +622,11 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 else (result.mean(axis=0) if result.ndim == 2 else result)
             )
             _hg65 = _chk_hg65(
-                _pre65_mono.astype(np.float32), _post65_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_65
+                _pre65_mono.astype(np.float32),
+                _post65_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_65,
+                bw_extension_context=True,
             )
             if _hg65.requires_rollback:
                 result = audio.copy().astype(np.float32)

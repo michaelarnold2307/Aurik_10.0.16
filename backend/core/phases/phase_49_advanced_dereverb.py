@@ -48,16 +48,19 @@ Version: 3.0.0 (scipy.signal.stft/istft, kein np.fft.rfft mehr)
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
 import scipy.signal as sig
-from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from scipy.ndimage import median_filter
 
-from backend.core.audio_utils import restore_layout, to_channels_last
+from backend.core.audio_utils import (
+    restore_layout,
+    safe_stft,  # §v10.115 explicit wrapper (no monkey-patch)
+    to_channels_last,
+)
 from backend.core.ml_model_readiness import check_ml_model_ready
 from backend.core.restoration_policy import get_effective_song_goal_weights
 

@@ -509,11 +509,12 @@ def run_pre_analysis(
 
             # Factor 3: Defect scanner material vs chain
             if result.defects is not None:
-                _def_mat = str(
-                    getattr(result.defects, "material_type", "")
-                    or getattr(result.defects, "auto_detected_material", "")
-                    or ""
-                )
+                _def_mat_raw = getattr(result.defects, "material_type", None)
+                # §v10.304.16: Enum.value statt str(Enum) → "mp3_high" statt "MaterialType.MP3_HIGH"
+                if hasattr(_def_mat_raw, "value"):
+                    _def_mat = str(_def_mat_raw.value)
+                else:
+                    _def_mat = str(_def_mat_raw or getattr(result.defects, "auto_detected_material", "") or "")
                 if _def_mat and _def_mat != "unknown":
                     if _def_mat in _cv_chain or any(_def_mat in m for m in _cv_chain):
                         _cv_agreements.append(f"Defect({_def_mat})")
@@ -617,10 +618,64 @@ def run_pre_analysis(
             # an den ANFANG der Kette. _defect_material ist ein Zwischenträger
             # und gehört VOR die digitale Stufe. physical_analog_sources werden
             # ebenfalls VOR der digitalen Stufe eingefügt.
+            
+            # §v10.304.14: Multi-Carrier-Inferenz aus Defect-Signaturen.
+            # Der DefectScanner erkennt Defekte die spezifisch für bestimmte
+            # Tonträger sind. Diese Signale werden genutzt um ZUSÄTZLICHE
+            # Träger in der Kette zu inferieren — nicht nur den dominanten.
+            _defect_inferred_carriers: list[str] = []
+            if result.defects is not None and hasattr(result.defects, "scores"):
+                _defect_scores = getattr(result.defects, "scores", {})
+                # Defekt → Träger-Mapping mit Schwellwerten
+                _DEFECT_CARRIER_MAP: dict[str, tuple[str, float]] = {
+                    "crackle": ("vinyl", 0.35),
+                    "groove_echo": ("vinyl", 0.30),
+                    "inner_groove_distortion": ("vinyl", 0.40),
+                    "riaa_curve_error": ("vinyl", 0.30),
+                    "tape_hiss": ("cassette", 0.25),
+                    "wow": ("cassette", 0.20),
+                    "flutter": ("cassette", 0.20),
+                    "multiband_wow_flutter": ("cassette", 0.25),
+                    "print_through": ("reel_tape", 0.30),
+                    "tape_head_level_dip": ("reel_tape", 0.25),
+                    "low_freq_rumble": ("vinyl", 0.30),
+                    "soft_saturation": ("reel_tape", 0.30),
+                    "quantization_noise": ("cd_digital", 0.30),
+                    "compression_artifacts": ("mp3_high", 0.20),
+                }
+                for _defect_name, (_carrier, _threshold) in _DEFECT_CARRIER_MAP.items():
+                    for _score_key, _score_obj in _defect_scores.items():
+                        _sk_name = _score_key.value if hasattr(_score_key, "value") else str(_score_key)
+                        if _sk_name == _defect_name:
+                            _sev = float(getattr(_score_obj, "severity", 0.0))
+                            if _sev >= _threshold and _carrier not in _chain and _carrier not in _defect_inferred_carriers:
+                                _defect_inferred_carriers.append(_carrier)
+                                logger.debug(
+                                    "§v10.304.14 Defect-Carrier: %s(sev=%.2f) → %s",
+                                    _defect_name, _sev, _carrier,
+                                )
+                            break
+            if _defect_inferred_carriers:
+                logger.info(
+                    "§v10.304.14 Multi-Carrier-Inferenz: %d zusätzliche Träger aus Defekt-Signaturen (%s)",
+                    len(_defect_inferred_carriers),
+                    " → ".join(_defect_inferred_carriers),
+                )
+                # Sortiere nach chronologischer Reihenfolge (älteste zuerst)
+                _CARRIER_ORDER = {
+                    "reel_tape": 0, "vinyl": 1, "cassette": 2,
+                    "cd_digital": 3, "mp3_high": 4, "mp3_low": 5,
+                }
+                _defect_inferred_carriers.sort(key=lambda c: _CARRIER_ORDER.get(c, 99))
+
             _era_injected = None
             _chain_injected: list[str] = []
+            # §v10.304.14: Defect-inferierte Träger ZUERST einfügen
+            for _src in _defect_inferred_carriers:
+                if _src and _src in _analog and _src not in _chain and _src not in _chain_injected:
+                    _chain_injected.append(_src)
             for _src in [_defect_material]:
-                if _src and _src in _analog and _src not in _chain:
+                if _src and _src in _analog and _src not in _chain and _src not in _chain_injected:
                     _chain_injected.append(_src)
             for _ps_mat, _ps_conf in _physical:
                 _k = str(_ps_mat).lower().replace(" ", "_")
@@ -685,6 +740,68 @@ def run_pre_analysis(
                 )
         except Exception as _inj_exc:
             logger.debug("Deep-Transfer-Chain-Injection skipped: %s", _inj_exc)
+
+    # ── §v10.304.13: Era-Re-Klassifikation mit angereicherter Chain ────────
+    # Wenn die Deep-Transfer-Chain-Injection die Kette erweitert hat (depth≥3),
+    # muss die Era-Klassifikation mit der VOLLEN Chain wiederholt werden.
+    # Der originale EraClassifier-Lauf (asynchron) hatte nur die flache Chain.
+    # Warte kurz auf den async Era-Thread, dann re-klassifiziere mit voller Chain.
+    if result.medium is not None:
+        _enriched_chain = list(getattr(result.medium, "transfer_chain", []) or [])
+        if len(_enriched_chain) >= 3:
+            # Warte bis zu 10s auf async Era-Thread
+            _era_thread_waited = False
+            try:
+                _era_thread  # noqa: B018 — prüft ob Variable existiert
+                if _era_thread is not None and _era_thread.is_alive():
+                    _era_thread.join(timeout=10.0)
+                    _era_thread_waited = True
+            except NameError:
+                pass  # _era_thread wurde nie erstellt (Era/Gerne aus Cache)
+            if result.era is not None:
+                _orig_confidence = float(getattr(result.era, "confidence", 0.0))
+                if _orig_confidence < 0.65:
+                    try:
+                        _classify_era = cast(
+                            Callable[..., Any],
+                            _load_symbol("backend.api.bridge", "get_era_classifier_fn"),
+                        )
+                        _era_re = _classify_era()(audio_native, sr_native, transfer_chain=_enriched_chain)
+                        _new_decade = int(getattr(_era_re, "decade", 0))
+                        _old_decade = int(getattr(result.era, "decade", 0))
+                        if _new_decade != _old_decade:
+                            logger.info(
+                                "§v10.304.13 Era-Re-Klassifikation: chain_depth=%d → "
+                                "era %d→%d (confidence %.2f→%.2f, waited=%s)",
+                                len(_enriched_chain),
+                                _old_decade,
+                                _new_decade,
+                                _orig_confidence,
+                                float(getattr(_era_re, "confidence", 0.0)),
+                                "yes" if _era_thread_waited else "no",
+                            )
+                            result.era = _era_re
+                    except Exception as _era_re_exc:
+                        logger.debug("Era-Re-Klassifikation fehlgeschlagen: %s", _era_re_exc)
+            else:
+                # Era ist None (async noch nicht fertig oder fehlgeschlagen) →
+                # direkt mit voller Chain klassifizieren
+                try:
+                    _classify_era = cast(
+                        Callable[..., Any],
+                        _load_symbol("backend.api.bridge", "get_era_classifier_fn"),
+                    )
+                    result.era = _classify_era()(audio_native, sr_native, transfer_chain=_enriched_chain)
+                    _new_decade = int(getattr(result.era, "decade", 0))
+                    logger.info(
+                        "§v10.304.13 Era-Direktklassifikation: chain_depth=%d → "
+                        "era=%d (confidence=%.2f, era_was_None)",
+                        len(_enriched_chain),
+                        _new_decade,
+                        float(getattr(result.era, "confidence", 0.0)),
+                    )
+                except Exception as _era_re_exc:
+                    logger.debug("Era-Direktklassifikation fehlgeschlagen: %s", _era_re_exc)
 
     # ------------------------------------------------------------------
     # Store in bridge cache so UV3 never re-runs classifiers

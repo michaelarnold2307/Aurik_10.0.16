@@ -171,9 +171,7 @@ class AlbumConsistencyPass:
         for p in profiles:
             lufs_dev = p.lufs - album_lufs
             if abs(lufs_dev) > _LUFS_OUTLIER_THRESHOLD_LU:
-                p.lufs_correction_db = float(
-                    np.clip(-lufs_dev, -_LUFS_MAX_CORRECTION_DB, _LUFS_MAX_CORRECTION_DB)
-                )
+                p.lufs_correction_db = float(np.clip(-lufs_dev, -_LUFS_MAX_CORRECTION_DB, _LUFS_MAX_CORRECTION_DB))
                 corrections_applied += 1
             else:
                 p.lufs_correction_db = 0.0

@@ -288,7 +288,11 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
                 else (audio_out.mean(axis=1) if audio_out.ndim == 2 else audio_out)
             )
             _hg58 = _chk_hg58(
-                _pre58_mono.astype(np.float32), _post58_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_58
+                _pre58_mono.astype(np.float32),
+                _post58_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_58,
+                bw_extension_context=True,
             )
             if _hg58.requires_rollback:
                 audio_out = audio.copy()

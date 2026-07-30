@@ -515,7 +515,17 @@ def _transient_preservation(audio: np.ndarray, original: np.ndarray, sr: int) ->
 
         # Detect attacks: rapid envelope rise
         diff = np.diff(env)
-        attacks = np.where(diff > np.percentile(diff, 90) * 1.5)[0]
+        # §v10.124 Major-Version: Rauschquellen (tiefe Ketten) erzeugen viele
+        # kleine Diff-Peaks → 90. Perzentil findet Noise statt Musik-Transienten.
+        # Hebe das Perzentil für tiefe Ketten an (Proxy: HG-Threshold).
+        try:
+            from backend.core.signal_flow_tracer import get_hallucination_guard_threshold
+
+            _hg_proxy = get_hallucination_guard_threshold()
+            _attack_percentile = 90.0 + max(0, _hg_proxy - 0.15) * 20.0  # 90→95 bei depth 4
+        except Exception:
+            _attack_percentile = 90.0
+        attacks = np.where(diff > np.percentile(diff, _attack_percentile) * 1.5)[0]
         attacks = attacks[attacks < n_windows - 1]
 
         if len(attacks) == 0:
@@ -534,6 +544,19 @@ def _transient_preservation(audio: np.ndarray, original: np.ndarray, sr: int) ->
             _blend_strength = 0.18  # 82% restauriert
         else:
             _blend_strength = 0.30  # 70% restauriert (original, für ambient/klassik)
+
+        # §v10.120 Depth-aware blend: tiefe Transfer-Ketten haben fragilere
+        # Original-Transienten (Crackle, Noise-Peaks). Reduziere den Original-
+        # Anteil proportional zur Chain-Depth (Proxy: HG-Threshold > 0.25).
+        try:
+            from backend.core.signal_flow_tracer import get_hallucination_guard_threshold
+
+            _hg_proxy = get_hallucination_guard_threshold()
+            if _hg_proxy > 0.25:
+                _depth_factor = float(np.clip(1.0 - (_hg_proxy - 0.25) * 1.2, 0.40, 1.0))
+                _blend_strength *= _depth_factor
+        except Exception:
+            pass  # SFT nicht verfügbar — Default-Blend verwenden
 
         # For each attack, blend in original transient at groove-adaptive strength
         blend = np.ones(len(mono), dtype=np.float32)

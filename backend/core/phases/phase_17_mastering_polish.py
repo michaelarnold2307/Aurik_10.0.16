@@ -50,16 +50,16 @@ Version: 2.0.0 (Professional)
 Quality Impact: 0.65 → 0.92 (+42%)
 """
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_filtfilt,  apply_musical_gain_envelope as _amge_17
-from backend.core.audio_utils import safe_filtfilt,  compute_gated_rms_linear as _gated_rms_17
-from backend.core.audio_utils import safe_filtfilt,  to_channels_last
+from backend.core.audio_utils import apply_musical_gain_envelope as _amge_17
+from backend.core.audio_utils import compute_gated_rms_linear as _gated_rms_17
+from backend.core.audio_utils import safe_filtfilt, to_channels_last
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 

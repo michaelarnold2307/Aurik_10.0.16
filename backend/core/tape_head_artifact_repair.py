@@ -36,6 +36,7 @@ class TapeHeadArtifactRepair:
         dropout_threshold_db: float = 4.0,  # Aggressiver: Pegel-Abfall ab 4dB
         dropout_max_ms: float = 15.0,  # Aggressiver: bis 15ms Dropout
         azimuth_correct: bool = True,
+        ast_musical_confidence: float = 0.0,  # §v10.304: 0-1, senkt Aggressivität bei Musik
     ) -> np.ndarray:
         """Führt alle Bandkopf-Reparaturen durch.
 
@@ -46,12 +47,17 @@ class TapeHeadArtifactRepair:
             dropout_max_ms: Maximale Dropout-Dauer
             azimuth_correct: Azimuth-Korrektur aktivieren
         """
+        # §v10.304 AST-Guard: Bei hohem Musik-Instrument-Anteil Schwelle anheben
+        # Tiefes chain-Material (depth≥3) hat MP3-Artefakte die als Dropouts fehlklassifiziert werden.
+        _ast_factor = 1.0 + ast_musical_confidence * 1.5  # 0→1.0, 0.5→1.75, 1.0→2.5
+        _effective_threshold_db = dropout_threshold_db * _ast_factor
+        _effective_max_ms = dropout_max_ms * (1.0 - ast_musical_confidence * 0.5)  # kürzere Max-Dauer bei Musik
+        _effective_max_ms = max(3.0, _effective_max_ms)  # Minimum 3ms
+
         result = np.asarray(audio, dtype=np.float32).copy()
 
-        # 1. Short-Dropout-Repair
-        result = self._repair_short_dropouts(result, sr, dropout_threshold_db, dropout_max_ms)
-
-        # 2. Azimuth-Korrektur (nur Stereo)
+        # 1. Short-Dropout-Repair (mit AST-adaptierten Schwellen)
+        result = self._repair_short_dropouts(result, sr, _effective_threshold_db, _effective_max_ms)
         if azimuth_correct and result.ndim == 2 and result.shape[0] >= 2:
             result = self._correct_azimuth(result, sr)
 

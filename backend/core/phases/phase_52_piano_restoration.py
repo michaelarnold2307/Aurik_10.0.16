@@ -514,7 +514,11 @@ class PianoRestorationV1(PhaseInterface):
                 else (audio_out.mean(axis=1) if audio_out.ndim == 2 else audio_out)
             )
             _hg52 = _chk_hg52(
-                _pre52_mono.astype(np.float32), _post52_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_52
+                _pre52_mono.astype(np.float32),
+                _post52_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_52,
+                bw_extension_context=True,
             )
             if _hg52.requires_rollback:
                 audio_out = audio.copy()

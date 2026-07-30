@@ -17,8 +17,8 @@ Artifacts"; Godsill & Rayner (1998) "Digital Audio Restoration".
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import time as _time
 
 import numpy as np
@@ -451,6 +451,22 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 warnings=["Tape splice repair skipped due to zero effective strength"],
             )
         _rms_in_db = _rms_dbfs_gated(audio)
+
+        # §v10.303.6 Early-Exit: Keine Splice-Zonen → nichts zu reparieren
+        _splice_zones_raw = kwargs.get("defect_locations", {}).get("tape_splice_artifact", []) if isinstance(kwargs.get("defect_locations"), dict) else []
+        _splice_count = len(_splice_zones_raw) if _splice_zones_raw else 0
+        if _splice_count == 0:
+            logger.info(
+                "Phase 64 §v10.303.6 Early-Exit: Keine Klebestellen gefunden → skip (%.2fs)",
+                _time.perf_counter() - t0,
+            )
+            return PhaseResult(
+                audio=audio.copy() if isinstance(audio, np.ndarray) else np.asarray(audio, dtype=np.float32),
+                success=True,
+                execution_time_seconds=_time.perf_counter() - t0,
+                metadata={"splice_count": 0, "skip_reason": "no_splice_zones"},
+            )
+
         # Schutzzonen für per-Splice individuelle Stärke zusammenstellen (§0p Vocal-Supremacy + §0l)
         _p64_zones: list = []
         for _z in kwargs.get("vibrato_zones") or []:
@@ -484,7 +500,7 @@ class TapeSpliceRepairPhase(PhaseInterface):
             crossfade_ms=_profile_64["crossfade_ms"],
             protected_zones=_p64_zones or None,
         )
-        _n_samples_64 = int(result_audio.shape[-1]) if result_audio.ndim == 2 else int(result_audio.shape[0])
+        _n_samples_64 = int(result_audio.shape[0]) if result_audio.ndim >= 2 else int(result_audio.shape[0])
         _locality_profile, _locality_coverage = self._build_locality_profile(
             n_samples=_n_samples_64,
             sample_rate=sample_rate,

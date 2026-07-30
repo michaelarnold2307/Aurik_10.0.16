@@ -28,20 +28,20 @@ def test_phase_dag_p02_before_p03():
         if c.before == "phase_02_hum_removal" and c.after == "phase_03_denoise":
             p02_before_p03 = True
             break
-    assert p02_before_p03, (
-        "§G95 VERLETZT: phase_02_hum_removal MUSS vor phase_03_denoise deklariert sein!"
-    )
+    assert p02_before_p03, "§G95 VERLETZT: phase_02_hum_removal MUSS vor phase_03_denoise deklariert sein!"
 
 
 def test_phase_dag_validate_enforces_p02_before_p03():
     """§G95: validate_phase_order erkennt P03 vor P02 als Verstoß."""
     from backend.core.phase_dag import validate_phase_order
 
-    violations = validate_phase_order([
-        "phase_01_click_removal",
-        "phase_03_denoise",  # P03 VOR P02 → Verstoß!
-        "phase_02_hum_removal",
-    ])
+    violations = validate_phase_order(
+        [
+            "phase_01_click_removal",
+            "phase_03_denoise",  # P03 VOR P02 → Verstoß!
+            "phase_02_hum_removal",
+        ]
+    )
     assert len(violations) > 0, "P03 vor P02 sollte als DAG-Verstoß erkannt werden"
 
 
@@ -55,10 +55,23 @@ def test_authentic_character_all_materials_present():
     from backend.core.intentional_artifact_classifier import AUTHENTIC_CHARACTER
 
     required = [
-        "shellac", "vinyl", "lp", "tape", "reel_tape",
-        "cassette", "kassette", "cd_digital",
-        "mp3_low", "mp3_high", "aac", "streaming",
-        "minidisc", "dat", "wax_cylinder", "wire_recording", "lacquer_disc",
+        "shellac",
+        "vinyl",
+        "lp",
+        "tape",
+        "reel_tape",
+        "cassette",
+        "kassette",
+        "cd_digital",
+        "mp3_low",
+        "mp3_high",
+        "aac",
+        "streaming",
+        "minidisc",
+        "dat",
+        "wax_cylinder",
+        "wire_recording",
+        "lacquer_disc",
     ]
     missing = [m for m in required if m not in AUTHENTIC_CHARACTER]
     assert not missing, f"§G98: Fehlende AUTHENTIC_CHARACTER-Einträge: {missing}"
@@ -84,10 +97,25 @@ def test_material_threshold_bonus_all_materials_present():
     from backend.core.per_phase_musical_goals_gate import _MATERIAL_THRESHOLD_BONUS
 
     required = [
-        "lacquer_disc", "lp", "kassette", "aac", "streaming",
-        "cassette", "vinyl", "shellac", "cd_digital", "mp3_low", "mp3_high",
-        "minidisc", "dat", "wax_cylinder", "wire_recording",
-        "reel_tape", "tape", "radio_broadcast", "optical_film",
+        "lacquer_disc",
+        "lp",
+        "kassette",
+        "aac",
+        "streaming",
+        "cassette",
+        "vinyl",
+        "shellac",
+        "cd_digital",
+        "mp3_low",
+        "mp3_high",
+        "minidisc",
+        "dat",
+        "wax_cylinder",
+        "wire_recording",
+        "reel_tape",
+        "tape",
+        "radio_broadcast",
+        "optical_film",
     ]
     missing = [m for m in required if m not in _MATERIAL_THRESHOLD_BONUS]
     assert not missing, f"§G99: Fehlende _MATERIAL_THRESHOLD_BONUS-Keys: {missing}"
@@ -106,12 +134,8 @@ def test_predict_quality_score_material_aware():
     shellac = predict_quality_score("shellac", 40.0, 0.0, False)
     cassette = predict_quality_score("cassette", 60.0, 0.0, False)
 
-    assert cd > shellac, (
-        f"CD ({cd:.3f}) sollte höheres Ceiling als Shellac ({shellac:.3f}) haben"
-    )
-    assert cd > cassette, (
-        f"CD ({cd:.3f}) sollte höheres Ceiling als Kassette ({cassette:.3f}) haben"
-    )
+    assert cd > shellac, f"CD ({cd:.3f}) sollte höheres Ceiling als Shellac ({shellac:.3f}) haben"
+    assert cd > cassette, f"CD ({cd:.3f}) sollte höheres Ceiling als Kassette ({cassette:.3f}) haben"
     assert 0.0 <= shellac <= 0.99, f"Shellac {shellac:.3f} außerhalb [0,1]"
     assert 0.0 <= cd <= 0.99, f"CD {cd:.3f} außerhalb [0,1]"
 
@@ -121,10 +145,23 @@ def test_predict_quality_score_all_materials():
     from backend.core.calibration_matrix import predict_quality_score
 
     materials = [
-        "cd_digital", "vinyl", "tape", "cassette", "shellac",
-        "mp3_low", "mp3_high", "aac", "streaming", "minidisc",
-        "dat", "wax_cylinder", "wire_recording", "lacquer_disc",
-        "lp", "kassette", "reel_tape",
+        "cd_digital",
+        "vinyl",
+        "tape",
+        "cassette",
+        "shellac",
+        "mp3_low",
+        "mp3_high",
+        "aac",
+        "streaming",
+        "minidisc",
+        "dat",
+        "wax_cylinder",
+        "wire_recording",
+        "lacquer_disc",
+        "lp",
+        "kassette",
+        "reel_tape",
     ]
     for mat in materials:
         score = predict_quality_score(mat, 50.0, 0.0, False)

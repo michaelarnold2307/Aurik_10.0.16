@@ -45,26 +45,30 @@ Import-Vollständigkeit. → Neuer Pattern-Kandidat für Scanner: P9 Import-Cons
 ## Was seit dem letzten Lauf geändert wurde
 
 ### Stabilität (94 Crash-Risiken eliminiert)
+
 - P1: 24 shape-Anti-Patterns gefixt (channels-first vs channels-last)
 - P2: 2 filtfilt-Crash-Risiken + safe_filtfilt Identity-Filter + Rekursion-Fix
 - P3: 24 noverlap-Crash-Risiken (stft/istft-Guards in 13 Dateien)
 - P4: 2 os-Import-Fehler (dac_plugin, validate_before_run)
-- P5: tuple→ndarray in PhaseResult.__post_init__ (§v10.95)
+- P5: tuple→ndarray in PhaseResult.**post_init** (§v10.95)
 - P6: 63 material-Dict-Lookups mit Enum-Normalisierung
 - P7: tuple.ndim (70 Exceptions) — bereits durch §v10.95 behoben
 
 ### Korrektheit (alle Parameter korrekt)
+
 - Alle 69 Phasen nutzen safe_stft/safe_istft (0 bare scipy.signal.stft)
 - Material-Adaption: 63 Dict-Lookups jetzt Enum-sicher
 - Jede .get(material, default) → .get(_mk, default) mit Normalisierung
 
 ### Wahrnehmung (Material+Genre-adaptiv)
+
 - **Material-JND**: CD=1.0, Vinyl=1.4, Tape=1.6, Kassette=2.0, Shellac=2.5
 - **Genre-JND**: Klassik=0.80, Jazz=0.90, Rock=1.00, Schlager=1.10, Electronic=1.20
 - **Kassette Deep-Chain** (Tiefe ≥3): noise_reduction=1.15, hf_restoration=1.25
 - **PerceptualGate**: should_skip_phase() jetzt material+genre-aware
 
 ### Forensik (Kreislauf geschlossen)
+
 - ExceptionAggregator liest 136.507 NDJSON-Einträge
 - PatternMiner entdeckte P7, P8 aus realen Daten
 - QualityRegressionDetector trackt Q-Score-Trends
@@ -76,6 +80,7 @@ Import-Vollständigkeit. → Neuer Pattern-Kandidat für Scanner: P9 Import-Cons
 ## Was beim nächsten Lauf zu erwarten ist
 
 ### Automatisch (non-blocking)
+
 ```
 Pipeline-Ende (UV3._execute_pipeline, Zeile 38795)
   → run_forensics()
@@ -86,6 +91,7 @@ Pipeline-Ende (UV3._execute_pipeline, Zeile 38795)
 ```
 
 ### Manuell nach dem Lauf
+
 ```bash
 # Dashboard aufrufen
 python scripts/forensics_dashboard.py --full

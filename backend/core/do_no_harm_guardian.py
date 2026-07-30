@@ -222,7 +222,10 @@ class DoNoHarmGuardian:
                 "MUSHRA=%.0f≥%.0f HPI=%.3f≥%.2f → "
                 "objektive Proxy-Warnungen werden unterdrückt "
                 "(das menschliche Ohr hat Vorrang)",
-                mushra_score, _MUSHRA_EXCELLENT, hpi_score, _HPI_HIGH,
+                mushra_score,
+                _MUSHRA_EXCELLENT,
+                hpi_score,
+                _HPI_HIGH,
             )
             return GuardianVerdict(
                 passed=True,
@@ -245,7 +248,8 @@ class DoNoHarmGuardian:
         ref_snap = self._input_snapshot
 
         logger.debug(
-            "DoNoHarmGuardian: referencing against %s", _ref_label,
+            "DoNoHarmGuardian: referencing against %s",
+            _ref_label,
         )
 
         degraded: list[str] = []
@@ -253,33 +257,27 @@ class DoNoHarmGuardian:
         # 1. Spectral Brightness — §v10.103 P2: gegen REFERENZ statt Input
         _brightness_drop = ref_snap.spectral_brightness - output_snap.spectral_brightness
         if _brightness_drop > self._max_brightness_drop:
-            degraded.append(
-                f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop}) [ref={_ref_label}]"
-            )
+            degraded.append(f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop}) [ref={_ref_label}]")
 
         # 2. Naturalness — §v10.102 depth-adaptiv + §v10.103 P2: gegen REFERENZ
         _mat_nat = str(material).lower()
-        _depth_nat = max(1, int(getattr(self, '_chain_depth', 1)))
+        _depth_nat = max(1, int(getattr(self, "_chain_depth", 1)))
         if _mat_nat in ("cassette", "reel_tape", "tape"):
-            _nat_threshold = 0.30 + 0.10 * _depth_nat + (0.10 if _depth_nat >= 3 else 0.0)
+            _nat_threshold = 0.30 + 0.10 * _depth_nat + (0.10 if _depth_nat >= 4 else 0.0)
         else:
             _nat_threshold = self._max_naturalness_drop
         _nat_drop = ref_snap.naturalness_estimate - output_snap.naturalness_estimate
         if _nat_drop > _nat_threshold:
-            degraded.append(
-                f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold}) [ref={_ref_label}]"
-            )
+            degraded.append(f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold}) [ref={_ref_label}]")
 
         # 3. RMS Change — gegen REFERENZ
         _rms_change = abs(output_snap.rms_dbfs - ref_snap.rms_dbfs)
         if _rms_change > self._max_rms_change_db:
-            degraded.append(
-                f"rms_change={_rms_change:.1f} dB (>{self._max_rms_change_db}) [ref={_ref_label}]"
-            )
+            degraded.append(f"rms_change={_rms_change:.1f} dB (>{self._max_rms_change_db}) [ref={_ref_label}]")
 
         # 4. Peak Integrity (Crest-Factor-basiert, §v10.102 depth-adaptiv) — gegen REFERENZ
         _mat_crest = str(material).lower()
-        _depth_crest = max(1, int(getattr(self, '_chain_depth', 1)))
+        _depth_crest = max(1, int(getattr(self, "_chain_depth", 1)))
         if _mat_crest in ("cassette", "reel_tape", "tape"):
             _crest_threshold = 2.0 + 2.0 * _depth_crest
         else:
@@ -297,9 +295,7 @@ class DoNoHarmGuardian:
         # 5. Dynamic Range — gegen REFERENZ
         _dr_change = ref_snap.dynamic_range_db - output_snap.dynamic_range_db
         if _dr_change > 6.0:
-            degraded.append(
-                f"dynamic_range_collapse={_dr_change:.1f} dB [ref={_ref_label}]"
-            )
+            degraded.append(f"dynamic_range_collapse={_dr_change:.1f} dB [ref={_ref_label}]")
 
         passed = len(degraded) == 0
 
@@ -502,24 +498,18 @@ class UnifiedQualityModel:
         _dr_ok = max(0.0, 100.0 - inp.dynamic_range_drop_db * 10.0)
 
         objective_score = (
-            0.20 * _brightness_ok
-            + 0.25 * _naturalness_ok
-            + 0.25 * _crest_ok
-            + 0.15 * _rms_ok
-            + 0.15 * _dr_ok
+            0.20 * _brightness_ok + 0.25 * _naturalness_ok + 0.25 * _crest_ok + 0.15 * _rms_ok + 0.15 * _dr_ok
         )
 
         # ── 3. Gewichteter Gesamt-Score ──
-        quality_score = (
-            self.PERCEPTUAL_WEIGHT * perceptual_score
-            + self.OBJECTIVE_WEIGHT * objective_score
-        )
+        quality_score = self.PERCEPTUAL_WEIGHT * perceptual_score + self.OBJECTIVE_WEIGHT * objective_score
 
         # ── 4. Material/Depth-Adaptivität ──
         _mat = str(inp.material).lower()
         _depth = max(1, int(inp.chain_depth))
-        if _mat in ("cassette", "reel_tape", "tape") and _depth >= 3:
-            # Deep-Chain-Kassetten: objektive Metriken sind weniger aussagekräftig
+        if _mat in ("cassette", "reel_tape", "tape") and _depth >= 4:
+            # Deep-Chain-Kassetten (depth≥4 nach §v10.120 Calibration-Shift):
+            # objektive Metriken sind weniger aussagekräftig
             # → perzeptuelles Gewicht steigt auf 75%
             _perceptual_w = 0.75
             _objective_w = 0.25
@@ -559,19 +549,17 @@ class UnifiedQualityModel:
                 f"(perceptual={perceptual_score:.1f}, objective={objective_score:.1f})"
             )
         elif decision == "WARN":
-            _reason = (
-                f"UQM WARN: quality={quality_score:.1f} < {self.QUALITY_PASS:.0f} "
-                f"— output accepted with warnings"
-            )
+            _reason = f"UQM WARN: quality={quality_score:.1f} < {self.QUALITY_PASS:.0f} — output accepted with warnings"
         else:
-            _reason = (
-                f"UQM REVERT: quality={quality_score:.1f} < {self.QUALITY_WARN:.0f} "
-                f"— returning original audio"
-            )
+            _reason = f"UQM REVERT: quality={quality_score:.1f} < {self.QUALITY_WARN:.0f} — returning original audio"
 
         logger.info(
             "UnifiedQualityModel: %s (perceptual=%.1f objective=%.1f combined=%.1f conf=%.2f)",
-            decision, perceptual_score, objective_score, quality_score, confidence,
+            decision,
+            perceptual_score,
+            objective_score,
+            quality_score,
+            confidence,
         )
 
         return UQMDecision(

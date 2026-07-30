@@ -103,6 +103,12 @@ class PipelineCalibration:
     # Begründung: bandwidth_loss=0 → factor=1.0 (volle Stärke).
     # bandwidth_loss=1.0 → factor=0.55 (halbe Stärke).
 
+    # ── §v10.124 Goal-Target-Depth-Skalierung ──
+    # §v10.200 SUPERSEDED: Die tatsächliche Depth-Skalierung erfolgt jetzt
+    # in calibration_matrix.estimate_song_goal_targets() via depth-adaptive kappa.
+    # Dieses Feld ist ein Legacy-Platzhalter — wird nicht mehr konsumiert.
+    goal_depth_factors: dict[str, float]
+
     # ── Metadaten ──
     restorability_score: float = 50.0
     transfer_chain_depth: int = 1
@@ -248,6 +254,18 @@ def calibrate_pipeline_guards(
     # ── M3: Phase 07 ──
     phase07_cap = float(np.clip(1.0 - 0.85 * bw_loss, 0.10, 1.0))
 
+    # §v10.124 Major-Version: Goal-Target-Depth-Skalierung.
+    # Tiefe Transfer-Ketten haben physikalisch begrenzte erreichbare Ziele.
+    # −5% pro Depth-Stufe ab Depth 2 für frequenzabhängige Goals.
+    _goal_depth_factor = float(np.clip(1.0 - max(0, depth - 1) * 0.05, 0.70, 1.0))
+    # Ziele die von der Chain-Depth besonders betroffen sind
+    _depth_affected_goals = {
+        "brillanz": _goal_depth_factor,
+        "transparenz": _goal_depth_factor,
+        "separation_fidelity": _goal_depth_factor,
+        "spatial_depth": float(np.clip(1.0 - max(0, depth - 1) * 0.03, 0.80, 1.0)),
+    }
+
     # ── MP3-Adaptive ──
     mp3_sib_factor = float(np.clip(1.0 + 4.0 * bw_loss, 1.0, 6.0))
     mp3_cap_factor = float(np.clip(1.0 - 0.45 * bw_loss, 0.40, 1.0))
@@ -257,13 +275,26 @@ def calibrate_pipeline_guards(
         "§PIPELINE-CALIB §V25: rs=%.0f depth=%d mat=%s bw=%.2f snr=%.1f "
         "crest=%.1f micro=%.1f genre=%s → crest_tol=%.1f crest_block=%.1f "
         "early=%.0f%% nt_tol=%.2f nt_max=%d onset_tol=%.0f%% onset_block=%.0f%% "
-        "p07_cap=%.2f mp3_sib=%.1f mp3_cap=%.2f",
-        rs, depth, material_type, bw_loss, snr,
-        crest_original_db, micro, genre,
-        crest_tolerance, crest_block,
-        early_abort_pct * 100, nt_tolerance, nt_max_triggers,
-        onset_tolerance_pct * 100, onset_block_pct * 100,
-        phase07_cap, mp3_sib_factor, mp3_cap_factor,
+        "p07_cap=%.2f mp3_sib=%.1f mp3_cap=%.2f goal_depth=%.2f",
+        rs,
+        depth,
+        material_type,
+        bw_loss,
+        snr,
+        crest_original_db,
+        micro,
+        genre,
+        crest_tolerance,
+        crest_block,
+        early_abort_pct * 100,
+        nt_tolerance,
+        nt_max_triggers,
+        onset_tolerance_pct * 100,
+        onset_block_pct * 100,
+        phase07_cap,
+        mp3_sib_factor,
+        mp3_cap_factor,
+        _goal_depth_factor,
     )
 
     return PipelineCalibration(
@@ -278,6 +309,7 @@ def calibrate_pipeline_guards(
         phase07_strength_cap=round(phase07_cap, 2),
         mp3_sibilance_threshold_factor=round(mp3_sib_factor, 1),
         mp3_strength_cap_factor=round(mp3_cap_factor, 2),
+        goal_depth_factors=_depth_affected_goals,
         restorability_score=rs,
         transfer_chain_depth=depth,
         material_type=str(material_type),

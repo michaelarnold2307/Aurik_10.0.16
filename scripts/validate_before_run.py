@@ -72,7 +72,6 @@ def test_critical_imports() -> bool:
 
 
 def test_phase_imports() -> bool:
-    import os
 
     phase_dir = "backend/core/phases"
     phases = sorted(f for f in os.listdir(phase_dir) if f.startswith("phase_") and f.endswith(".py"))

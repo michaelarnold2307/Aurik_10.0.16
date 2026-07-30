@@ -428,6 +428,67 @@ _medium_lru: _AnalysisLruCache = _AnalysisLruCache()
 _restorability_lru: _AnalysisLruCache = _AnalysisLruCache()
 
 
+def _build_bridge_calibration_dict() -> dict:
+    """§Bridge: Baut Kalibrierungs-Dict für Frontend aus CalibrationContext.
+
+    NIMMT NUR das Dict aus BridgeCalibrationData.to_frontend_dict().
+    Die Dataclass selbst lebt in Aurik10/ui/bridge_calibration.py
+    (Frontend-Seite, ohne backend-Imports).
+
+    Diese Funktion ist AUSSCHLIESSLICH in bridge.py —
+    sie darf backend.* importieren (Brücken-Funktion).
+    """
+    import time
+    try:
+        from Aurik10.ui.bridge_calibration import BridgeCalibrationData
+        from backend.core.calibrated_constants import get_constants
+        from backend.core.calibration_context import get_calibration_context
+
+        ctx = get_calibration_context()
+        if ctx is None:
+            return BridgeCalibrationData().to_frontend_dict()
+
+        const = get_constants(ctx)
+        depth = int(ctx.transfer_chain_depth)
+
+        warning = ""
+        if depth >= 4:
+            warning = (
+                f"Tiefe Transfer-Kette ({depth} Stufen) — "
+                "erwartete Einschränkungen bei Brillanz, Transparenz und SNR."
+            )
+
+        color = "#E6A817" if depth >= 4 else ("#4CAF50" if depth >= 3 else "#2196F3")
+
+        data = BridgeCalibrationData(
+            restorability_score=float(ctx.restorability_score),
+            transfer_chain_depth=depth,
+            material_type=str(ctx.material_type),
+            snr_db=float(getattr(ctx, 'snr_db', 30.0)),
+            bandwidth_hz=float(getattr(ctx, 'bandwidth_hz', 20000.0)),
+            era_decade=int(getattr(ctx, 'era_decade', 1980)),
+            genre=str(getattr(ctx, 'genre', 'unknown')),
+            vocal_confidence=float(getattr(ctx, 'vocal_confidence', 0.0)),
+            chain_factor=float(getattr(const, 'chain_factor', ctx.chain_factor)),
+            artifact_freedom_min=float(const.artifact_freedom_min),
+            regression_threshold=float(const.regression_threshold),
+            gdd_spectral_ms=float(const.gdd_spectral_ms('phase_29')),
+            echo_corr_threshold=float(getattr(const, 'echo_corr_threshold', 0.35)),
+            hg_base_threshold=float(const.hg_base_threshold),
+            min_phase_strength=float(const.min_phase_strength),
+            use_minimum_phase_filter=bool(getattr(const, 'use_minimum_phase_filter', False)),
+            deesser_depth_factor=float(getattr(const, 'deesser_depth_factor', 1.0)),
+            quality_color=color,
+            expected_phase_count=(43 if depth >= 4 else (35 if depth >= 3 else 25)),
+            expected_duration_factor=(2.5 if depth >= 4 else (1.8 if depth >= 3 else 1.0)),
+            deep_chain_warning=warning,
+            calibration_timestamp=time.monotonic(),
+        )
+        return data.to_frontend_dict()
+    except Exception:
+        return {}
+
+
 # ---------------------------------------------------------------------------
 # Defect-Scan-Cache  (Thread-sicher, LRU, content-addressed)
 # ---------------------------------------------------------------------------
@@ -602,11 +663,17 @@ def normalize_user_mode(mode: str | None) -> str:
         "fast": "Restoration",
         "balanced": "Restoration",
         "quality": "Restoration",
-        "maximum": "Studio 2026",
+        "maximum": "Restoration",  # §v10.80: Maximum = höchste Qualität im gewählten Modus, nicht Studio-Zwang
         "studio2026": "Studio 2026",
         "studio": "Studio 2026",
+        "preview": "Preview",  # §3.5: 30s preview before full restoration
     }
     return aliases.get(raw, "Restoration")
+
+
+def is_preview_mode(mode: str | None) -> bool:
+    """§3.5: Prüft, ob der Modus ein Preview ist (30s Vorschau)."""
+    return normalize_user_mode(mode) == "Preview"
 
 
 def get_restorer_classes() -> tuple[type, type]:
@@ -1145,6 +1212,8 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
                 if isinstance(_rc.get("transfer_generation_count", 0), (int, float))
                 else 0
             ),
+            # §Bridge: Vollständige Kalibrierungsdaten für Frontend (kein Direktimport!)
+            "_bridge_calibration": _build_bridge_calibration_dict(),
             "hf_loss_db": (
                 _safe_float(_rc.get("hf_loss_db", 0.0), 0.0)
                 if isinstance(_rc.get("hf_loss_db"), (int, float))
@@ -1807,18 +1876,20 @@ def warmup_models_background() -> None:
 
     Plugin-Reihenfolge spiegelt §4.4-Priorisierung:
     Tier-1-Primär-Plugins zuerst (VAD/Pitch/Tagging), Fallbacks danach.
+
+    §v10.305 G73: Warmup-Plugin-Namen MÜSSEN vor dem ersten Lauf validiert werden.
     """
     import importlib
 
     _plugins = [
         # Tier-1 Primär-Plugins (§9.7.4 — Pflicht-Vorwärmen, §4.4-Reihenfolge)
-        ("plugins.silero_plugin", "get_silero_vad"),  # VAD (~1 MB, ultraschnell — zuerst)
+        ("plugins.silero_plugin", "get_silero_plugin"),  # VAD (~1 MB, ultraschnell — zuerst)
         ("plugins.fcpe_plugin", "get_fcpe_plugin"),  # Pitch-Tracking Primär (§4.4)
         ("plugins.beats_plugin", "get_beats_plugin"),  # Audio-Tagging Primär (§4.4)
-        ("plugins.sgmse_plugin", "get_sgmse_plugin"),  # Dereverb/Denoising Primär
+        ("plugins.sgmse_plugin", "get_sgmse_plus_plugin"),  # Dereverb/Denoising Primär
         ("backend.core.noise_reduction", "get_noise_reducer"),  # DeepFilterNet v3.II Breitrauschen
         # Stem-Separation Primärpfad (§4.4 — BS-RoFormer > MDX23C)
-        ("plugins.bs_roformer_plugin", "get_bs_roformer_plugin"),  # Gesang Primär (860 MB — lazy)
+        ("plugins.bs_roformer_plugin", "get_bs_roformer"),  # Gesang Primär (860 MB — lazy)
         ("plugins.mdx23c_plugin", "get_mdx23c_plugin"),  # Instrumental Primär (Kim_Vocal_2)
         # Fallback-Plugins (nach Bedarf)
         ("plugins.panns_plugin", "get_panns_plugin"),  # Audio-Tagging Fallback
@@ -1829,38 +1900,50 @@ def warmup_models_background() -> None:
     logger.info("bridge: warmup started (%d plugins) …", len(_plugins))
     _loaded = 0
     _failed = 0
+    # §v10.304.30: Keine GPU-Detection im Warmup. torch.zeros("cuda") hängt
+    # auf manchen ROCm-Systemen → Warmup-Thread tot. GPU-Plugins werden
+    # trotzdem geladen — wenn GPU nicht verfügbar, crashen sie und werden
+    # von try/except gefangen. Warmup läuft GARANTIERT durch.
     for _mod, _accessor in _plugins:
-        # §v10.101 MERT async: 330M-Parameter-Modell braucht ~160s Kaltstart.
-        # Synchrones Laden blockiert den Warmup-Thread → UI/Import verzögert.
-        # Daher: MERT in eigenem Thread laden, Warmup sofort fortsetzen.
+        def _load_one(_m: str, _a: str) -> bool:
+            try:
+                m = importlib.import_module(_m)
+                fn = getattr(m, _a, None)
+                if fn is not None:
+                    fn()
+                return True
+            except Exception as _e:
+                logger.warning("bridge: %s.%s FEHLGESCHLAGEN: %s", _m, _a, _e)
+                return False
+
         if "mert" in _mod.lower():
-            def _load_mert_async(_m=_mod, _a=_accessor):
-                try:
-                    m = importlib.import_module(_m)
-                    fn = getattr(m, _a, None)
-                    if fn is not None:
-                        fn()
-                        logger.info("bridge: MERT async warmup complete (~160s)")
-                except Exception as _e:
-                    logger.warning("bridge: MERT async FEHLGESCHLAGEN: %s", _e)
-            _mert_thread = threading.Thread(target=_load_mert_async, daemon=True, name="aurik_warmup_mert")
-            _mert_thread.start()
-            logger.info("bridge: MERT async warmup started (background thread)")
+            try:
+                _mert_thread = threading.Thread(
+                    target=lambda m=_mod, a=_accessor: _load_one(m, a),
+                    daemon=True, name="aurik_warmup_mert",
+                )
+                _mert_thread.start()
+                logger.info("bridge: MERT async warmup started")
+            except Exception:
+                pass
             continue
+
         try:
-            m = importlib.import_module(_mod)
-            fn = getattr(m, _accessor, None)
-            if fn is not None:
-                fn()
+            if _load_one(_mod, _accessor):
                 _loaded += 1
-                if "clap" in _mod.lower():
-                    logger.info("bridge: %s.%s geladen (2.2 GB)", _mod.rsplit(".", maxsplit=1)[-1], _accessor)
-                else:
-                    logger.debug("bridge: %s.%s vorgeladen", _mod.rsplit(".", maxsplit=1)[-1], _accessor)
-        except Exception as _e:
+            else:
+                _failed += 1
+        except Exception as _sync_exc:
             _failed += 1
-            logger.warning("bridge: %s.%s FEHLGESCHLAGEN: %s", _mod, _accessor, _e)
+            logger.warning("bridge: %s.%s CRASH: %s", _mod, _accessor, _sync_exc)
     logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen", _loaded, _failed)
+    # §v10.305 G73: Validiere alle Plugin-Zugriffsnamen (einmal pro Prozess)
+    if _failed > 0:
+        logger.warning(
+            "bridge: %d Warmup-Plugins FEHLGESCHLAGEN — "
+            "Zugriffsnamen in warmup_models_background() prüfen!",
+            _failed,
+        )
 
 
 def warmup_rocm() -> None:
@@ -3061,6 +3144,7 @@ def get_phase_display_formatter_fns() -> dict[str, object]:
         logger.warning("bridge.py::get_phase_display_formatter_fns fallback", exc_info=True)
         return {}
 
+
 def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | None:
     """§v10.101 Live-Preview: Aktuelles Pipeline-Audio an beliebiger Position.
 
@@ -3068,9 +3152,15 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
     und hoeren, wie der aktuelle Stand klingt.
     """
     try:
-        import base64, io, os, tempfile, numpy as np, soundfile as sf
+        import base64
+        import io
+        import os
+        import tempfile
 
-        _path = os.path.join(tempfile.gettempdir(), 'aurik_live_preview.wav')
+        import numpy as np
+        import soundfile as sf
+
+        _path = os.path.join(tempfile.gettempdir(), "aurik_live_preview.wav")
         if not os.path.exists(_path):
             return None
 
@@ -3081,16 +3171,15 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
         snippet = audio[start:end]
 
         buf = io.BytesIO()
-        sf.write(buf, snippet, sr, format='WAV', subtype='PCM_16')
+        sf.write(buf, snippet, sr, format="WAV", subtype="PCM_16")
         buf.seek(0)
 
         return {
-            'audio_b64': base64.b64encode(buf.read()).decode('ascii'),
-            'sample_rate': sr,
-            'duration_s': float(len(snippet) / sr),
-            'seek_s': float(seek_s),
-            'total_s': float(n_total / sr),
+            "audio_b64": base64.b64encode(buf.read()).decode("ascii"),
+            "sample_rate": sr,
+            "duration_s": float(len(snippet) / sr),
+            "seek_s": float(seek_s),
+            "total_s": float(n_total / sr),
         }
     except Exception:
         return None
-

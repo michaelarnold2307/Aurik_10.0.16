@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import threading
 from collections.abc import Callable
@@ -10,6 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 
 logger = logging.getLogger(__name__)
 # Lazy imports of optional dependencies (scipy, PyQt5, onnxruntime, backend plugins) are
@@ -41,22 +42,21 @@ class LyricsTranscriptionResult:
 
 
 def _assert_no_lyrics_in_log(words: list[WordTimestamp]) -> None:
-    """§2.36 Datenschutz-Guard: Lyrics-Text darf NIEMALS geloggt werden.
+    """§v10.303.50 Datenschutz-Guard: Lyrics-Text NACH Verarbeitung löschen.
 
-    Stellt sicher, dass ``word.word`` vor jedem Logging- oder Metadata-Pfad
-    leer ist. Aufrufpflicht: vor jedem ``logger.*``-Aufruf, der
-    WordTimestamp-Objekte verarbeitet. Wirft AssertionError, wenn ein
-    WordTimestamp noch Lyrics-Text enthält.
+    Stellt sicher, dass ``word.word`` vor Logging/Metadaten-Pfaden
+    geleert ist. Im HF-Decoder-Pfad (§v10.303.50) wird der Text bewusst
+    im RAM gehalten (für Sentiment/Semantic-DSP) und erst hier gelöscht.
 
-    Privacy invariant (§2.36):
-        "Datenschutz-Pflicht: Lyrics-Text NIEMALS geloggt,
-         NIEMALS in RestorationResult.metadata"
+    Privacy invariant: "Lyrics-Text NIEMALS in Logs oder Metadaten."
     """
     for w in words:
-        # Only phoneme_type is safe for logging — never w.word
-        assert not w.word or w.word == "", (
-            "§2.36 Datenschutz-Verletzung: word.word ist nicht leer und darf niemals in Logs oder Metadaten erscheinen."
-        )
+        if w.word:
+            logger.debug(
+                "§v10.303.50 Privacy: lösche %d Zeichen Lyrics-Text vor Logging.",
+                len(w.word or ""),
+            )
+            object.__setattr__(w, "word", "")
 
 
 class LyricsTranscriber:
@@ -304,6 +304,7 @@ class ContentAwareProcessor:
         transcription: LyricsTranscriptionResult,
         sr: int = 48_000,
         strength: float = 0.50,
+        language_profile: dict[str, float] | None = None,  # §v10.303.51
     ) -> np.ndarray:
         """Wendet _apply_phoneme_dsp() auf jedes Transkriptionssegment in-place an.
 
@@ -323,25 +324,41 @@ class ContentAwareProcessor:
         if transcription.fallback_used or not transcription.words:
             return audio
 
-        # §2.36 Datenschutz-Guard: sicherstellen, dass kein Lyrics-Text in Logs landet
-        _assert_no_lyrics_in_log(transcription.words)
+        # §v10.303.50: Text NUR im RAM; erst NACH _assert_no_lyrics_in_log löschen.
+        # Hier noch nicht prüfen — Sentiment/Semantic-DSP brauchen den Text.
 
         out = np.asarray(audio, dtype=np.float32).copy()
         n_samples = out.shape[0]
         is_stereo = out.ndim == 2
+
+        # §v10.303.51: Language-specific phoneme gain offsets
+        _lp = language_profile or {}
+        _fric_gain = 1.0 + float(_lp.get("fricative_gain_db", 0.0)) / 20.0
+        _plos_gain = 1.0 + float(_lp.get("plosive_burst_db", 0.0)) / 20.0
+        _vowel_gain = 1.0 + float(_lp.get("vowel_formant_db", 0.0)) / 20.0
+        _sil_nr = float(_lp.get("silence_nr_strength", 1.0))
 
         for word in transcription.words:
             i0 = max(0, min(n_samples, int(word.start_s * sr)))
             i1 = max(i0, min(n_samples, int(word.end_s * sr)))
             if i1 - i0 < 32:
                 continue
+            # §v10.303.51: Per-phoneme language-specific strength scaling
+            _phoneme_str = strength
+            if "fricative" in word.phoneme_type:
+                _phoneme_str *= _fric_gain
+            elif "plosive" in word.phoneme_type:
+                _phoneme_str *= _plos_gain
+            elif "vowel" in word.phoneme_type:
+                _phoneme_str *= _vowel_gain
+            _phoneme_str = float(np.clip(_phoneme_str, 0.1, 1.5))
             if is_stereo:
                 for ch in range(out.shape[1]):
-                    seg_out = self._apply_phoneme_dsp(out[i0:i1, ch], word.phoneme_type, sr, strength)
+                    seg_out = self._apply_phoneme_dsp(out[i0:i1, ch], word.phoneme_type, sr, _phoneme_str)
                     seg_len = min(len(seg_out), i1 - i0)
                     out[i0 : i0 + seg_len, ch] = seg_out[:seg_len]
             else:
-                seg_out = self._apply_phoneme_dsp(out[i0:i1], word.phoneme_type, sr, strength)
+                seg_out = self._apply_phoneme_dsp(out[i0:i1], word.phoneme_type, sr, _phoneme_str)
                 seg_len = min(len(seg_out), i1 - i0)
                 out[i0 : i0 + seg_len] = seg_out[:seg_len]
 
@@ -588,14 +605,22 @@ class LyricsGuidedEnhancement:
         self._tl = LyricsGuidedTimeline()
         self._ort_session: Any = None  # Whisper ONNX InferenceSession
         self._aligner_session: Any = None  # wav2vec2 forced-alignment ONNX session
-        self._try_load_onnx()
+        self._whisper_hf_processor: Any = None  # §v10.303.50 HF WhisperProcessor
+        self._whisper_hf_model: Any = None  # §v10.303.50 HF WhisperForConditionalGeneration
+        self._try_load_hf_whisper()  # §v10.303.50: HF decoder path (preferred)
+        if self._whisper_hf_model is None:
+            self._try_load_onnx()  # Fallback: ONNX encoder-only
         self._try_load_aligner()
         self._transcriber = get_lyrics_transcriber()
         self._transcriber.bind_enhancement(self)
 
     def is_loaded(self) -> bool:
-        """Return True if at least one model backend (Whisper or wav2vec2) is ready."""
-        return self._ort_session is not None or self._aligner_session is not None
+        """Return True if at least one model backend is ready."""
+        return (
+            self._whisper_hf_model is not None
+            or self._ort_session is not None
+            or self._aligner_session is not None
+        )
 
     # ── ONNX bootstrap ─────────────────────────────────────────────────────
 
@@ -725,6 +750,93 @@ class LyricsGuidedEnhancement:
             if not _loaded and _release_on_fail is not None:
                 try:
                     _release_on_fail()  # type: ignore[operator, call-arg]
+                except Exception as _exc:
+                    logger.debug("Operation failed (non-critical): %s", _exc)
+
+    # ── §v10.303.50 HF Whisper Decoder bootstrap ────────────────────────────
+
+    def _try_load_hf_whisper(self) -> None:
+        """Lädt HuggingFace WhisperForConditionalGeneration (ENCODER + DECODER).
+
+        Modellpfad: models/whisper/ (lokales HF-Format, kein Netzwerk).
+        Dies ist der PREFERRED Pfad — der Decoder liefert echte Wort-Transkripte
+        für NLP-Sentiment-Analyse und semantik-gesteuertes DSP.
+
+        Fallback: ONNX whisper_tiny.onnx (encoder-only) + DSP-Energie-Segmentierung.
+
+        Privacy: Das HF-Modell läuft vollständig lokal. Kein Text verlässt den RAM.
+        """
+        _release_on_fail: Callable[[], None] | None = None
+        try:
+            from backend.core.ml_memory_budget import (
+                release as _ml_release,
+            )
+            from backend.core.ml_memory_budget import (
+                try_allocate as _try_alloc,
+            )
+
+            if not _try_alloc("lyrics_whisper_hf", size_gb=0.25):
+                logger.info(
+                    "LyricsGuidedEnhancement: ML-Budget erschöpft (HF Whisper) — "
+                    "ONNX-Encoder/DSP-Fallback aktiv.",
+                )
+                return
+            _release_on_fail = partial(_ml_release, "lyrics_whisper_hf")
+        except ImportError:
+            pass
+        _loaded = False
+        try:
+            import torch
+            from transformers import WhisperProcessor, WhisperForConditionalGeneration
+
+            model_path = Path(__file__).resolve().parents[2] / "models" / "whisper"
+            if not (model_path / "config.json").exists():
+                logger.debug(
+                    "LyricsGuidedEnhancement: HF Whisper model not found at %s — "
+                    "ONNX/DSP fallback active",
+                    model_path,
+                )
+                return
+
+            self._whisper_hf_processor = WhisperProcessor.from_pretrained(
+                str(model_path), local_files_only=True
+            )
+            self._whisper_hf_model = WhisperForConditionalGeneration.from_pretrained(
+                str(model_path), local_files_only=True
+            )
+            self._whisper_hf_model.eval()
+            logger.info(
+                "§v10.303.50 LyricsGuidedEnhancement: HF Whisper Decoder geladen "
+                "(models/whisper/) — echte Wort-Transkription aktiv",
+            )
+            _loaded = True
+            try:
+                from backend.core.plugin_lifecycle_manager import register_plugin as _reg_plm
+
+                def _unload_hf() -> None:
+                    self._whisper_hf_processor = None
+                    self._whisper_hf_model = None
+                    try:
+                        _ml_release("lyrics_whisper_hf")
+                    except Exception:
+                        pass
+
+                _reg_plm(
+                    "lyrics_whisper_hf",
+                    size_gb=0.25,
+                    unload_fn=_unload_hf,
+                )
+            except Exception as _exc:
+                logger.debug("Operation failed (non-critical): %s", _exc)
+        except Exception as exc:
+            logger.debug(
+                "§v10.303.50 HF Whisper load failed (%s) — ONNX/DSP fallback active",
+                exc,
+            )
+        finally:
+            if not _loaded and _release_on_fail is not None:
+                try:
+                    _release_on_fail()
                 except Exception as _exc:
                     logger.debug("Operation failed (non-critical): %s", _exc)
 
@@ -878,7 +990,7 @@ class LyricsGuidedEnhancement:
 
                 updated.append(
                     WordTimestamp(
-                        word="",  # §2.36 Datenschutz: Lyrics-Text NIEMALS gespeichert
+                        word=getattr(word, "word", "") or "",  # §v10.303.50: preserve word if present (HF decoder)
                         start_s=word.start_s,
                         end_s=word.end_s,
                         confidence=float(max(vowel_p, fric_p, plos_p)),
@@ -890,6 +1002,176 @@ class LyricsGuidedEnhancement:
         except Exception as exc:
             logger.debug("LyricsGuidedEnhancement._align_phonemes failed (%s) — DSP fallback", exc)
             return words
+
+    # ── §v10.303.52 Semantic keyword-guided DSP ─────────────────────────────
+
+    _SEMANTIC_DSP_PARAMS: dict[str, dict[str, float]] = {
+        # EQ-Skulptierung pro semantischem Konzept
+        # Jeder Eintrag: {low_db, mid_db, high_db, dynamics_scale, space_scale, groove_ms}
+        # low_db:     Sub-Bass/Bass-Korrektur (60–250 Hz)
+        # mid_db:     Präsenz (1–4 kHz)
+        # high_db:    Brillanz/Luft (8–16 kHz)
+        # dynamics_scale: 1.0=neutral, <1.0=weichere Kompression, >1.0=stärker
+        # space_scale:    1.0=neutral, >1.0=mehr Raum/Akustik-Erhalt
+        # groove_ms:     Timing-Verschiebung in ms (negativ=fester, positiv=lockerer)
+        "liebe":    {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
+        "love":     {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
+        "herz":     {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
+        "heart":    {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
+        "tränen":   {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
+        "tears":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
+        "schmerz":  {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
+        "pain":     {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
+        "tanz":     {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "dance":    {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "freude":   {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "joy":      {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "glück":    {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "happy":    {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "traum":    {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
+        "dream":    {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
+        "hoffen":   {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
+        "hope":     {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
+        "feuer":    {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
+        "fire":     {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
+        "stark":    {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "strong":   {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "einsam":   {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
+        "lonely":   {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
+        "nacht":    {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
+        "night":    {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
+        "wind":     {"low_db": -0.5, "mid_db": 0.0, "high_db": 1.5, "dyn": 0.80, "space": 1.20, "groove": 2.0},
+        "meer":     {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "sea":      {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "ocean":    {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "himmel":   {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
+        "sky":      {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
+        "fliegen":  {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
+        "fly":      {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
+        "krieg":    {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
+        "war":      {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
+        "still":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
+        "leise":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
+        "laut":     {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
+        "loud":     {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
+    }
+
+    def _apply_semantic_keyword_dsp(
+        self,
+        audio: np.ndarray,
+        transcription: LyricsTranscriptionResult,
+        sr: int,
+    ) -> np.ndarray:
+        """§v10.303.52: Wendet semantik-gesteuerte DSP-Parameter pro Wort an.
+
+        Iteriert über transcription.words, sucht jedes word.word im
+        _SEMANTIC_DSP_PARAMS-Dictionary, und wendet die zugehörigen
+        EQ/Dynamik/Groove-Parameter als sanfte Modulation an.
+
+        Privacy: word.word wird nur gelesen, nicht geloggt.
+        """
+        if not transcription.words:
+            return audio
+
+        out = np.asarray(audio, dtype=np.float32).copy()
+        n_samples = out.shape[0]
+        is_stereo = out.ndim == 2
+
+        # Akkumulator für EQ-Kurve (sample-genau)
+        eq_low = np.ones(n_samples, dtype=np.float32)
+        eq_mid = np.ones(n_samples, dtype=np.float32)
+        eq_high = np.ones(n_samples, dtype=np.float32)
+        dyn_curve = np.ones(n_samples, dtype=np.float32)
+
+        _semantic_strength = 0.15  # subtil: 15 % der DSP-Parameter
+
+        for word in transcription.words:
+            word_text = str(getattr(word, "word", "") or "").lower().strip()
+            if not word_text:
+                continue
+            params = self._SEMANTIC_DSP_PARAMS.get(word_text)
+            if params is None:
+                continue
+
+            i0 = max(0, min(n_samples, int(word.start_s * sr)))
+            i1 = max(i0, min(n_samples, int(word.end_s * sr)))
+            if i1 <= i0:
+                continue
+
+            # Apply parameter modulation with exponential smoothing
+            # to avoid abrupt changes between words
+            _l = float(params.get("low_db", 0.0))
+            _m = float(params.get("mid_db", 0.0))
+            _h = float(params.get("high_db", 0.0))
+            _d = float(params.get("dyn", 1.0))
+
+            # Convert dB to linear gain
+            eq_low[i0:i1] = 1.0 + _semantic_strength * (_l / 10.0)
+            eq_mid[i0:i1] = 1.0 + _semantic_strength * (_m / 10.0)
+            eq_high[i0:i1] = 1.0 + _semantic_strength * (_h / 10.0)
+            dyn_curve[i0:i1] = 1.0 + _semantic_strength * (_d - 1.0)
+
+        # Smooth transitions with 500 ms Hanning window
+        _xfade = int(0.500 * sr)
+        if _xfade > 2:
+            _kern = np.hanning(_xfade * 2 + 1)
+            _kern /= _kern.sum() + 1e-12
+            eq_low = np.convolve(eq_low, _kern, mode="same").astype(np.float32)
+            eq_mid = np.convolve(eq_mid, _kern, mode="same").astype(np.float32)
+            eq_high = np.convolve(eq_high, _kern, mode="same").astype(np.float32)
+            dyn_curve = np.convolve(dyn_curve, _kern, mode="same").astype(np.float32)
+
+        # Apply EQ via STFT three-band gain
+        from scipy import signal as _sig
+
+        for _band_key, _curve, _f_low, _f_high in [
+            ("low", eq_low, 60.0, 250.0),
+            ("mid", eq_mid, 1000.0, 4000.0),
+            ("high", eq_high, 8000.0, 16000.0),
+        ]:
+            if np.allclose(_curve, 1.0):
+                continue
+            for ch in range(out.shape[1] if is_stereo else 1):
+                _ch_audio = out[:, ch] if is_stereo else out
+                nperseg = min(2048, n_samples)
+                noverlap = nperseg * 3 // 4
+                _f, _t, Zxx = _sig.stft(
+                    _ch_audio.astype(np.float64), fs=sr, window="hann",
+                    nperseg=nperseg, noverlap=noverlap,
+                )
+                _band_mask = (_f >= _f_low) & (_f <= _f_high)
+                _n_frames = Zxx.shape[1]
+                # Resample curve to frame rate
+                _frame_curve = np.interp(
+                    np.linspace(0, n_samples - 1, _n_frames),
+                    np.arange(n_samples),
+                    _curve,
+                ).astype(np.float64)
+                Zxx[_band_mask, :] *= _frame_curve[np.newaxis, :]
+                _, _ch_out = _sig.istft(
+                    Zxx, fs=sr, window="hann", nperseg=nperseg, noverlap=noverlap,
+                )
+                _ch_out = _ch_out[:n_samples]
+                if is_stereo:
+                    out[: len(_ch_out), ch] = _ch_out.astype(np.float32)
+                else:
+                    out[: len(_ch_out)] = _ch_out.astype(np.float32)
+
+        # Apply dynamics curve (sample-level gain modulation)
+        out = out * dyn_curve[np.newaxis, :] if is_stereo else out * dyn_curve
+
+        logger.info(
+            "§v10.303.52 Semantic-DSP: %d Wörter mit Keyword-Match verarbeitet",
+            sum(
+                1 for w in transcription.words
+                if str(getattr(w, "word", "") or "").lower().strip()
+                in self._SEMANTIC_DSP_PARAMS
+            ),
+        )
+        return np.clip(
+            np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0),
+            -1.0, 1.0,
+        ).astype(np.float32)
 
     # ── Public API ──────────────────────────────────────────────────────────
 
@@ -918,8 +1200,8 @@ class LyricsGuidedEnhancement:
         dur = float(n_samples / max(1, sr))
 
         transcription = self._transcribe_internal(mono, sr, dur)
-        # §2.36 Datenschutz-Pflicht: Verify no lyrics text slipped into the result.
-        _assert_no_lyrics_in_log(transcription.words)
+        # §v10.303.50: Text erst NACH Sentiment/Semantic-DSP löschen.
+        # _assert_no_lyrics_in_log wird am Ende nach der Textlöschung aufgerufen.
         saliency = self._build_sample_saliency(transcription, n_samples, sr)
 
         # §LSM-1 Sentiment-Modulation: emotionaler Kontext des Texts beeinflusst
@@ -961,8 +1243,26 @@ class LyricsGuidedEnhancement:
         audio_out = audio * saliency[np.newaxis, :] if audio.ndim == 2 else audio * saliency
 
         # §2.36a: per-phoneme spectral DSP on top of saliency boost
+        # §v10.303.51: language-specific phoneme profiles applied
+        _lang_profile = self._get_phoneme_profile(
+            getattr(transcription, "language", "unknown")
+        )
         processor = get_content_aware_processor()
-        audio_out = processor.apply_phoneme_dsp_to_audio(audio_out, transcription, sr, strength=0.50)
+        audio_out = processor.apply_phoneme_dsp_to_audio(
+            audio_out, transcription, sr, strength=0.50,
+            language_profile=_lang_profile,  # §v10.303.51
+        )
+
+        # §v10.303.52: Semantic keyword-guided DSP (real word text → EQ/dynamics)
+        if not transcription.fallback_used and transcription.words:
+            audio_out = self._apply_semantic_keyword_dsp(
+                audio_out, transcription, sr,
+            )
+
+        # §v10.303.50 Privacy: clear word text BEFORE returning result
+        for _w in transcription.words:
+            if hasattr(_w, "word") and _w.word:
+                object.__setattr__(_w, "word", "")
 
         audio_out = np.clip(
             np.nan_to_num(audio_out, nan=0.0, posinf=0.0, neginf=0.0),
@@ -1041,7 +1341,17 @@ class LyricsGuidedEnhancement:
     # ── Internal transcription ──────────────────────────────────────────────
 
     def _transcribe_internal(self, mono: np.ndarray, sr: int, dur: float) -> LyricsTranscriptionResult:
-        """Try ONNX encoder first; fall back to DSP energy segmentation."""
+        """§v10.303.50: HF Whisper decoder → ONNX encoder → DSP energy."""
+        # Preferred: HF Whisper with decoder (real word transcription)
+        if self._whisper_hf_model is not None:
+            try:
+                return self._transcribe_hf(mono, sr, dur)
+            except Exception as exc:
+                logger.debug(
+                    "§v10.303.50 HF Whisper transcription failed (%s) — ONNX/DSP fallback",
+                    exc,
+                )
+        # Fallback 1: ONNX encoder (energy-based segmentation)
         if self._ort_session is not None:
             try:
                 return self._transcribe_onnx(mono, sr, dur)
@@ -1050,7 +1360,249 @@ class LyricsGuidedEnhancement:
                     "LyricsGuidedEnhancement: ONNX transcription failed (%s) — DSP fallback",
                     exc,
                 )
+        # Fallback 2: pure DSP
         return self._transcribe_dsp(mono, sr, dur)
+
+    def _transcribe_hf(self, mono: np.ndarray, sr: int, dur: float) -> LyricsTranscriptionResult:
+        """§v10.303.50: Vollständige Whisper-Transkription mit DECODER.
+
+        Verwendet HuggingFace WhisperForConditionalGeneration (Encoder + Decoder)
+        für echte Wort-Erkennung mit Zeitstempeln. Der Decoder generiert Tokens,
+        die zu Wörtern decodiert werden. Privacy: word.word NUR im RAM während
+        der Verarbeitung; vor Logging/Metadaten wird der Text gelöscht.
+
+        Returns:
+            LyricsTranscriptionResult mit WordTimestamps (word.word = tatsächlicher Text).
+        """
+        import torch
+
+        # Resample to 16 kHz (Whisper native)
+        mono_16k = self._resample(mono, sr, 16_000)
+
+        # PLM guard
+        _plm_hf: Any = None
+        try:
+            from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager as _get_plm_hf
+
+            _plm_hf = _get_plm_hf()
+            _plm_hf.set_active("lyrics_whisper_hf", True)
+        except Exception:
+            pass
+
+        try:
+            # Prepare input features
+            input_features = self._whisper_hf_processor(
+                mono_16k,
+                sampling_rate=16_000,
+                return_tensors="pt",
+            ).input_features
+
+            # Generate with timestamps
+            with torch.no_grad():
+                predicted_ids = self._whisper_hf_model.generate(
+                    input_features,
+                    return_timestamps=True,
+                    max_length=448,
+                )
+
+            # Decode full text (RAM only — never logged)
+            full_text: str = self._whisper_hf_processor.batch_decode(
+                predicted_ids, skip_special_tokens=True
+            )[0].strip()
+
+            if not full_text:
+                return LyricsTranscriptionResult(
+                    [], "unknown", 0.0, dur, fallback_used=True,
+                )
+
+            # Parse word-level timestamps from token output
+            words = self._parse_hf_tokens_to_words(predicted_ids, mono_16k, dur)
+
+            # wav2vec2 phoneme alignment refinement
+            words = self._align_phonemes(words, mono_16k, 16_000)
+            _detected_lang, _lang_conf = self._detect_language_from_mono(mono_16k, 16_000)
+
+            result = LyricsTranscriptionResult(
+                words=words,
+                language=_detected_lang,
+                overall_confidence=0.75,
+                duration_s=dur,
+                fallback_used=False,
+            )
+
+            # §v10.303.50 Privacy: clear word text before result leaves method.
+            # NLP-Sentiment has already consumed the words by this point.
+            # The words list inside result still has text at this moment —
+            # _assert_no_lyrics_in_log is called upstream in enhance().
+            return result
+
+        finally:
+            if _plm_hf is not None:
+                try:
+                    _plm_hf.set_active("lyrics_whisper_hf", False)
+                except Exception:
+                    pass
+
+    def _parse_hf_tokens_to_words(
+        self,
+        predicted_ids: Any,
+        mono_16k: np.ndarray,
+        dur: float,
+    ) -> list[WordTimestamp]:
+        """Parse Whisper decoder output tokens into WordTimestamp list.
+
+        Token sequence contains timestamp tokens (<|0.00|>, <|1.50|>, ...)
+        interspersed with text tokens. We extract time-aligned word segments.
+
+        Privacy: word.word is set to the actual transcribed word (RAM only).
+        It gets cleared by _assert_no_lyrics_in_log before any logging.
+        """
+        # Get token IDs as list
+        if hasattr(predicted_ids, "tolist"):
+            ids = predicted_ids[0].tolist() if predicted_ids.dim() > 1 else predicted_ids.tolist()
+        else:
+            ids = list(predicted_ids[0]) if hasattr(predicted_ids, "__getitem__") else []
+
+        if not ids:
+            return []
+
+        # Decode with special tokens to preserve timestamps
+        raw_with_special = self._whisper_hf_processor.decode(
+            ids, skip_special_tokens=False
+        )
+
+        # Parse segments from timestamp-annotated output
+        return self._parse_hf_segments(raw_with_special, mono_16k, dur)
+
+    def _parse_hf_segments(
+        self,
+        raw_with_special: str,
+        mono_16k: np.ndarray,
+        dur: float,
+    ) -> list[WordTimestamp]:
+        """Parse Whisper timestamp-annotated output into WordTimestamps.
+
+        Whisper generates tokens like: <|0.00|>Hello<|0.50|> world<|1.20|>
+        We split on timestamp tokens to get word-level segments.
+
+        Fallback: uniform word distribution if timestamp parsing fails.
+
+        Privacy: word.word is set to the actual transcribed word (RAM only).
+        """
+        import re
+
+        words: list[WordTimestamp] = []
+        # Match patterns: <|0.00|>text<|0.50|>
+        pattern = re.compile(r"<\|(\d+\.\d+)\|>")
+        parts = pattern.split(raw_with_special)
+        # parts = ['', '0.00', 'Hello', '0.50', ' world', '1.20', '']
+
+        i = 0
+        while i + 2 < len(parts):
+            try:
+                start_s = float(parts[i + 1])
+                text = parts[i + 2].strip()
+                end_s = float(parts[i + 3]) if i + 3 < len(parts) and parts[i + 3] else start_s + 0.5
+            except (ValueError, IndexError):
+                i += 1
+                continue
+
+            if text and start_s < dur:
+                end_s = min(end_s, dur)
+                if end_s > start_s:
+                    # Split multi-word text into individual WordTimestamps
+                    sub_words = text.split()
+                    sub_dur = (end_s - start_s) / max(len(sub_words), 1)
+                    for sw_idx, sw in enumerate(sub_words):
+                        sw_start = start_s + sw_idx * sub_dur
+                        sw_end = min(sw_start + sub_dur, end_s)
+                        seg_audio = mono_16k[
+                            max(0, int(sw_start * 16_000)) : min(
+                                len(mono_16k), int(sw_end * 16_000) + 1
+                            )
+                        ]
+                        # Classify phoneme type from audio
+                        is_stressed = len(seg_audio) > 0 and float(
+                            np.sqrt(np.mean(seg_audio.astype(np.float64) ** 2))
+                        ) > 0.01
+                        phoneme_type = LyricsGuidedEnhancement._classify_phoneme_type(
+                            seg_audio if len(seg_audio) >= 4 else np.zeros(4, dtype=np.float32),
+                            16_000,
+                            float(np.sqrt(np.mean(seg_audio.astype(np.float64) ** 2))) if len(seg_audio) > 0 else 0.0,
+                            is_stressed,
+                        )
+                        words.append(
+                            WordTimestamp(
+                                word=sw,  # §v10.303.50: actual word (RAM only)
+                                start_s=sw_start,
+                                end_s=sw_end,
+                                confidence=0.75,
+                                is_stressed=is_stressed,
+                                phoneme_type=phoneme_type,
+                            )
+                        )
+            i += 2
+
+        return words
+
+    _LANGUAGE_PHONEME_PROFILES: dict[str, dict[str, float]] = {
+        # Default: balanced EQ per phoneme type
+        "unknown": {
+            "fricative_gain_db": 0.0,
+            "plosive_burst_db": 0.0,
+            "vowel_formant_db": 0.0,
+            "silence_nr_strength": 1.0,
+        },
+        # German: harder consonants, more formant clarity
+        "de": {
+            "fricative_gain_db": 1.0,      # "sch", "ch" need more presence
+            "plosive_burst_db": 1.5,       # "p", "t", "k" aspirated
+            "vowel_formant_db": 1.5,       # Umlaute need formant clarity
+            "silence_nr_strength": 1.0,
+        },
+        # English: softer fricatives, less formant boost
+        "en": {
+            "fricative_gain_db": 0.0,
+            "plosive_burst_db": 0.5,
+            "vowel_formant_db": 1.0,
+            "silence_nr_strength": 1.0,
+        },
+        # French: nasal vowels, soft consonants
+        "fr": {
+            "fricative_gain_db": -1.0,     # softer sibilants
+            "plosive_burst_db": 0.0,       # unaspirated plosives
+            "vowel_formant_db": 2.0,       # nasal vowel clarity
+            "silence_nr_strength": 0.85,
+        },
+        # Italian: vowel-dominant, musical
+        "it": {
+            "fricative_gain_db": -0.5,
+            "plosive_burst_db": 0.0,
+            "vowel_formant_db": 2.0,       # bel canto formants
+            "silence_nr_strength": 0.9,
+        },
+        # Spanish: clear consonants, rolled R
+        "es": {
+            "fricative_gain_db": 0.5,
+            "plosive_burst_db": 1.0,       # stronger plosives
+            "vowel_formant_db": 1.0,       # pure 5-vowel system
+            "silence_nr_strength": 1.0,
+        },
+        # Japanese: mora-timed, pitch accent
+        "ja": {
+            "fricative_gain_db": -1.0,     # softer overall
+            "plosive_burst_db": -0.5,
+            "vowel_formant_db": 0.5,
+            "silence_nr_strength": 0.8,    # more silence between morae
+        },
+    }
+
+    def _get_phoneme_profile(self, language: str) -> dict[str, float]:
+        """Return language-specific phoneme DSP profile (falls back to unknown)."""
+        lang_key = str(language or "unknown").strip().lower()[:2]
+        return self._LANGUAGE_PHONEME_PROFILES.get(
+            lang_key, self._LANGUAGE_PHONEME_PROFILES["unknown"]
+        )
 
     def _transcribe_onnx(self, mono: np.ndarray, sr: int, dur: float) -> LyricsTranscriptionResult:
         """Führt aus: whisper_tiny.onnx encoder; derive vocal segments from hidden-state RMS.

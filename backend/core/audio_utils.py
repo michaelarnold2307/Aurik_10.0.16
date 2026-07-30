@@ -90,7 +90,7 @@ def restore_layout(audio: np.ndarray, was_transposed: bool) -> np.ndarray:
     return audio
 
 
-def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
+def safe_filtfilt(b, a, x, axis=-1, padtype="odd", padlen=None):
     """Zero-phase filter with automatic short-signal fallback.
 
     §v10.101: scipy.signal.filtfilt crasht mit "The length of the input
@@ -99,7 +99,8 @@ def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
     fällt auf lfilter (minimum-phase) zurück, wenn filtfilt nicht möglich.
     """
     from scipy.signal import filtfilt, lfilter
-    n = x.shape[axis] if hasattr(x, 'shape') and x.ndim > 0 else len(x)
+
+    n = x.shape[axis] if hasattr(x, "shape") and x.ndim > 0 else len(x)
     # padlen = 3 * max(len(b), len(a)) für b/a; 3 * order für SOS
     if padlen is None:
         padlen = 3 * max(len(b), len(a))
@@ -111,6 +112,40 @@ def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
     if n > max(len(b), len(a)):
         return lfilter(b, a, x, axis=axis)
     return np.asarray(x)
+
+
+def safe_sosfiltfilt(
+    sos: np.ndarray,
+    x: np.ndarray,
+    axis: int = -1,
+    *,
+    chain_depth: int = 1,
+) -> np.ndarray:
+    """Zero-phase SOS filter with depth-adaptive minimum-phase fallback.
+
+    §v10.131: ``scipy.signal.sosfiltfilt`` (zero-phase) erzeugt Pre-Ringing
+    durch den Rückwärts-Durchlauf. Auf degradiertem HF-Material (Kassette,
+    chain_depth ≥ 4) wird dieses Pre-Ringing hörbar als metallisches Echo
+    im 6–12 kHz-Bereich. ``sosfilt`` (kausal, minimum-phase) vermeidet das
+    Pre-Ringing vollständig; der Gruppenlaufzeit-Unterschied (< 0.1 ms bei
+    48 kHz) ist akustisch irrelevant, solange alle parallelen Bänder
+    denselben Filter-Typ verwenden.
+
+    Args:
+        sos: Second-order sections (SOS) filter coefficients
+        x: Input signal
+        axis: Filter axis
+        chain_depth: Transfer-Chain-Tiefe (§v10.131). Default 1 = zero-phase.
+                     Bei ≥4 wird minimum-phase (sosfilt) verwendet.
+
+    Returns:
+        Gefiltertes Signal (float64 oder wie Input).
+    """
+    from scipy.signal import sosfilt, sosfiltfilt
+
+    if chain_depth >= 4:
+        return sosfilt(sos, x, axis=axis)
+    return sosfiltfilt(sos, x, axis=axis)
 
 
 def safe_stft(
@@ -130,6 +165,10 @@ def safe_stft(
     Returns (f, t, Zxx) wie scipy.signal.stft.
     """
     from scipy.signal import stft as _scipy_stft
+
+    # §v10.119: Normalisiere boundary=True → 'zeros' (scipy-kompatibel)
+    if kwargs.get("boundary") is True:
+        kwargs["boundary"] = "zeros"
     n = x.shape[-1] if x.ndim > 0 else len(x)
     # Clamp nperseg to signal length
     _nperseg = min(nperseg, max(2, n))
@@ -161,6 +200,10 @@ def safe_istft(
     Returns (t, x) wie scipy.signal.istft.
     """
     from scipy.signal import istft as _scipy_istft
+
+    # §v10.119: Normalisiere boundary=True → 'zeros' (scipy-kompatibel)
+    if kwargs.get("boundary") is True:
+        kwargs["boundary"] = "zeros"
     # Clamp noverlap: 0 <= noverlap < nperseg
     if noverlap is None:
         _noverlap = nperseg // 2
@@ -793,10 +836,38 @@ def apply_musical_gain_envelope(  # pylint: disable=too-many-positional-argument
         material_key=material_key,
     ):
         edge_len = int(edge_profile["edge_len"])
+        # §v10.128 FIX: Statt Hard-Clamp auf max 1.0 (erzeugt Stufenfunktion an
+        # der Edge-Grenze → hörbarer Lautstärkesprung in den ersten Sekunden)
+        # verwenden wir einen Smooth-Crossfade: linearer Übergang von 1.0 (bei t=0)
+        # zum originalen Gain-Wert (bei t=edge_len). Das bewahrt die musikalische
+        # Kontinuität und verhindert den abrupten Pegelsprung.
+        # Crossfade-Länge: 200 ms (§2.45a-II) oder edge_len/4, je nachdem was kürzer ist.
+        _cf_samples = min(max(int(0.200 * sr), 480), max(edge_len // 4, 1))
         if bool(edge_profile["intro_quiet"]):
-            per_sample_gain[:edge_len] = np.minimum(per_sample_gain[:edge_len], 1.0)
+            _clamped = np.minimum(per_sample_gain[:edge_len], 1.0)
+            if _cf_samples < edge_len:
+                # Smooth blend: ramp from clamped (t=0) to original (t=edge_len)
+                _ramp = np.linspace(1.0, 0.0, _cf_samples, dtype=np.float32)
+                _iramp = 1.0 - _ramp
+                per_sample_gain[:_cf_samples] = (
+                    _clamped[:_cf_samples] * _ramp + per_sample_gain[:_cf_samples] * _iramp
+                )
+                per_sample_gain[_cf_samples:edge_len] = _clamped[_cf_samples:edge_len]
+            else:
+                per_sample_gain[:edge_len] = _clamped
         if bool(edge_profile["outro_quiet"]):
-            per_sample_gain[-edge_len:] = np.minimum(per_sample_gain[-edge_len:], 1.0)
+            _clamped_outro = np.minimum(per_sample_gain[-edge_len:], 1.0)
+            if _cf_samples < edge_len:
+                # Smooth blend: ramp from original (t=-edge_len) to clamped (t=-0)
+                _ramp_out = np.linspace(0.0, 1.0, _cf_samples, dtype=np.float32)
+                _iramp_out = 1.0 - _ramp_out
+                per_sample_gain[-edge_len:-edge_len + _cf_samples] = (
+                    _clamped_outro[:_cf_samples] * _ramp_out
+                    + per_sample_gain[-edge_len:-edge_len + _cf_samples] * _iramp_out
+                )
+                per_sample_gain[-edge_len + _cf_samples:] = _clamped_outro[_cf_samples:]
+            else:
+                per_sample_gain[-edge_len:] = _clamped_outro
         out = _render(per_sample_gain)
         out = limit_quiet_edge_boost(
             edge_reference,
@@ -939,18 +1010,14 @@ def crossfade_to_bypass(
 
     # Cosine-Fade: smooth, keine hörbaren Diskontinuitäten
     t = np.linspace(0, np.pi / 2, fade_len)
-    fade_in = np.sin(t)   # 0 → 1
+    fade_in = np.sin(t)  # 0 → 1
     fade_out = np.cos(t)  # 1 → 0
 
     if processed.ndim == 2 and original.ndim == 2:
         for ch in range(processed.shape[0]):
-            result[ch, :fade_len] = (
-                fade_out * processed[ch, -fade_len:] + fade_in * original[ch, :fade_len]
-            )
+            result[ch, :fade_len] = fade_out * processed[ch, -fade_len:] + fade_in * original[ch, :fade_len]
     elif processed.ndim == 1 and original.ndim == 1:
-        result[:fade_len] = (
-            fade_out * processed[-fade_len:] + fade_in * original[:fade_len]
-        )
+        result[:fade_len] = fade_out * processed[-fade_len:] + fade_in * original[:fade_len]
     else:
         # Dimension mismatch — fallback to original
         return original.astype(np.float32)
@@ -1014,3 +1081,30 @@ def apply_edge_taper(
             result[:, -n_taper:] *= win_out[np.newaxis, :]
 
     return np.asarray(result, dtype=np.float32)
+
+
+# ── §v10.304 Safe Array Construction ────────────────────────────────────
+
+def safe_asarray(
+    obj: object,
+    dtype: Any = None,
+    fallback_shape: tuple = (0,),
+) -> np.ndarray:
+    """Numpy-Array-Konvertierung ohne P5-Crash.
+
+    Fängt 'setting an array element with a sequence' (P5, 204×/Run)
+    und broadcast-errors (P11, 59×/Run) ab. Liefert leeres Array
+    mit fallback_shape statt Exception.
+
+    Usage:
+        from backend.core.audio_utils import safe_asarray
+        arr = safe_asarray(some_data, dtype=np.float32)
+    """
+    try:
+        if isinstance(obj, np.ndarray):
+            return np.asarray(obj, dtype=dtype) if dtype else obj
+        _arr = np.asarray(obj, dtype=dtype)
+        return _arr
+    except (ValueError, TypeError):
+        logger.debug("safe_asarray: inhomogeneous data, returning zeros")
+        return np.zeros(fallback_shape, dtype=dtype or np.float32)

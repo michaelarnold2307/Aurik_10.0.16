@@ -535,6 +535,7 @@ class PhaseProgressNarrator:
     ) -> str:
         """Baut ein narratives Kapitel aus Kontext-Daten."""
         import random as _random
+
         _rng = _random.Random(hash(chapter_id + self._session_key))
 
         _mat_name = _TRÄGER_NAMEN.get(material, "diesem Tonträger")
@@ -555,10 +556,15 @@ class PhaseProgressNarrator:
         _defect_list = ""
         if defects:
             _def_names = {
-                "clicks": "Knackser", "crackle": "Knistern", "hum": "Netzbrummen",
-                "noise_level": "Grundrauschen", "wow": "Gleichlaufschwankungen",
-                "dropout": "Aussetzer", "clipping": "Übersteuerungen",
-                "sibilance": "Zischlaute", "pops": "Pops",
+                "clicks": "Knackser",
+                "crackle": "Knistern",
+                "hum": "Netzbrummen",
+                "noise_level": "Grundrauschen",
+                "wow": "Gleichlaufschwankungen",
+                "dropout": "Aussetzer",
+                "clipping": "Übersteuerungen",
+                "sibilance": "Zischlaute",
+                "pops": "Pops",
             }
             _def_human = [_def_names.get(d, d) for d in defects[:5]]
             _defect_list = ", ".join(_def_human)
@@ -633,13 +639,13 @@ class PhaseProgressNarrator:
     def _chapter_enhancing(self, mat, era, chain, rng) -> str:
         _templates = [
             (
-                f"✨ Kapitel 3: Die Wiederbelebung\n\n"
-                f"Die gröbsten Störungen sind entfernt. Jetzt kommt der "
-                f"magische Moment: Aurik bringt zurück, was die Zeit genommen hat.\n\n"
-                f"Verlorene Höhen werden rekonstruiert, die natürliche Wärme "
-                f"kehrt zurück, und die Musik bekommt wieder den Raum und die "
-                f"Tiefe, die sie einmal hatte. Es ist, als würde man ein "
-                f"Fenster öffnen und frische Luft hereinlassen."
+                "✨ Kapitel 3: Die Wiederbelebung\n\n"
+                "Die gröbsten Störungen sind entfernt. Jetzt kommt der "
+                "magische Moment: Aurik bringt zurück, was die Zeit genommen hat.\n\n"
+                "Verlorene Höhen werden rekonstruiert, die natürliche Wärme "
+                "kehrt zurück, und die Musik bekommt wieder den Raum und die "
+                "Tiefe, die sie einmal hatte. Es ist, als würde man ein "
+                "Fenster öffnen und frische Luft hereinlassen."
             ),
             (
                 f"🎚️ Kapitel 3: Der Klang erblüht\n\n"
@@ -656,13 +662,13 @@ class PhaseProgressNarrator:
     def _chapter_polishing(self, mat, era, rng) -> str:
         _templates = [
             (
-                f"💎 Kapitel 4: Der Feinschliff\n\n"
-                f"Die grobe Arbeit ist getan. Jetzt wird Deine Musik poliert — "
-                f"wie ein Diamant, der den letzten Schliff bekommt.\n\n"
-                f"Die Lautstärke wird für jedes Wiedergabegerät optimiert, "
-                f"das Stereobild bekommt die perfekte Balance, und jedes "
-                f"kleine Detail wird noch einmal geprüft und verfeinert. "
-                f"Das ist der Unterschied zwischen 'gut' und 'atemberaubend'."
+                "💎 Kapitel 4: Der Feinschliff\n\n"
+                "Die grobe Arbeit ist getan. Jetzt wird Deine Musik poliert — "
+                "wie ein Diamant, der den letzten Schliff bekommt.\n\n"
+                "Die Lautstärke wird für jedes Wiedergabegerät optimiert, "
+                "das Stereobild bekommt die perfekte Balance, und jedes "
+                "kleine Detail wird noch einmal geprüft und verfeinert. "
+                "Das ist der Unterschied zwischen 'gut' und 'atemberaubend'."
             ),
             (
                 f"🎯 Kapitel 4: Die Perfektion\n\n"
@@ -725,6 +731,7 @@ class PhaseProgressNarrator:
             if _current == _from and _to in self._chapters_emitted:
                 self._last_chapter = _to
                 import random as _rnd
+
                 return _msgs[_rnd.randint(0, len(_msgs) - 1)]
         return None
 
@@ -746,8 +753,7 @@ class PhaseProgressNarrator:
                 "Frequenzgang-Veränderungen, die jeder Bandkopf verursacht.",
             ],
             "smart_tape": [
-                "Intelligente Band-Analyse: Aurik modelliert das exakte "
-                "Bandverhalten und gleicht es perfekt aus.",
+                "Intelligente Band-Analyse: Aurik modelliert das exakte Bandverhalten und gleicht es perfekt aus.",
             ],
             "azimuth": [
                 "Azimut-Präzisions-Korrektur: Aurik richtet die Stereo-Spuren "
@@ -766,8 +772,7 @@ class PhaseProgressNarrator:
                 "Wirkung und verstärkt die Momente, die unter die Haut gehen.",
             ],
             "mdem": [
-                "Multi-dimensionale Entzerrung: Aurik bearbeitet die letzte "
-                "Ebene der Klang-Verbesserung.",
+                "Multi-dimensionale Entzerrung: Aurik bearbeitet die letzte Ebene der Klang-Verbesserung.",
             ],
             "denker": [
                 "Der Aurik-Denker prüft jetzt das gesamte Ergebnis: "
@@ -808,11 +813,11 @@ class PhaseProgressNarrator:
         if material == "mp3_low" and "discovery_mp3" not in self._discoveries_emitted:
             self._discoveries_emitted.add("discovery_mp3")
             _discoveries.append(
-                f"🔎 Interessant: Deine Aufnahme ist eine stark komprimierte MP3-Datei. "
-                f"Das bedeutet, dass beim Kodieren viele Klangdetails entfernt wurden. "
-                f"Aurik hat spezielle Algorithmen, um diese verlorenen Details zu "
-                f"rekonstruieren — fast wie ein Puzzle, bei dem die fehlenden Teile "
-                f"aus dem vorhandenen Bild erschlossen werden."
+                "🔎 Interessant: Deine Aufnahme ist eine stark komprimierte MP3-Datei. "
+                "Das bedeutet, dass beim Kodieren viele Klangdetails entfernt wurden. "
+                "Aurik hat spezielle Algorithmen, um diese verlorenen Details zu "
+                "rekonstruieren — fast wie ein Puzzle, bei dem die fehlenden Teile "
+                "aus dem vorhandenen Bild erschlossen werden."
             )
 
         if era and era <= 1970 and "discovery_era" not in self._discoveries_emitted:
@@ -828,14 +833,15 @@ class PhaseProgressNarrator:
         if defects and len(defects) >= 4 and "discovery_defects" not in self._discoveries_emitted:
             self._discoveries_emitted.add("discovery_defects")
             _discoveries.append(
-                f"🔎 Deine Aufnahme zeigt gleich mehrere Arten von Schäden — "
-                f"das deutet auf eine bewegte Geschichte hin. Aurik behandelt "
-                f"jeden Schadenstyp mit einem eigenen, spezialisierten Werkzeug. "
-                f"Kein One-Size-Fits-All — sondern 43 verschiedene Spezialisten."
+                "🔎 Deine Aufnahme zeigt gleich mehrere Arten von Schäden — "
+                "das deutet auf eine bewegte Geschichte hin. Aurik behandelt "
+                "jeden Schadenstyp mit einem eigenen, spezialisierten Werkzeug. "
+                "Kein One-Size-Fits-All — sondern 43 verschiedene Spezialisten."
             )
 
         if _discoveries:
             import random as _rnd
+
             return _discoveries[_rnd.randint(0, len(_discoveries) - 1)]
         return None
 
@@ -878,6 +884,7 @@ class PhaseProgressNarrator:
             return None
 
         import random as _rnd
+
         _cat = _categories[hash(f"{phase_id}_{int(phase_duration_s // 30)}") % len(_categories)]
 
         # Intermezzo zusammenbauen: Einleitung + Inhalt + Rückleitung
@@ -1029,6 +1036,7 @@ class PhaseProgressNarrator:
                 "manchmal ist weniger mehr.",
             ]
             import random as _rnd
+
             return _rnd.choice(_recs)
 
         if quality_score < 55.0:

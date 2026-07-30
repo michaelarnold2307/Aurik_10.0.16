@@ -11,28 +11,59 @@ oberhalb der Maskierungsschwelle liegt → Phase überspringen (kein Nutzen).
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 from backend.core.dsp.bark_lufs_util import (
-    BARK_EDGES_HZ, BARK_HEARING_THRESHOLD_DB, N_GAMMATONE as N_BARK,
-    hz_to_bark, split_into_bark_bands,
+    BARK_EDGES_HZ,
+    BARK_HEARING_THRESHOLD_DB,
+    hz_to_bark,
+    split_into_bark_bands,
+)
+from backend.core.dsp.bark_lufs_util import (
+    N_GAMMATONE as N_BARK,
 )
 
 # ---------------------------------------------------------------------------
 # JND (Just Noticeable Difference) pro Bark-Band
 # Quelle: Zwicker & Fastl (1999), Tabelle 7.1
 # ---------------------------------------------------------------------------
-_JND_DB_PER_BARK = np.array([
-    2.0, 1.8, 1.5, 1.3, 1.0, 0.9, 0.8, 0.7, 0.6,
-    0.6, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3,
-    1.5, 1.8, 2.0, 2.5, 3.0, 3.5,
-], dtype=np.float32)
+_JND_DB_PER_BARK = np.array(
+    [
+        2.0,
+        1.8,
+        1.5,
+        1.3,
+        1.0,
+        0.9,
+        0.8,
+        0.7,
+        0.6,
+        0.6,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.5,
+        1.8,
+        2.0,
+        2.5,
+        3.0,
+        3.5,
+    ],
+    dtype=np.float32,
+)
 
 
 def compute_perceptual_threshold(
-    audio: np.ndarray, sr: int,
+    audio: np.ndarray,
+    sr: int,
 ) -> np.ndarray:
     """Berechnet die perzeptuelle Maskierungsschwelle pro Bark-Band.
 
@@ -47,7 +78,8 @@ def compute_perceptual_threshold(
     from backend.core.dsp.bark_lufs_util import measure_lufs_per_bark
 
     bands = split_into_bark_bands(
-        audio if audio.ndim == 1 else np.mean(audio, axis=0), sr,
+        audio if audio.ndim == 1 else np.mean(audio, axis=0),
+        sr,
     )
     lufs = measure_lufs_per_bark(bands, sr)
 
@@ -110,14 +142,14 @@ def should_skip_phase(
     Returns:
         True wenn Phase übersprungen werden sollte (keine hörbare Änderung)
     """
-    from backend.core.perceptual_tuning import get_material_jnd_factor, get_genre_jnd_factor
+    from backend.core.perceptual_tuning import get_genre_jnd_factor, get_material_jnd_factor
 
     _mat_factor = get_material_jnd_factor(material_type)
     _genre_factor = get_genre_jnd_factor(genre)
     _combined_jnd_factor = _mat_factor * _genre_factor  # Multiplikativ: beide Faktoren wirken
 
     delta = audio_after.astype(np.float64) - audio_before.astype(np.float64)
-    delta_rms = float(np.sqrt(np.mean(delta ** 2)) + 1e-12)
+    delta_rms = float(np.sqrt(np.mean(delta**2)) + 1e-12)
     if delta_rms < 1e-8:
         return True  # Keine Änderung
 
@@ -131,10 +163,12 @@ def should_skip_phase(
     from backend.core.dsp.bark_lufs_util import measure_lufs_per_bark
 
     bands_before = split_into_bark_bands(
-        audio_before if audio_before.ndim == 1 else np.mean(audio_before, axis=0), sr,
+        audio_before if audio_before.ndim == 1 else np.mean(audio_before, axis=0),
+        sr,
     )
     bands_after = split_into_bark_bands(
-        audio_after if audio_after.ndim == 1 else np.mean(audio_after, axis=0), sr,
+        audio_after if audio_after.ndim == 1 else np.mean(audio_after, axis=0),
+        sr,
     )
 
     lufs_before = measure_lufs_per_bark(bands_before, sr)
@@ -147,7 +181,9 @@ def should_skip_phase(
             continue  # Beide unhörbar leise
 
         delta_db = float(abs(lufs_after[b] - lufs_before[b]))
-        jnd = float(_JND_DB_PER_BARK[b]) * 0.7 * _combined_jnd_factor  # §v10.116: Material+Genre-adaptiv, §v10.101: ×0.7 konservativ
+        jnd = (
+            float(_JND_DB_PER_BARK[b]) * 0.7 * _combined_jnd_factor
+        )  # §v10.116: Material+Genre-adaptiv, §v10.101: ×0.7 konservativ
 
         # Eine Änderung ist hörbar wenn:
         # 1. Delta > JND des Bandes (Zwicker, ×0.7 konservativ)
@@ -165,7 +201,9 @@ def should_skip_phase(
 
 
 def perceptual_loudness_normalize(
-    audio: np.ndarray, sr: int, target_lufs: float = -18.0,
+    audio: np.ndarray,
+    sr: int,
+    target_lufs: float = -18.0,
 ) -> np.ndarray:
     """LUFS-basierte Lautheitsnormalisierung mit Bark-Band-Korrektur.
 
@@ -181,7 +219,8 @@ def perceptual_loudness_normalize(
         Lautheitsnormalisiertes Audio
     """
     from backend.core.dsp.bark_lufs_util import (
-        measure_lufs_per_bark, bark_dynamics_target,
+        bark_dynamics_target,
+        measure_lufs_per_bark,
     )
 
     is_stereo = audio.ndim == 2
@@ -206,9 +245,11 @@ def perceptual_loudness_normalize(
     if is_stereo:
         # Stereo-Mix: gleiche Gain-Kurve für beide Kanäle
         gain_ratio = output / (mono + 1e-12)
-        output = np.column_stack([
-            audio[:, 0] * gain_ratio,
-            audio[:, 1] * gain_ratio,
-        ]).astype(np.float32)
+        output = np.column_stack(
+            [
+                audio[:, 0] * gain_ratio,
+                audio[:, 1] * gain_ratio,
+            ]
+        ).astype(np.float32)
 
     return np.clip(output, -1.0, 1.0)

@@ -33,25 +33,26 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # L1: ExceptionAggregator — NDJSON → klassifizierte Fehler
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class ClassifiedException:
     """Eine klassifizierte Exception aus dem NDJSON-Log."""
-    exception_type: str          # z.B. "ValueError", "KeyError"
-    message_fingerprint: str     # hash der normalisierten Message
-    message: str                 # original message (gekürzt)
-    phase_id: str                # wo es passierte
-    stage: str                   # "phase_start", "phase_failed", ...
-    count: int = 1               # wie oft aufgetreten
-    first_seen: str = ""         # ISO timestamp
-    last_seen: str = ""          # ISO timestamp
+
+    exception_type: str  # z.B. "ValueError", "KeyError"
+    message_fingerprint: str  # hash der normalisierten Message
+    message: str  # original message (gekürzt)
+    phase_id: str  # wo es passierte
+    stage: str  # "phase_start", "phase_failed", ...
+    count: int = 1  # wie oft aufgetreten
+    first_seen: str = ""  # ISO timestamp
+    last_seen: str = ""  # ISO timestamp
     traceback_snippet: str = ""  # erste 3 Frames
-    pattern_class: str = ""      # P1-P6 oder "UNCLASSIFIED"
-    q_score_at_time: float = 0.0 # Q-Score zum Zeitpunkt des Fehlers
+    pattern_class: str = ""  # P1-P6 oder "UNCLASSIFIED"
+    q_score_at_time: float = 0.0  # Q-Score zum Zeitpunkt des Fehlers
 
 
 class ExceptionAggregator:
@@ -70,6 +71,24 @@ class ExceptionAggregator:
         "local variable.*referenced before assignment": "P4",
         "KeyError.*material": "P6",
         "broadcast.*shapes": "P1",
+        # §v10.303.11 Neue klassifizierte Patterns:
+        "tuple.*has no attribute.*ndim": "P7",
+        "phase_failed": "P8",
+        "Stereo template must be 2D": "P9",
+        "_SkipResult": "P10",
+        "operands could not be broadcast": "P11",
+        "window_length must be less than": "P12",
+        "polyorder must be less than window_length": "P13",
+        "truth value of an array.*ambiguous": "P14",
+        "restore timeout": "P15",
+        # §v10.303.39 Phase-0-spezifische Patterns:
+        "TorchScript.*load.*failed": "P16",
+        "ONNX.*inference.*failed": "P17",
+        "BreathDetector.*not.*available": "P18",
+        "phase0.*failed": "P19",
+        "Apollo.*not found": "P20",
+        "DeepFilterNet.*not.*available": "P21",
+        "ResembleEnhance.*not.*available": "P22",
     }
 
     def __init__(self, log_dir: Path | str | None = None):
@@ -77,6 +96,31 @@ class ExceptionAggregator:
             log_dir = Path(__file__).resolve().parents[2] / "logs"
         self.log_dir = Path(log_dir)
         self.ndjson_path = self.log_dir / "oom_phase_forensics.ndjson"
+
+    def record_exception(self, error_msg: str, phase_id: str = "unknown", stage: str = "phase_failed") -> None:
+        """§v10.303.39: Schreibt Exception live in die NDJSON-Forensik-Datei."""
+        import json as _json
+        from datetime import datetime, timezone
+
+        _entry = _json.dumps({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "phase_id": phase_id,
+            "stage": stage,
+            "error": error_msg,
+        })
+        self.log_dir.mkdir(parents=True, exist_ok=True)
+        with open(self.ndjson_path, "a", encoding="utf-8") as _f:
+            _f.write(_entry + "\n")
+        # §v10.303.40 Exception-Budget: Zähle pro Phase
+        if not hasattr(self, "_phase_exc_count"):
+            self._phase_exc_count: dict[str, int] = {}
+        self._phase_exc_count[phase_id] = self._phase_exc_count.get(phase_id, 0) + 1
+
+    def get_phase_exception_count(self, phase_id: str) -> int:
+        """§v10.303.40: Gibt Exception-Count für eine Phase zurück."""
+        if not hasattr(self, "_phase_exc_count"):
+            self._phase_exc_count = {}
+        return self._phase_exc_count.get(phase_id, 0)
 
     def aggregate(self, since: str | None = None) -> list[ClassifiedException]:
         """Liest NDJSON, dedupliziert und klassifiziert alle Exceptions.
@@ -105,7 +149,9 @@ class ExceptionAggregator:
                     continue
                 # Nur Einträge mit Fehlern
                 if "error" not in entry and entry.get("stage") not in (
-                    "phase_failed", "phase_exception_parallel", "phase_exception",
+                    "phase_failed",
+                    "phase_exception_parallel",
+                    "phase_exception",
                 ):
                     continue
                 raw_entries.append(entry)
@@ -178,8 +224,7 @@ class ExceptionAggregator:
             "by_phase": dict(by_phase.most_common(10)),
             "unclassified": by_pattern.get("UNCLASSIFIED", 0),
             "top_exceptions": [
-                {"type": e.exception_type, "message": e.message[:120], "count": e.count}
-                for e in entries[:10]
+                {"type": e.exception_type, "message": e.message[:120], "count": e.count} for e in entries[:10]
             ],
         }
 
@@ -188,15 +233,17 @@ class ExceptionAggregator:
 # L4: PatternMiner — entdeckt neue Anti-Patterns aus NDJSON
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class PatternCandidate:
     """Ein vom Miner vorgeschlagener neuer Pattern-Kandidat."""
-    temporary_id: str          # z.B. "P7"
-    description: str           # menschenlesbare Beschreibung
-    regex_pattern: str         # Regex für Scanner-Integration
+
+    temporary_id: str  # z.B. "P7"
+    description: str  # menschenlesbare Beschreibung
+    regex_pattern: str  # Regex für Scanner-Integration
     affected_files: list[str]  # Dateien mit diesem Pattern
-    exception_count: int       # wie oft aufgetreten
-    confidence: float          # 0.0-1.0 Konfidenz
+    exception_count: int  # wie oft aufgetreten
+    confidence: float  # 0.0-1.0 Konfidenz
 
 
 class PatternMiner:
@@ -235,14 +282,16 @@ class PatternMiner:
             affected = self._find_affected_files(regex) if regex else []
 
             if affected:
-                candidates.append(PatternCandidate(
-                    temporary_id=f"P{pattern_idx}",
-                    description=self._describe(entry),
-                    regex_pattern=regex,
-                    affected_files=affected[:10],
-                    exception_count=entry.count,
-                    confidence=self._confidence(entry.count, len(affected)),
-                ))
+                candidates.append(
+                    PatternCandidate(
+                        temporary_id=f"P{pattern_idx}",
+                        description=self._describe(entry),
+                        regex_pattern=regex,
+                        affected_files=affected[:10],
+                        exception_count=entry.count,
+                        confidence=self._confidence(entry.count, len(affected)),
+                    )
+                )
                 pattern_idx += 1
 
         return sorted(candidates, key=lambda c: c.confidence, reverse=True)
@@ -254,10 +303,15 @@ class PatternMiner:
         msg = re.sub(r"\b\d{4,}\b", r"\\d+", msg)
         # Finde das markanteste Keyword
         keywords = [
-            "tuple.*ndim", "shape.*mismatch", "index.*out.*of.*bounds",
-            "division.*by.*zero", "NoneType.*has.*no.*attribute",
-            "cannot.*broadcast", "reshape.*incompatible",
-            "memory.*allocation", "CUDA.*out.*of.*memory",
+            "tuple.*ndim",
+            "shape.*mismatch",
+            "index.*out.*of.*bounds",
+            "division.*by.*zero",
+            "NoneType.*has.*no.*attribute",
+            "cannot.*broadcast",
+            "reshape.*incompatible",
+            "memory.*allocation",
+            "CUDA.*out.*of.*memory",
         ]
         for kw in keywords:
             if re.search(kw, msg, re.IGNORECASE):
@@ -268,9 +322,12 @@ class PatternMiner:
         """Sucht nach Code-Stellen, die dem Pattern entsprechen."""
         try:
             import subprocess
+
             result = subprocess.run(
                 ["grep", "-rl", regex, "backend/core/"],
-                capture_output=True, text=True, timeout=10,
+                capture_output=True,
+                text=True,
+                timeout=10,
                 cwd=self.repo_root,
             )
             return [f.strip() for f in result.stdout.split("\n") if f.strip()][:10]
@@ -284,7 +341,7 @@ class PatternMiner:
     def _confidence(self, count: int, files: int) -> float:
         """Berechnet Konfidenz 0-1 basierend auf Häufigkeit und Streuung."""
         count_score = min(count / 50, 1.0)  # 50+ Exceptions = max confidence
-        file_score = min(files / 5, 1.0)     # 5+ files = max confidence
+        file_score = min(files / 5, 1.0)  # 5+ files = max confidence
         return round(0.5 * count_score + 0.5 * file_score, 2)
 
 
@@ -292,9 +349,11 @@ class PatternMiner:
 # L5: QualityRegressionDetector — misst ob Fixes die Qualität verbessern
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class QualitySnapshot:
     """Q-Score + Exception-Rate zu einem Zeitpunkt."""
+
     timestamp: str
     q_score: float
     exception_count: int
@@ -326,12 +385,17 @@ class QualityRegressionDetector:
         """Schreibt einen Snapshot in die History."""
         snap = self.snapshot(q_score)
         with open(self.history_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps({
-                "timestamp": snap.timestamp,
-                "q_score": snap.q_score,
-                "exception_count": snap.exception_count,
-                "pattern_counts": snap.pattern_counts,
-            }) + "\n")
+            f.write(
+                json.dumps(
+                    {
+                        "timestamp": snap.timestamp,
+                        "q_score": snap.q_score,
+                        "exception_count": snap.exception_count,
+                        "pattern_counts": snap.pattern_counts,
+                    }
+                )
+                + "\n"
+            )
 
     def compare(self) -> dict[str, Any]:
         """Vergleicht den letzten mit dem vorletzten Snapshot."""
@@ -393,6 +457,7 @@ class QualityRegressionDetector:
 # L6: ContinuousAnalysis — inkrementelle Scanner-Updates
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class ContinuousAnalyzer:
     """L6: Inkrementelle Analyse — liest nur neue NDJSON-Einträge seit letztem Lauf.
 
@@ -433,8 +498,7 @@ class ContinuousAnalyzer:
             "new_exceptions": len(entries),
             "cursor_updated": cursor != self.get_cursor(),
             "pattern_candidates": [
-                {"id": c.temporary_id, "desc": c.description, "confidence": c.confidence}
-                for c in candidates
+                {"id": c.temporary_id, "desc": c.description, "confidence": c.confidence} for c in candidates
             ],
         }
 
@@ -442,6 +506,7 @@ class ContinuousAnalyzer:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Convenience API
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def get_forensics() -> ExceptionAggregator:
     """Liefert den globalen ExceptionAggregator (singleton-artig)."""

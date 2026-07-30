@@ -58,15 +58,15 @@ Performance Target: <0.3× realtime
 Quality Target: 0.90 (Professional-Grade)
 """
 
-import os
 import logging
+import os
 import time
 from typing import Any
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
+from backend.core.audio_utils import safe_filtfilt, stereo_channel_view, stereo_like  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 

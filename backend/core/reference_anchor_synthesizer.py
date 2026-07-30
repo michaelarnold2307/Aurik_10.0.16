@@ -22,6 +22,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+
 from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)

@@ -21,6 +21,7 @@ from dataclasses import asdict, dataclass
 
 import numpy as np
 from scipy.signal import correlate as _scipy_correlate
+
 from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)
@@ -215,7 +216,8 @@ class VocalStyleProfiler:
             logger.debug("vocal_style_profiler.py::_compute_vibrato recursion → lfilter fallback")
             try:
                 from scipy.signal import lfilter
-                if 'b' in locals() and 'a' in locals():
+
+                if "b" in locals() and "a" in locals():
                     f0_vibrato = lfilter(b, a, f0_detrended)
                     depth_hz = float(np.std(f0_vibrato))
                     if depth_hz >= 0.5 and float(np.mean(f0_arr)) > 0.0:

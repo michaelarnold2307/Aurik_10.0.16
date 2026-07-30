@@ -135,13 +135,65 @@ class PerceptualValidator:
     """
 
     _GOAL_MAPPINGS: dict[str, list[int]] = {
-        "bass-kraft": [0, 10, 137],
-        "brillanz": [138, 310, 311],
-        "waerme": [137, 141],
-        "natuerlichkeit": [0, 1, 2],
-        "authentizitaet": [0, 1, 2],
-        "emotionalitaet": [137, 141, 310],
-        "transparenz": [0, 310, 311],
+        # §v10.304: Korrigierte AudioSet-527-Indizes (vorher: Speech-Klassen für Bass-Kraft).
+        # Referenz: AudioSet-Ontologie (Gemmeke et al. 2017), validiert gegen
+        # ast_audio_set_classifier.py _AUDIOSET_CLASS_NAMES.
+        #
+        # bass-kraft:     Low-frequency instruments → sub-bass energy
+        "bass-kraft":       [10, 73, 413],   # Bass drum, Double bass, Bass guitar
+        # brillanz:        High-frequency percussive → presence/clarity
+        "brillanz":         [310, 311, 346],  # Hi-hat, Cymbal, Tambourine
+        # waerme:          Mid-low harmonic instruments → warmth
+        "waerme":           [137, 363, 364],  # Cello, String section, Orchestra
+        # natuerlichkeit:  Musical content (nicht Speech) → naturalness
+        "natuerlichkeit":   [15, 407, 137],   # Music, Singing, Cello
+        # authentizitaet:  Source/genre authenticity markers
+        "authentizitaet":   [15, 28, 37],     # Music, Musical instrument, Independent music
+        # emotionalitaet:  Mood classes → emotional impact
+        "emotionalitaet":   [399, 400, 401],  # Happy music, Sad music, Exciting music
+        # transparenz:     High-frequency clarity + vocal presence
+        "transparenz":      [15, 407, 310],   # Music, Singing, Hi-hat
+    }
+
+    # §v10.304: Genre-adaptive Goal-Mappings.
+    # Jazz → andere Referenz-Instrumente als Metal oder Klassik.
+    _GENRE_GOAL_MAPPINGS: dict[str, dict[str, list[int]]] = {
+        "jazz": {
+            "bass-kraft":       [73, 137, 10],     # Double bass, Cello, Bass drum
+            "brillanz":         [310, 196, 138],    # Hi-hat, Flute, Bell
+            "waerme":           [141, 137, 363],    # Piano, Cello, String section
+            "emotionalitaet":   [401, 403, 400],    # Sad, Tender, Happy
+        },
+        "classical_music": {
+            "bass-kraft":       [137, 73, 363],     # Cello, Double bass, String section
+            "brillanz":         [196, 138, 311],    # Flute, Bell, Cymbal
+            "waerme":           [363, 137, 141],    # String section, Cello, Piano
+            "emotionalitaet":   [403, 401, 400],    # Tender, Sad, Happy
+        },
+        "rock_music": {
+            "bass-kraft":       [10, 413, 143],     # Bass drum, Bass guitar, Electric guitar
+            "brillanz":         [311, 310, 143],    # Cymbal, Hi-hat, Electric guitar
+            "waerme":           [143, 141, 10],     # Electric guitar, Piano, Bass drum
+            "emotionalitaet":   [404, 400, 401],    # Exciting, Happy, Sad
+        },
+        "pop_music": {
+            "bass-kraft":       [413, 10, 141],     # Bass guitar, Bass drum, Piano
+            "brillanz":         [310, 311, 407],    # Hi-hat, Cymbal, Singing
+            "waerme":           [141, 407, 137],    # Piano, Singing, Cello
+            "emotionalitaet":   [400, 404, 401],    # Happy, Exciting, Sad
+        },
+        "electronic_music": {
+            "bass-kraft":       [10, 413, 299],     # Bass drum, Bass guitar, Synthesizer
+            "brillanz":         [311, 310, 299],    # Cymbal, Hi-hat, Synthesizer
+            "waerme":           [299, 141, 137],    # Synthesizer, Piano, Cello
+            "emotionalitaet":   [404, 400, 401],    # Exciting, Happy, Sad
+        },
+        "hip_hop": {
+            "bass-kraft":       [10, 413, 104],     # Bass drum, Bass guitar, Bass
+            "brillanz":         [310, 311, 407],    # Hi-hat, Cymbal, Singing
+            "waerme":           [407, 141, 143],    # Singing, Piano, Electric guitar
+            "emotionalitaet":   [404, 400, 357],    # Exciting, Happy, Hip hop
+        },
     }
 
     def __init__(
@@ -171,9 +223,11 @@ class PerceptualValidator:
         self.model = None
 
         # Preferred local model path:
+        # 0) §v10.304: Zentraler AST Classifier (ast_audio_set_classifier)
         # 1) ONNX bundle at models/ast/ast_model.onnx
         # 2) HF local directory at models/ast_perceptual_base
-        if self._try_load_onnx_model():
+        _central_loaded = self._try_load_central_classifier()
+        if not _central_loaded and self._try_load_onnx_model():
             self.device = None
         else:
             self.device = torch.device("cpu") if _load_torch_stack() and torch is not None else None
@@ -183,6 +237,27 @@ class PerceptualValidator:
         self.validation_count = 0
         self.listening_test_requests: list[ListeningTestRequest] = []
         self.ab_test_samples: list[ABTestSample] = []
+
+    def _try_load_central_classifier(self) -> bool:
+        """§v10.304: Versucht den zentralen AST Classifier zu verwenden.
+
+        Wenn der AstAudioSetClassifier bereits geladen ist, wird seine
+        Inference-Session wiederverwendet — keine zweite Modell-Instanz.
+        """
+        try:
+            from backend.core.ast_audio_set_classifier import get_ast_classifier
+
+            _clf = get_ast_classifier()
+            if _clf.is_loaded():
+                self.onnx_session = _clf._session  # type: ignore[assignment]
+                self._onnx_input_name = _clf._input_name
+                self._onnx_output_name = _clf._output_name
+                self._ast_classifier = _clf  # Referenz für goal-spezifische Methoden
+                logger.info("PerceptualValidator: verwende zentralen AST Classifier")
+                return True
+        except Exception as exc:
+            logger.debug("Zentraler AST Classifier nicht verfügbar: %s", exc)
+        return False
 
     def _try_load_onnx_model(self) -> bool:
         """Try loading bundled AST ONNX model (models/ast/ast_model.onnx)."""

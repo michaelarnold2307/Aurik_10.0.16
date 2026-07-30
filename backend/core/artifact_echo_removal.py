@@ -33,6 +33,7 @@ class ArtifactEchoRemoval:
         original_reference: np.ndarray | None = None,
         max_lag_ms: float = 50.0,
         min_correlation: float = 0.7,
+        ast_musical_confidence: float = 0.0,  # §v10.304: senkt Aggressivität bei Musik
     ) -> np.ndarray:
         """Entfernt Echo-Artefakte aus dem Audio.
 
@@ -42,7 +43,11 @@ class ArtifactEchoRemoval:
             original_reference: Original-Audio als Referenz (optional)
             max_lag_ms: Maximaler Echo-Lag
             min_correlation: Minimale Korrelation für Echo-Erkennung
+            ast_musical_confidence: 0-1, hebt min_correlation bei Musik an
         """
+        # §v10.304 AST-Guard: Bei Musik-Instrument-Anteil Echo-Schwelle anheben
+        _effective_corr = min_correlation + ast_musical_confidence * 0.25
+        _effective_corr = min(0.95, _effective_corr)  # max 0.95
         result = np.asarray(audio, dtype=np.float32).copy()
         mono = np.mean(result, axis=0) if result.ndim == 2 else result
 
@@ -79,7 +84,7 @@ class ArtifactEchoRemoval:
                 peak_corr = float(np.max(echo_region))
                 peak_lag = int(np.argmax(echo_region)) + min_lag
 
-                if peak_corr > min_correlation:
+                if peak_corr > _effective_corr:
                     # Echo gefunden → unterdrücken via spektrale Subtraktion
                     echo_block = np.roll(block, -peak_lag) * peak_corr * 0.5
                     corrected = block - echo_block
@@ -157,9 +162,12 @@ class ArtifactEchoRemoval:
         sr: int,
         *,
         original_reference: np.ndarray | None = None,
+        ast_musical_confidence: float = 0.0,  # §v10.304
     ) -> np.ndarray:
         """Entfernt Echo + korrigiert Onsets in einem Durchlauf."""
-        result = self.remove_echo(audio, sr)
+        result = self.remove_echo(
+            audio, sr, ast_musical_confidence=ast_musical_confidence,
+        )
         if original_reference is not None:
             result = self.realign_onsets(result, sr, original_reference=original_reference)
         return result

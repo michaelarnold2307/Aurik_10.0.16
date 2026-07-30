@@ -26,8 +26,8 @@ Version: 2.0.0
 
 from __future__ import annotations
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
@@ -719,6 +719,7 @@ class SpectralRepairPhase(PhaseInterface):
                 sr=sample_rate,
                 material_bw_ceiling_hz=_bw_ceiling_50,
                 mode="restoration",
+                bw_extension_context=True,
             )
             if _hg_result50.requires_rollback:
                 logger.warning(

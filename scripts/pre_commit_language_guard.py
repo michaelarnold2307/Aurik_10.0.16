@@ -41,97 +41,153 @@ _WHITELIST: set[str] = _load_whitelist()
 
 # Deutsche Fachbegriffe, die in Logs OK sind (keine false positives)
 _GERMAN_TECH_TERMS: set[str] = {
-    "debug", "info", "warning", "error",  # logger method names
-    "ok", "pass",  # status
+    "debug",
+    "info",
+    "warning",
+    "error",  # logger method names
+    "ok",
+    "pass",  # status
 }
 
 # Englische Wörter, die in Log-Meldungen NICHT vorkommen dürfen
 # (Groß-/Kleinschreibung wird ignoriert)
 _ENGLISH_FORBIDDEN: list[str] = [
-    "non-blocking", "non-critical", "fallback",
-    "calibrated", "calibration",
-    "threshold", "thresh",
-    "session", "capture", "record",
-    "failed", "failure",
-    "skipped", "skip",
-    "executed", "execute",
-    "applied", "apply",
-    "completed", "complete",
-    "started", "finished",
+    "non-blocking",
+    "non-critical",
+    "fallback",
+    "calibrated",
+    "calibration",
+    "threshold",
+    "thresh",
+    "session",
+    "capture",
+    "record",
+    "failed",
+    "failure",
+    "skipped",
+    "skip",
+    "executed",
+    "execute",
+    "applied",
+    "apply",
+    "completed",
+    "complete",
+    "started",
+    "finished",
     "error",  # in Log-Text, nicht als Logger-Methode
     "warning",  # in Log-Text
-    "update", "updating",
-    "recovery", "recover",
-    "loaded", "loading", "load",
-    "saved", "save", "saving",
-    "created", "create",
-    "initialized", "initialize",
-    "detected", "detect",
-    "processed", "process",
-    "generated", "generate",
-    "configured", "configure",
-    "enabled", "disabled",
-    "available", "unavailable",
-    "successful", "successfully",
+    "update",
+    "updating",
+    "recovery",
+    "recover",
+    "loaded",
+    "loading",
+    "load",
+    "saved",
+    "save",
+    "saving",
+    "created",
+    "create",
+    "initialized",
+    "initialize",
+    "detected",
+    "detect",
+    "processed",
+    "process",
+    "generated",
+    "generate",
+    "configured",
+    "configure",
+    "enabled",
+    "disabled",
+    "available",
+    "unavailable",
+    "successful",
+    "successfully",
     "failed to",
     "unable to",
     "trying to",
     "attempt",
     "retry",
     "timeout",
-    "cached", "cache",
-    "cleared", "clear",
+    "cached",
+    "cache",
+    "cleared",
+    "clear",
     "reset",
-    "aborted", "abort",
-    "terminated", "terminate",
+    "aborted",
+    "abort",
+    "terminated",
+    "terminate",
     "shutdown",
     "startup",
     "initializing",
     "finalize",
-    "validate", "validation",
-    "verifying", "verify",
-    "checking", "check",
-    "computing", "compute",
-    "analyzing", "analysis",
-    "extracting", "extract",
-    "importing", "export",
-    "reading", "writing",
-    "fetching", "fetch",
-    "sending", "send",
-    "receiving", "receive",
-    "connecting", "connection",
+    "validate",
+    "validation",
+    "verifying",
+    "verify",
+    "checking",
+    "check",
+    "computing",
+    "compute",
+    "analyzing",
+    "analysis",
+    "extracting",
+    "extract",
+    "importing",
+    "export",
+    "reading",
+    "writing",
+    "fetching",
+    "fetch",
+    "sending",
+    "send",
+    "receiving",
+    "receive",
+    "connecting",
+    "connection",
     "disconnect",
     "pending",
-    "running", "run",
-    "stopping", "stopped",
+    "running",
+    "run",
+    "stopping",
+    "stopped",
     "restart",
     "stage",
     "phase",
     "mode",
-    "profile", "profiling",
+    "profile",
+    "profiling",
     "budget",
     "ratio",
     "score",
     "result",
-    "output", "input",
+    "output",
+    "input",
     "reference",
     "original",
-    "restored", "restore",
-    "enhanced", "enhance",
-    "optimized", "optimize",
-    "adjusted", "adjust",
-    "normalized", "normalize",
+    "restored",
+    "restore",
+    "enhanced",
+    "enhance",
+    "optimized",
+    "optimize",
+    "adjusted",
+    "adjust",
+    "normalized",
+    "normalize",
 ]
 
 # Ausnahmen: Zeilen die trotz englischer Wörter OK sind
 # (z.B. Code-Kommentare, Spec-Referenzen, technische IDs)
 _EXEMPT_PATTERNS: list[str] = [
-    r"#\s*§",           # Spec-Referenzen in Kommentaren
-    r"#\s*noqa",         # noqa-Kommentare
-    r"#\s*pylint:",      # pylint-Direktiven
-    r"#\s*type:",        # type-Kommentare
+    r"#\s*§",  # Spec-Referenzen in Kommentaren
+    r"#\s*noqa",  # noqa-Kommentare
+    r"#\s*pylint:",  # pylint-Direktiven
+    r"#\s*type:",  # type-Kommentare
     r"logger\.(debug|info|warning|error)\($",  # Logger-Aufruf ohne String
-    r"exc_info=True",    # Logger-Parameter
+    r"exc_info=True",  # Logger-Parameter
     r"stack_info=True",  # Logger-Parameter
 ]
 
@@ -198,11 +254,13 @@ class LogLanguageVisitor(ast.NodeVisitor):
                                 return
                             is_en, word = _contains_english_word(msg)
                             if is_en:
-                                self.violations.append((
-                                    line_no,
-                                    "EN",
-                                    f'"{msg[:60]}..." → enthält "{word}"',
-                                ))
+                                self.violations.append(
+                                    (
+                                        line_no,
+                                        "EN",
+                                        f'"{msg[:60]}..." → enthält "{word}"',
+                                    )
+                                )
                         # Auch f-Strings prüfen
                         elif isinstance(first_arg, ast.JoinedStr):
                             # Extrahiere Text aus f-String
@@ -218,11 +276,13 @@ class LogLanguageVisitor(ast.NodeVisitor):
                                 return
                             is_en, word = _contains_english_word(msg)
                             if is_en:
-                                self.violations.append((
-                                    line_no,
-                                    "EN",
-                                    f'f"...{msg[:40]}..." → enthält "{word}"',
-                                ))
+                                self.violations.append(
+                                    (
+                                        line_no,
+                                        "EN",
+                                        f'f"...{msg[:40]}..." → enthält "{word}"',
+                                    )
+                                )
         self.generic_visit(node)
 
 
@@ -242,26 +302,26 @@ def check_file(filepath: Path) -> list[tuple[int, str, str]]:
 def main() -> int:
     """Haupteinstiegspunkt."""
     all_mode = "--all" in sys.argv or "--fix" in sys.argv
-    
+
     if all_mode:
         # Scan all Python files
         files: list[Path] = []
         for root, dirs, fns in os.walk(str(_PROJECT_ROOT / "backend")):
-            dirs[:] = [d for d in dirs if d not in ('__pycache__', 'tests', '.git')]
+            dirs[:] = [d for d in dirs if d not in ("__pycache__", "tests", ".git")]
             for fn in fns:
-                if fn.endswith('.py'):
+                if fn.endswith(".py"):
                     files.append(Path(root) / fn)
         for root, dirs, fns in os.walk(str(_PROJECT_ROOT / "denker")):
             for fn in fns:
-                if fn.endswith('.py'):
+                if fn.endswith(".py"):
                     files.append(Path(root) / fn)
         for root, dirs, fns in os.walk(str(_PROJECT_ROOT / "Aurik10")):
             for fn in fns:
-                if fn.endswith('.py'):
+                if fn.endswith(".py"):
                     files.append(Path(root) / fn)
     else:
         files = get_changed_files()
-    
+
     if not files:
         print("✅ Sprache-Guard: Keine .py-Dateien zum Prüfen")
         return 0
@@ -287,7 +347,7 @@ def main() -> int:
                 print(violation_line)
                 new_violations += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Geprüft: {len(set(files))} Dateien, {total} englische Log-Meldungen ({new_violations} neu)")
 
     if new_violations == 0:

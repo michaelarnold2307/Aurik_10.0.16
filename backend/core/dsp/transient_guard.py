@@ -220,3 +220,38 @@ def detect_transient_shifts(
     except Exception as exc:
         logger.debug("detect_transient_shifts non-blocking: %s", exc)
         return _fallback
+
+
+def compute_transient_mask(audio: np.ndarray, sample_rate: int) -> np.ndarray:
+    """§v10.303.13: Energie-Delta-basierte Transienten-Maske.
+
+    Detektiert Frames mit starkem Energie-Anstieg (+3dB) als Transienten
+    (Onsets, Attacks, Klicks). Diese Frames sollten in subtraktiven Phasen
+    (Denoise, Dehiss, Dereverb) weniger aggressiv bearbeitet werden, um
+    Groove und Mikrodynamik zu erhalten.
+
+    Returns:
+        Float-Array [0.0, 1.0] mit Länge = Anzahl Frames.
+        1.0 = sicherer Transient, 0.0 = kein Transient.
+    """
+    # STFT-Parameter
+    _n_fft = 2048
+    _hop = _n_fft // 4  # 512 samples = 10.7ms @48kHz
+
+    _mono = audio if audio.ndim == 1 else np.mean(audio, axis=0)
+    _n_frames = 1 + (len(_mono) - _n_fft) // _hop
+    if _n_frames < 4:
+        return np.zeros(max(1, _n_frames), dtype=np.float32)
+
+    # Energie pro Frame
+    _energy = np.array([
+        float(np.mean(_mono[i * _hop : i * _hop + _n_fft] ** 2))
+        for i in range(_n_frames)
+    ])
+    _energy_db = 10.0 * np.log10(_energy + 1e-12)
+    # Energie-Delta: +3dB Anstieg = Onset
+    _delta = np.diff(_energy_db, prepend=_energy_db[0])
+    _mask = (_delta > 3.0).astype(np.float32)
+    # Smooth über 3 Frames (32ms) für natürliche Übergänge
+    _mask = np.convolve(_mask, np.ones(3) / 3, mode='same')
+    return np.clip(_mask, 0.0, 1.0).astype(np.float32)

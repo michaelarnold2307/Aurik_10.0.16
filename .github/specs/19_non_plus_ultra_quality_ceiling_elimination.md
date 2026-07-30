@@ -5,6 +5,7 @@
 > Die vier unabhängigen Root-Causes für „43→43" (keine messbare Qualitätsverbesserung)
 > sind identifiziert und behoben. Diese Spec dokumentiert die architektonischen Fixes
 > und die neuen GEBOTE (§G90–§G99), die verhindern, dass Aurik jemals wieder:
+>
 > - gegen den defekten Input vergleicht
 > - Exception-Schlucker ohne Logging verwendet
 > - Phasen ohne Cross-Phase-Koordination laufen lässt
@@ -114,6 +115,7 @@ noise_ratio = log_mean / max(arith_mean, 1e-8)  # 1e-8 vs 1e-10 im Zähler
 ### Problem
 
 Phasen operierten isoliert auf denselben Frequenzbändern:
+
 - P02 (Hum-Removal) notched 50/60 Hz → P37 (Bass-Enhancement) synthetisierte Bass in denselben Bändern
 - P10 (Compression) komprimierte Bässe → P26 (Expansion) expandierte dieselben Bänder → Gain-Pumping
 - P02 konnte NACH P03 (ML-Denoising) laufen → ML lernte Brumm als „Signal"
@@ -121,6 +123,7 @@ Phasen operierten isoliert auf denselben Frequenzbändern:
 ### Lösung: DAG-Constraint + Metadata-Handshakes
 
 **C1 — DAG-Constraint (§G95)**:
+
 ```python
 # phase_dag.py
 PhaseConstraint("phase_02_hum_removal", "phase_03_denoise",
@@ -128,12 +131,14 @@ PhaseConstraint("phase_02_hum_removal", "phase_03_denoise",
 ```
 
 **C2 — P02→P37 Metadata-Handshake (§G94a)**:
+
 - P02 schreibt `modifications["fundamentals"]` = `[50, 60]`
 - `_normalize_phase_result` extrahiert → `_restoration_context["hum_notch_freqs"]`
 - `_canonical_phase_context_kwargs` injiziert in ALLE Phasen
 - P37 liest `hum_notch_freqs` → reduziert `sub_harmonic_gain` um −20% pro überlappendem Fundamental
 
 **C3 — P10→P26 Metadata-Handshake (§G94b)**:
+
 - P10 schreibt `modifications["per_band_gain_db"]` = `{bass: 3.2, low_mid: 2.1}`
 - `_normalize_phase_result` extrahiert → `_restoration_context["p10_per_band_gain_db"]`
 - P26 liest `p10_per_band_gain_db` → reduziert `max_expansion_db` proportional

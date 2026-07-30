@@ -34,7 +34,7 @@ class TestCarrierTransferCharacteristics:
             ("vinyl", 16000, 70),
             ("reel_tape", 18000, 72),
             ("cd_digital", 22050, 96),
-            ("cassette", 14000, 60),
+            ("cassette", 16000, 60),  # §BW-CEIL v10.13: 14→16 kHz
             ("tape", 15000, 62),
             ("mp3_low", 16000, 90),
         ],

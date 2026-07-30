@@ -75,41 +75,99 @@ class ResolvedAssessment:
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Reparatur-Phasen (dürfen immer laufen)
-_REPAIR_FAMILIES: frozenset[str] = frozenset({
-    "click", "hum", "denoise", "eq", "rumble", "crackle",
-    "dropout", "declip", "azimuth", "phase_correction",
-    "transient_preservation", "transport_bump",
-})
+_REPAIR_FAMILIES: frozenset[str] = frozenset(
+    {
+        "click",
+        "hum",
+        "denoise",
+        "eq",
+        "rumble",
+        "crackle",
+        "dropout",
+        "declip",
+        "azimuth",
+        "phase_correction",
+        "transient_preservation",
+        "transport_bump",
+    }
+)
 
 # Enhancement-Phasen (nur bei restorability ≥ 50)
-_ENHANCE_FAMILIES: frozenset[str] = frozenset({
-    "stereo", "presence", "air_band", "bass", "vocal",
-    "harmonic", "mastering", "de_esser", "loudness",
-    "dynamics", "speed_pitch", "mid_side",
-})
+_ENHANCE_FAMILIES: frozenset[str] = frozenset(
+    {
+        "stereo",
+        "presence",
+        "air_band",
+        "bass",
+        "vocal",
+        "harmonic",
+        "mastering",
+        "de_esser",
+        "loudness",
+        "dynamics",
+        "speed_pitch",
+        "mid_side",
+    }
+)
 
 # Hochriskante Phasen (nur bei restorability ≥ 70, SNR ≥ 20)
-_RISKY_FAMILIES: frozenset[str] = frozenset({
-    "diffusion", "inpainting", "band_gap", "frequency_restoration",
-    "spectral_repair", "groove_echo", "inner_groove",
-})
+_RISKY_FAMILIES: frozenset[str] = frozenset(
+    {
+        "diffusion",
+        "inpainting",
+        "band_gap",
+        "frequency_restoration",
+        "spectral_repair",
+        "groove_echo",
+        "inner_groove",
+    }
+)
 
 
 def _family_from_phase_id(phase_id: str) -> str:
     """Extrahiert die Familie aus einer Phase-ID."""
     pid = str(phase_id).lower()
     for family in [
-        "click", "hum", "denoise", "eq", "rumble", "crackle",
-        "dropout", "declip", "azimuth", "phase_correction",
-        "transient_preservation", "transport_bump",
-        "stereo", "presence", "air_band", "bass", "vocal",
-        "harmonic", "mastering", "de_esser", "loudness",
-        "dynamics", "speed_pitch", "mid_side",
-        "diffusion", "inpainting", "band_gap", "frequency_restoration",
-        "spectral_repair", "groove_echo", "inner_groove",
-        "tape_hiss", "wow_flutter", "surface_noise",
-        "splice", "noise_gate", "truepeak", "output_format",
-        "semantic", "modulation",
+        "click",
+        "hum",
+        "denoise",
+        "eq",
+        "rumble",
+        "crackle",
+        "dropout",
+        "declip",
+        "azimuth",
+        "phase_correction",
+        "transient_preservation",
+        "transport_bump",
+        "stereo",
+        "presence",
+        "air_band",
+        "bass",
+        "vocal",
+        "harmonic",
+        "mastering",
+        "de_esser",
+        "loudness",
+        "dynamics",
+        "speed_pitch",
+        "mid_side",
+        "diffusion",
+        "inpainting",
+        "band_gap",
+        "frequency_restoration",
+        "spectral_repair",
+        "groove_echo",
+        "inner_groove",
+        "tape_hiss",
+        "wow_flutter",
+        "surface_noise",
+        "splice",
+        "noise_gate",
+        "truepeak",
+        "output_format",
+        "semantic",
+        "modulation",
         "deesser",
     ]:
         if family in pid:
@@ -173,10 +231,7 @@ def gatekeep(
             mode="repair_only",
             allowed_phase_families=_REPAIR_FAMILIES | _ENHANCE_FAMILIES,
             restorability_score=rs,
-            reason=(
-                f"Restorability={rs:.0f}/100: Repair-Mode. "
-                f"Basis-Enhancement erlaubt, keine riskanten Phasen."
-            ),
+            reason=(f"Restorability={rs:.0f}/100: Repair-Mode. Basis-Enhancement erlaubt, keine riskanten Phasen."),
         )
 
     # ── Regel 4: Full Pipeline ──
@@ -288,16 +343,10 @@ class StreamingDoNoHarm:
 
             # Artefakt-Proxy: RMS-Stabilität über Segmente
             seg_len = max(n // 20, 256)
-            seg_rms = np.array([
-                np.sqrt(np.mean(a[i:i+seg_len]**2))
-                for i in range(0, n - seg_len, seg_len)
-            ])
+            seg_rms = np.array([np.sqrt(np.mean(a[i : i + seg_len] ** 2)) for i in range(0, n - seg_len, seg_len)])
             seg_rms = seg_rms[seg_rms > 1e-8]
             if len(seg_rms) >= 3:
-                art_score = float(np.clip(
-                    1.0 - np.std(seg_rms) / (np.mean(seg_rms) + 1e-8),
-                    0.0, 1.0
-                ))
+                art_score = float(np.clip(1.0 - np.std(seg_rms) / (np.mean(seg_rms) + 1e-8), 0.0, 1.0))
             else:
                 art_score = 1.0
 
@@ -325,8 +374,7 @@ class SessionLearner:
         self._memory: dict[str, Any] = self._load()
         self._current_session_songs: list[dict[str, Any]] = []
 
-    def recall(self, material_type: str, restorability: float,
-               terminal_codec: str | None) -> dict[str, Any] | None:
+    def recall(self, material_type: str, restorability: float, terminal_codec: str | None) -> dict[str, Any] | None:
         """Erinnert sich an ähnliche Songs aus früheren Sessions."""
         best_match = None
         best_score = 0.0
@@ -344,15 +392,24 @@ class SessionLearner:
         if best_match and best_score > 0.4:
             logger.info(
                 "§SESSION-MEMORY: recall '%s' rs=%.0f → %s (score=%.2f)",
-                material_type, restorability,
-                best_match.get("verdict", "?"), best_score,
+                material_type,
+                restorability,
+                best_match.get("verdict", "?"),
+                best_score,
             )
             return best_match
         return None
 
-    def record(self, material_type: str, restorability: float,
-               terminal_codec: str | None, verdict: str,
-               phases_run: int, time_s: float, warnings: list[str]) -> None:
+    def record(
+        self,
+        material_type: str,
+        restorability: float,
+        terminal_codec: str | None,
+        verdict: str,
+        phases_run: int,
+        time_s: float,
+        warnings: list[str],
+    ) -> None:
         """Speichert das Ergebnis dieses Songs."""
         entry = {
             "material": material_type,
@@ -382,7 +439,8 @@ class SessionLearner:
             self._MEMORY_PATH.write_text(json.dumps(self._memory, indent=2))
             logger.info(
                 "§SESSION-MEMORY: %d songs persisted to %s",
-                len(songs), self._MEMORY_PATH,
+                len(songs),
+                self._MEMORY_PATH,
             )
         except Exception as e:
             logger.debug("§SESSION-MEMORY persist: %s", e)
@@ -449,8 +507,12 @@ def resolve_assessment(
                 f"Das Original ist mit restorability={restorability_score:.0f}/100 "
                 f"zu degradiert für sinnvolle Bearbeitung."
             ),
-            metrics={"hpi": hpi_score, "restorability": restorability_score,
-                     "mushra": mushra_score, "quality_delta": quality_gate_delta},
+            metrics={
+                "hpi": hpi_score,
+                "restorability": restorability_score,
+                "mushra": mushra_score,
+                "quality_delta": quality_gate_delta,
+            },
             warnings=all_warnings,
         )
 
@@ -460,10 +522,7 @@ def resolve_assessment(
     # ist nur relevant wenn HPI niedrig ist und MUSHRA trotzdem hoch.
     expected_mushra = hpi_score * 100.0
     if mushra_score > expected_mushra + 10 and quality_gate_delta < 10 and hpi_score < 0.70:
-        all_warnings.append(
-            f"MUSHRA({mushra_score:.0f}) ≫ HPI({hpi_score:.3f}): "
-            f"MUSHRA vermutlich false-positive"
-        )
+        all_warnings.append(f"MUSHRA({mushra_score:.0f}) ≫ HPI({hpi_score:.3f}): MUSHRA vermutlich false-positive")
         return ResolvedAssessment(
             overall_verdict="unchanged",
             quality_score=round(hpi_score * 100, 0),
@@ -473,15 +532,13 @@ def resolve_assessment(
                 f"und QualityGate (Δ={quality_gate_delta:.1f}). "
                 f"HPI wird als verlässlicher eingestuft."
             ),
-            metrics={"hpi": hpi_score, "mushra": mushra_score,
-                     "quality_delta": quality_gate_delta},
+            metrics={"hpi": hpi_score, "mushra": mushra_score, "quality_delta": quality_gate_delta},
             warnings=all_warnings,
         )
 
     # ── Fall 4: Klare Verbesserung ──
     explanations.append(
-        f"Qualität verbessert: HPI={hpi_score:.3f}, "
-        f"MUSHRA={mushra_score:.0f}, ΔQG=+{quality_gate_delta:.1f}"
+        f"Qualität verbessert: HPI={hpi_score:.3f}, MUSHRA={mushra_score:.0f}, ΔQG=+{quality_gate_delta:.1f}"
     )
     quality = min(95.0, hpi_score * 95.0 + quality_gate_delta * 0.5)
     verdict = "improved" if quality > 60 else "unchanged"
@@ -491,9 +548,12 @@ def resolve_assessment(
         quality_score=round(quality, 1),
         confidence=0.80,
         explanation="; ".join(explanations),
-        metrics={"hpi": hpi_score, "mushra": mushra_score,
-                 "quality_delta": quality_gate_delta,
-                 "artifact_freedom": artifact_freedom},
+        metrics={
+            "hpi": hpi_score,
+            "mushra": mushra_score,
+            "quality_delta": quality_gate_delta,
+            "artifact_freedom": artifact_freedom,
+        },
         warnings=all_warnings,
     )
 
@@ -529,13 +589,13 @@ def surgery_first_prune(
     # Cap auf max_phases
     if len(pruned) > decision.max_phases:
         # Priorität: Reparatur-Phasen zuerst
-        repair = [p for p in pruned
-                  if _family_from_phase_id(p) in _REPAIR_FAMILIES]
-        enhance = [p for p in pruned
-                   if _family_from_phase_id(p) in _ENHANCE_FAMILIES]
-        risky = [p for p in pruned
-                 if _family_from_phase_id(p) not in _REPAIR_FAMILIES
-                 and _family_from_phase_id(p) not in _ENHANCE_FAMILIES]
+        repair = [p for p in pruned if _family_from_phase_id(p) in _REPAIR_FAMILIES]
+        enhance = [p for p in pruned if _family_from_phase_id(p) in _ENHANCE_FAMILIES]
+        risky = [
+            p
+            for p in pruned
+            if _family_from_phase_id(p) not in _REPAIR_FAMILIES and _family_from_phase_id(p) not in _ENHANCE_FAMILIES
+        ]
 
         budget = decision.max_phases
         pruned = repair[:budget]
@@ -553,7 +613,9 @@ def surgery_first_prune(
     if removed:
         logger.info(
             "§SURGERY-FIRST: %d→%d Phasen (%d entfernt: %s)",
-            len(selected_phases), len(pruned), len(removed),
+            len(selected_phases),
+            len(pruned),
+            len(removed),
             ", ".join(removed[:5]) + ("..." if len(removed) > 5 else ""),
         )
 
@@ -595,9 +657,7 @@ class AurikOrchestrator:
         """P1+P3+P5: Entscheidet und reduziert VOR der Pipeline."""
 
         # P3: Erfahrung abrufen
-        experience = self.learner.recall(
-            material_type, restorability_score, terminal_codec
-        )
+        experience = self.learner.recall(material_type, restorability_score, terminal_codec)
         if experience:
             logger.info(
                 "§ORCHESTRATOR recall: ähnlicher Song → %s (%d Phasen)",
@@ -655,13 +715,15 @@ class AurikOrchestrator:
         if not result.continue_pipeline:
             logger.warning(
                 "§WATCHDOG STOP: %s nach Phase %s",
-                result.reason, phase_id,
+                result.reason,
+                phase_id,
             )
 
         if result.phase_was_harmful:
             logger.warning(
                 "§WATCHDOG HARMFUL: %s — %s",
-                phase_id, result.reason,
+                phase_id,
+                result.reason,
             )
 
         return result

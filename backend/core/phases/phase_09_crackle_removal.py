@@ -71,11 +71,11 @@ Date: 2026-02-15
 
 import contextlib
 import logging
+import os  # §v10.105 module-level (prevents UnboundLocalError)
 import threading
 import time
 from pathlib import Path
 from typing import Any
-import os  # §v10.105 module-level (prevents UnboundLocalError)
 
 import numpy as np
 from scipy import signal

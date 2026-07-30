@@ -584,6 +584,31 @@ class FrequencyRestorationPhase(PhaseInterface):
             and hasattr(self, "_restore_frequency_ml_hybrid")
         )
 
+        # §v10.200 Depth-Gate: NVSR/FlashSR erzeugen bei depth≥4 katastrophale
+        # tonal_center-Regression (−0.833 im Live-Run) auf extrem-analogen Trägern.
+        # §v10.300 Differenzierung: Nur bei physikalisch-analogen Endstufen blocken
+        # (shellac, wax_cylinder, wire_recording). Bei cassette, vinyl, tape und
+        # digitalen Ketten bleibt ML aktiv — mit reduziertem strength-cap 0.50.
+        _td_p06 = max(1, int(kwargs.get("transfer_chain_depth", 1)))
+        if _td_p06 >= 4 and use_ml_hybrid:
+            _chain = kwargs.get("effective_chain") or []
+            _term = str(_chain[-1]).lower() if _chain else str(material_type).lower()
+            _EXTREME_ANALOG = {"shellac", "wax_cylinder", "wire_recording"}
+            if _term in _EXTREME_ANALOG:
+                use_ml_hybrid = False
+                logger.info(
+                    "§v10.200 Phase_06 depth=%d terminal=%s → DSP-only (NVSR/FlashSR skipped — tonal_center safety)",
+                    _td_p06, _term,
+                )
+            else:
+                # ML erlaubt mit reduziertem Cap
+                _prev_cap = float(kwargs.get("ml_strength_cap", 1.0))
+                kwargs["ml_strength_cap"] = min(_prev_cap, 0.50)
+                logger.info(
+                    "§v10.300 Phase_06 depth=%d terminal=%s → ML mit strength-cap=%.2f (statt %.2f)",
+                    _td_p06, _term, kwargs["ml_strength_cap"], _prev_cap,
+                )
+
         if use_ml_hybrid:
             # ML-Hybrid path: DSP (SBR + LPC) + FlashSR (Neural Vocoder Super Resolution)
             restored, ml_metadata = self._restore_frequency_ml_hybrid(

@@ -1,0 +1,100 @@
+# Scope Guardrails — Aurik 10.0.0 §v10.300
+#
+# Diese Policy-Datei definiert erzwungene Scope-Grenzen.
+# Verstöße werden in CI durch tests/normative/test_scope_guardrails.py erkannt.
+#
+# PRINZIP: Keine neuen Phasen, Goals oder DefectTypes ohne Echt-Audio-Evidenz.
+# Jede Erweiterung muss durch mindestens 5 reale Audiofälle mit gemessener
+# Verbesserung des HPI ≥ 0.02 gerechtfertigt werden.
+
+version: "1.0.0"
+created: "2026-08-04"
+enforced_in_ci: true
+
+# ── Erzwungene Obergrenzen ──────────────────────────────────────────────────
+
+caps:
+  max_phases:
+    current: 69
+    limit: 69
+    description: >
+      Keine neuen Phasen ohne: (a) ≥5 Echt-Audio-Fälle die konkret von der
+      neuen Phase profitieren, (b) gemessene HPI-Verbesserung ≥ 0.02,
+      (c) Genehmigung im Real-Audio-Quality-Gate-Review.
+      Ausnahme: Bugfixes an bestehenden Phasen (keine neuen Phasen-IDs).
+
+  max_musical_goals:
+    current: 14
+    limit: 14
+    description: >
+      Keine neuen Musical Goals ohne: (a) ≥5 Echt-Audio-Fälle die eine Lücke
+      im aktuellen Goal-Set zeigen, (b) gemessene Korrelation mit HPI ≥ 0.5,
+      (c) Peer-Review des Goal-Designs.
+
+  max_defect_types:
+    current: 76
+    limit: 76
+    description: >
+      Keine neuen DefectTypes ohne: (a) ≥3 Echt-Audio-Fälle mit diesem Defekt,
+      (b) Manifests die den Defekt dokumentieren, (c) DSP-Phase die ihn behandelt.
+
+  max_materials:
+    current: 17
+    limit: 18
+    description: >
+      Keine neuen Materialien ohne Corpus-Fälle und Material-Ceiling-Messung.
+
+# ── Erforderliche Evidenz für Änderungen ─────────────────────────────────────
+
+evidence_requirements:
+  new_phase:
+    min_real_audio_cases: 5
+    min_hpi_improvement: 0.02
+    required_documentation:
+      - "Welcher konkrete Defekt/Qualitätsmangel wird adressiert?"
+      - "In welchen 5+ Echt-Audio-Fällen tritt er auf?"
+      - "Gemessene HPI-Verbesserung (vorher/nachher)"
+      - "Risiko: Kann die Phase bestehende Qualität verschlechtern?"
+
+  new_musical_goal:
+    min_real_audio_cases: 5
+    min_hpi_correlation: 0.5
+    required_documentation:
+      - "Welche perzeptuelle Lücke schließt dieses Goal?"
+      - "Korrelation mit HPI auf ≥5 Echt-Audio-Fällen"
+      - "Physikalische Messbarkeit (DSP-Metrik)"
+
+  new_defect_type:
+    min_real_audio_cases: 3
+    required_documentation:
+      - "Manifest-Einträge die diesen Defekt dokumentieren"
+      - "DSP-Phase die ihn behandelt"
+      - "Unterscheidbarkeit von bestehenden DefectTypes"
+
+  gui_change:
+    min_real_audio_validation: false
+    description: >
+      GUI-Änderungen benötigen keine Echt-Audio-Evidenz, solange sie keine
+      DSP-Pipeline, Quality-Gate-Logik oder Metrik-Berechnung ändern.
+
+# ── Selbstverpflichtung ──────────────────────────────────────────────────────
+
+commitments:
+  - id: C1
+    text: >
+      Vor jeder neuen Phase wird der Real-Audio Quality Gate Report
+      als Baseline gespeichert und nach Implementierung verglichen.
+      Eine Verschlechterung des HPI-Average macht die Änderung rückgängig.
+  - id: C2
+    text: >
+      Der PROJECT_STATUS.md-"Produktionsbereit"-Status wird erst dann
+      wieder aktiviert, wenn der Real-Audio Quality Gate passed.
+  - id: C3
+    text: >
+      Jeder Commit der die DSP-Pipeline ändert, muss audit/
+      real_audio_restoration_quality_gate.py ausführen und das Ergebnis
+      in der Commit-Message referenzieren.
+  - id: C4
+    text: >
+      Die Corpus-Größe wird kontinuierlich ausgebaut. Mindestens +5
+      Echt-Audio-Fälle pro Monat bis ≥80 Fälle erreicht sind.

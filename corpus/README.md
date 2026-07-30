@@ -1,94 +1,89 @@
-# Echt-Audio-Test-Corpus — Public-Domain-Aufnahmen für Pipeline-Validierung
+# Aurik Echt-Audio-Corpus — §15.2
 
-> §15.2: Auriks Pipeline muss an echtem Audiomaterial validiert werden.
-> Alle Aufnahmen in diesem Corpus sind Public Domain oder CC0-lizenziert.
+## Zweck
+
+Dieses Verzeichnis enthält echte Musikaufnahmen für reproduzierbare Qualitätsmessung.
+Auriks 18.400+ Tests operieren auf synthetischen Signalen — dieser Corpus schließt die
+Lücke zwischen synthetischer Validierung und echtem Höreindruck.
 
 ## Verzeichnisstruktur
 
 ```
 corpus/
-├── README.md                ← Diese Datei
-├── MANIFEST_SCHEMA.yaml     ← Schema für manifest.yaml
+├── MANIFEST_SCHEMA.yaml          # JSON-Schema für manifest.yaml
+├── README.md                     # Diese Datei
 ├── shellac/
-│   ├── clean/               ← Referenz-Aufnahmen ohne Defekte
-│   ├── damaged/             ← Aufnahmen mit typischen Schellack-Defekten
-│   └── restored/            ← Von Aurik restaurierte Versionen
+│   ├── manifest.yaml
+│   ├── damaged/                  # Defekte Original-Aufnahmen
+│   └── restored/                 # Aurik-restaurierte Versionen
 ├── vinyl/
-│   ├── clean/
+│   ├── manifest.yaml
 │   ├── damaged/
 │   └── restored/
 ├── tape/
-│   ├── clean/
+│   ├── manifest.yaml
+│   ├── damaged/
+│   └── restored/
+├── reel_tape/
+│   ├── manifest.yaml
+│   ├── damaged/
+│   └── restored/
+├── cassette/
+│   ├── manifest.yaml
 │   ├── damaged/
 │   └── restored/
 └── digital/
-    ├── clean/
+    ├── manifest.yaml
     ├── damaged/
     └── restored/
 ```
 
-## manifest.yaml (pro Verzeichnis)
+## Rechtlicher Hinweis
 
-Jedes Unterverzeichnis enthält eine `manifest.yaml` mit Metadaten:
+**Alle Dateien in diesem Corpus MÜSSEN entweder gemeinfrei (Public Domain) oder unter
+einer CC0-Lizenz stehen.** Urheberrechtlich geschütztes Material ist EXPLIZIT
+AUSGESCHLOSSEN. Jeder Eintrag in einer `manifest.yaml` MUSS das Feld `license` führen.
 
-```yaml
-# Beispiel: corpus/shellac/damaged/manifest.yaml
-- file: jazz_78_shellac_1938.wav
-  duration_s: 24.5
-  sample_rate: 48000
-  channels: 1
-  material: shellac
-  era: 1938
-  genre: Jazz
-  defects:
-    - clicks
-    - surface_noise
-    - rumble
-  source: "Internet Archive — 78rpm Collection"
-  source_url: "https://archive.org/details/..."
-  license: "Public Domain"
-  license_url: "https://creativecommons.org/publicdomain/mark/1.0/"
-  checksum_sha256: "abc123..."
-  notes: "Transfer von Victor 78rpm, 1938"
-```
+Füge KEINE eigenen MP3s, FLACs oder WAVs hinzu, deren Lizenzstatus unklar ist.
+Nutze stattdessen `scripts/generate_corpus_from_public_domain.py`, um automatisch
+Public-Domain-Material von vertrauenswürdigen Quellen herunterzuladen.
 
 ## Quellen für Public-Domain-Aufnahmen
 
-| Quelle | URL | Typ | Lizenz |
-|--------|-----|-----|--------|
-| Internet Archive 78rpm | <https://archive.org/details/78rpm> | Schellack, Vinyl | Public Domain |
-| Musopen | <https://musopen.org> | Klassik, alle Materialien | Public Domain / CC0 |
-| Freesound (CC0) | <https://freesound.org> | Effekte, kurze Clips | CC0 |
-| IASA Training Collection | <https://www.iasa-web.org> | Alle historischen Medien | Educational Use |
-| Europeana Sounds | <https://www.europeana.eu> | Historische Aufnahmen | Varies (PD/CC) |
+| Quelle | URL | Material |
+|--------|-----|----------|
+| Internet Archive | https://archive.org/details/78rpm | Shellac, Vinyl |
+| Musopen | https://musopen.org | Klassik (Shellac, Vinyl, Tape) |
+| Freesound (CC0) | https://freesound.org | Einzelklänge, Atmosphären |
+| Library of Congress | https://loc.gov/audio/ | Historische Aufnahmen |
+| Europeana Sounds | https://www.europeana.eu | Europäisches Audio-Erbe |
 
-## Aufnahmen hinzufügen
+## Manifest
+
+Jedes Unterverzeichnis führt eine `manifest.yaml` nach dem Schema in
+`MANIFEST_SCHEMA.yaml`. Validierung:
 
 ```bash
-# 1. Audio-Datei ins passende Verzeichnis kopieren
-cp meine_aufnahme.wav corpus/shellac/damaged/
+python tests/corpus/test_corpus_integrity.py
+```
 
-# 2. manifest.yaml aktualisieren
-# (Feld für Feld ausfüllen, siehe MANIFEST_SCHEMA.yaml)
+## Pipeline Smoke Test
 
-# 3. Integrität prüfen
-python -m pytest tests/corpus/test_corpus_integrity.py -v
-
-# 4. Pipeline-Smoke-Test
+```bash
 python -m pytest tests/corpus/test_corpus_pipeline_smoke.py -v
 ```
 
-## Rechtlicher Hinweis
+## Mindestanforderungen (Quality Gate)
 
-⚠️  **Alle Aufnahmen in diesem Corpus MÜSSEN Public Domain oder CC0 sein.**
-Kein urheberrechtlich geschütztes Material. Keine Fair-Use-Argumentation.
-Bei Unsicherheit: Nicht hinzufügen.
+- ≥ 20 Aufnahmen in ≥ 4 Material-Kategorien
+- ≥ 5 Vokal-Aufnahmen
+- Alle Manifest-Einträge valide (test_corpus_integrity grün)
+- Kein Crash in Pipeline-Smoke-Test (test_corpus_pipeline_smoke grün)
 
-## Minimalanforderungen (§15.2)
+## Aufnahmen hinzufügen
 
-- [ ] ≥ 20 Aufnahmen insgesamt
-- [ ] ≥ 4 Material-Kategorien (shellac, vinyl, tape, digital)
-- [ ] Alle manifest.yaml-Einträge vollständig
-- [ ] Alle Checksummen verifiziert
-- [ ] `test_corpus_integrity` grün
-- [ ] `test_corpus_pipeline_smoke` grün
+1. Audiodatei im passenden `damaged/`-Ordner ablegen (FLAC oder WAV, 48 kHz empfohlen)
+2. Eintrag in `manifest.yaml` mit `file`, `duration_s`, `sample_rate`, `material`, `era_year`, `genre`, `license`, `source_attribution` ausfüllen
+3. Optional: `source_url`, `defect_types`, `vocal`, `language`
+4. `test_corpus_integrity` laufen lassen
+5. Commit mit aussagekräftiger Message (z.B. "corpus: add 1950s jazz shellac recording")

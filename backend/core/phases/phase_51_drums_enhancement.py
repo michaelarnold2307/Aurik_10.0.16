@@ -467,7 +467,11 @@ class DrumsEnhancementV1(PhaseInterface):
                     else (enhanced.mean(axis=1) if enhanced.ndim == 2 else enhanced)
                 )
                 _hg51 = _chk_hg51(
-                    _pre51_mono.astype(np.float32), _post51_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_51
+                    _pre51_mono.astype(np.float32),
+                    _post51_mono.astype(np.float32),
+                    sr=sample_rate,
+                    mode=_hg_mode_51,
+                    bw_extension_context=True,
                 )
                 if _hg51.requires_rollback:
                     enhanced = audio.copy()

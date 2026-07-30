@@ -497,11 +497,22 @@ class WowFlutterFix(PhaseInterface):
         # Transport-Bump-Repair (135 Bumps, ~5 s) läuft trotzdem — ist schnell.
         _wow_sev_defect = float(kwargs.get("wow_severity", kwargs.get("wow", 0.0)) or 0.0)
         _flutter_sev_defect = float(kwargs.get("flutter_severity", kwargs.get("flutter", 0.0)) or 0.0)
+        # §v10.200 Fallback: DefectScanner-Daten aus _restoration_context abrufen,
+        # da kwargs nach Resampling (44100→48000) die Werte verlieren können.
+        if _wow_sev_defect <= 0.0 and _flutter_sev_defect <= 0.0:
+            _rctx_fb = kwargs.get("_restoration_context", {}) or {}
+            _defect_scores_fb = _rctx_fb.get("defect_scores", _rctx_fb.get("defect_focus_scores", {})) or {}
+            _wow_sev_defect = float(_defect_scores_fb.get("wow", _defect_scores_fb.get("wow_severity", 0.0)) or 0.0)
+            _flutter_sev_defect = float(_defect_scores_fb.get("flutter", _defect_scores_fb.get("flutter_severity", 0.0)) or 0.0)
         _wow_flutter_skip = _wow_sev_defect < 0.15 and _flutter_sev_defect < 0.15
         if _wow_flutter_skip:
-            logger.info(
+            # §v10.303: Erste Meldung als INFO, Wiederholungen als DEBUG (Log-Spam-Prävention)
+            _log_fn = logger.info if not getattr(self, "_wow_skip_logged", False) else logger.debug
+            self._wow_skip_logged = True
+            _log_fn(
                 "§v10.96 Wow/Flutter-Skip: wow=%.3f flutter=%.3f < 0.15 → ML-Hybrid skipped, transport-bump only",
-                _wow_sev_defect, _flutter_sev_defect,
+                _wow_sev_defect,
+                _flutter_sev_defect,
             )
             # Setze wow/flutter-spezifische Parameter auf Minimalwerte
             _effective_strength = 0.0  # Keine Pitch-Detektion, nur Transport-Repair
@@ -824,7 +835,8 @@ class WowFlutterFix(PhaseInterface):
                             audio = _stabilize_envelope(audio)
                         logger.debug(
                             "Phase 12: Envelope-Stabilisierung (mod=%.2f, cutoff=%.0f Hz)",
-                            _mod_strength, _mod_cutoff,
+                            _mod_strength,
+                            _mod_cutoff,
                         )
                     except Exception as _mod_exc:
                         logger.debug("Phase 12 Envelope non-blocking: %s", _mod_exc)

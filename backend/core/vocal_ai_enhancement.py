@@ -209,8 +209,8 @@ class GenderDetector:
 
         Kosten: O(chunks × N log N) mit N=sr*0.1, max 60 chunks ≈ 3 s Audio.
         """
-        chunk_samples = max(int(self.sr * 0.1), 512)   # 100 ms
-        hop_samples = chunk_samples // 2                 # 50 ms Überlappung
+        chunk_samples = max(int(self.sr * 0.1), 512)  # 100 ms
+        hop_samples = chunk_samples // 2  # 50 ms Überlappung
         max_chunks = min(60, max(1, (len(audio) - chunk_samples) // hop_samples + 1))
         best_f0 = 0.0
         best_peak_height = 0.0
@@ -228,7 +228,7 @@ class GenderDetector:
             autocorr = np.fft.irfft(fft * np.conj(fft))[:n]
             autocorr = autocorr / (autocorr[0] + 1e-10)
             min_period = int(self.sr / 500)  # Max 500 Hz
-            max_period = int(self.sr / 50)   # Min 50 Hz
+            max_period = int(self.sr / 50)  # Min 50 Hz
             if max_period <= min_period or max_period > len(autocorr):
                 continue
             autocorr_search = autocorr[min_period:max_period]

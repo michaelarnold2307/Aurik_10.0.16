@@ -38,8 +38,8 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import threading
 import time
 
@@ -250,7 +250,8 @@ class BassEnhancement(PhaseInterface):
                 config["sub_harmonic_gain"] = float(config["sub_harmonic_gain"] * _hum_damp)
                 logger.debug(
                     "P37: hum_notch_freqs=%s → sub_harmonic_gain damped by %.0f%%",
-                    _hum_freqs, (1.0 - _hum_damp) * 100,
+                    _hum_freqs,
+                    (1.0 - _hum_damp) * 100,
                 )
         config["sub_harmonic_gain"] = float(config["sub_harmonic_gain"] * _effective_strength)
         config["saturation_drive"] = float(config["saturation_drive"] * _effective_strength)
@@ -300,6 +301,22 @@ class BassEnhancement(PhaseInterface):
                 _p37_soft_sat_preserve,
                 _p37_sat_scale,
             )
+
+        # §v10.127 Depth-aware bass boost: tiefe Transfer-Ketten verlieren
+        # systematisch Bass-Energie durch Generation-Verlust (Rumpelfilter,
+        # Bandpass-Charakteristik jeder Kopier-Generation).
+        # +12% Bass-Enhancement pro Depth-Stufe ab Depth 3.
+        _td_p37 = len(kwargs.get("transfer_chain", []) or [])
+        if _td_p37 >= 3:
+            _depth_bass_boost = float(np.clip(1.0 + (_td_p37 - 2) * 0.12, 1.0, 1.50))
+            config["harmonic_2_gain"] = float(config["harmonic_2_gain"] * _depth_bass_boost)
+            config["sub_harmonic_gain"] = float(config["sub_harmonic_gain"] * _depth_bass_boost)
+            config["mix"] = float(np.clip(config["mix"] * _depth_bass_boost * 0.9, 0.0, 1.0))
+            logger.debug(
+                "Phase 37 depth=%d → bass boost ×%.2f",
+                _td_p37,
+                _depth_bass_boost,
+            )
         # Measure initial bass energy
         bass_energy_before = self._measure_bass_energy(audio, sample_rate)
 
@@ -331,7 +348,7 @@ class BassEnhancement(PhaseInterface):
         # §2.46e Hallucination-Guard (Pflicht für additive Phasen)
         try:
             _mode_37 = str(kwargs.get("mode", "restoration"))
-            _hg_37 = _check_hg_37_fn(audio, enhanced_audio, sr=sample_rate, mode=_mode_37)  # type: ignore[misc]
+            _hg_37 = _check_hg_37_fn(audio, enhanced_audio, sr=sample_rate, mode=_mode_37, bw_extension_context=True)  # type: ignore[misc]
             if _hg_37.requires_rollback:
                 logger.warning(
                     "phase_37: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_37.spectral_novelty

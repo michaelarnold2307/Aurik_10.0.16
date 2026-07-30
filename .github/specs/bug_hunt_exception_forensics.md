@@ -29,6 +29,7 @@ Wenn `self.audio` ein Tuple war (z.B. `(ndarray, metadata_dict)` aus einer
 Hilfsfunktion), crashte `np.asarray()` mit inhomogeneous shapes.
 
 **Fix:** Tuple→ndarray-Extraktion VOR `np.asarray()`:
+
 ```python
 if isinstance(self.audio, (tuple, list)):
     _candidates = [x for x in self.audio if isinstance(x, np.ndarray)]
@@ -47,6 +48,7 @@ Das `(2,)`-Array broadcastete nicht mit dem `(N,)`-Audio → Crash.
 **Fix:** `audio.shape[0] <= 2 and audio.shape[1] > 2` statt `shape[0] <= shape[1]`.
 
 **Dateien:**
+
 - `backend/core/phases/phase_09_crackle_removal.py:610`
 - `backend/core/phases/phase_29_tape_hiss_reduction.py:116`
 - `backend/core/phases/phase_49_advanced_dereverb.py:1095`
@@ -58,6 +60,7 @@ Das `(2,)`-Array broadcastete nicht mit dem `(N,)`-Audio → Crash.
 erwarteten strikt 2D-Input. Mono-Audio (1D) löste ValueError aus.
 
 **Fix:** 1D-Toleranz:
+
 - `stereo_channel_view`: `if audio.ndim == 1: return audio, audio.copy()`
 - `stereo_like`: `if template.ndim == 1: return np.column_stack([left, right])`
 
@@ -78,6 +81,7 @@ mit Enum-Keys. Wenn `material` ein String statt Enum war → KeyError.
 54 Call-Sites im Codebase, viele ohne Längen-Prüfung.
 
 **Fix:** `safe_filtfilt()`-Wrapper in audio_utils.py:
+
 ```python
 def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
     n = x.shape[axis]
@@ -86,6 +90,7 @@ def safe_filtfilt(b, a, x, axis=-1, padtype='odd', padlen=None):
     if n > max(len(b), len(a)): return lfilter(b, a, x, ...)
     return np.asarray(x)
 ```
+
 ALLE 54 Call-Sites auf `safe_filtfilt` migriert.
 
 **Dateien:** `backend/core/audio_utils.py` + 18 weitere Dateien
@@ -122,6 +127,7 @@ Analog→CD-Floor (-74 dBFS) wurde nie angewendet.
 ## Identifizierte Muster (für zukünftige Bug-Jagd)
 
 ### Pattern A: Falsche Kanal-Detection
+
 ```python
 # FALSCH (für channels-last (N,2) mit N≤2):
 if audio.shape[0] <= audio.shape[1]:  # N≤2 → True, falsch!
@@ -136,21 +142,25 @@ if audio.shape[0] <= 2 and audio.shape[1] > 2:  # channels-first
 **Noch zu prüfen:** phase_28, 34, 48, 50, 53, 54
 
 ### Pattern B: Tuple-Return aus Hilfsfunktionen
+
 Funktionen wie `_apply_material_loudness_preservation()` und `_limit_quiet_zone_boost()`
 geben `(ndarray, dict)` zurück. Alle Caller unpacken korrekt, ABER wenn das Tuple
 durch die Post-Processing-Chain gereicht wird, crasht `.ndim`-Zugriff.
 
 **Gefundene Tuple-Quellen (alle korrekt entpackt):**
+
 - phase_18: `_apply_material_loudness_preservation` → `gated_audio, loudness_stats = ...`
 - phase_29: `_limit_quiet_zone_boost` → `audio_processed, _quiet_zone_stats = ...`
 - phase_29: `_apply_material_loudness_preservation` → `audio_processed, loudness_stats = ...`
 - phase_03: `_apply_material_loudness_preservation` → `result_audio, loudness_stats = ...`
 
 ### Pattern C: Enum-String-Normalisierung
+
 `MaterialType`-Enums werden durch `str()` zu `"MaterialType.CASSETTE"`.
 Dict-Lookups mit String-Keys schlagen fehl. Immer `.value` oder Normalisierung nutzen.
 
 ### Pattern D: Channels-Last als Pipeline-Standard
+
 `to_channels_last()` wird in vielen Phasen aufgerufen. Eine zentrale Normalisierung
 in `_profiled_phase_call` verhindert Inkonsistenzen.
 
@@ -164,6 +174,7 @@ in `_profiled_phase_call` verhindert Inkonsistenzen.
 **Betroffene Phasen:** 18 (noise_gate), 29 (tape_hiss), 49 (dereverb), 50 (spectral_repair)
 
 **Was wir wissen:**
+
 - Rescue-Mechanismus findet ndarray via `_deep_extract_ndarray(result)` → Audio korrekt
 - Alle Tuple-Return-Pfade in diesen Phasen sind korrekt entpackt
 - `PhaseResult.__post_init__` normalisiert Tuple→ndarray
@@ -171,6 +182,7 @@ in `_profiled_phase_call` verhindert Inkonsistenzen.
   `_active_quality_intervention()` → `_apply_dedicated_*()` → `_evaluate_stereo_safety_guard()`
 
 **Ansatz für Live-Debugging:**
+
 ```python
 # In unified_restorer_v3.py, vor dem Exception-Handler:
 if not isinstance(current_audio, np.ndarray):
@@ -184,11 +196,13 @@ if not isinstance(current_audio, np.ndarray):
 **Betroffene Phasen:** 03, 04, 05, 08, 12, 13, 14, 16, 18, 19 (je 1×)
 
 **Was wir wissen:**
+
 - `_SkipResult` existiert NICHT als importierbares Python-Symbol
 - Nicht in scipy, numpy, oder Aurik-Quellcode auffindbar
 - Wahrscheinlich dynamisch von scipy's C-Extensions generiert
 
 **Ansatz für Live-Debugging:**
+
 ```python
 # Im Exception-Handler:
 if "_SkipResult" in str(e):
@@ -209,6 +223,7 @@ dann via `* audio` broadcasted. Wenn das Gain stattdessen ein (2,2)-Array ist
 (z.B. durch `np.eye(2)` oder `np.outer(gain, gain)`), schlägt der Broadcast fehl.
 
 **Ansatz für Live-Debugging:**
+
 ```python
 # In phase_18, vor kritischen Multiplikationen:
 if hasattr(gain, 'shape') and gain.shape == (2, 2):
@@ -221,11 +236,13 @@ if hasattr(gain, 'shape') and gain.shape == (2, 2):
 **Betroffene Phasen:** 03, 28, 29, 48, 50, 53
 
 **Was wir wissen:**
+
 - Phasen haben bereits Guards (phase_28:705-708)
 - Edge-Case: dynamisches `nperseg = min(N, len(audio))` kann kleiner als `noverlap` werden
 - `hybrid_ml_denoiser.py:276` hat den korrekten Fix: `_noverlap = min(1536, _nperseg - 1)`
 
 **Fix-Ansatz:** Gleichen Clamp in ALLE STFT-Call-Sites einbauen:
+
 ```python
 _nperseg = min(N_FFT, max(1, len(audio)))
 _noverlap = min(N_OVERLAP, max(0, _nperseg - 1))
@@ -236,26 +253,33 @@ _noverlap = min(N_OVERLAP, max(0, _nperseg - 1))
 ## Architektonische Erkenntnisse
 
 ### 1. Pipeline-Design
+
 `_profiled_phase_call` ist der Flaschenhals — alle Phasen laufen hier durch.
 Zentrale Guards hier haben maximalen Impact bei minimalem Risiko.
 
 ### 2. PhaseResult als Sicherheitsnetz
+
 `PhaseResult.__post_init__` ist DIE zentrale Stelle für Shape-Validierung.
 Jede Verbesserung hier schützt ALLE 69 Phasen automatisch.
 
 ### 3. PMGG-Pfad vs Direkt-Pfad
+
 Zwei getrennte Code-Pfade in `_execute_pipeline`:
+
 - PMGG: `wrap_phase()` → Regression-Check → Retry-Logik
 - Direkt: `_profiled_phase_call()` → `_normalize_phase_result()`
 Guards müssen in BEIDEN Pfaden sitzen.
 
 ### 4. Forensik-Infrastruktur
+
 `_record_oom_probe()` in unified_restorer_v3.py:32686 schreibt NDJSON.
 Diese Infrastruktur war essentiell für die Bug-Identifikation.
 ABER: `os.getpid()`-Abhängigkeit macht sie selbst anfällig (Sprint 1).
 
 ### 5. safe_filtfilt als Pattern
+
 Der Wrapper-Ansatz (`safe_filtfilt`) ist das richtige Muster:
+
 - Eine Funktion, die Fallback-Logik kapselt
 - Alle Call-Sites migrieren
 - Keine Exception-Handler nötig

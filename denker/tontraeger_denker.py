@@ -276,7 +276,7 @@ class TontraegerDenker:
             "streaming": "Streaming-Kopie",
             "unknown": "Unbekanntes Material",
         }
-        _mk = getattr(material, 'value', material)  # §v10.113 — enum→string
+        _mk = getattr(material, "value", material)  # §v10.113 — enum→string
         label = label_map.get(_mk, str(material))
         pct = int(confidence * 100)
         base = f"Erkanntes Material: {label} ({pct} % Konfidenz)."

@@ -35,14 +35,14 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import time
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import audio_sample_count, stereo_channel_view, stereo_like, safe_filtfilt  # §v10.101
+from backend.core.audio_utils import audio_sample_count, safe_filtfilt, stereo_channel_view, stereo_like  # §v10.101
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
 
@@ -75,6 +75,7 @@ class PresenceBoost(PhaseInterface):
 
     Performance: <0.10× realtime on modern CPU
     """
+
     # §v10.101 SOTA: Presence-Bänder auf Bark-Skala kalibriert
     # Bark 18-20 (2.0-4.4 kHz): Körper und Wärme der Präsenz
     # Bark 21-24 (4.4-9.5 kHz): Klarheit und Definition
@@ -381,7 +382,13 @@ class PresenceBoost(PhaseInterface):
         # §2.46e Hallucination-Guard (Pflicht für additive Phasen)
         try:
             _mode_38 = str(kwargs.get("mode", "restoration"))
-            _hg_38 = _check_hg_38_fn(audio, enhanced_audio, sr=sample_rate, mode=_mode_38)  # type: ignore[misc]
+            _hg_38 = _check_hg_38_fn(
+                audio,
+                enhanced_audio,
+                sr=sample_rate,
+                mode=_mode_38,
+                bw_extension_context=True,
+            )  # type: ignore[misc]
             if _hg_38.requires_rollback:
                 logger.warning(
                     "phase_38: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_38.spectral_novelty
@@ -496,7 +503,9 @@ class PresenceBoost(PhaseInterface):
 
         logger.debug(
             "Phase 38: presence EQ jitter=%.1f%% → lower=%.0fHz upper=%.0fHz",
-            (_jitter_factor - 1.0) * 100, lower_center, upper_center,
+            (_jitter_factor - 1.0) * 100,
+            lower_center,
+            upper_center,
         )
 
         if lower_gain > 0.05:
@@ -513,7 +522,12 @@ class PresenceBoost(PhaseInterface):
         return enhanced
 
     def _apply_bell_filter(
-        self, audio: np.ndarray, sample_rate: int, center_freq: float, gain_db: float, q: float,
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        center_freq: float,
+        gain_db: float,
+        q: float,
         zero_phase: bool = False,
     ) -> np.ndarray:
         """Wendet an: parametric EQ bell filter.

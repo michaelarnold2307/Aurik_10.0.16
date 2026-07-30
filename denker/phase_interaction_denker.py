@@ -57,6 +57,22 @@ logger = logging.getLogger(__name__)
 _SINGLETON: dict[str, PhaseInteractionDenker | None] = {"instance": None}
 _lock = threading.Lock()
 
+# §v10.303.3 Denker-Feedback-Loop: UV3 schreibt hier die Familien rein,
+# die es bei Low-Confidence gestrippt hat. Der Denker liest sie beim
+# nächsten Planungszyklus und plant diese Familien gar nicht erst ein.
+_low_confidence_stripped_cache: frozenset[str] = frozenset()
+
+
+def record_low_confidence_stripped_families(families: set[str] | frozenset[str]) -> None:
+    """§v10.303.3: UV3 ruft dies nach dem Strip, damit der Denker lernt."""
+    global _low_confidence_stripped_cache
+    _low_confidence_stripped_cache = frozenset(families)
+
+
+def get_low_confidence_stripped_families() -> frozenset[str]:
+    """§v10.303.3: Denker liest dies vor der Planung."""
+    return _low_confidence_stripped_cache
+
 
 def _load_symbol(module_name: str, symbol_name: str) -> Any:
     """Lädt Symbole lazy, um schwere/zyklische Imports zu vermeiden."""
@@ -505,6 +521,69 @@ class PhaseInteractionDenker:
 
         merged_phases = list(uv3_phases)
         injected_notes: list[str] = []
+
+        # §v10.303.4 Aktiver Confidence-Check: Auch ohne Cache (Song 1) wird
+        # der adaptive Threshold angewendet. Verhindert Song-1-Inkonsistenz.
+        _mat_conf = pipeline_confidence
+        if isinstance(_mat_conf, (int, float)) and isinstance(restorability_score, (int, float)):
+            try:
+                from backend.core.unified_restorer_v3 import UnifiedRestorerV3
+                _threshold = UnifiedRestorerV3._compute_low_confidence_threshold(
+                    restorability_score=float(restorability_score)
+                )
+                if _mat_conf < _threshold:
+                    _family_map = getattr(UnifiedRestorerV3, "_PHASE_INTERVENTION_CLASS", {})
+                    _no_skip = {
+                        "subtractive_cleanup", "reconstruction_inpainting",
+                        "time_pitch_transport", "distortion_repair", "dynamics_repair",
+                        "tonal_restoration", "tonal_mastering", "sibilance_control",
+                        "noise_reduction", "vocal_enhancement", "stereo_phase_geometry",
+                    }
+                    _pre = len(merged_phases)
+                    merged_phases = [
+                        _p for _p in merged_phases
+                        if _family_map.get(_p, "general") in _no_skip
+                    ]
+                    _post = len(merged_phases)
+                    if _post < _pre:
+                        logger.info(
+                            "§v10.303.4 PID-Confidence-Strip: %d/%d Phasen entfernt "
+                            "(conf=%.3f < threshold=%.3f, rs=%.0f)",
+                            _pre - _post, _pre, _mat_conf, _threshold, restorability_score,
+                        )
+                        injected_notes.append(
+                            f"§v10.303.4 Confidence-Strip: {_pre - _post} Phasen "
+                            f"(conf={_mat_conf:.3f} < thr={_threshold:.3f})"
+                        )
+            except Exception:
+                pass
+
+        # §v10.303.3 Denker-Feedback-Loop: Familien die UV3 beim letzten Run
+        # bei Low-Confidence gestrippt hat, werden gar nicht erst eingeplant.
+        _stripped_cache = get_low_confidence_stripped_families()
+        if _stripped_cache:
+            try:
+                from backend.core.unified_restorer_v3 import UnifiedRestorerV3
+                _family_map = getattr(UnifiedRestorerV3, "_PHASE_INTERVENTION_CLASS", {})
+                _pre_count = len(merged_phases)
+                merged_phases = [
+                    _p for _p in merged_phases
+                    if _family_map.get(_p, "general") not in _stripped_cache
+                ]
+                _post_count = len(merged_phases)
+                if _post_count < _pre_count:
+                    logger.info(
+                        "§v10.303.3 Denker-Feedback: %d/%d Phasen aus Plan gestrichen "
+                        "(gelernte useless families: %s)",
+                        _pre_count - _post_count, _pre_count,
+                        ", ".join(sorted(_stripped_cache)),
+                    )
+                    injected_notes.append(
+                        f"§v10.303.3 Feedback-Strip: {_pre_count - _post_count} Phasen "
+                        f"aus {len(_stripped_cache)} gelernten Familien"
+                    )
+            except Exception:
+                pass
 
         # 2. Ketten-Pflicht-Phasen (§2.46 Feature 1: TontraegerketteDenker)
         # Injiziert must_have_phases aus der erkannten Trägerkette,
@@ -1241,16 +1320,27 @@ class PhaseInteractionDenker:
     # ── Guard-Modulation (zentrale Entscheidungs-Intelligenz) ─────────────
 
     def _dag_reorder(self, phases: list[str], *, material: str = "unknown") -> list[str]:
-        """§ROADMAP-4: Topologische Sortierung nach Frequenzbereich.
+        """§3.4 ECHTES DAG: Topologische Sortierung mit Kahn's Algorithmus.
 
-        Regeln:
-        1. Subtractive (NR) vor additive (EQ) bei rauschdominiertem Material (tape)
-        2. Additive vor subtractive bei bandbreitenbegrenztem Material (shellac)
-        3. Breitband-Phasen vor schmalbandigen Phasen
-        4. Defekt-Reparatur vor Enhancement
+        Jede Phase deklariert in PHASE_FREQ_PROFILES:
+          - affects:   [(f_low, f_high, intensity), ...] — bearbeitete Frequenzbänder
+          - category:  "subtractive" | "additive" | "dynamics" | "corrective" | "other"
+          - requires:  [freq_band_name, ...] — Bänder, die VORHER restauriert sein müssen
+          - conflicts: [phase_id, ...] — Phasen, die NICHT adjazent laufen sollen
+          - after:     [phase_id, ...] — explizite Vorgänger (harte Kanten)
 
-        Nutzt die PHASE_FREQ_PROFILES aus dem CrossPhaseCoordinator für
-        Frequenzbereich-Information jeder Phase.
+        Kahn's Algorithmus:
+          1. Build adjacency list from requires/after + category rules + conflicts
+          2. Compute in-degree for each node
+          3. Queue nodes with in-degree 0, sorted by priority
+          4. Process queue, append to result, reduce in-degree of neighbors
+          5. Cycle detection: if result shorter than input → break cycles by priority
+
+        Material-adaptive Regeln (zusätzlich zu deklarierten Kanten):
+          - Tape/Kassette:  subtractive → dynamics → additive (NR vor EQ)
+          - Shellac/Wachs:  additive → dynamics → subtractive (BW-Restaurierung vor NR)
+          - Vinyl/Digital:  corrective → subtractive → dynamics → additive (Default)
+          - reel_tape:      corrective → subtractive → additive → dynamics
         """
         if len(phases) <= 1:
             return list(phases)
@@ -1260,40 +1350,215 @@ class PhaseInteractionDenker:
         except ImportError:
             return list(phases)
 
-        # ── Klassifiziere Phasen ──
-        subtractive: list[str] = []
-        additive: list[str] = []
-        dynamics: list[str] = []
-        other: list[str] = []
-
-        for pid in phases:
-            profile = PHASE_FREQ_PROFILES.get(pid, {})
-            cat = profile.get("category", "")
-            if cat == "subtractive":
-                subtractive.append(pid)
-            elif cat == "additive":
-                additive.append(pid)
-            elif cat == "dynamics":
-                dynamics.append(pid)
-            else:
-                other.append(pid)
-
+        phase_set = set(phases)
         mat = str(material).lower()
 
-        # ── Material-adaptive Reihenfolge ──
-        if mat in ("shellac", "wax_cylinder", "lacquer_disc"):
-            # Bandbreitenbegrenzt: EQ/Enhancement VOR NR
-            # (erst Frequenzen restoren, dann entrauschen)
-            result = additive + dynamics + subtractive + other
-        elif mat in ("cassette", "tape", "reel_tape"):
-            # Rauschdominiert: NR VOR EQ/Enhancement
-            # (erst entrauschen, dann restliche Frequenzen formen)
-            result = subtractive + dynamics + additive + other
+        # ── 0. Material-adaptive Kategorie-Reihenfolge (VOR Kantenbau) ──
+        if mat in ("cassette", "tape", "reel_tape"):
+            cat_order = ["corrective", "subtractive", "dynamics", "additive", "other"]
+        elif mat in ("shellac", "wax_cylinder", "lacquer_disc"):
+            cat_order = ["corrective", "additive", "dynamics", "subtractive", "other"]
         else:
-            # Default (vinyl, digital): Defekt-Reparatur vor Enhancement
-            result = subtractive + dynamics + additive + other
+            cat_order = ["corrective", "subtractive", "dynamics", "additive", "other"]
 
+        # ── 1. Baue Adjazenzliste und In-Degree ─────────────────────────
+        adj: dict[str, list[str]] = {p: [] for p in phases}
+        in_degree: dict[str, int] = {p: 0 for p in phases}
+
+        def add_edge(src: str, dst: str) -> None:
+            """Fügt gerichtete Kante src → dst hinzu (src muss vor dst laufen)."""
+            if src not in phase_set or dst not in phase_set:
+                return
+            if src == dst:
+                return
+            if dst not in adj[src]:
+                adj[src].append(dst)
+                in_degree[dst] += 1
+                logger.debug("DAG edge: %s → %s", src, dst)
+
+        # ── 1a. Deklarierte Kanten aus PHASE_FREQ_PROFILES ─────────────
+        for pid in phases:
+            profile = PHASE_FREQ_PROFILES.get(pid, {})
+            # Explizite Vorgänger (after) — materialadaptiv überspringbar
+            for predecessor in profile.get("after", []):
+                # Bei Konflikt mit Material-Regel: after-Kante überspringen
+                # (z.B. Shellac: additive vor subtractive → after "denoise vor presence" ignorieren)
+                pred_cat = PHASE_FREQ_PROFILES.get(predecessor, {}).get("category", "other")
+                pid_cat = profile.get("category", "other")
+                if _categories_conflict_with_material(pred_cat, pid_cat, mat, cat_order):
+                    logger.debug(
+                        "DAG: skipping after edge %s (%s) → %s (%s) — conflicts with material rule for %s",
+                        predecessor, pred_cat, pid, pid_cat, mat,
+                    )
+                    continue
+                add_edge(predecessor, pid)
+            # requires: Phasen, die die benötigten Frequenzbänder bereitstellen
+            for required_band in profile.get("requires", []):
+                for other in phases:
+                    if other == pid:
+                        continue
+                    other_profile = PHASE_FREQ_PROFILES.get(other, {})
+                    other_affects = other_profile.get("affects", [])
+                    for band_low, band_high, _ in other_affects:
+                        band_name = _freq_range_to_band_name(band_low, band_high)
+                        if band_name == required_band and other_profile.get("category") in (
+                            "additive",
+                            "corrective",
+                        ):
+                            # Bei Konflikt mit Material-Regel: requires-Kante überspringen
+                            other_cat = other_profile.get("category", "other")
+                            pid_cat_req = profile.get("category", "other")
+                            if not _categories_conflict_with_material(other_cat, pid_cat_req, mat, cat_order):
+                                add_edge(other, pid)
+                            break
+
+        # ── 1b. Konflikt-Kanten: conflicting phases → separieren ──────
+        for pid in phases:
+            profile = PHASE_FREQ_PROFILES.get(pid, {})
+            for conflict_id in profile.get("conflicts", []):
+                if conflict_id in phase_set and conflict_id != pid:
+                    # Der Phase mit niedrigerer Priorität wird als Nachfolger einsortiert
+                    prio_a = profile.get("priority", 5)
+                    prio_b = PHASE_FREQ_PROFILES.get(conflict_id, {}).get("priority", 5)
+                    if prio_a < prio_b:
+                        add_edge(pid, conflict_id)
+                    elif prio_b < prio_a:
+                        add_edge(conflict_id, pid)
+                    # Bei gleicher Priorität: Kategorie-basierte Entscheidung
+                    else:
+                        cat_a = profile.get("category", "")
+                        cat_b = PHASE_FREQ_PROFILES.get(conflict_id, {}).get("category", "")
+                        if cat_a == "subtractive" and cat_b != "subtractive":
+                            add_edge(pid, conflict_id)
+                        elif cat_b == "subtractive" and cat_a != "subtractive":
+                            add_edge(conflict_id, pid)
+
+        # ── 1c. Material-adaptive Kategorie-Kanten ─────────────────────
+        # cat_order bereits in Schritt 0 definiert
+
+        # Phasen nach Kategorie gruppieren
+        cat_phases: dict[str, list[str]] = {c: [] for c in cat_order}
+        for pid in phases:
+            profile = PHASE_FREQ_PROFILES.get(pid, {})
+            cat = profile.get("category", "other")
+            if cat not in cat_phases:
+                cat = "other"
+            cat_phases.setdefault(cat, []).append(pid)
+
+        # Kanten zwischen aufeinanderfolgenden Kategorien
+        for i in range(len(cat_order) - 1):
+            for src in cat_phases.get(cat_order[i], []):
+                for dst in cat_phases.get(cat_order[i + 1], []):
+                    # Nur wenn keine explizite reverse-Kante existiert
+                    if src not in adj.get(dst, []):
+                        add_edge(src, dst)
+
+        # ── 2. Kahn's Algorithmus ──────────────────────────────────────
+        # Priority queue: (priority, phase_id) — niedrigere priority = früher
+        import heapq
+
+        queue: list[tuple[int, str]] = []
+        for pid in phases:
+            if in_degree[pid] == 0:
+                prio = PHASE_FREQ_PROFILES.get(pid, {}).get("priority", 5)
+                heapq.heappush(queue, (prio, pid))
+
+        result: list[str] = []
+        while queue:
+            _, pid = heapq.heappop(queue)
+            result.append(pid)
+            for neighbor in adj.get(pid, []):
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    prio = PHASE_FREQ_PROFILES.get(neighbor, {}).get("priority", 5)
+                    heapq.heappush(queue, (prio, neighbor))
+
+        # ── 3. Cycle-Breaking: verbleibende Phasen nach Priorität ──────
+        remaining = [p for p in phases if p not in result]
+        if remaining:
+            logger.warning(
+                "DAG cycle detected: %d phases not reachable (material=%s). Breaking by priority.",
+                len(remaining),
+                mat,
+            )
+            remaining.sort(
+                key=lambda p: PHASE_FREQ_PROFILES.get(p, {}).get("priority", 5)
+            )
+            result.extend(remaining)
+
+        # ── 4. Validierung: alle Phasen vorhanden? ─────────────────────
+        if set(result) != phase_set:
+            missing = phase_set - set(result)
+            extra = set(result) - phase_set
+            logger.error(
+                "DAG integrity error: missing=%s extra=%s — falling back to category sort",
+                missing,
+                extra,
+            )
+            return self._dag_reorder_fallback(phases, material=mat)
+
+        logger.info(
+            "§3.4 DAG reorder: %d phases, material=%s → %s",
+            len(result),
+            mat,
+            " → ".join(result[:5]) + (" …" if len(result) > 5 else ""),
+        )
         return result
+
+    def _dag_reorder_fallback(self, phases: list[str], *, material: str = "unknown") -> list[str]:
+        """Fallback: Kategorie-basierte Sortierung (ursprüngliche Logik)."""
+        if len(phases) <= 1:
+            return list(phases)
+        try:
+            from denker.cross_phase_coordinator import PHASE_FREQ_PROFILES
+        except ImportError:
+            return list(phases)
+        subtractive, additive, dynamics, corrective, other = [], [], [], [], []
+        for pid in phases:
+            cat = PHASE_FREQ_PROFILES.get(pid, {}).get("category", "other")
+            {"subtractive": subtractive, "additive": additive, "dynamics": dynamics,
+             "corrective": corrective}.get(cat, other).append(pid)
+        mat = str(material).lower()
+        if mat in ("shellac", "wax_cylinder", "lacquer_disc"):
+            return corrective + additive + dynamics + subtractive + other
+        return corrective + subtractive + dynamics + additive + other
+
+
+def _freq_range_to_band_name(f_low: float, f_high: float) -> str:
+    """Mapped einen Frequenzbereich auf den nächstgelegenen FREQ_BANDS-Namen."""
+    try:
+        from denker.cross_phase_coordinator import FREQ_BANDS
+    except ImportError:
+        return "mid"
+    center = (f_low + f_high) / 2
+    best_band = "mid"
+    best_dist = float("inf")
+    for band_name, b_low, b_high, _ in FREQ_BANDS:
+        b_center = (b_low + b_high) / 2
+        dist = abs(center - b_center)
+        if dist < best_dist:
+            best_dist = dist
+            best_band = band_name
+    return best_band
+
+
+def _categories_conflict_with_material(
+    src_cat: str, dst_cat: str, material: str, cat_order: list[str]
+) -> bool:
+    """Prüft, ob eine after-Kante (src→dst) der materialadaptiven Kategorie-Reihenfolge widerspricht.
+
+    Wenn src in cat_order NACH dst kommt, würde die after-Kante src→dst
+    einen Zyklus mit den Kategorie-Kanten erzeugen → Konflikt → Kante überspringen.
+
+    Returns True wenn die Kante der Material-Regel widerspricht.
+    """
+    if src_cat not in cat_order or dst_cat not in cat_order:
+        return False
+    src_idx = cat_order.index(src_cat)
+    dst_idx = cat_order.index(dst_cat)
+    # Konflikt: src (Vorgänger) kommt in cat_order NACH dst (Nachfolger)
+    # → after-Kante würde rückwärts durch die Kategorien zeigen
+    return src_idx > dst_idx
 
     # ── Guard-Modulation (zentrale Entscheidungs-Intelligenz) ─────────────
 

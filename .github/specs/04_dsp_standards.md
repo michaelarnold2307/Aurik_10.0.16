@@ -18,7 +18,6 @@ JEDER Phase angewendet wenn die Sharpness im 2–5 kHz-Bereich >12% beträgt.
 Implementiert in `backend/core/comfort_guard.py`, integriert in
 `PhaseInterface._safe_process()`.
 
-
 ## §4.10 — Perzeptuelle DSP-Standards (§v10.101)
 
 ### §4.10.1 Bark-Band-Verarbeitungspflicht
@@ -59,7 +58,6 @@ Die absolute Hörschwelle variiert um >40 dB über das Spektrum.
 ### §4.10.6 Zeitliche Maskierung
 
 Attack/Release orientieren sich an ISO 11172-3: Pre-Masking 20ms, Post-Masking 100ms.
-
 
 ## §4.1 Pflicht-Konzepte (mindestens eines pro DSP-Funktion)
 
@@ -1573,4 +1571,3 @@ Pipeline verdrahtet. Die Migration der Einzelphasen erfolgt schrittweise:
 
 **Garantie:** Neue Phasen MÜSSEN Bark/LUFS verwenden (§V35, §V36).
 Bestehende Phasen werden bei nächster Überarbeitung migriert.
-

@@ -497,7 +497,33 @@ class HarmonicRestorationPhase(PhaseInterface):
         # Stille produzieren. Zusätzlich H2/H1 ≥ 0.35 als Frühwarn-Schwelle.
         # §v10.118 FC-Awareness: Im FeedbackChain-Durchlauf sofort auf
         # Passthrough schalten wenn H2/H1 ≥ 0.35 (keine Synthese nötig).
-        _is_fc_pass = bool(kwargs.get('_feedback_chain_pass', False))
+        _is_fc_pass = bool(kwargs.get("_feedback_chain_pass", False))
+
+        # §v10.306 Preventive Vocal-Presence Pre-Check:
+        # Bevor irgendeine schwere Berechnung läuft: prüfen ob das Audio
+        # überhaupt harmonisch anreicherbare Inhalte hat (Stimme/Instrument).
+        # Reines Rauschen, Stille oder bereits gesättigtes Material wird
+        # sofort auf Passthrough geschaltet — keine DDSP, kein FFT.
+        # Spart ~2s pro Phase-07-Aufruf auf nicht-vokalem Material.
+        if _effective_strength > 0.05:
+            try:
+                _mono_pre = np.mean(audio, axis=1) if audio.ndim == 2 else audio
+                _rms_total = float(np.sqrt(np.mean(_mono_pre**2)) + 1e-12)
+                # Bandpass 300-4000 Hz: wo Stimme lebt
+                from scipy.signal import butter, sosfilt
+                _sos = butter(4, [300/24000, 4000/24000], btype='band', output='sos')
+                _vocal_band = sosfilt(_sos, _mono_pre)
+                _rms_vocal = float(np.sqrt(np.mean(_vocal_band**2)) + 1e-12)
+                _vocal_ratio = _rms_vocal / max(_rms_total, 1e-12)
+                if _rms_total < 1e-6:
+                    logger.info("phase_07: Silence detected (RMS=%.1e) → Passthrough", _rms_total)
+                    _effective_strength = 0.0
+                elif _vocal_ratio < 0.15 and _rms_total < 1e-3:
+                    logger.info("phase_07: No vocal content (ratio=%.3f, RMS=%.1e) → Passthrough",
+                                _vocal_ratio, _rms_total)
+                    _effective_strength = 0.0
+            except Exception:
+                pass  # Non-blocking pre-check
         if _is_fc_pass:
             try:
                 _h2h1_fc = self._measure_h2_ratio(audio, sample_rate)
@@ -507,26 +533,33 @@ class HarmonicRestorationPhase(PhaseInterface):
                         _h2h1_fc,
                     )
                     _effective_strength = 0.0
-            except Exception:
-                pass
+            except Exception as _fc_exc_1:
+                logger.debug("phase_07 FC-Awareness H2/H1 (non-blocking): %s", _fc_exc_1)
         if _effective_strength > 0.05:
             try:
                 _h2h1_07 = self._measure_h2_ratio(audio, sample_rate)
-                if _h2h1_07 >= 0.50:
-                    _effective_strength = float(np.clip(_effective_strength * 0.15, 0.0, 0.10))
+                # §v10.303.38 Carrier-Adaptive H2/H1-Schwelle:
+                # Tiefe Tonträgerketten erhöhen H2/H1 durch Rauschen, nicht durch
+                # harmonische Sättigung. Die Schwelle muss mit der Kettentiefe steigen.
+                _td_h2h1 = len(list(kwargs.get("transfer_chain", []) or []))
+                _h2h1_threshold = float(np.clip(0.50 + _td_h2h1 * 0.08, 0.50, 0.82))
+                if _h2h1_07 >= _h2h1_threshold:
+                    _h2h1_reduction = float(np.clip(1.0 - (_h2h1_07 - 0.50) * 1.5, 0.05, 1.0))
+                    _effective_strength = float(np.clip(_effective_strength * _h2h1_reduction, 0.0, 0.10))
                     logger.info(
-                        "phase_07: H2/H1=%.3f ≥ 0.50 → strength auf %.3f gedrosselt (FeedbackChain-Guard)",
-                        _h2h1_07, _effective_strength,
+                        "phase_07: H2/H1=%.3f ≥ %.2f (depth=%d) → strength auf %.3f gedrosselt",
+                        _h2h1_07, _h2h1_threshold, _td_h2h1, _effective_strength,
                     )
                 elif _h2h1_07 >= 0.35:
                     # Frühwarn-Schwelle: Obertongehalt bereits hoch → sanft drosseln
                     _effective_strength = float(np.clip(_effective_strength * 0.50, 0.0, 1.0))
                     logger.debug(
                         "phase_07: H2/H1=%.3f ≥ 0.35 → strength auf %.3f gedrosselt (FeedbackChain-Frühwarn)",
-                        _h2h1_07, _effective_strength,
+                        _h2h1_07,
+                        _effective_strength,
                     )
-            except Exception:
-                pass  # Non-blocking: H2/H1-Messung darf Phase nicht blockieren
+            except Exception as _h2_exc:
+                logger.debug("phase_07 H2/H1-Messung (non-blocking): %s", _h2_exc)
 
         # §V41 ForwardMaskingGuard: Stärke in post-transienten Masking-Fenstern erhöhen.
         _panns_s_07 = float(kwargs.get("panns_singing", 0.0))
@@ -744,16 +777,17 @@ class HarmonicRestorationPhase(PhaseInterface):
         # §v10.40: Transfer-chain-adaptive tilt tolerance — deeper chains need
         # looser tolerance because each generational transfer adds its own tilt.
         def _get_transfer_depth_p07(kw: dict) -> int:
-            _chain = (
-                kw.get("transfer_chain")
-                or (kw.get("_restoration_context", {}) or {}).get("transfer_chain", [])
-            )
+            _chain = kw.get("transfer_chain") or (kw.get("_restoration_context", {}) or {}).get("transfer_chain", [])
             return len(_chain) if _chain else 1
 
         _depth_factor_p07 = 1.0
         _td_p07 = _get_transfer_depth_p07(kwargs)
-        if _td_p07 >= 3:
-            _depth_factor_p07 = 2.0  # double tolerance for deep transfer chains
+        if _td_p07 >= 5:
+            _depth_factor_p07 = 2.0  # double tolerance for extreme chains
+        elif _td_p07 >= 4:
+            _depth_factor_p07 = 1.5  # 50% more tolerance for deep cassette chains
+        else:
+            _depth_factor_p07 = 1.0
 
         _tilt_capped_p07 = False
         try:
@@ -769,9 +803,10 @@ class HarmonicRestorationPhase(PhaseInterface):
                 if _cap07_floor_raw == 0.5 and "." in _mat_k07:
                     _short_k07 = _mat_k07.rsplit(".", 1)[-1]
                     _cap07_floor_raw = _TILT_CAP_FLOOR_P07.get(_short_k07, _cap07_floor_raw)
-                # §v10.60: Bei depth≥3 den Floor weiter absenken, um mehr harmonische
-                # Synthese bei extremen Tilt-Abweichungen durchzulassen.
-                if _td_p07 >= 3:
+                # §v10.60: Bei depth≥5 (extreme chain) den Floor weiter absenken, um mehr
+                # harmonische Synthese bei extremen Tilt-Abweichungen durchzulassen.
+                # §v10.120 Calibration-Shift: depth 4 (deep cassette) behält normalen Floor.
+                if _td_p07 >= 5:
                     _cap07_floor = max(_cap07_floor_raw * 0.7, 0.05)
                 else:
                     _cap07_floor = _cap07_floor_raw
@@ -884,6 +919,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 sr=sample_rate,
                 material_bw_ceiling_hz=_bw_ceiling_07,
                 mode="restoration",
+                bw_extension_context=True,
             )
             if _hg_result07.requires_rollback:
                 logger.warning(
@@ -951,6 +987,8 @@ class HarmonicRestorationPhase(PhaseInterface):
             # Kassette hat inhärente Bandsättigung → h2≈0.03, nicht 0.006.
             if _era_d_07 is None and _h2_target_07 < 0.01:
                 _mat_for_h2 = str(material_type or "").lower()
+                # §v10.301: Normalisiere Enum-Strings ("materialtype.cassette" → "cassette")
+                _mat_for_h2 = _mat_for_h2.replace("materialtype.", "").replace(" ", "_").replace("-", "_")
                 _MATERIAL_H2_FALLBACK: dict[str, float] = {
                     "cassette": 0.030,
                     "tape": 0.025,
@@ -981,16 +1019,28 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _n_07 = min(len(_diff_07), sample_rate * 3)
                     _diff_seg_07 = _diff_07[:_n_07] if _diff_07.ndim == 1 else _diff_07[0, :_n_07]
                     _lag_min_07 = max(1, int(0.015 * sample_rate))
-                    _auto_07 = np.correlate(_diff_seg_07, _diff_seg_07, mode='full')
+                    _auto_07 = np.correlate(_diff_seg_07, _diff_seg_07, mode="full")
                     _mid_07 = len(_auto_07) // 2
                     _search_07 = _auto_07[_mid_07 + _lag_min_07 : _mid_07 + int(0.050 * sample_rate)]
                     if len(_search_07) > 0:
                         _echo_peak_07 = float(np.max(np.abs(_search_07))) / max(float(np.max(np.abs(_auto_07))), 1e-12)
-                        if _echo_peak_07 > 0.5:
+                        _td_echo_p07 = _get_transfer_depth_p07(kwargs)
+                        # §v10.131 Depth-adaptive: Bei depth≥4 und starkem Echo harmonische
+                        # Synthese komplett deaktivieren (mehr Echo als Nutzen).
+                        _echo_kill_p07 = 0.60 if _td_echo_p07 >= 4 else 0.80
+                        if _echo_peak_07 > _echo_kill_p07:
+                            _h2_blend_07 = 1.0  # Voll-Dry: Synthese komplett deaktiviert
+                            logger.info(
+                                "§v10.131 Depth-Echo-Kill (depth=%d, corr=%.3f > %.2f): "
+                                "harmonic synthesis fully disabled",
+                                _td_echo_p07, _echo_peak_07, _echo_kill_p07,
+                            )
+                        elif _echo_peak_07 > 0.5:
                             _h2_blend_07 = min(0.60, _h2_blend_07 * 1.5)
                             logger.info(
                                 "§v10.117 Anti-Echo: echo_corr=%.3f → blend boosted to %.2f",
-                                _echo_peak_07, _h2_blend_07,
+                                _echo_peak_07,
+                                _h2_blend_07,
                             )
                 except Exception:
                     pass  # Non-blocking echo guard

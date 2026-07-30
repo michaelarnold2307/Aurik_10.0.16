@@ -139,6 +139,17 @@ class TemporalQualityCoherenceMetric:
         _mat = str(material_key).lower().replace("-", "_") if material_key else "default"
         span_threshold = _MATERIAL_SPAN_THRESHOLD.get(_mat, _MATERIAL_SPAN_THRESHOLD["default"])
         sigma_threshold = _MATERIAL_SIGMA_THRESHOLD.get(_mat, _MATERIAL_SIGMA_THRESHOLD["default"])
+        # §v10.303.15 Multi-Carrier: permissivsten Schwellwert aller Carrier
+        if transfer_chain and len(transfer_chain) > 1:
+            _chain_span, _chain_sigma = span_threshold, sigma_threshold
+            for _c in transfer_chain:
+                _ck = str(_c).lower().replace("-", "_")
+                _chain_span = max(_chain_span, _MATERIAL_SPAN_THRESHOLD.get(_ck, span_threshold))
+                _chain_sigma = max(_chain_sigma, _MATERIAL_SIGMA_THRESHOLD.get(_ck, sigma_threshold))
+            if _chain_span > span_threshold:
+                span_threshold, sigma_threshold = _chain_span, _chain_sigma
+                logger.debug("§v10.303.15 Multi-Carrier TQC: span=%.2f sigma=%.2f (chain: %s)",
+                             span_threshold, sigma_threshold, transfer_chain)
 
         duration_s = len(audio) / max(sr, 1)
         if duration_s < self.MIN_FILE_DURATION_S:
@@ -249,9 +260,22 @@ def get_temporal_coherence_metric() -> TemporalQualityCoherenceMetric:
     return _instance
 
 
-def measure_temporal_coherence(audio: np.ndarray, sr: int, material_key: str | None = None) -> TemporalCoherenceResult:
-    """Convenience-Wrapper."""
-    return get_temporal_coherence_metric().measure(audio, sr, material_key=material_key)
+def measure_temporal_coherence(
+    audio: np.ndarray,
+    sr: int,
+    material_key: str | None = None,
+    transfer_chain: list[str] | None = None,
+) -> TemporalCoherenceResult:
+    """Convenience-Wrapper.
+
+    §v10.303.15 Multi-Carrier: Wenn transfer_chain gegeben ist, wird der
+    permissivste Schwellwert aller Carrier in der Kette verwendet.
+    Bei 3 analogen + 1 digitalen Träger ist die Qualitätsvarianz
+    NATÜRLICH höher — der strengste Schwellwert würde falsch alarmieren.
+    """
+    return get_temporal_coherence_metric().measure(
+        audio, sr, material_key=material_key, transfer_chain=transfer_chain,
+    )
 
 
 # Convenience-Alias (Spec §3.2)

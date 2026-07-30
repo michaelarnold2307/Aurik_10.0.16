@@ -949,6 +949,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                         sr=sample_rate,
                         mode=_mode56,
                         material_bw_ceiling_hz=_bw_cap56,
+                        bw_extension_context=True,
                     )
                     if _hg_result56.requires_rollback:
                         logger.debug(

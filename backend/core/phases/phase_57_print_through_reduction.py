@@ -41,7 +41,11 @@ def _rms_dbfs_gated(sig: np.ndarray) -> float:
     Stereo → Mono-Downmix vor Framing. Gibt -96.0 zurück wenn kein aktiver Frame.
     """
     if sig.ndim == 2:
-        _mono = sig.mean(axis=0).astype(np.float64) if (sig.shape[0] <= 2 and sig.shape[1] > 2) else sig.mean(axis=1).astype(np.float64)
+        _mono = (
+            sig.mean(axis=0).astype(np.float64)
+            if (sig.shape[0] <= 2 and sig.shape[1] > 2)
+            else sig.mean(axis=1).astype(np.float64)
+        )
     else:
         _mono = sig.astype(np.float64)
     _frame = 480  # 10 ms @ 48 kHz

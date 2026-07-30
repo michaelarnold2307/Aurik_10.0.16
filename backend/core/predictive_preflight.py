@@ -119,6 +119,7 @@ _PHASE_TO_FAMILY: dict[str, str] = {
     "phase_56_spectral_band_gap_repair": "spectral_restoration",
 }
 
+
 # Minimale Verbesserung pro Dimension, um Phase nicht zu skippen.
 # §v10.101: Adaptiv statt statisch 0.15 — hängt von Restorability ab.
 # Je schlechter die Quelle, desto mehr Phasen werden gebraucht →
@@ -238,7 +239,9 @@ def compute_preflight(
             result.skipped_phases.append(phase_id)
             logger.debug(
                 "PredictivePreflight SKIP %s (family=%s, max_delta=%.3f)",
-                phase_id, family, max_delta,
+                phase_id,
+                family,
+                max_delta,
             )
 
     result.computation_time_ms = (time.time() - t0) * 1000.0
@@ -281,7 +284,9 @@ def _compute_baseline_metrics(
 
     # Crest-Faktor: Peak/RMS im Zeitdomain
     crest_values = []
-    for i, pos in enumerate([i * max(1, (len(mono) - fft_size) // max(1, len(spectra) - 1)) for i in range(len(spectra))]):
+    for i, pos in enumerate(
+        [i * max(1, (len(mono) - fft_size) // max(1, len(spectra) - 1)) for i in range(len(spectra))]
+    ):
         pos = min(pos, len(mono) - fft_size)
         seg = mono[pos : pos + fft_size]
         peak = float(np.max(np.abs(seg))) + 1e-12
@@ -311,10 +316,16 @@ def _compute_baseline_metrics(
 
 
 def _simulate_perceptual_effect(
-    spectra, baseline, proxy, sample_rate, fft_size, mono,
+    spectra,
+    baseline,
+    proxy,
+    sample_rate,
+    fft_size,
+    mono,
 ):
     """§SOTA: JND-basierte Simulation statt FFT-Deltas."""
     from backend.core.dsp.bark_lufs_util import BARK_EDGES_HZ
+
     freqs = np.fft.rfftfreq(fft_size, 1.0 / sample_rate)
     n_bark = len(BARK_EDGES_HZ) - 1
     deltas = {}
@@ -322,12 +333,40 @@ def _simulate_perceptual_effect(
         bark_e = np.zeros(min(n_bark, 24), dtype=np.float64)
         for spec in spectra:
             for b in range(min(n_bark, 24)):
-                lo, hi = BARK_EDGES_HZ[b], BARK_EDGES_HZ[b+1]
+                lo, hi = BARK_EDGES_HZ[b], BARK_EDGES_HZ[b + 1]
                 m = (freqs >= lo) & (freqs < hi)
-                if m.any(): bark_e[b] += float(np.mean(spec[m] ** 2))
+                if m.any():
+                    bark_e[b] += float(np.mean(spec[m] ** 2))
         bark_e /= max(len(spectra), 1)
         ref = baseline.get(f"{dim}_ref", np.median(bark_e) + 1e-12)
-        jnd = np.array([2.0,1.8,1.5,1.3,1.0,0.9,0.8,0.7,0.6,0.6,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.5,1.8,2.0,2.5,3.0,3.5])[:len(bark_e)]
+        jnd = np.array(
+            [
+                2.0,
+                1.8,
+                1.5,
+                1.3,
+                1.0,
+                0.9,
+                0.8,
+                0.7,
+                0.6,
+                0.6,
+                0.6,
+                0.7,
+                0.8,
+                0.9,
+                1.0,
+                1.1,
+                1.2,
+                1.3,
+                1.5,
+                1.8,
+                2.0,
+                2.5,
+                3.0,
+                3.5,
+            ]
+        )[: len(bark_e)]
         dev = np.abs(1.0 - bark_e / (ref + 1e-12))
         wd = np.mean(dev / (jnd + 0.5))
         d = float(np.clip(wd * weight * (0.8 if direction == "decrease" else 1.0), 0.0, 1.0))
@@ -389,9 +428,7 @@ def _simulate_phase_effect(
         hf_mask = freqs >= 5000
         if np.any(hf_mask):
             hf_spec = spec[hf_mask]
-            modified_metrics["hf_peak_ratio"].append(
-                float(np.max(hf_spec) / (np.mean(hf_spec) + 1e-12))
-            )
+            modified_metrics["hf_peak_ratio"].append(float(np.max(hf_spec) / (np.mean(hf_spec) + 1e-12)))
         else:
             modified_metrics["hf_peak_ratio"].append(1.0)
 

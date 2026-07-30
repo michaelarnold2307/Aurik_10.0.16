@@ -68,7 +68,6 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import os
 import sys
 import time
@@ -76,6 +75,8 @@ from typing import Any
 
 import numpy as np
 import scipy.signal as signal
+
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 
 # Handle imports for both module and standalone execution
 if __name__ == "__main__":

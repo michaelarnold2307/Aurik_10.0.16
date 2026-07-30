@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import enum
 import logging
+import os
 import sys
 import threading
 from typing import Any
@@ -549,7 +550,25 @@ class MLDeviceManager:
         self._gpu_errors: dict[str, int] = {}  # plugin_name → error count
         self._gpu_disabled_plugins: set[str] = set()  # session-disabled plugins
         self._ort_gpu_compatible_plugins: set[str] = set(_HEAVY_ML_PLUGINS)
-        self._detect_backend()
+        self._detection_complete = threading.Event()  # §v10.304.24: Signal für Warmup
+        # §v10.304.28: AURIK_FORCE_CPU=1 überspringt GPU-Detektion komplett.
+        # Nützlich bei ROCm-Treiberproblemen (Thread-Deadlocks, HIP-Kontext-Fehler).
+        if os.environ.get("AURIK_FORCE_CPU", "").strip() in ("1", "true", "yes"):
+            logger.info("MLDeviceManager: AURIK_FORCE_CPU=1 — GPU deaktiviert, CPU-only")
+            self._detection_complete.set()
+            return
+        try:
+            self._detect_backend()
+            self._detection_complete.set()  # §v10.304.24: GPU-Erkennung abgeschlossen
+        except Exception:
+            self._detection_complete.set()  # Garantie: Event immer gesetzt, kein ewiges wait()
+            raise
+
+    # ── §v10.304.24: Warten auf GPU-Erkennung ──────────────────────────
+
+    def wait_for_detection(self, timeout_s: float = 60.0) -> bool:
+        """Blockiert bis GPU-Erkennung abgeschlossen ist (max timeout_s)."""
+        return self._detection_complete.wait(timeout=timeout_s)
 
     # ── Detection ────────────────────────────────────────────────────────
 
@@ -586,10 +605,20 @@ class MLDeviceManager:
                 arch_str,
                 self._gpu_tier.name,
             )
+            # §v10.304.30: Klare, grep-bare Status-Zeile
+            _backend_label = "ROCm" if self._backend == GPUBackend.ROCM else "CUDA" if self._backend == GPUBackend.CUDA else self._backend.value
+            logger.info("══════════════════════════════════════════════")
+            logger.info("GPU STATUS: %s AKTIV — %s (%.1f GB VRAM)", _backend_label, self._gpu_name, self._vram_total_gb)
+            logger.info("  PyTorch device:  %s", self._torch_gpu_device)
+            logger.info("  ONNX providers:  %s", " → ".join(self._ort_gpu_providers))
+            logger.info("══════════════════════════════════════════════")
         else:
             logger.info(
                 "MLDeviceManager: no GPU backend — CPU-only mode (CUDA/ROCm/DirectML not found or not installed)"
             )
+            logger.info("══════════════════════════════════════════════")
+            logger.info("GPU STATUS: DEAKTIVIERT — CPU-only")
+            logger.info("══════════════════════════════════════════════")
 
     def _detect_cuda_or_rocm(self) -> None:
         """Erkennt NVIDIA CUDA oder AMD ROCm via torch.cuda.
@@ -619,6 +648,12 @@ class MLDeviceManager:
                 self._ort_gpu_providers = ["ROCMExecutionProvider", "CPUExecutionProvider"]
                 self._gpu_architecture = _detect_amd_architecture(device_name)
                 logger.info("MLDeviceManager: AMD ROCm detected — HIP %s", torch.version.hip)
+                # §v10.304.30: ONNX ROCm-Sanity-Probe sofort nach Erkennung.
+                # Prüft ob ROCMExecutionProvider tatsächlich funktioniert.
+                # Defekte ONNX-ROCm-Installationen (hipErrorInvalidDeviceFunction)
+                # werden sofort erkannt → GPU global deaktiviert statt dass
+                # jeder einzelne Plugin-Inferenz-Call fehlschlägt.
+                self._probe_rocm_onnx_pad()
             elif is_cuda:
                 self._backend = GPUBackend.CUDA
                 self._ort_gpu_providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
@@ -629,6 +664,7 @@ class MLDeviceManager:
                 self._backend = GPUBackend.ROCM
                 self._ort_gpu_providers = ["ROCMExecutionProvider", "CPUExecutionProvider"]
                 self._gpu_architecture = _detect_amd_architecture(device_name)
+                logger.info("MLDeviceManager: GPU erkannt (Fallback ROCm) — %s", device_name)
 
             self._torch_gpu_device = "cuda"
             self._vram_total_gb = round(total_vram, 2)
@@ -1175,31 +1211,68 @@ class MLDeviceManager:
             "CPUExecutionProvider",
         ]
 
+    def force_cpu_fallback(self, reason: str = "") -> None:
+        """§v10.304.23: GPU global deaktivieren — alle Plugins auf CPU.
+
+        Wird aufgerufen wenn der Bridge-Warmup einen GPU-Timeout detektiert.
+        Verhindert dass nachfolgende Phasen/Plugins erneut versuchen die
+        defekte GPU zu nutzen.
+        """
+        with self._lock:
+            if self._gpu_available:
+                self._gpu_available = False
+                self._backend = GPUBackend.NONE
+                self._torch_gpu_device = "cpu"
+                self._ort_gpu_providers = ["CPUExecutionProvider"]
+                logger.warning(
+                    "MLDeviceManager: GPU deaktiviert (%s) — CPU-Fallback für alle Plugins",
+                    reason or "unknown",
+                )
+                logger.info("══════════════════════════════════════════════")
+                logger.info("GPU STATUS: DEAKTIVIERT — %s", reason or "unknown")
+                logger.info("══════════════════════════════════════════════")
+
     def warmup_rocm(self) -> bool:
-        """Initialisiert ROCm-Laufzeitumgebung mit minimaler Dummy-Inferenz zur Cold-Start-Amortisierung.
+        """Initialisiert ROCm-Laufzeitumgebung mit Dummy-Inferenz (Timeout-geschützt).
 
         Running this once during application startup eliminates the ~500 ms–2 s first-
         inference latency caused by ROCm kernel compilation (HIP JIT). Returns True on
         success, False if warmup failed or ROCm is not active.
 
-        Safe to call from any thread; internally synchronises via the instance lock.
+        §v10.304.30: torch.zeros("cuda") kann auf defekten ROCm-Installationen
+        hängen. Geschützt durch ThreadPoolExecutor mit 10 s Timeout.
+        §v10.304.31: self._lock wird NICHT während der GPU-Operation gehalten —
+        sonst Deadlock wenn force_cpu_fallback denselben Lock braucht.
         """
         if self._backend != GPUBackend.ROCM or not self._gpu_available:
             return False
         try:
             import torch  # type: ignore[import]
 
-            with self._lock:
-                _t = torch.zeros(_ROCM_WARMUP_TENSOR_LEN, dtype=torch.float32, device="cuda")
-                _t_back = _t.cpu()
-                del _t, _t_back
-                torch.cuda.synchronize()
-            torch.set_num_interop_threads(_ROCM_TORCH_THREADS)
-            logger.info("MLDeviceManager: ROCm warmup complete — HIP runtime ready (%s)", self._gpu_name)
-            return True
+            def _warmup_op() -> bool:
+                try:
+                    _t = torch.zeros(_ROCM_WARMUP_TENSOR_LEN, dtype=torch.float32, device="cuda")
+                    _t_back = _t.cpu()
+                    del _t, _t_back
+                    torch.cuda.synchronize()
+                    torch.set_num_interop_threads(_ROCM_TORCH_THREADS)
+                    return True
+                except Exception:
+                    return False
+
+            from concurrent.futures import ThreadPoolExecutor as _WarmupTPE
+
+            _pool = _WarmupTPE(max_workers=1, thread_name_prefix="rocm_warmup")
+            _fut = _pool.submit(_warmup_op)
+            _ok = _fut.result(timeout=10.0)
+            _pool.shutdown(wait=False)
+            if _ok:
+                logger.info("MLDeviceManager: ROCm warmup complete — HIP runtime ready (%s)", self._gpu_name)
+                return True
         except Exception as exc:
-            logger.debug("MLDeviceManager: ROCm warmup failed (non-critical): %s", exc)
-            return False
+            logger.warning("MLDeviceManager: ROCm warmup failed/timeout — GPU deaktiviert: %s", exc)
+            self.force_cpu_fallback("warmup_timeout")
+        return False
 
     def pin_tensor_rocm(self, array: Any) -> Any:
         """Gibt a pinned-memory copy of *array* for zero-copy CPU→GPU transfers zurück.

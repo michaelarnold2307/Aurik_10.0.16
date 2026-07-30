@@ -337,9 +337,7 @@ def wrap_steering(engine: PhaseSteeringEngine, original_fn):
             result2_audio = result2.audio if hasattr(result2, "audio") else result2
             hpe2 = engine._compute_hpe(result2_audio, sr)
             if hpe2 > hpe_before - 0.02:
-                engine.record_phase(
-                    phase_name + "_retry", result2_audio, hpe2, engine._compute_pmgg(result2_audio, sr)
-                )
+                engine.record_phase(phase_name + "_retry", result2_audio, hpe2, engine._compute_pmgg(result2_audio, sr))
                 return result2
             # RETRY half nicht → SKIP
             engine.record_phase(phase_name + "_retry_failed", audio, hpe_before, engine._compute_pmgg(audio, sr))

@@ -37,7 +37,6 @@ from typing import Any, cast
 import numpy as np
 from scipy.signal import butter, sosfiltfilt
 
-from backend.api.bridge import normalize_user_mode as _bridge_normalize_user_mode
 from backend.core.calibration_matrix import get_material_floor
 from backend.core.pipeline_health_state import PipelineHealthState, pipeline_health_from_fail_reasons
 
@@ -377,6 +376,7 @@ class AurikDenker:
             audio:         Audio-Signal (mono/stereo, float32)
             sr:            Sample-Rate in Hz (Spec §6.5: immer 48 000 Hz)
             validate_audio: Ob Eingabe-Validierung durchgeführt werden soll
+            mode:          "Restoration", "Studio 2026", oder "Preview" (§3.5)
 
         Returns:
             AurikErgebnis mit restauriertem Audio und vollständiger Bewertung.
@@ -385,10 +385,29 @@ class AurikDenker:
         t_start = time.perf_counter()
         assert sr == 48000, f"AurikDenker.restauriere() erwartet sr=48000 Hz, erhalten: {sr} Hz"
 
+        # ── §3.5 Preview-Mode: 30s Vorschau vor voller Restaurierung ─────
+        _PREVIEW_DURATION_S = 30.0
+        from backend.api.bridge import normalize_user_mode as _bridge_norm
+
+        _is_preview = _bridge_norm(mode) == "Preview"
+        if _is_preview:
+            preview_samples = int(_PREVIEW_DURATION_S * sr)
+            original_duration_s = len(audio) / sr if audio.ndim == 1 else audio.shape[0] / sr
+            if len(audio.shape) == 1:
+                audio = audio[:preview_samples].copy()
+            else:
+                audio = audio[:preview_samples].copy()
+            logger.info(
+                "§3.5 Preview: Audio auf %.1fs getrimmt (Original: %.1fs)",
+                _PREVIEW_DURATION_S, original_duration_s,
+            )
+            # Preview läuft immer mit no_rt_limit für schnellstmögliche Vorschau
+            no_rt_limit = True
+
         _dur_s = len(audio) / max(sr, 1) if audio.ndim == 1 else audio.shape[0] / max(sr, 1)
         logger.info(
             "AurikDenker.denke() gestartet: mode=%s, sr=%d, duration=%.1fs, shape=%s, "
-            "caches=[era=%s, genre=%s, defect=%s, medium=%s, rest=%s]",
+            "caches=[era=%s, genre=%s, defect=%s, medium=%s, rest=%s]%s",
             mode,
             sr,
             _dur_s,
@@ -398,6 +417,7 @@ class AurikDenker:
             cached_defect_result is not None,
             cached_medium_result is not None,
             cached_restorability_result is not None,
+            " [PREVIEW §3.5]" if _is_preview else "",
         )
 
         # NaN/Inf-Schutz (Spec §3.1)
@@ -633,7 +653,9 @@ class AurikDenker:
         if normalized in internal_aliases:
             return internal_aliases[normalized]
 
-        canonical_mode = _bridge_normalize_user_mode(mode)
+        from backend.api.bridge import normalize_user_mode as _bridge_norm
+
+        canonical_mode = _bridge_norm(mode)
         if canonical_mode == "Studio 2026":
             return "studio2026"
         if canonical_mode == "Restoration":
@@ -1273,6 +1295,7 @@ class AurikDenker:
         # carrier (cached_medium_result from _carrier_bg / bridge cache) — avoids a
         # redundant MediumDetector pass that the user sees as "Tonträger wird erkannt".
         material = "unknown"
+        _medium_confidence: float = 1.0  # §v10.303.4: Für PID-Planung
         if cached_medium_result is not None:
             # Use same multi-fallback as UV3 (line 1564): primary_material → material_type → material
             material = str(
@@ -1281,6 +1304,7 @@ class AurikDenker:
                 or getattr(cached_medium_result, "material", None)
                 or "unknown"
             )
+            _medium_confidence = float(getattr(cached_medium_result, "confidence", 1.0) or 1.0)
             stage_notes["tontraeger"] = (
                 f"{material} (Cache, Konfidenz: {getattr(cached_medium_result, 'confidence', 0.0):.2f})"
             )
@@ -1306,6 +1330,7 @@ class AurikDenker:
                     )
                 toni = get_tontraeger_denker().erkenne(aktuelles_audio, sr, file_path=input_path)
                 material = toni.material_type
+                _medium_confidence = float(getattr(toni, "confidence", 1.0) or 1.0)
                 stage_notes["tontraeger"] = f"{material} (Konfidenz: {toni.confidence:.2f})"
                 phases_executed.append("tontraeger_erkennung")
                 logger.info("AurikDenker [1/10] Träger: %s (%.2f)", material, toni.confidence)
@@ -1513,20 +1538,39 @@ class AurikDenker:
             strat_denker = get_strategie_denker()
             # M-2b: §7.6 defekt-adaptive Chunk-Größe — übergebe Defektschwere an Strategie
             _defect_sev_for_plan = float(getattr(defekt, "overall_severity", 0.0)) if defekt is not None else 0.0
-            strategie = strat_denker.plan(
-                aktuelles_audio,
-                sr,
-                enforce_3x_rt=True,
-                defect_severity=_defect_sev_for_plan,
-                signal_signature=_signal_signature,
-            )
-            strat_denker.starte_timer(audio_duration_s)
-            _budget_raw = getattr(strategie, "max_processing_s", audio_duration_s * _3X_RT_LIMIT)
+            # §v10.304.18: Timeout-Guard für StrategieDenker.plan() — ROCm/HIP GPU-Init
+            # kann auf manchen Systemen > 120s blockieren. Fallback: Default-Plan.
+            import concurrent.futures as _cf_strat
+
+            def _plan_with_timeout() -> Any:
+                return strat_denker.plan(
+                    aktuelles_audio, sr,
+                    enforce_3x_rt=True,
+                    defect_severity=_defect_sev_for_plan,
+                    signal_signature=_signal_signature,
+                )
+
+            _strat_future = _cf_strat.ThreadPoolExecutor(max_workers=1).submit(_plan_with_timeout)
+            try:
+                strategie = _strat_future.result(timeout=120.0)
+            except (_cf_strat.TimeoutError, TimeoutError):
+                logger.warning(
+                    "§v10.304.18 StrategieDenker Timeout nach 120s — "
+                    "verwende Default-Plan (GPU-Init blockiert)"
+                )
+                strategie = None  # Fallback: wird unten als Default gehandhabt
+                _strat_future.cancel()
+            if strategie is not None:
+                strat_denker.starte_timer(audio_duration_s)
+                _budget_raw = getattr(strategie, "max_processing_s", audio_duration_s * _3X_RT_LIMIT)
+                _mode_raw = getattr(strategie, "quality_mode", "quality")
+            else:
+                _budget_raw = audio_duration_s * _3X_RT_LIMIT
+                _mode_raw = "quality"
             try:
                 _budget_s = float(_budget_raw)
             except (TypeError, ValueError):
                 _budget_s = float(audio_duration_s * _3X_RT_LIMIT)
-            _mode_raw = getattr(strategie, "quality_mode", "quality")
             _strat_mode = str(_mode_raw) if _mode_raw is not None else "quality"
             stage_notes["strategie"] = f"Budget: {_budget_s:.1f}s, Modus: {_strat_mode}"
             phases_executed.append("strategie_plan")
@@ -1629,6 +1673,7 @@ class AurikDenker:
                     audio=aktuelles_audio,
                     sr=sr,
                     restorability_score=_pid_rest_score,
+                    pipeline_confidence=_medium_confidence,
                     goal_risk_map=_goal_risk_map or None,
                     strategie_plan=strategie,
                     causal_plan=defekt,
@@ -2793,7 +2838,13 @@ class AurikDenker:
             try:
                 _guard.phase_end("orchestrierung", aktuelles_audio, sr)
                 aktuelles_audio, _guard_blend_report = _guard.post_restore(audio, aktuelles_audio, sr)
-                _guard_report = _guard.post_flight(aktuelles_audio, sr)
+                # §v10.119: chain_depth aus chain_info für Constitution-Check
+                _guard_chain_depth = 1
+                if isinstance(chain_info, dict):
+                    _tc = chain_info.get("transfer_chain") or chain_info.get("chain") or []
+                    if isinstance(_tc, list) and _tc:
+                        _guard_chain_depth = len(_tc)
+                _guard_report = _guard.post_flight(aktuelles_audio, sr, chain_depth=_guard_chain_depth)
                 if _guard_blend_report.get("whisper_blended"):
                     warnings.append("Whisper-Details: originale Leise-Passagen zurückgemischt")
                 if _guard_blend_report.get("dynamics_restored"):
@@ -2839,7 +2890,9 @@ class AurikDenker:
             )
             logger.info(
                 "§ORCHESTRATOR FINAL: %s (%.0f/100, conf=%.2f)",
-                _final.overall_verdict, _final.quality_score, _final.confidence,
+                _final.overall_verdict,
+                _final.quality_score,
+                _final.confidence,
             )
         except Exception as _orf_exc:
             logger.debug("§ORCHESTRATOR resolve non-blocking: %s", _orf_exc)

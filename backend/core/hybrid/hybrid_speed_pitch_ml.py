@@ -114,6 +114,12 @@ class HybridSpeedPitch:
     Detects global pitch for speed correction using adaptive YIN/CREPE strategy.
     """
 
+    # §v10.303: Klassen-Variablen für Chunk-übergreifende Persistenz.
+    # Phase 31 erzeugt pro Chunk eine neue Instanz — ohne diese Variablen
+    # gehen pYIN-Disable und CREPE-Fallback nach Chunk 1 verloren.
+    _pyin_disabled: bool = False
+    _last_valid_crepe: tuple[float, float] | None = None
+
     def __init__(self, config: SpeedPitchConfig | None = None) -> None:
         """
         Initialisiert hybrid speed/pitch detector.
@@ -205,7 +211,13 @@ class HybridSpeedPitch:
         crepe_confidence = None
 
         # Stufe 1: pYIN-Detektion (Mauch & Dixon 2014) — §4.2 konform
-        if strategy in [
+        # §v10.303: Nach erstem massivem Fail (conf < 0.15) pYIN für diesen Song deaktivieren.
+        # pYIN confidence 0.08 auf cassette ist nutzlos — spart 2× 4s pro Folgelauf.
+        if HybridSpeedPitch._pyin_disabled:
+            pyin_pitch = 0.0
+            pyin_confidence = 0.0
+            logger.debug("pYIN: deaktiviert (vorheriger Fail conf < 0.15)")
+        elif strategy in [
             PitchDetectionStrategy.PYIN_ONLY,
             PitchDetectionStrategy.ADAPTIVE,
             PitchDetectionStrategy.HYBRID,
@@ -217,6 +229,10 @@ class HybridSpeedPitch:
             metadata["pyin"] = {"pitch": float(pyin_pitch), "confidence": float(pyin_confidence)}
 
             logger.info("pYIN: pitch=%.2f Hz, confidence=%.3f", pyin_pitch, pyin_confidence)
+            # §v10.303: Bei massivem Fail (conf < 0.15) pYIN für diesen Song deaktivieren
+            if pyin_confidence < 0.15:
+                HybridSpeedPitch._pyin_disabled = True
+                logger.info("pYIN confidence %.3f < 0.15 → pYIN für diesen Song deaktiviert", pyin_confidence)
 
         # Stufe 2: ML-Detektion (bedingt: RMVPE/PESTO/CREPE)
         should_apply_crepe = False
@@ -241,6 +257,18 @@ class HybridSpeedPitch:
             metadata["crepe"] = {"pitch": float(crepe_pitch), "confidence": float(crepe_confidence)}
 
             logger.info("CREPE: pitch=%.2f Hz, confidence=%.3f", crepe_pitch, crepe_confidence)
+            # §v10.303: CREPE-Null-Ergebnis (pitch≈0, conf≈0) → letztes gültiges Ergebnis verwenden
+            if crepe_pitch < 1.0 and crepe_confidence < 0.01:
+                if HybridSpeedPitch._last_valid_crepe is not None:
+                    crepe_pitch, crepe_confidence = HybridSpeedPitch._last_valid_crepe
+                    logger.info(
+                        "CREPE Null-Ergebnis → letztes gültiges übernommen: pitch=%.2f Hz, conf=%.3f",
+                        crepe_pitch, crepe_confidence,
+                    )
+                else:
+                    logger.info("CREPE Null-Ergebnis — kein vorheriges gültiges Ergebnis, verwerfe")
+            elif crepe_confidence > 0.3:
+                HybridSpeedPitch._last_valid_crepe = (float(crepe_pitch), float(crepe_confidence))
 
         # Finaler Pitch-Schätzwert
         final_pitch, final_confidence = self._combine_estimates(

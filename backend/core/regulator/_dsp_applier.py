@@ -7,13 +7,14 @@ Kanonisch zusammengeführt aus backend/_dsp_applier.py (Phase-Skip-Gate, Modul-D
 und backend/core/regulator/_dsp_applier.py (Biquad-EQ, Kompressor, Limiter, Enhancer).
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 import scipy.signal
+
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 
 logger = logging.getLogger(__name__)
 

@@ -48,6 +48,7 @@ def guard_phase_output(result, audio_in: np.ndarray, phase_id: str) -> PhaseResu
     """Validate phase output is a proper PhaseResult with valid audio.
 
     Returns the PhaseResult (passes through if valid).
+    §v10.304: Normalisiert Audio-Shape auf Input-Shape (eliminiert P5-Exceptions).
     """
     from .phases.phase_interface import PhaseResult
 
@@ -62,6 +63,27 @@ def guard_phase_output(result, audio_in: np.ndarray, phase_id: str) -> PhaseResu
             raise TypeError(f"PhaseContract [{phase_id}]: PhaseResult.audio must be ndarray, got {type(result.audio)}")
         if result.audio.ndim not in (1, 2):
             raise ValueError(f"PhaseContract [{phase_id}]: result audio must be 1D or 2D, got {result.audio.ndim}D")
+        # §v10.304: Shape-Normalisierung verhindert P5-Exceptions
+        # (STFT/ISTFT kann Frame-Grenzen verschieben → Kanäle unterschiedlich lang)
+        if audio_in is not None and result.audio.ndim == audio_in.ndim:
+            _in_len = audio_in.shape[-1] if audio_in.ndim == 2 else len(audio_in)
+            _out_len = result.audio.shape[-1] if result.audio.ndim == 2 else len(result.audio)
+            if _out_len != _in_len:
+                _min_len = min(_out_len, _in_len)
+                if result.audio.ndim == 2:
+                    result = PhaseResult(
+                        audio=result.audio[..., :_min_len].copy() if _out_len > _in_len
+                        else np.pad(result.audio, ((0,0), (0,_in_len-_out_len))),
+                        modifications=result.modifications,
+                        warnings=result.warnings + [f"Shape normalized: {_out_len}→{_in_len}"],
+                    )
+                else:
+                    result = PhaseResult(
+                        audio=result.audio[:_min_len].copy() if _out_len > _in_len
+                        else np.pad(result.audio, (0, _in_len-_out_len)),
+                        modifications=result.modifications,
+                        warnings=result.warnings + [f"Shape normalized: {_out_len}→{_in_len}"],
+                    )
 
     return result
 

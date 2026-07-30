@@ -45,6 +45,7 @@ from typing import Any
 
 import numpy as np
 import scipy.signal as sig
+
 from backend.core.audio_utils import safe_filtfilt  # §v10.101
 
 logger = logging.getLogger(__name__)

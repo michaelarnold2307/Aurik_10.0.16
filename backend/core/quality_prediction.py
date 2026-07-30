@@ -146,8 +146,12 @@ class QualityAnalyzer:
     """
 
     def analyze_quality(
-        self, audio: np.ndarray, sample_rate: int, reference: np.ndarray | None = None,
-        *, perceptual_score: float | None = None,
+        self,
+        audio: np.ndarray,
+        sample_rate: int,
+        reference: np.ndarray | None = None,
+        *,
+        perceptual_score: float | None = None,
     ) -> QualityEstimate:
         """
         Analysiert die Audioqualität — perzeptuell gewichtet für menschliches Hören.
@@ -185,7 +189,13 @@ class QualityAnalyzer:
 
         # Overall score (perzeptuell gewichtet, §v10.101)
         overall_score = self._calculate_overall_score(
-            snr_db, dynamic_range_db, thd_percent, clarity, warmth, brightness, naturalness,
+            snr_db,
+            dynamic_range_db,
+            thd_percent,
+            clarity,
+            warmth,
+            brightness,
+            naturalness,
             perceptual_score=perceptual_score,
         )
 
@@ -513,8 +523,16 @@ class QualityAnalyzer:
     # === Helper Methods ===
 
     def _calculate_overall_score(
-        self, snr: float, dr: float, thd: float, clarity: float, warmth: float, brightness: float, naturalness: float,
-        *, perceptual_score: float | None = None,
+        self,
+        snr: float,
+        dr: float,
+        thd: float,
+        clarity: float,
+        warmth: float,
+        brightness: float,
+        naturalness: float,
+        *,
+        perceptual_score: float | None = None,
     ) -> float:
         """
         Calculate overall quality score (0-100) — perzeptuell gewichtet.
@@ -554,12 +572,7 @@ class QualityAnalyzer:
         else:
             # Technical Fallback: reduziert technische, erhöht perzeptuelle Anteile
             score = (
-                0.20 * snr_norm
-                + 0.15 * dr_norm
-                + 0.10 * thd_norm
-                + 0.20 * clarity
-                + 0.15 * warmth
-                + 0.20 * naturalness
+                0.20 * snr_norm + 0.15 * dr_norm + 0.10 * thd_norm + 0.20 * clarity + 0.15 * warmth + 0.20 * naturalness
             )
 
         return float(score * 100)

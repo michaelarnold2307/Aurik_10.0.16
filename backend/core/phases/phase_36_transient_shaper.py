@@ -296,7 +296,11 @@ class TransientShaper(PhaseInterface):
                 else (shaped_audio.mean(axis=1) if shaped_audio.ndim == 2 else shaped_audio)
             )
             _hg36 = _chk_hg36(
-                _pre36_mono.astype(np.float32), _post36_mono.astype(np.float32), sr=sample_rate, mode=_hg_mode_36
+                _pre36_mono.astype(np.float32),
+                _post36_mono.astype(np.float32),
+                sr=sample_rate,
+                mode=_hg_mode_36,
+                bw_extension_context=True,
             )
             if _hg36.requires_rollback:
                 shaped_audio = audio.copy()

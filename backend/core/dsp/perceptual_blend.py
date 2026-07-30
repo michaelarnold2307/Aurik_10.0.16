@@ -19,6 +19,7 @@ Referenzen:
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -27,11 +28,36 @@ logger = logging.getLogger(__name__)
 # Bark-Skala: 24 kritische Bänder des menschlichen Gehörs
 # Grenzfrequenzen in Hz (Zwicker 1961)
 # ---------------------------------------------------------------------------
-_BARK_EDGES_HZ = np.array([
-    0, 100, 200, 300, 400, 510, 630, 770, 920, 1080,
-    1270, 1480, 1720, 2000, 2320, 2700, 3150, 3700, 4400,
-    5300, 6400, 7700, 9500, 12000, 15500,
-], dtype=np.float32)
+_BARK_EDGES_HZ = np.array(
+    [
+        0,
+        100,
+        200,
+        300,
+        400,
+        510,
+        630,
+        770,
+        920,
+        1080,
+        1270,
+        1480,
+        1720,
+        2000,
+        2320,
+        2700,
+        3150,
+        3700,
+        4400,
+        5300,
+        6400,
+        7700,
+        9500,
+        12000,
+        15500,
+    ],
+    dtype=np.float32,
+)
 
 
 def _hz_to_bark(hz: np.ndarray) -> np.ndarray:
@@ -80,12 +106,13 @@ def perceptual_blend(
     wet_mono = wet if not is_stereo else np.mean(wet, axis=0)
 
     delta = wet_mono - dry_mono
-    delta_rms = float(np.sqrt(np.mean(delta ** 2)) + 1e-12)
+    delta_rms = float(np.sqrt(np.mean(delta**2)) + 1e-12)
     if delta_rms < 1e-8:
         return dry.copy()  # Keine Änderung → dry
 
     # ── STFT ──
     import librosa
+
     D_dry = librosa.stft(dry_mono.astype(np.float32), n_fft=_N_FFT, hop_length=_HOP)
     D_wet = librosa.stft(wet_mono.astype(np.float32), n_fft=_N_FFT, hop_length=_HOP)
 
@@ -122,8 +149,8 @@ def perceptual_blend(
     # §v10.101 Temporale Maskierung (ISO 11172-3):
     # Laute Transienten maskieren leisere Ereignisse VOR (20ms) und NACH (100ms) sich.
     # Wir berechnen die Onset-Stärke via Spectral Flux und erweitern die Maskierung.
-    _PRE_MASK_FRAMES = max(1, int(0.020 * sr / _HOP))   # 20ms pre-masking
-    _POST_MASK_FRAMES = max(1, int(0.100 * sr / _HOP))   # 100ms post-masking
+    _PRE_MASK_FRAMES = max(1, int(0.020 * sr / _HOP))  # 20ms pre-masking
+    _POST_MASK_FRAMES = max(1, int(0.100 * sr / _HOP))  # 100ms post-masking
     _ONSET_THRESHOLD = 0.15  # Relative Schwelle für Spectral-Flux-Onsets
 
     # Spectral Flux: Summe der positiven Magnituden-Differenzen pro Frame
@@ -153,6 +180,7 @@ def perceptual_blend(
 
     # Smooth temporal boost to prevent abrupt changes
     from scipy.ndimage import uniform_filter1d
+
     _temporal_boost = uniform_filter1d(_temporal_boost.astype(np.float64), size=3).astype(np.float32)
 
     for frame in range(n_frames):
@@ -193,7 +221,7 @@ def perceptual_blend(
         abs_thresh = np.zeros(n_bark, dtype=np.float32)
         for fb in range(n_bark):
             bark_z = bark_centers[fb]
-            abs_thresh[fb] = 3.64 * (bark_z ** -0.8) - 6.5 * np.exp(-0.6 * (bark_z - 3.3) ** 2) + 1e-3 * (bark_z ** 4)
+            abs_thresh[fb] = 3.64 * (bark_z**-0.8) - 6.5 * np.exp(-0.6 * (bark_z - 3.3) ** 2) + 1e-3 * (bark_z**4)
 
         abs_thresh_db = 10.0 * np.log10(np.maximum(abs_thresh, 1e-12))
         effective_thresh_db = np.maximum(masked_threshold_db, abs_thresh_db)
@@ -209,22 +237,29 @@ def perceptual_blend(
             # Gewichtung: je mehr Bänder hörbar geändert, desto mehr Wet
             audibility_ratio = float(n_audible) / float(n_bark)
             # Skaliere den globalen Wet-Faktor mit der Hörbarkeit
-            gain_mask[frame] = float(np.clip(
-                scalar_wet * (0.3 + 0.7 * audibility_ratio),
-                min_gain, 1.0,
-            ))
+            gain_mask[frame] = float(
+                np.clip(
+                    scalar_wet * (0.3 + 0.7 * audibility_ratio),
+                    min_gain,
+                    1.0,
+                )
+            )
         else:
             # Keine hörbare Änderung → fast nur Dry
             gain_mask[frame] = min_gain
 
         # §v10.101 Temporale Maskierung: Bei Transienten mehr Wet erlauben
-        gain_mask[frame] = float(np.clip(
-            gain_mask[frame] * _temporal_boost[frame],
-            min_gain, 1.0,
-        ))
+        gain_mask[frame] = float(
+            np.clip(
+                gain_mask[frame] * _temporal_boost[frame],
+                min_gain,
+                1.0,
+            )
+        )
 
     # ── Smooth Gain über Frames ──
     from scipy.ndimage import uniform_filter1d
+
     gain_mask = uniform_filter1d(gain_mask.astype(np.float64), size=5).astype(np.float32)
 
     # ── Blend ──

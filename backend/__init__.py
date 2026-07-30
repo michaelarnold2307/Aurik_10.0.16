@@ -34,7 +34,10 @@ def _safe_stft(
     Bei input_length < nperseg gibt scipy eine UserWarning aus und
     verwendet nperseg=input_length. Dieser Guard fängt den Fall ab,
     ohne die Warnung auszulösen — das Verhalten ist identisch.
+    §v10.119: Normalisiert boundary=True → 'zeros' (scipy-kompatibel).
     """
+    # §v10.119: boundary=True ist in scipy ungültig
+    _boundary = "zeros" if boundary is True else boundary
     arr = _np.asarray(x)
     if arr.size == 0:
         nfft_val = nfft if nfft is not None else nperseg
@@ -53,7 +56,7 @@ def _safe_stft(
                 return_onesided=return_onesided,
                 scaling=scaling,
                 axis=axis,
-                boundary=boundary,
+                boundary=_boundary,
                 padded=padded,
             )
     return _original_stft(
@@ -67,7 +70,7 @@ def _safe_stft(
         return_onesided=return_onesided,
         scaling=scaling,
         axis=axis,
-        boundary=boundary,
+        boundary=_boundary,
         padded=padded,
     )
 
@@ -77,4 +80,38 @@ _scipy_signal.stft = _safe_stft
 # Alle Phasen verwenden jetzt explizit `from backend.core.audio_utils import safe_stft, safe_istft`.
 # Diese Monkey-Patches werden in v10.18 entfernt. Siehe Spec 22 (M1 Safe-STFT-Wrapper).
 _scipy_signal.safe_stft = _safe_stft
-_scipy_signal.safe_istft = _safe_stft  # §v10.119: safe_istft alias (gleiche Signatur, Längen-Guard)
+
+
+# §v10.303 FIX: safe_istft war fälschlich auf _safe_stft (STFT) gesetzt.
+# Dadurch gab signal.safe_istft() 3 Werte zurück (f,t,Zxx) statt 2 (t,x).
+# Betroffene Phasen: 03, 20, 23, 24 — alle mit "too many values to unpack".
+def _safe_istft(
+    Zxx,
+    fs=1.0,
+    window="hann",
+    nperseg=256,
+    noverlap=None,
+    **kwargs,
+):
+    """§v10.303 Korrekte safe_istft-Monkey-Patch für Rückwärtskompatibilität.
+
+    War vorher fälschlich auf _safe_stft gesetzt (STFT-Forward).
+    """
+    from scipy.signal import istft as _scipy_istft
+
+    if kwargs.get("boundary") is True:
+        kwargs["boundary"] = "zeros"
+    # Clamp noverlap: 0 <= noverlap < min(nperseg, Zxx.shape[0])
+    _eff_nperseg = min(nperseg, Zxx.shape[0] if hasattr(Zxx, "shape") else nperseg)
+    if noverlap is None:
+        _noverlap = _eff_nperseg // 2
+    else:
+        _noverlap = min(int(noverlap), max(0, _eff_nperseg - 1))
+    try:
+        return _scipy_istft(Zxx, fs=fs, window=window, nperseg=nperseg, noverlap=_noverlap, **kwargs)
+    except ValueError:
+        _noverlap = max(0, _eff_nperseg // 4)
+        return _scipy_istft(Zxx, fs=fs, window="hann", nperseg=nperseg, noverlap=_noverlap)
+
+
+_scipy_signal.safe_istft = _safe_istft

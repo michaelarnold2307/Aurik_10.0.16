@@ -44,15 +44,15 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import time
 from typing import Any
 
 import numpy as np
 from scipy import signal
 
-from backend.core.audio_utils import safe_filtfilt,  audio_sample_count, stereo_channel_view, stereo_like
+from backend.core.audio_utils import audio_sample_count, safe_filtfilt, stereo_channel_view, stereo_like
 from backend.core.defect_scanner import MaterialType
 from backend.core.phase_strength_contract import resolve_phase_strength_contract
 
@@ -147,10 +147,10 @@ class FinalEQ(PhaseInterface):
     # §v10.101: Bark-basierte Frequenzbänder statt linearer Hz
     # 24 kritische Bänder → 4 perzeptuelle Gruppen
     BANDS = {
-        "low": (20, 400),       # Bark 1-7:   Sub-bass + Bass-Wärme
+        "low": (20, 400),  # Bark 1-7:   Sub-bass + Bass-Wärme
         "low_mid": (400, 2000),  # Bark 8-14:  Körper und Fülle
-        "high_mid": (2000, 6400),# Bark 15-20: Präsenz und Klarheit
-        "high": (6400, 15500),   # Bark 21-24: Luft und Brillanz
+        "high_mid": (2000, 6400),  # Bark 15-20: Präsenz und Klarheit
+        "high": (6400, 15500),  # Bark 21-24: Luft und Brillanz
     }
 
     # Material-adaptive EQ configurations

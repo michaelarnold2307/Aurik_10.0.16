@@ -17,7 +17,6 @@ from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 NDJSON_PATH = REPO_ROOT / "logs" / "oom_phase_forensics.ndjson"
 
@@ -48,15 +47,15 @@ def summarize(entries: list[dict]):
     total = len(entries)
     by_stage = Counter(e.get("stage", "unknown") for e in entries)
     errors = [e for e in entries if e.get("stage", "").startswith(("phase_failed", "phase_exception"))]
-    phases = set(e.get("phase_id", "?") for e in entries if e.get("phase_id", "").startswith("phase_"))
+    phases = {e.get("phase_id", "?") for e in entries if e.get("phase_id", "").startswith("phase_")}
 
-    print(f"\n{'='*70}")
-    print(f"  🔬 Exception-Forensik Dashboard — §v10.115")
-    print(f"{'='*70}")
+    print(f"\n{'=' * 70}")
+    print("  🔬 Exception-Forensik Dashboard — §v10.115")
+    print(f"{'=' * 70}")
     print(f"  Daten:       {NDJSON_PATH}")
     print(f"  Einträge:    {total:,}")
     print(f"  Phasen:      {len(phases)} unique")
-    print(f"  Fehler:      {len(errors):,} ({len(errors)/max(total,1)*100:.1f}%)")
+    print(f"  Fehler:      {len(errors):,} ({len(errors) / max(total, 1) * 100:.1f}%)")
     print()
 
     print("  Top-10 Phasen nach Einträgen:")
@@ -66,7 +65,7 @@ def summarize(entries: list[dict]):
         print(f"    {phase:<30} {count:>5d}  {bar}")
 
     if errors:
-        print(f"\n  Fehler-Typen:")
+        print("\n  Fehler-Typen:")
         err_types = Counter(e.get("error", "?").split(":")[0] for e in errors)
         for etype, count in err_types.most_common(8):
             print(f"    {etype:<40} {count:>5d}")
@@ -92,9 +91,9 @@ def trends(entries: list[dict]):
             run_key = "unknown"
         runs[run_key].append(e)
 
-    print(f"\n{'='*70}")
+    print(f"\n{'=' * 70}")
     print(f"  📈 Exception-Trends (letzte {min(10, len(runs))} Läufe)")
-    print(f"{'='*70}")
+    print(f"{'=' * 70}")
 
     sorted_runs = sorted(runs.items(), reverse=True)[:10]
     for run_key, run_entries in sorted_runs:
@@ -107,8 +106,12 @@ def trends(entries: list[dict]):
 
     # Trend direction
     if len(sorted_runs) >= 2:
-        last_errors = sum(1 for e in sorted_runs[0][1] if "failed" in e.get("stage", "") or "exception" in e.get("stage", ""))
-        prev_errors = sum(1 for e in sorted_runs[1][1] if "failed" in e.get("stage", "") or "exception" in e.get("stage", ""))
+        last_errors = sum(
+            1 for e in sorted_runs[0][1] if "failed" in e.get("stage", "") or "exception" in e.get("stage", "")
+        )
+        prev_errors = sum(
+            1 for e in sorted_runs[1][1] if "failed" in e.get("stage", "") or "exception" in e.get("stage", "")
+        )
         last_total = max(len(sorted_runs[0][1]), 1)
         prev_total = max(len(sorted_runs[1][1]), 1)
         delta = (last_errors / last_total - prev_errors / prev_total) * 100
@@ -128,15 +131,15 @@ def patterns(entries: list[dict]):
     miner = PatternMiner()
     discoveries = miner.mine(report)
 
-    print(f"\n{'='*70}")
-    print(f"  🧠 Pattern-Mining — §v10.115")
-    print(f"{'='*70}")
+    print(f"\n{'=' * 70}")
+    print("  🧠 Pattern-Mining — §v10.115")
+    print(f"{'=' * 70}")
     print(f"  Bekannte Patterns: {len(miner.KNOWN_PATTERNS)}")
     print(f"  Neue Entdeckungen: {len(discoveries)}")
     print()
 
     for i, (pattern_name, pattern) in enumerate(discoveries.items(), 1):
-        print(f"  P{7+i}: {pattern_name}")
+        print(f"  P{7 + i}: {pattern_name}")
         print(f"       Count: {pattern.get('count', '?')}")
         print(f"       Regex: {pattern.get('regex', '?')}")
         print(f"       Suggestion: {pattern.get('suggestion', '?')}")
@@ -148,7 +151,7 @@ def qscore_correlation(entries: list[dict]):
     from backend.core.exception_forensics import QScoreMonitor
 
     monitor = QScoreMonitor()
-    
+
     # Extract phase-level data
     phases = defaultdict(list)
     for e in entries:
@@ -156,9 +159,9 @@ def qscore_correlation(entries: list[dict]):
         if pid.startswith("phase_"):
             phases[pid].append(e)
 
-    print(f"\n{'='*70}")
-    print(f"  📊 Q-Score-Korrelation — §v10.115")
-    print(f"{'='*70}")
+    print(f"\n{'=' * 70}")
+    print("  📊 Q-Score-Korrelation — §v10.115")
+    print(f"{'=' * 70}")
     print(f"  Phasen mit Daten: {len(phases)}")
     print()
 
@@ -173,13 +176,13 @@ def qscore_correlation(entries: list[dict]):
         phase_quality.append((pid, error_rate, quality_impact, total))
 
     phase_quality.sort(key=lambda x: x[2], reverse=True)
-    
+
     print("  Top-10 Phasen nach Quality Impact:")
     print(f"  {'Phase':<30} {'Err%':>6} {'Q-Impact':>8} {'#Runs':>6}")
-    print(f"  {'─'*30} {'─'*6} {'─'*8} {'─'*6}")
+    print(f"  {'─' * 30} {'─' * 6} {'─' * 8} {'─' * 6}")
     for pid, rate, impact, total in phase_quality[:10]:
         bar = "🟢" if impact < 0.1 else ("🟡" if impact < 0.3 else "🔴")
-        print(f"  {bar} {pid:<28} {rate*100:>5.1f}% {impact:>7.3f} {total:>5d}")
+        print(f"  {bar} {pid:<28} {rate * 100:>5.1f}% {impact:>7.3f} {total:>5d}")
 
 
 def main():

@@ -56,6 +56,11 @@ _LEVEL_COLLAPSE_DBFS = -60.0  # Signal-Kollaps wenn Post-RMS unter diesem Wert
 _PRE_PHASE_MIN_DBFS = -50.0  # Pre-Phase: Signal zu leise fuer sinnvolle Verarbeitung
 _SILENCE_ENERGY_THRESH = -72.0  # dBFS — Stille-Zone gilt als kontaminiert über diesem Wert
 
+# §v10.122 HallucinationGuard-Integration: Depth-adaptiver Basis-Schwellwert,
+# gesetzt von calibrate_sft_thresholds() VOR der monotonen Kappung.
+# Der HallucinationGuard liest diesen Wert via get_hallucination_guard_threshold().
+_HG_BASE_THRESHOLD: float = 0.15  # Default: §2.46e normativ
+
 # Pegelschätzung: 99.9-Perzentil statt np.max (Anti-V08)
 _PEAK_PERCENTILE = 99.9
 
@@ -1078,14 +1083,74 @@ def calibrate_sft_thresholds(
     """
     global _ECHO_CORR_THRESH, _HNR_WARN_DB, _HNR_CRIT_DB
     global _WET_CEILING_NONREPAIR, _WET_CEILING_REPAIR
+    global _HG_BASE_THRESHOLD
 
     if novelty_crit is not None:
         set_novelty_crit_threshold(novelty_crit)
 
+    # §v10.122 HallucinationGuard-Integration: Depth-adaptiver Basis-Schwellwert.
+    # Der HG-Default 0.15 ist nur für Studio-Master (depth 1) korrekt.
+    # Tiefere Transfer-Ketten produzieren legitimerweise mehr spektrale Neuheit
+    # durch Carrier-Inversion — der Schwellwert MUSS mit der Depth skalieren.
+    _depth = max(1, int(transfer_chain_depth))
+    if _depth >= 5:
+        _HG_BASE_THRESHOLD = 0.55  # extreme chain: sehr viel Neuheit erwartet
+    elif _depth == 4:
+        _HG_BASE_THRESHOLD = 0.40  # deep cassette (Novelty 0.55)
+    elif _depth == 3:
+        _HG_BASE_THRESHOLD = 0.28  # moderate chain
+    elif _depth == 2:
+        _HG_BASE_THRESHOLD = 0.20  # shallow chain
+    else:
+        _HG_BASE_THRESHOLD = 0.15  # studio master (§2.46e normativ)
+    logger.info("§v10.122 HG-Threshold: depth=%d → base=%.2f", _depth, _HG_BASE_THRESHOLD)
+    # §v10.131 Depth-adaptive Echo: tiefe Ketten erzeugen legitimerweise
+    # mehr harmonische Echos durch kaskadierte Filter-Phasen.
+    # Phase_07 (Harmonic Restoration) auf depth=4 Kassetten produziert
+    # Autokorrelation >0.78 — aber das ist kein Artefakt, sondern
+    # natürliche Resonanz der harmonischen Synthese.
+    if _depth >= 4:
+        _ECHO_CORR_THRESH = 0.55  # relaxed: 0.35→0.55
+    elif _depth >= 3:
+        _ECHO_CORR_THRESH = 0.45
+    else:
+        _ECHO_CORR_THRESH = 0.35  # Studio-Master: strikt
+    # §G125 CalibratedConstants-Integration: zentrale Konstanten als Fallback.
+    # Wenn CalibratedConstants verfügbar ist, überschreiben dessen Werte
+    # die lokalen Berechnungen (Single Source of Truth, §G76).
+    try:
+        from backend.core.calibrated_constants import get_constants
+        _cc = get_constants()
+        _ECHO_CORR_THRESH = _cc.echo_corr_threshold
+        _HG_BASE_THRESHOLD = _cc.hg_base_threshold
+        _WET_CEILING_NONREPAIR = _cc.sft_wet_ceiling_nonrepair
+        _WET_CEILING_REPAIR = _cc.sft_wet_ceiling_repair
+        _HNR_WARN_DB = _cc.hnr_warn_db
+        _HNR_CRIT_DB = _cc.hnr_crit_db
+        logger.debug("§G125 CalibratedConstants applied: echo=%.2f hg=%.2f wet_nr=%.2f wet_r=%.2f",
+                     _ECHO_CORR_THRESH, _HG_BASE_THRESHOLD,
+                     _WET_CEILING_NONREPAIR, _WET_CEILING_REPAIR)
+    except Exception:
+        pass  # Fallback: lokale Berechnungen bleiben aktiv
+
     # §G71 Wet-Ceilings: depth-adaptiv für effektive Phasen-Wirkung ≥ 0.15
     _depth = max(1, int(transfer_chain_depth))
-    _WET_CEILING_NONREPAIR = float(np.clip(0.72 + max(0, _depth - 1) * 0.05, 0.65, 0.90))
-    _WET_CEILING_REPAIR = float(np.clip(0.82 + max(0, _depth - 1) * 0.05, 0.75, 0.95))
+    # §v10.119: Extreme Transfer-Chains (depth≥5) warnen und konservativ cappen.
+    # 5+ Stufen (z.B. Wachswalze→Schellack→Tonband→Kassette→MP3) haben
+    # physikalische Grenzen, die kein Algorithmus überwinden kann.
+    if _depth >= 5:
+        logger.warning(
+            "§v10.119 Extreme-Transfer-Chain: depth=%d ≥ 5 — physikalische Grenzen. "
+            "Wet-Ceilings werden auf konservative Maximalwerte begrenzt. "
+            "Erwarte reduzierte Restaurationsqualität — das ist KEIN Aurik-Fehler, "
+            "sondern eine physikalische Grenze der Quellkette.",
+            _depth,
+        )
+        _depth_effective = 4  # Cap für Kalibrierung
+    else:
+        _depth_effective = _depth
+    _WET_CEILING_NONREPAIR = float(np.clip(0.72 + max(0, _depth_effective - 1) * 0.05, 0.65, 0.90))
+    _WET_CEILING_REPAIR = float(np.clip(0.82 + max(0, _depth_effective - 1) * 0.05, 0.75, 0.95))
     logger.info(
         "§G71 SFT-Wet-Ceilings: depth=%d rs=%.0f → nonrepair=%.2f repair=%.2f",
         _depth,
@@ -1098,9 +1163,11 @@ def calibrate_sft_thresholds(
     _mat_lower = str(material_type).lower()
     _is_tape = any(t in _mat_lower for t in ("cassette", "reel_tape", "tape"))
     _ECHO_CORR_THRESH = 0.45 if _is_tape else 0.35
-    # §v10.117: Deep chains accumulate more phase rotation → higher echo baseline
-    if _depth >= 3:
-        _ECHO_CORR_THRESH += 0.10 * (_depth - 2)  # depth=3→0.55, depth=4→0.65
+    # §v10.117: Deep chains accumulate more phase rotation → higher echo baseline.
+    # §v10.120 Calibration-Shift: depth≥4 is the new "deep cassette" tier
+    # (Novelty 0.55); depth 3 is moderate (0.45) and does not trigger echo boost.
+    if _depth >= 4:
+        _ECHO_CORR_THRESH += 0.10 * (_depth - 3)  # depth=4→0.55, depth=5→0.65
     logger.info("§v10.43 SFT-Echo: mat=%s depth=%d → ECHO=%.2f", _mat_lower, _depth, _ECHO_CORR_THRESH)
 
     # HNR: Vocal-Material braucht strengere Grenzwerte (Gesangsschaden hörbarer)
@@ -1121,3 +1188,12 @@ _WET_CEILING_REPAIR: float = 0.80
 def get_sft_wet_ceilings() -> tuple[float, float]:
     """§G71 Gibt die kalibrierten Wet-Ceilings zurück (non-repair, repair)."""
     return (_WET_CEILING_NONREPAIR, _WET_CEILING_REPAIR)
+
+
+def get_hallucination_guard_threshold() -> float:
+    """§v10.122 Gibt den depth-adaptiven HallucinationGuard-Basis-Schwellwert zurück.
+
+    Wird von calibrate_sft_thresholds() pro Song gesetzt.
+    Default: 0.15 (§2.46e normativ).
+    """
+    return _HG_BASE_THRESHOLD

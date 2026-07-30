@@ -46,8 +46,8 @@ Author: Aurik Development Team
 Version: 2.0.0 Professional
 """
 
-import os
 import logging
+import os
 import time
 from typing import Any
 
@@ -364,6 +364,26 @@ class NoiseGate(PhaseInterface):
                     material = MaterialType[str(material_type).upper()]  # type: ignore[assignment]
                 except (KeyError, AttributeError):
                     material = MaterialType.UNKNOWN  # type: ignore[assignment]
+
+        # §v10.303.16 Continuous-Noise-Guard: Noise-Gate auf Material mit
+        # kontinuierlichem Rauschen (Tape/Cassette) erzeugt Pumpen und
+        # Echoeffekte. Der Gate öffnet/schließt auf der Hiss-Grenze →
+        # hörbare Atmung. Phase 29 (Tape Hiss) ist die korrekte Behandlung.
+        _CONTINUOUS_NOISE_MATERIALS = {
+            MaterialType.CASSETTE, MaterialType.TAPE, MaterialType.REEL_TAPE,
+        }
+        if material in _CONTINUOUS_NOISE_MATERIALS:
+            logger.info(
+                "§v10.303.16 Continuous-Noise-Guard: %s → Noise Gate skipped "
+                "(kontinuierliches Rauschen, Gate würde pumpen. Phase 29 übernimmt)",
+                material.name,
+            )
+            return PhaseResult(
+                success=True,
+                audio=audio.copy() if isinstance(audio, np.ndarray) else np.asarray(audio, dtype=np.float32),
+                execution_time_seconds=time.time() - start_time,
+                metadata={"algorithm": "skipped_continuous_noise", "material": material.name},
+            )
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))

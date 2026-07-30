@@ -93,11 +93,13 @@ def joint_calibrate(
         else:
             min_strength = 0.45
 
-    # §v10.58 Depth-Boost: Bei transfer_chain_depth ≥ 3 werden Kern-Restaurationsphasen
-    # verstärkt, da tiefe Ketten (z.B. reel→vinyl→cassette→mp3) stärkere Eingriffe
-    # benötigen, um die akkumulierte Degradation zu kompensieren.
+    # §v10.58 Depth-Boost: Bei transfer_chain_depth ≥ 5 (extreme Ketten ≥5 Stufen,
+    # z.B. Wachswalze→Schellack→Tonband→Kassette→MP3) werden Kern-Restaurationsphasen
+    # verstärkt, da extreme Degradations-Akkumulation stärkere Eingriffe benötigt.
+    # §v10.120 Calibration-Shift: depth 4 (0.55) ist "deep cassette", depth 5+ ist
+    # "extreme chain" mit Boost-Berechtigung.
     _depth_boost = float(np.clip(1.0 + (transfer_chain_depth - 1) * 0.12, 1.0, 1.50))
-    if transfer_chain_depth >= 3:
+    if transfer_chain_depth >= 5:
         min_strength = float(np.clip(min_strength * _depth_boost, 0.30, 0.70))
 
     # ── 1. Goal-Gaps ───────────────────────────────────────────

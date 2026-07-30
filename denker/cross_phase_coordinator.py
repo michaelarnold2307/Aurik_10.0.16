@@ -73,38 +73,15 @@ FREQ_BANDS = [
 
 
 # ── Phase Frequency Band Declarations ─────────────────────────────────
-# Jede Phase deklariert: {affects: [(f_low, f_high, relative_intensity)], ...}
-# relative_intensity ∈ [0.3, 1.0] — wie stark die Phase in diesem Band wirkt
+# Jede Phase deklariert:
+#   affects:   [(f_low, f_high, relative_intensity), ...]
+#   category:  "subtractive" | "additive" | "dynamics" | "corrective" | "other"
+#   requires:  [freq_band_name, ...] — Bänder, die VORHER restauriert sein müssen
+#   conflicts: [phase_id, ...] — Phasen, die NICHT adjazent laufen sollen
+#   after:     [phase_id, ...] — explizite Vorgänger (harte Kanten für DAG)
+#   priority:  int 1-9 — niedriger = läuft früher (default 5)
 PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
-    "phase_19_de_esser": {
-        "affects": [
-            (2000, 4000, 0.4),  # lower sibilance (male)
-            (4000, 8000, 0.8),  # core sibilance (both)
-            (8000, 12000, 0.6),  # upper sibilance (female/child)
-            (12000, 20000, 0.2),  # air extension
-        ],
-        "category": "subtractive",
-        "human_label": "De-Esser",
-    },
-    "phase_38_presence_boost": {
-        "affects": [
-            (2000, 4000, 0.7),  # lower presence
-            (4000, 8000, 0.6),  # upper presence
-            (8000, 12000, 0.2),  # air spill
-        ],
-        "category": "additive",
-        "human_label": "Präsenz-Boost",
-    },
-    "phase_18_noise_gate": {
-        "affects": [
-            (20, 250, 0.4),  # bass rumble gating
-            (250, 2000, 0.6),  # midrange noise
-            (2000, 8000, 0.5),  # presence-noise reduction
-            (8000, 20000, 0.3),  # HF hiss gating
-        ],
-        "category": "subtractive",
-        "human_label": "Noise Gate",
-    },
+    # ── Subtractive (Noise Reduction) ──────────────────────────────────
     "phase_03_denoise": {
         "affects": [
             (20, 250, 0.7),
@@ -113,6 +90,10 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (8000, 20000, 0.6),
         ],
         "category": "subtractive",
+        "requires": [],
+        "conflicts": ["phase_29_tape_hiss_reduction"],
+        "after": ["phase_02_hum_removal", "phase_05_rumble_filter"],
+        "priority": 2,
         "human_label": "Denoise (OMLSA)",
     },
     "phase_29_tape_hiss_reduction": {
@@ -122,7 +103,111 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (12000, 20000, 1.0),
         ],
         "category": "subtractive",
+        "requires": [],
+        "conflicts": ["phase_03_denoise"],
+        "after": [],
+        "priority": 2,
         "human_label": "Tape Hiss",
+    },
+    "phase_19_de_esser": {
+        "affects": [
+            (2000, 4000, 0.4),
+            (4000, 8000, 0.8),
+            (8000, 12000, 0.6),
+            (12000, 20000, 0.2),
+        ],
+        "category": "subtractive",
+        "requires": ["presence_high"],
+        "conflicts": [],
+        "after": ["phase_03_denoise"],
+        "priority": 4,
+        "human_label": "De-Esser",
+    },
+    "phase_18_noise_gate": {
+        "affects": [
+            (20, 250, 0.4),
+            (250, 2000, 0.6),
+            (2000, 8000, 0.5),
+            (8000, 20000, 0.3),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_03_denoise"],
+        "priority": 3,
+        "human_label": "Noise Gate",
+    },
+    "phase_09_crackle_removal": {
+        "affects": [
+            (2000, 8000, 0.7),
+            (8000, 20000, 0.9),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
+        "human_label": "Crackle Removal",
+    },
+    "phase_01_click_removal": {
+        "affects": [
+            (20, 20000, 0.5),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
+        "human_label": "Click Removal",
+    },
+    "phase_02_hum_removal": {
+        "affects": [
+            (20, 250, 0.9),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
+        "human_label": "Hum Removal",
+    },
+    "phase_05_rumble_filter": {
+        "affects": [
+            (20, 60, 1.0),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
+        "human_label": "Rumble Filter",
+    },
+    "phase_28_surface_noise_profiling": {
+        "affects": [
+            (2000, 8000, 0.6),
+            (8000, 20000, 0.8),
+        ],
+        "category": "subtractive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 2,
+        "human_label": "Surface Noise",
+    },
+
+    # ── Additive (Enhancement / Restoration) ───────────────────────────
+    "phase_38_presence_boost": {
+        "affects": [
+            (2000, 4000, 0.7),
+            (4000, 8000, 0.6),
+            (8000, 12000, 0.2),
+        ],
+        "category": "additive",
+        "requires": [],
+        "conflicts": ["phase_19_de_esser"],
+        "after": ["phase_03_denoise", "phase_19_de_esser"],
+        "priority": 6,
+        "human_label": "Präsenz-Boost",
     },
     "phase_39_air_band_enhancement": {
         "affects": [
@@ -130,6 +215,10 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (12000, 20000, 0.9),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_38_presence_boost"],
+        "priority": 7,
         "human_label": "Air-Band",
     },
     "phase_37_bass_enhancement": {
@@ -138,6 +227,10 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (60, 250, 0.6),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_05_rumble_filter"],
+        "priority": 6,
         "human_label": "Bass-Boost",
     },
     "phase_06_frequency_restoration": {
@@ -148,6 +241,10 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (8000, 20000, 0.8),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_03_denoise", "phase_29_tape_hiss_reduction"],
+        "priority": 5,
         "human_label": "Frequenz-Restaurierung",
     },
     "phase_07_harmonic_enhancement": {
@@ -158,24 +255,49 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (8000, 20000, 0.3),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_06_frequency_restoration"],
+        "priority": 6,
         "human_label": "Harmonik-Boost",
     },
-    "phase_07_declipper": {  # §v10.18: Selbstkalibrierender Declipper
+    "phase_07_declipper": {
         "affects": [
-            (20, 20000, 0.4),  # Breitband: rekonstruiert Samples über gesamtes Spektrum
+            (20, 20000, 0.4),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
         "human_label": "Declipper",
     },
     "phase_42_vocal_enhancement": {
         "affects": [
-            (500, 2000, 0.7),  # formant region
-            (2000, 4000, 0.8),  # presence
-            (4000, 8000, 0.4),  # brilliance
+            (500, 2000, 0.7),
+            (2000, 4000, 0.8),
+            (4000, 8000, 0.4),
         ],
         "category": "additive",
+        "requires": [],
+        "conflicts": ["phase_19_de_esser"],
+        "after": ["phase_19_de_esser", "phase_03_denoise"],
+        "priority": 7,
         "human_label": "Vocal Enhancement",
     },
+    "phase_08_transient_preservation": {
+        "affects": [
+            (20, 20000, 0.5),
+        ],
+        "category": "additive",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_03_denoise"],
+        "priority": 5,
+        "human_label": "Transient Preservation",
+    },
+
+    # ── Dynamics ───────────────────────────────────────────────────────
     "phase_40_loudness_normalization": {
         "affects": [
             (20, 60, 0.3),
@@ -185,6 +307,10 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (8000, 20000, 0.5),
         ],
         "category": "dynamics",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 9,
         "human_label": "Loudness-Normierung",
     },
     "phase_54_transparent_dynamics": {
@@ -195,7 +321,109 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
             (8000, 20000, 0.2),
         ],
         "category": "dynamics",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 8,
         "human_label": "Transparent Dynamics",
+    },
+    "phase_10_compression": {
+        "affects": [
+            (20, 250, 0.6),
+            (250, 2000, 0.7),
+            (2000, 8000, 0.5),
+            (8000, 20000, 0.3),
+        ],
+        "category": "dynamics",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_03_denoise"],
+        "priority": 7,
+        "human_label": "Compression",
+    },
+
+    # ── Corrective (Phase/Stereo) ──────────────────────────────────────
+    "phase_14_phase_correction": {
+        "affects": [
+            (20, 20000, 0.3),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 1,
+        "human_label": "Phase Correction",
+    },
+    "phase_25_azimuth_correction": {
+        "affects": [
+            (20, 20000, 0.3),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_14_phase_correction"],
+        "priority": 1,
+        "human_label": "Azimuth Correction",
+    },
+    "phase_12_wow_flutter_fix": {
+        "affects": [
+            (20, 20000, 0.4),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 2,
+        "human_label": "Wow/Flutter Fix",
+    },
+    "phase_13_stereo_enhancement": {
+        "affects": [
+            (250, 8000, 0.5),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_14_phase_correction"],
+        "priority": 8,
+        "human_label": "Stereo Enhancement",
+    },
+    "phase_15_stereo_balance": {
+        "affects": [
+            (20, 20000, 0.3),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_14_phase_correction"],
+        "priority": 3,
+        "human_label": "Stereo Balance",
+    },
+
+    # ── Other ──────────────────────────────────────────────────────────
+    "phase_04_eq_correction": {
+        "affects": [
+            (20, 250, 0.7),
+            (250, 2000, 0.5),
+            (2000, 8000, 0.5),
+            (8000, 20000, 0.6),
+        ],
+        "category": "other",
+        "requires": [],
+        "conflicts": [],
+        "after": ["phase_03_denoise"],
+        "priority": 5,
+        "human_label": "EQ Correction",
+    },
+    "phase_30_dc_offset_removal": {
+        "affects": [
+            (0, 20, 1.0),
+        ],
+        "category": "corrective",
+        "requires": [],
+        "conflicts": [],
+        "after": [],
+        "priority": 0,
+        "human_label": "DC Offset Removal",
     },
 }
 

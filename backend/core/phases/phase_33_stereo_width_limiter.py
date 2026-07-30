@@ -288,8 +288,14 @@ class StereoWidthLimiterPhaseV2(PhaseInterface):
 
         # Step 5: Per-band width limiting
         # §v10.96: Normalisiere material — kann str oder MaterialType-Enum sein.
-        _mat_enum_33 = material if isinstance(material, MaterialType) else getattr(MaterialType, str(material).upper().split('.')[-1], MaterialType.UNKNOWN)
-        _mat_fallback_33 = self.MAX_WIDTH_PER_BAND.get(_mat_enum_33, self.MAX_WIDTH_PER_BAND.get(MaterialType.VINYL, [0.5, 0.7, 0.9, 0.8]))
+        _mat_enum_33 = (
+            material
+            if isinstance(material, MaterialType)
+            else getattr(MaterialType, str(material).upper().split(".")[-1], MaterialType.UNKNOWN)
+        )
+        _mat_fallback_33 = self.MAX_WIDTH_PER_BAND.get(
+            _mat_enum_33, self.MAX_WIDTH_PER_BAND.get(MaterialType.VINYL, [0.5, 0.7, 0.9, 0.8])
+        )
         max_widths = [float(v * _effective_strength) for v in _mat_fallback_33]
         side_bands_limited = []
 

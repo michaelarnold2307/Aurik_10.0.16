@@ -161,7 +161,7 @@ Normative Anforderungen:
 | `phase_04_eq_correction` | optimal-transport spectral matching + parametrische Minimum-Phase-EQ | parametric target EQ | `O3_spectral_balance` | Timbre, TonalCenter, Wärme |
 | `phase_05_rumble_filter` | psychoakustisch begrenzter linear-phase HPF + subharmonic rumble estimator | Butterworth HPF | `O2_subtractive` | BassKraft, Natürlichkeit, Transparenz |
 | `phase_06_frequency_restoration` | AudioSR + SourceFidelityEQ + BW-ceiling aware shelving | sinusoidal+stochastic bandwidth restoration | `O3_spectral_balance` | Brillanz, Transparenz, Timbre |
-| `phase_07_harmonic_restoration` | harmonic lattice + DDSP partial reconstruction; Tilt-Cap-Floor 0.35 at depth≥3 (§v10.60, §G88-1) | sinusoidal+stochastic harmonic fill | `O3_spectral_balance` | Timbre, BassKraft, Brillanz |
+| `phase_07_harmonic_restoration` | harmonic lattice + DDSP partial reconstruction; Tilt-Cap-Floor 0.35 at depth≥5 (§v10.60, §G88-1, §v10.120) | sinusoidal+stochastic harmonic fill | `O3_spectral_balance` | Timbre, BassKraft, Brillanz |
 | `phase_08_transient_preservation` | onset-protection mask + HPSS-rescue + transient re-injection | linked transient shaper | `O1_impulse` | Artikulation, Groove, MikroDynamik |
 | `phase_09_crackle_removal` | BANQUET/RBME hybrid + LPC/AR micro-gap interpolation | iterative sparse Bayes decrackle | `O1_impulse` | Natürlichkeit, Transparenz, Authentizität |
 | `phase_10_compression` | crest-aware broadband compressor with loudness-sidechain | transparent VCA-style compressor | `O6_dynamics` | MikroDynamik, Emotionalität, Transparenz |
@@ -182,7 +182,7 @@ Normative Anforderungen:
 | `phase_20_reverb_reduction` | SGMSE+ + WPE hybrid dereverb | WPE + OMLSA tail trim | `O2_subtractive` | Transparenz, Raumtiefe, Natürlichkeit |
 | `phase_21_exciter` | hallucination-guarded harmonic exciter with material ceiling | harmonic shelf + soft saturation | `O3_spectral_balance` | Brillanz, Präsenz, Separation |
 | `phase_22_tape_saturation` | hysteresis/Volterra tape curve with era profile | soft saturation model | `O6_dynamics` | Wärme, Authentizität, MikroDynamik |
-| `phase_23_spectral_repair` | Apollo v2 + AudioSR + PGHI; DSP-only (FlashSR ML deaktiviert) at depth≥3 (§v10.60, §G88-2) | consistent Wiener + NMF repair | `O8_generative_repair` | Transparenz, Brillanz, Authentizität |
+| `phase_23_spectral_repair` | Apollo v2 + AudioSR + PGHI; DSP-only (FlashSR ML deaktiviert) at depth≥5 (§v10.60, §G88-2, §v10.120) | consistent Wiener + NMF repair | `O8_generative_repair` | Transparenz, Brillanz, Authentizität |
 | `phase_24_dropout_repair` | boundary-aware AudioSR/CQTdiff with SSIP | sinusoidal-stochastic/LPC fill | `O8_generative_repair` | Artikulation, Authentizität, Natürlichkeit |
 | `phase_25_azimuth_correction` | coherence-maximizing tape azimuth solver | sample-delay + phase rotator | `O4_time_pitch` | Raumtiefe, Authentizität, Timbre |
 | `phase_26_dynamic_range_expansion` | masking-aware upward/downward expansion with per-band noise-floor guard (§G87, §v10.61) | broadband expander with per-band floor targets | `O6_dynamics` | MikroDynamik, Emotionalität, Transparenz, CD-Raumton |

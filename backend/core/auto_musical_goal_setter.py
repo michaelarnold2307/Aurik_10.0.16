@@ -42,7 +42,6 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from backend.core.defect_scanner import DefectAnalysisResult, DefectType, MaterialType
-from backend.core.defect_scanner import MaterialType  # §v10.113
 from backend.core.processing_modes import ProcessingMode
 from backend.core.quality_prediction import QualityEstimate
 

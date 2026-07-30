@@ -26,10 +26,10 @@ import sys
 import numpy as np
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.95 – PhaseResult Tuple→ndarray
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_95_phaseresult_tuple_to_ndarray():
     """Phase-Interface normalisiert Tuple→ndarray in PhaseResult.audio."""
@@ -56,6 +56,7 @@ def test_v10_95_phaseresult_tuple_to_ndarray():
 # §v10.97 – Broadcaster channels-last
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_v10_97_broadcaster_channels_last_guard():
     """Broadcaster prüft shape[0]==2 and shape[1]>2 vor stereo-spezifischen
     Operationen."""
@@ -64,17 +65,17 @@ def test_v10_97_broadcaster_channels_last_guard():
         source = f.read()
 
     # Muster: shape[0]==2 and ... and shape[1] ...
-    pattern = r'shape\[0\]\s*==\s*2\s+and\s+.*shape\[1\]'
+    pattern = r"shape\[0\]\s*==\s*2\s+and\s+.*shape\[1\]"
     matches = list(re.finditer(pattern, source))
     assert len(matches) >= 3, (
-        "§v10.97 REGRESSION: shape[0]==2 and shape[1]>2 Guards fehlen. "
-        f"Nur {len(matches)} statt ≥3 gefunden."
+        f"§v10.97 REGRESSION: shape[0]==2 and shape[1]>2 Guards fehlen. Nur {len(matches)} statt ≥3 gefunden."
     )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.100 + §v10.101 – safe_filtfilt + padlen-Catch
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_101_safe_filtfilt_available():
     """safe_filtfilt ist aus audio_utils importierbar."""
@@ -115,6 +116,7 @@ def test_v10_101_safe_filtfilt_stereo():
 # §v10.103 – noverlap-Guard
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_v10_103_noverlap_guard_psychoacoustics():
     """psychoacoustics.py hat noverlap-Clamp vor stft()."""
     filepath = "backend/core/dsp/psychoacoustics.py"
@@ -123,10 +125,8 @@ def test_v10_103_noverlap_guard_psychoacoustics():
 
     # Mindestens ein noverlap-Clamp vor stft Aufruf
     assert "noverlap" in source, "psychoacoustics.py enthält kein noverlap"
-    pattern = r'_noverlap\s*=\s*min\('
-    assert re.search(pattern, source), (
-        "§v10.103 REGRESSION: noverlap min(nperseg-1)-Clamp fehlt in psychoacoustics.py"
-    )
+    pattern = r"_noverlap\s*=\s*min\("
+    assert re.search(pattern, source), "§v10.103 REGRESSION: noverlap min(nperseg-1)-Clamp fehlt in psychoacoustics.py"
 
 
 def test_v10_103_noverlap_guard_phase_53():
@@ -138,15 +138,14 @@ def test_v10_103_noverlap_guard_phase_53():
     except FileNotFoundError:
         pytest.skip("phase_53 nicht gefunden")
 
-    pattern = r'_noverlap\s*=\s*min\('
-    assert re.search(pattern, source), (
-        "§v10.103 REGRESSION: noverlap-Clamp fehlt in phase_53"
-    )
+    pattern = r"_noverlap\s*=\s*min\("
+    assert re.search(pattern, source), "§v10.103 REGRESSION: noverlap-Clamp fehlt in phase_53"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.104 – Tuple→ndarray-Guards
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_104_active_quality_intervention_guard():
     """_active_quality_intervention hat Tuple→ndarray-Guard."""
@@ -164,15 +163,14 @@ def test_v10_104_cand_tuple_guard():
     with open(filepath) as f:
         source = f.read()
 
-    pattern = r'_cand.*Tuple.*ndarray|_cand.*isinstance.*tuple'
-    assert re.search(pattern, source, re.IGNORECASE), (
-        "§v10.104 REGRESSION: _cand Tuple-Guard fehlt"
-    )
+    pattern = r"_cand.*Tuple.*ndarray|_cand.*isinstance.*tuple"
+    assert re.search(pattern, source, re.IGNORECASE), "§v10.104 REGRESSION: _cand Tuple-Guard fehlt"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.107 – per_segment_executor channels-first
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_107_per_segment_channels_first():
     """per_segment_executor prüft channels-first (2,N) vor Verarbeitung."""
@@ -187,15 +185,14 @@ def test_v10_107_per_segment_channels_first():
 # §v10.109 – Waveform-Performance
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_v10_109_waveform_quantile():
     """modern_window.py nutzt np.quantile statt np.percentile."""
     filepath = "Aurik10/ui/modern_window.py"
     with open(filepath) as f:
         source = f.read()
 
-    assert "np.quantile" in source, (
-        "§v10.109 REGRESSION: np.quantile fehlt (sollte np.percentile ersetzen)"
-    )
+    assert "np.quantile" in source, "§v10.109 REGRESSION: np.quantile fehlt (sollte np.percentile ersetzen)"
     assert "§v10.109" in source, "§v10.109 Marker fehlt in modern_window.py"
 
 
@@ -206,15 +203,14 @@ def test_v10_109_waveform_antialiasing_off():
         source = f.read()
 
     # Muster: renderHint + Antialiasing = False
-    pattern = r'Antialiasing.*False|setRenderHint.*Antialiasing'
-    assert re.search(pattern, source), (
-        "§v10.109 REGRESSION: Antialiasing-Deaktivierung fehlt"
-    )
+    pattern = r"Antialiasing.*False|setRenderHint.*Antialiasing"
+    assert re.search(pattern, source), "§v10.109 REGRESSION: Antialiasing-Deaktivierung fehlt"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.111 – Phase-07 FeedbackChain-Silence-Guard
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_111_phase07_silence_guard():
     """Phase 07 hat Silence-Guard vor FeedbackChain-Verarbeitung."""
@@ -224,15 +220,14 @@ def test_v10_111_phase07_silence_guard():
 
     assert "§v10.111" in source, "§v10.111 Marker fehlt in phase_07"
     # silence detection vor feedback chain
-    pattern = r'rms|silence|stumm|FeedbackChain.*Guard'
-    assert re.search(pattern, source, re.IGNORECASE), (
-        "§v10.111 REGRESSION: Silence-Guard fehlt in Phase 07"
-    )
+    pattern = r"rms|silence|stumm|FeedbackChain.*Guard"
+    assert re.search(pattern, source, re.IGNORECASE), "§v10.111 REGRESSION: Silence-Guard fehlt in Phase 07"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.99 – Edge Taper
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_99_edge_taper_present():
     """Edge Taper (12ms fade-in/out) ist in unified_restorer_v3.py."""
@@ -241,15 +236,14 @@ def test_v10_99_edge_taper_present():
         source = f.read()
 
     assert "§v10.99" in source, "§v10.99 Marker fehlt"
-    pattern = r'12\s*ms|edge.?taper|fade.?in.*fade.?out'
-    assert re.search(pattern, source, re.IGNORECASE), (
-        "§v10.99 REGRESSION: Edge Taper fehlt"
-    )
+    pattern = r"12\s*ms|edge.?taper|fade.?in.*fade.?out"
+    assert re.search(pattern, source, re.IGNORECASE), "§v10.99 REGRESSION: Edge Taper fehlt"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # §v10.100 – padlen/noverlap Paranoia-Catch
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_v10_100_padlen_catch_present():
     """Paranoia-Catch für padlen/noverlap-Fehler ist vorhanden."""
@@ -264,6 +258,7 @@ def test_v10_100_padlen_catch_present():
 # §v10.102 – Forensik-Traceback
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_v10_102_forensic_traceback_present():
     """Forensik-Traceback für tuple-ndim Fehler ist instrumentiert."""
     filepath = "backend/core/unified_restorer_v3.py"
@@ -277,6 +272,7 @@ def test_v10_102_forensic_traceback_present():
 # §v10.106 – Bug-Pattern-Watchdog
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_v10_106_watchdog_classification():
     """Bug-Pattern-Watchdog klassifiziert Exceptions."""
     filepath = "backend/core/unified_restorer_v3.py"
@@ -289,6 +285,7 @@ def test_v10_106_watchdog_classification():
 # ═══════════════════════════════════════════════════════════════════════════════
 # ████████████████████ HÄRTETEST: Live-Runtime ██████████████████████████████████
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestV10FixRuntimeHardening:
     """Echte Runtime-Tests: importieren + aufrufen."""

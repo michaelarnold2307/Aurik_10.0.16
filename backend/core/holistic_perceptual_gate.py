@@ -120,6 +120,21 @@ class HolisticPerceptualGate:
         # §2.44 Persistenz: Referenz-Memory von Disk laden (analog §2.70 RestorationMemory).
         self._load_ref_memory_from_disk()
 
+    @staticmethod
+    def _get_depth_adaptive_af_min(transfer_chain: list[str] | None) -> float:
+        """§v10.120 Depth-adaptiver artifact_freedom-Mindestwert für HPI-Gate.
+
+        Konsistent mit spec_constitution.py Music-Death-Shield.
+        """
+        _depth = max(1, len(transfer_chain)) if transfer_chain else 1
+        if _depth >= 4:
+            return 0.70  # deep cassette
+        elif _depth == 3:
+            return 0.80  # moderate
+        elif _depth == 2:
+            return 0.88  # shallow
+        return 0.90  # studio master (Restoration-Floor)
+
     def evaluate_restoration(
         self,
         original: np.ndarray,
@@ -388,7 +403,10 @@ class HolisticPerceptualGate:
         if not np.isfinite(hpi):
             logger.warning(
                 "HPI product NaN: mert=%.4f timbral=%.4f artifact=%.4f emotional=%.4f → floor 0.5",
-                float(mert_sim), float(timbral), float(artifact_freedom), float(emotional_arc_score),
+                float(mert_sim),
+                float(timbral),
+                float(artifact_freedom),
+                float(emotional_arc_score),
             )
             hpi = 0.5
         hpi = float(hpi)
@@ -417,7 +435,9 @@ class HolisticPerceptualGate:
         # Korrekte Mechanik: hohe Restorability → höhere Erwartungen via _gbc_targets (§09.12),
         # nicht via nachträglichen HPI-Abzug. update_reference_memory()-Gate: HPI > 0.0 AND af ≥ 0.90.
 
-        passed = hpi > 0.0 and artifact_freedom >= 0.90  # §v10.101: 0.90 für Restoration (beschädigtes Material hat inhärent Restartefakte)
+        passed = hpi > 0.0 and artifact_freedom >= self._get_depth_adaptive_af_min(
+            transfer_chain
+        )  # §v10.120 depth-adaptiv
 
         # §0i/§2.44 BUG-FIX v10.0.0 (Bug 5): Material-adaptive timbral_fidelity floor.
         # Spec §0a: material-adaptive floors (Shellac~0.40, Vinyl~0.55, CD~0.75).
@@ -555,17 +575,21 @@ class HolisticPerceptualGate:
         genre: str = "DEFAULT",
         material: str = "digital",
         era_bin: str = "post-1980",
+        transfer_chain: list[str] | None = None,
     ) -> None:
         """§2.44 Update MERT reference memory after successful restoration.
 
         Quality-Gate v10.0.0 (V54-aligned): HPI > 0.0 AND artifact_freedom ≥ 0.95.
-        (Vorher: HPI > 0.5 AND p1_p2_passed — blockierte Kaltstart-Population,
-        da timbral_fidelity ohne Referenz systematisch bei 0.54 blieb → HPI < 0.5.)
+        §v10.124 Major-Version: AF-Schwelle depth-adaptiv (0.95→0.75 bei depth≥4),
+        damit tiefe Transfer-Ketten das Reference-Memory bevölkern können.
         EMA-Gewichtung: α skaliert mit HPI-Qualität (α_eff = α × min(1.0, HPI/0.7)),
         sodass schwächere Läufe weniger Einfluss haben als starke.
         Minimum-Alpha 0.05 verhindert, dass Kaltstart-Einträge nie gelernt werden.
         """
-        if not (hpi > 0.0 and artifact_freedom >= 0.95):
+        _af_min = self._get_depth_adaptive_af_min(transfer_chain)
+        # Für Reference-Memory: +0.05 strenger als HPI-Gate
+        _af_ref_min = min(0.95, _af_min + 0.05)
+        if not (hpi > 0.0 and artifact_freedom >= _af_ref_min):
             return
 
         embedding = self._compute_embedding(restored, sr)
@@ -700,7 +724,7 @@ class HolisticPerceptualGate:
         self,
         audio: np.ndarray,
         sr: int,
-    ) -> "np.ndarray | None":
+    ) -> np.ndarray | None:
         """§v10.91 Blinder Referenz-Vektor aus dem saubersten Audio-Fenster.
 
         Wird aufgerufen wenn GP-Memory keinen Referenz-Vektor fuer die aktuelle
@@ -712,6 +736,7 @@ class HolisticPerceptualGate:
         """
         try:
             from backend.core.blind_internal_reference import BlindInternalReference
+
             bir = BlindInternalReference()
             result = bir.find(np.asarray(audio), sr)
             if result.best_score > 0.3 and result.segments:
@@ -723,9 +748,7 @@ class HolisticPerceptualGate:
                 else:
                     slice_ref = np.asarray(audio[:, start_n:end_n], dtype=np.float32)
                 if slice_ref.shape[-1] > int(sr * 0.05):
-                    return np.asarray(
-                        self._compute_embedding(slice_ref, sr), dtype=np.float32
-                    )
+                    return np.asarray(self._compute_embedding(slice_ref, sr), dtype=np.float32)
             return None
         except Exception:
             return None
@@ -828,7 +851,9 @@ class HolisticPerceptualGate:
             hpi = hpi * _vqi_studio
             logger.debug("§2.44 Studio VQI-Faktor: vqi=%.3f panns=%.2f", _vqi_studio, panns_singing)
 
-        passed = hpi > 0.0 and artifact_freedom >= 0.95
+        passed = hpi > 0.0 and artifact_freedom >= self._get_depth_adaptive_af_min(
+            None
+        )  # §v10.120: Studio mode hat kein transfer_chain → depth=1 → 0.90
 
         logger.info(
             "§2.44 HPI(Studio2026)=%.4f passed=%s "

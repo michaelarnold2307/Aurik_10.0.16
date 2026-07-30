@@ -1,101 +1,89 @@
-# MANIFEST_SCHEMA.yaml — Schema für corpus/*/manifest.yaml
+# Corpus Manifest Schema — Aurik 10.0.0
+# §15.2 Echt-Audio-Corpus: Jedes Unterverzeichnis (shellac, vinyl, …) führt eine
+# manifest.yaml nach diesem Schema. Validierung via tests/corpus/test_corpus_integrity.py
+#
+# Erforderliche Felder pro Eintrag: file, duration_s, sample_rate, material, era, genre
+# Optionale Felder: defect_types, source_url, license, source_attribution, checksum_sha256
 
-schema_version: "1.0"
-description: "Metadaten-Schema für Echt-Audio-Test-Corpus (§15.2)"
-
-required_fields:
-  - file
-  - duration_s
-  - sample_rate
-  - channels
-  - material
-  - license
-
-fields:
-  file:
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: "Aurik Corpus Manifest"
+type: object
+required: [corpus_version, material, entries]
+properties:
+  corpus_version:
     type: string
-    description: "Dateiname relativ zum manifest.yaml-Verzeichnis"
-    example: "jazz_78_shellac_1938.wav"
-
-  duration_s:
-    type: float
-    description: "Dauer in Sekunden"
-    example: 24.5
-
-  sample_rate:
-    type: integer
-    description: "Abtastrate in Hz"
-    example: 48000
-
-  channels:
-    type: integer
-    description: "Anzahl Kanäle (1=mono, 2=stereo)"
-    enum: [1, 2]
-
+    description: "SemVer der Manifest-Version (zur Erkennung von Schema-Änderungen)"
+    default: "1.0.0"
   material:
     type: string
-    description: "Tonträgermaterial"
-    enum: [shellac, wax_cylinder, lacquer_disc, wire_recording, vinyl, tape, reel_tape, cassette, digital]
-
-  era:
-    type: integer
-    description: "Aufnahmejahr (best estimate)"
-    example: 1938
-
-  genre:
+    description: "Material-Kategorie (shellac, vinyl, tape, reel_tape, cassette, digital)"
+    enum: [shellac, vinyl, tape, reel_tape, cassette, digital]
+  description:
     type: string
-    description: "Musikgenre"
-    example: "Jazz"
-
-  defects:
-    type: list[string]
-    description: "Bekannte Defekttypen"
+    description: "Freitext-Beschreibung des Untercorpus"
+  entries:
+    type: array
+    minItems: 1
     items:
-      enum:
-        - clicks
-        - pops
-        - crackle
-        - surface_noise
-        - hiss
-        - hum
-        - rumble
-        - wow
-        - flutter
-        - dropouts
-        - distortion
-        - clipping
-        - bandwidth_limited
-        - stereo_imbalance
-        - phase_issues
-        - print_through
-        - crosstalk
-        - groove_echo
-        - inner_groove_distortion
-        - modulation_noise
-
-  source:
-    type: string
-    description: "Quelle der Aufnahme"
-    example: "Internet Archive — 78rpm Collection"
-
-  source_url:
-    type: string
-    description: "URL zur Quelle"
-
-  license:
-    type: string
-    description: "Lizenz"
-    enum: ["Public Domain", "CC0", "CC BY 4.0", "Other — see license_url"]
-
-  license_url:
-    type: string
-    description: "URL zum Lizenztext"
-
-  checksum_sha256:
-    type: string
-    description: "SHA-256-Hash der Audiodatei"
-    example: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
-  notes:
-    type: string
-    description: "Freitext-Notizen"
+      type: object
+      required: [file, duration_s, sample_rate, material, era_year, genre]
+      properties:
+        file:
+          type: string
+          description: "Pfad relativ zum manifest.yaml-Verzeichnis (z.B. damaged/jazz_1950s_scratched.wav)"
+        duration_s:
+          type: number
+          minimum: 0.5
+          description: "Dauer in Sekunden"
+        sample_rate:
+          type: integer
+          enum: [8000, 11025, 16000, 22050, 32000, 44100, 48000, 88200, 96000, 176400, 192000]
+        material:
+          type: string
+          enum: [shellac, vinyl, tape, reel_tape, cassette, dat, cd_digital, mp3_low, mp3_high, aac, minidisc, streaming, lacquer_disc, wax_cylinder, wire_recording, unknown]
+        era_year:
+          type: integer
+          minimum: 1877
+          maximum: 2026
+          description: "Aufnahmejahr (nicht Jahr der Digitalisierung)"
+        genre:
+          type: string
+          description: "Genre (z.B. jazz, classical, rock, schlager, pop, blues, folk, electronic)"
+        defect_types:
+          type: array
+          items:
+            type: string
+          description: "Bekannte Defekttypen (z.B. [hiss, clicks, wow_flutter, crackle, dropout])"
+        condition:
+          type: string
+          enum: [clean, damaged, restored]
+          description: "Zustand: clean (Referenz), damaged (defekt), restored (nach Aurik-Verarbeitung)"
+        source_url:
+          type: string
+          format: uri
+          description: "URL der Quelle (Internet Archive, Musopen, Freesound, …)"
+        source_attribution:
+          type: string
+          description: "Urheber-Angabe (Autor, Ensemble, Aufnahmejahr, Quelle)"
+        license:
+          type: string
+          description: "Lizenz (Public Domain, CC0, CC BY 4.0, CC BY-SA 4.0, …)"
+        checksum_sha256:
+          type: string
+          pattern: "^[a-f0-9]{64}$"
+          description: "SHA-256 der Audiodatei"
+        channels:
+          type: integer
+          enum: [1, 2]
+          default: 2
+        bit_depth:
+          type: integer
+          enum: [16, 24, 32]
+          default: 16
+        vocal:
+          type: boolean
+          default: true
+          description: "Enthält Gesang (true) oder rein instrumental (false)"
+        language:
+          type: string
+          description: "Sprache des Gesangs (ISO 639-1), falls zutreffend"

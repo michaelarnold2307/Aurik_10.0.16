@@ -89,10 +89,10 @@ class MultibandCompressionPhase(PhaseInterface):
     # §v10.101 SOTA: Gammatone-Filterbank (Cochlea-Modell) 32→4 Gruppen.
     # Patterson 1987 / Glasberg & Moore 1990: 32 ERB-Kanäle in 4 perzeptuelle Bereiche.
     BARK_GROUPS = {
-        "bass":       range(0, 9),    # Gammatone 1-9:   50–400 Hz   → Opto-Style
-        "low_mid":    range(9, 18),   # Gammatone 10-18:  400–2000 Hz → VCA-Style
-        "mid_high":   range(18, 26),  # Gammatone 19-26: 2000–6400 Hz → Tube-Style
-        "high":       range(26, 32),  # Gammatone 27-32: 6400–15500 Hz → FET-Style
+        "bass": range(0, 9),  # Gammatone 1-9:   50–400 Hz   → Opto-Style
+        "low_mid": range(9, 18),  # Gammatone 10-18:  400–2000 Hz → VCA-Style
+        "mid_high": range(18, 26),  # Gammatone 19-26: 2000–6400 Hz → Tube-Style
+        "high": range(26, 32),  # Gammatone 27-32: 6400–15500 Hz → FET-Style
     }
 
     # Compression Character per Band [bass, low_mid, mid_high, high]

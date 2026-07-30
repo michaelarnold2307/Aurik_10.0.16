@@ -35,6 +35,7 @@ PresenceScore = f(
 ```
 
 **Berechnung:**
+
 - Vocal Formant Coherence: MERT-basierte Distanz zwischen restaurierten Formanten und einer Datenbank echter Gesangsaufnahmen
 - Transient Immediacy: Onset-Stärke-Verteilung im Vergleich zu Live-Referenzen
 - Room Tone Continuity: Varianz des Rauschbodens über die Zeit (niedrig = kontinuierlich = echt)
@@ -42,6 +43,7 @@ PresenceScore = f(
 - Spectral Air Authenticity: Korrelation der HF-Hüllkurve (>10 kHz) mit natürlichen Referenzen
 
 **Integration:**
+
 - Läuft NACH allen Restaurierungsphasen, VOR dem Export
 - Ersetzt NICHT die technischen Metriken — ergänzt sie
 - Wird im Quality Report als eigene Zeile ausgewiesen
@@ -79,6 +81,7 @@ class GddBudgetManager:
 ```
 
 **Budget-Verteilung pro Material:**
+
 | Material | Budget | Pro-Phase-Cap |
 |----------|--------|---------------|
 | Shellac | 8.0 ms | 4.0 ms |
@@ -88,6 +91,7 @@ class GddBudgetManager:
 | Digital | 5.0 ms | 3.0 ms |
 
 **Integration in `_profiled_phase_call`:**
+
 - Vor jeder STFT-Phase: `budget = gdd_budget.allocate(phase_id, material)`
 - Wenn budget < 1.0 ms: Phase auf Stärke 0.25 reduzieren (Passthrough-nah)
 - Nach jeder STFT-Phase: `gdd_budget.consume(phase_id, actual_gdd_ms)`
@@ -125,6 +129,7 @@ def validate_rollback_audio(audio: np.ndarray, source_phase: str) -> bool:
 ```
 
 **Integration:**
+
 - Nach JEDEM Rollback (CIG, SFT, AFG): `validate_rollback_audio()` aufrufen
 - Bei False: NICHT den Rollback-Punkt verwenden, sondern den LETZTEN BEKANNT GUTEN Checkpoint
 - Wenn kein gültiger Checkpoint existiert: Original-Audio (Pre-Phase-01) als Fallback
@@ -157,6 +162,7 @@ def _normalize_phase_audio(result, audio_before_phase):
 ```
 
 **Integration:**
+
 - Wird in `_profiled_phase_call` als LETZTER Schritt vor `return result` aufgerufen
 - Verhindert, dass Tupel/Listen das `result.audio` verlassen
 - Logged WARNING wenn Extraction nötig war (für Debugging)

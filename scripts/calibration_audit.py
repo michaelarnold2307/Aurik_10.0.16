@@ -11,8 +11,8 @@ Usage:
   python3 scripts/calibration_audit.py --fix           # Auto-fix to SOTA targets
 """
 
-import sys
 import os
+import sys
 
 # SOTA target values (from §v10.116)
 SOTA_TARGETS = {

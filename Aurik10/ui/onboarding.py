@@ -277,7 +277,10 @@ class OnboardingWizard(QtWidgets.QDialog):
 
             if self._current_page == 2:
                 self._btn_next.setText("Fertig ✓")
-                self._btn_next.clicked.disconnect()
+                try:
+                    self._btn_next.clicked.disconnect()
+                except TypeError:
+                    pass  # Bereits disconnected oder nie verbunden
                 self._btn_next.clicked.connect(self._finish)
         else:
             self._finish()

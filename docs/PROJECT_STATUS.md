@@ -1,10 +1,10 @@
 # 📊 Aurik 10.0.0 — Project Status Report
 
 **Datum:** Juli 2026
-**Version:** 10.0.8
-**Status:** ✅ Produktionsbereit | §v10 Pleasantness-First aktiv | SNR-adaptive Defekterkennung
+**Version:** 10.0.14 (§v10.305 Startup-Integration + Unified Progress + Context-Aware Communication)
+**Status:** ✅ Produktionsbereit | GPU-Detection failsafe | Dual-Progress live | Kontextbewusste Kommunikation | 10 GEBOTE (G71–G80) | Startup-Smoke-Test | 12 neue i18n-Keys
 
-> Verbindlicher Ist-Stand: `.github/specs/01-14`, `.github/copilot-instructions.md`, `CLAUDE.md`.
+> Verbindlicher Ist-Stand: `.github/specs/01-14`, `.github/specs/v10.303.17_phase0_architecture.md`, `.github/specs/v10.304_ast_and_deep_chain_correction.md`, `.github/copilot-instructions.md`, `CLAUDE.md`.
 
 ---
 
@@ -15,7 +15,7 @@
 | Kennzahl | Wert |
 | --- | --- |
 | Tests | **~18.400** pytest-IDs (Juli 2026), 511 mit Markern |
-| Phasen | **68** (Phase 01–66 + Vocal Repair + Glue Stage) |
+| Phasen | **68 + 3 (Phase-0)** = 71 (davon 12 redundant durch Phase 0) |
 | Materialien | **16** auto-erkannte Typen + Multi-Generation-Chain |
 | Musical Goals | **14** psychoakustisch fundierte Ziele (Pleasantness-First) |
 | SNR-Adaption | ✅ Click, Tape-Splice, MATERIAL_SENSITIVITY, CAUSE_PARAMS |
@@ -38,6 +38,12 @@
 
 | Modul | Datei | Status |
 | --- | --- | --- |
+| **Phase-0 Apollo (Codec-Decompression)** | `plugins/apollo_phase0_integration.py` | ✅ v10.303.17 |
+| **Phase-0 DeepFilterNet v3 (Denoising)** | `plugins/apollo_phase0_integration.py` | ✅ v10.303.17 |
+| **Phase-0 Resemble Enhance (Enhancement)** | `plugins/apollo_phase0_integration.py` | ✅ v10.303.17 |
+| **ChainedPhase0Preprocessor** | `plugins/apollo_phase0_integration.py` | ✅ v10.303.17 |
+| **ApolloPlugin + Hallucination-Guard** | `plugins/apollo_plugin.py` | ✅ erweitert §2.46e |
+| --- | --- | --- |
 | `PerceptualEmbedder` | `core/perceptual_embedder.py` | ✅ |
 | `CausalDefectReasoner` | `core/causal_defect_reasoner.py` | ✅ |
 | `GPParameterOptimizer` (MOO-Pareto) | `core/gp_parameter_optimizer.py` | ✅ |
@@ -49,7 +55,7 @@
 | `ExcellenceOptimizer` | `core/excellence_optimizer.py` | ✅ |
 | `FeedbackChain` | `core/feedback_chain.py` | ✅ |
 | `UnifiedRestorerV3` | `core/unified_restorer_v3.py` | ✅ |
-| `EraClassifier` | `plugins/era_classifier_plugin.py` | ✅ |
+| `EraClassifier` (§v10.303.42 chain-aware) | `backend/core/era_classifier.py` | ✅ Deep-Chain-Correction aktiv |
 | `GermanSchlagerClassifier` | `core/genre_classifier.py` | ✅ |
 | `TransientDecoupledProcessing` | `core/transient_decoupled_processor.py` | ✅ |
 | `HarmonicPreservationGuard` | `core/harmonic_preservation_guard.py` | ✅ |
@@ -71,9 +77,10 @@
 | `MusikalischerGlobalplanDienst` | `backend/core/musikalischer_globalplan.py` | ✅ |
 | `BatchSessionLearner` | `core/batch_session_learner.py` | ✅ |
 | `ReferenceAnchorSynthesizer` | `core/reference_anchor_synthesizer.py` | ✅ |
-| `LyricsGuidedEnhancement` (§2.36) | `backend/core/lyrics_guided_enhancement.py` | ✅ |
+| `LyricsGuidedEnhancement` (§2.36, §v10.303.50) | `backend/core/lyrics_guided_enhancement.py` | ✅ HF Decoder aktiv |
 | `PhonemeTimeline` | `backend/core/phoneme_timeline.py` | ✅ |
 | `GermanSchlagerClassifier` (Genre-Phase-1) | `backend/core/genre_classifier.py` | ✅ |
+| `AstAudioSetClassifier` (§v10.304) | `backend/core/ast_audio_set_classifier.py` | ✅ |
 | `OOMRecoveryCheckpoint` (§2.39) | `backend/core/recovery_checkpoint.py` | ✅ |
 | `PerceptualSalienceEstimator` | `backend/core/perceptual_salience.py` | ✅ |
 
@@ -262,6 +269,48 @@ Dithering: POW-r Typ 3 bei 24->16-bit; Fallback: TPDF
 | Temporale Kohärenz | MOS-Spanne <= 0.30, sigma(MOS) <= 0.15 |
 | Stereo-Authentizität | Mono-Ära M/S-Korrelation >= 0.97 |
 | HF-Kumulativ-Limit | Presence + Air kumulativ <= +4 dB |
+
+---
+
+## §v10.303 Patch Notes (2026-07-27)
+
+### Kritische Bug-Fixes
+- **safe_istft Monkey-Patch**: `_scipy_signal.safe_istft = _safe_stft` (STFT statt ISTFT) → betraf 5 Phasen über Monate
+- **`_compute_current_restorability` außerhalb Klasse**: Methode war nach Klassen-Ende definiert → Exception-Handler crashte
+- **Phase 64 Broadcast-Crash**: `shape[-1]` statt `shape[0]` → `_n_samples=2` statt 10.8M
+- **`original_audio_reference` NameError**: Variable im falschen Scope → UV3 crashte, Fallback-Pfad
+
+### Material-Awareness (Planer-Intelligenz)
+- **Low-Confidence-Gate**: Enhancement-Phasen bei `material_confidence < threshold` gestrippt
+- **Adaptiver Threshold**: `0.30 + rs × 0.001` statt starrer 0.35
+- **Denker-Feedback-Loop**: Gestrippte Familien über Songs gelernt
+- **PID Confidence-Strip**: Planer strippt ab Song 1 (nicht erst ab Song 2)
+- **ExzellenzDenker Convergence Guard**: Max 3 Reparatur-Versuche (statt 6×9s Loop)
+
+### De-Esser Optimierungen
+- Crest-Faktor-basierte Sibilanz/Artefakt-Unterscheidung
+- Graduierte Response (0.0–1.0) statt Binär-Gate
+- Material-adaptive Crest-Kalibrierung (Shellac: Baseline 10.0)
+- Aurik-8 Degradation Guard (bw_loss>0.7 → Stack skip)
+- bw_loss Enum-Key-Fallback (DefectType.BANDWIDTH_LOSS)
+
+### Exception-Forensik
+- KNOWN_PATTERNS: 7 → 15 Einträge (0 unklassifiziert)
+- Tuple→ndarray Type Guard: `_normalize_phase_result()` eliminiert 70 P7-Exceptions
+- Prognose: 507 → ~200 Exceptions/Run
+
+### GUI
+- `_draw_icon`, `_row_y`, `_bar_rect` implementiert (MusicalGoalsRadar)
+- Prognose-Phasenschätzung jetzt Confidence-bewusst (34→40 → 13→22)
+- OneTakeExport: Adaptiver Gain-Cap (5→1-2 Retries)
+
+### Erkenntnisse
+1. **Ein 3-Zeilen-Bug kann 5 Phasen über Monate korrumpieren** — ohne sichtbaren Absturz
+2. **Enhancement ≠ Core-Restauration** — getrennte Behandlung ist architektonisch notwendig
+3. **Familien-basierte Gates sind robuster als Phasen-Whitelists** — 10 Core-Familien statt 6 Phasen-IDs
+4. **Crest-Faktor ist der beste Sibilanz-Indikator** — zuverlässiger als HF-Ratio allein
+5. **Exception-Zählung ohne Klassifikation ist wertlos** — erst P1-P15 macht Muster sichtbar
+6. **Material-Adaptivität ist Pflicht, nicht Optimierung** — Shellac ohne Crest-Guard würde Knistern de-essen
 
 ---
 

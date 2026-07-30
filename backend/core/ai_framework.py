@@ -19,7 +19,6 @@ WICHTIG: Keine Dummys/Mocks - nur reale, funktionsfähige Implementierungen.
 Pure Open Source reicht NICHT aus - Eigenentwicklung ist in allen Bereichen essenziell.
 """
 
-from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 import logging
 import warnings
 from dataclasses import dataclass, field
@@ -27,6 +26,8 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+
+from backend.core.audio_utils import safe_filtfilt  # §v10.101 padlen-guard
 
 logger = logging.getLogger(__name__)
 

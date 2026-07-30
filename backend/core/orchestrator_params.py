@@ -36,6 +36,7 @@ def _clip(v: float, lo: float, hi: float) -> float:
 
 # ── Phase 03: Denoise ───────────────────────────────────────────────────
 
+
 def phase03_denoise(m: dict) -> dict:
     """Kontinuierlich: Stärke sinkt mit bandwidth_loss und Crest-Verlust."""
     bw = _safe(m, "bandwidth_loss")
@@ -51,6 +52,7 @@ def phase03_denoise(m: dict) -> dict:
 
 
 # ── Phase 07: Harmonic Restoration ──────────────────────────────────────
+
 
 def phase07_harmonic(m: dict) -> dict:
     """Kontinuierlich: Stärke sinkt mit bw_loss UND aktuellem Crest."""
@@ -74,6 +76,7 @@ def phase07_harmonic(m: dict) -> dict:
 
 # ── Phase 19: De-Esser ──────────────────────────────────────────────────
 
+
 def phase19_deesser(m: dict) -> dict:
     """Kontinuierlich: Sibilanz-Schwelle und Stärke-Cap aus bw_loss + Codec."""
     bw = _safe(m, "bandwidth_loss")
@@ -94,13 +97,20 @@ def phase19_deesser(m: dict) -> dict:
 
 # ── Phase 39: Air-Band ──────────────────────────────────────────────────
 
+
 def phase39_air_band(m: dict) -> dict:
     """Kontinuierlich: Air-Band nur wenn bandwidth_loss es rechtfertigt."""
     bw = _safe(m, "bandwidth_loss")
     is_restoration = m.get("is_restoration_mode", True)
     is_analog = str(m.get("material_type", "")).lower() in (
-        "vinyl", "shellac", "wax_cylinder", "wire_recording",
-        "tape", "reel_tape", "cassette", "lacquer_disc",
+        "vinyl",
+        "shellac",
+        "wax_cylinder",
+        "wire_recording",
+        "tape",
+        "reel_tape",
+        "cassette",
+        "lacquer_disc",
     )
 
     # Air-Band ist in Restoration für analoge Quellen NUR mit bw_loss>0.5 erlaubt
@@ -120,6 +130,7 @@ def phase39_air_band(m: dict) -> dict:
 
 # ── Phase 29: Tape Hiss Reduction ───────────────────────────────────────
 
+
 def phase29_tape_hiss(m: dict) -> dict:
     """Kontinuierlich: Stärke aus Material-Typ + SNR."""
     bw = _safe(m, "bandwidth_loss")
@@ -129,7 +140,7 @@ def phase29_tape_hiss(m: dict) -> dict:
     strength = 0.60 - 0.15 * bw
     if snr < 20:
         strength *= 0.70
-    if depth >= 4:
+    if depth >= 5:
         strength *= 0.80
     strength = _clip(strength, 0.10, 0.65)
 
@@ -137,6 +148,7 @@ def phase29_tape_hiss(m: dict) -> dict:
 
 
 # ── Phase 06: Frequency Restoration (NVSR) ──────────────────────────────
+
 
 def phase06_frequency(m: dict) -> dict:
     """Kontinuierlich: NVSR-Stärke aus Bandwidth-Loss + Restorability."""
@@ -148,7 +160,7 @@ def phase06_frequency(m: dict) -> dict:
         return {"strength": 0.0, "skip": True}
 
     strength = 0.25 + 0.55 * bw
-    strength *= (0.5 + 0.5 * rs)  # Restorability-Modifikator
+    strength *= 0.5 + 0.5 * rs  # Restorability-Modifikator
     strength = _clip(strength, 0.10, 0.80)
 
     rolloff_target = 10000 + int(5500 * bw)  # bw=0.5→12750, bw=1.0→15500
@@ -161,6 +173,7 @@ def phase06_frequency(m: dict) -> dict:
 
 
 # ── Phase 40: Loudness Normalization ────────────────────────────────────
+
 
 def phase40_loudness(m: dict) -> dict:
     """Kontinuierlich: Loudness-Ziel aus Material + Restorability."""
@@ -177,6 +190,7 @@ def phase40_loudness(m: dict) -> dict:
 
 # ── Phase 01: Click Removal ─────────────────────────────────────────────
 
+
 def phase01_click(m: dict) -> dict:
     """Kontinuierlich: Stärke aus Klick-Dichte + SNR."""
     snr = _safe(m, "snr_db", 30.0)
@@ -187,7 +201,7 @@ def phase01_click(m: dict) -> dict:
     strength = 0.15 + 0.0003 * click_density
     if snr < 15:
         strength *= 0.60
-    if depth >= 3:
+    if depth >= 4:
         strength *= 0.85
     strength = _clip(strength, 0.10, 0.80)
 
@@ -195,6 +209,7 @@ def phase01_click(m: dict) -> dict:
 
 
 # ── Phase 12: Wow/Flutter ───────────────────────────────────────────────
+
 
 def phase12_wow_flutter(m: dict) -> dict:
     """Kontinuierlich: Stärke aus Wow/Flutter-Severity + Material."""
@@ -207,7 +222,7 @@ def phase12_wow_flutter(m: dict) -> dict:
         return {"strength": 0.0, "skip": True}
 
     strength = 0.20 + 0.60 * sev
-    if depth >= 3:
+    if depth >= 4:
         strength *= 0.80
     strength = _clip(strength, 0.10, 0.70)
 
@@ -215,6 +230,7 @@ def phase12_wow_flutter(m: dict) -> dict:
 
 
 # ── Phase 09: Crackle ───────────────────────────────────────────────────
+
 
 def phase09_crackle(m: dict) -> dict:
     """Kontinuierlich: Stärke aus Crackle-Dichte."""
@@ -241,6 +257,7 @@ _PARAM_FUNCTIONS: dict[str, Any] = {
     "phase_39_air_band_enhancement": phase39_air_band,
     "phase_40_loudness_normalization": phase40_loudness,
 }
+
 
 # Generische Default-Funktion für Phasen ohne spezifische Kalibrierung
 def _generic_params(m: dict) -> dict:
@@ -274,10 +291,8 @@ def compute_phase_params(
 
     # Gemeinsame Parameter für ALLE Phasen
     params.setdefault("calibrated", True)
-    params.setdefault("restorability_score",
-                      _safe(measurements, "restorability_score", 50.0))
-    params.setdefault("bandwidth_loss",
-                      _safe(measurements, "bandwidth_loss", 0.0))
+    params.setdefault("restorability_score", _safe(measurements, "restorability_score", 50.0))
+    params.setdefault("bandwidth_loss", _safe(measurements, "bandwidth_loss", 0.0))
 
     return params
 
@@ -285,6 +300,7 @@ def compute_phase_params(
 # ═══════════════════════════════════════════════════════════════════════════
 # Lightweight Probe: Eine schnelle Test-Iteration für Grenzfälle
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def probe_phase_benefit(
     phase_id: str,
@@ -309,9 +325,12 @@ def probe_phase_benefit(
         delta = _quick_probe_delta(audio, audio_test)
 
         if delta > -0.02:
-            return {"should_run": True, "strength": strength,
-                    "delta": round(delta, 4),
-                    "reason": f"Kalibrierte Stärke {strength:.3f} hilft (Δ={delta:+.4f})"}
+            return {
+                "should_run": True,
+                "strength": strength,
+                "delta": round(delta, 4),
+                "reason": f"Kalibrierte Stärke {strength:.3f} hilft (Δ={delta:+.4f})",
+            }
 
         # Test 2: Halbierte Stärke
         strength_lo = max(0.03, strength * 0.5)
@@ -319,19 +338,23 @@ def probe_phase_benefit(
         delta_lo = _quick_probe_delta(audio, audio_lo)
 
         if delta_lo > -0.02:
-            return {"should_run": True, "strength": strength_lo,
-                    "delta": round(delta_lo, 4),
-                    "reason": f"Reduziert auf {strength_lo:.3f} (Δ={delta_lo:+.4f})"}
+            return {
+                "should_run": True,
+                "strength": strength_lo,
+                "delta": round(delta_lo, 4),
+                "reason": f"Reduziert auf {strength_lo:.3f} (Δ={delta_lo:+.4f})",
+            }
 
         # Beide schaden → Skip
-        return {"should_run": False, "strength": 0.0,
-                "delta": round(min(delta, delta_lo), 4),
-                "reason": f"Keine Stärke hilft ({strength:.3f}→{delta:+.4f}, "
-                          f"{strength_lo:.3f}→{delta_lo:+.4f})"}
+        return {
+            "should_run": False,
+            "strength": 0.0,
+            "delta": round(min(delta, delta_lo), 4),
+            "reason": f"Keine Stärke hilft ({strength:.3f}→{delta:+.4f}, {strength_lo:.3f}→{delta_lo:+.4f})",
+        }
 
     except Exception as e:
-        return {"should_run": False, "strength": 0.0, "delta": -1.0,
-                "reason": f"Probe fehlgeschlagen: {e}"}
+        return {"should_run": False, "strength": 0.0, "delta": -1.0, "reason": f"Probe fehlgeschlagen: {e}"}
 
 
 def _quick_probe_delta(pre: np.ndarray, post: np.ndarray) -> float:

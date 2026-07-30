@@ -1,5 +1,6 @@
 import hashlib
 import io
+
 # v10.101 SOTA: Export durch Pipeline-Gates (JND+Perceptual-Blend) geschützt.
 import logging
 import math
@@ -549,6 +550,26 @@ def validate_export_quality(result: Any) -> tuple[bool, list[str]]:
     }
     _material_fallback = _MATERIAL_P1P2_FALLBACK.get(_mat_key, _FALLBACK_UNKNOWN)
 
+    # ── §v10.303.29 HPI/MUSHRA Perceptual Override ──
+    # Wenn das menschliche Ohr (MUSHRA ≥ 85) UND der Holistic Perceptual Index
+    # (HPI ≥ 0.75) unisono "Excellent" sagen, werden objektive P1/P2-Warnungen
+    # auf Warning-only herabgestuft. Das Ohr hat Vorrang vor Proxies.
+    # Gleiche Logik wie DoNoHarmGuardian.perceptual_override (§5/5).
+    _hpi = (_nested_float(meta, "hpi") or _nested_float(meta, "holistic_perceptual_index")
+            or _nested_float(meta, "analytics", "hpi")
+            or getattr(result, "hpi", None) or getattr(result, "holistic_perceptual_index", None))
+    _mushra = (_nested_float(meta, "mushra_score") or _nested_float(meta, "mushra")
+               or _nested_float(meta, "analytics", "mushra", "mushra_score")
+               or _nested_float(meta, "analytics", "mushra_score")
+               or getattr(result, "mushra_score", None) or getattr(result, "mushra", None))
+    _perceptual_override = (_hpi is not None and _hpi >= 0.75 and _mushra is not None and _mushra >= 85.0)
+    if _perceptual_override:
+        logger.info(
+            "Export-Gate: PERCEPTUAL OVERRIDE — MUSHRA=%.0f≥85 HPI=%.3f≥0.75 → "
+            "objektive P1/P2-Warnungen werden auf Warning herabgestuft",
+            _mushra, _hpi,
+        )
+
     for goal_name, mat_floor in _material_fallback.items():
         score = goal_scores.get(goal_name)
         if score is None:
@@ -556,11 +577,17 @@ def validate_export_quality(result: Any) -> tuple[bool, list[str]]:
         # §09.2 adaptive Threshold hat Vorrang; Fallback = material-adaptiver Boden
         effective_thr = float(_adaptive_thresholds.get(goal_name, mat_floor))
         if float(score) < effective_thr:
-            warnings.append(
+            _msg = (
                 f"KRITISCH: {goal_name} = {float(score):.3f} < {effective_thr:.2f} — "
                 "P1/P2-Mindestziel unterschritten. Restaurierung hat Kernqualität verletzt."
             )
-            passed = False
+            if _perceptual_override:
+                # HPI+MUSHRA unisono "Excellent" → downgrade zu Warning
+                warnings.append(_msg.replace("KRITISCH:", "WARNUNG (override):"))
+                logger.info("Export-Gate: %s override aktiv — kein Hard-Fail", goal_name)
+            else:
+                warnings.append(_msg)
+                passed = False
 
     # P3–P5 violations: warning only (no hard-fail)
     _p3p5_violations = [v for v in violations if v not in _material_fallback]

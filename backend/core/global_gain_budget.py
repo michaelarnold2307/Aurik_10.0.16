@@ -64,10 +64,10 @@ class GlobalGainBudget:
         self.reset()
 
         depth = max(1, int(transfer_depth))
-        if depth >= 4:
-            self._total_budget_db = 12.0
-        elif depth >= 3:
-            self._total_budget_db = 10.0
+        if depth >= 5:
+            self._total_budget_db = 14.0  # §v10.200: 12→14 — extreme chains brauchen mehr
+        elif depth >= 4:
+            self._total_budget_db = 12.0  # §v10.200: 10→12 — 4-stufige Kassetten brauchen mehr
         elif depth >= 2:
             self._total_budget_db = 8.0
         else:
@@ -83,7 +83,10 @@ class GlobalGainBudget:
 
         logger.info(
             "§GGB-1: chain-depth=%d snr=%.1fdB mat=%s → total budget = %.1f dB",
-            depth, snr, material, self._total_budget_db,
+            depth,
+            snr,
+            material,
+            self._total_budget_db,
         )
 
     def configure_snr(self, snr_db: float, material: str = "unknown") -> None:
@@ -101,7 +104,11 @@ class GlobalGainBudget:
             if new_budget > self._total_budget_db:
                 logger.info(
                     "§GGB-1 SNR-adapt: snr=%.1fdB mat=%s → budget %.1f→%.1f dB (×%.2f)",
-                    snr, material, self._total_budget_db, new_budget, snr_factor,
+                    snr,
+                    material,
+                    self._total_budget_db,
+                    new_budget,
+                    snr_factor,
                 )
                 self._total_budget_db = new_budget
 
@@ -132,6 +139,13 @@ class GlobalGainBudget:
 
             # Global cap
             remaining = max(0.0, self._total_budget_db - self._cumulative_db)
+            # §v10.303: Bei wiederholten Requests derselben Phase (z.B. Phase 28
+            # pro Chunk) Budget gleichmäßig verteilen. Letzte Chunks bekommen
+            # sonst 0.15 dB während erste 2.00 dB kriegen → Amplitudenmodulation.
+            _prev = self._phase_gains.get(phase_id, 0.0)
+            if _prev > 0.0 and remaining < 5.0:
+                # Wiederholter Request + knappes Budget → nicht mehr als remaining/4
+                requested = min(requested, max(0.1, remaining / 4.0))
             approved = min(requested, remaining)
 
             self._cumulative_db += approved
@@ -144,7 +158,7 @@ class GlobalGainBudget:
                     requested_db,
                     approved,
                     self._cumulative_db,
-                    self._TOTAL_BUDGET_DB,
+                    self._total_budget_db,  # §v10.200 FIX: instance variable, not class constant
                     remaining - approved,
                 )
 

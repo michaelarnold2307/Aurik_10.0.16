@@ -288,12 +288,13 @@ class WatchdogMonitor:
         with self._lock:
             self._cumulative_strength += phase_strength
 
-    def post_flight_validity(self, audio: np.ndarray, sr: int) -> WatchdogReport:
+    def post_flight_validity(self, audio: np.ndarray, sr: int, chain_depth: int = 1) -> WatchdogReport:
         """Erstellt den finalen Watchdog-Report nach Pipeline-Ende.
 
         Args:
             audio: Finales (restauriertes) Audio
             sr: Sample-Rate
+            chain_depth: Tiefe der Transfer-Kette (§v10.119, default 1)
 
         Returns:
             WatchdogReport mit allen Warnungen, Kritischen und Empfehlungen.
@@ -379,14 +380,14 @@ class WatchdogMonitor:
             est_artifact = max(0.80, integrity_factor * report.pleasantness_score)
             est_hpi = max(0.0, min(1.0, report.pleasantness_score * integrity_factor))
             # §0h Veto-Check
-            pq_v = const.check_paragraph_zero(audio, sr, artifact_freedom=est_artifact, hpi=est_hpi)
+            pq_v = const.check_paragraph_zero(audio, sr, artifact_freedom=est_artifact, hpi=est_hpi, chain_depth=chain_depth)
             for v in pq_v:
                 if "VETO" in v:
                     report.criticals.append(f"CONSTITUTION: {v}")
                 else:
                     report.warnings.append(f"CONSTITUTION: {v}")
             report.constitution_violations = pq_v
-            blocked, reason = const.is_export_blocked(est_artifact, est_hpi)
+            blocked, reason = const.is_export_blocked(est_artifact, est_hpi, chain_depth=chain_depth)
             if blocked:
                 report.criticals.append(f"§0h EXPORT-BLOCK: {reason}")
             # Goal-Evaluation via HPE

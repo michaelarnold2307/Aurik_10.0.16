@@ -884,7 +884,7 @@ class FeedbackChain:
             # §2.34 GoalPriorityProtocol: Stufe-1/2-Ziele schützen
             # Skip internal GPP check when external goal_priority_callback is wired
             # (UV3 provides its own GPP callback that already calls measure_all).
-# §v10.101/D3: JND-validierter Iterations-Abbruch — stoppt wenn Verbesserung unhörbar.
+            # §v10.101/D3: JND-validierter Iterations-Abbruch — stoppt wenn Verbesserung unhörbar.
             if _gpp is not None and _prev_goals and not callable(self.goal_priority_callback):
                 try:
                     from backend.core.musical_goals.musical_goals_metrics import (  # pylint: disable=import-outside-toplevel

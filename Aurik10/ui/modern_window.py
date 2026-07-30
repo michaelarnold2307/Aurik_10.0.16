@@ -3177,52 +3177,52 @@ class BatchProcessingThread(QThread):
                     # _tick_heartbeat zeigt dann einfach max(0, deadline - jetzt) an.
                     # Die Deadline wird per Exponentieller Glättung aktualisiert,
                     # damit sie sich stabil senkt statt zu springen.
-                    _raw_remaining_s = -1.0
+                    _rem_s = -1.0
                     _eta_range = getattr(self, "_eta_range_str", "")
                     if elapsed_s >= 2.0 and pct >= 5:
-                        _exp_total = getattr(self, "_expected_processing_s", None)
+                        _expected_processing_s = getattr(self, "_expected_processing_s", None)
                         _exp_lo = float(getattr(self, "_expected_processing_lo_s", 0.0) or 0.0)
                         _exp_hi = float(getattr(self, "_expected_processing_hi_s", 0.0) or 0.0)
                         _ml_start = getattr(self, "_ml_start_elapsed", -1.0)
                         _ui_progress = float(np.clip(_new_tgt, 0.0, 100.0))
-                        if _ui_progress < 20 and _exp_total and _exp_total > 0:
-                            _raw_remaining_s = max(0.0, _exp_total - elapsed_s)
+                        if _ui_progress < 20 and _expected_processing_s and _expected_processing_s > 0:
+                            _rem_s = max(0.0, _expected_processing_s - elapsed_s)
                         elif _ui_progress >= 20 and _ml_start >= 0:
                             _ml_elapsed_cb = max(0.1, elapsed_s - _ml_start)
                             # ETA auf UI-Fortschritt basieren (nicht auf rohem UV3-pct),
                             # damit lange Einzelphasen nicht als "2-3 Stunden" ausreissen.
                             _ml_frac_cb = max(0.01, min(0.98, (_ui_progress - 20.0) / 78.0))
-                            _raw_remaining_s = max(0.0, _ml_elapsed_cb / _ml_frac_cb * (1.0 - _ml_frac_cb) + 18.0)
+                            _rem_s = max(0.0, _ml_elapsed_cb / _ml_frac_cb * (1.0 - _ml_frac_cb) + 18.0)
                         else:
-                            _raw_remaining_s = max(0.0, elapsed_s / max(1.0, _ui_progress) * (100.0 - _ui_progress))
+                            _rem_s = max(0.0, elapsed_s / max(1.0, _ui_progress) * (100.0 - _ui_progress))
 
                         # Gegen zu aggressive Ausschlaege (nach oben ODER unten):
                         # laufende Schaetzung mit initialer material-/modusadaptiver
                         # Erwartung mischen. Frueh staerker am Erwartungswert,
                         # spaeter staerker am Live-Verlauf.
-                        if _raw_remaining_s > 0 and _exp_total and float(_exp_total) > 0:
-                            _baseline_remaining_s = max(0.0, float(_exp_total) - elapsed_s)
+                        if _rem_s > 0 and _expected_processing_s and float(_expected_processing_s) > 0:
+                            _baseline_remaining_s = max(0.0, float(_expected_processing_s) - elapsed_s)
                             _w_expected = float(np.clip(0.65 - (_ui_progress - 20.0) / 120.0, 0.25, 0.65))
-                            _raw_remaining_s = (
-                                _w_expected * _baseline_remaining_s + (1.0 - _w_expected) * _raw_remaining_s
+                            _rem_s = (
+                                _w_expected * _baseline_remaining_s + (1.0 - _w_expected) * _rem_s
                             )
 
                         # Harte Plausibilitätsgrenze: Restzeit darf nicht deutlich über
                         # der material-/modus-adaptiven Vorabschätzung liegen.
-                        if _raw_remaining_s > 0 and (_exp_hi > 0 or (_exp_total and _exp_total > 0)):
+                        if _rem_s > 0 and (_exp_hi > 0 or (_expected_processing_s and _expected_processing_s > 0)):
                             _total_cap_s = max(
                                 (_exp_hi * 1.20) if _exp_hi > 0 else 0.0,
-                                (float(_exp_total) * 1.35) if _exp_total and _exp_total > 0 else 0.0,
+                                (float(_expected_processing_s) * 1.35) if _expected_processing_s and _expected_processing_s > 0 else 0.0,
                                 (_exp_lo * 1.60) if _exp_lo > 0 else 0.0,
                             )
                             if _total_cap_s > 0:
                                 _max_remaining_s = max(0.0, _total_cap_s - elapsed_s)
-                                _raw_remaining_s = min(_raw_remaining_s, _max_remaining_s)
+                                _rem_s = min(_rem_s, _max_remaining_s)
                     # Deadline-Glättung: Exponentieller Filter vermeidet Sprünge.
                     _now_wall = time.perf_counter()
                     _old_deadline = getattr(self, "_eta_deadline", -1.0)
-                    if _raw_remaining_s > 0:
-                        _new_deadline = _now_wall + _raw_remaining_s
+                    if _rem_s > 0:
+                        _new_deadline = _now_wall + _rem_s
                         if _old_deadline > _now_wall:
                             # Glättung: 65 % alte Deadline + 35 % neue → sanftes Absinken.
                             # Aber: wenn neue Deadline deutlich früher (≥30 s) → sofort
@@ -10128,7 +10128,7 @@ class RecordSleeveWidget(QtWidgets.QFrame):
             if _rt > 0:
                 _parts.append(f"⏱ Echtzeit-Faktor: {_rt:.0f}×")
         if _reverted:
-            _parts.append(f"⚠️ Bearbeitung verworfen")
+            _parts.append("⚠️ Bearbeitung verworfen")
             if _dnh_reason:
                 _parts.append(f"   Grund: {_dnh_reason[:80]}")
         else:
@@ -17047,7 +17047,7 @@ class ModernMainWindow(QMainWindow):
                     _rec = getattr(self, "_recommended_mode", "RESTORATION")
                     _rec_lbl = "Restoration" if _rec == "RESTORATION" else "Studio 2026"
                     _msg = (
-                        f"{_fname} — Analyse abgeschlossen. Empfehlung: {_rec_lbl} · Modus wählen und starten."
+                        t("status.analysis_done_with_recommendation", file=_fname, mode=_rec_lbl)
                         if _fname
                         else "Analyse abgeschlossen — Modus wählen und starten."
                     )
@@ -17082,12 +17082,12 @@ class ModernMainWindow(QMainWindow):
                     self.progress_bar.setVisible(False)
                 if hasattr(self, "status_text"):
                     self.status_text.setText(
-                        f"Voranalyse fehlgeschlagen ({reason}) — Bridge prüfen und Datei neu laden."
+                        t("status.preanalysis_failed", reason=reason)
                     )
                     self._apply_status_text_style("error")
                 if hasattr(self, "detected_medium_label"):
                     self.detected_medium_label.setText(
-                        "Voranalyse fehlgeschlagen — Start aus Sicherheitsgründen blockiert"
+                        t("status.preanalysis_blocked")
                     )
                     self.detected_medium_label.setStyleSheet("""
                         color: #B87A7A; font-size: 11pt; padding: 12px;
@@ -19420,6 +19420,128 @@ class ModernMainWindow(QMainWindow):
                 self.waveform_widget_rest_ab.set_stage_progress(phase_target_bp / 10000.0)
 
     # ── §K Einfache UV3-Progress-Engine: eine Formel, ein Timer ──────────────
+    def _sync_unified_progress(self) -> None:
+        """§v10.305 Unified Progress: Eine Methode, beide Balken, volle Transparenz.
+
+        Garantiert:
+        - Hauptbalken (grün): Gesamt-Workflow, ETA
+        - Phasenbalken (orange): Aktiver Zwischenschritt — Defekte behoben/gesamt
+        - Status-Text: Phase-Name, Defekt-Count, Restzeit
+        - Beide Balken aus derselben Datenbasis, kein Racing
+        """
+        _bt = self.batch_thread
+        if not (_bt and _bt.isRunning()):
+            return
+        _now = time.perf_counter()
+
+        _item = next((i for i in self.batch_queue.items if i.status == "processing"), None)
+        _def_state = getattr(self, "_defect_progress_state", None) or {}
+        _uv3 = self._uv3 if hasattr(self, "_uv3") else getattr(_bt, "_uv3", None)
+
+        stats = self.batch_queue.get_stats()
+        _total_items = max(1, int(stats.get("total", 1) or 1))
+        _done_items = int(stats.get("completed", 0) or 0) + int(stats.get("failed", 0) or 0)
+
+        # ── 1. Gesamtfortschritt (grüner Hauptbalken) ─────────────────
+        _item_pct = float(getattr(_item, "progress", 0) or 0) if _item is not None else 100.0
+        _overall_pct = (_done_items + _item_pct / 100.0) / _total_items * 100.0
+        _overall_pct = max(0.0, min(99.9, _overall_pct))
+        _overall_bp = int(round(_overall_pct * 100.0))
+
+        _cur_bp = self.progress_bar.value()
+        if _overall_bp > _cur_bp:
+            _step = max(1, (_overall_bp - _cur_bp) // 4)
+            self.progress_bar.setRange(0, 10000)
+            self.progress_bar.setValue(min(_overall_bp, _cur_bp + _step))
+            self.progress_bar.setVisible(True)
+
+        _pct_de = f"{_overall_pct:.1f}".replace(".", ",")
+        _eta_str = ""
+        _eta_deadline = getattr(self, "_eta_deadline", 0.0)
+        if _eta_deadline > 0:
+            _rem_s = max(0.0, _eta_deadline - _now)
+            if _rem_s < 60:
+                _eta_str = " · <1 Min."
+            elif _rem_s < 3600:
+                _eta_str = f" · noch ~{int(_rem_s / 60)} Min."
+            else:
+                _h = int(_rem_s / 3600)
+                _m = int((_rem_s % 3600) / 60)
+                _eta_str = f" · noch ~{_h}h {_m:02d} Min."
+
+        # ── 2. Zwischenschritt-Fortschritt (oranger Phasenbalken) ─────
+        _phase_name = str(getattr(self, "_latest_phase_text", "") or "").strip()
+        _clean = re.sub(r"\s*\[[a-z0-9_]+\]\s*$", "", _phase_name) if _phase_name else ""
+
+        _def_total = int(_def_state.get("total", 0) or 0)
+        _def_remaining = int(_def_state.get("remaining", _def_total) or 0)
+        _def_resolved = max(0, _def_total - _def_remaining)
+        _def_pct = int(_def_state.get("resolved_pct", 0) or 0)
+
+        _phase_bp = 0
+        _phase_detail = ""
+        if _def_total > 0:
+            _phase_bp = int(round(_def_pct * 100.0))
+            _phase_detail = f" · {_def_resolved}/{_def_total} Defekte behoben"
+        elif _uv3 and isinstance(_uv3, dict) and _uv3.get("active"):
+            _phase_elapsed = _now - _uv3.get("started_at", _now)
+            if _phase_elapsed <= 90.0:
+                _hb_frac = _phase_elapsed / 90.0 * 0.88
+            else:
+                _tail = 0.10 * (1.0 - math.exp(-(_phase_elapsed - 90.0) / 40.0))
+                _hb_frac = 0.88 + _tail
+            _phase_bp = int(round(_hb_frac * 10000.0))
+            if not _clean and _uv3["idx"] >= 0:
+                _clean = f"Phase {_uv3['idx']+1}/{_uv3['count']}"
+        else:
+            _phase_bp = int(round(_item_pct * 100.0))
+
+        _phase_bp = max(self._heartbeat_phase_progress_bp, min(9800, _phase_bp))
+        if _phase_bp > self._heartbeat_phase_progress_bp:
+            self._heartbeat_phase_progress_bp = _phase_bp
+
+        if hasattr(self, "phase_progress_bar"):
+            self.phase_progress_bar.setValue(_phase_bp)
+            self.phase_progress_bar.setVisible(True)
+
+        # ── 3. Status-Text: Alles auf einen Blick ─────────────────────
+        _parts = [f"{_pct_de} %{_eta_str}"]
+        if _clean:
+            _parts.append(_clean)
+        if _phase_detail:
+            _parts.append(_phase_detail.strip())
+        if hasattr(self, "status_text"):
+            self.status_text.setText("  ·  ".join(_parts))
+
+        # ── 4. Step-Label ─────────────────────────────────────────────
+        if hasattr(self, "_phase_step_label") and _clean:
+            _label = _clean
+            if _uv3 and isinstance(_uv3, dict):
+                _label = f"Stufe {_uv3['idx']+1}/{_uv3['count']}  ·  {_clean}"
+            self._phase_step_label.setText(_label)
+            self._phase_step_label.setVisible(True)
+
+        # ── 5. Waveform sync ──────────────────────────────────────────
+        _phase_frac = _phase_bp / 10000.0
+        if hasattr(self, "waveform_widget"):
+            self.waveform_widget.set_stage_progress(_phase_frac)
+        if hasattr(self, "waveform_widget_rest_ab"):
+            self.waveform_widget_rest_ab.set_stage_progress(_phase_frac)
+
+        # ── 6. Echtzeit-Defektzähler ──────────────────────────────────
+        if hasattr(self, "defect_count_live_label") and _def_total > 0:
+            self.defect_count_live_label.setText(f"{_def_resolved}/{_def_total} behoben")
+            self.defect_count_live_label.setVisible(True)
+
+        # §v10.305: Periodisches Refresh der Defekt-Counts (jedes 4. Heartbeat-Tick, ~800ms)
+        # _defect_remaining_event_counts wird sonst nur bei defect_update-Events aktualisiert.
+        # Ohne diesen Refresh bleiben die x/y-Counts in den Chips während langer Phasen stehen.
+        if self._heartbeat_dots == 0 and hasattr(self, "_latest_defect_payload"):
+            _payload = dict(getattr(self, "_latest_defect_payload", {}) or {})
+            if _payload:
+                _payload["_from_waveform_resolved_refresh"] = True
+                self._update_defects(_payload)
+
     def _tick_uv3_simple_progress(self) -> None:
         """Vereinfachte Fortschrittsformel für UV3-Phasenausführung.
 
@@ -19540,7 +19662,7 @@ class ModernMainWindow(QMainWindow):
         self.title_bar.set_status(t("status.processing_running_spinner", spin=spin), "#B8A068")
 
         # §K: Einfache UV3-Progress-Engine — eine Formel, ein Timer
-        self._tick_uv3_simple_progress()
+        self._sync_unified_progress()  # §v10.305 Unified: beide Balken aus einer Quelle
 
         # Progress-Bar über Queue-Status pollen — unabhängig von Signals.
         if self.batch_thread and self.batch_thread.isRunning():
@@ -19694,7 +19816,7 @@ class ModernMainWindow(QMainWindow):
                                     )
                             if _ui_pct < 19 and _eta_range:
                                 # §v10.205: ETA nur zeigen wenn noch nicht überschritten
-                                _deadline_ok = (_raw_remaining_s > 0 and _raw_remaining_s < _exp_total * 0.9) if _exp_total else True
+                                _deadline_ok = (_rem_s > 0 and _rem_s < _expected_processing_s * 0.9) if _expected_processing_s else True
                                 if _deadline_ok:
                                     _full = (
                                         f"Jetzt: {_base}  ·  {_el} · ~{_eta_range}  –  {_eta_str}"
@@ -19827,7 +19949,7 @@ class ModernMainWindow(QMainWindow):
         item = self.batch_queue.get_item(item_id)
         if item and hasattr(self, "status_text"):
             self._apply_status_text_style("info")
-            self.status_text.setText(t("status.processing_item", file=Path(item.input_file).name))
+            self.status_text.setText(self._build_context_status("status.processing_item", item.input_file))
         self.progress_bar.setRange(0, 10000)
         self.progress_bar.setValue(0)
         self._heartbeat_phase_progress_key = ""
@@ -19934,6 +20056,73 @@ class ModernMainWindow(QMainWindow):
 
         self._update_stats()
 
+    def _build_context_status(self, base_key: str, file_path: str = "") -> str:
+        """Baut kontextbewusste Statusmeldung aus Pre-Analysis-Daten.
+
+        Nutzt _latest_pre_analysis_result um Medium, Ära, Genre und
+        Restorability-Score in die Status-Texte einzuflechten.
+        Fällt auf generische Botschaft zurück wenn kein Kontext verfügbar ist.
+        """
+        _pa = getattr(self, "_latest_pre_analysis_result", None)
+        _file = Path(file_path).name if file_path else ""
+
+        _medium_label = None
+        _era_label = None
+        _genre_label = None
+        _score = None
+        _defect_count = None
+
+        if _pa is not None:
+            _med = getattr(_pa, "medium", None)
+            if _med is not None:
+                _raw = getattr(_med, "primary_material", None)
+                try:
+                    from Aurik10.ui.carrier_display import _CARRIER_MEDIUM_DISPLAY
+                    _medium_label = _CARRIER_MEDIUM_DISPLAY.get(str(_raw), (None, str(_raw)))[1]
+                except Exception:
+                    _medium_label = str(_raw) if _raw else None
+            _era = getattr(_pa, "era", None)
+            if _era is not None:
+                _dec = getattr(_era, "decade", None)
+                if isinstance(_dec, (int, float)):
+                    _era_label = f"{int(_dec)}er"
+            _genre = getattr(_pa, "genre", None)
+            if _genre is not None:
+                _gl = getattr(_genre, "genre_label", None)
+                if _gl and str(_gl).lower() not in ("unbekannt", "unknown", ""):
+                    _genre_label = str(_gl)
+                elif getattr(_genre, "is_schlager", False):
+                    _genre_label = "Schlager"
+            _rest = getattr(_pa, "restorability", None)
+            if _rest is not None:
+                _score = int(getattr(_rest, "restorability_score", 0))
+            _def = getattr(_pa, "defects", None)
+            if _def is not None:
+                _scores = getattr(_def, "scores", {}) or {}
+                _defect_count = sum(1 for v in _scores.values() if isinstance(v, (int, float)) and v > 0.1)
+
+        if base_key == "status.processing_item":
+            if _medium_label and _era_label and _genre_label and _score is not None:
+                return t("status.processing_item_rich", file=_file, medium=_medium_label,
+                         era=_era_label, genre=_genre_label, score=_score)
+            if _medium_label and _era_label:
+                return t("status.processing_item_medium_era", file=_file,
+                         medium=_medium_label, era=_era_label)
+            if _medium_label:
+                return t("status.processing_item_medium", file=_file, medium=_medium_label)
+        elif base_key == "status.saved_file":
+            if _medium_label and _score is not None and _defect_count is not None:
+                if _score >= 70:
+                    return t("status.saved_file_excellent", file=_file, medium=_medium_label,
+                             score=_score, defects=_defect_count)
+                elif _score >= 40:
+                    return t("status.saved_file_improved", file=_file, medium=_medium_label,
+                             score=_score, defects=_defect_count)
+                else:
+                    return t("status.saved_file_challenging", file=_file, medium=_medium_label,
+                             score=_score, defects=_defect_count)
+        return t(base_key, file=_file)
+
     def _resolve_batch_completion_status(self, item) -> dict[str, str]:
         """Ermittelt Batch-Kurzstatus. Guardian-Revert hat VORRANG."""
         _out_name = Path(getattr(item, "output_file", "") or "").name
@@ -19973,7 +20162,7 @@ class ModernMainWindow(QMainWindow):
                 "style": "warning" if _degradation_status != "blocked" else "error",
                 "text": f"Verarbeitung mit Einschränkungen gespeichert: {_out_name} · {_reason}",
             }
-        return {"style": "success", "text": t("status.saved_file", file=_out_name)}
+        return {"style": "success", "text": self._build_context_status("status.saved_file", getattr(item, "input_file", ""))}
 
     def _on_item_finished_with_result(self, item_id, restoration_result):
         """Handle item completion mit RestorationResult — aktualisiert Qualitäts-Radar."""
@@ -23007,8 +23196,10 @@ class ModernMainWindow(QMainWindow):
                 )
                 _cnt_total = int(_init_counts.get(_cnt_key, 0) or 0)
                 _cnt_rem = int(_rem_counts.get(_cnt_key, _cnt_total))
+                _cnt_resolved = max(0, _cnt_total - _cnt_rem)
                 if _cnt_total > 0:
-                    return f' <span style="color:#8FA6C8;">{_cnt_total}/{_cnt_rem}</span>'
+                    # §v10.305: Echtzeit-Count pro Defekt: resolved/total
+                    return f' <span style="color:#7BA8EE;">{_cnt_resolved}/{_cnt_total}</span>'
 
                 _unit_by_key = {
                     "hum": "Hz",
@@ -23254,7 +23445,7 @@ class ModernMainWindow(QMainWindow):
                 if n > 0:
                     if _status == "correcting" and _real_repair_phase:
                         # §v10.70: Nutze pre-computed _repair_names vom Thread (Single Source)
-                        _active_names = payload.get("_repair_names", "")
+                        _active_names = defects.get("_repair_names", "")
                         # Store for heartbeat status text injection
                         self._current_repair_names = _active_names
                         if _active_names:

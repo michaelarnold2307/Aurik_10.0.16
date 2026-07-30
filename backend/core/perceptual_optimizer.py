@@ -341,7 +341,7 @@ class PerceptualOptimizer:
         n = len(mono)
         if n < sr // 4:
             # §v10.93: < 250ms — RMS-basierter Perceptual-Proxy
-            _rms = float(np.sqrt(np.mean(mono.astype(np.float64)**2) + 1e-12))
+            _rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
             return float(np.clip(_rms * 5.0, 0.30, 0.70))
 
         # 1. Brightness (HF-Energie)

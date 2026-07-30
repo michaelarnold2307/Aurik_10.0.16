@@ -353,6 +353,14 @@ repos:
         pass_filenames: false
         always_run: true
 
+      # §v10.306 SOTA-Guard: Startup-Qualitätsregeln (torch.zeros, i18n, lock-discipline, imports)
+      - id: aurik-sota-guard
+        name: "§v10.306 SOTA-Guard (GPU-Safety, i18n, Lock-Discipline, Imports)"
+        entry: python3 scripts/pre_commit_sota_guard.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       # Conventional Commits Message Validation
       - id: conventional-commit-msg
         name: "Conventional Commits (feat/fix/docs/style/refactor/perf/test/chore/spec/build/ci)"

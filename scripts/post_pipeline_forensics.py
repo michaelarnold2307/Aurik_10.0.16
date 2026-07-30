@@ -35,9 +35,9 @@ def run_forensics(q_score: float | None = None) -> dict:
         Dict mit forensics_summary, pattern_candidates, quality_trend.
     """
     from backend.core.exception_forensics import (
+        ContinuousAnalyzer,
         ExceptionAggregator,
         PatternMiner,
-        ContinuousAnalyzer,
     )
     from backend.core.quality_regression_detector import QualityRegressionDetector
 
@@ -64,6 +64,20 @@ def run_forensics(q_score: float | None = None) -> dict:
     if summary["unclassified"] > 0:
         miner = PatternMiner(agg)
         candidates = miner.discover()
+
+        # ── §v10.303.41 Auto-Promotion ──
+        _auto_promoted = 0
+        for c in candidates:
+            if c.confidence >= 0.90 and c.exception_count >= 10:
+                if c.regex_pattern and c.regex_pattern not in agg.KNOWN_PATTERNS:
+                    agg.KNOWN_PATTERNS[c.regex_pattern] = c.temporary_id
+                    _auto_promoted += 1
+                    logger.info(
+                        "§v10.303.41 Auto-Promotion: %s → %s (conf=%.2f, count=%d)",
+                        c.regex_pattern[:60], c.temporary_id, c.confidence, c.exception_count,
+                    )
+        if _auto_promoted:
+            logger.info("§v10.303.41 Auto-Promotion: %d Pattern(s) in KNOWN_PATTERNS aufgenommen", _auto_promoted)
 
         if candidates:
             # Schreibe entdeckte Patterns für den Scanner
@@ -95,15 +109,13 @@ def run_forensics(q_score: float | None = None) -> dict:
                 len(candidates),
                 pattern_feed,
             )
-            result["pattern_candidates"] = [
-                {"id": c.temporary_id, "confidence": c.confidence} for c in candidates
-            ]
+            result["pattern_candidates"] = [{"id": c.temporary_id, "confidence": c.confidence} for c in candidates]
 
     # ── L5: Q-Score-Korrelation ─────────────────────────────────────────
     qrd = QualityRegressionDetector()
     if q_score is not None:
         qrd.record(q_score)
-        logger.info("§v10.115 Q-Score aufgezeichnet: %.4f", q_score)
+        logger.info("§v10.115 Q-Wert aufgezeichnet: %.4f", q_score)
 
     comparison = qrd.compare()
     if comparison.get("status") == "ok":
@@ -130,6 +142,7 @@ def run_forensics(q_score: float | None = None) -> dict:
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Post-Pipeline Forensik-Hook")
     parser.add_argument("--qscore", type=float, help="Q-Score des letzten Laufs")
     parser.add_argument("--json", action="store_true", help="JSON-Output")
@@ -143,18 +156,16 @@ def main():
         print(json.dumps(result, indent=2, default=str))
     else:
         summary = result["forensics_summary"]
-        print(f"\n🔬 §v10.115 Post-Pipeline Forensik")
-        print(f"   Exceptions: {summary['total_exceptions']} total, "
-              f"{summary['unique_messages']} unique")
+        print("\n🔬 §v10.115 Post-Pipeline Forensik")
+        print(f"   Exceptions: {summary['total_exceptions']} total, {summary['unique_messages']} unique")
         print(f"   Unklassifiziert: {summary['unclassified']}")
         print(f"   Pattern-Kandidaten: {len(result['pattern_candidates'])}")
 
         qt = result.get("quality_trend", {})
         if qt.get("status") == "ok":
-            print(f"   Q-Score: {qt['current_q_score']:.4f} "
-                  f"(Δ={qt['q_score_delta']:+.4f})")
+            print(f"   Q-Score: {qt['current_q_score']:.4f} (Δ={qt['q_score_delta']:+.4f})")
             if qt.get("regression_detected"):
-                print(f"   ⚠️  QUALITY REGRESSION DETECTED")
+                print("   ⚠️  QUALITY REGRESSION DETECTED")
 
     return 0
 

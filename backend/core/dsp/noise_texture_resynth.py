@@ -65,7 +65,7 @@ def _material_resynth_target(material_type: str) -> tuple[str, float | None]:
     # die von Callern wie phase_03/phase_29/unified_restorer_v3 ankommen können.
     for _prefix in ("materialtype.",):
         if key.startswith(_prefix):
-            key = key[len(_prefix):]
+            key = key[len(_prefix) :]
             break
     if key in _ANALOG_CD_FLOOR_TARGETS:
         return "cd_digital", _CD_LIKE_FLOOR_DBFS

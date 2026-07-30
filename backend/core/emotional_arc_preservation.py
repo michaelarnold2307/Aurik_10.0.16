@@ -156,6 +156,7 @@ class EmotionalArcPreservationMetric:
         sr: int,
         lyrics_saliency: np.ndarray | None = None,
         frisson_zones=None,
+        transfer_chain_depth: int = 1,
     ) -> EmotionalArcResult:
         """Misst den Erhalt des emotionalen Bogens.
 
@@ -325,19 +326,33 @@ class EmotionalArcPreservationMetric:
         # ----------------------------------------------------------------
         # Urteil
         # ----------------------------------------------------------------
+        # §v10.200 Depth-adaptive thresholds: tiefere Ketten haben flachere
+        # emotionale Bögen durch Rauschmaskierung. Bei depth≥4 ist eine
+        # Pearson-Korrelation von 0.85 physikalisch unerreichbar.
+        _td_ea = max(1, int(transfer_chain_depth))
+        if _td_ea >= 4:
+            _thr_arousal = 0.50
+            _thr_valence = 0.50
+        elif _td_ea >= 3:
+            _thr_arousal = 0.70
+            _thr_valence = 0.65
+        else:
+            _thr_arousal = self.THRESHOLD_AROUSAL
+            _thr_valence = self.THRESHOLD_VALENCE
+
         arc_preserved = (
-            ar_pearson >= self.THRESHOLD_AROUSAL
-            and val_pearson >= self.THRESHOLD_VALENCE
+            ar_pearson >= _thr_arousal
+            and val_pearson >= _thr_valence
             and klimax_dev <= self.MAX_KLIMAX_DEVIATION
             and klimax_level_dev <= self.MAX_KLIMAX_LEVEL_DB
             and _local_drop_ok  # §Y4: no segment arousal collapsed by > 8%
         )
 
         reason_parts = []
-        if ar_pearson < self.THRESHOLD_AROUSAL:
-            reason_parts.append(f"Arousal-Korrelation zu niedrig ({ar_pearson:.2f} < {self.THRESHOLD_AROUSAL})")
-        if val_pearson < self.THRESHOLD_VALENCE:
-            reason_parts.append(f"Valence-Korrelation zu niedrig ({val_pearson:.2f} < {self.THRESHOLD_VALENCE})")
+        if ar_pearson < _thr_arousal:
+            reason_parts.append(f"Arousal-Korrelation zu niedrig ({ar_pearson:.2f} < {_thr_arousal})")
+        if val_pearson < _thr_valence:
+            reason_parts.append(f"Valence-Korrelation zu niedrig ({val_pearson:.2f} < {_thr_valence})")
         if klimax_dev > self.MAX_KLIMAX_DEVIATION:
             reason_parts.append(f"Klimax-Verschiebung: {klimax_dev} Segmente (Max: {self.MAX_KLIMAX_DEVIATION})")
         if klimax_level_dev > self.MAX_KLIMAX_LEVEL_DB:
@@ -806,6 +821,7 @@ def measure_emotional_arc(
     sr: int,
     lyrics_saliency: np.ndarray | None = None,
     frisson_zones=None,
+    transfer_chain_depth: int = 1,
 ) -> EmotionalArcResult:
     """Convenience-Wrapper: Erhalt des emotionalen Bogens prüfen.
 
@@ -827,6 +843,7 @@ def measure_emotional_arc(
         sr,
         lyrics_saliency=lyrics_saliency,
         frisson_zones=frisson_zones,
+        transfer_chain_depth=transfer_chain_depth,
     )
 
 

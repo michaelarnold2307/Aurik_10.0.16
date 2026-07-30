@@ -1023,7 +1023,9 @@ def test_59_blind_reference_vector_used_when_no_gp_memory():
     gate._ref_memory.clear()
     audio = _audio(dur=8.0, amp=0.3, freq=440.0)
     result = gate.evaluate_restoration(
-        audio, audio, SR,
+        audio,
+        audio,
+        SR,
         artifact_freedom=0.96,
         restorability_score=70.0,
         genre="test",  # Keine GP-Memory für "test"
@@ -1039,7 +1041,7 @@ def test_59_blind_reference_vector_used_when_no_gp_memory():
 def test_60_hpi_nan_guard_max():
     """§G96, §V35: max(nan, 0.5) wird durch nan_to_num geschützt."""
     # Direkter Test des NaN-Verhaltens
-    x = float('nan')
+    x = float("nan")
     # Python: max(nan, 0.5) == nan (BUG)
     assert np.isnan(max(x, 0.5)), "Python max(nan, 0.5) IS nan — Guard muss davor sein"
     # Mit Guard: nan_to_num vor max
@@ -1058,7 +1060,9 @@ def test_61_hpi_product_nan_guard():
     # Mit extrem kurzem Audio (<1024 samples) bekommen einige Pfade NaN
     short = np.array([0.1, 0.2, 0.1], dtype=np.float32)
     result = gate.evaluate_restoration(
-        short, short, SR,
+        short,
+        short,
+        SR,
         artifact_freedom=0.9,
         restorability_score=50.0,
         genre="test",
@@ -1102,7 +1106,9 @@ def test_64_reference_audio_none_not_degraded_input():
     audio = _audio(dur=8.0, amp=0.3, freq=440.0)
     # reference_audio=None → sollte blinden Vektor verwenden, nicht degraded_input
     result = gate.evaluate_restoration(
-        audio, audio, SR,
+        audio,
+        audio,
+        SR,
         reference_audio=None,
         artifact_freedom=0.96,
         restorability_score=70.0,

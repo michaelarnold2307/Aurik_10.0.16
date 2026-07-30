@@ -17,7 +17,6 @@ import re
 import numpy as np
 import pytest
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # 1. Import-Shadowing
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -56,13 +55,15 @@ def _has_shadowing_import(filepath: str) -> list[dict]:
                                     and isinstance(sub.ctx, ast.Load)
                                     and sub.lineno < child.lineno
                                 ):
-                                    bugs.append({
-                                        "func": node.name,
-                                        "func_line": node.lineno,
-                                        "name": imported,
-                                        "use_line": sub.lineno,
-                                        "import_line": child.lineno,
-                                    })
+                                    bugs.append(
+                                        {
+                                            "func": node.name,
+                                            "func_line": node.lineno,
+                                            "name": imported,
+                                            "use_line": sub.lineno,
+                                            "import_line": child.lineno,
+                                        }
+                                    )
                                     break
     return bugs
 
@@ -80,6 +81,7 @@ def test_no_os_shadowing_in_uv3():
 def test_no_import_shadowing_in_core():
     """§v10.101: kein import-shadowing in backend/core/."""
     import os
+
     base = os.path.join(os.path.dirname(__file__), "..", "backend", "core")
     all_bugs = []
     for root, dirs, files in os.walk(base):
@@ -90,8 +92,7 @@ def test_no_import_shadowing_in_core():
                 bugs = _has_shadowing_import(fp)
                 all_bugs.extend(bugs)
     assert len(all_bugs) == 0, (
-        f"Import-Shadowing in {len(all_bugs)} Funktion(en): "
-        f"{[(b['name'], b['func']) for b in all_bugs[:5]]}"
+        f"Import-Shadowing in {len(all_bugs)} Funktion(en): {[(b['name'], b['func']) for b in all_bugs[:5]]}"
     )
 
 
@@ -111,9 +112,7 @@ def test_gain_budget_resets_on_configure():
 
     # configure muss resetten
     gb.configure_for_chain_depth(2)
-    assert gb.cumulative_db == 0.0, (
-        "Budget wurde NICHT zurückgesetzt — Singleton akkumuliert über Läufe!"
-    )
+    assert gb.cumulative_db == 0.0, "Budget wurde NICHT zurückgesetzt — Singleton akkumuliert über Läufe!"
 
 
 def test_gain_budget_snr_adaptive():
@@ -127,8 +126,7 @@ def test_gain_budget_snr_adaptive():
 
     gb.configure_for_chain_depth(4, snr_db=14.3, material="cassette")
     assert gb._total_budget_db > base_budget, (
-        f"SNR=14.3 Kassette sollte > {base_budget} dB Budget haben, "
-        f"nicht {gb._total_budget_db}"
+        f"SNR=14.3 Kassette sollte > {base_budget} dB Budget haben, nicht {gb._total_budget_db}"
     )
 
 
@@ -166,9 +164,7 @@ def test_donoharm_material_adaptive_crest():
 
     # Verifiziere dass material-Parameter existiert
     sig = inspect.signature(DoNoHarmGuardian.evaluate)
-    assert "material" in sig.parameters, (
-        "evaluate() muss material-Parameter haben für adaptive Schwellwerte"
-    )
+    assert "material" in sig.parameters, "evaluate() muss material-Parameter haben für adaptive Schwellwerte"
 
 
 def test_donoharm_cassette_passes_higher_crest_drop():
@@ -193,9 +189,7 @@ def test_donoharm_cassette_passes_higher_crest_drop():
     verdict = guardian.evaluate(output_audio, sr, material="cassette")
     # Crest sollte NICHT degradiert sein (clean output hat besseren Crest)
     crest_degraded = any("crest_drop" in m for m in verdict.degraded_metrics)
-    assert not crest_degraded, (
-        f"Crest fälschlich als degradiert gemeldet: {verdict.degraded_metrics}"
-    )
+    assert not crest_degraded, f"Crest fälschlich als degradiert gemeldet: {verdict.degraded_metrics}"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
