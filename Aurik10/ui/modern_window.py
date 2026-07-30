@@ -17753,7 +17753,7 @@ class ModernMainWindow(QMainWindow):
                         _last_step_pct_val[0] = _cur_pct
                         _last_step_check_time = time.monotonic()
                         _elapsed = 0.0
-                    if _elapsed > 60.0:
+                    if _elapsed > 120.0:
                         _cur_step = getattr(self, "_preanalysis_step_msg", "")
                         logger.warning(
                             "§W-PREANALYSIS-LIVENESS: Kein Fortschritt seit %.0fs. "

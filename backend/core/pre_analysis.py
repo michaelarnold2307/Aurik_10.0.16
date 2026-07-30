@@ -692,9 +692,9 @@ def run_pre_analysis(
                     # §v10.306: Era-Material aus chain_injected entfernen —
                     # verhindert Doppeleintrag wenn DefectScanner das gleiche
                     # Medium erkennt (z.B. vinyl als era_material UND
-                    # defect_inferred_carrier).
-                    if _era_injected in _chain_injected:
-                        _chain_injected.remove(_era_injected)
+                    # defect_inferred_carrier). Prüft auf ALLE Vorkommen
+                    # (list.remove() stoppt nach erstem Treffer).
+                    _chain_injected = [c for c in _chain_injected if c != _era_injected]
                 if _chain_injected:
                     _dpos = len(_chain)
                     for i, m in enumerate(_chain):
