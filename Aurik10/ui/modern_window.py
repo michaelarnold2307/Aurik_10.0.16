@@ -16663,7 +16663,7 @@ class ModernMainWindow(QMainWindow):
                 _step_msg = getattr(self, "_preanalysis_step_msg", None)
                 _finalizing_text = _step_msg if _step_msg else "⏳ Analyse wird finalisiert …"
                 _bar.setRange(0, 10000)
-                _bar.setValue(10000)
+                _bar.setValue(5000)  # §v10.306: 50% = Pre-Analysis abgeschlossen
                 _bar.setFormat(_finalizing_text)
                 if hasattr(self, "status_text"):
                     self.status_text.setText(_finalizing_text)
@@ -16671,7 +16671,14 @@ class ModernMainWindow(QMainWindow):
                         self._last_scan_pct_int = _pct_int
                         self._apply_status_text_style("warning")
                 return
-            _bar.setValue(min(10000, int(round(_p * 100.0))))
+            # §v10.306: Hauptbalken = GESAMT-Workflow (5–50% = Pre-Analysis)
+            # Phasenbalken = aktueller Sub-Schritt (Scan-Fortschritt)
+            _total_pct = 5.0 + _p * 0.45  # 0% scan → 5%, 100% scan → 50%
+            _bar.setValue(min(5000, int(round(_total_pct * 100.0))))
+            # Phase bar: scan progress
+            if hasattr(self, "phase_progress_bar"):
+                self.phase_progress_bar.setValue(min(10000, int(round(_p * 100.0))))
+                self.phase_progress_bar.setVisible(True)
             # Show live preanalysis step message if available, otherwise scan progress
             _step_msg = getattr(self, "_preanalysis_step_msg", None)
             if _step_msg and _p >= 75.0:
@@ -16991,6 +16998,10 @@ class ModernMainWindow(QMainWindow):
                 if getattr(self, "_preanalysis_finalized_for", None) == _cfk:
                     return  # double-fire guard
                 self._preanalysis_finalized_for = _cfk
+                # §v10.306: Pre-Analysis abgeschlossen → Phase-Bar ausblenden
+                self._preanalysis_pending = False
+                if hasattr(self, "phase_progress_bar"):
+                    self.phase_progress_bar.setVisible(False)
                 # §W-POST-ANALYSIS: Watchdog prüft Pre-Analysis-Ergebnis
                 _pa_result = getattr(self, "_latest_pre_analysis_result", None)
                 if _pa_result is not None:
@@ -17715,6 +17726,7 @@ class ModernMainWindow(QMainWindow):
             threading.Thread(target=_pre_analysis_bg, daemon=True).start()
 
             # ── §W-PREANALYSIS-LIVENESS Watchdog ──────────────────────────
+            self._preanalysis_pending = True  # §v10.306: Watchdog aktivieren
             # Falls die Pre-Analysis hängt (kein _cb()-Update > 60s), loggen
             # und ggf. Timeout-Force-Finalize triggern.
             _last_step_pct_val = [0.0]
