@@ -17762,8 +17762,8 @@ class ModernMainWindow(QMainWindow):
                             _cur_step or "(keiner)",
                         )
                         self._preanalysis_timeout_fired = True
-                        self._try_signal_preanalysis_done("era_genre")
-                        self._try_signal_preanalysis_done("defect_scan")
+                        _try_signal_preanalysis_done("era_genre")
+                        _try_signal_preanalysis_done("defect_scan")
                         break
 
             threading.Thread(target=_preanalysis_liveness_check, daemon=True, name="aurik-preanalysis-watchdog").start()
