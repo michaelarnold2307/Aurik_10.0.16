@@ -33102,6 +33102,39 @@ class UnifiedRestorerV3:
         _quality_mode_value = _active_quality_mode.value
         _pipeline_confidence = pipeline_confidence
         current_audio = audio.copy()
+
+        # ── §v10.306 Pre-Pipeline Memory Gate ──
+        # Bevor die Pipeline startet: Swap-Sanity-Check.
+        # Bei >90% Swap ist der Adressraum so fragmentiert dass C-Allokatoren
+        # (ONNX/PyTorch/scipy) mit SIGSEGV crashen. Lieber sauber abbrechen.
+        try:
+            import psutil as _ps_gate
+            _sw_gate = _ps_gate.swap_memory()
+            if _sw_gate.percent > 90.0:
+                _vm_gate = _ps_gate.virtual_memory()
+                logger.critical(
+                    "§MEM-GATE: Pipeline-Start verweigert — Swap %.0f%% (%.1f GB), RAM %.0f%% (%.1f GB frei). "
+                    "System hat nicht genug Speicher für sichere Restaurierung. "
+                    "Bitte andere Anwendungen schließen oder Swap vergrößern.",
+                    _sw_gate.percent, _sw_gate.used / (1024**3),
+                    _vm_gate.percent, _vm_gate.available / (1024**3),
+                )
+                return RestorationResult(
+                    audio=current_audio.copy(),
+                    config=self.config,
+                    material_type=material_type,
+                    defect_scores={},
+                    phases_executed=[],
+                    phases_skipped=[],
+                    total_time_seconds=0.0,
+                    rt_factor=0.0,
+                    quality_estimate=0.0,
+                    warnings=["memory_gate_blocked"],
+                    metadata={"skip_reason": "swap_pressure", "swap_pct": _sw_gate.percent},
+                )
+        except Exception:
+            pass
+
         # ── §v10.303.20–21 Phase-0 Pre-Processor Pipeline ──
         # Wissenschaftliche Reihenfolge (Carrier-Chain-Inversion §2.46):
         #   1. Apollo (Codec-Decompression) — nur für lossy-codec
