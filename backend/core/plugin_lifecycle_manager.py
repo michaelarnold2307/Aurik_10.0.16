@@ -264,7 +264,10 @@ class PluginLifecycleManager:
             if not pipeline_emergency and free_mb >= _MIN_FREE_MB_HARD and not swap_emergency:
                 return 0
             _now = time.monotonic()
-            if _now - self._last_swap_warn_ts >= 60.0:
+            # §v10.306: Adaptiver Cooldown. Wenn letzter Evict nichts brachte,
+            # 5 Minuten warten statt jede Minute warnen.
+            _cooldown = 300.0 if getattr(self, '_last_evict_was_empty', False) else 60.0
+            if _now - self._last_swap_warn_ts >= _cooldown:
                 _log_fn = logger.warning if (free_mb < _MIN_FREE_MB_HARD or swap_emergency) else logger.info
                 _log_fn(
                     "PLM: Pipeline aktiv, Speicherpflege (RAM=%.0f %%, frei=%.0f MB, swap=%.0f %%) "
@@ -285,7 +288,8 @@ class PluginLifecycleManager:
         )
         if swap_emergency and not (ram_pct > _RAM_EVICT_THRESHOLD_PCT or free_mb < _MIN_FREE_MB_HARD):
             _now_s = time.monotonic()
-            if _now_s - self._last_swap_warn_ts >= 60.0:
+            _cooldown = 300.0 if getattr(self, '_last_evict_was_empty', False) else 60.0
+            if _now_s - self._last_swap_warn_ts >= _cooldown:
                 logger.warning(
                     "PLM: Swap-Druck kritisch (%.0f %%) — erzwinge Eviction inaktiver Plugins (RAM=%.0f %%, frei=%.0f MB)",
                     swap_pct,
@@ -295,7 +299,10 @@ class PluginLifecycleManager:
                 self._last_swap_warn_ts = _now_s
         if not needs_evict:
             return 0
-        return self._do_evict(target_pct=_RAM_TARGET_PCT, required_mb=required_mb)
+        _evicted = self._do_evict(target_pct=_RAM_TARGET_PCT, required_mb=required_mb)
+        # §v10.306: Tracke ob letzte Eviction leer war → Cooldown-Verlängerung
+        self._last_evict_was_empty = (_evicted == 0)
+        return _evicted
 
     def force_evict_all(self) -> int:
         """Entlädt ALLE registrierten, inaktiven Plugins sofort.
