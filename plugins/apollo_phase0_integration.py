@@ -491,6 +491,126 @@ class ResembleEnhanceGuard:
 # ═══════════════════════════════════════════════════════════════════════
 
 
+# ── Chained Phase-0 Pre-Processor ─────────────────────────────────────
+
+
+class EARVAEPhase0Stage:
+    """§v10.306 EAR_VAE Neural Clean-Pass — Phase-0 Stage.
+
+    Uses the EAR_VAE ONNX model (earlab/EAR_VAE, Apache 2.0) to perform
+    a neural clean-pass via VAE bottleneck. The perceptual K-weighting,
+    phase-derivative loss, and stereo correlation loss trained into the
+    model produce a cleaner version of the input while preserving musical
+    detail.
+
+    This stage runs BEFORE subtractive stages (Apollo/DeepFilterNet) to
+    give them a cleaner baseline. Falls back silently if the ONNX model
+    is not available.
+    """
+
+    def __init__(self) -> None:
+        self._plugin = None
+        self._load_attempted = False
+
+    def _get_plugin(self):
+        if self._load_attempted:
+            return self._plugin
+        self._load_attempted = True
+        try:
+            from plugins.ear_vae_plugin import get_ear_vae_plugin
+
+            self._plugin = get_ear_vae_plugin()
+            if self._plugin is not None and self._plugin._ok:
+                logger.info("EAR_VAE Phase-0 stage available")
+            else:
+                logger.debug("EAR_VAE Phase-0: plugin not loaded")
+                self._plugin = None
+        except Exception as exc:
+            logger.debug("EAR_VAE Phase-0 unavailable: %s", exc)
+            self._plugin = None
+        return self._plugin
+
+    def process(self, audio: np.ndarray, sr: int = 48000) -> tuple[np.ndarray, bool]:
+        """Run EAR_VAE neural clean-pass.
+
+        Returns (audio_out, applied).
+        """
+        plugin = self._get_plugin()
+        if plugin is None:
+            return audio, False
+
+        try:
+            _audio = np.asarray(audio, dtype=np.float32)
+            _audio = np.nan_to_num(_audio, nan=0.0, posinf=1.0, neginf=-1.0)
+            _audio = np.clip(_audio, -1.0, 1.0)
+
+            # Convert mono to stereo if needed
+            if _audio.ndim == 1:
+                _audio = np.stack([_audio, _audio], axis=0)
+            elif _audio.ndim == 2 and _audio.shape[1] == 2 and _audio.shape[0] > 2:
+                _audio = _audio.T
+
+            # Resample to 48k if needed
+            if sr != 48000:
+                try:
+                    from scipy.signal import resample_poly
+
+                    num = int(_audio.shape[-1] * 48000 / sr)
+                    channels = []
+                    for c in range(min(2, _audio.shape[0] if _audio.ndim == 2 else 1)):
+                        ch = _audio[c] if _audio.ndim == 2 else _audio
+                        channels.append(resample_poly(ch, num, ch.shape[-1]))
+                    _audio = np.stack(channels, axis=0).astype(np.float32)
+                except Exception:
+                    pass
+
+            # Run neural clean-pass
+            out = plugin.process(_audio, sample_rate=48000)
+            if out is None:
+                return audio, False
+
+            # Quality guard: skip if spectral novelty > 40%
+            _novelty = _spectral_novelty(audio, out, sr=48000)
+            if _novelty > 0.40:
+                logger.debug("EAR_VAE skipped: novelty %.3f > 0.40", _novelty)
+                return audio, False
+
+            # Resample back to original SR if needed
+            if sr != 48000:
+                try:
+                    from scipy.signal import resample_poly
+
+                    num = int(out.shape[-1] * sr / 48000)
+                    channels = []
+                    for c in range(out.shape[0]):
+                        channels.append(resample_poly(out[c], num, out[c].shape[-1]))
+                    out = np.stack(channels, axis=0).astype(np.float32)
+                except Exception:
+                    pass
+
+            # Convert back to original channel layout
+            if audio.ndim == 1:
+                out = np.mean(out[:2], axis=0) if out.shape[0] >= 2 else out[0]
+            elif audio.ndim == 2 and audio.shape[1] == 2 and audio.shape[0] > 2:
+                out = out.T
+
+            out = np.clip(out, -1.0, 1.0)
+            if out.shape[-1] != audio.shape[-1]:
+                # Trim/pad to match original length
+                min_len = min(out.shape[-1], audio.shape[-1])
+                if out.ndim == 2:
+                    out = out[:, :min_len]
+                else:
+                    out = out[:min_len]
+
+            logger.info("EAR_VAE Phase-0 applied: novelty=%.3f", _novelty)
+            return out.astype(np.float32), True
+
+        except Exception as exc:
+            logger.debug("EAR_VAE Phase-0 failed: %s", exc)
+            return audio, False
+
+
 class ChainedPhase0Preprocessor:
     """Verketteter Phase-0 Pre-Processor mit korrekter Reihenfolge.
 
@@ -507,12 +627,14 @@ class ChainedPhase0Preprocessor:
     """
 
     def __init__(self):
+        self._ear_vae = EARVAEPhase0Stage()
         self._apollo = ApolloPhase0Guard()
         self._deepfilter = DeepFilterNetGuard()
         self._resemble = ResembleEnhanceGuard()
         self._apollo_failed_materials: set[str] = set()
         self._dfn_failed_materials: set[str] = set()
         self._resemble_failed_materials: set[str] = set()
+        self._ear_vae_failed: bool = False
         # ── §v10.303.18 Phase-0-Cache ──
         import os as _os
 
@@ -532,6 +654,7 @@ class ChainedPhase0Preprocessor:
         audio: np.ndarray,
         sr: int = 48000,
         material: Any = "unknown",
+        transfer_chain: list[str] | None = None,
     ) -> ApolloResult:
         """Führt die verkettete Phase-0 Pipeline aus.
 
@@ -558,7 +681,7 @@ class ChainedPhase0Preprocessor:
                         applied=True,
                         material=_mat,
                         metadata={"stages": _cached_stages,
-                                   "chain": "apollo→deepfilternet→resemble_enhance",
+                                   "chain": "ear_vae→apollo→deepfilternet→resemble_enhance",
                                    "cached": True},
                     )
             except Exception:
@@ -566,6 +689,16 @@ class ChainedPhase0Preprocessor:
 
         _any_applied = False
         _meta_stages: list[dict[str, Any]] = []
+
+        # ── Stufe 0: EAR_VAE Neural Clean-Pass (§v10.306) ──
+        if not self._ear_vae_failed:
+            _ev_out, _ev_applied = self._ear_vae.process(_current, sr)
+            if _ev_applied:
+                _current = _ev_out
+                _any_applied = True
+                _meta_stages.append({"stage": "ear_vae", "applied": True})
+            else:
+                _meta_stages.append({"stage": "ear_vae", "applied": False})
 
         # ── Stufe 1: Apollo Codec-Decompression ──
         _should_apply_apollo = ApolloPhase0Guard.should_apply(material, transfer_chain=transfer_chain)
@@ -632,7 +765,7 @@ class ChainedPhase0Preprocessor:
             audio=_current.astype(np.float32),
             applied=_any_applied,
             material=_mat,
-            metadata={"stages": _meta_stages, "chain": "apollo→deepfilternet→resemble_enhance"},
+            metadata={"stages": _meta_stages, "chain": "ear_vae→apollo→deepfilternet→resemble_enhance"},
         )
 
     def reset(self) -> None:

@@ -51,7 +51,7 @@
   Alle Post-Pipeline-Checks (Goals, Goosebumps, EmotionalArc, IAD, HPI, MUSHRA) vergleichen gegen
   den ML-verbesserten Output — nicht gegen das physikalisch unerreichbare degradierte Original.
 - **Cache**: Hash-basierte Persistenz in `~/.aurik/cache/phase0/` für Batch-Imports (§v10.303.18).
-- **PLM-Lade-Reihenfolge**: DFN (34MB) → Apollo (67MB) → Resemble (722MB) — klein zu groß.
+- **PLM-Lade-Reihenfolge**: EAR_VAE (643MB ONNX) → DFN (34MB) → Apollo (67MB) → Resemble (722MB) — klein zu groß.
 - **MP3-resistente Gender-Detection**: `bandwidth_loss` an `_detect_gender_robust()` übergeben.
 
 ### v10 Roadmap (spezifiziert, nicht implementiert)
@@ -93,7 +93,7 @@ Denker-Schicht (denker/*.py) [ZENTRALE ENTSCHEIDUNGSINTELLIGENZ]
   └─ ExzellenzDenker     — Musical Goals, Goal-Repair
   ↓
 UnifiedRestorerV3 (backend/core/unified_restorer_v3.py)
-  ├─ **Phase 0: Apollo→DFN→Resemble** (plugins/apollo_phase0_integration.py)
+  ├─ **Phase 0: EAR_VAE→Apollo→DFN→Resemble** (plugins/apollo_phase0_integration.py)
   ├─ SongCalibration     — global_scalar, family_scalars, ALLE Guards
   ├─ SectionStrengthEnvelope — kontinuierliche per-Segment-Hüllkurve
   ├─ Phase-Selektion     — Preservation Mode, Risk-Guard

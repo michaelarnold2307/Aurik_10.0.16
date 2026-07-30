@@ -19,7 +19,7 @@ AURIK_ABOUT = {
         "wiederherstellt — mit 66 adaptiven Phasen, Closed-Loop-Optimierung "
         "und Self-Supervised Learning."
     ),
-    "donation_url": "https://www.paypal.com/donate?hosted_button_id=AURIKDONATE",
+    "donation_url": "https://www.paypal.com/donate?business=michael.arnold2307@gmail.com&currency_code=EUR",
     "license": "MIT — Kostenlos für private und kommerzielle Nutzung",
 }
 

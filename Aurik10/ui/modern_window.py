@@ -1178,8 +1178,9 @@ def _normalize_audio(audio: np.ndarray) -> np.ndarray:
         audio = audio[:, :2]
     # NaN/Inf bereinigen
     audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
-    # Clipping auf [-1, 1]
-    audio = np.clip(audio, -1.0, 1.0)
+    # §v10.306: Clipping auf [-0.98, 0.98] — 0.17 dB Headroom gegen
+    # Inter-Sample-Peaks (DAC-Rekonstruktionsfilter kann >0dB rekonstruieren)
+    audio = np.clip(audio, -0.98, 0.98)
     return audio
 
 
@@ -1223,7 +1224,7 @@ def _match_playback_loudness_to_reference(audio: np.ndarray, reference: np.ndarr
     if peak > 0.985:
         matched = matched * (0.985 / peak)
         gain_db = 20.0 * math.log10(max(0.985 / max(float(np.max(np.abs(prepared))), 1e-9), 1e-9))
-    return np.clip(matched, -1.0, 1.0).astype(np.float32, copy=False), gain_db
+    return np.clip(matched, -0.98, 0.98).astype(np.float32, copy=False), gain_db
 
 
 def _guard_preview_short_term_loudness(audio: np.ndarray, reference: np.ndarray | None, sr: int) -> np.ndarray:
@@ -1383,10 +1384,16 @@ def _build_carrier_chain_html(chain_keys: list[str]) -> str:
     §UI-CARRIER-DISPLAY-INVARIANT: Einzige Implementierung der Ketten-Zusammensetzung.
     Nutzt immer _CARRIER_MEDIUM_DISPLAY + _render_carrier_html (Single Source of Truth).
     Gibt '' zurück wenn chain_keys leer oder nur Whitespace-Einträge enthält.
+
+    §v10.306: Dedupliziert aufeinanderfolgende identische Einträge (Bug: Vinyl doppelt).
     """
     parts: list[str] = []
+    _prev: str | None = None
     for k in chain_keys:
         k_str = str(k).strip().lower() if k else "unknown"
+        if k_str == _prev:
+            continue  # §v10.306: Doppelten Eintrag überspringen
+        _prev = k_str
         icon_stem, label = _CARRIER_MEDIUM_DISPLAY.get(k_str, ("unknown", k_str or "Unbekannt"))
         parts.append(_render_carrier_html(icon_stem, label))
     return "&nbsp;&nbsp;→&nbsp;&nbsp;".join(parts) if parts else ""
@@ -20747,6 +20754,55 @@ class ModernMainWindow(QMainWindow):
                     f"<span style='color:#B8A068;'>{t('batch.retry_hint', count=n_fail)}</span>"
                 )
                 self._result_banner.setVisible(True)
+
+        # §GRATITUDE: Spenden-Erinnerung nach erfolgreicher Restaurierung
+        if n_ok > 0:
+            try:
+                from backend.core.donation_reminder import (
+                    PAYPAL_EMAIL,
+                    PAYPAL_URL,
+                    open_donation_link,
+                    should_show_reminder,
+                )
+
+                if should_show_reminder():
+                    QTimer.singleShot(1500, lambda: self._show_donation_dialog())
+            except Exception:
+                pass  # non-blocking
+
+    def _show_donation_dialog(self) -> None:
+        """Zeigt die Spenden-Erinnerung als freundlichen Dialog mit PayPal-Button."""
+        try:
+            from backend.core.donation_reminder import (
+                get_donation_info,
+                open_donation_link,
+                show_reminder,
+            )
+
+            _info = get_donation_info()
+            _msg = show_reminder(0.8)
+
+            _dlg = QMessageBox(self)
+            _dlg.setWindowTitle("🎵 Aurik — Danke für Dein Vertrauen!")
+            _dlg.setIcon(QMessageBox.Icon.Information)
+            _dlg.setText(_msg.replace("\n", "<br>").replace(
+                _info["url"],
+                f"<a href='{_info['url']}' style='color:#0070ba;'>{_info['url']}</a>",
+            ))
+            _dlg.setTextFormat(Qt.TextFormat.RichText)
+            _dlg.setStandardButtons(QMessageBox.StandardButton.Close)
+            _btn_donate = _dlg.addButton("💛 Jetzt unterstützen", QMessageBox.ButtonRole.AcceptRole)
+            _btn_donate.setStyleSheet(
+                "QPushButton {"
+                "  background-color: #0070ba; color: white; font-weight: bold;"
+                "  padding: 8px 20px; border-radius: 6px; font-size: 13px;"
+                "}"
+                "QPushButton:hover { background-color: #005ea6; }"
+            )
+            _btn_donate.clicked.connect(lambda: open_donation_link())
+            _dlg.exec()
+        except Exception:
+            pass  # non-blocking
 
     def _trigger_celebration(self) -> None:
         """Brief celebration particle burst on the waveform after successful restoration."""

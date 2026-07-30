@@ -1037,6 +1037,30 @@ class DeEsserPhase(PhaseInterface):
         elif _bw_loss > 0.50:
             _graduated_mode = "conservative"
 
+        # §v10.306 Pre-Echo-Guard: Bei tiefer Tonträgerkette (≥4) UND
+        # extremem BW-Verlust (>0.85) ist das verbleibende HF-Material
+        # Codec-Artefakt, nicht echte Sibilanz. Selbst minimales De-Essing
+        # produziert dann Pre-Echo-Artefakte (16 PE in Log bestätigt).
+        if _graduated_mode == "minimal" and _td_p19_hf >= 4:
+            logger.info(
+                "§v10.306 Pre-Echo-Guard: depth=%d bw_loss=%.2f → DeEsser komplett skipped "
+                "(rest-HF ist Codec-Artefakt, kein Sibilant)",
+                _td_p19_hf, _bw_loss,
+            )
+            enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
+            enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
+            return PhaseResult(
+                success=True,
+                audio=enhanced_audio,
+                execution_time_seconds=time.time() - start_time,
+                metadata={
+                    "material": material.name,
+                    "de_essing_applied": False,
+                    "aurik_8_enhancement": False,
+                    "skip_reason": "pre_echo_guard_depth_bw_loss",
+                },
+            )
+
         if _graduated_mode != "full":
             logger.info(
                 "§v10.303.35 Graduated De-Essing: bw_loss=%.2f → mode=%s",

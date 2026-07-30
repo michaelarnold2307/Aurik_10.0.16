@@ -32,6 +32,7 @@ import pathlib
 import sys
 import threading
 import time
+import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from types import SimpleNamespace
@@ -21115,6 +21116,15 @@ class UnifiedRestorerV3:
         except Exception:
             logger.debug("PeriodicHealth: non-blocking recording failure", exc_info=True)
 
+        # §GRATITUDE: Spenden-Erinnerung nach erfolgreicher Restaurierung
+        try:
+            from backend.core.donation_reminder import show_reminder
+
+            _quality = float(getattr(result, "quality_estimate", 0.5) or 0.5)
+            show_reminder(_quality)
+        except Exception as _dr_exc:
+            logger.debug("Donation Reminder nicht verfügbar: %s (non-blocking)", _dr_exc)
+
         return result
 
     def get_phase_progress(self) -> dict:
@@ -33105,7 +33115,6 @@ class UnifiedRestorerV3:
             _p0 = ChainedPhase0Preprocessor()
             _p0_result = _p0.process(
                 current_audio, sample_rate, material_type,
-                transfer_chain=(getattr(self, "_restoration_context", {}) or {}).get("transfer_chain"),
             )
             if _p0_result.applied:
                 current_audio = _p0_result.audio
@@ -33132,6 +33141,7 @@ class UnifiedRestorerV3:
                 ]
                 # Mapping: Phase-0-Stufe → behobene Defektklassen
                 _p0_defect_map = {
+                    "ear_vae": ["broadband_noise", "spectral_dullness", "phase_distortion"],
                     "apollo": ["compression_artifacts", "codec_pre_echo", "codec_hf_loss"],
                     "deepfilternet": ["broadband_noise", "tape_hiss", "modulation_noise"],
                     "resemble_enhance": ["broadband_noise", "spectral_dullness"],
@@ -33145,6 +33155,12 @@ class UnifiedRestorerV3:
                 # §v10.303.16: Erweitert um alle Phasen, deren Aufgabe durch
                 # die entsprechenden ML-Modelle bereits vollständig erfüllt ist.
                 _p0_redundant_phases = {
+                    "ear_vae": [
+                        "phase_03_denoise",
+                        "phase_06_frequency_restoration",
+                        "phase_14_phase_correction",
+                        "phase_34_mid_side_processing",
+                    ],
                     "apollo": [
                         "phase_23_spectral_repair",
                         "phase_50_spectral_repair",
@@ -35623,8 +35639,12 @@ class UnifiedRestorerV3:
                     _mg_checker_248 = _get_mg_checker_248()
                     # §2.54: Compute material-adaptive context for drift tolerance
                     _mat_str_248 = "unknown"
+                    _td_248 = 1
                     try:
                         _mat_str_248 = str(getattr(material_type, "value", material_type)).lower()
+                        _td_248 = max(1, int(
+                            getattr(self, "_restoration_context", {}).get("transfer_chain_depth", 1)
+                        ))
                     except Exception:
                         logger.debug(
                             "§2.48 InteractionGuard: material_type konnte nicht normalisiert werden", exc_info=True
@@ -35668,6 +35688,7 @@ class UnifiedRestorerV3:
                         _baseline_goals_248,
                         material_type=_mat_str_248,
                         restorability_score=float(_pmgg_restorability_score),
+                        transfer_chain_depth=_td_248,
                         defect_severity_mean=_defect_sev_mean_248,
                         n_active_phases=len(selected_phases),
                         n_carrier_phases=_n_carrier_248,
@@ -36071,10 +36092,10 @@ class UnifiedRestorerV3:
                     _vm_pre = _ps_pre.virtual_memory()
                     _avail_pre = _vm_pre.available / (1024**3)
                     _ram_pct_pre = _vm_pre.percent
-                    # Deep-Flush: wenn RAM > 75 % UND FlashSR zuvor gelaufen (große Heap-Fragmente)
+                    # Deep-Flush: wenn RAM > 72 % (bzw. 68 % nach FlashSR) →
                     # → aggressive GC + malloc_trim BEVOR die nächste Phase ihren Speicher anfordert.
                     _flashsr_ran = bool(getattr(self, "_restoration_context", {}).get("flashsr_applied", False))
-                    if _ram_pct_pre > 75.0 or (_flashsr_ran and _ram_pct_pre > 70.0):
+                    if _ram_pct_pre > 72.0 or (_flashsr_ran and _ram_pct_pre > 68.0):
                         gc.collect(2)  # alle 3 Generationen
                         gc.collect(2)  # drittes collect für zirkuläre Refs
                         try:
@@ -38102,7 +38123,8 @@ class UnifiedRestorerV3:
                     else:
                         logger.error("❌ %s exception: %s", phase_id, e, exc_info=True)
                         skipped.append(phase_id)
-                    _record_oom_probe("phase_exception", phase_id, error=f"{type(e).__name__}:{e}")
+                    _record_oom_probe("phase_exception", phase_id, error=f"{type(e).__name__}:{e}",
+                                     traceback=traceback.format_exc())
                 if self.performance_guard:
                     self.performance_guard.end_phase(phase_id, phase_start)
                 # §Wall-Time-Budget: Non-exempt Phasen-Laufzeit kumulieren.
@@ -38146,7 +38168,7 @@ class UnifiedRestorerV3:
                         )
                     except Exception as _exc:
                         logger.debug("psutil swap_memory (post-phase) failed: %s", _exc)
-                    if _avail_gb_phase < 4.0 or _ram_pct_phase > 80.0 or _swap_thrashing:
+                    if _avail_gb_phase < 3.5 or _ram_pct_phase > 84.0 or _swap_thrashing:
                         _reason = (
                             "Swap-Thrashing"
                             if _swap_thrashing

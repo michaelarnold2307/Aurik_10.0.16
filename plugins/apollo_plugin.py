@@ -182,7 +182,7 @@ class ApolloPlugin:
         self._fallback_active: bool = False
         self._device: str = "cpu"  # set by _try_load_model
         self._hallucination_threshold: float = float(
-            _os.environ.get("AURIK_APOLLO_HALLUCINATION_THRESHOLD", "0.35")
+            os.environ.get("AURIK_APOLLO_HALLUCINATION_THRESHOLD", "0.35")
         )
         self._try_load_model()
 

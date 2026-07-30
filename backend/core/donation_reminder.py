@@ -7,13 +7,19 @@ Spenden-Erinnerung mit PayPal-Link.
 from __future__ import annotations
 
 import logging
+import time
 import webbrowser
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-PAYPAL_URL = "https://www.paypal.com/donate?hosted_button_id=AURIKDONATE"
+PAYPAL_URL = "https://www.paypal.com/donate?business=michael.arnold2307@gmail.com&currency_code=EUR"
 PAYPAL_EMAIL = "michael.arnold2307@gmail.com"
-PAYPAL_FALLBACK = "https://www.paypal.com/paypalme/aurikdev"
+PAYPAL_FALLBACK = "https://paypal.me/michaelarnold2307"
+
+# Rate-limit: maximal alle 24 Stunden (pro Session oder via Disk-Stamp)
+_RATE_LIMIT_SECONDS = 86400  # 24 Stunden
+_STAMP_FILE = Path(__file__).parent.parent / "logs" / ".donation_last_shown"
 
 _MESSAGES = [
     "🎵 Dein Song wurde erfolgreich restauriert!",
@@ -68,3 +74,18 @@ def get_donation_info() -> dict:
         "fallback": PAYPAL_FALLBACK,
         "email": PAYPAL_EMAIL,
     }
+
+
+def should_show_reminder() -> bool:
+    """Prüft, ob genug Zeit seit der letzten Anzeige vergangen ist (Rate-Limit 24h)."""
+    try:
+        now = time.time()
+        if _STAMP_FILE.exists():
+            last = float(_STAMP_FILE.read_text().strip())
+            if now - last < _RATE_LIMIT_SECONDS:
+                return False
+        _STAMP_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _STAMP_FILE.write_text(str(now))
+        return True
+    except Exception:
+        return True  # Bei Fehler lieber anzeigen als nie

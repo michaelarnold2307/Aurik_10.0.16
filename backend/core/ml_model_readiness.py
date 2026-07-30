@@ -103,7 +103,7 @@ def check_ml_model_ready(model_id: str, phase_name: str = "") -> bool:
         return False
 
     if not ready:
-        logger.warning(
+        logger.info(
             "ML-Modell '%s' ist nicht verfügbar (nicht geladen / Budget erschöpft)%s",
             model_id,
             f" — Phase {phase_name}" if phase_name else "",

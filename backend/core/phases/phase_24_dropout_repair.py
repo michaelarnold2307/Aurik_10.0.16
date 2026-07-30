@@ -880,9 +880,6 @@ class DropoutRepairPhase(PhaseInterface):
         check_ml_model_ready("GACELA", phase_name="24")
         check_ml_model_ready("PANNs", phase_name="24")
         check_ml_model_ready("Whisper", phase_name="24")
-        check_ml_model_ready("FlashSR", phase_name="24")
-        check_ml_model_ready("GACELA", phase_name="24")
-        check_ml_model_ready("AudioLDM2", phase_name="24")
         """
         Professional dropout repair with context-aware inpainting and ML-Hybrid support.
 
