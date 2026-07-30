@@ -160,6 +160,14 @@ class ApolloPhase0Guard:
         self._cached_effective: set[str] = set()  # Materialien wo Apollo half
         self._cached_ineffective: set[str] = set()  # Materialien wo Apollo nichts brachte
 
+    def unload(self) -> None:
+        """§v10.306: Apollo-Modell sofort aus RAM entladen."""
+        if self._model is not None:
+            del self._model
+            self._model = None
+        self._loaded = False
+        import gc; gc.collect()
+
     # ── Modell-Ladung ────────────────────────────────────────────────
 
     @property
@@ -409,6 +417,14 @@ class ResembleEnhanceGuard:
         self._loaded = False
         self._plugin = None
 
+    def unload(self) -> None:
+        """§v10.306: ResembleEnhance sofort aus RAM entladen."""
+        if self._plugin is not None:
+            self._plugin.unload()
+            self._plugin = None
+        self._loaded = False
+        import gc; gc.collect()
+
     def _ensure_loaded(self) -> bool:
         if self._loaded and self._plugin is not None:
             return True
@@ -529,6 +545,14 @@ class EARVAEPhase0Stage:
             logger.debug("EAR_VAE Phase-0 unavailable: %s", exc)
             self._plugin = None
         return self._plugin
+
+    def unload(self) -> None:
+        """§v10.306: EAR_VAE sofort aus RAM entladen."""
+        if self._plugin is not None:
+            self._plugin.unload()
+            self._plugin = None
+        self._load_attempted = False
+        import gc; gc.collect()
 
     def process(self, audio: np.ndarray, sr: int = 48000) -> tuple[np.ndarray, bool]:
         """Run EAR_VAE neural clean-pass.
@@ -699,6 +723,8 @@ class ChainedPhase0Preprocessor:
                 _meta_stages.append({"stage": "ear_vae", "applied": True})
             else:
                 _meta_stages.append({"stage": "ear_vae", "applied": False})
+            # §v10.306: EAR_VAE sofort entladen — 643 MB RAM freigeben
+            self._ear_vae.unload()
 
         # ── Stufe 1: Apollo Codec-Decompression ──
         _should_apply_apollo = ApolloPhase0Guard.should_apply(material, transfer_chain=transfer_chain)
@@ -719,6 +745,8 @@ class ChainedPhase0Preprocessor:
                 _meta_stages.append({"stage": "apollo", "applied": False})
         else:
             _meta_stages.append({"stage": "apollo", "applied": False, "reason": "not_codec_or_cached"})
+        # §v10.306: Apollo sofort entladen — 800 MB RAM freigeben
+        self._apollo.unload()
 
         # ── Stufe 2: DeepFilterNet v3 (Noise-Floor, Atmungserhalt) ──
         if _mat not in self._dfn_failed_materials:
@@ -732,6 +760,8 @@ class ChainedPhase0Preprocessor:
                 _meta_stages.append({"stage": "deepfilternet", "applied": False})
         else:
             _meta_stages.append({"stage": "deepfilternet", "applied": False, "reason": "cached_failure"})
+        # §v10.306: DeepFilterNet sofort entladen — 34 MB RAM freigeben
+        self._deepfilter.unload()
 
         # ── Stufe 3: Resemble Enhance ──
         if _mat not in self._resemble_failed_materials:
@@ -745,6 +775,8 @@ class ChainedPhase0Preprocessor:
                 _meta_stages.append({"stage": "resemble_enhance", "applied": False})
         else:
             _meta_stages.append({"stage": "resemble_enhance", "applied": False, "reason": "cached_failure"})
+        # §v10.306: ResembleEnhance sofort entladen — 722 MB RAM freigeben
+        self._resemble.unload()
 
         # ── §v10.303.18 Cache speichern ──
         if _any_applied:
@@ -823,6 +855,15 @@ class DeepFilterNetGuard:
         self._loaded = False
         self._plugin = None
         self._breath_detector = None
+
+    def unload(self) -> None:
+        """§v10.306: DeepFilterNet sofort aus RAM entladen."""
+        if self._plugin is not None:
+            self._plugin.unload()
+            self._plugin = None
+        self._loaded = False
+        self._breath_detector = None
+        import gc; gc.collect()
 
     def _ensure_loaded(self) -> bool:
         if self._loaded and self._plugin is not None:
