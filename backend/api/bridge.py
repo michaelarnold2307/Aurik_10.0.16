@@ -1878,60 +1878,65 @@ def warmup_models_background() -> None:
     Tier-1-Primär-Plugins zuerst (VAD/Pitch/Tagging), Fallbacks danach.
 
     §v10.305 G73: Warmup-Plugin-Namen MÜSSEN vor dem ersten Lauf validiert werden.
+    §v10.306: RAM-bewusstes Staggered-Loading — kleine Modelle sofort,
+    große Modelle nur bei ausreichend RAM (>20% frei).
     """
     import importlib
+    import gc as _warmup_gc
 
-    _plugins = [
-        # Tier-1 Primär-Plugins (§9.7.4 — Pflicht-Vorwärmen, §4.4-Reihenfolge)
-        ("plugins.silero_plugin", "get_silero_plugin"),  # VAD (~1 MB, ultraschnell — zuerst)
-        ("plugins.fcpe_plugin", "get_fcpe_plugin"),  # Pitch-Tracking Primär (§4.4)
-        ("plugins.beats_plugin", "get_beats_plugin"),  # Audio-Tagging Primär (§4.4)
-        ("plugins.sgmse_plugin", "get_sgmse_plus_plugin"),  # Dereverb/Denoising Primär
-        ("backend.core.noise_reduction", "get_noise_reducer"),  # DeepFilterNet v3.II Breitrauschen
-        # Stem-Separation Primärpfad (§4.4 — BS-RoFormer > MDX23C)
-        ("plugins.bs_roformer_plugin", "get_bs_roformer"),  # Gesang Primär (860 MB — lazy)
-        ("plugins.mdx23c_plugin", "get_mdx23c_plugin"),  # Instrumental Primär (Kim_Vocal_2)
-        # Fallback-Plugins (nach Bedarf)
-        ("plugins.panns_plugin", "get_panns_plugin"),  # Audio-Tagging Fallback
-        ("plugins.crepe_plugin", "get_crepe_plugin"),  # Pitch-Tracking Fallback
-        # Goal-Measurement-Plugins (§v10.101 — Vorladen verhindert Timeout bei Goal-Messung)
-        ("plugins.mert_plugin", "get_mert_plugin"),  # MERT-v1-330M (~1.2 GB, 160s Kaltstart → 0s)
-        # §v10.306: Apollo Spectral Repair (~0.8 GB) — genutzt von Phase 23+40
-        # Kaltstart ~15-30s für ONNX-Modell. Ohne Warmup hängt der erste
-        # Phase-23-Aufruf beim Laden des Apollo-Modells.
-        ("plugins.apollo_plugin", "get_apollo"),
+    # ── Tier-1: Kritische Sofort-Plugins (<100 MB, immer laden) ──────────
+    _plugins_tier1 = [
+        ("plugins.silero_plugin", "get_silero_plugin"),      # VAD (~1 MB)
+        ("plugins.fcpe_plugin", "get_fcpe_plugin"),          # Pitch (~7 MB)
+        ("plugins.crepe_plugin", "get_crepe_plugin"),        # Pitch Fallback (~10 MB)
+        ("plugins.beats_plugin", "get_beats_plugin"),        # Audio-Tagging (~10 MB)
+        ("backend.core.noise_reduction", "get_noise_reducer"), # DeepFilterNet v3.II (~15 MB)
+        ("plugins.panns_plugin", "get_panns_plugin"),        # Audio-Tagging Primär (~66 MB)
+        ("plugins.sgmse_plugin", "get_sgmse_plus_plugin"),   # Dereverb/Denoising (~12 MB)
     ]
-    logger.info("bridge: warmup started (%d plugins) …", len(_plugins))
+
+    # ── Tier-2: Große Modelle — nur bei RAM-Reserve laden ───────────────
+    _plugins_tier2 = [
+        ("plugins.apollo_plugin", "get_apollo"),             # ~800 MB
+        ("plugins.bs_roformer_plugin", "get_bs_roformer"),   # ~860 MB
+        ("plugins.mdx23c_plugin", "get_mdx23c_plugin"),      # ~900 MB
+        ("plugins.mert_plugin", "get_mert_plugin"),          # ~1.2 GB (async)
+    ]
+
+    logger.info("bridge: warmup started (%d+%d plugins) …",
+                len(_plugins_tier1), len(_plugins_tier2))
     _loaded = 0
     _failed = 0
+    _deferred = 0
+
     # §v10.304.30: Keine GPU-Detection im Warmup. torch.zeros("cuda") hängt
     # auf manchen ROCm-Systemen → Warmup-Thread tot. GPU-Plugins werden
     # trotzdem geladen — wenn GPU nicht verfügbar, crashen sie und werden
     # von try/except gefangen. Warmup läuft GARANTIERT durch.
-    for _mod, _accessor in _plugins:
-        def _load_one(_m: str, _a: str) -> bool:
-            try:
-                m = importlib.import_module(_m)
-                fn = getattr(m, _a, None)
-                if fn is not None:
-                    fn()
-                return True
-            except Exception as _e:
-                logger.warning("bridge: %s.%s FEHLGESCHLAGEN: %s", _m, _a, _e)
-                return False
+    def _load_one(_m: str, _a: str) -> bool:
+        try:
+            m = importlib.import_module(_m)
+            fn = getattr(m, _a, None)
+            if fn is not None:
+                fn()
+            return True
+        except Exception as _e:
+            logger.warning("bridge: %s.%s FEHLGESCHLAGEN: %s", _m, _a, _e)
+            return False
 
-        if "mert" in _mod.lower():
-            try:
-                _mert_thread = threading.Thread(
-                    target=lambda m=_mod, a=_accessor: _load_one(m, a),
-                    daemon=True, name="aurik_warmup_mert",
-                )
-                _mert_thread.start()
-                logger.info("bridge: MERT async warmup started")
-            except Exception:
-                pass
-            continue
+    # ── RAM-Check-Helper ─────────────────────────────────────────────────
+    def _ram_ok_for_large() -> bool:
+        try:
+            import psutil
+            vm = psutil.virtual_memory()
+            avail_pct = vm.available / max(vm.total, 1)
+            # >20% frei (>6.2 GB bei 31 GB) = genug für große Modelle
+            return avail_pct > 0.20
+        except Exception:
+            return True  # Im Zweifel versuchen
 
+    # ── Tier 1: Alle kleinen Modelle sofort laden ────────────────────────
+    for _mod, _accessor in _plugins_tier1:
         try:
             if _load_one(_mod, _accessor):
                 _loaded += 1
@@ -1940,7 +1945,45 @@ def warmup_models_background() -> None:
         except Exception as _sync_exc:
             _failed += 1
             logger.warning("bridge: %s.%s CRASH: %s", _mod, _accessor, _sync_exc)
-    logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen", _loaded, _failed)
+
+    # GC nach Tier-1 — gibt temporäre Allokationen frei
+    _warmup_gc.collect()
+
+    # ── Tier 2: Große Modelle nur bei RAM-Reserve ────────────────────────
+    for _mod, _accessor in _plugins_tier2:
+        if "mert" in _mod.lower():
+            # MERT immer async (1.2 GB, 160s Kaltstart)
+            if _ram_ok_for_large():
+                try:
+                    _mert_thread = threading.Thread(
+                        target=lambda m=_mod, a=_accessor: _load_one(m, a),
+                        daemon=True, name="aurik_warmup_mert",
+                    )
+                    _mert_thread.start()
+                    _loaded += 1
+                    logger.info("bridge: MERT async warmup started")
+                except Exception:
+                    _failed += 1
+            else:
+                _deferred += 1
+                logger.info("bridge: MERT deferred — RAM zu knapp")
+            continue
+
+        if _ram_ok_for_large():
+            try:
+                if _load_one(_mod, _accessor):
+                    _loaded += 1
+                else:
+                    _failed += 1
+            except Exception as _sync_exc:
+                _failed += 1
+                logger.warning("bridge: %s.%s CRASH: %s", _mod, _accessor, _sync_exc)
+        else:
+            _deferred += 1
+            logger.info("bridge: %s deferred — RAM zu knapp", _mod.split(".")[-1])
+
+    logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen, %d deferred",
+                _loaded, _failed, _deferred)
     # §v10.305 G73: Validiere alle Plugin-Zugriffsnamen (einmal pro Prozess)
     if _failed > 0:
         logger.warning(
