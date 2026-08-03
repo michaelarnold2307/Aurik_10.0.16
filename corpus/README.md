@@ -52,11 +52,11 @@ Public-Domain-Material von vertrauenswürdigen Quellen herunterzuladen.
 
 | Quelle | URL | Material |
 |--------|-----|----------|
-| Internet Archive | https://archive.org/details/78rpm | Shellac, Vinyl |
-| Musopen | https://musopen.org | Klassik (Shellac, Vinyl, Tape) |
-| Freesound (CC0) | https://freesound.org | Einzelklänge, Atmosphären |
-| Library of Congress | https://loc.gov/audio/ | Historische Aufnahmen |
-| Europeana Sounds | https://www.europeana.eu | Europäisches Audio-Erbe |
+| Internet Archive | <https://archive.org/details/78rpm> | Shellac, Vinyl |
+| Musopen | <https://musopen.org> | Klassik (Shellac, Vinyl, Tape) |
+| Freesound (CC0) | <https://freesound.org> | Einzelklänge, Atmosphären |
+| Library of Congress | <https://loc.gov/audio/> | Historische Aufnahmen |
+| Europeana Sounds | <https://www.europeana.eu> | Europäisches Audio-Erbe |
 
 ## Manifest
 

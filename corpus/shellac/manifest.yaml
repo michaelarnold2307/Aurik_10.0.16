@@ -1,0 +1,132 @@
+corpus_version: 1.0.0
+material: shellac
+description: Synthetic shellac recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1925
+  file: clean/shellac_jazz_1920s_clean.wav
+  genre: jazz
+  license: CC0 (generated)
+  material: shellac
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: c4f569811dc0af3e1d3a971a746abdabfcf5fe0fe22201cdfbd1cc1619625bd0
+  defect_description: Starkes Knistern + BW-Limit
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1925
+  file: damaged/shellac_jazz_1920s_crackle.wav
+  genre: jazz
+  license: CC0 (generated)
+  material: shellac
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: a197391157fb083a4dc8222ce017f6ab8b3508bea436d7ed641a872ad6e67d43
+  defect_description: Hiss + 50Hz Brumm + 8kHz BW
+  defect_types:
+  - hiss
+  duration_s: 10.0
+  era_year: 1925
+  file: damaged/shellac_jazz_1920s_hiss_hum.wav
+  genre: jazz
+  license: CC0 (generated)
+  material: shellac
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/shellac_blues_1930s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1932
+  genre: blues
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: f0d182ca404b5f083f92ddd57e56fd8f4a087d474de217d229b573c520c73324
+  defect_types: []
+- file: damaged/shellac_blues_1930s_hiss_crackle_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1932
+  genre: blues
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 39b086237810a867c44c7217686b6ec79691689c47942f8b08684559697fdc37
+  defect_types:
+  - hiss
+  - crackle
+  - hum
+- file: damaged/shellac_blues_1930s_surface_noise.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1932
+  genre: blues
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 613625faa60db7bfa87dc5c04ada9fd2435caaa27076aee009160381013f41fe
+  defect_types:
+  - surface
+  - noise
+- file: clean/shellac_classical_1940s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1945
+  genre: classical
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: bd874a30f5bebb40661c7ab5fe7c4af22c68c6772f487aeb629c0254a2ff8337
+  defect_types: []
+- file: damaged/shellac_classical_1940s_crackle.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1945
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 854b62f9e43b3e7255ee3cffef7bfcee675382b634a750d9bb17619aefdb93a6
+  defect_types:
+  - crackle
+- file: damaged/shellac_classical_1940s_hiss_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1945
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 9d39851c54ff909aeff6720fca4231ac0c0cc81c8aaa6aaffbe3320964609706
+  defect_types:
+  - hiss
+  - hum

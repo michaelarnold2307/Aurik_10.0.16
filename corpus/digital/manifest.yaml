@@ -1,0 +1,130 @@
+corpus_version: 1.0.0
+material: digital
+description: Synthetic digital recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 2005
+  file: clean/digital_electronic_2000s_clean.wav
+  genre: electronic
+  license: CC0 (generated)
+  material: digital
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: a3447d4a8da9e6e011dbb7ab536fc3f2a6255491c1d64f83da490f4ce1e50ee1
+  defect_description: MP3 32kbps-artig
+  defect_types: []
+  duration_s: 10.0
+  era_year: 2005
+  file: damaged/digital_electronic_2000s_mp3.wav
+  genre: electronic
+  license: CC0 (generated)
+  material: digital
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: 3bd95eb96ae359feeeeb210c9c2a649aede21a07466254642f5919058d3f5edc
+  defect_description: 12 Clicks/s (digitale Störungen)
+  defect_types:
+  - clicks
+  duration_s: 10.0
+  era_year: 2005
+  file: damaged/digital_electronic_2000s_clicks.wav
+  genre: electronic
+  license: CC0 (generated)
+  material: digital
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/digital_pop_2000s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2003
+  genre: pop
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: a4f0f0f705437b9e890c314f60c4d3f74e37c168ee7e8e6cd4a891f7ce549df2
+  defect_types: []
+- file: damaged/digital_pop_2000s_clicks.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2003
+  genre: pop
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: c10ddbc908922bb39aeeca3f2ade13fea12dfc01a65af32189d036d0480384b6
+  defect_types:
+  - clicks
+- file: damaged/digital_pop_2000s_mp3_artifacts.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2003
+  genre: pop
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: d1beb71939a5ef05d29bd4fb45f5355fba4898d4a10a331601b892633a7c3dc1
+  defect_types:
+  - mp3
+  - artifacts
+- file: clean/digital_jazz_2010s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2014
+  genre: jazz
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 68c6795bddaf3a8af71faeeb28ff2afcac7f367ab5e8f9b356c2c20e93409d70
+  defect_types: []
+- file: damaged/digital_jazz_2010s_clicks.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2014
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 7c210a00bd3a9f7209a643cb3fc99cf2f6c55069a173f7b8bb75af63e11d5036
+  defect_types:
+  - clicks
+- file: damaged/digital_jazz_2010s_mp3_artifacts.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2014
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: a45c9377139bdb3826e4f468be58ea711806baa56e89008f072c217255a4a8fd
+  defect_types:
+  - mp3
+  - artifacts

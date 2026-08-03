@@ -1,0 +1,131 @@
+corpus_version: 1.0.0
+material: reel_tape
+description: Synthetic reel_tape recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1968
+  file: clean/reel_soul_1960s_clean.wav
+  genre: soul
+  license: CC0 (generated)
+  material: reel_tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: 7b9637fdd739b436ad37d0d3a5b0c2ea57d91ae72f1a49b35f25b4e8c7e12010
+  defect_description: Leichtes Hiss + 50Hz
+  defect_types:
+  - hiss
+  duration_s: 10.0
+  era_year: 1968
+  file: damaged/reel_soul_1960s_hiss_hum.wav
+  genre: soul
+  license: CC0 (generated)
+  material: reel_tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: e2a6f8a41e87521cbe49f179e7fe632bda87487c4c597e25b1c65a63d3931af8
+  defect_description: Dropouts
+  defect_types:
+  - dropout
+  duration_s: 10.0
+  era_year: 1968
+  file: damaged/reel_soul_1960s_dropouts.wav
+  genre: soul
+  license: CC0 (generated)
+  material: reel_tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/reel_jazz_1950s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1955
+  genre: jazz
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: bdccb804e1c8c66b3d109af896006a323923e2c67d0237961ad5c659f43b263c
+  defect_types: []
+- file: damaged/reel_jazz_1950s_hiss_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1955
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 7868e379b84d10061ba9114ccafe0051418e780aed15dc02ddb346d0c3bbdd7a
+  defect_types:
+  - hiss
+  - hum
+- file: damaged/reel_jazz_1950s_dropouts.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1955
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: cb5fcba0451ca64022540b07aa2d385c99271839ed5fc320b4356e005e0fa924
+  defect_types:
+  - dropouts
+- file: clean/reel_classical_1960s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1964
+  genre: classical
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 8c173450320f77ea6f8c7b5fdb5c4c2b41c9db1b7448124c4ce4682fbb1b7d2f
+  defect_types: []
+- file: damaged/reel_classical_1960s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1964
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 6acd2d9860c926e17896456c98bda58bed6f0707548e9885c286d178c951b10c
+  defect_types:
+  - hiss
+- file: damaged/reel_classical_1960s_wow_flutter.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: reel_tape
+  era_year: 1964
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: eeebf4b097397da775e5129749b9477c6e09b5cad3877ffd5d5bd24c019f2b86
+  defect_types:
+  - wow
+  - flutter

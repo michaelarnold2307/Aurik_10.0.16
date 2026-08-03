@@ -1,0 +1,267 @@
+corpus_version: 1.0.0
+material: tape
+description: Synthetic tape recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1975
+  file: clean/tape_blues_1970s_clean.wav
+  genre: blues
+  license: CC0 (generated)
+  material: tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: f0b0030397ff53bfa22d4c42ffe6bb89089bddd19c532d8a70320b1c8ca04ed0
+  defect_description: Hiss -30dB + Dropouts
+  defect_types:
+  - hiss
+  - dropout
+  duration_s: 10.0
+  era_year: 1975
+  file: damaged/tape_blues_1970s_hiss_dropout.wav
+  genre: blues
+  license: CC0 (generated)
+  material: tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: 9968f59aabd84525fe8f091f3de1d6859c77cce29e768a8b6a68f9525300d7b5
+  defect_description: Wow/Flutter 0.3%
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1975
+  file: damaged/tape_blues_1970s_wow.wav
+  genre: blues
+  license: CC0 (generated)
+  material: tape
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/tape_country_1960s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1965
+  genre: country
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: e744d7b642400bde3bc424117cc265b47779743122aad23ef0b873dc2e81fb2a
+  defect_types: []
+- file: damaged/tape_country_1960s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1965
+  genre: country
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 40e39792062670ccca0f41a2186f7c8ea9fabaae4644aa9e675e86d2b6baea50
+  defect_types:
+  - hiss
+- file: damaged/tape_country_1960s_dropouts.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1965
+  genre: country
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 5c7455fd599bffd16c993f2172ac605fc53d819d3b57d5fed2cd0399c9143ebc
+  defect_types:
+  - dropouts
+- file: clean/tape_folk_1970s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1973
+  genre: folk
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: bbdf6c6682fce7b55de0d82532c8dc39fc3e6675189c440e99ac27e98d62058b
+  defect_types: []
+- file: damaged/tape_folk_1970s_hiss_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1973
+  genre: folk
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 0e2ffba58396846a10b0d7ad6093d0be2e350988d7af6806d6d7df2b0fbb4374
+  defect_types:
+  - hiss
+  - hum
+- file: damaged/tape_folk_1970s_wow_flutter.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1973
+  genre: folk
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 4e156b5933956a877bf5483e05112fa7e5806278a902580252b637e5d6e36573
+  defect_types:
+  - wow
+  - flutter
+- file: clean/tape_rock_1980s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1982
+  genre: rock
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: f170e4be898fd50b9d3cb6834c090fce33905d99317d9ace52db93ecb2347d08
+  defect_types: []
+- file: damaged/tape_rock_1980s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1982
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: f04d9079d51fca21337665f6364a09b6cc06f67fc127b23d2dd3481d070b9a8b
+  defect_types:
+  - hiss
+- file: damaged/tape_rock_1980s_dropouts_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1982
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: f47cc6c0883e4c162cad88e2ddb5e8204eaa8a0f13884dcdc232e6006b6c59b6
+  defect_types:
+  - dropouts
+  - hiss
+- file: clean/tape_jazz_1950s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1958
+  genre: jazz
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 77737ced04c52b2a05f6e38b871fadfa2228d1083d926204f5871c990e251426
+  defect_types: []
+- file: damaged/tape_jazz_1950s_hiss_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1958
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 92e9b896fa0e7e6a2eea9649a01e6b84cd6bdd446f7a59766079c9ce2f9230a5
+  defect_types:
+  - hiss
+  - hum
+- file: damaged/tape_jazz_1950s_wow_flutter.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1958
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: e3e08fb1e4caa6b460469bad4862a3c6a6f354a1d46d8664cb085a78b882a566
+  defect_types:
+  - wow
+  - flutter
+- file: clean/tape_classical_1970s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1976
+  genre: classical
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 930cae1f19ae6b995c8e68af14befddd971639593b15075d5d0194007e22da64
+  defect_types: []
+- file: damaged/tape_classical_1970s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1976
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: a8fea5f46c244dd66d10342d40242c15b65a6599e467d8a8cfa33be8d6bc6bf2
+  defect_types:
+  - hiss
+- file: damaged/tape_classical_1970s_dropouts_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1976
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: b118cb0acad02f7564f6be4f0b587e09e7b16cf5ab717713a2a0a2ff30a4f194
+  defect_types:
+  - dropouts
+  - hum

@@ -34034,6 +34034,8 @@ class UnifiedRestorerV3:
         # §v10.18: resolved_defects accumulator — Phasen melden behobene Defekte
         # (z.B. Phase 07 meldet CLIPPING=0.0 → Phase 23 sieht reduzierte Severity)
         self._resolved_defects_accumulator: dict[str, float] = {}
+        # §v10.707: DefectResult-Scores für defektgetriebenen Phase-Skip speichern
+        self._defect_result_scores = getattr(defect_result, "scores", {}) or {}
         executed: list[str] = []
         skipped: list[str] = []
         deferred: list[str] = []  # §2.38 KMV: phases skipped by PerformanceGuard for Stage 2 refinement
@@ -36513,6 +36515,11 @@ class UnifiedRestorerV3:
                     logger.info("Phase %s skipped: all primary defects resolved", phase_id)
                     skipped.append(phase_id)
                     _record_oom_probe("phase_skip_resolved_defects", phase_id)
+                    continue
+                # §v10.707: Skip-Phase wenn der Defekt gar nicht im Signal vorhanden ist
+                if self._should_skip_absent_defect_phase(phase_id):
+                    skipped.append(phase_id)
+                    _record_oom_probe("phase_skip_defect_absent", phase_id)
                     continue
                 # §v10.303: Skip enhancement phases when material confidence critically low
                 if self._should_skip_low_confidence_phase(phase_id):
@@ -40908,6 +40915,63 @@ class UnifiedRestorerV3:
                     all_resolved = False
                     break
             return all_resolved
+        except Exception:
+            return False
+
+    def _should_skip_absent_defect_phase(self, phase_id: str) -> bool:
+        """§v10.707: Skip-Phase wenn der adressierte Defekt nicht im Signal vorhanden ist.
+
+        Anders als _should_skip_resolved_phase (Defekt war da, wurde behoben):
+        Diese Methode prüft, ob der Defekt ÜBERHAUPT jemals im Signal messbar war.
+
+        - Schaut im DefectScanner-Ergebnis (defect_result.scores) nach
+        - Wenn ALLE von dieser Phase adressierten Defekte severity < 0.03 haben
+          → Defekt ist nicht hörbar vorhanden → Phase überspringen
+        - Enhancement-Phasen (kein Defect-Mapping) werden nie übersprungen
+        - Phase 06 (frequency_restoration) für analoge Medien nie überspringen
+
+        §v10.707 Design-Entscheidung: Defektgetrieben statt Kettenlängen-getrieben.
+        Die Transfer-Chain-Tiefe informiert, aber die tatsächlichen Defektmessungen
+        entscheiden, ob eine Phase läuft.
+        """
+        # Phase 06 für analoge Medien nie überspringen
+        if phase_id == "phase_06_frequency_restoration":
+            _rctx = getattr(self, "_restoration_context", None) or {}
+            _mat = str(_rctx.get("material_key", "")).lower()
+            _analog = {"shellac", "vinyl", "tape", "cassette", "reel_tape",
+                       "wax_cylinder", "wire_recording", "lacquer_disc", "lp"}
+            if _mat in _analog:
+                return False
+
+        try:
+            from backend.core.defect_phase_mapper import get_reverse_phase_map
+            rmap = get_reverse_phase_map()
+            target_defects = rmap.get(phase_id)
+            if not target_defects:
+                # Enhancement-Phase (kein Defekt-Mapping) → nie überspringen
+                return False
+
+            # Defect scores aus dem Pre-Scan
+            _defect_scores = getattr(self, "_defect_result_scores", None)
+            if _defect_scores is None:
+                return False  # Kein DefectResult → sicherheitshalber nicht skippen
+
+            _AUDIBILITY_FLOOR = 0.03  # §v10.707: severity < 0.03 = nicht hörbar
+            all_absent = True
+            for dt in target_defects:
+                dt_key = dt.value if hasattr(dt, "value") else str(dt)
+                sev = float(getattr(_defect_scores.get(dt_key), "severity", 0.0) or 0.0)
+                if sev >= _AUDIBILITY_FLOOR:
+                    all_absent = False
+                    break
+
+            if all_absent:
+                logger.info(
+                    "§v10.707 Defekt-Absenz: %s skipped — alle adressierten Defekte "
+                    "severity < %.2f (nicht hörbar im Signal)",
+                    phase_id, _AUDIBILITY_FLOOR,
+                )
+            return all_absent
         except Exception:
             return False
 

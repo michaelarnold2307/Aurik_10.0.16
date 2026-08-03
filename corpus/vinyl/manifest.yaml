@@ -1,0 +1,268 @@
+corpus_version: 1.0.0
+material: vinyl
+description: Synthetic vinyl recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1965
+  file: clean/vinyl_rock_1960s_clean.wav
+  genre: rock
+  license: CC0 (generated)
+  material: vinyl
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: c3c5059262d6301ae64ed7b90790ac5c819c693f554ea25a51d80fa4c18032ca
+  defect_description: 8 Clicks/s
+  defect_types:
+  - clicks
+  duration_s: 10.0
+  era_year: 1965
+  file: damaged/vinyl_rock_1960s_clicks.wav
+  genre: rock
+  license: CC0 (generated)
+  material: vinyl
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: 4e94a946e0bdbd99b9fff4e8e9daa9736ee0fe41d9bf31655af5f60a27636205
+  defect_description: 60Hz Brumm + Knistern
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1965
+  file: damaged/vinyl_rock_1960s_hum_crackle.wav
+  genre: rock
+  license: CC0 (generated)
+  material: vinyl
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/vinyl_blues_1950s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: f0a54b8be44d40d3bc140fcbc780e55157af65b412679ccb3245cbc67ddcf705
+  defect_types: []
+- file: damaged/vinyl_blues_1950s_hiss_hum.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: a44aab1c6f8ab55d913be7e0bc81d778fe3597dabfe22ed805cafeb8b39b56e9
+  defect_types:
+  - hiss
+  - hum
+- file: damaged/vinyl_blues_1950s_crackle.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 07d980d189f5bc3237817bd5e7e68e6d91bc93578a96cba92a872e9c35d2cb43
+  defect_types:
+  - crackle
+- file: clean/vinyl_jazz_1960s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1963
+  genre: jazz
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 734bb85cc881113550ec510925f94531e15bcacf44abb3425f9182bcc58b9afb
+  defect_types: []
+- file: damaged/vinyl_jazz_1960s_hiss_crackle.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1963
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: fe0c4765989ad80e2b648980049b99728fb87751c903058350d41ae3e6b21d7a
+  defect_types:
+  - hiss
+  - crackle
+- file: damaged/vinyl_jazz_1960s_surface_noise.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1963
+  genre: jazz
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 59c5e310547d1ff1759ea0971baf365aa63b155e6e8719e19c1b872c7a6bc85b
+  defect_types:
+  - surface
+  - noise
+- file: clean/vinyl_rock_1970s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1972
+  genre: rock
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: ae5fa335d5330430ee564be25e7e25ae63c07317efba32f090845ec79047d3f9
+  defect_types: []
+- file: damaged/vinyl_rock_1970s_clicks.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1972
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 8cd59330d7a01601d699f10f3f4f24c68edd26077d221eef8029467e1d683c4e
+  defect_types:
+  - clicks
+- file: damaged/vinyl_rock_1970s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1972
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 2b7ca8f40bcd0371e979ed47b882622e1fc5d242825d11a5c3f5698aebf678d7
+  defect_types:
+  - hiss
+- file: clean/vinyl_classical_1960s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1961
+  genre: classical
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 634810e18abe6c32eeeffc33e813d2ad0a120c889a49902171059d9446826947
+  defect_types: []
+- file: damaged/vinyl_classical_1960s_hiss_hum_wow.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1961
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: aac8c13d9b0678442bee44f4d5ba342438ecf59c213a183435d1685c9aefc925
+  defect_types:
+  - hiss
+  - hum
+  - wow
+- file: damaged/vinyl_classical_1960s_surface_noise.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1961
+  genre: classical
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: false
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: d1bdf37917f1d4445a70458fe9b06aad87563fdbe8a4cc19f9fbff39f8e72028
+  defect_types:
+  - surface
+  - noise
+- file: clean/vinyl_soul_1970s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1975
+  genre: soul
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 9366bc37eddcb619ec6531efeaeb5bd35a71f0779ce48aee620102d875871a75
+  defect_types: []
+- file: damaged/vinyl_soul_1970s_crackle_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1975
+  genre: soul
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 4781340a5c785dae1aa25e9621493c92c5cebac3d8934e617c3d14aafc8e2f48
+  defect_types:
+  - crackle
+  - hiss
+- file: damaged/vinyl_soul_1970s_wow_flutter.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1975
+  genre: soul
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 332cfe615619979b3ace274e4969750590c7be1e89bdc1e64e2198af1b2f41fb
+  defect_types:
+  - wow
+  - flutter

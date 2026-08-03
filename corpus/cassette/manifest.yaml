@@ -1,0 +1,133 @@
+corpus_version: 1.0.0
+material: cassette
+description: Synthetic cassette recordings for Aurik real-audio validation (CC0)
+entries:
+- checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
+  defect_types: []
+  duration_s: 10.0
+  era_year: 1985
+  file: clean/cassette_pop_1980s_clean.wav
+  genre: pop
+  license: CC0 (generated)
+  material: cassette
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: ce61eb5a893b6082e5df3e0405932313889db8dc1a27567aedd207679224261a
+  defect_description: Starkes Hiss -20dB + Wow
+  defect_types:
+  - hiss
+  duration_s: 10.0
+  era_year: 1985
+  file: damaged/cassette_pop_1980s_hiss_wow.wav
+  genre: pop
+  license: CC0 (generated)
+  material: cassette
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- checksum_sha256: 5e597db6df4f273ae36607e5105d6a5496df21c5e8e05bad6798641e594db1c1
+  defect_description: Hiss + Clicks + Dropouts
+  defect_types:
+  - clicks
+  - hiss
+  - dropout
+  duration_s: 10.0
+  era_year: 1985
+  file: damaged/cassette_pop_1980s_combined.wav
+  genre: pop
+  license: CC0 (generated)
+  material: cassette
+  sample_rate: 48000
+  source: Synthetic (Aurik Corpus Generator)
+  source_attribution: Synthetic Corpus Generator (CC0)
+- file: clean/cassette_rock_1990s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1992
+  genre: rock
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 82818f3ea354cc5180de345e163890a98519bf074d7d73319f877d53733020b8
+  defect_types: []
+- file: damaged/cassette_rock_1990s_hiss_wow.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1992
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: d668b979206402c5cf186c56090523fb6e8946617cf82fda0ad8563b12a889f6
+  defect_types:
+  - hiss
+  - wow
+- file: damaged/cassette_rock_1990s_dropouts.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1992
+  genre: rock
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 05ebb4d96f16e996885eeb40e02c78d13cea1ab0227760efbf0faae4a7c750e7
+  defect_types:
+  - dropouts
+- file: clean/cassette_hiphop_1980s_clean.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1987
+  genre: hiphop
+  condition: clean
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 7abf23606cec6f4dc86a82750ebc0d78047981cc420da6bb30623d261934abb9
+  defect_types: []
+- file: damaged/cassette_hiphop_1980s_hiss.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1987
+  genre: hiphop
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 5878e3ebafda09e428e12e85e1d0a3894d1947e059d158ab3ca8911459aa8f9e
+  defect_types:
+  - hiss
+- file: damaged/cassette_hiphop_1980s_wow_flutter.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: cassette
+  era_year: 1987
+  genre: hiphop
+  condition: damaged
+  channels: 2
+  bit_depth: 16
+  vocal: true
+  license: CC0 (synthetisch generiert)
+  source_attribution: Aurik Corpus Generator (synthetisch, Public Domain)
+  checksum_sha256: 9179ce3d6a9b91035b9dd92cd49fd7c7be940b17c9344e16e2cb4c5a32669d2e
+  defect_types:
+  - wow
+  - flutter
