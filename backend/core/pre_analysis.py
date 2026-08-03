@@ -521,10 +521,13 @@ def run_pre_analysis(
                     else:
                         _cv_conflicts.append(f"Defect({_def_mat}) not in chain")
 
-            # Report
+            # Report — §v10.370: Auf INFO gesenkt (vorher WARNING).
+            # Cross-Validation läuft VOR der Chain-Injection — Konflikte
+            # zwischen initialer Kette und Era/Defect sind ERWARTET.
+            # Die Post-Injection-Cross-Validation (unten) prüft die finale Kette.
             if _cv_conflicts:
-                logger.warning(
-                    "Cross-Validation: %d Konflikt(e) in Tonträgerkette — %s. Übereinstimmungen: %s. Confidence=%.2f",
+                logger.info(
+                    "Cross-Validation (pre-injection): %d Konflikt(e) — %s. Übereinstimmungen: %s. Confidence=%.2f",
                     len(_cv_conflicts),
                     ", ".join(_cv_conflicts),
                     ", ".join(_cv_agreements) if _cv_agreements else "keine",
@@ -618,7 +621,7 @@ def run_pre_analysis(
             # an den ANFANG der Kette. _defect_material ist ein Zwischenträger
             # und gehört VOR die digitale Stufe. physical_analog_sources werden
             # ebenfalls VOR der digitalen Stufe eingefügt.
-            
+
             # §v10.304.14: Multi-Carrier-Inferenz aus Defect-Signaturen.
             # Der DefectScanner erkennt Defekte die spezifisch für bestimmte
             # Tonträger sind. Diese Signale werden genutzt um ZUSÄTZLICHE
@@ -648,11 +651,17 @@ def run_pre_analysis(
                         _sk_name = _score_key.value if hasattr(_score_key, "value") else str(_score_key)
                         if _sk_name == _defect_name:
                             _sev = float(getattr(_score_obj, "severity", 0.0))
-                            if _sev >= _threshold and _carrier not in _chain and _carrier not in _defect_inferred_carriers:
+                            if (
+                                _sev >= _threshold
+                                and _carrier not in _chain
+                                and _carrier not in _defect_inferred_carriers
+                            ):
                                 _defect_inferred_carriers.append(_carrier)
                                 logger.debug(
                                     "§v10.304.14 Defect-Carrier: %s(sev=%.2f) → %s",
-                                    _defect_name, _sev, _carrier,
+                                    _defect_name,
+                                    _sev,
+                                    _carrier,
                                 )
                             break
             if _defect_inferred_carriers:
@@ -663,8 +672,12 @@ def run_pre_analysis(
                 )
                 # Sortiere nach chronologischer Reihenfolge (älteste zuerst)
                 _CARRIER_ORDER = {
-                    "reel_tape": 0, "vinyl": 1, "cassette": 2,
-                    "cd_digital": 3, "mp3_high": 4, "mp3_low": 5,
+                    "reel_tape": 0,
+                    "vinyl": 1,
+                    "cassette": 2,
+                    "cd_digital": 3,
+                    "mp3_high": 4,
+                    "mp3_low": 5,
                 }
                 _defect_inferred_carriers.sort(key=lambda c: _CARRIER_ORDER.get(c, 99))
 
@@ -674,6 +687,12 @@ def run_pre_analysis(
             for _src in _defect_inferred_carriers:
                 if _src and _src in _analog and _src not in _chain and _src not in _chain_injected:
                     _chain_injected.append(_src)
+            # §v10.307: Digitale Träger aus Defekt-Signaturen (mp3_high etc.)
+            # separat sammeln — ersetzen "unknown" am Kettenende.
+            _digital_defect_carriers: list[str] = []
+            for _src in _defect_inferred_carriers:
+                if _src and _src not in _analog and _src not in _digital_defect_carriers:
+                    _digital_defect_carriers.append(_src)
             for _src in [_defect_material]:
                 if _src and _src in _analog and _src not in _chain and _src not in _chain_injected:
                     _chain_injected.append(_src)
@@ -720,26 +739,70 @@ def run_pre_analysis(
                     _chain.insert(_vi, "vinyl")
                     logger.info("pre_analysis: Vinyl-Inference — reel_tape+cassette+vinyl-era → vinyl eingefügt")
 
-                _md.transfer_chain = _chain
                 _md.is_multi_generation = len(_chain) > 1
                 _analog_in = [m for m in _chain if m in _analog]
                 if _analog_in:
                     _md.primary_material = _analog_in[-1]
                 # Chronological sort after all injections (§v10.306: robust, kein Singleton-Try)
                 # 1930+++++1950+++++1960+++++1980+++++1990+++++++++2000++
+                # MUST run BEFORE _md.transfer_chain assignment — §v10.307 Bugfix:
+                # transfer_chain wurde VOR dem Sort gesetzt, GUI zeigte unsortierte Kette.
                 if len(_chain) > 1:
                     _TIMELINE: dict[str, int] = {
-                        "wax_cylinder": 0, "lacquer_disc": 1, "shellac": 2,
-                        "wire_recording": 3, "reel_tape": 4, "vinyl": 5, "tape": 5,
-                        "cassette": 6, "cartridge_8track": 7,
-                        "cd_digital": 8, "dat": 9, "minidisc": 10,
-                        "mp3_high": 11, "mp3_low": 12, "aac": 12, "streaming": 13,
+                        "wax_cylinder": 0,
+                        "lacquer_disc": 5,  # §v10.440: 1→5 — Lacquer ist VINYL-Master, wird VOM Tape geschnitten
+                        "shellac": 2,
+                        "wire_recording": 3,
+                        "reel_tape": 4,
+                        "vinyl": 6,
+                        "tape": 6,
+                        "cassette": 7,
+                        "cartridge_8track": 8,
+                        "cd_digital": 9,
+                        "dat": 10,
+                        "minidisc": 11,
+                        "mp3_high": 12,
+                        "mp3_low": 13,
+                        "aac": 13,
+                        "streaming": 14,
                     }
                     _sorted = sorted(_chain, key=lambda m: _TIMELINE.get(m, 99))
                     if _sorted != _chain:
-                        logger.debug("pre_analysis: chain sorted: %s → %s",
-                                     " → ".join(_chain), " → ".join(_sorted))
+                        logger.info("pre_analysis: chain sorted: %s → %s", " → ".join(_chain), " → ".join(_sorted))
                         _chain = _sorted
+
+                # §v10.307: Digitale Defekt-Träger am Kettenende einsetzen.
+                # "unknown" stammt vom MediumDetector wenn kein Codec erkannt wurde.
+                # Der DefectScanner hat aber oft mp3_high/mp3_low erkannt → ersetzen.
+                if _digital_defect_carriers and _chain and _chain[-1] == "unknown":
+                    _digital = _digital_defect_carriers[0]
+                    _chain[-1] = _digital
+                    logger.info("pre_analysis: 'unknown' → '%s' (aus DefectScanner)", _digital)
+
+                _md.transfer_chain = _chain  # §v10.307: NACH dem Sort setzen
+
+                # §v10.712: Chain-Depth-Confidence-Guard.
+                # Wenn der MediumDetector nur geringe Konfidenz hat (z.B. 0.41),
+                # dürfen daraus abgeleitete Zusatzträger (defect_inferred_carriers)
+                # die Kette nicht aufblähen. Ein unsicheres "lacquer_disc → vinyl → mp3_low"
+                # wird sonst zu "reel_tape → lacquer_disc → vinyl → cassette → mp3_low"
+                # aufgebläht — und die aggressive chain_depth=5 zerstört dann
+                # tonal_center und timbre im eigentlich sauberen 320kbps MP3.
+                _md_confidence = float(getattr(_md, "confidence", 0.5) or 0.5)
+                _max_chain_depth = 2 if _md_confidence < 0.50 else (3 if _md_confidence < 0.60 else 99)
+                if len(_chain) > _max_chain_depth:
+                    _trimmed = _chain[:_max_chain_depth]
+                    logger.info(
+                        "§v10.712 Chain-Depth-Cap: confidence=%.2f → "
+                        "chain von %d auf %d Träger gekürzt (%s → %s)",
+                        _md_confidence,
+                        len(_chain),
+                        len(_trimmed),
+                        " → ".join(_chain),
+                        " → ".join(_trimmed),
+                    )
+                    _chain = _trimmed
+                    _md.transfer_chain = _chain
 
                 logger.info(
                     "pre_analysis: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
@@ -804,8 +867,7 @@ def run_pre_analysis(
                     result.era = _classify_era()(audio_native, sr_native, transfer_chain=_enriched_chain)
                     _new_decade = int(getattr(result.era, "decade", 0))
                     logger.info(
-                        "§v10.304.13 Era-Direktklassifikation: chain_depth=%d → "
-                        "era=%d (confidence=%.2f, era_was_None)",
+                        "§v10.304.13 Era-Direktklassifikation: chain_depth=%d → era=%d (confidence=%.2f, era_was_None)",
                         len(_enriched_chain),
                         _new_decade,
                         float(getattr(result.era, "confidence", 0.0)),
@@ -821,6 +883,24 @@ def run_pre_analysis(
         _store_in_cache(file_path, result)
 
     result.elapsed_seconds = time.monotonic() - t0
+    # §v10.330: Post-Injection Cross-Validation.
+    # Die erste Cross-Validation lief VOR der Chain-Injection (Zeile ~473) und
+    # verglich die unvollständige Kette. Jetzt, nach Deep-Transfer-Chain-Injection
+    # und Era-Re-Klassifikation, ist die finale Kette verfügbar. Erst JETZT
+    # sind Konflikte zwischen Era/Defect/Genre und Chain aussagekräftig.
+    if result.medium is not None and getattr(result.medium, "is_multi_generation", False):
+        try:
+            _final_chain = list(getattr(result.medium, "transfer_chain", []) or [])
+            _era_material = str(getattr(result.era, "material_prior", "") or "")
+            _genre_label = str(getattr(result.genre, "genre_label", "") or "")
+            if _era_material and _era_material != "unknown" and _era_material not in _final_chain:
+                logger.info(
+                    "pre_analysis: Post-Injection-Era-Check — era=%s now in chain=%s ✓",
+                    _era_material,
+                    " → ".join(_final_chain),
+                )
+        except Exception:
+            logger.debug("pre_analysis.py:879: Silent exception absorbed", exc_info=True)
     logger.info("pre_analysis: complete in %.1fs (errors=%s)", result.elapsed_seconds, list(result.errors))
 
     # Free DefectScanner STFT/spectral intermediate arrays (30 defect types × full audio).
