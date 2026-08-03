@@ -110,7 +110,7 @@ class MushraProxy:
         # MERT-Embedding einmal für die Session berechnen
         if self._mert_available:
             try:
-                from backend.core.mert_mushra_proxy import get_mert_mushra_proxy as _get_mert
+                from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
                 _mert = _get_mert()
                 self._session_reference_embedding = _mert.compute_embedding(audio, sample_rate)
@@ -236,7 +236,7 @@ class MushraProxy:
         Mapping: cos_sim → MUSHRA 0-100. Keine Session-Referenz nötig.
         """
         try:
-            from backend.core.mert_mushra_proxy import get_mert_mushra_proxy as _get_mert
+            from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
             _emb_a = _mert.compute_embedding(audio, sample_rate)
@@ -261,7 +261,7 @@ class MushraProxy:
     def _estimate_mushra_mert(self, audio: np.ndarray, sample_rate: int) -> float:
         """Proxy-MUSHRA via MERT-Embedding-Ähnlichkeit."""
         try:
-            from backend.core.mert_mushra_proxy import get_mert_mushra_proxy as _get_mert
+            from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
             _embedding = _mert.compute_embedding(audio, sample_rate)

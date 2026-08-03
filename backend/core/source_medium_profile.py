@@ -73,6 +73,11 @@ class SourceMediumProfile:
                 _ceiling = min(_ceiling, self.native_nyquist_hz * 0.95)
             object.__setattr__(self, "synthesis_ceiling_hz", round(_ceiling))
 
+    @staticmethod
+    def get_bw_ceiling_hz(medium_key: str) -> float | None:
+        """§v10.705: Physikalische Bandbreiten-Obergrenze eines Mediums."""
+        return get_bw_ceiling_hz(medium_key)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Registratur
@@ -312,15 +317,16 @@ def get_medium_profile_for_depth(
             return _codec_profile
     return _mat_profile
 
-    @staticmethod
-    def get_bw_ceiling_hz(medium_key: str) -> float | None:
-        """§v10.705: Liefert die physikalische Bandbreiten-Obergrenze eines Mediums.
 
-        Wird von phase_23, phase_56 und anderen Synthese-Phasen verwendet,
-        um Halluzination oberhalb der physikalischen Medium-Grenze zu verhindern.
-        """
-        _profile = get_medium_profile(medium_key)
-        return _profile.synthesis_ceiling_hz if _profile else None
+@staticmethod
+def get_bw_ceiling_hz(medium_key: str) -> float | None:
+    """§v10.705: Liefert die physikalische Bandbreiten-Obergrenze eines Mediums.
+
+    Wird von phase_23, phase_56 und anderen Synthese-Phasen verwendet,
+    um Halluzination oberhalb der physikalischen Medium-Grenze zu verhindern.
+    """
+    _profile = get_medium_profile(medium_key)
+    return _profile.synthesis_ceiling_hz if _profile else None
 
 
 # ── Convenience ──────────────────────────────────────────────────────────────
