@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # ── Konfiguration ──────────────────────────────────────────────────────
 
 _MAX_RETRIES: int = 5
-_BRICKWALL_CEILING_DBTP: float = -0.3
+_BRICKWALL_CEILING_DBTP: float = -1.0  # §v10.706 B17: -1.0 für ISP-Margin (vorher -0.3 reichte nicht)
 _LUFS_RESTORATION: float = -16.0
 _LUFS_STUDIO: float = -12.0
 _FATIGUE_HF_CUT_DB: float = -1.0
@@ -176,11 +176,12 @@ class OneTakeExport:
                     _gain_cap_db = 6.0
                     try:
                         from backend.core.calibration_context import get_calibration_context
+
                         _ctx = get_calibration_context()
                         if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                             _gain_cap_db = 3.0  # Kassette ist fragiler
                     except Exception:
-                        pass
+                        logger.debug("one_take_export.py:183: Silent exception absorbed", exc_info=True)
                     # §v10.303.9 Adaptive-Override: >4dB Abweichung → Caps lockern
                     _deviation = abs(gain_db)
                     if _deviation > 4.0:
@@ -308,7 +309,7 @@ def _compensate_denoise_learning_dip(audio: np.ndarray, sr: int) -> np.ndarray:
 
     _audio = np.asarray(audio, dtype=np.float64)
     _n_start = int(sr * 3.0)  # Erste 3s
-    _n_fade = int(sr * 4.0)   # Fade-In über 4s
+    _n_fade = int(sr * 4.0)  # Fade-In über 4s
 
     if _audio.ndim == 2:
         _mono = _audio.mean(axis=0) if _audio.shape[0] <= 2 else _audio.mean(axis=1)
@@ -321,7 +322,7 @@ def _compensate_denoise_learning_dip(audio: np.ndarray, sr: int) -> np.ndarray:
 
     # RMS der ersten 3s vs Gesamt-RMS
     _rms_start = float(np.sqrt(np.mean(_mono[:_n_start] ** 2) + 1e-12))
-    _rms_total = float(np.sqrt(np.mean(_mono ** 2) + 1e-12))
+    _rms_total = float(np.sqrt(np.mean(_mono**2) + 1e-12))
     _rms_ratio = _rms_start / _rms_total
 
     if _rms_ratio > 0.80:  # Weniger als 20% Unterschied → kein Handlungsbedarf
@@ -345,10 +346,12 @@ def _compensate_denoise_learning_dip(audio: np.ndarray, sr: int) -> np.ndarray:
     _out = _out * _envelope
 
     from backend.core.logging_utils import get_logger
+
     get_logger(__name__).info(
-        "§v10.303.12 Denoise-Learning-Kompensation: Anfang RMS=%.1f%% vom Gesamt → "
-        "+%.1fdB Fade-In über %.1fs",
-        _rms_ratio * 100, _max_gain_db, _n_fade / sr,
+        "§v10.303.12 Denoise-Learning-Kompensation: Anfang RMS=%.1f%% vom Gesamt → +%.1fdB Fade-In über %.1fs",
+        _rms_ratio * 100,
+        _max_gain_db,
+        _n_fade / sr,
     )
     return np.clip(_out.astype(np.float64), -1.0, 1.0)
 

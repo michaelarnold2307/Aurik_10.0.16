@@ -820,10 +820,28 @@ class TapeHissReductionPhase(PhaseInterface):
             "transfer_chain", []
         )
         _transfer_depth_p29 = len(_chain_p29) if _chain_p29 else 1
+        # §v10.706 B12: Medium-adaptiver Cap aus SourceMediumProfile
+        _smp_cap_p29 = 1.0
+        try:
+            from backend.core.source_medium_profile import get_medium_profile
+
+            _mat_raw = kwargs.get("material_type", kwargs.get("material", "unknown"))
+            _mat_p29 = str(getattr(_mat_raw, "value", _mat_raw)).lower()
+            _smp = get_medium_profile(_mat_p29)
+            _smp_cap_p29 = float(getattr(_smp, "hiss_reduction_max_strength", 1.0))
+        except Exception:
+            logger.debug("Phase_29: SourceMediumProfile nicht verfügbar — verwende Default hiss_cap=1.0")
         if _transfer_depth_p29 >= 5:
-            _effective_strength = float(np.clip(_effective_strength, 0.0, 0.40))
+            _effective_strength = float(np.clip(_effective_strength, 0.0, min(0.30, _smp_cap_p29)))
             logger.info(
-                "§v10.58 Phase 29 depth=%d → max strength 0.40 + DSP-only (degradiertes Signal)",
+                "§v10.58 Phase 29 depth=%d → max strength %.2f + DSP-only (degradiertes Signal, §v10.705 B41/B12)",
+                _transfer_depth_p29,
+                min(0.30, _smp_cap_p29),
+            )
+        elif _transfer_depth_p29 >= 4:
+            _effective_strength = float(np.clip(_effective_strength, 0.0, min(0.42, _smp_cap_p29)))
+            logger.info(
+                "§v10.58 Phase 29 depth=%d → max strength 0.42 + DSP-only (§v10.705 B41)",
                 _transfer_depth_p29,
             )
 

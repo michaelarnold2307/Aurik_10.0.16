@@ -528,35 +528,44 @@ class PhaseInteractionDenker:
         if isinstance(_mat_conf, (int, float)) and isinstance(restorability_score, (int, float)):
             try:
                 from backend.core.unified_restorer_v3 import UnifiedRestorerV3
+
                 _threshold = UnifiedRestorerV3._compute_low_confidence_threshold(
                     restorability_score=float(restorability_score)
                 )
                 if _mat_conf < _threshold:
                     _family_map = getattr(UnifiedRestorerV3, "_PHASE_INTERVENTION_CLASS", {})
                     _no_skip = {
-                        "subtractive_cleanup", "reconstruction_inpainting",
-                        "time_pitch_transport", "distortion_repair", "dynamics_repair",
-                        "tonal_restoration", "tonal_mastering", "sibilance_control",
-                        "noise_reduction", "vocal_enhancement", "stereo_phase_geometry",
+                        "subtractive_cleanup",
+                        "reconstruction_inpainting",
+                        "time_pitch_transport",
+                        "distortion_repair",
+                        "dynamics_repair",
+                        "tonal_restoration",
+                        "tonal_mastering",
+                        "sibilance_control",
+                        "noise_reduction",
+                        "vocal_enhancement",
+                        "stereo_phase_geometry",
                     }
                     _pre = len(merged_phases)
-                    merged_phases = [
-                        _p for _p in merged_phases
-                        if _family_map.get(_p, "general") in _no_skip
-                    ]
+                    merged_phases = [_p for _p in merged_phases if _family_map.get(_p, "general") in _no_skip]
                     _post = len(merged_phases)
                     if _post < _pre:
                         logger.info(
                             "§v10.303.4 PID-Confidence-Strip: %d/%d Phasen entfernt "
                             "(conf=%.3f < threshold=%.3f, rs=%.0f)",
-                            _pre - _post, _pre, _mat_conf, _threshold, restorability_score,
+                            _pre - _post,
+                            _pre,
+                            _mat_conf,
+                            _threshold,
+                            restorability_score,
                         )
                         injected_notes.append(
                             f"§v10.303.4 Confidence-Strip: {_pre - _post} Phasen "
                             f"(conf={_mat_conf:.3f} < thr={_threshold:.3f})"
                         )
             except Exception:
-                pass
+                logger.debug("phase_interaction_denker.py:567: Silent exception absorbed", exc_info=True)
 
         # §v10.303.3 Denker-Feedback-Loop: Familien die UV3 beim letzten Run
         # bei Low-Confidence gestrippt hat, werden gar nicht erst eingeplant.
@@ -564,18 +573,16 @@ class PhaseInteractionDenker:
         if _stripped_cache:
             try:
                 from backend.core.unified_restorer_v3 import UnifiedRestorerV3
+
                 _family_map = getattr(UnifiedRestorerV3, "_PHASE_INTERVENTION_CLASS", {})
                 _pre_count = len(merged_phases)
-                merged_phases = [
-                    _p for _p in merged_phases
-                    if _family_map.get(_p, "general") not in _stripped_cache
-                ]
+                merged_phases = [_p for _p in merged_phases if _family_map.get(_p, "general") not in _stripped_cache]
                 _post_count = len(merged_phases)
                 if _post_count < _pre_count:
                     logger.info(
-                        "§v10.303.3 Denker-Feedback: %d/%d Phasen aus Plan gestrichen "
-                        "(gelernte useless families: %s)",
-                        _pre_count - _post_count, _pre_count,
+                        "§v10.303.3 Denker-Feedback: %d/%d Phasen aus Plan gestrichen (gelernte useless families: %s)",
+                        _pre_count - _post_count,
+                        _pre_count,
                         ", ".join(sorted(_stripped_cache)),
                     )
                     injected_notes.append(
@@ -583,7 +590,7 @@ class PhaseInteractionDenker:
                         f"aus {len(_stripped_cache)} gelernten Familien"
                     )
             except Exception:
-                pass
+                logger.debug("phase_interaction_denker.py:592: Silent exception absorbed", exc_info=True)
 
         # 2. Ketten-Pflicht-Phasen (§2.46 Feature 1: TontraegerketteDenker)
         # Injiziert must_have_phases aus der erkannten Trägerkette,
@@ -713,6 +720,38 @@ class PhaseInteractionDenker:
 
         # 6. Reihenfolge-Constraints erzwingen (§2.46 / §7.2)
         ordered, ordering_applied = self._apply_order_constraints(resolved)
+
+        # 6a. §v10.706 Denker-IQ: Material-Fremdlauf-Detektion
+        # Warnt bei Phasen die für anderes Medium designed sind, reduziert
+        # aber NICHT die Stärke — ActiveIntervention lehnt wirkungslose
+        # Phasen bereits ab. Phase_60/61 erkennen selbst ob Groove-Defekte
+        # vorhanden sind. Phase_64 funktioniert auch auf Vinyl (Tape-Master).
+        _MATERIAL_FOREIGN_PHASES: dict[str, frozenset[str]] = {
+            "cassette": frozenset({"phase_60_inner_groove_distortion_repair", "phase_61_groove_echo_cancellation"}),
+            "reel_tape": frozenset({"phase_60_inner_groove_distortion_repair", "phase_61_groove_echo_cancellation"}),
+            "tape": frozenset({"phase_60_inner_groove_distortion_repair", "phase_61_groove_echo_cancellation"}),
+            "cd_digital": frozenset(
+                {
+                    "phase_60_inner_groove_distortion_repair",
+                    "phase_61_groove_echo_cancellation",
+                    "phase_64_tape_splice_repair",
+                }
+            ),
+        }
+        _mat_foreign = _MATERIAL_FOREIGN_PHASES.get(material.lower(), frozenset())
+        _foreign_found = [p for p in ordered if p in _mat_foreign]
+        if _foreign_found:
+            conflict_notes.append(
+                f"§v10.706 Material-Fremdlauf: {len(_foreign_found)} Phase(n) "
+                f"für anderes Medium designed ({', '.join(_foreign_found)}) — "
+                f"laufen auf {material} (Defekte können durch Kette transferiert sein)"
+            )
+            logger.info(
+                "PhaseInteractionDenker: %d Material-fremde Phase(n) erkannt: %s "
+                "(Kette kann Defekte übertragen haben — Phasen laufen normal)",
+                len(_foreign_found),
+                _foreign_found,
+            )
 
         # 7. Qualitäts-Tier je Phase (Feature 3: StrategieDenker.schaetze_phasen_tier())
         # Advisory-only — UV3 kann diese Infos für per-Phase-Algorithmus-Selektion nutzen.
@@ -1363,7 +1402,7 @@ class PhaseInteractionDenker:
 
         # ── 1. Baue Adjazenzliste und In-Degree ─────────────────────────
         adj: dict[str, list[str]] = {p: [] for p in phases}
-        in_degree: dict[str, int] = {p: 0 for p in phases}
+        in_degree: dict[str, int] = dict.fromkeys(phases, 0)
 
         def add_edge(src: str, dst: str) -> None:
             """Fügt gerichtete Kante src → dst hinzu (src muss vor dst laufen)."""
@@ -1388,7 +1427,11 @@ class PhaseInteractionDenker:
                 if _categories_conflict_with_material(pred_cat, pid_cat, mat, cat_order):
                     logger.debug(
                         "DAG: skipping after edge %s (%s) → %s (%s) — conflicts with material rule for %s",
-                        predecessor, pred_cat, pid, pid_cat, mat,
+                        predecessor,
+                        pred_cat,
+                        pid,
+                        pid_cat,
+                        mat,
                     )
                     continue
                 add_edge(predecessor, pid)
@@ -1481,9 +1524,7 @@ class PhaseInteractionDenker:
                 len(remaining),
                 mat,
             )
-            remaining.sort(
-                key=lambda p: PHASE_FREQ_PROFILES.get(p, {}).get("priority", 5)
-            )
+            remaining.sort(key=lambda p: PHASE_FREQ_PROFILES.get(p, {}).get("priority", 5))
             result.extend(remaining)
 
         # ── 4. Validierung: alle Phasen vorhanden? ─────────────────────
@@ -1516,8 +1557,9 @@ class PhaseInteractionDenker:
         subtractive, additive, dynamics, corrective, other = [], [], [], [], []
         for pid in phases:
             cat = PHASE_FREQ_PROFILES.get(pid, {}).get("category", "other")
-            {"subtractive": subtractive, "additive": additive, "dynamics": dynamics,
-             "corrective": corrective}.get(cat, other).append(pid)
+            {"subtractive": subtractive, "additive": additive, "dynamics": dynamics, "corrective": corrective}.get(
+                cat, other
+            ).append(pid)
         mat = str(material).lower()
         if mat in ("shellac", "wax_cylinder", "lacquer_disc"):
             return corrective + additive + dynamics + subtractive + other
@@ -1542,9 +1584,7 @@ def _freq_range_to_band_name(f_low: float, f_high: float) -> str:
     return best_band
 
 
-def _categories_conflict_with_material(
-    src_cat: str, dst_cat: str, material: str, cat_order: list[str]
-) -> bool:
+def _categories_conflict_with_material(src_cat: str, dst_cat: str, material: str, cat_order: list[str]) -> bool:
     """Prüft, ob eine after-Kante (src→dst) der materialadaptiven Kategorie-Reihenfolge widerspricht.
 
     Wenn src in cat_order NACH dst kommt, würde die after-Kante src→dst

@@ -971,3 +971,35 @@ def classify_riaa_curve(audio, sr, era_decade):
 - Maximale Dateigröße: 10 GB (darüber Chunk-Modus)
 - > 2 Kanäle → PANNs-gewichteter Stereo-Downmix
 - Ungültige Dateien: `AudioLoadError` + Deutsch-Meldung, kein Absturz
+
+---
+
+## §6.9 SourceMediumProfile-Integration (§v10.706, v10.17.0)
+
+Die zentrale Registratur `SourceMediumProfile` definiert physikalische Limiten
+PRO Trägermedium. Seit v10.17.0 werden diese Limiten in der Kalibrierung und in
+mehreren Phasen durchgesetzt:
+
+| SMP-Feld | Genutzt von | Mechanismus |
+|----------|------------|-------------|
+| `max_bandwidth_hz` | Phase_06, Phase_23 | Bandwidth-Cap für Frequenz-Erweiterung |
+| `hiss_reduction_max_strength` | Phase_29 | Hard-Cap: `min(depth_cap, smp_cap)` |
+| `harmonic_max_order` | Phase_07 | DDSP synthetisiert nur bis phys. Limit |
+| `is_compressed` | Phase_26, Phase_54, SongCalibration | Dynamics-Expansion reduziert/gedeckelt |
+| `has_soft_saturation` | Phase_36 | Transient-Shaper-Stärke −20% |
+| `deesser_skip_saturation_conf` | SongCalibration (B11) | Vocal-Familien-Skalar reduziert |
+
+### Drei-Schicht-Material-Intelligenz (§v10.706)
+
+1. **Defekt-Erkennung**: DefectScanner mit chain-adaptiven Thresholds — 46+ Typen
+2. **Phasen-Selektion**: Chain-Injection + PID Material-Fremdlauf-Detektion (INFO)
+3. **Physikalische Kalibrierung**: SourceMediumProfile → SongCalibration → family_scalars
+
+### Denker-IQ: Chain-Depth-adaptives Budget (§v10.706)
+
+StrategieDenker skaliert das Zeitbudget mit der Tonträgerketten-Tiefe:
+
+- depth=1: Budget ×1.00
+- depth=4: Budget ×1.45 (Cassette-Kette)
+- depth=5: Budget ×1.60
+- Zusätzlich: Restorability-Faktor (rs=64 → +18%)

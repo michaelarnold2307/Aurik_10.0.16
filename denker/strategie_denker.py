@@ -272,6 +272,9 @@ class StrategieDenker:
         enforce_3x_rt: bool = True,
         defect_severity: float = 0.0,
         signal_signature: dict[str, float] | None = None,
+        # §v10.706 Denker-IQ: chain_depth für adaptive Budget-Skalierung
+        chain_depth: int = 1,
+        restorability_score: float = 70.0,
     ) -> StrategiePlan:
         """Erstellt den Verarbeitungs-Strategieplan.
 
@@ -297,6 +300,13 @@ class StrategieDenker:
         self._ensure_guard(mode=mode, enforce=enforce_3x_rt)
 
         max_proc = _3X_RT_LIMIT * audio_dur
+        # §v10.706 Denker-IQ: Chain-depth-adaptive Budget-Skalierung.
+        # Tiefe Ketten (4+) brauchen mehr Phasen → mehr Budget.
+        # Jede zusätzliche Generation: +15% Budget (kumulativ).
+        _depth_budget_factor = float(np.clip(1.0 + (chain_depth - 1) * 0.15, 1.0, 2.0))
+        # Restorability-Adaption: schlechter restaurierbar → mehr Budget
+        _rs_budget_factor = float(np.clip(1.0 + (100.0 - restorability_score) * 0.005, 1.0, 1.50))
+        max_proc *= _depth_budget_factor * _rs_budget_factor
         _sev = float(defect_severity) if math.isfinite(float(defect_severity)) else 0.0
         _sev = max(0.0, min(1.0, _sev))
         _effective_sev = _derive_effective_defect_severity(_sev, signal_signature)
@@ -435,6 +445,9 @@ class StrategieDenker:
         self._audio_duration_s = max(audio_duration_s, 0.001)
         self._t_start = time.monotonic()
 
+        # §v10.706 Denker-IQ: Use plan's scaled budget if available, else fallback
+        _budget = getattr(self._current_plan, "max_processing_s", None) if self._current_plan else None
+        _budget_s = float(_budget) if _budget else _3X_RT_LIMIT * audio_duration_s
         if self._guard is not None:
             try:
                 self._guard.start_monitoring(audio_duration_seconds=self._audio_duration_s)
@@ -444,7 +457,7 @@ class StrategieDenker:
         logger.info(
             "StrategieDenker: Timer gestartet (Audio=%.1fs, Budget=%.1fs).",
             audio_duration_s,
-            _3X_RT_LIMIT * audio_duration_s,
+            _budget_s,
         )
 
     def check(self, phases_remaining: int = 0) -> BudgetStatus:
@@ -465,7 +478,8 @@ class StrategieDenker:
             )
 
         elapsed = time.monotonic() - self._t_start
-        max_proc = _3X_RT_LIMIT * max(self._audio_duration_s, 0.001)
+        _plan_budget = getattr(self._current_plan, "max_processing_s", None) if self._current_plan else None
+        max_proc = float(_plan_budget) if _plan_budget else _3X_RT_LIMIT * max(self._audio_duration_s, 0.001)
         remaining = max(0.0, max_proc - elapsed)
         rt_factor = elapsed / max(self._audio_duration_s, 0.001)
 

@@ -290,6 +290,19 @@ class DynamicRangeExpansion(PhaseInterface):
         expansion_profile = self._compute_expansion_profile(material_key, quality_mode, restorability_score)
         self._max_expansion_db_current = float(expansion_profile["max_expansion_db"])
 
+        # §v10.706 B14: SMP is_compressed → bereits komprimierte Medien nicht expandieren
+        try:
+            from backend.core.source_medium_profile import get_medium_profile
+
+            _smp26 = get_medium_profile(material_key)
+            if getattr(_smp26, "is_compressed", False):
+                self._max_expansion_db_current *= 0.75
+                logger.info(
+                    "Phase26 SMP: is_compressed → max_expansion_db reduziert auf %.1f", self._max_expansion_db_current
+                )
+        except Exception:
+            logger.debug("Phase_26: SourceMediumProfile nicht verfügbar — is_compressed-Check übersprungen")
+
         # §v10.94 Non-Plus-Ultra: P10 Kompressions-Gain lesen und Expansion anpassen.
         # P10 (Compression) läuft VOR P26 (Expansion) mit denselben Crossover-Bändern
         # (150/800/5k Hz). Wenn P10 bereits −3 dB in "bass" komprimiert hat,
@@ -418,7 +431,7 @@ class DynamicRangeExpansion(PhaseInterface):
                 config.get("downward_threshold_db", -50.0),
             )
         except Exception:
-            pass
+            logger.debug("phase_26_dynamic_range_expansion.py:420: Silent exception absorbed", exc_info=True)
 
         # §2.51 Linked-Stereo: Gain-Envelope aus \u221a(L\u00b2+R\u00b2)/\u221a2, identisch auf L+R
         if is_stereo:

@@ -511,7 +511,8 @@ class HarmonicRestorationPhase(PhaseInterface):
                 _rms_total = float(np.sqrt(np.mean(_mono_pre**2)) + 1e-12)
                 # Bandpass 300-4000 Hz: wo Stimme lebt
                 from scipy.signal import butter, sosfilt
-                _sos = butter(4, [300/24000, 4000/24000], btype='band', output='sos')
+
+                _sos = butter(4, [300 / 24000, 4000 / 24000], btype="band", output="sos")
                 _vocal_band = sosfilt(_sos, _mono_pre)
                 _rms_vocal = float(np.sqrt(np.mean(_vocal_band**2)) + 1e-12)
                 _vocal_ratio = _rms_vocal / max(_rms_total, 1e-12)
@@ -519,11 +520,12 @@ class HarmonicRestorationPhase(PhaseInterface):
                     logger.info("phase_07: Silence detected (RMS=%.1e) → Passthrough", _rms_total)
                     _effective_strength = 0.0
                 elif _vocal_ratio < 0.15 and _rms_total < 1e-3:
-                    logger.info("phase_07: No vocal content (ratio=%.3f, RMS=%.1e) → Passthrough",
-                                _vocal_ratio, _rms_total)
+                    logger.info(
+                        "phase_07: No vocal content (ratio=%.3f, RMS=%.1e) → Passthrough", _vocal_ratio, _rms_total
+                    )
                     _effective_strength = 0.0
             except Exception:
-                pass  # Non-blocking pre-check
+                logger.debug("phase_07_harmonic_restoration.py:527: Silent exception absorbed", exc_info=True)
         if _is_fc_pass:
             try:
                 _h2h1_fc = self._measure_h2_ratio(audio, sample_rate)
@@ -548,7 +550,10 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _effective_strength = float(np.clip(_effective_strength * _h2h1_reduction, 0.0, 0.10))
                     logger.info(
                         "phase_07: H2/H1=%.3f ≥ %.2f (depth=%d) → strength auf %.3f gedrosselt",
-                        _h2h1_07, _h2h1_threshold, _td_h2h1, _effective_strength,
+                        _h2h1_07,
+                        _h2h1_threshold,
+                        _td_h2h1,
+                        _effective_strength,
                     )
                 elif _h2h1_07 >= 0.35:
                     # Frühwarn-Schwelle: Obertongehalt bereits hoch → sanft drosseln
@@ -703,8 +708,18 @@ class HarmonicRestorationPhase(PhaseInterface):
         _ddsp_audio: np.ndarray | None = None
         _ddsp_inharmonicity: float = 0.0
         try:
+            # §v10.706 B13: harmonic_max_order aus SourceMediumProfile statt hardcodiert 64
+            _harm_limit = 64
+            try:
+                from backend.core.source_medium_profile import get_medium_profile
+
+                _mat_p07 = str(getattr(material_type, "value", material_type)).lower() if material_type else "unknown"
+                _smp = get_medium_profile(_mat_p07)
+                _harm_limit = int(getattr(_smp, "harmonic_max_order", 64))
+            except Exception:
+                logger.debug("Phase_07: SourceMediumProfile nicht verfügbar — verwende Default harmonic_max_order=64")
             _ddsp_audio, _ddsp_inharmonicity = _ddsp_harmonic_inversion(
-                _mono, sample_rate, f0_info, n_harmonics=64, material_type=str(material_type)
+                _mono, sample_rate, f0_info, n_harmonics=_harm_limit, material_type=str(material_type)
             )
             if _ddsp_audio is not None and _effective_strength >= 0.3:
                 # Blend DDSP result into main audio at conservative wet (≤ 0.35)
@@ -1033,7 +1048,9 @@ class HarmonicRestorationPhase(PhaseInterface):
                             logger.info(
                                 "§v10.131 Depth-Echo-Kill (depth=%d, corr=%.3f > %.2f): "
                                 "harmonic synthesis fully disabled",
-                                _td_echo_p07, _echo_peak_07, _echo_kill_p07,
+                                _td_echo_p07,
+                                _echo_peak_07,
+                                _echo_kill_p07,
                             )
                         elif _echo_peak_07 > 0.5:
                             _h2_blend_07 = min(0.60, _h2_blend_07 * 1.5)
@@ -1043,7 +1060,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                                 _h2_blend_07,
                             )
                 except Exception:
-                    pass  # Non-blocking echo guard
+                    logger.debug("phase_07_harmonic_restoration.py:1052: Silent exception absorbed", exc_info=True)
                 restored = np.clip(
                     (1.0 - _h2_blend_07) * restored + _h2_blend_07 * audio,
                     -1.0,

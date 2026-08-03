@@ -1,5 +1,5 @@
 # =============================================================================
-# .pre-commit-config.yaml  Aurik 10 Code-Qualitäts-Hooks (SOTA, Juli 2026)
+# .pre-commit-config.yaml  Aurik 10.7 „Selbstläufer" Code-Qualitäts-Hooks (SOTA, August 2026)
 # Installation: pre-commit install && pre-commit install --hook-type commit-msg
 # Manuell ausführen: pre-commit run --all-files
 # =============================================================================
@@ -305,10 +305,10 @@ repos:
         pass_filenames: false
         files: ^scripts/.*\.py$
 
-      # Version-Consistency (kein Aurik 8.0/9.x in Logs)
+      # Version-Consistency (kein Aurik 8.0/9.x in Logs; erlaubt 10.0.x und 10.1.x)
       - id: aurik-version-consistency
         name: "Version-Consistency (kein Aurik 8.0/9.x)"
-        entry: "bash -c '! grep -rn \"Aurik [0-9]\\.[0-9]\" backend/ Aurik10/ --include=\"*.py\" | grep -v \"10\\.\" | grep -v \"# \" | grep -v \"CLAUDE\" | grep -v \"CHANGELOG\" | grep -v \"specs/\"'"
+        entry: "bash -c '! grep -rn \"Aurik [0-9]\\.[0-9]\" backend/ Aurik10/ --include=\"*.py\" | grep -v \"10\\.[01]\\\\.\" | grep -v \"6\\\\.0\" | grep -v \"# \" | grep -v \"CLAUDE\" | grep -v \"CHANGELOG\" | grep -v \"specs/\" | grep -v \"compatibility_shim\"'"
         language: system
         pass_filenames: false
         files: ^(backend|Aurik10)/.*\.py$
@@ -353,9 +353,25 @@ repos:
         pass_filenames: false
         always_run: true
 
-      # §v10.306 SOTA-Guard: Startup-Qualitätsregeln (torch.zeros, i18n, lock-discipline, imports)
+      # §v10.600 Closed-Loop-Guard: Regelkreis-Integrität (Strength, Signalquelle, Selbstkalibrierung)
+      - id: aurik-closed-loop-guard
+        name: "§v10.600 Closed-Loop-Guard (Regelkreis, Signalquelle, Kalibrierung, Chunked-Persistenz)"
+        entry: python3 scripts/pre_commit_closed_loop_guard.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # §v10.702 B1/B2/B3 Reproduzierbarkeits-Guard (MQA-Verbesserung, Per-Defekt-Scoring, Chunk-Determinismus, Full-Song-Presence)
+      - id: aurik-reproducibility-guard
+        name: "§v10.702 Reproduzierbarkeits-Guard (B1 MQA, B2 Per-Defekt, B3 Chunk-Determinismus, B3-P2 Full-Song-Scan)"
+        entry: python3 scripts/pre_commit_reproducibility_guard.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      # §v10.340 SOTA-Guard: Startup-Qualitätsregeln (torch.zeros, i18n, lock-discipline, imports, OOM, Bayesian, Causal-Reasoning)
       - id: aurik-sota-guard
-        name: "§v10.306 SOTA-Guard (GPU-Safety, i18n, Lock-Discipline, Imports)"
+        name: "§v10.340 SOTA-Guard (GPU-Safety, i18n, Lock-Discipline, Imports, OOM-Resilienz, Causal-Material)"
         entry: python3 scripts/pre_commit_sota_guard.py
         language: system
         pass_filenames: false

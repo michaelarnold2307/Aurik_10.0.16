@@ -45,12 +45,8 @@ def _spectral_novelty(original: np.ndarray, processed: np.ndarray, sr: int = 480
         return 0.0
     _mono_orig, _mono_proc = _mono_orig[:_min_len], _mono_proc[:_min_len]
 
-    _spec_orig = np.abs(
-        np.stack([np.fft.rfft(_mono_orig[i : i + _n_fft]) for i in range(0, _min_len - _n_fft, _hop)])
-    )
-    _spec_proc = np.abs(
-        np.stack([np.fft.rfft(_mono_proc[i : i + _n_fft]) for i in range(0, _min_len - _n_fft, _hop)])
-    )
+    _spec_orig = np.abs(np.stack([np.fft.rfft(_mono_orig[i : i + _n_fft]) for i in range(0, _min_len - _n_fft, _hop)]))
+    _spec_proc = np.abs(np.stack([np.fft.rfft(_mono_proc[i : i + _n_fft]) for i in range(0, _min_len - _n_fft, _hop)]))
     _n = min(_spec_orig.shape[0], _spec_proc.shape[0])
     _spec_orig, _spec_proc = _spec_orig[:_n], _spec_proc[:_n]
     _diff = np.abs(_spec_proc - _spec_orig)
@@ -161,12 +157,18 @@ class ApolloPhase0Guard:
         self._cached_ineffective: set[str] = set()  # Materialien wo Apollo nichts brachte
 
     def unload(self) -> None:
-        """§v10.306: Apollo-Modell sofort aus RAM entladen."""
+        """§v10.402: Apollo-Modell entladen. Überspringt wenn PLM-Singleton (shared)."""
+        if getattr(self, "_shared_from_plm", False):
+            self._model = None  # Nur Referenz lösen, nicht das Modell
+            self._loaded = False
+            return
         if self._model is not None:
             del self._model
             self._model = None
         self._loaded = False
-        import gc; gc.collect()
+        import gc
+
+        gc.collect()
 
     # ── Modell-Ladung ────────────────────────────────────────────────
 
@@ -175,9 +177,29 @@ class ApolloPhase0Guard:
         return self._loaded
 
     def load(self) -> bool:
-        """Lädt Apollo Modell. Returns True bei Erfolg."""
+        """Lädt Apollo Modell. Returns True bei Erfolg.
+
+        §v10.402: Nutzt PLM-Singleton wenn verfügbar — spart 800 MB RAM.
+        """
         if self._loaded:
             return True
+        # §v10.402: PLM-Singleton statt eigener Instanz
+        try:
+            from plugins.apollo_plugin import get_loaded_apollo
+
+            _apollo = get_loaded_apollo()
+            if _apollo is not None:
+                _model = getattr(_apollo, "_model", None)
+                if _model is not None:
+                    self._model = _model
+                    self._device = getattr(_apollo, "_device", "cpu")
+                    self._loaded = True
+                    self._shared_from_plm = True
+                    logger.info("Apollo Phase-0 via PLM-Singleton (shared model, 0 MB extra)")
+                    return True
+        except Exception:
+            pass
+        # Fallback: eigenes Modell laden
         if not __import__("os").path.isfile(self._model_path):
             logger.debug("Apollo-Modell nicht gefunden: %s", self._model_path)
             return False
@@ -313,12 +335,17 @@ class ApolloPhase0Guard:
             if _novelty > self._hallucination_threshold:
                 logger.warning(
                     "§2.46e Apollo Hallucination-Guard: novelty=%.3f > %.2f → Rollback (Material=%s)",
-                    _novelty, self._hallucination_threshold, _mat,
+                    _novelty,
+                    self._hallucination_threshold,
+                    _mat,
                 )
                 self._cached_ineffective.add(_mat)
                 return ApolloResult(
-                    audio=_audio, applied=False, novelty=_novelty,
-                    material=_mat, goosebumps_preserved=True,
+                    audio=_audio,
+                    applied=False,
+                    novelty=_novelty,
+                    material=_mat,
+                    goosebumps_preserved=True,
                 )
 
             # ── Guard 2: Quality-Delta ──
@@ -333,22 +360,31 @@ class ApolloPhase0Guard:
                 logger.warning(
                     "Apollo Quality-Guard: Degradation erkannt (Material=%s) → Rollback. "
                     "RMS=%.1fdB Crest=%.3f HF=%.1fdB SpecVar=%.3f",
-                    _mat, _qual["rms_delta_db"], _qual["crest_delta"],
-                    _qual["hf_delta_db"], _qual["spec_var_delta"],
+                    _mat,
+                    _qual["rms_delta_db"],
+                    _qual["crest_delta"],
+                    _qual["hf_delta_db"],
+                    _qual["spec_var_delta"],
                 )
                 self._cached_ineffective.add(_mat)
                 return ApolloResult(
-                    audio=_audio, applied=False, novelty=_novelty,
+                    audio=_audio,
+                    applied=False,
+                    novelty=_novelty,
                     rms_delta_db=_qual["rms_delta_db"],
                     hf_delta_db=_qual["hf_delta_db"],
-                    material=_mat, goosebumps_preserved=False,
+                    material=_mat,
+                    goosebumps_preserved=False,
                 )
 
             # ── Apollo erfolgreich ──
             _elapsed = time.perf_counter() - t0
             logger.info(
                 "Apollo Phase-0: %s decompressed (%.2fs, novelty=%.3f, HF=+%.1fdB)",
-                _mat, _elapsed, _novelty, _qual.get("hf_delta_db", 0.0),
+                _mat,
+                _elapsed,
+                _novelty,
+                _qual.get("hf_delta_db", 0.0),
             )
             self._cached_effective.add(_mat)
 
@@ -360,7 +396,9 @@ class ApolloPhase0Guard:
                 _out_audio = _processed.astype(np.float32)
 
             return ApolloResult(
-                audio=_out_audio, applied=True, novelty=_novelty,
+                audio=_out_audio,
+                applied=True,
+                novelty=_novelty,
                 rms_delta_db=_qual.get("rms_delta_db", 0.0),
                 hf_delta_db=_qual.get("hf_delta_db", 0.0),
                 goosebumps_preserved=True,
@@ -393,7 +431,11 @@ class ApolloPhase0Guard:
     def is_lossy_codec_material(material: str) -> bool:
         """Prüft ob Material von verlustbehaftetem Codec stammt."""
         return str(material).strip().lower() in {
-            "mp3_low", "mp3_high", "aac", "minidisc", "streaming",
+            "mp3_low",
+            "mp3_high",
+            "aac",
+            "minidisc",
+            "streaming",
         }
 
 
@@ -418,16 +460,35 @@ class ResembleEnhanceGuard:
         self._plugin = None
 
     def unload(self) -> None:
-        """§v10.306: ResembleEnhance sofort aus RAM entladen."""
+        """§v10.402: Resemble entladen. Überspringt wenn PLM-Singleton."""
+        if getattr(self, "_shared_from_plm", False):
+            self._plugin = None
+            self._loaded = False
+            return
         if self._plugin is not None:
             self._plugin.unload()
             self._plugin = None
         self._loaded = False
-        import gc; gc.collect()
+        import gc
+
+        gc.collect()
 
     def _ensure_loaded(self) -> bool:
         if self._loaded and self._plugin is not None:
             return True
+        # §v10.402: PLM-Singleton statt eigener Instanz
+        try:
+            from plugins.resemble_enhance_plugin import get_resemble_enhance_plugin
+
+            self._plugin = get_resemble_enhance_plugin()
+            self._loaded = getattr(self._plugin, "_session", None) is not None
+            if self._loaded:
+                self._shared_from_plm = True
+                logger.info("Resemble Enhance Phase-0 via PLM-Singleton")
+            return self._loaded
+        except Exception:
+            pass
+        # Fallback
         try:
             from plugins.resemble_enhance_plugin import ResembleEnhancePlugin
 
@@ -470,7 +531,8 @@ class ResembleEnhanceGuard:
             if _novelty > self._threshold:
                 logger.warning(
                     "Resemble Enhance Hallucination-Guard: novelty=%.3f > %.2f → Rollback",
-                    _novelty, self._threshold,
+                    _novelty,
+                    self._threshold,
                 )
                 return _audio, False
 
@@ -484,16 +546,19 @@ class ResembleEnhanceGuard:
             )
             if _degraded:
                 logger.warning(
-                    "Resemble Enhance Quality-Guard: Degradation → Rollback. "
-                    "RMS=%.1fdB Crest=%.3f HF=%.1fdB",
-                    _qual["rms_delta_db"], _qual["crest_delta"], _qual["hf_delta_db"],
+                    "Resemble Enhance Quality-Guard: Degradation → Rollback. RMS=%.1fdB Crest=%.3f HF=%.1fdB",
+                    _qual["rms_delta_db"],
+                    _qual["crest_delta"],
+                    _qual["hf_delta_db"],
                 )
                 return _audio, False
 
             _elapsed = time.perf_counter() - t0
             logger.info(
                 "Resemble Enhance Phase-0b: %.2fs, novelty=%.3f, HF=+%.1fdB",
-                _elapsed, _novelty, _qual.get("hf_delta_db", 0.0),
+                _elapsed,
+                _novelty,
+                _qual.get("hf_delta_db", 0.0),
             )
             return _processed, True
 
@@ -552,7 +617,9 @@ class EARVAEPhase0Stage:
             self._plugin.unload()
             self._plugin = None
         self._load_attempted = False
-        import gc; gc.collect()
+        import gc
+
+        gc.collect()
 
     def process(self, audio: np.ndarray, sr: int = 48000) -> tuple[np.ndarray, bool]:
         """Run EAR_VAE neural clean-pass.
@@ -586,10 +653,25 @@ class EARVAEPhase0Stage:
                         channels.append(resample_poly(ch, num, ch.shape[-1]))
                     _audio = np.stack(channels, axis=0).astype(np.float32)
                 except Exception:
-                    pass
+                    logger.debug("Phase-0: resample_poly für EAR_VAE fehlgeschlagen — überspringe Resample")
 
             # Run neural clean-pass
-            out = plugin.process(_audio, sample_rate=48000)
+            # §v10.360: PLM-Schutz für EAR_VAE (643 MB)
+            try:
+                from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+
+                _plm = get_plugin_lifecycle_manager()
+                _plm.set_active("EAR_VAE", True)
+                _plm.touch("EAR_VAE")  # §v10.370: LRU-Update
+            except Exception:
+                logger.debug("Phase-0: PLM EAR_VAE Aktivierung fehlgeschlagen")
+            try:
+                out = plugin.process(_audio, sample_rate=48000)
+            finally:
+                try:
+                    get_plugin_lifecycle_manager().set_active("EAR_VAE", False)
+                except Exception:
+                    logger.debug("Phase-0: PLM EAR_VAE Deaktivierung fehlgeschlagen")
             if out is None:
                 return audio, False
 
@@ -688,7 +770,8 @@ class ChainedPhase0Preprocessor:
         _current = np.asarray(audio, dtype=np.float32)
 
         # ── §v10.303.18 Cache-Check ──
-        import json as _json, os as _os
+        import json as _json
+        import os as _os
 
         _cache_key = hashlib.sha256(_current[: min(len(_current), 96000)].tobytes()).hexdigest()
         _cache_file = _os.path.join(self._cache_dir, f"{_mat}_{_cache_key[:16]}.npz")
@@ -696,17 +779,25 @@ class ChainedPhase0Preprocessor:
             try:
                 _cached = np.load(_cache_file, allow_pickle=True)
                 _cached_audio = _cached["audio"]
-                _cached_stages_str = str(_cached.get("stage_info", ["apollo,deepfilternet,resemble_enhance"])[0]) if "stage_info" in _cached else "apollo,deepfilternet,resemble_enhance"
-                _cached_stages = [{"stage": s.strip(), "applied": True} for s in _cached_stages_str.split(",") if s.strip()]
+                _cached_stages_str = (
+                    str(_cached.get("stage_info", ["apollo,deepfilternet,resemble_enhance"])[0])
+                    if "stage_info" in _cached
+                    else "apollo,deepfilternet,resemble_enhance"
+                )
+                _cached_stages = [
+                    {"stage": s.strip(), "applied": True} for s in _cached_stages_str.split(",") if s.strip()
+                ]
                 if len(_cached_audio) == len(_current):
                     logger.info("§v10.303.18 Phase-0 Cache HIT: %s", _cache_key[:16])
                     return ApolloResult(
                         audio=_cached_audio.astype(np.float32),
                         applied=True,
                         material=_mat,
-                        metadata={"stages": _cached_stages,
-                                   "chain": "ear_vae→apollo→deepfilternet→resemble_enhance",
-                                   "cached": True},
+                        metadata={
+                            "stages": _cached_stages,
+                            "chain": "ear_vae→apollo→deepfilternet→resemble_enhance",
+                            "cached": True,
+                        },
                     )
             except Exception:
                 pass  # Cache corrupt → neu berechnen
@@ -729,16 +820,34 @@ class ChainedPhase0Preprocessor:
         # ── Stufe 1: Apollo Codec-Decompression ──
         _should_apply_apollo = ApolloPhase0Guard.should_apply(material, transfer_chain=transfer_chain)
         if _should_apply_apollo and _mat not in self._apollo_failed_materials:
-            _apollo_result = self._apollo.process(_current, sr, material)
+            # §v10.330: Apollo als aktiv markieren — verhindert PLM-Eviction
+            # während der Inferenz (Segfault-Risiko).
+            try:
+                from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+
+                _plm = get_plugin_lifecycle_manager()
+                _plm.set_active("Apollo", True)
+                _plm.touch("Apollo")  # §v10.370: LRU-Update
+            except Exception:
+                pass
+            try:
+                _apollo_result = self._apollo.process(_current, sr, material)
+            finally:
+                try:
+                    get_plugin_lifecycle_manager().set_active("Apollo", False)
+                except Exception:
+                    pass
             if _apollo_result.applied:
                 _current = _apollo_result.audio
                 _any_applied = True
-                _meta_stages.append({
-                    "stage": "apollo",
-                    "applied": True,
-                    "novelty": _apollo_result.novelty,
-                    "hf_delta_db": _apollo_result.hf_delta_db,
-                })
+                _meta_stages.append(
+                    {
+                        "stage": "apollo",
+                        "applied": True,
+                        "novelty": _apollo_result.novelty,
+                        "hf_delta_db": _apollo_result.hf_delta_db,
+                    }
+                )
             else:
                 if _apollo_result.novelty > 0:
                     self._apollo_failed_materials.add(_mat)
@@ -749,8 +858,27 @@ class ChainedPhase0Preprocessor:
         self._apollo.unload()
 
         # ── Stufe 2: DeepFilterNet v3 (Noise-Floor, Atmungserhalt) ──
-        if _mat not in self._dfn_failed_materials:
-            _dfn_out, _dfn_applied = self._deepfilter.process(_current, sr)
+        # §v10.700.8 Precondition: Nur bei sprachdominiertem Material (panns_singing >= 0.5).
+        # DeepFilterNet ist auf DNS-Challenge (Sprache+Rauschen) trainiert. Bei Musik
+        # mit instrumentalem Hintergrund (panns_singing < 0.5) halluziniert es spektrale
+        # Inhalte → Hallucination-Guard triggert Rollback. Besser: gar nicht erst anwenden.
+        _vocal_conf = 0.0  # §FIX_B30: _pre undefined — Phase-0 has no pre-analysis context; safe default
+        if _mat not in self._dfn_failed_materials and _vocal_conf >= 0.5:
+            try:
+                from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+
+                _plm = get_plugin_lifecycle_manager()
+                _plm.set_active("DeepFilterNetV3", True)
+                _plm.touch("DeepFilterNetV3")  # §v10.370: LRU-Update
+            except Exception:
+                pass
+            try:
+                _dfn_out, _dfn_applied = self._deepfilter.process(_current, sr)
+            finally:
+                try:
+                    get_plugin_lifecycle_manager().set_active("DeepFilterNetV3", False)
+                except Exception:
+                    pass
             if _dfn_applied:
                 _current = _dfn_out
                 _any_applied = True
@@ -759,13 +887,36 @@ class ChainedPhase0Preprocessor:
                 self._dfn_failed_materials.add(_mat)
                 _meta_stages.append({"stage": "deepfilternet", "applied": False})
         else:
-            _meta_stages.append({"stage": "deepfilternet", "applied": False, "reason": "cached_failure"})
+            _reason = "low_vocal" if _vocal_conf < 0.5 else "cached_failure"
+            _meta_stages.append({"stage": "deepfilternet", "applied": False, "reason": _reason})
+            if _vocal_conf < 0.5 and _vocal_conf > 0:
+                logger.debug(
+                    "DeepFilterNet skipped: panns_singing=%.2f < 0.5 (Musik/Instrumental — außerhalb Trainingsbereich)",
+                    _vocal_conf,
+                )
         # §v10.306: DeepFilterNet sofort entladen — 34 MB RAM freigeben
         self._deepfilter.unload()
 
         # ── Stufe 3: Resemble Enhance ──
-        if _mat not in self._resemble_failed_materials:
-            _re_out, _re_applied = self._resemble.process(_current, sr)
+        # §v10.700.8 Precondition: Nur bei sprachdominiertem Material (panns_singing >= 0.5).
+        # Resemble Enhance ist auf Sprach-Denoising trainiert (DNS-Challenge).
+        # Bei Musik halluziniert es → Hallucination-Guard triggert Rollback.
+        if _mat not in self._resemble_failed_materials and _vocal_conf >= 0.5:
+            try:
+                from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+
+                _plm = get_plugin_lifecycle_manager()
+                _plm.set_active("ResembleEnhance", True)
+                _plm.touch("ResembleEnhance")  # §v10.370: LRU-Update
+            except Exception:
+                pass
+            try:
+                _re_out, _re_applied = self._resemble.process(_current, sr)
+            finally:
+                try:
+                    get_plugin_lifecycle_manager().set_active("ResembleEnhance", False)
+                except Exception:
+                    pass
             if _re_applied:
                 _current = _re_out
                 _any_applied = True
@@ -783,7 +934,7 @@ class ChainedPhase0Preprocessor:
             try:
                 import os as _os2
 
-                _stage_info = ",".join(sorted(set(s["stage"] for s in _meta_stages if s.get("applied"))))
+                _stage_info = ",".join(sorted({s["stage"] for s in _meta_stages if s.get("applied")}))
                 np.savez_compressed(
                     _cache_file,
                     audio=_current.astype(np.float32),
@@ -824,7 +975,8 @@ class ChainedPhase0Preprocessor:
                 _ok = _loader()
                 logger.info(
                     "§v10.303.20 PLM preload %s: %s",
-                    _name, "geladen" if _ok else "nicht verfügbar",
+                    _name,
+                    "geladen" if _ok else "nicht verfügbar",
                 )
             except Exception as _exc:
                 logger.debug("PLM preload %s fehlgeschlagen: %s", _name, _exc)
@@ -857,17 +1009,35 @@ class DeepFilterNetGuard:
         self._breath_detector = None
 
     def unload(self) -> None:
-        """§v10.306: DeepFilterNet sofort aus RAM entladen."""
+        """§v10.402: DeepFilterNet entladen. Überspringt wenn PLM-Singleton."""
+        if getattr(self, "_shared_from_plm", False):
+            self._plugin = None
+            self._loaded = False
+            return
         if self._plugin is not None:
             self._plugin.unload()
             self._plugin = None
         self._loaded = False
         self._breath_detector = None
-        import gc; gc.collect()
+        import gc
+
+        gc.collect()
 
     def _ensure_loaded(self) -> bool:
         if self._loaded and self._plugin is not None:
             return True
+        # §v10.402: PLM-Singleton statt eigener Instanz
+        try:
+            from plugins.deepfilternet_v3_ii_plugin import get_deepfilternet_plugin
+
+            self._plugin = get_deepfilternet_plugin()
+            self._loaded = True
+            self._shared_from_plm = True
+            logger.info("DeepFilterNet Phase-0 via PLM-Singleton")
+            return True
+        except Exception:
+            pass
+        # Fallback
         try:
             from plugins.deepfilternet_v3_ii_plugin import DeepFilterNetV3Plugin
 
@@ -898,7 +1068,8 @@ class DeepFilterNetGuard:
             if _breath_pct > 0:
                 logger.debug(
                     "DeepFilterNet: %d Atemsegmente erkannt (%.1f%% des Audios) — werden erhalten",
-                    len(_result.breath_positions), _breath_pct,
+                    len(_result.breath_positions),
+                    _breath_pct,
                 )
             return _mask
         except ImportError:
@@ -967,7 +1138,8 @@ class DeepFilterNetGuard:
             if _novelty > self._threshold:
                 logger.warning(
                     "DeepFilterNet Hallucination-Guard: novelty=%.3f > %.2f → Rollback",
-                    _novelty, self._threshold,
+                    _novelty,
+                    self._threshold,
                 )
                 return _audio, False
 
@@ -981,16 +1153,19 @@ class DeepFilterNetGuard:
             )
             if _degraded:
                 logger.warning(
-                    "DeepFilterNet Quality-Guard: Degradation → Rollback. "
-                    "RMS=%.1fdB Crest=%.3f HF=%.1fdB",
-                    _qual["rms_delta_db"], _qual["crest_delta"], _qual["hf_delta_db"],
+                    "DeepFilterNet Quality-Guard: Degradation → Rollback. RMS=%.1fdB Crest=%.3f HF=%.1fdB",
+                    _qual["rms_delta_db"],
+                    _qual["crest_delta"],
+                    _qual["hf_delta_db"],
                 )
                 return _audio, False
 
             _elapsed = time.perf_counter() - t0
             logger.info(
                 "DeepFilterNet Phase-0b: %.2fs, novelty=%.3f, RMS=%.1fdB",
-                _elapsed, _novelty, _qual.get("rms_delta_db", 0.0),
+                _elapsed,
+                _novelty,
+                _qual.get("rms_delta_db", 0.0),
             )
 
             # Remix stereo

@@ -1,6 +1,6 @@
 # Aurik 10 — GEBOTE & VERBOTE (Normativer Katalog)
 
-> **Status:** Normativ | **Version:** 10.0.17 | **Stand:** §v10.119 Mode-Differenzierung: RESTORATION = Do No Harm, STUDIO_2026 = kreativ
+> **Status:** Normativ | **Version:** 10.16.0 | **Stand:** August 2026
 >
 > Dieser Katalog definiert alle unverhandelbaren GEBOTE (positiv, was Aurik TUN MUSS)
 > und VERBOTE (negativ, was Aurik NIEMALS tun darf). Jedes Gebot und Verbot ist mit
@@ -48,7 +48,7 @@ Jeder importierte Song wird individuell maximal für das menschliche Ohr verbess
 | §G21 | **Denker-Zentralität** | Alle Stärke-Entscheidungen fließen zentral im Denker. Keine dezentralen "Magic Numbers" in Phasen. |
 | §G22 | **Determinismus** | Derselbe Input → derselbe Output. Jeder Zufallsgenerator wird mit fixem Seed aus dem Datei-Hash initialisiert. |
 | §G23 | **ML-Fallback-Logging** | Jeder ML→DSP-Fallback MUSS mit `logger.warning()` protokolliert werden. Silent-Failures sind VERBOTEN. |
-| §G24 | **NaN/Inf-Schutz** | Jede der 68 Phasen MUSS `np.nan_to_num()` oder `np.isfinite()` auf Ausgabe-Audio anwenden (§0a). |
+| §G24 | **NaN/Inf-Schutz** | Jede der 71 Phasen (68 + 3 Phase-0) MUSS `np.nan_to_num()` oder `np.isfinite()` auf Ausgabe-Audio anwenden (§0a). |
 | §G25 | **Logger-Pflicht** | Jede Python-Datei mit `logger`-Verwendung MUSS `import logging` und `logger = logging.getLogger(__name__)` definieren. |
 | §G26 | **Guard-Counter-Lebendigkeit** | Jeder deklarierte Guard-Counter MUSS auch inkrementiert werden. Deklaration ohne `+= 1` ist toter Code. |
 | §G27 | **Messschleifen-Plateau** | Jede Messschleife mit ≥3 Kandidaten MUSS Plateau-Erkennung haben. |
@@ -147,6 +147,11 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 - Kategorie IX (§G68–§G75): SFT-Adaptivität & Defekt-Audibilität
 - Kategorie X (§G76–§G81): Kalibrierungs-Dispatch
 - Kategorie XI (§G82–§G86): Laufzeit-Rekalibrierung
+- Kategorie XIX (§G131–§G137): SOTA-Reproduzierbarkeit B1/B2/B3
+- Kategorie XX (§G138–§G141): Perzeptueller Autopilot — Wohlklang-Garantien
+- Kategorie XXI (§G142–§G145): Perzeptueller Closed-Loop — Per-Band-Hören
+- Kategorie XXII (§G150–§G155): Metrik-Hierarchie & Guard-Disziplin
+- Kategorie XXIII (§G156–§G166): Restorability-Gate & Bugfixes B19–B30 (§v10.704)
 - Kategorie XII (§G87): Noise-Floor-Brücke
 - Kategorie XIII (§G88): Defektbehebungs-Module
 - Kategorie XIV (§G89): Unsichtbare Signalintegrität
@@ -269,7 +274,7 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 
 | ID | Regel | Beschreibung |
 | ---- | ------- | ------------- |
-| §G89 | **Soft-Clipping-Pflicht für alle 68 Phasen** | Jede Phase MUSS ihre Ausgabe via `apply_soft_clip()` (tanh-basiert, material-adaptiv) statt `np.clip(audio, -1.0, 1.0)` begrenzen (§v10.62). Hard-Clipping auf ±1.0 erzeugt ein Rechteck-Fenster im Zeitbereich → sinc-Spektrum mit hörbaren Obertönen bis Nyquist. Tanh-Soft-Clipping erzeugt nur ungerade Harmonische, die das Ohr als „analoge Sättigung" statt „digitalen Clip" wahrnimmt. Die zentrale Durchsetzung erfolgt in `PhaseResult.__post_init__` und `create_phase_result()` — damit sind alle Phasen-Ausgaben automatisch geschützt. Material-adaptive Knee: Shellac/Vinyl 1.2 dB, Tape/Cassette 0.8 dB, Digital 0.4 dB. |
+| §G89 | **Soft-Clipping-Pflicht für alle 71 Phasen (68 + 3 Phase-0)** | Jede Phase MUSS ihre Ausgabe via `apply_soft_clip()` (tanh-basiert, material-adaptiv) statt `np.clip(audio, -1.0, 1.0)` begrenzen (§v10.62). Hard-Clipping auf ±1.0 erzeugt ein Rechteck-Fenster im Zeitbereich → sinc-Spektrum mit hörbaren Obertönen bis Nyquist. Tanh-Soft-Clipping erzeugt nur ungerade Harmonische, die das Ohr als „analoge Sättigung" statt „digitalen Clip" wahrnimmt. Die zentrale Durchsetzung erfolgt in `PhaseResult.__post_init__` und `create_phase_result()` — damit sind alle Phasen-Ausgaben automatisch geschützt. Material-adaptive Knee: Shellac/Vinyl 1.2 dB, Tape/Cassette 0.8 dB, Digital 0.4 dB. |
 
 ## Kategorie XVIII — Startup-Integration & Kommunikation (§G71–§G80 spec_constitution, §v10.305)
 
@@ -288,16 +293,87 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 
 ---
 
+---
+
+## Kategorie XXII — Architektonische Qualitäts-Garantien: Metrik-Hierarchie & Guard-Disziplin (§G150–§G155)
+
+> §v10.704 — Prämisse: 20 Bugs in der Produktionsanalyse haben drei systemische
+> Schwachstellen offengelegt: (1) Guards widersprechen sich mangels Metrik-Hierarchie,
+> (2) Guards kennen den Phasen-Kontext nicht, (3) Schwellwerte sind hartcodiert statt
+> adaptiv. Diese Kategorie kodifiziert die architektonischen Heilungsmaßnahmen.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G150 | **Metrik-Hierarchie-Pflicht** | Aurik MUSS eine definitive Hierarchie der Qualitätsmetriken einhalten: Priorität 1 = MUSHRA/HPI (perzeptuell), Priorität 2 = Defekt-Reduktion (B2-Daten), Priorität 3 = artifact_freedom (nur VETO bei >5 Artefakten), Priorität 4 = BlindQuality (NUR Diagnostik, NIE Quality-Gate). Keine niedrigere Metrik darf das Urteil einer höheren überschreiben. |
+| §G151 | **MUSHRA-Primat** | Wenn MUSHRA > 0 (perzeptuelle Daten verfügbar), MUSS MUSHRA die primäre Ground Truth für ALLE Quality-Gate-Entscheidungen sein. artifact_freedom und BlindQuality dürfen NIEMALS ein positives MUSHRA-Urteil negieren. |
+| §G152 | **BlindQuality-Diagnostik-Verbot** | Der BlindQualityScore (SNR/THD/Bandbreite) darf AUSSCHLIESSLICH für technische Diagnostik verwendet werden. Er darf NIEMALS in `quality_guaranteed`, `verdict` oder `export_gate` einfließen. Verstoß → §V40 (bestehend). |
+| §G153 | **Guard-Phasen-Whitelist-Pflicht** | Jeder Quality-Guard (AFG, VocalNoHarm, FormantGuard, CIG, SFT, PMGG) MUSS deklarieren, für welche Phasen-Familien er zuständig ist. Eine Phase, deren Familie nicht in der Whitelist des Guards steht, wird von diesem Guard ÜBERSPRUNGEN. Kein Guard läuft盲 auf allen Phasen. |
+| §G154 | **Adaptive-Schwellwert-Pflicht** | Jeder Schwellwert in Quality-Gates MUSS aus Material-Typ, Transfer-Chain-Depth und Phasen-Familie ABGELEITET werden — NIEMALS hartcodiert. Formel: `threshold = base_threshold × material_factor × depth_factor × phase_factor`. Die Tabelle der Material/Depth/Phase-Faktoren MUSS zentral in `calibrated_constants.py` definiert sein. |
+| §G155 | **Quality-Entscheidungs-Narrativ-Pflicht** | Jede Quality-Gate-Entscheidung (Verdict, Rollback, Skip) MUSS im GUI-Narrativ BEGRÜNDET werden — mit Bezug auf die konkrete Metrik, den Schwellwert und die Phasen-Familie. Kein „NO IMPROVEMENT" ohne Erklärung. Kein Rollback ohne „Warum". Der Nutzer MUSS verstehen, WARUM Aurik so entschieden hat. |
+
+### Neue VERBOTE — Architektonische Qualitäts-Garantien (§V47–§V49)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V47 | **Metrik-Unterordnung-Verbot** | Es ist VERBOTEN, dass eine niedrigprioritäre Metrik (artifact_freedom, BlindQuality) das Urteil einer höherprioritären Metrik (MUSHRA, HPI) überschreibt oder negiert. |
+| §V48 | **Guard-Kontext-Ignoranz-Verbot** | Es ist VERBOTEN, einen Quality-Guard auf einer Phase laufen zu lassen, deren Phasen-Familie nicht in der Whitelist des Guards deklariert ist. |
+| §V49 | **Hartcodierter-Schwellwert-Verbot** | Es ist VERBOTEN, einen Quality-Gate-Schwellwert hart zu codieren. Alle Schwellwerte MÜSSEN via `calibrated_constants.py` aus Material+Depth+Phase abgeleitet werden. |
+
+## Kategorie XXIII — Restorability-Gate & Bugfixes B19–B30 (§G156–§G166)
+
+> §v10.704 — Prämisse: Zwei Produktionsläufe mit 5-stufiger Transferkette
+> (restorability=66) zeigten eine systematische Failure-Kaskade: De-Esser produzierte
+> artifact_freedom=0.494 → HPI-Gate verwarf gesamte Restauration → 0 Phasen wirksam.
+> Sechs Root-Cause-Fixes (B19–B30) durchbrechen diese Kaskade.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G156 | **Depth+Restorability-adaptiver HPI-Gate** | Der artifact_freedom-Mindestwert MUSS aus Depth UND Restorability abgeleitet werden: `af_min = base(depth) − (100−rs) × 0.0045`, floor=0.32. Depth≥5→0.48, depth≥4→0.58, depth=3→0.72, depth=2→0.82, depth=1→0.88. (§v10.704 B30) |
+| §G157 | **Sample-Axis-Robustheit für B3-Phase-2** | Der Defect-Presence-Scan MUSS beide Audio-Layouts korrekt erkennen: (2,N) und (N,2). `shape[-1]` bei (N,2) = Kanäle, nicht Samples. (§v10.704 B26) |
+| §G158 | **MUSHRA/HPI-Forwarding an MQA** | MushraEvaluator und HPI MÜSSEN ihre Scores an MQA weiterleiten. Ohne Forwarding: MQA sieht 0 → "NO IMPROVEMENT" trotz OQS=84.0. (§v10.704 B27) |
+| §G159 | **De-Esser-Dynamics-Threshold** | AFG-Threshold für De-Esser: 0.40 (Schwelle 0.38). Alte 0.55 erzwang Rollback trotz unhörbarer Artefakte auf Kassettenmaterial. (§v10.704 B19) |
+| §G160 | **Chunked-Mode-Längenwarnung** | Post-Pipeline-Check MUSS `self._in_chunked` erkennen und bei >100k Samples Diff von WARNING auf DEBUG herabstufen. (§v10.704 B28) |
+| §G161 | **P5-Exception-Traceback-Pflicht** | "setting an array element"-Exceptions MÜSSEN mit vollständigem Traceback (2000 Zeichen) als WARNING geloggt werden. (§v10.704 B29) |
+| §G162 | **HPI-Gate-Restorability-Kontinuität** | `(100−rs) × 0.0045`. Diskrete Buckets sind VERBOTEN. (§G77, §v10.704 B30) |
+| §G163 | **Floor-Absolut-Garantie** | artifact_freedom-Mindestwert NIEMALS < 0.32. (§v10.704 B30) |
+| §G164 | **Studio-Master-Floor-Invariante** | depth=1, rs=100: af_min UNVERÄNDERT 0.88. (§v10.704 B30) |
+| §G165 | **Spec-Constitution-Synchronisation** | Jede AF/HPI-Änderung MUSS in `check_violations`, `is_export_blocked` UND `_get_depth_adaptive_af_min` nachgezogen werden. (§v10.704) |
+| §G166 | **Drei-Quellen-Synchronisation** | AF/HPI-Schwellwerte existieren an DREI Orten. Alle MÜSSEN identische Formeln verwenden. (§v10.704) |
+
+### Neue VERBOTE — Restorability-Gate (§V50–§V51)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V50 | **Restorability-Ignoranz-Verbot** | Es ist VERBOTEN, einen HPI-Gate-Schwellwert ohne `restorability_score` zu berechnen. |
+| §V51 | **Sample-Axis-Raten-Verbot** | Es ist VERBOTEN, `audio.shape[-1]` als Sample-Anzahl zu interpretieren, ohne (N,2) vs (2,N) zu prüfen. |
+
+### Neue GEBOTE — Denker-IQ & Material-Awareness (§G167–§G172, §v10.706)
+
+| ID | Gebot | Beschreibung |
+| ---- | ------- | ------------- |
+| §G167 | **Export-Gate-B30-Komplettierung** | ALLE Export-Gates (ArtifactFreedomGate, FinalExportAudioGate, QualityGateRegistry) MÜSSEN die B30-Formel `af_min = base(depth) − (100−rs)×0.0045` verwenden. Hartcodierte 0.95 sind VERBOTEN. |
+| §G168 | **SourceMediumProfile-Kalibrierungspflicht** | SongCalibration MUSS `get_medium_profile()` konsultieren. `is_compressed`, `hiss_reduction_max_strength`, `harmonic_max_order`, `deesser_skip_saturation_conf` fließen in `family_scalars` ein. |
+| §G169 | **Per-Phase-SMP-Cap** | Jede Phase mit medium-spezifischen Limits MUSS `SourceMediumProfile` als Hard-Cap konsultieren: Phase_29 (`hiss_reduction_max_strength`), Phase_07 (`harmonic_max_order`), Phase_26 (`is_compressed`), Phase_36 (`has_soft_saturation`), Phase_54 (`is_compressed`). |
+| §G170 | **Chain-Depth-Budget-Adaption** | StrategieDenker MUSS das Zeitbudget mit `chain_depth` skalieren: +15% pro Generation, +0.5% pro Restorability-Punkt unter 100. |
+| §G171 | **Material-Fremdlauf-Transparenz** | Läuft eine für Medium X designte Phase auf Medium Y (durch Chain-Injection), MUSS dies als INFO geloggt werden. Kein Block, kein Strip — ActiveIntervention entscheidet. |
+| §G172 | **OneTakeExport-ISP-Margin** | Brickwall-Ceiling MUSS −1.0 dBTP betragen (ISP-Margin für inter-sample peaks). −0.3 dBTP ist VERBOTEN — TruePeak-Messung erfasst ISP, die der Sample-Peak-Limiter nicht eliminiert. |
+
+### Neues VERBOT — Material-Awareness (§V52)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V52 | **Material-Nivellierungs-Verbot** | Es ist VERBOTEN, `"tape"`, `"cassette"` und `"reel_tape"` in Kalibrierung oder Phasen-Logik identisch zu behandeln. Jedes Medium hat eigene physikalische Limiten via SourceMediumProfile. |
+
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
 | --------- | ------- | ---------- |
-| 10.0.13 | 2026-08-03 | §G89: Soft-Clipping-Pflicht für alle 68 Phasen (§v10.62). `apply_soft_clip()` + `crossfade_to_bypass()` in audio_utils.py. Kategorie XIV. |
+| 10.0.13 | 2026-08-03 | §G89: Soft-Clipping-Pflicht für alle 71 Phasen (68 + 3 Phase-0) (§v10.62). `apply_soft_clip()` + `crossfade_to_bypass()` in audio_utils.py. Kategorie XIV. |
 | 10.0.12 | 2026-08-03 | §G88: Defektbehebungs-Module (Phase_07/19/23/43) mit Depth-adaptiven DSP-Fallbacks. Kategorie XIII. |
 | 10.0.11 | 2026-08-03 | §G87: Phase_26 Per-Band-Noise-Floor-Guard (D1–D3). Schließt Phase_03→Phase_26 Noise-Floor-Lücke. Kategorie XII. |
 | 10.0.10 | 2026-07-19 | §G82–§G86: Laufzeit-Rekalibrierung. Lebendiger CalibrationContext, NOVELTY_CRIT-Nachführung, Monotonie-Garantie. Kategorie XI. |
 | 10.0.9 | 2026-07-19 | §G76–§G81: Kalibrierungs-Dispatch. Zentraler CalibrationContext, kontinuierliche Ableitung aller Schwellwerte, Kalibrierungs-Audit. Kategorie X. |
-| 10.0.8 | 2026-07-19 | §G68–§G75: SFT-Adaptivität, Defekt-Audibilität, Repair-Klassifikation. Kategorie IX. |
+| 10.14.0 | 2026-07-19 | §G68–§G75: SFT-Adaptivität, Defekt-Audibilität, Repair-Klassifikation. Kategorie IX. |
 | 10.0.7 | 2026-07-13 | §G60–§G67 + §V27–§V33. Lag-Integritäts-Architektur nach Root-Cause-Analyse (8 Bugs, 13 Commits). Kategorie VII + VIII. |
 | 10.0.6 | 2026-07-13 | §G46–§G59 (Metriken & Qualitätssicherung). Kategorie VI. |
 | 10.0.5 | 2026-07-13 | §G30–§G39 (CD-Rauschprofil & Export, ML-Device, Test-Assertion). §V16–§V24. |
@@ -379,12 +455,132 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 | §G121 | **Mode-Differenzierung: RESTORATION = Do No Harm** | Kreative Audio-Eingriffe (Noise-Gate, Spektral-Balance, Stereo-Fokus) dürfen NUR im STUDIO_2026-Mode laufen. In RESTORATION MUSS die Original-Dynamik unangetastet bleiben — der NaturalnessOptimizer darf das Originalsignal NICHT gate-bearbeiten, spektral umbalancieren oder im Stereo-Feld verschieben. (§v10.119) |
 | §V39 | **Noise-Gate-Verbot in RESTORATION** | Es ist VERBOTEN, das Noise-Gate, die Spektral-Balance oder den Stereo-Fokus im RESTORATION-Mode auszuführen. Diese sind kreative Werkzeuge, die die Original-Dynamik verändern — ein Verstoß gegen §0 „Do No Harm". (§v10.119) |
 
+## Kategorie XVIII — Laufzeit-Qualitätsgarantien (§G122–§G130)
+
+> §v10.702 — Prämissen aus dem Produktionslauf „Elke Best" (Kassette, 4-stufige Kette, 224 s, 44 Phasen, QualityGate Δ=0.0).
+> Diese Kategorie definiert die aus 10 identifizierten Laufzeit-Regressionen abgeleiteten unverhandelbaren GEBOTE.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G122 | **LUFS-Δ-Cap-Pflicht** | Phase_40 MUSS material-adaptives LUFS-Cap anwenden: Kassette ≤8 LU, Shellac ≤5 LU, Vinyl ≤6 LU, CD ≤20 LU. Überschreitung → WARNING + Begrenzung. Verhindert MUSHRA-Zerstörung durch extreme Loudness-Normalisierung. (§v10.702 R2) |
+| §G123 | **Closed-Loop-Empfindlichkeit** | Der Closed-Loop-Calibrator MUSS Verbesserungen ab Δ≥0.015 erkennen (vorher 0.04). Regressionen MÜSSEN ab Δ≤−0.03 erkannt werden (vorher −0.06). Adapt-Step 0.04 (vorher 0.08). Kumulativer Δ-Tracker nach 5 Phasen mit ΣΔ>0.05 → Boost. (§v10.702 R3) |
+| §G124 | **ExcellenceOptimizer-Hysterese** | Core-Guard des ExcellenceOptimizers MUSS Hysterese 0.05 einhalten (vorher 0.015). Regressionen innerhalb PMGG-Messungenauigkeit (±0.03) → KEIN Rollback. (§v10.702 R4) |
+| §G125 | **MDEM-Per-5-Phasen-Prüfung** | Nach jeder 5. erfolgreich ausgeführten Phase MUSS RMS-Hüllkurven-Pearson-Prüfung gegen Pre-Pipeline-Audio erfolgen. Pearson <0.85 → WARNING: kumulativer Dynamik-Verlust. (§v10.702 R5) |
+| §G126 | **De-Esser-Soft-Saturation-Skip** | Phase_19 MUSS vor Ausführung soft_saturation in Defect-Scores prüfen. Confidence >0.5 → Phase vollständig überspringen. (§v10.702 R7) |
+| §G127 | **Unbound-Variable-Scope-Garantie** | Jede lokale Variable, die in return-Dict referenziert wird, MUSS VOR dem umgebenden if-Block initialisiert sein. Scope-Bugs (Chunked-Streaming-Crash, 1699 s Verlust) sind zu verhindern. (§v10.702 R1) |
+| §G128 | **GDD-Budget-Proaktivität** | GDD-Budget-Manager MUSS VOR jeder STFT-Phase allocate() aufrufen. <1.0 ms → Stärke auf 25% drosseln. Nach jeder STFT-Phase MUSS consume() laufen. (§v10.701 D2) |
+| §G129 | **Rollback-Sanity-Pflicht** | Nach JEDEM Rollback (HPI, AFG, CIG, SFT) MUSS validate_rollback_audio() das Ziel-Audio prüfen. RMS <−60 dBFS, NaN, Inf oder Peak <1e−6 → CRITICAL + Fallback auf Original. (§v10.701 D4) |
+| §G130 | **PresenceEmbedding-Export-Pflicht** | Jeder Export MUSS PresenceScore berechnen (5 Sub-Scorer: Vocal Formant Coherence, Transient Immediacy, Room Tone Continuity, Microdynamic Liveliness, Spectral Air Authenticity). Score ≥0.70 = hörbare Verbesserung. Im Quality Report ausweisen. (§v10.701 D3) |
+
+## Kategorie XIX — SOTA-Reproduzierbarkeit: Kritische Bugfixes B1/B2/B3 (§G131–§G136)
+
+> §v10.702 B1/B2/B3 — Prämisse: Drei kritische Bugs verhinderten die vollständige
+> Reproduzierbarkeit und korrekte Qualitätsbewertung von Importsongs. Diese Kategorie
+> kodifiziert die architektonischen Garantien für perzeptuelle Verbesserungs-Metrik,
+> Defekt-Transparenz und Chunked-Streaming-Determinismus.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G131 | **Perzeptuelle-Verbesserungs-Metrik-Pflicht** | Der MQA-`_minimal_improvement`-Check MUSS `musical_improvement` (40% Tech + 60% MUSHRA/HPI) als primäre Metrik verwenden, wenn perzeptuelle Daten verfügbar sind. Der BlindQualityScore (SNR/THD/bandbreite) bestraft Defekt-ENTFERNUNG (Rauschen=HF-Energie) und darf NUR als Fallback ohne MUSHRA/HPI dienen. (§v10.702 B1) |
+| §G132 | **Composite-Score-Schwelle** | Bei verfügbaren perzeptuellen Metriken: `musical_improvement > 0.005` (0.5% Composite = hörbare Verbesserung). Ohne perzeptuelle Daten: `output_score/input_score ≥ 1.015` (1.5% Ratio-Fallback). (§v10.702 B1) |
+| §G133 | **Per-Defekt-Reduktions-Pflicht** | Nach der Restauration MUSS ein Pre-vs-Post-DefectScan pro Defekttyp die Severity-Reduktion berechnen (pre, post, reduction, reduction_pct). Das Ergebnis MUSS unter `RestorationResult.metadata["defect_reduction_per_type"]` und im `_mqa_result` gespeichert werden. (§v10.702 B2) |
+| §G134 | **Defekt-Transparenz** | Die GUI MUSS für jeden Defekttyp die individuelle Reduktionsrate anzeigen können. Kein "Blackbox"-Qualitätswert — jeder Defekt wird einzeln ausgewiesen. Der Logger MUSS die Reduktion pro Defekttyp protokollieren. (§v10.702 B2) |
+| §G135 | **Chunked-Streaming-Determinismus-Pflicht** | `_restore_chunked()` MUSS nach Chunk 0 den kompletten Pre-Analysis-State einfrieren (CalibrationProfile, RestorationContext, AutosetupPolicy, ExecutedPhases, RestorabilityScore) und für alle Folge-Chunks via `_b3_frozen_*` kwargs injizieren. Alle Chunks MÜSSEN identische Phasen und Parameter wie Chunk 0 verwenden. (§v10.702 B3) |
+| §G136 | **Wiederholungs-Reproduzierbarkeit** | Derselbe Input (Audio-Datei) MUSS bei wiederholter Ausführung denselben Output liefern. Jeder Zufallsgenerator wird mit deterministischem Seed initialisiert (§G22). Chunked-Streaming ist keine Ausnahme: gleiche Phasen, gleiche Parameter, gleiches Ergebnis. (§v10.702 B3) |
+| §G137 | **Full-Song-Defekt-Presence-Pflicht** | Vor dem Chunked-Streaming-Chunking MUSS `scan_defect_presence()` das GESAMTE Audio auf Defekt-Typen scannen (stratifizierte Fenster, max. 10 × 60s). Fehlende Defekt-Typen MÜSSEN VOR CausalReasoner/Denker in `defect_result.scores` gemerged werden (severity=0.06, confidence=0.30). Der Phasen-Plan MUSS Phasen für ALLE im Gesamt-Song vorhandenen Defekt-Typen enthalten — nicht nur für die, die Chunk 0 zufällig sieht. (§v10.702 B3-P2) |
+
+### Neue VERBOTE — SOTA-Reproduzierbarkeit (§V40–§V42)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V40 | **BlindQuality-als-Ground-Truth-Verbot** | Es ist VERBOTEN, den BlindQualityScore (SNR/THD/bandbreite) als alleinige Verbesserungs-Metrik zu verwenden, wenn MUSHRA/HPI-Daten verfügbar sind. BlindQuality bestraft Rauschentfernung und darf die perzeptuelle Bewertung nicht überschreiben. (§v10.702 B1) |
+| §V41 | **Blackbox-Qualitätswert-Verbot** | Es ist VERBOTEN, einen aggregierten Einzelwert als einzige Qualitätsaussage zu präsentieren, wenn `defect_reduction_per_type` mit Pre-vs-Post-Reduktion pro Defekttyp verfügbar ist. Die Reduktion MUSS pro Defekt nachvollziehbar sein. (§v10.702 B2) |
+| §V42 | **Nicht-deterministisches-Chunking-Verbot** | Es ist VERBOTEN, dass verschiedene Chunks eines Chunked-Streaming-Laufs unterschiedliche Phasen-Selektionen oder Kalibrierungs-Parameter erhalten. Der Pre-Analysis-State von Chunk 0 MUSS deterministisch auf alle Folge-Chunks übertragen werden. (§v10.702 B3) |
+
+---
+
+## Kategorie XX — Perzeptueller Autopilot: Wohlklang-Garantien (§G138–§G141)
+
+> §v10.703 — Prämisse: Aurik positioniert sich als „Perzeptueller Autopilot".
+> Nicht: Werkzeugkasten für Toningenieure (RX 11). Sondern: Ein-Knopf-Garantie
+> für hörbare Verbesserung, messbare Defekt-Reduktion und garantierten Wohlklang.
+> Diese Kategorie kodifiziert die vier architektonischen Pfeiler.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G138 | **BlindQuality-Verbot-im-Gate** | Der BlindQualityScore (SNR/THD) darf IM QUALITY-GATE NICHT als Verbesserungs-Metrik verwendet werden. Die EINZIGE zulässige Metrik ist `musical_improvement` (perzeptuell gewichtet). Ohne MUSHRA/HPI: QUALITY_UNCERTAIN — keine falsche Garantie bei fehlenden perzeptuellen Daten. (§v10.703 Step 3, §V40) |
+| §G139 | **Defekt-Countdown-Pflicht** | Nach der Restauration MUSS ein `defect_countdown`-Dict berechnet werden: total_detected, audible_before, audible_after, resolved, reduced, zero_audible_defects. Die GUI MUSS diesen Countdown anzeigen: „3 Defekte → 2 behoben → 0 hörbar ✅". (§v10.703 Step 1) |
+| §G140 | **Export-Gate-Pflicht** | Vor JEDEM Export MUSS `export_gate()` aufgerufen werden. Das Gate prüft: Zero Audible Defects, Quality Guaranteed, Wohlklang-Garantie. Es MUSS Garantien (✅) und Warnungen (⚠️) ausweisen — darf den Export aber NICHT blockieren. (§v10.703 Step 2) |
+| §G141 | **Wohlklang-Garantie-Pflicht** | Nach JEDER Restauration MUSS `wohlklang_garantie_check()` den MUSHRA-Score prüfen. MUSHRA ≥ 80 → Wohlklang garantiert. MUSHRA < 80 → ReRun-Empfehlung mit berechneten sanfteren Parametern (global_scalar -Δ, strength × Faktor). Der Nutzer MUSS die Empfehlung in der GUI sehen. (§v10.703 Step 4) |
+
+### Neue VERBOTE — Perzeptueller Autopilot (§V43–§V44)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V43 | **Export-ohne-Gate-Verbot** | Es ist VERBOTEN, einen Export ohne vorherigen `export_gate()`-Aufruf durchzuführen. Das Gate muss gelaufen sein und seine Ergebnisse müssen im Export-Log erscheinen. |
+| §V44 | **MUSHRA-Ignoranz-Verbot** | Es ist VERBOTEN, einen MUSHRA-Score < 80 ohne Wohlklang-Warnung an den Nutzer zu akzeptieren. Der Nutzer MUSS informiert werden, dass die Wohlklang-Garantie nicht erfüllt ist und ein ReRun empfohlen wird. |
+
+---
+
+## Kategorie XXI — Perzeptueller Closed-Loop: Per-Band-Hören (§G142–§G145)
+
+> §v10.703 Steps 5+6 — Prämisse: Aurik simuliert das menschliche Ohr AUF DER EBENE
+> DER KRITISCHEN BÄNDER. Kein skalarer Score. Keine mathematische Metrik.
+> Jede Phase fragt: „Hat sich der Klang pro Bark-Band verbessert oder verschlechtert?"
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G142 | **Per-Band-MUSHRA-Pflicht** | Die MQA MUSS `compute_per_band_mushra()` aus `backend.core.per_band_mushra` aufrufen. Das Ergebnis (24 Bark-Bänder × MUSHRA 0–100) MUSS in `RestorationResult.metadata["per_band_mushra"]` gespeichert werden. Die GUI MUSS eine spektrale Wohlklang-Heatmap anzeigen können. (§v10.703 Step 5) |
+| §G143 | **Bark-Band-Blend-Pflicht** | Wenn Per-Band-MUSHRA verfügbar ist, MUSS der Wet/Dry-Mix `perceptual_blend_per_band()` verwenden — NICHT `perceptual_blend()` (skalar). Nur in Bark-Bändern mit perzeptueller Verbesserung wird das Wet-Signal übernommen. In allen anderen Bändern bleibt das Dry-Signal erhalten. (§v10.703 Step 5) |
+| §G144 | **MUSHRA-Proxy-Pflicht** | JEDE Phase MUSS nach der Ausführung den `MUSHRAProxy` konsultieren. Der Proxy schätzt MUSHRA vorher/nachher in <100ms via leichten MERT-Embedding-Vergleich. Das Delta (post−pre) MUSS in `result.metadata["mushra_proxy_delta"]` gespeichert werden. (§v10.703 Step 6) |
+| §G145 | **Perzeptueller-Rollback-Pflicht** | Wenn `mushra_proxy_delta ≤ 0` (keine hörbare Verbesserung oder Verschlechterung), MUSS die Phase auf Pre-Phase-Audio zurückgesetzt werden. `result.audio = pre_phase_audio.copy()`. `result.metadata["mushra_proxy_rollback"] = True`. Der Rollback MUSS als Warning geloggt werden — er ist kein Fehler, sondern ein Qualitätsmerkmal. (§v10.703 Step 6) |
+
+### Neue VERBOTE — Perzeptueller Closed-Loop (§V45–§V46)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V45 | **Ungeprüfte-Phase-Verbot** | Es ist VERBOTEN, eine Phase ohne MUSHRA-Proxy-Prüfung abzuschließen, wenn `_perceptual_closed_loop=True` (Default). Der Proxy muss gelaufen sein und das Delta muss in den Metadaten stehen. |
+| §V46 | **Delta-Ignoranz-Verbot** | Es ist VERBOTEN, ein negatives MUSHRA-Proxy-Delta (perzeptuelle Verschlechterung) zu ignorieren. Bei Δ ≤ 0 MUSS ein Rollback erfolgen. Kein „es war nur eine kleine Verschlechterung" — das menschliche Ohr ist der Richter. |
+
+---
+
+## Kategorie XXII — Architektonische Qualitäts-Garantien: Metrik-Hierarchie & Guard-Disziplin (§G150–§G155)
+
+> §v10.704 — Prämisse: 20 Bugs in der Produktionsanalyse haben drei systemische
+> Schwachstellen offengelegt: (1) Guards widersprechen sich mangels Metrik-Hierarchie,
+> (2) Guards kennen den Phasen-Kontext nicht, (3) Schwellwerte sind hartcodiert statt
+> adaptiv. Diese Kategorie kodifiziert die architektonischen Heilungsmaßnahmen.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G150 | **Metrik-Hierarchie-Pflicht** | Aurik MUSS eine definitive Hierarchie der Qualitätsmetriken einhalten: Priorität 1 = MUSHRA/HPI (perzeptuell), Priorität 2 = Defekt-Reduktion (B2-Daten), Priorität 3 = artifact_freedom (nur VETO bei >5 Artefakten), Priorität 4 = BlindQuality (NUR Diagnostik, NIE Quality-Gate). Keine niedrigere Metrik darf das Urteil einer höheren überschreiben. |
+| §G151 | **MUSHRA-Primat** | Wenn MUSHRA > 0 (perzeptuelle Daten verfügbar), MUSS MUSHRA die primäre Ground Truth für ALLE Quality-Gate-Entscheidungen sein. artifact_freedom und BlindQuality dürfen NIEMALS ein positives MUSHRA-Urteil negieren. |
+| §G152 | **BlindQuality-Diagnostik-Verbot** | Der BlindQualityScore (SNR/THD/Bandbreite) darf AUSSCHLIESSLICH für technische Diagnostik verwendet werden. Er darf NIEMALS in `quality_guaranteed`, `verdict` oder `export_gate` einfließen. Verstoß → §V40 (bestehend). |
+| §G153 | **Guard-Phasen-Whitelist-Pflicht** | Jeder Quality-Guard (AFG, VocalNoHarm, FormantGuard, CIG, SFT, PMGG) MUSS deklarieren, für welche Phasen-Familien er zuständig ist. Eine Phase, deren Familie nicht in der Whitelist des Guards steht, wird von diesem Guard ÜBERSPRUNGEN. Kein Guard läuft盲 auf allen Phasen. |
+| §G154 | **Adaptive-Schwellwert-Pflicht** | Jeder Schwellwert in Quality-Gates MUSS aus Material-Typ, Transfer-Chain-Depth und Phasen-Familie ABGELEITET werden — NIEMALS hartcodiert. Formel: `threshold = base_threshold × material_factor × depth_factor × phase_factor`. Die Tabelle der Material/Depth/Phase-Faktoren MUSS zentral in `calibrated_constants.py` definiert sein. |
+| §G155 | **Quality-Entscheidungs-Narrativ-Pflicht** | Jede Quality-Gate-Entscheidung (Verdict, Rollback, Skip) MUSS im GUI-Narrativ BEGRÜNDET werden — mit Bezug auf die konkrete Metrik, den Schwellwert und die Phasen-Familie. Kein „NO IMPROVEMENT" ohne Erklärung. Kein Rollback ohne „Warum". Der Nutzer MUSS verstehen, WARUM Aurik so entschieden hat. |
+
+### Neue VERBOTE — Architektonische Qualitäts-Garantien (§V47–§V49)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V47 | **Metrik-Unterordnung-Verbot** | Es ist VERBOTEN, dass eine niedrigprioritäre Metrik (artifact_freedom, BlindQuality) das Urteil einer höherprioritären Metrik (MUSHRA, HPI) überschreibt oder negiert. |
+| §V48 | **Guard-Kontext-Ignoranz-Verbot** | Es ist VERBOTEN, einen Quality-Guard auf einer Phase laufen zu lassen, deren Phasen-Familie nicht in der Whitelist des Guards deklariert ist. |
+| §V49 | **Hartcodierter-Schwellwert-Verbot** | Es ist VERBOTEN, einen Quality-Gate-Schwellwert hart zu codieren. Alle Schwellwerte MÜSSEN via `calibrated_constants.py` aus Material+Depth+Phase abgeleitet werden. |
+
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
 | --------- | ------- | ---------- |
+| 10.17.0 | 2026-08-03 | **§G167–§G172 + §V52: Denker-IQ & Material-Awareness.** B30-Komplettierung (3 Export-Gates). B5: MERT-MUSHRA-Fix. B6–B10: Chain-Injection + PID-Validierung + StrategieDenker-Budget. B11: SourceMediumProfile → SongCalibration. B12–B16: SMP in Phase_29/07/26/54/36. B17: OneTakeExport ISP-Margin. Drei-Schicht-Material-Intelligenz. 10 Dateien. (§v10.706) |
+| 10.16.1 | 2026-08-02 | **§G156–§G166 + §V50–§V51: Restorability-Gate & Bugfixes B19–B30.** B30: Depth+Restorability-adaptiver HPI-Gate. B26: Sample-Axis-Fix. B27: MUSHRA/HPI→MQA. B19: AFG-Threshold. B28: Chunked-Längenwarnung. B29: P5-Traceback-Diagnostik. Drei-Quellen-Synchronisation. Kategorie XXIII. (§v10.704) |
+| 10.16.0 | 2026-08-03 | **§G150–§G155 + §V47–§V49: Metrik-Hierarchie & Guard-Disziplin.** S1: Metrik-Hierarchie in MQA. S2: Guard-Phasen-Whitelist (AFG). S3: Adaptive-Schwellwert-Pflicht. S4: Quality-Entscheidungs-Narrativ. Kategorie XXII. (§v10.704) |
+| 10.15.0 | 2026-08-03 | **§G142–§G145 + §V45–§V46: Perzeptueller Closed-Loop.** Step 5: Per-Band-MUSHRA (24 Bark-Bänder). Step 6: MUSHRA-Proxy in PhaseInterface._safe_process(). Perzeptueller Rollback bei Δ≤0. Kategorie XXI. (§v10.703) |
+| 10.15.0 | 2026-08-03 | **§G138–§G141 + §V43–§V44: Perzeptueller Autopilot.** Step 1: Defekt-Countdown. Step 2: Export-Garantie. Step 3: BlindQuality aus MQA entfernt. Step 4: Wohlklang-Garantie. Kategorie XX. (§v10.703) |
+| 10.14.2 | 2026-08-03 | **§G131–§G137 + §V40–§V42: SOTA-Reproduzierbarkeit.** B1: Perzeptuelle Verbesserungs-Metrik statt BlindQuality. B2: Per-Defekt-Reduktions-Transparenz. B3: Chunked-Streaming-Determinismus. B3-P2: Full-Song Defect-Presence Pre-Scan (§G137). 3 Compliance-Fixes (R01/R02/R11). Kategorie XIX. (§v10.702) |
+| 10.14.1 | 2026-08-02 | **§G122–§G130: Laufzeit-Qualitätsgarantien.** LUFS-Cap, Closed-Loop-Empfindlichkeit, ExcellenceOptimizer-Hysterese, MDEM-Per-5-Phasen, De-Esser-Skip, Scope-Garantie, GDD-Budget, Rollback-Sanity, PresenceEmbedding. Kategorie XVIII. (§v10.702) |
 | 10.0.18 | 2026-08 | **§v10.120–§v10.124: Depth-Threshold Calibration-Shift & Major-Version-Upgrade.** Chain-Depth-Paradigma §G71 flächendeckend: depth≥3=moderat, depth≥4=deep cassette, depth≥5=extrem. Alle 6 Quality-Gates depth-adaptiv. 18 Guard-Migrationen, 8 CIG-Exclusions, 17 Phasen mit bw_extension_context. MERT-Referenzspeicher depth-adaptiv (AF≥0.75 für Depth≥4). NaturalnessOptimizer Attack-Perzentil 90→95 adaptiv. Goosebumps-Recovery-HPI-Fix. 46 Dateien. Specs: §18, §19. |
 | 10.0.16 | 2026 | §G113–§G120: Universelle Phasen-Sicherheit & Excellence-Kalibrierung. RMS-Guard, Transient-Shift, Hallucination-Guard, Formant-Guard, Groove-Guard, HPI-Gate, Silence-Guard, RX11-Kalibrierung. Kategorie XVII. (§v10.112–§v10.117) |
-| 10.0.15 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
+| 10.14.0 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
 | 10.0.14 | 2026-08-10 | §G90–§G99: Non-Plus-Ultra. Blinder Referenz-Vektor, Exception-Proxies, Cross-Phase-Koordination, NaN-Guards, Material-Vollständigkeit. Kategorie XV. |
 | 10.0.14 | 2026-07-30 | **§G71–§G80 (spec_constitution): Startup-Integration & Kommunikation.** GPU-Detection failsafe, Lock-Disziplin, Plugin-Namen-Validierung, Watchdog-Selbsttest, Cache-Safety, Happy-Path-Gate, Startup-Smoke-Test, Import-Check, Event-Garantie, Probe-Invocation. Kategorie XII. (§v10.305) |

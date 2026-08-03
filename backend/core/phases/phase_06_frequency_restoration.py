@@ -465,6 +465,21 @@ class FrequencyRestorationPhase(PhaseInterface):
         # Get material-specific parameters (mutable copy for source-fidelity overrides)
         params: dict[str, Any] = self.MATERIAL_PARAMS.get(material_type, self.MATERIAL_PARAMS["unknown"]).copy()
 
+        # §v10.705 B7: Bandwidth-Cap aus SourceMediumProfile — physikalische
+        # Grenze des Trägermediums darf nicht überschritten werden.
+        try:
+            from backend.core.source_medium_profile import get_medium_profile
+
+            _smp = get_medium_profile(str(material_type).lower().replace("_", "-"))
+            _bw_cap = float(_smp.max_bandwidth_hz)
+            if _bw_cap > 0:
+                _old_rolloff = float(params.get("rolloff_hz", 20000.0))
+                params["rolloff_hz"] = min(_old_rolloff, _bw_cap)
+                _ext = list(params.get("extension_range_hz", [10000, 16000]))
+                params["extension_range_hz"] = [min(_ext[0], _bw_cap), min(_ext[1], _bw_cap)]
+        except Exception:
+            pass  # Non-blocking: SourceMediumProfile nicht verfügbar
+
         # §2.41 Source-Fidelity: Zielbandbreite aus SongCalibrationProfile nutzen.
         # Wenn das Original eine höhere Bandbreite hatte als der Träger normalerweise
         # liefert, max_boost_db konservativ anheben (max. +4 dB extra, skaliert mit
@@ -598,7 +613,8 @@ class FrequencyRestorationPhase(PhaseInterface):
                 use_ml_hybrid = False
                 logger.info(
                     "§v10.200 Phase_06 depth=%d terminal=%s → DSP-only (NVSR/FlashSR skipped — tonal_center safety)",
-                    _td_p06, _term,
+                    _td_p06,
+                    _term,
                 )
             else:
                 # ML erlaubt mit reduziertem Cap
@@ -606,7 +622,10 @@ class FrequencyRestorationPhase(PhaseInterface):
                 kwargs["ml_strength_cap"] = min(_prev_cap, 0.50)
                 logger.info(
                     "§v10.300 Phase_06 depth=%d terminal=%s → ML mit strength-cap=%.2f (statt %.2f)",
-                    _td_p06, _term, kwargs["ml_strength_cap"], _prev_cap,
+                    _td_p06,
+                    _term,
+                    kwargs["ml_strength_cap"],
+                    _prev_cap,
                 )
 
         if use_ml_hybrid:

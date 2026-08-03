@@ -399,7 +399,8 @@ class AurikDenker:
                 audio = audio[:preview_samples].copy()
             logger.info(
                 "§3.5 Preview: Audio auf %.1fs getrimmt (Original: %.1fs)",
-                _PREVIEW_DURATION_S, original_duration_s,
+                _PREVIEW_DURATION_S,
+                original_duration_s,
             )
             # Preview läuft immer mit no_rt_limit für schnellstmögliche Vorschau
             no_rt_limit = True
@@ -822,7 +823,7 @@ class AurikDenker:
 
             get_watchdog().on_phase_start(name)
         except Exception:
-            pass
+            logger.debug("aurik_denker.py:825: Silent exception absorbed", exc_info=True)
 
     def _wd_phase_end(self, name: str, audio: np.ndarray | None = None, sr: int = 48000) -> None:
         """Non-blocking watchdog phase end (ignores all errors)."""
@@ -832,7 +833,7 @@ class AurikDenker:
             if audio is not None:
                 get_watchdog().on_phase_end(name, audio, sr)
         except Exception:
-            pass
+            logger.debug("aurik_denker.py:835: Silent exception absorbed", exc_info=True)
 
     @staticmethod
     def _compute_signal_intelligence_signature(audio: np.ndarray, sr: int) -> dict[str, float]:
@@ -1515,7 +1516,7 @@ class AurikDenker:
                         chain_info=chain_info,
                     )
                 except Exception:
-                    pass  # auch DSP-Fallback fehlgeschlagen — downstream-Code muss None tolerieren
+                    logger.debug("aurik_denker.py:1518: Silent exception absorbed", exc_info=True)
         finally:
             self._wd_phase_end("globalplan", aktuelles_audio, sr)
 
@@ -1543,11 +1544,22 @@ class AurikDenker:
             import concurrent.futures as _cf_strat
 
             def _plan_with_timeout() -> Any:
+                # §v10.706 Denker-IQ: chain_depth für adaptives Budget
+                _strat_chain = chain_info.get("chain", []) if isinstance(chain_info, dict) else []
+                _strat_depth = max(1, len(_strat_chain)) if isinstance(_strat_chain, list) else 1
+                _strat_rs = (
+                    float(getattr(cached_restorability_result, "restorability_score", 70.0))
+                    if cached_restorability_result is not None
+                    else 70.0
+                )
                 return strat_denker.plan(
-                    aktuelles_audio, sr,
+                    aktuelles_audio,
+                    sr,
                     enforce_3x_rt=True,
                     defect_severity=_defect_sev_for_plan,
                     signal_signature=_signal_signature,
+                    chain_depth=_strat_depth,
+                    restorability_score=_strat_rs,
                 )
 
             _strat_future = _cf_strat.ThreadPoolExecutor(max_workers=1).submit(_plan_with_timeout)
@@ -1555,8 +1567,7 @@ class AurikDenker:
                 strategie = _strat_future.result(timeout=120.0)
             except (_cf_strat.TimeoutError, TimeoutError):
                 logger.warning(
-                    "§v10.304.18 StrategieDenker Timeout nach 120s — "
-                    "verwende Default-Plan (GPU-Init blockiert)"
+                    "§v10.304.18 StrategieDenker Timeout nach 120s — verwende Default-Plan (GPU-Init blockiert)"
                 )
                 strategie = None  # Fallback: wird unten als Default gehandhabt
                 _strat_future.cancel()

@@ -160,6 +160,16 @@ class TransientShaper(PhaseInterface):
         if _bw > 0.80:
             logger.info("Phase 36: skipped — bandwidth_loss=%.2f > 0.80 (fragile material)", _bw)
             return PhaseResult(success=True, audio=audio, metadata={"skipped": "fragile"})
+        # §v10.706 B16: SMP has_soft_saturation → Tape-Sättigung weicht Transienten auf
+        _mat_val = str(getattr(material, "value", material)).lower() if material else "unknown"
+        try:
+            from backend.core.source_medium_profile import get_medium_profile
+
+            if getattr(get_medium_profile(_mat_val), "has_soft_saturation", False):
+                kwargs = dict(kwargs)
+                kwargs["strength"] = float(kwargs.get("strength", 1.0)) * 0.80
+        except Exception:
+            logger.debug("Phase_36: SourceMediumProfile nicht verfügbar — has_soft_saturation-Check übersprungen")
         return self._process_impl(audio, sample_rate, material, **kwargs)
 
     def _process_impl(  # type: ignore[override]
