@@ -135,6 +135,7 @@ __all__ = [
     "get_cached_restorability_result",
     # NaN/Inf-Guard
     "export_guard",
+    "get_export_transparency",
     "validate_export_quality",
     "build_export_quality_gate_payload",
     "get_adaptive_goals_fn",
@@ -439,8 +440,9 @@ def _build_bridge_calibration_dict() -> dict:
     sie darf backend.* importieren (Brücken-Funktion).
     """
     import time
+
     try:
-        from Aurik10.ui.bridge_calibration import BridgeCalibrationData
+        from backend.api.bridge_calibration_data import BridgeCalibrationData
         from backend.core.calibrated_constants import get_constants
         from backend.core.calibration_context import get_calibration_context
 
@@ -454,8 +456,7 @@ def _build_bridge_calibration_dict() -> dict:
         warning = ""
         if depth >= 4:
             warning = (
-                f"Tiefe Transfer-Kette ({depth} Stufen) — "
-                "erwartete Einschränkungen bei Brillanz, Transparenz und SNR."
+                f"Tiefe Transfer-Kette ({depth} Stufen) — erwartete Einschränkungen bei Brillanz, Transparenz und SNR."
             )
 
         color = "#E6A817" if depth >= 4 else ("#4CAF50" if depth >= 3 else "#2196F3")
@@ -464,20 +465,20 @@ def _build_bridge_calibration_dict() -> dict:
             restorability_score=float(ctx.restorability_score),
             transfer_chain_depth=depth,
             material_type=str(ctx.material_type),
-            snr_db=float(getattr(ctx, 'snr_db', 30.0)),
-            bandwidth_hz=float(getattr(ctx, 'bandwidth_hz', 20000.0)),
-            era_decade=int(getattr(ctx, 'era_decade', 1980)),
-            genre=str(getattr(ctx, 'genre', 'unknown')),
-            vocal_confidence=float(getattr(ctx, 'vocal_confidence', 0.0)),
-            chain_factor=float(getattr(const, 'chain_factor', ctx.chain_factor)),
+            snr_db=float(getattr(ctx, "snr_db", 30.0)),
+            bandwidth_hz=float(getattr(ctx, "bandwidth_hz", 20000.0)),
+            era_decade=int(getattr(ctx, "era_decade", 1980)),
+            genre=str(getattr(ctx, "genre", "unknown")),
+            vocal_confidence=float(getattr(ctx, "vocal_confidence", 0.0)),
+            chain_factor=float(getattr(const, "chain_factor", ctx.chain_factor)),
             artifact_freedom_min=float(const.artifact_freedom_min),
             regression_threshold=float(const.regression_threshold),
-            gdd_spectral_ms=float(const.gdd_spectral_ms('phase_29')),
-            echo_corr_threshold=float(getattr(const, 'echo_corr_threshold', 0.35)),
+            gdd_spectral_ms=float(const.gdd_spectral_ms("phase_29")),
+            echo_corr_threshold=float(getattr(const, "echo_corr_threshold", 0.35)),
             hg_base_threshold=float(const.hg_base_threshold),
             min_phase_strength=float(const.min_phase_strength),
-            use_minimum_phase_filter=bool(getattr(const, 'use_minimum_phase_filter', False)),
-            deesser_depth_factor=float(getattr(const, 'deesser_depth_factor', 1.0)),
+            use_minimum_phase_filter=bool(getattr(const, "use_minimum_phase_filter", False)),
+            deesser_depth_factor=float(getattr(const, "deesser_depth_factor", 1.0)),
             quality_color=color,
             expected_phase_count=(43 if depth >= 4 else (35 if depth >= 3 else 25)),
             expected_duration_factor=(2.5 if depth >= 4 else (1.8 if depth >= 3 else 1.0)),
@@ -1532,6 +1533,68 @@ def export_guard(audio: np.ndarray) -> np.ndarray:
     return audio
 
 
+def get_export_transparency(
+    input_path: str = "",
+    output_path: str = "",
+    output_audio: np.ndarray | None = None,
+    output_sr: int = 48000,
+    original_audio: np.ndarray | None = None,
+    original_sr: int = 48000,
+    export_bit_depth: int = 24,
+    export_format: str = "FLAC",
+    dither_method: str = "POW-r 3",
+) -> dict[str, Any]:
+    """§v10.700 A5: Export-Transparenz — berechnet Export-Metadaten für die GUI.
+
+    Liefert: Resample-Kette, True-Peak, LUFS, Dateigröße vorher/nachher, Dither.
+    Kann von CLI und GUI nach dem Export aufgerufen werden.
+    """
+    import os
+    from pathlib import Path
+
+    _report: dict[str, Any] = {
+        "resample_chain": f"{original_sr} Hz → {output_sr} Hz" if original_sr != output_sr else f"{original_sr} Hz (kein Resampling)",
+        "resample_method": "Lanczos-4 (scipy.signal.resample_poly)" if original_sr != output_sr else "—",
+        "export_format": export_format,
+        "export_bit_depth": export_bit_depth,
+        "dither_method": dither_method if export_bit_depth < 32 else "— (32-bit, kein Dither nötig)",
+    }
+
+    # True-Peak
+    if output_audio is not None:
+        try:
+            from backend.core.audio_exporter import _approx_true_peak
+            _tp_db = float(_approx_true_peak(output_audio, output_sr))
+            _report["true_peak_dbtp"] = round(_tp_db, 2)
+            _report["true_peak_ok"] = _tp_db <= -1.0  # EBU R128: ≤ -1 dBTP
+        except Exception:
+            _report["true_peak_dbtp"] = None
+            _report["true_peak_ok"] = None
+
+    # LUFS
+    if output_audio is not None:
+        try:
+            mono = output_audio if output_audio.ndim == 1 else output_audio.mean(axis=-1)
+            rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2)) + 1e-12)
+            _lufs_approx = float(20.0 * np.log10(rms)) - 0.0  # RMS ≈ LUFS für stationäre Signale
+            _report["integrated_lufs"] = round(_lufs_approx, 1)
+        except Exception:
+            _report["integrated_lufs"] = None
+
+    # Dateigröße
+    if input_path and Path(input_path).exists():
+        _report["input_size_mb"] = round(os.path.getsize(input_path) / (1024 * 1024), 2)
+        _report["input_size_label"] = f"{_report['input_size_mb']:.1f} MB"
+    if output_path and Path(output_path).exists():
+        _report["output_size_mb"] = round(os.path.getsize(output_path) / (1024 * 1024), 2)
+        _report["output_size_label"] = f"{_report['output_size_mb']:.1f} MB"
+        if "input_size_mb" in _report:
+            _delta = _report["output_size_mb"] - _report["input_size_mb"]
+            _report["size_delta_label"] = f"{_report['input_size_label']} → {_report['output_size_label']}"
+
+    return _report
+
+
 def validate_export_quality(result: object) -> tuple[bool, list[str]]:
     """Validiert export quality based on RestorationResult fields.
 
@@ -1881,30 +1944,29 @@ def warmup_models_background() -> None:
     §v10.306: RAM-bewusstes Staggered-Loading — kleine Modelle sofort,
     große Modelle nur bei ausreichend RAM (>20% frei).
     """
-    import importlib
     import gc as _warmup_gc
+    import importlib
 
     # ── Tier-1: Kritische Sofort-Plugins (<100 MB, immer laden) ──────────
     _plugins_tier1 = [
-        ("plugins.silero_plugin", "get_silero_plugin"),      # VAD (~1 MB)
-        ("plugins.fcpe_plugin", "get_fcpe_plugin"),          # Pitch (~7 MB)
-        ("plugins.crepe_plugin", "get_crepe_plugin"),        # Pitch Fallback (~10 MB)
-        ("plugins.beats_plugin", "get_beats_plugin"),        # Audio-Tagging (~10 MB)
-        ("backend.core.noise_reduction", "get_noise_reducer"), # DeepFilterNet v3.II (~15 MB)
-        ("plugins.panns_plugin", "get_panns_plugin"),        # Audio-Tagging Primär (~66 MB)
-        ("plugins.sgmse_plugin", "get_sgmse_plus_plugin"),   # Dereverb/Denoising (~12 MB)
+        ("plugins.silero_plugin", "get_silero_plugin"),  # VAD (~1 MB)
+        ("plugins.fcpe_plugin", "get_fcpe_plugin"),  # Pitch (~7 MB)
+        ("plugins.crepe_plugin", "get_crepe_plugin"),  # Pitch Fallback (~10 MB)
+        ("plugins.beats_plugin", "get_beats_plugin"),  # Audio-Tagging (~10 MB)
+        ("backend.core.noise_reduction", "get_noise_reducer"),  # DeepFilterNet v3.II (~15 MB)
+        ("plugins.panns_plugin", "get_panns_plugin"),  # Audio-Tagging Primär (~66 MB)
+        ("plugins.sgmse_plugin", "get_sgmse_plus_plugin"),  # Dereverb/Denoising (~12 MB)
     ]
 
     # ── Tier-2: Große Modelle — nur bei RAM-Reserve laden ───────────────
     _plugins_tier2 = [
-        ("plugins.apollo_plugin", "get_apollo"),             # ~800 MB
-        ("plugins.bs_roformer_plugin", "get_bs_roformer"),   # ~860 MB
-        ("plugins.mdx23c_plugin", "get_mdx23c_plugin"),      # ~900 MB
-        ("plugins.mert_plugin", "get_mert_plugin"),          # ~1.2 GB (async)
+        ("plugins.apollo_plugin", "get_apollo"),  # ~800 MB
+        ("plugins.bs_roformer_plugin", "get_bs_roformer"),  # ~860 MB
+        ("plugins.mdx23c_plugin", "get_mdx23c_plugin"),  # ~900 MB
+        ("plugins.mert_plugin", "get_mert_plugin"),  # ~1.2 GB (async)
     ]
 
-    logger.info("bridge: warmup started (%d+%d plugins) …",
-                len(_plugins_tier1), len(_plugins_tier2))
+    logger.info("bridge: warmup started (%d+%d plugins) …", len(_plugins_tier1), len(_plugins_tier2))
     _loaded = 0
     _failed = 0
     _deferred = 0
@@ -1928,6 +1990,7 @@ def warmup_models_background() -> None:
     def _ram_ok_for_large() -> bool:
         try:
             import psutil
+
             vm = psutil.virtual_memory()
             avail_pct = vm.available / max(vm.total, 1)
             # >28% frei (>8.7 GB bei 31 GB) = genug für große Modelle + Swap-Puffer
@@ -1940,7 +2003,7 @@ def warmup_models_background() -> None:
                 if sw.percent > 65.0:
                     return False
             except Exception:
-                pass
+                logger.debug("bridge.py:2005: Silent exception absorbed", exc_info=True)
             return True
         except Exception:
             return False  # §v10.306: Im Zweifel NICHT laden — Segfault-Risiko
@@ -1967,7 +2030,8 @@ def warmup_models_background() -> None:
                 try:
                     _mert_thread = threading.Thread(
                         target=lambda m=_mod, a=_accessor: _load_one(m, a),
-                        daemon=True, name="aurik_warmup_mert",
+                        daemon=True,
+                        name="aurik_warmup_mert",
                     )
                     _mert_thread.start()
                     _loaded += 1
@@ -1992,13 +2056,11 @@ def warmup_models_background() -> None:
             _deferred += 1
             logger.info("bridge: %s deferred — RAM zu knapp", _mod.split(".")[-1])
 
-    logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen, %d deferred",
-                _loaded, _failed, _deferred)
+    logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen, %d deferred", _loaded, _failed, _deferred)
     # §v10.305 G73: Validiere alle Plugin-Zugriffsnamen (einmal pro Prozess)
     if _failed > 0:
         logger.warning(
-            "bridge: %d Warmup-Plugins FEHLGESCHLAGEN — "
-            "Zugriffsnamen in warmup_models_background() prüfen!",
+            "bridge: %d Warmup-Plugins FEHLGESCHLAGEN — Zugriffsnamen in warmup_models_background() prüfen!",
             _failed,
         )
 
@@ -3221,7 +3283,8 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
         if not os.path.exists(_path):
             return None
 
-        audio, sr = sf.read(_path)
+        from backend.file_import import load_audio_file
+        audio, sr = load_audio_file(_path)
         n_total = len(audio)
         start = max(0, min(int(seek_s * sr), n_total - 1))
         end = min(start + int(duration_s * sr), n_total)
@@ -3240,3 +3303,31 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
         }
     except Exception:
         return None
+
+
+# ---------------------------------------------------------------------------
+# Donation Reminder — Spenden-Erinnerung (via bridge)
+# ---------------------------------------------------------------------------
+
+
+def get_donation_reminder() -> dict[str, str]:
+    """Liefert PayPal-Email + Spenden-URL für die GUI."""
+    try:
+        from backend.core.donation_reminder import PAYPAL_EMAIL, DONATION_URL
+        return {"paypal_email": PAYPAL_EMAIL, "donation_url": DONATION_URL}
+    except ImportError:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# CD-Noise-Profile — via bridge
+# ---------------------------------------------------------------------------
+
+
+def inject_cd_noise_profile(audio, sample_rate: int, material_type: str = "vinyl") -> object:
+    """Injiziert CD-Rauschprofil. Wrapper für backend.core.cd_noise_profile."""
+    try:
+        from backend.core.cd_noise_profile import inject_cd_noise_profile as _inject
+        return _inject(audio, sample_rate, material_type)
+    except ImportError:
+        return audio

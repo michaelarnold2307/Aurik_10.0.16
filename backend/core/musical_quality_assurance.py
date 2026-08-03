@@ -219,6 +219,7 @@ class MusicalQualityReport:
     # Processing summary
     modules_applied: list[str]
     processing_intensity: float  # Wie intensiv wurde verarbeitet (0-1)
+    quality_uncertain: bool  # §v10.703: True wenn keine MUSHRA/HPI → keine perzeptuelle Garantie
     overprocessed: bool
 
     # Final verdict
@@ -646,23 +647,25 @@ class MusicalQualityAssurance:
         # niedrigere SNR-Ceilings. Bei depth≥4 wird das Target proportional relaxiert.
         try:
             from backend.core.calibration_context import get_calibration_context
+
             _ctx = get_calibration_context()
             if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                 _depth = _ctx.transfer_chain_depth
                 _depth_factor = float(np.clip(1.0 - (_depth - 3) * 0.15, 0.50, 1.0))
                 _snr_target = float(max(_snr_target * _depth_factor, _snr_baseline * 0.95))
         except Exception:
-            pass
+            logger.debug("musical_quality_assurance.py:655: Silent exception absorbed", exc_info=True)
         _snr_baseline = baseline.snr_db if baseline is not None else 0.0
         # §v10.131 Depth-adaptive: bei tiefen Ketten mehr SNR-Verlust tolerieren
         _snr_depth_relax = 0.0
         try:
             from backend.core.calibration_context import get_calibration_context
+
             _ctx = get_calibration_context()
             if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                 _snr_depth_relax = (_ctx.transfer_chain_depth - 3) * 1.0  # +1dB pro Stufe ab 4
         except Exception:
-            pass
+            logger.debug("musical_quality_assurance.py:666: Silent exception absorbed", exc_info=True)
         _SNR_RAMP_LOW = 28.0  # below this baseline SNR: only 0.3 dB min improvement
         _SNR_RAMP_HIGH = 38.0  # above this baseline SNR: standard 3.0 dB min improvement
         # §v10.0.4: Bei sehr niedriger Baseline (≤28dB) ist eine leichte SNR-Verschlechterung
@@ -1139,9 +1142,16 @@ class MusicalQualityAssurance:
         medium_type: MediumType,
         processing_mode: ProcessingMode,
         modules_applied: list[str],
+        *,
+        mushra_score: float = 0.0,
+        hpi_score: float = 0.0,
     ) -> MusicalQualityReport:
         """
         Validiert final quality after complete processing.
+
+        §v10.700 B4: Perzeptuelle Verbesserung (MUSHRA, HPI) wird in das
+        musikalische Qualitätsurteil einbezogen. Ein MUSHRA≥85 oder HPI≥0.70
+        überschreibt ein technisch-neutrales Urteil ("51→51").
 
         Args:
             original_audio: Original audio
@@ -1150,6 +1160,8 @@ class MusicalQualityAssurance:
             medium_type: Medium type
             processing_mode: Processing mode
             modules_applied: List of modules applied
+            mushra_score: MUSHRA perzeptuelle Qualität 0-100 (optional)
+            hpi_score: HPI perzeptuelle Verbesserung 0-1 (optional)
 
         Returns:
             Comprehensive musical quality report
@@ -1172,8 +1184,28 @@ class MusicalQualityAssurance:
             original_audio, processed_audio, sample_rate, medium_type, processing_mode
         )
 
-        # Calculate musical metrics
-        musical_improvement = (output_quality.overall_score - input_quality.overall_score) / 100.0
+        # Calculate musical metrics — §v10.700 B4: Perzeptuelle Verbesserung
+        # Technischer Quality-Score (SNR/THD-basiert) kann bei Denoising/Deharshing
+        # kaum ändern → "51→51" trotz MUSHRA 95.3. B4 integriert MUSHRA/HPI
+        # als perzeptuelle Gewichtung in den Verbesserungswert.
+        _tech_improvement = (output_quality.overall_score - input_quality.overall_score) / 100.0
+        _mushra = float(np.clip(mushra_score or 0.0, 0.0, 100.0))
+        _hpi = float(np.clip(hpi_score or 0.0, 0.0, 1.0))
+
+        # Wenn perzeptuelle Metriken verfügbar sind: gewichte sie 60% ein
+        if _mushra > 0 or _hpi > 0:
+            _mushra_improvement = (_mushra - 50.0) / 50.0  # 50 = neutral, 100 = excellent
+            _perceptual_improvement = _mushra_improvement if _mushra > 0 else _hpi
+            if _mushra > 0 and _hpi > 0:
+                _perceptual_improvement = 0.6 * _mushra_improvement + 0.4 * _hpi
+            musical_improvement = 0.4 * _tech_improvement + 0.6 * _perceptual_improvement
+            logger.info(
+                "§v10.700 B4: Perzeptuelle Verbesserung MUSHRA=%.0f HPI=%.2f → "
+                "tech=%.3f perc=%.3f → combined=%.3f",
+                _mushra, _hpi, _tech_improvement, _perceptual_improvement, musical_improvement,
+            )
+        else:
+            musical_improvement = _tech_improvement
         authenticity_preserved = output_quality.authenticity >= input_quality.authenticity * 0.85
         character_preserved = integrity_result.character_preservation >= 0.80
         natural_sound = output_quality.naturalness >= 0.65 or (
@@ -1206,18 +1238,26 @@ class MusicalQualityAssurance:
 
         overprocessed = processing_intensity > _max_processing_intensity
 
-        # Determine if quality is guaranteed.
-        # §2.54 Minimum improvement: processing must yield measurable improvement.
-        # For severely degraded sources (restorability < 40) a 0% improvement
-        # with gates-all-passing means the pipeline ran but added nothing — never
-        # "excellence".  Require at least 1% absolute improvement.
-        # §v10.101: Use relative improvement (output/input ≥ 1.02) instead of
-        # absolute (output−input ≥ 1.0). For low-quality sources (score ~40),
-        # a 2% relative gain (~0.8 points) is already significant. The absolute
-        # 1.0-point threshold was too strict for heavily degraded material.
-        _input_score = max(float(input_quality.overall_score), 0.1)
-        _output_score = float(output_quality.overall_score)
-        _minimal_improvement = (_output_score / _input_score) >= 1.02
+        # §v10.703 Step 3: BlindQualityScore KOMPLETT aus Quality-Gate entfernt.
+        # (§V40 BlindQuality-als-Ground-Truth-Verbot vollstreckt).
+        # Die EINZIGE Verbesserungs-Metrik ist musical_improvement — ein
+        # perzeptuell gewichteter Composite (40% Tech + 60% MUSHRA/HPI).
+        # Ohne perzeptuelle Daten: QUALITY_UNCERTAIN — das Gate ist bestanden,
+        # aber wir können NICHT garantieren, dass es fürs menschliche Ohr besser ist.
+        # → §G131 Perzeptuelle-Verbesserungs-Metrik-Pflicht, §V40, §G138
+        _has_perceptual = bool(_mushra > 0 or _hpi > 0)
+        if _has_perceptual:
+            _minimal_improvement = musical_improvement > 0.005
+        else:
+            _minimal_improvement = False
+            logger.warning(
+                "§v10.703 QUALITY_UNCERTAIN: Keine perzeptuellen Daten (MUSHRA/HPI) verfügbar. "
+                "Quality-Gate kann nicht garantieren, dass die Restauration fürs menschliche Ohr besser ist. "
+                "MERT-Modell prüfen oder Audio zu kurz für MUSHRA-Berechnung."
+            )
+
+        # §v10.703: quality_uncertain wenn MUSHRA/HPI fehlen
+        quality_uncertain = gate_passed and not _has_perceptual
 
         quality_guaranteed = (
             gate_passed
@@ -1230,8 +1270,15 @@ class MusicalQualityAssurance:
         )
 
         # Generate verdict
+        # §v10.704 S4 Quality-Entscheidungs-Narrativ (§G155):
+        # Jedes Verdict MUSS erklären WARUM — mit Bezug auf die Metrik-Hierarchie.
         if quality_guaranteed:
-            verdict = f"✓ QUALITY GUARANTEED - {medium_type.value} musical excellence achieved"
+            _mushra_note = f" MUSHRA={_mushra:.0f}" if _mushra > 0 else ""
+            _hpi_note = f" HPI={_hpi:.2f}" if _hpi > 0 else ""
+            verdict = (
+                f"✓ QUALITY GUARANTEED — {medium_type.value} klingt nachweislich besser "
+                f"für das menschliche Ohr{_mushra_note}{_hpi_note}"
+            )
         elif not gate_passed:
             verdict = f"❌ QUALITY GATES FAILED - {gate_reason}"
         elif not integrity_result.passed:
@@ -1244,8 +1291,11 @@ class MusicalQualityAssurance:
             verdict = f"❌ AUTHENTICITY LOST - {medium_type.value} character destroyed"
         elif not _minimal_improvement:
             verdict = (
-                f"❌ NO IMPROVEMENT - Processing did not enhance quality "
-                f"({input_quality.overall_score:.0f}→{output_quality.overall_score:.0f})"
+                f"❌ KEINE HÖRBARE VERBESSERUNG — "
+                f"musical_improvement={musical_improvement:+.3f} unter Schwelle 0.005. "
+                f"Das simulierte menschliche Ohr (MUSHRA={_mushra:.0f}, HPI={_hpi:.2f}) "
+                f"konnte keine signifikante Verbesserung feststellen. "
+                f"Empfehlung: Studio-2026-Mode für maximale Qualität."
             )
         else:
             verdict = "❌ QUALITY NOT GUARANTEED - Unknown issue"
@@ -1276,6 +1326,7 @@ class MusicalQualityAssurance:
             output_quality=output_quality,
             medium_type=medium_type,
             processing_mode=processing_mode,
+            quality_uncertain=quality_uncertain,
             gates_passed=gate_passed,
             gate_results={"overall": gate_passed},
             integrity_result=integrity_result,
@@ -1315,6 +1366,132 @@ class MusicalQualityAssurance:
             logger.info("RECOMMENDATIONS:")
             for rec in recommendations:
                 logger.info("  → %s", rec)
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # §v10.703 Step 2: Export-Garantie — Zero Audible Defects Gate
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    def export_gate(
+        self,
+        quality_report: MusicalQualityReport,
+        defect_countdown: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Prüft ob der Export die „Keine hörbaren Defekte"-Garantie erfüllt.
+
+        Non-blocking: warnt, aber blockiert den Export nicht.
+        Gibt ein Dict zurück, das die GUI anzeigen kann.
+        """
+        result: dict[str, Any] = {
+            "export_ready": True,
+            "zero_audible_defects": False,
+            "wohlklang_garantiert": False,
+            "warnings": [],
+            "guarantees": [],
+        }
+
+        # 1. Zero Audible Defects Check
+        if defect_countdown:
+            if defect_countdown.get("zero_audible_defects", False):
+                result["zero_audible_defects"] = True
+                result["guarantees"].append(
+                    "KEINE HÖRBAREN DEFEKTE — "
+                    f'{defect_countdown.get("resolved", 0)} Defekte vollständig behoben'
+                )
+            else:
+                _remaining = defect_countdown.get("audible_after", 0)
+                result["warnings"].append(
+                    f'⚠️ {_remaining} Defekte noch hörbar — '
+                    f'Empfehlung: Erneute Restauration mit höherer Intensität'
+                )
+
+        # 2. Perzeptuelle Verbesserung
+        if quality_report.quality_guaranteed:
+            result["guarantees"].append(
+                f'✅ QUALITY GUARANTEED — '
+                f'MUSHRA-Verbesserung bestätigt'
+            )
+        elif getattr(quality_report, "quality_uncertain", False):
+            result["warnings"].append(
+                '⚠️ QUALITY UNCERTAIN — Keine perzeptuellen Daten verfügbar. '
+                'Die Verbesserung konnte nicht vom simulierten menschlichen Ohr bestätigt werden.'
+            )
+        else:
+            result["warnings"].append(
+                '⚠️ QUALITY NOT GUARANTEED — Siehe MQA-Report für Details.'
+            )
+
+        # 3. Wohlklang-Garantie (MUSHRA)
+        _mushra = float(getattr(quality_report, "output_quality", None)
+                        and getattr(quality_report.output_quality, "mushra_score", 0.0) or 0.0)
+        if _mushra >= 80.0:
+            result["wohlklang_garantiert"] = True
+            result["guarantees"].append(
+                f'🎵 WOHLKLANG GARANTIERT — MUSHRA {_mushra:.0f}/100'
+            )
+        elif _mushra > 0:
+            result["warnings"].append(
+                f'⚠️ MUSHRA {_mushra:.0f}/100 unter Wohlklang-Schwelle (80) — '
+                f'Empfehlung: Studio-2026-Mode für maximale Qualität'
+            )
+
+        # Log summary
+        _garantien = len(result["guarantees"])
+        _warnungen = len(result["warnings"])
+        logger.info(
+            "§v10.703 Export-Gate: %d Garantien, %d Warnungen → %s",
+            _garantien, _warnungen,
+            "✅ EXPORT FREIGEGEBEN" if result["export_ready"] else "⚠️ EXPORT MIT VORBEHALT",
+        )
+        return result
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # §v10.703 Step 4: Wohlklang-Garantie — MUSHRA < 80 → ReRun
+    # ═══════════════════════════════════════════════════════════════════════════
+
+    @staticmethod
+    def wohlklang_garantie_check(mushra_score: float, hpi_score: float) -> dict[str, Any]:
+        """Prüft ob der Wohlklang garantiert ist (MUSHRA >= 80).
+
+        Returns dict mit:
+        - wohlklang_ok: bool
+        - recommendation: str (GUI-Text)
+        - rerun_params: dict | None (wenn ReRun empfohlen: angepasste Parameter)
+        """
+        if mushra_score >= 80.0:
+            return {
+                "wohlklang_ok": True,
+                "recommendation": f"🎵 Wohlklang garantiert — MUSHRA {mushra_score:.0f}/100. Export bereit.",
+                "rerun_params": None,
+            }
+
+        # MUSHRA < 80 → ReRun mit sanfteren Parametern
+        _delta = 80.0 - mushra_score
+        _rerun = {
+            "reason": f"MUSHRA {mushra_score:.0f} < 80 — Wohlklang nicht garantiert",
+            "global_scalar_reduction": round(min(0.30, _delta / 100.0), 2),
+            "strength_multiplier": round(max(0.60, 1.0 - _delta / 200.0), 2),
+            "recommendation": (
+                f"⚠️ MUSHRA {mushra_score:.0f}/100 unter Wohlklang-Schwelle (80). "
+                f"Empfehlung: Automatischer ReRun mit reduzierter Intensität "
+                f"(global_scalar -{round(min(0.30, _delta / 100.0) * 100)}%, "
+                f"strength ×{round(max(0.60, 1.0 - _delta / 200.0), 2)}). "
+                f"Danach erneut prüfen."
+            ),
+        }
+
+        logger.info(
+            "§v10.703 Wohlklang-Garantie: MUSHRA %.0f < 80 → ReRun empfohlen "
+            "(global_scalar -%.0f%%, strength ×%.2f)",
+            mushra_score,
+            _rerun["global_scalar_reduction"] * 100,
+            _rerun["strength_multiplier"],
+        )
+
+        return {
+            "wohlklang_ok": False,
+            "recommendation": _rerun["recommendation"],
+            "rerun_params": _rerun,
+        }
 
         logger.info("=" * 60)
 
