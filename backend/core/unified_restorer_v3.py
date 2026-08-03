@@ -34036,6 +34036,8 @@ class UnifiedRestorerV3:
         self._resolved_defects_accumulator: dict[str, float] = {}
         # §v10.707: DefectResult-Scores für defektgetriebenen Phase-Skip speichern
         self._defect_result_scores = getattr(defect_result, "scores", {}) or {}
+        # §v10.709: Qualitäts-Degradationszähler zurücksetzen
+        self._consecutive_quality_degradations = 0
         executed: list[str] = []
         skipped: list[str] = []
         deferred: list[str] = []  # §2.38 KMV: phases skipped by PerformanceGuard for Stage 2 refinement
@@ -37577,6 +37579,68 @@ class UnifiedRestorerV3:
                                     if _dv < 0.01 and _dk in _defect_locations:
                                         _defect_locations[_dk] = []
                             _collect_guard_payload(_phase_for_exec, phase_id)
+
+                            # §v10.709: Per-Phase Quality Degradation Guard
+                            # Prüft nach JEDER Phase ob P1/P2-Ziele unter material-adaptive
+                            # Schwellwerte gefallen sind. Bei 3 konsekutiven Degradationen
+                            # → Emergency-Stop + Revert auf besten Checkpoint.
+                            # Verhindert das "Elke-Best-Szenario": 327 Phasen, Qualität
+                            # zerstört, Export-Gate blockiert — alles zu spät.
+                            if _pmgg_scores_curr:
+                                try:
+                                    from backend.core.goal_priority_protocol import (
+                                        check_iteration_abort as _check_abort,
+                                    )
+
+                                    _abort = _check_abort(
+                                        _pmgg_scores_before_phase or {},
+                                        _pmgg_scores_curr,
+                                        goal_weights=get_effective_song_goal_weights(
+                                            locals().get("kwargs", {})
+                                        ),
+                                    )
+                                    if _abort.should_abort:
+                                        _consecutive_degradations = getattr(
+                                            self, "_consecutive_quality_degradations", 0
+                                        ) + 1
+                                        self._consecutive_quality_degradations = _consecutive_degradations
+                                        logger.warning(
+                                            "§v10.709 Quality-Degradation #%d nach %s: %s",
+                                            _consecutive_degradations,
+                                            phase_id,
+                                            _abort.degraded_goals,
+                                        )
+                                        if _consecutive_degradations >= 3:
+                                            logger.error(
+                                                "§v10.709 EMERGENCY-STOP: %d konsekutive "
+                                                "Qualitäts-Degradationen — Pipeline abgebrochen, "
+                                                "Revert auf besten Checkpoint. Betroffene Goals: %s",
+                                                _consecutive_degradations,
+                                                _abort.degraded_goals,
+                                            )
+                                            # Revert auf letzten guten Checkpoint
+                                            _best_cp = getattr(
+                                                self, "_afg_best_clean_checkpoint", None
+                                            )
+                                            if _best_cp is not None:
+                                                current_audio = _best_cp.copy()
+                                                logger.info(
+                                                    "§v10.709 Revert: bester Checkpoint "
+                                                    "wiederhergestellt (phase=%s)",
+                                                    getattr(self, "_afg_best_clean_phase", "?"),
+                                                )
+                                            # Pipeline-Ende erzwingen
+                                            self._emergency_stop_requested = True
+                                            self._graceful_stop_event.set()
+                                            break  # bricht die for-Phase-Schleife ab
+                                    else:
+                                        # Reset counter when quality is stable/improving
+                                        self._consecutive_quality_degradations = 0
+                                except Exception as _dq_exc:
+                                    logger.debug(
+                                        "§v10.709 Quality-Degradation-Guard: "
+                                        "non-blocking error: %s", _dq_exc
+                                    )
                             # §v10.22: Merged severity map für Dedicated-Repair-Funktionen
                             _defect_severity_map_merged = (
                                 {
