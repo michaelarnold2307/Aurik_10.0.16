@@ -38894,6 +38894,15 @@ class UnifiedRestorerV3:
                         logger.error(
                             "🔍 %s UNKNOWN exception (traceback follows): %s", phase_id, _exc_msg[:120], exc_info=True
                         )
+                    elif "setting an array element" in _exc_msg:
+                        # §v10.711: P5-Source-Identification — dump first 3 occurrences
+                        _p5_count = getattr(self, "_p5_exception_count", 0)
+                        self._p5_exception_count = _p5_count + 1
+                        if _p5_count < 3:
+                            logger.error(
+                                "🔍 %s P5 (setting an array element with a sequence) #%d — traceback:",
+                                phase_id, _p5_count + 1, exc_info=True
+                            )
                     elif "'tuple' object has no attribute 'ndim'" in _exc_msg:
                         logger.error("🔍 %s TUPLE-NDIM traceback:", phase_id, exc_info=True)
                     elif "_SkipResult" in _exc_msg:

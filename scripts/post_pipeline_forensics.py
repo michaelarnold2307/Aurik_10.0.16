@@ -25,11 +25,13 @@ sys.path.insert(0, str(REPO_ROOT))
 logger = logging.getLogger(__name__)
 
 
-def run_forensics(q_score: float | None = None) -> dict:
+def run_forensics(q_score: float | None = None, since: str | None = None) -> dict:
     """Führt die komplette Post-Pipeline-Forensik durch.
 
     Args:
         q_score: Optionaler Q-Score des abgeschlossenen Laufs.
+        since: Optional ISO timestamp — nur Exceptions ab diesem Zeitpunkt.
+               None = nur die letzten 24h (verhindert Akkumulation historischer Fehler).
 
     Returns:
         Dict mit forensics_summary, pattern_candidates, quality_trend.
@@ -41,6 +43,11 @@ def run_forensics(q_score: float | None = None) -> dict:
     )
     from backend.core.quality_regression_detector import QualityRegressionDetector
 
+    # §v10.711: Ohne since-Filter nur die letzten 24h zählen.
+    # Verhindert dass 44 MB NDJSON-Historie als "570 Exceptions" gemeldet werden.
+    if since is None:
+        since = (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)).isoformat()
+
     result: dict = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "forensics_summary": {},
@@ -50,7 +57,21 @@ def run_forensics(q_score: float | None = None) -> dict:
 
     # ── L1: Exception-Aggregation ────────────────────────────────────────
     agg = ExceptionAggregator()
-    summary = agg.summary()
+    entries = agg.aggregate(since=since)  # §v10.711: Zeitgefiltert
+    total = sum(e.count for e in entries)
+    by_pattern = {}
+    for e in entries:
+        by_pattern[e.pattern_class] = by_pattern.get(e.pattern_class, 0) + e.count
+    unclassified = by_pattern.get("UNCLASSIFIED", 0)
+    unique = len(entries)
+    top = [{"type": e.exception_type, "message": e.message[:120], "count": e.count} for e in entries[:10]]
+    summary = {
+        "total_exceptions": total,
+        "unique_messages": unique,
+        "by_pattern": by_pattern,
+        "unclassified": unclassified,
+        "top_exceptions": top,
+    }
 
     logger.info(
         "§v10.115 Forensik: %d Exceptions, %d unique, %d unklassifiziert",
@@ -74,7 +95,10 @@ def run_forensics(q_score: float | None = None) -> dict:
                     _auto_promoted += 1
                     logger.info(
                         "§v10.303.41 Auto-Promotion: %s → %s (conf=%.2f, count=%d)",
-                        c.regex_pattern[:60], c.temporary_id, c.confidence, c.exception_count,
+                        c.regex_pattern[:60],
+                        c.temporary_id,
+                        c.confidence,
+                        c.exception_count,
                     )
         if _auto_promoted:
             logger.info("§v10.303.41 Auto-Promotion: %d Pattern(s) in KNOWN_PATTERNS aufgenommen", _auto_promoted)
