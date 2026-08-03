@@ -41374,7 +41374,12 @@ class UnifiedRestorerV3:
             # Chunks (z.B. Crackle nur in Chunk 7) keine Reparatur-Phasen erhalten.
             _full_defect_types: set = set()
             try:
+                # §v10.711: file_ext aus input_path ableiten (propagiert durch kwargs)
+                _input_path_for_chunk = str(kwargs.get("input_path", "") or kwargs.get("file_path", "") or "")
                 _file_ext = kwargs.get("file_ext", "") or ""
+                if not _file_ext and _input_path_for_chunk:
+                    import os as _os_chunk
+                    _file_ext = _os_chunk.path.splitext(_input_path_for_chunk)[1].lower()
                 _full_defect_types = self.defect_scanner.scan_defect_presence(
                     audio,
                     sample_rate,
