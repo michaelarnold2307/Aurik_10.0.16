@@ -78,6 +78,7 @@ except Exception:
 # §v10.70 Bridge: load_audio_file über die Bridge, nicht direkt aus backend.file_import
 try:
     from backend.api.bridge import get_load_audio_fn
+
     _direct_load_audio_file = get_load_audio_fn()
 except Exception:
     _direct_load_audio_file = None  # type: ignore[assignment]
@@ -1597,22 +1598,28 @@ class BatchProcessingThread(QThread):
     ) -> float:
         """Schätzt einen laufenden GUI-MOS aus echtem Pipeline-Fortschritt.
 
+        §v10.702 G5: Die Schätzung ist bewusst konservativ. Der Maximalwert ist
+        auf 3.5 gecapped (nicht 4.5), weil interpolative Schätzungen keine echten
+        Qualitätsmessungen ersetzen können. Die GUI zeigt den Wert als „Schätzwert".
+        Erst die finale MQA-Messung nach dem Export liefert den echten MOS.
         Der Wert ist nur ein Live-Indikator; die finale Qualitätsmessung bleibt
         `_compute_and_show_quality()` nach dem Export vorbehalten.
         """
         pct = float(np.clip(progress_pct, 0.0, 100.0))
         base = float(np.clip(baseline_mos, 1.0, 5.0))
+        # §v10.702 G5: Cap bei 3.5 — ehrliche Obergrenze für interpolative Schätzung
+        _MAX_ESTIMATE = 3.5
         if pct < 20.0:
             analysis_frac = pct / 20.0
-            return float(np.clip(1.0 + (base - 1.0) * analysis_frac, 1.0, 5.0))
+            return float(np.clip(1.0 + (base - 1.0) * analysis_frac, 1.0, _MAX_ESTIMATE))
         if pct < 86.0 and not post_processing_started:
             phase_frac = (pct - 20.0) / 66.0
-            phase_bonus = min(0.55, max(0, active_phase_count) * 0.025)
-            target = min(4.65, base + 0.75 + phase_bonus)
-            return float(np.clip(base + (target - base) * (1.0 - (1.0 - phase_frac) ** 2), 1.0, 4.75))
+            phase_bonus = min(0.35, max(0, active_phase_count) * 0.015)
+            target = min(_MAX_ESTIMATE, base + 0.50 + phase_bonus)
+            return float(np.clip(base + (target - base) * (1.0 - (1.0 - phase_frac) ** 2), 1.0, _MAX_ESTIMATE))
         post_frac = max(0.0, min(1.0, (pct - 86.0) / 12.0))
-        target = min(4.85, max(base, base + 0.95))
-        return float(np.clip(base + (target - base) * (1.0 - (1.0 - post_frac) ** 3), 1.0, 4.9))
+        target = min(_MAX_ESTIMATE, max(base, base + 0.60))
+        return float(np.clip(base + (target - base) * (1.0 - (1.0 - post_frac) ** 3), 1.0, _MAX_ESTIMATE))
 
     def request_emergency_checkpoint(self) -> None:
         """§3.9.2 SIGTERM best-effort checkpoint save.
@@ -2138,6 +2145,8 @@ class BatchProcessingThread(QThread):
                             with _sp_lock:
                                 if not _sp["alive"]:
                                     return
+                                # §v10.702 G3: Liveness-Heartbeat — Watchdog erkennt tote Threads
+                                _sp["_liveness"] = time.perf_counter()
                                 cur = _sp["current"]
                                 tgt = _sp["target"]
                                 last_jump = _sp["last_jump"]
@@ -2425,6 +2434,36 @@ class BatchProcessingThread(QThread):
                     target=_smooth_progress_emitter, daemon=True, name="aurik-smooth-progress"
                 )
                 _sp_thread.start()
+                # §v10.702 G3: Smooth-Emitter-Liveness-Watchdog
+                # Daemon-Threads sterben still bei Exceptions → Balken friert ein.
+                # Der Watchdog prüft alle 5s ob der Emitter noch lebt und startet
+                # ihn ggf. neu. Max. 2 Neustarts pro Lauf.
+                _sp["_liveness"] = time.perf_counter()
+                _sp["_restart_count"] = 0
+                def _smooth_emitter_watchdog():
+                    with _sp_lock:
+                        _last_live = _sp.get("_liveness", 0.0)
+                    _stale_s = time.perf_counter() - _last_live
+                    if _stale_s > 8.0 and _sp.get("alive", False):
+                        _rc = _sp.get("_restart_count", 0)
+                        if _rc < 2:
+                            logger.warning(
+                                "§v10.702 G3: Smooth-Emitter %.0fs stale → restart (%d/2)",
+                                _stale_s, _rc + 1,
+                            )
+                            with _sp_lock:
+                                _sp["_restart_count"] = _rc + 1
+                                _sp["_liveness"] = time.perf_counter()
+                            _new_thread = threading.Thread(
+                                target=_smooth_progress_emitter, daemon=True,
+                                name="aurik-smooth-progress-r",
+                            )
+                            _new_thread.start()
+                        else:
+                            logger.error("§v10.702 G3: Smooth-Emitter 2× restart fehlgeschlagen")
+                    if _sp.get("alive", False):
+                        QTimer.singleShot(5000, _smooth_emitter_watchdog)
+                QTimer.singleShot(5000, _smooth_emitter_watchdog)
                 # Reset dynamic step names for this run
                 self._dynamic_step_names: dict[int, str] = {}
                 # Human-readable phase explanation appended to status line
@@ -2780,6 +2819,9 @@ class BatchProcessingThread(QThread):
                     return _sid, _local
 
                 def _on_batch_progress(pct: float, msg: str, elapsed_s: float = 0.0, _item=item) -> None:
+                    # §v10.440: Chirurgie-Label ausblenden wenn nicht mehr in Chirurgie
+                    if not msg.startswith("chirurgie:") and getattr(self, "chirurgie_label", None) is not None:
+                        self.chirurgie_label.setVisible(False)
                     # §11.4 Stufen-Vorab-Meldung: UV3 meldet Gesamtzahl der Phasen
                     # BEVOR die Pipeline startet → Total von Anfang an korrekt.
                     if msg.startswith("__total_uv3_phases__:"):
@@ -2799,6 +2841,41 @@ class BatchProcessingThread(QThread):
                         ]
                         if len(_chain_keys) >= 2:
                             self.carrier_chain_update.emit(list(_chain_keys))
+                        return
+                    # §v10.380: Chirurgie-Live-Countdown
+                    if msg.startswith("chirurgie:"):
+                        _parts = msg.split(":")
+                        if len(_parts) >= 3:
+                            _counts = _parts[2].split("/")
+                            if len(_counts) == 2:
+                                self._chirurgie_done = int(_counts[0])
+                                self._chirurgie_total = int(_counts[1])
+                                # §v10.440: Live-Countdown im dedizierten Chirurgie-Label
+                                try:
+                                    _pct = int(100 * self._chirurgie_done / max(1, self._chirurgie_total))
+                                    self.chirurgie_label.setText(
+                                        f"🔬 Chirurgie: {self._chirurgie_done}/{self._chirurgie_total} "
+                                        f"Defekte repariert ({_pct}%)"
+                                    )
+                                    self.chirurgie_label.setVisible(True)
+                                except Exception:
+                                    pass
+                                # §v10.702 G12: Per-Defekt-Countdown aus Chirurgie-Fortschritt
+                                # Verteile globale Resolution proportional auf alle Defekt-Typen
+                                try:
+                                    _ratio = self._chirurgie_done / max(1, self._chirurgie_total)
+                                    _init_counts = getattr(self, '_defect_initial_event_counts', {}) or {}
+                                    _rem_counts = getattr(self, '_defect_remaining_event_counts', {}) or {}
+                                    _updated = False
+                                    for _dk, _dt in _init_counts.items():
+                                        _rem = max(0, int(_dt * (1.0 - _ratio)))
+                                        if _rem != _rem_counts.get(_dk, _dt):
+                                            _rem_counts[_dk] = _rem
+                                            _updated = True
+                                    if _updated:
+                                        self._defect_remaining_event_counts = _rem_counts
+                                except Exception:
+                                    pass
                         return
                     if msg.startswith("__pid_live_hint__:"):
                         _payload = msg.split(":", 1)[1]
@@ -2824,6 +2901,14 @@ class BatchProcessingThread(QThread):
                     _uv3_started = elapsed_s > 0 and pct >= 20
                     if _uv3_started and getattr(self, "_ml_start_elapsed", -1.0) < 0:
                         self._ml_start_elapsed = elapsed_s
+                    # §v10.702 G10: Backend-elapsed_s in _last_phase_state injizieren.
+                    # Der Heartbeat liest elapsed_s + (time.perf_counter() - wall_time).
+                    # Ohne diesen Eintrag defaultet elapsed_s auf 0 → ETA springt bei
+                    # Chunked-Streaming (weil Backend-Zeit = Chunk-Zeit, nicht Gesamt).
+                    _st_g10 = getattr(self.batch_thread, "_last_phase_state", None)
+                    if isinstance(_st_g10, dict) and elapsed_s > 0:
+                        _st_g10["elapsed_s"] = float(elapsed_s)
+                        _st_g10["wall_time"] = time.perf_counter()
                     _early_pid_match = re.search(r"\[([a-z0-9_]+)\]", msg)
                     _early_pid = _early_pid_match.group(1) if _early_pid_match else ""
                     # Hauptbalken: aus dem realen, ausgewählten Stufenplan ableiten.
@@ -2854,7 +2939,9 @@ class BatchProcessingThread(QThread):
                     with _sp_lock:
                         _now = time.perf_counter()
                         _inter_s = _now - _sp["last_target_time"]
-                        _target_advanced = _new_tgt > (_sp["target"] + 0.01)
+                        # §v10.702 G1: 0.01→0.001 — im Chunked-Mode sind Phase-Deltas
+                        # oft <0.01% gemappt. 0.001 erlaubt 16× feinere Fortschritte.
+                        _target_advanced = _new_tgt > (_sp["target"] + 0.001)
                         # Rolling average of actual inter-phase duration (skip rapid-fire < 0.5 s).
                         # Nur echte Zielwert-Spruenge kalibrieren die Phase-Dauer: einige Backend-
                         # Statusmeldungen kommen mit identischem Prozentwert. Wuerden sie den Zeitanker
@@ -2875,13 +2962,37 @@ class BatchProcessingThread(QThread):
                             _sp2_phase_reset[0] = True
                         # Track upward jump size for creep velocity calibration
                         _delta = _new_tgt - _sp["target"]
-                        if _delta > 0.3:  # erhöht von 0.15 wegen 30Hz Heartbeat-Granularität
+                        # §v10.702 G2: 0.3→0.05 — im Chunked-Mode sind Phase-Deltas
+                        # oft <0.1%. 0.05 erlaubt Kalibrierung bei 6× kleineren Sprüngen.
+                        if _delta > 0.05:
                             _sp["last_jump"] = _delta
                         _sp["phase_stage_cap"] = _stage_cap
                         # Monotonic: nur aufwärts setzen
                         if _target_advanced:
                             _sp["last_target_time"] = _now
                             _sp["target"] = _new_tgt
+                        # §v10.702 G6: Phase-Progress-Sub-Bar Fallback — direkt aus
+                        # echtem Phase-Completion-Event, nicht nur vom Smooth-Emitter.
+                        # Verhindert eingefrorenen Sub-Balken wenn Smooth-Emitter-Thread stirbt.
+                        if _msg_has_phase and _target_advanced:
+                            try:
+                                self.phase_progress.emit(0)  # Reset für neue Phase
+                            except Exception:
+                                pass
+                        # §v10.702 G11: Quality-Update Fallback — direkt aus Batch-Thread.
+                        # Wenn der Smooth-Emitter-Daemon stirbt (G3), verhindert dies
+                        # dass das Qualitäts-Meter komplett einfriert.
+                        if _target_advanced and len(executed) % 5 == 0:
+                            try:
+                                _live_mos_fb = self._estimate_live_quality_mos(
+                                    progress_pct=_new_tgt,
+                                    baseline_mos=_live_quality_baseline_mos[0],
+                                    active_phase_count=_uv3_count[0],
+                                    post_processing_started=_post_processing_started[0],
+                                )
+                                self.quality_update.emit(round(_live_mos_fb, 1))
+                            except Exception:
+                                pass
                     if _new_tgt > 2.0 and _new_tgt < 98.0:
                         self.set_buttons_enabled(False)
                     elif _new_tgt >= 98.0:
@@ -3052,7 +3163,12 @@ class BatchProcessingThread(QThread):
                             self._current_repair_names = _active_names
                             if _active_keys and _rate_ok:
                                 _emit_defect_update(
-                                    {**_current_defect_scores, "status": "correcting", "_active_defects": _active_keys, "_repair_names": _active_names}
+                                    {
+                                        **_current_defect_scores,
+                                        "status": "correcting",
+                                        "_active_defects": _active_keys,
+                                        "_repair_names": _active_names,
+                                    }
                                 )
                             elif _defect_reduced_phase and _rate_ok:
                                 _emit_defect_update({**_current_defect_scores, "status": "correcting"})
@@ -3210,16 +3326,16 @@ class BatchProcessingThread(QThread):
                         if _rem_s > 0 and _expected_processing_s and float(_expected_processing_s) > 0:
                             _baseline_remaining_s = max(0.0, float(_expected_processing_s) - elapsed_s)
                             _w_expected = float(np.clip(0.65 - (_ui_progress - 20.0) / 120.0, 0.25, 0.65))
-                            _rem_s = (
-                                _w_expected * _baseline_remaining_s + (1.0 - _w_expected) * _rem_s
-                            )
+                            _rem_s = _w_expected * _baseline_remaining_s + (1.0 - _w_expected) * _rem_s
 
                         # Harte Plausibilitätsgrenze: Restzeit darf nicht deutlich über
                         # der material-/modus-adaptiven Vorabschätzung liegen.
                         if _rem_s > 0 and (_exp_hi > 0 or (_expected_processing_s and _expected_processing_s > 0)):
                             _total_cap_s = max(
                                 (_exp_hi * 1.20) if _exp_hi > 0 else 0.0,
-                                (float(_expected_processing_s) * 1.35) if _expected_processing_s and _expected_processing_s > 0 else 0.0,
+                                (float(_expected_processing_s) * 1.35)
+                                if _expected_processing_s and _expected_processing_s > 0
+                                else 0.0,
                                 (_exp_lo * 1.60) if _exp_lo > 0 else 0.0,
                             )
                             if _total_cap_s > 0:
@@ -4145,6 +4261,22 @@ class WaveformWidget(QWidget):
         "dynamic_compression": ((65, 238, 175), "🎚", "Kompressions-Entfernung"),
         # stereo_imbalance defect: r29g233b182 (teal) → gold (complementary) — fallback for bare 'stereo' keyword
         "stereo": ((255, 222, 65), "🎧", "Stereo-Ausbalancierung"),
+        # §v10.202 B3: Fehlende Phasen-Namen — 28 Phasen ergänzt
+        "preprocessor": ((130, 100, 200), "⚙", "Vorverarbeitung"),
+        "output_format": ((215, 218, 242), "💾", "Format-Optimierung"),
+        "semantic_audio": ((178, 140, 255), "🧠", "KI-Kontext-Analyse"),
+        "lyrics_guided": ((255, 228, 78), "📝", "Text-basierte Optimierung"),
+        "modulation_noise": ((55, 218, 255), "🔇", "Modulationsrauschen"),
+        "inner_groove": ((255, 152, 0), "💿", "Innenrillen-Reparatur"),
+        "groove_echo": ((118, 210, 242), "🔇", "Rillen-Echo-Entfernung"),
+        "crosstalk": ((108, 228, 255), "🎧", "Übersprech-Entfernung"),
+        "intermodulation": ((178, 140, 255), "〰", "Intermodulations-Bereinigung"),
+        "tape_splice": ((228, 208, 192), "tape_vintage", "Bandschnitt-Reparatur"),
+        "stem_targeted": ((78, 198, 255), "🎯", "Stamm-Separierung"),
+        "glue_stage": ((215, 218, 242), "mastering", "Glue-Stage"),
+        "vocal_naturalness": ((255, 228, 78), "🎤", "Stimm-Natürlichkeit"),
+        "groove": ((255, 202, 65), "🎵", "Groove-Erhalt"),
+        "print_through_reduction": ((112, 215, 255), "〰", "Banddurchdruck-Entfernung"),
     }
 
     # ── Stage effect category mapping (keyword → animation type) ──────────
@@ -4616,6 +4748,15 @@ class WaveformWidget(QWidget):
         """)
         # Playhead position (0.0–1.0 fraction of total duration, -1.0 = hidden)
         self._playhead_pos: float = -1.0
+        # Loop region (0.0–1.0 fractions, -1.0 = inactive)
+        self._loop_start_frac: float = -1.0
+        self._loop_end_frac: float = -1.0
+        self._loop_active: bool = False
+        # Drag state for loop region creation (Shift+drag on waveform)
+        self._loop_drag_start: float | None = None
+        self._loop_drag_active: bool = False
+        # Playhead color override (None = default white)
+        self._playhead_color: tuple[int, int, int] | None = None
         # Processed-region fraction: 0.0 = nothing processed, 1.0 = fully done. -1.0 = hidden.
         self._scan_pos: float = -1.0
         # ── Stage visualization state ────────────────────────────────────────
@@ -4669,6 +4810,41 @@ class WaveformWidget(QWidget):
         """Aktualisiert the visible playhead position in normalized [0, 1] units."""
         self._playhead_pos = float(position)
         self.update()
+
+    def set_playhead_color(self, color: tuple[int, int, int] | None) -> None:
+        """Setzt Playhead-Farbe (orange=original, blau=restauriert, rot=delta, None=weiß)."""
+        self._playhead_color = color
+        self.update()
+
+    def set_loop_region(self, start_frac: float, end_frac: float) -> None:
+        """Setzt die Loop-Region auf der Wellenform [start_frac, end_frac]."""
+        self._loop_start_frac = max(0.0, min(1.0, float(start_frac)))
+        self._loop_end_frac = max(0.0, min(1.0, float(end_frac)))
+        if self._loop_start_frac >= self._loop_end_frac:
+            # Tauschen falls verdreht
+            self._loop_start_frac, self._loop_end_frac = self._loop_end_frac, self._loop_start_frac
+        self._loop_active = True
+        self.update()
+
+    def clear_loop_region(self) -> None:
+        """Deaktiviert die Loop-Region."""
+        self._loop_start_frac = -1.0
+        self._loop_end_frac = -1.0
+        self._loop_active = False
+        self.update()
+
+    def toggle_loop(self) -> bool:
+        """Toggle Loop an/aus. Gibt neuen Status zurück."""
+        if self._loop_start_frac >= 0 and self._loop_end_frac > self._loop_start_frac:
+            self._loop_active = not self._loop_active
+        self.update()
+        return self._loop_active
+
+    def get_loop_region(self) -> tuple[float, float] | None:
+        """Gibt (start, end) oder None zurück."""
+        if self._loop_start_frac >= 0 and self._loop_end_frac > self._loop_start_frac:
+            return (self._loop_start_frac, self._loop_end_frac)
+        return None
 
     def get_view_range(self) -> tuple[float, float]:
         """Gibt the currently visible normalized waveform window zurück."""
@@ -4732,7 +4908,9 @@ class WaveformWidget(QWidget):
         # scale is stable across the SR-normalisation re-render.
         if not _preserve_zoom:
             if isinstance(audio, np.ndarray) and audio.size > 0:
-                _fp = float(np.quantile(np.abs(audio), 0.999, method='inverted_cdf'))  # §v10.109: ~2× schneller als percentile
+                _fp = float(
+                    np.quantile(np.abs(audio), 0.999, method="inverted_cdf")
+                )  # §v10.109: ~2× schneller als percentile
                 self._full_track_peak = _fp if _fp > 1e-6 else 0.0
             else:
                 self._full_track_peak = 0.0
@@ -4749,6 +4927,14 @@ class WaveformWidget(QWidget):
             self._morph_timer.stop()
         self._morph_diff = None
         self._morph_t = 1.0
+        # §v10.702 G8: Pulse-Timer nur im Leerlauf (kein Audio geladen)
+        # Stoppen wenn Audio geladen ist, starten wenn Audio gelöscht wird
+        if audio is not None and audio.size > 0:
+            if self._pulse_timer.isActive():
+                self._pulse_timer.stop()
+        else:
+            if not self._pulse_timer.isActive():
+                self._pulse_timer.start(50)
         # Compute gated-RMS reference for level delta badge (§2.45a).
         # Only update when zoom is not preserved (= new file or completed restoration).
         if not _preserve_zoom and isinstance(audio, np.ndarray) and audio.size > 0:
@@ -5107,6 +5293,9 @@ class WaveformWidget(QWidget):
             self._morph_timer.stop()
         self._morph_diff = None
         self._morph_t = 1.0
+        # §v10.702 G8: Pulse-Timer wieder starten wenn kein Audio geladen
+        if self.audio_data is None and not self._pulse_timer.isActive():
+            self._pulse_timer.start(50)
         self.update()
 
     # ── Phase-Transition Animation Engine ─────────────────────────────────
@@ -6347,17 +6536,40 @@ class WaveformWidget(QWidget):
         self.update()
 
     def mousePressEvent(self, event):
-        """Start pan drag on left-button press."""
+        """Start pan drag or loop-region drag on left-button press."""
         if event.button() == Qt.MouseButton.LeftButton and self.audio_data is not None:
             self._pan_anchor = event.pos().x()
             self._pan_press_y = event.pos().y()
             self._did_pan = False
             self._pan_view_start_at_press = self._view_start
+            # Shift+drag = Loop-Region
+            if event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+                margin_left = 50
+                margin_right = 20
+                plot_w = max(1, self.width() - margin_left - margin_right)
+                frac_view = max(0.0, min(1.0, (event.pos().x() - margin_left) / plot_w))
+                abs_frac = self._view_start + frac_view * (self._view_end - self._view_start)
+                self._loop_drag_start = abs_frac
+                self._loop_drag_active = True
+                self._loop_start_frac = -1.0
+                self._loop_end_frac = -1.0
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Pan view while dragging."""
-        if self._pan_anchor is not None and self.audio_data is not None:
+        """Pan view or update loop region while dragging."""
+        # Loop region drag (Shift+ziehen)
+        if self._loop_drag_active and self.audio_data is not None:
+            margin_left = 50
+            margin_right = 20
+            plot_w = max(1, self.width() - margin_left - margin_right)
+            frac_view = max(0.0, min(1.0, (event.pos().x() - margin_left) / plot_w))
+            abs_frac = self._view_start + frac_view * (self._view_end - self._view_start)
+            self._loop_start_frac = min(self._loop_drag_start, abs_frac)
+            self._loop_end_frac = max(self._loop_drag_start, abs_frac)
+            self._did_pan = True  # prevent seek on release
+            self.update()
+        # Normal pan
+        elif self._pan_anchor is not None and self.audio_data is not None:
             margin_left = 50
             margin_right = 20
             plot_w = max(1, self.width() - margin_left - margin_right)
@@ -6373,8 +6585,16 @@ class WaveformWidget(QWidget):
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        """End pan drag; on click without drag, request seek at clicked timeline position."""
-        if (
+        """End pan/loop drag; on click without drag, request seek."""
+        # Finalisiere Loop-Region-Drag
+        if self._loop_drag_active:
+            self._loop_drag_active = False
+            self._loop_drag_start = None
+            if self._loop_start_frac >= 0 and self._loop_end_frac > self._loop_start_frac:
+                self._loop_active = True
+            self.update()
+        # Seek auf Click (ohne Drag)
+        elif (
             event.button() == Qt.MouseButton.LeftButton
             and self.audio_data is not None
             and self._pan_anchor is not None
@@ -6605,8 +6825,10 @@ class WaveformWidget(QWidget):
             _view_frac = (self._playhead_pos - self._view_start) / _view_span
             if 0.0 <= _view_frac <= 1.0:
                 _ph_x = int(plot_x + _view_frac * plot_width)
-                # Weißer vertikaler Spielkopf-Strich
-                painter.setPen(QPen(QColor(255, 255, 255, 220), 2, Qt.PenStyle.SolidLine))
+                # Farbiger Playhead: orange=Original, blau=Restauriert, rot=Delta, default=Weiß
+                _ph_color = self._playhead_color if self._playhead_color else (255, 255, 255)
+                _ph_r, _ph_g, _ph_b = _ph_color
+                painter.setPen(QPen(QColor(_ph_r, _ph_g, _ph_b, 220), 2, Qt.PenStyle.SolidLine))
                 painter.drawLine(_ph_x, plot_y, _ph_x, plot_y + plot_height)
                 # Dreieck-Anfasser oben
                 _tri = QPolygonF()
@@ -6614,10 +6836,9 @@ class WaveformWidget(QWidget):
                 _tri.append(QPointF(_ph_x + 6, plot_y))
                 _tri.append(QPointF(_ph_x, plot_y + 12))
                 painter.setPen(Qt.PenStyle.NoPen)
-                painter.setBrush(QBrush(QColor(255, 255, 255, 200)))
+                painter.setBrush(QBrush(QColor(_ph_r, _ph_g, _ph_b, 200)))
                 painter.drawPolygon(_tri)
                 # Zeitstempel neben dem Cursor
-                # Versetze nach unten wenn Stage-Overlay aktiv (30px-Panel am Top belegt Zeile 0–30)
                 if self.audio_data is not None and self.sample_rate > 0:
                     _n = len(self.audio_data)
                     _t_s = self._playhead_pos * (_n / self.sample_rate)
@@ -6625,9 +6846,36 @@ class WaveformWidget(QWidget):
                     _t_str = f"{_m}:{_s:02d}"
                     _lx = _ph_x + 5 if _ph_x + 38 <= plot_x + plot_width else _ph_x - 36
                     _ts_y = (plot_y + 34) if self._active_stage else (plot_y + 12)
-                    painter.setPen(QColor(255, 255, 200, 210))
+                    painter.setPen(QColor(_ph_r, _ph_g, _ph_b, 210))
                     painter.setFont(QFont(self.font().family(), 7, QFont.Weight.Bold))
                     painter.drawText(_lx, _ts_y, _t_str)
+
+        # ── Loop-Region (Shift+Drag auf Wellenform) ──────────────────────────
+        if self._loop_start_frac >= 0 and self._loop_end_frac > self._loop_start_frac:
+            _view_span = max(1e-9, self._view_end - self._view_start)
+            _ls = (self._loop_start_frac - self._view_start) / _view_span
+            _le = (self._loop_end_frac - self._view_start) / _view_span
+            _ls_clamped = max(0.0, min(1.0, _ls))
+            _le_clamped = max(0.0, min(1.0, _le))
+            if _le_clamped - _ls_clamped > 0.001:
+                _lx_px = int(plot_x + _ls_clamped * plot_width)
+                _lw_px = int((_le_clamped - _ls_clamped) * plot_width)
+                if _lw_px > 0:
+                    # Semi-transparente blaue Überlagerung
+                    _loop_active_alpha = 45 if self._loop_active else 20
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.setBrush(QBrush(QColor(80, 140, 255, _loop_active_alpha)))
+                    painter.drawRect(_lx_px, plot_y, _lw_px, plot_height)
+                    # Randlinien
+                    painter.setPen(QPen(QColor(80, 160, 255, 160 if self._loop_active else 80), 1.5, Qt.PenStyle.SolidLine))
+                    painter.drawLine(_lx_px, plot_y, _lx_px, plot_y + plot_height)
+                    painter.drawLine(_lx_px + _lw_px, plot_y, _lx_px + _lw_px, plot_y + plot_height)
+                    # "LOOP" Label wenn aktiv
+                    if self._loop_active and _lw_px > 50:
+                        painter.setPen(QColor(80, 180, 255, 200))
+                        _loop_font = QFont(self.font().family(), 8, QFont.Weight.Bold)
+                        painter.setFont(_loop_font)
+                        painter.drawText(_lx_px + 4, plot_y + plot_height - 8, "LOOP")
 
         # ── Scan-Cursor: only visible while DefectScanner is actively reading ──
         # Once status changes to "correcting" or "completed", phases process the
@@ -10062,9 +10310,9 @@ class RecordSleeveWidget(QtWidgets.QFrame):
 
     def _panel_play(self):
         """Startet Wiedergabe des restaurierten Audios."""
-        if hasattr(self, '_rest_audio') and self._rest_audio is not None:
+        if hasattr(self, "_rest_audio") and self._rest_audio is not None:
             self._play_restored()
-        elif hasattr(self, 'batch_thread') and self.batch_thread is not None:
+        elif hasattr(self, "batch_thread") and self.batch_thread is not None:
             # Während Batch: Live-Preview
             self._play_live_preview()
 
@@ -10118,9 +10366,15 @@ class RecordSleeveWidget(QtWidgets.QFrame):
         _vqi = _meta.get("vqi")  # Vocal Quality Index
         # §v10.207: Material-Namen auf Deutsch übersetzen
         _MAT_DE: dict[str, str] = {
-            "cassette": "Kassette", "vinyl": "Schallplatte", "shellac": "Schellack",
-            "reel_tape": "Tonband", "mp3_low": "MP3 (niedrig)", "mp3_high": "MP3 (hoch)",
-            "cd_digital": "CD/Digital", "streaming": "Streaming", "unknown": "Unbekannt",
+            "cassette": "Kassette",
+            "vinyl": "Schallplatte",
+            "shellac": "Schellack",
+            "reel_tape": "Tonband",
+            "mp3_low": "MP3 (niedrig)",
+            "mp3_high": "MP3 (hoch)",
+            "cd_digital": "CD/Digital",
+            "streaming": "Streaming",
+            "unknown": "Unbekannt",
         }
         _mat_de = _MAT_DE.get(_mat, _mat) if _mat else ""
 
@@ -10140,13 +10394,13 @@ class RecordSleeveWidget(QtWidgets.QFrame):
                 _parts.append(f"   Grund: {_dnh_reason[:80]}")
         else:
             if _q > 0:
-                _parts.append(f"📊 Ergebnisqualität: {_q*100:.0f}%")
+                _parts.append(f"📊 Ergebnisqualität: {_q * 100:.0f}%")
             if _mushra > 0:
                 _parts.append(f"🎧 Klangqualität: {_mushra:.0f}/100")  # §v10.207: MUSHRA→Klangqualität
             if _hpi > 0:
                 _parts.append(f"📈 Klangverbesserung: {_hpi:.0%}")  # §v10.207: HPI→Klangverbesserung
         if _af > 0:
-            _parts.append(f"🛡️ Störungsfreiheit: {_af*100:.0f}%")  # §v10.207: Artefakt→Störung
+            _parts.append(f"🛡️ Störungsfreiheit: {_af * 100:.0f}%")  # §v10.207: Artefakt→Störung
         # §v10.206: Technische Metriken — nur wenn vorhanden
         if _lufs is not None:
             _lufs_val = float(_lufs)
@@ -10256,6 +10510,14 @@ class ModernTitleBar(QWidget):
         self.status_label.setWordWrap(True)
         self.status_label.setMinimumHeight(50)
         self.status_label.setMaximumHeight(120)
+
+        # ── §v10.440 Chirurgie-Countdown (dediziert, nicht überschreibbar) ──
+        self.chirurgie_label = QLabel("")
+        self.chirurgie_label.setVisible(False)
+        self.chirurgie_label.setStyleSheet(
+            "color: #FFD700; font-size: 13pt; padding: 4px 12px;"
+            "background: rgba(255, 215, 0, 0.10); border-radius: 4px;"
+        )
 
         # ── Recent Files button ──────────────────────────────────────────
         self.btn_recent = QPushButton("📋")
@@ -13700,6 +13962,59 @@ class ModernMainWindow(QMainWindow):
         self.btn_stop_playback.clicked.connect(self._stop_song_playback_only)
         ab_row_layout.addWidget(self.btn_stop_playback)
 
+        # ── Blindtest-Modus: A/B in zufälliger Reihenfolge, Bewertung, Auflösung ──
+        self.btn_blindtest = ModernButton("🎲  Blindtest")
+        self.btn_blindtest.setAccessibleName("Blindtest starten")
+        self.btn_blindtest.setAccessibleDescription(
+            "Startet einen Blindtest: Aurik spielt Original und Restauriert in zufälliger Reihenfolge. "
+            "Sie bewerten — erst danach wird aufgelöst."
+        )
+        self.btn_blindtest.setEnabled(False)
+        self.btn_blindtest.setFixedHeight(self._sp(38))
+        self.btn_blindtest.setStyleSheet(
+            "QPushButton{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 #5a3a7a,stop:1 #3e2060);border:none;border-radius:7px;"
+            "color:#e8d8ff;font-size:9pt;font-weight:bold;padding:7px 10px;}"
+            "QPushButton:hover{background:qlineargradient(x1:0,y1:0,x2:1,y2:0,"
+            "stop:0 #7a50a8,stop:1 #4a2a80);}"
+            "QPushButton:disabled{background:rgba(80,80,80,0.30);color:#555;}"
+        )
+        self.btn_blindtest.clicked.connect(self._start_blindtest)
+        ab_row_layout.addWidget(self.btn_blindtest)
+
+        # Blindtest-Rating-Leiste (initial versteckt)
+        self._blindtest_rating_row = QWidget()
+        _bt_rating_layout = QHBoxLayout(self._blindtest_rating_row)
+        _bt_rating_layout.setContentsMargins(0, 0, 0, 0)
+        _bt_rating_layout.setSpacing(5)
+        self._blindtest_rating_buttons: list[QPushButton] = []
+        for i in range(1, 6):
+            _btn = QPushButton(str(i))
+            _btn.setFixedSize(self._sp(32), self._sp(32))
+            _btn.setStyleSheet(
+                "QPushButton{background:rgba(100,80,160,0.5);border:1px solid rgba(160,140,220,0.5);"
+                "border-radius:6px;color:#d8c8ff;font-size:10pt;font-weight:bold;}"
+                "QPushButton:hover{background:rgba(130,100,200,0.8);}"
+            )
+            _rating = i
+            _btn.clicked.connect(lambda checked, r=_rating: self._rate_blindtest(r))
+            self._blindtest_rating_buttons.append(_btn)
+            _bt_rating_layout.addWidget(_btn)
+        self._blindtest_rating_label = QLabel("A bewerten (1-5):")
+        self._blindtest_rating_label.setStyleSheet("color: #c8b8ee; font-size: 8pt;")
+        _bt_rating_layout.insertWidget(0, self._blindtest_rating_label)
+        _bt_rating_layout.addStretch()
+        self._blindtest_rating_row.setVisible(False)
+        ab_row_layout.addWidget(self._blindtest_rating_row)
+
+        # Blindtest-State
+        self._blindtest_active: bool = False
+        self._blindtest_round: int = 0  # 1=A, 2=B
+        self._blindtest_a_is_original: bool = False  # zufällig
+        self._blindtest_score_a: int = 0
+        self._blindtest_score_b: int = 0
+        self._blindtest_history: list[dict] = []  # persistent
+
         # Playback-Zeitanzeige (Elapsed / Total)
         self._playback_time_label = QLabel("– : – –")
         self._playback_time_label.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter)
@@ -13712,9 +14027,7 @@ class ModernMainWindow(QMainWindow):
 
         # §v10.207: Playback-Speed-Regler
         self._speed_label = QLabel("1×")
-        self._speed_label.setStyleSheet(
-            "color: #8894A8; font-size: 8pt; font-weight: bold; padding: 0 4px;"
-        )
+        self._speed_label.setStyleSheet("color: #8894A8; font-size: 8pt; font-weight: bold; padding: 0 4px;")
         self._speed_label.setFixedWidth(24)
         self._speed_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ab_row_layout.addWidget(self._speed_label)
@@ -15558,7 +15871,7 @@ class ModernMainWindow(QMainWindow):
             "<table cellspacing='4' style='font-size:9pt;'>"
             "<tr>"
             "<td style='color:#b0bdd0; padding-right:16px;'>Restaurierungs-Pipeline</td>"
-            "<td style='color:#d0d8ff;'><b>66 Phasen</b></td>"
+            "<td style='color:#d0d8ff;'><b>Material-adaptiv</b></td>"
             "<td style='color:#8899bb; padding-left:12px;'>Defektkorrektur · Enhancement · Guard-Policy</td>"
             "</tr>"
             "<tr>"
@@ -16632,8 +16945,17 @@ class ModernMainWindow(QMainWindow):
         self.quality_meter_widget.set_mos(mos)
 
     def _set_live_quality_mos(self, mos: float) -> None:
-        """Zeigt Pipeline-Fortschritt als explizite Live-Schätzung an."""
+        """Zeigt Pipeline-Fortschritt als explizite Live-Schätzung an.
+
+        §v10.702 G9: Wenn bereits ein echter MOS-Wert gesetzt wurde
+        (via _compute_and_show_quality), wird der interpolierte Schätzwert
+        ignoriert. Verhindert dass der Heartbeat den echten Messwert
+        mit einem Schätzwert überschreibt.
+        """
         if getattr(self, "quality_meter_widget", None) is None:
+            return
+        # §v10.702 G9: Echten Messwert nicht mit Schätzwert überschreiben
+        if getattr(self, "_real_quality_set", False):
             return
         self.quality_meter_widget.set_measurement_state(
             "Live-Schätzung",
@@ -16678,10 +17000,11 @@ class ModernMainWindow(QMainWindow):
                         self._last_scan_pct_int = _pct_int
                         self._apply_status_text_style("warning")
                 return
-            # §v10.306: Hauptbalken = GESAMT-Workflow (5–50% = Pre-Analysis)
-            # Phasenbalken = aktueller Sub-Schritt (Scan-Fortschritt)
-            _total_pct = 5.0 + _p * 0.45  # 0% scan → 5%, 100% scan → 50%
-            _bar.setValue(min(5000, int(round(_total_pct * 100.0))))
+            # §v10.704 B21: Gesamtfortschritt 0–100% über den GESAMTEN Workflow.
+            # Pre-Analysis: 0–25%, Verarbeitung: 25–100%. KEIN Reset zwischen Stufen.
+            _PREANALYSIS_CEILING_PCT = 25.0
+            _total_pct = _p * (_PREANALYSIS_CEILING_PCT / 100.0)  # 0% scan → 0%, 100% scan → 25%
+            _bar.setValue(min(int(_PREANALYSIS_CEILING_PCT * 100), int(round(_total_pct * 100.0))))
             # Phase bar: scan progress
             if hasattr(self, "phase_progress_bar"):
                 self.phase_progress_bar.setValue(min(10000, int(round(_p * 100.0))))
@@ -17099,14 +17422,10 @@ class ModernMainWindow(QMainWindow):
                     self.progress_bar.setValue(0)
                     self.progress_bar.setVisible(False)
                 if hasattr(self, "status_text"):
-                    self.status_text.setText(
-                        t("status.preanalysis_failed", reason=reason)
-                    )
+                    self.status_text.setText(t("status.preanalysis_failed", reason=reason))
                     self._apply_status_text_style("error")
                 if hasattr(self, "detected_medium_label"):
-                    self.detected_medium_label.setText(
-                        t("status.preanalysis_blocked")
-                    )
+                    self.detected_medium_label.setText(t("status.preanalysis_blocked"))
                     self.detected_medium_label.setStyleSheet("""
                         color: #B87A7A; font-size: 11pt; padding: 12px;
                         background: rgba(148, 82, 82, 0.10);
@@ -17329,6 +17648,8 @@ class ModernMainWindow(QMainWindow):
                 _raw_medium = getattr(_med, "primary_material", None) or "unknown"
                 _score = round(float(getattr(_med, "confidence", 0)) * 5) if _med else 0
                 _chain_keys: list[str] = list(getattr(_med, "transfer_chain", None) or [])
+                # §v10.500: Chain-Depth für Narrativ speichern
+                self._chain_depth = len(_chain_keys) if _chain_keys else 1
                 _orig_stem, _orig_label = _CARRIER_MEDIUM_DISPLAY.get(_raw_medium, ("unknown", _raw_medium))
                 _orig_html = _render_carrier_html(_orig_stem, _orig_label)
                 if len(_chain_keys) > 1:
@@ -18278,6 +18599,17 @@ class ModernMainWindow(QMainWindow):
                 "Synchronisierten A/B-Loop starten; A/B wechseln bei gleicher Position.",
                 _sync_reason,
             )
+        # Blindtest erfordert ebenfalls beide Versionen
+        if hasattr(self, "btn_blindtest"):
+            _both = self._orig_audio is not None and self._rest_audio is not None
+            _bt_ready = _both and _output_ready
+            _bt_reason = "Original und restaurierter Export werden beide benötigt." if not _both else _output_reason
+            self._set_button_enabled_with_reason(
+                self.btn_blindtest,
+                _bt_ready,
+                "Blindtest: A/B in zufälliger Reihenfolge, bewerten, Auflösung.",
+                _bt_reason,
+            )
             if not _sync_ready and getattr(self.btn_ab_sync, "isChecked", lambda: False)():
                 self.btn_ab_sync.setChecked(False)
                 if hasattr(self, "_ab_source_label"):
@@ -18390,6 +18722,106 @@ class ModernMainWindow(QMainWindow):
             self._ab_loop_start_frac = _current_pos
         self._ab_loop_source = source
         self._ab_play_loop_source()
+
+    # ── Blindtest-Modus §v10.700.2 ────────────────────────────────────────
+
+    def _start_blindtest(self) -> None:
+        """Startet Blindtest: A und B in zufälliger Reihenfolge."""
+        if self._orig_audio is None or self._rest_audio is None:
+            return
+        self._blindtest_active = True
+        self._blindtest_round = 1
+        self._blindtest_score_a = 0
+        self._blindtest_score_b = 0
+        # Zufällig: Ist A das Original oder das Restaurat?
+        self._blindtest_a_is_original = bool(np.random.randint(0, 2))
+        # Rating-Leiste einblenden
+        self._blindtest_rating_row.setVisible(True)
+        self._blindtest_rating_label.setText("A bewerten (1-5):")
+        for _btn in self._blindtest_rating_buttons:
+            _btn.setEnabled(True)
+        # Playhead: Lila für Blindtest
+        if self.waveform_widget:
+            self.waveform_widget.set_playhead_color((180, 130, 255))
+        # Spiele erste Runde (A)
+        self._play_blindtest_round()
+        # Button-Label updaten
+        self.btn_blindtest.setText("🎲  Läuft...")
+        self.btn_blindtest.setEnabled(False)
+
+    def _play_blindtest_round(self) -> None:
+        """Spielt die aktuelle Blindtest-Runde."""
+        if self._blindtest_round == 1:
+            # A: Original oder Restauriert (zufällig)
+            if self._blindtest_a_is_original:
+                self._play_audio(self._orig_audio, self._orig_sr)
+            else:
+                self._play_audio(self._rest_audio, self._rest_sr)
+        else:
+            # B: das jeweils andere
+            if self._blindtest_a_is_original:
+                self._play_audio(self._rest_audio, self._rest_sr)
+            else:
+                self._play_audio(self._orig_audio, self._orig_sr)
+
+    def _rate_blindtest(self, rating: int) -> None:
+        """Bewertung für aktuelle Runde (1-5)."""
+        if not self._blindtest_active:
+            return
+        if self._blindtest_round == 1:
+            self._blindtest_score_a = rating
+            # Runde 2: B
+            self._blindtest_round = 2
+            self._blindtest_rating_label.setText("B bewerten (1-5):")
+            self._play_blindtest_round()
+        else:
+            self._blindtest_score_b = rating
+            self._reveal_blindtest()
+
+    def _reveal_blindtest(self) -> None:
+        """Löst den Blindtest auf und zeigt das Ergebnis."""
+        self._blindtest_active = False
+        self._blindtest_rating_row.setVisible(False)
+        for _btn in self._blindtest_rating_buttons:
+            _btn.setEnabled(False)
+        # Playhead zurücksetzen
+        if self.waveform_widget:
+            self.waveform_widget.set_playhead_color(None)
+        # Auflösen
+        a_label = "Original" if self._blindtest_a_is_original else "Restauriert"
+        b_label = "Restauriert" if self._blindtest_a_is_original else "Original"
+        result_text = (
+            f"Blindtest: A={a_label} ({self._blindtest_score_a}★) | "
+            f"B={b_label} ({self._blindtest_score_b}★)"
+        )
+        if self._blindtest_score_a > self._blindtest_score_b:
+            winner = "A" if self._blindtest_a_is_original else "B"
+            result_text += f" → Bevorzugt: {winner}"
+        elif self._blindtest_score_b > self._blindtest_score_a:
+            winner = "B" if self._blindtest_a_is_original else "A"
+            result_text += f" → Bevorzugt: {winner}"
+        else:
+            result_text += " → Gleichstand"
+        # Speichern in History
+        self._blindtest_history.append({
+            "a_is_original": self._blindtest_a_is_original,
+            "score_a": self._blindtest_score_a,
+            "score_b": self._blindtest_score_b,
+            "preferred": "original" if (
+                (self._blindtest_a_is_original and self._blindtest_score_a >= self._blindtest_score_b)
+                or (not self._blindtest_a_is_original and self._blindtest_score_b > self._blindtest_score_a)
+            ) else "restored",
+        })
+        # Anzeigen
+        self._ab_source_label.setText(result_text)
+        self._ab_source_label.setStyleSheet(
+            "color: #e8d8ff; font-size: 9pt; font-weight: bold; padding: 0 4px;"
+        )
+        self._ab_source_label.setVisible(True)
+        # Button reset
+        self.btn_blindtest.setText("🎲  Blindtest")
+        self.btn_blindtest.setEnabled(True)
+        self._stop_song_playback_only()
 
     def _dialog_options(self, *, directory_only: bool = False) -> QFileDialog.Options:
         """Erstellt QFileDialog options for the Qt fallback path.
@@ -19011,10 +19443,13 @@ class ModernMainWindow(QMainWindow):
         # Disable process button and Magic Buttons during processing
         if hasattr(self, "btn_process"):
             self.btn_process.setEnabled(False)
+        # §v10.204 #4: Visuelles Feedback — Button-Text zeigt Verarbeitungsstatus
         if hasattr(self, "btn_magic_restoration"):
             self.btn_magic_restoration.setEnabled(False)
+            self.btn_magic_restoration.setText("🔄 Läuft…")
         if hasattr(self, "btn_magic_studio"):
             self.btn_magic_studio.setEnabled(False)
+            self.btn_magic_studio.setText("🔄 Läuft…")
 
         # Update status
         self.title_bar.set_status(t("status.processing_running"), "#B8A068")
@@ -19024,10 +19459,18 @@ class ModernMainWindow(QMainWindow):
 
         # Heartbeat-Timer starten
         self._heartbeat_dots = 0
+        self._processing_start_time = time.perf_counter()  # §v10.500: Narrativ-Referenz
         self._long_phase_toast_bucket = -1
         self._defect_progress_state = {
-            "total": 0,
-            "remaining": 0,
+            # §v10.704 B24: Initiale Defekt-Counts aus Pre-Analysis übernehmen,
+            # nicht auf 0 initialisieren. Die Chips zeigen dann sofort den
+            # korrekten Stand (z.B. "985/985") statt "0/0".
+            "total": sum(1 for v in getattr(self, "_defect_initial_event_counts", {}).values() if v > 0)
+                     or sum(1 for v in getattr(self, "_defect_scan_scores", {}).values()
+                            if isinstance(v, (int, float)) and v > 0.1),
+            "remaining": sum(1 for v in getattr(self, "_defect_initial_event_counts", {}).values() if v > 0)
+                         or sum(1 for v in getattr(self, "_defect_scan_scores", {}).values()
+                                if isinstance(v, (int, float)) and v > 0.1),
             "resolved": 0,
             "resolved_pct": 0,
             "reduced_pct": 0,
@@ -19133,7 +19576,10 @@ class ModernMainWindow(QMainWindow):
             # psutil nicht verfügbar -> kein Check, weiterfahren
 
         self.progress_bar.setRange(0, 10000)
-        self.progress_bar.setValue(0)
+        # §v10.704 B21: KEIN Reset auf 0 — Gesamtfortschritt läuft von Import bis Export durch.
+        # Pre-Analysis endet bei ~25%, Verarbeitung startet mindestens dort.
+        _current_val = self.progress_bar.value()
+        self.progress_bar.setValue(max(_current_val, 2500))  # min. 25% wenn Pre-Analysis fertig
         self.progress_bar.setVisible(True)
         if hasattr(self, "phase_progress_bar"):
             self.phase_progress_bar.setValue(0)
@@ -19511,7 +19957,7 @@ class ModernMainWindow(QMainWindow):
                 _hb_frac = 0.88 + _tail
             _phase_bp = int(round(_hb_frac * 10000.0))
             if not _clean and _uv3["idx"] >= 0:
-                _clean = f"Phase {_uv3['idx']+1}/{_uv3['count']}"
+                _clean = f"Phase {_uv3['idx'] + 1}/{_uv3['count']}"
         else:
             _phase_bp = int(round(_item_pct * 100.0))
 
@@ -19523,34 +19969,40 @@ class ModernMainWindow(QMainWindow):
             self.phase_progress_bar.setValue(_phase_bp)
             self.phase_progress_bar.setVisible(True)
 
-        # ── 3. Status-Text: Alles auf einen Blick ─────────────────────
-        _parts = [f"{_pct_de} %{_eta_str}"]
-        if _clean:
-            _parts.append(_clean)
-        if _phase_detail:
-            _parts.append(_phase_detail.strip())
+        # ── 3. Status-Text: Narrativ statt technischer Anzeige ─────
+        # §v10.500: Innovatives Kommunikationssystem — Aurik erzählt
+        # die Geschichte des Songs in ganzen Sätzen, nicht als Log.
+        _elapsed_narr = max(0.0, _now - getattr(self, '_processing_start_time', _now))
+        _narrative = self._narrate_status(
+            pct=_overall_pct,
+            phase=_clean,
+            defect_state=_def_state,
+            eta_remaining_s=max(0.0, _eta_deadline - _now) if _eta_deadline > 0 else -1,
+            elapsed_s=_elapsed_narr,
+        )
         if hasattr(self, "status_text"):
-            self.status_text.setText("  ·  ".join(_parts))
+            self.status_text.setText(_narrative)
 
-        # §v10.306: Live-Update der Träger-Anzeige während Restauration
-        # "Erkannte Aufnahme:" zeigt nach Analyse-Start den Live-Phasenstatus
+        # §v10.708: Träger-Anzeige bleibt während Restauration sichtbar.
+        # "Erkannte Aufnahme:" zeigt die Tonträgerkette — NICHT den Phasenstatus
+        # (dafür gibt es _phase_step_label) und NICHT Defekt-Counts (die sind
+        # jetzt in den dimensionalen Qualitätsmetriken sichtbar).
+        # Nur zurücksetzen wenn _carrier_bg_label leer ist (Initialzustand).
         if hasattr(self, "detected_medium_label") and hasattr(self, "_carrier_bg_label"):
-            if _clean and _uv3 and isinstance(_uv3, dict) and _uv3.get("active"):
-                _ph_cur = _uv3["idx"] + 1
-                _ph_tot = _uv3["count"]
-                _live_info = f"🎧 Phase {_ph_cur}/{_ph_tot}: {_clean}"
-                if _phase_detail:
-                    _live_info += f"<br><span style='font-size:8pt;color:#8FA6C8;'>{_phase_detail.strip()}</span>"
-                self.detected_medium_label.setText(_live_info)
-            elif _def_total > 0:
-                _live_info = f"🎧 Restauration aktiv · {_def_resolved}/{_def_total} Defekte behoben"
-                self.detected_medium_label.setText(_live_info)
+            if not self._carrier_bg_label:
+                if _clean and _uv3 and isinstance(_uv3, dict) and _uv3.get("active"):
+                    _ph_cur = _uv3["idx"] + 1
+                    _ph_tot = _uv3["count"]
+                    _live_info = f"🎧 Phase {_ph_cur}/{_ph_tot}: {_clean}"
+                    if _phase_detail:
+                        _live_info += f"<br><span style='font-size:8pt;color:#8FA6C8;'>{_phase_detail.strip()}</span>"
+                    self.detected_medium_label.setText(_live_info)
 
         # ── 4. Step-Label ─────────────────────────────────────────────
         if hasattr(self, "_phase_step_label") and _clean:
             _label = _clean
             if _uv3 and isinstance(_uv3, dict):
-                _label = f"Stufe {_uv3['idx']+1}/{_uv3['count']}  ·  {_clean}"
+                _label = f"Stufe {_uv3['idx'] + 1}/{_uv3['count']}  ·  {_clean}"
             self._phase_step_label.setText(_label)
             self._phase_step_label.setVisible(True)
 
@@ -19628,10 +20080,14 @@ class ModernMainWindow(QMainWindow):
 
         if hasattr(self, "status_text"):
             _el_m, _el_s = divmod(int(_phase_elapsed), 60)
-            if _ph_tot > 0:
-                self.status_text.setText(f"Phase {_ph_cur}/{_ph_tot}: {_clean}  ·  {_el_m}:{_el_s:02d}")
-            else:
-                self.status_text.setText(f"Phase {_ph_cur}: {_clean}  ·  {_el_m}:{_el_s:02d}")
+            # §v10.500: Narrativ statt technischer Anzeige
+            _narr = self._narrate_status(
+                pct=float(getattr(self, '_last_phase_state', {}).get('pct', _ph_cur/max(1,_ph_tot)*100)),
+                phase=_clean,
+                defect_state=getattr(self, '_defect_progress_state', None) or {},
+                elapsed_s=_phase_elapsed,
+            )
+            self.status_text.setText(_narr)
 
         if hasattr(self, "_phase_step_label"):
             self._phase_step_label.setText(f"Stufe {_ph_cur}/{_ph_tot}  ·  {_clean}")
@@ -19849,7 +20305,11 @@ class ModernMainWindow(QMainWindow):
                                     )
                             if _ui_pct < 19 and _eta_range:
                                 # §v10.205: ETA nur zeigen wenn noch nicht überschritten
-                                _deadline_ok = (_rem_s > 0 and _rem_s < _expected_processing_s * 0.9) if _expected_processing_s else True
+                                _deadline_ok = (
+                                    (_rem_s > 0 and _rem_s < _expected_processing_s * 0.9)
+                                    if _expected_processing_s
+                                    else True
+                                )
                                 if _deadline_ok:
                                     _full = (
                                         f"Jetzt: {_base}  ·  {_el} · ~{_eta_range}  –  {_eta_str}"
@@ -19971,6 +20431,8 @@ class ModernMainWindow(QMainWindow):
 
     def _on_item_started(self, item_id: str) -> None:
         """Verarbeitet item start — Queue-Label auf ⏳ setzen und Status-Text aktualisieren."""
+        # §v10.702 G9: Qualitaets-Flag fuer neuen Song zuruecksetzen
+        self._real_quality_set = False
         if hasattr(self, "queue_list"):
             for i in range(self.queue_list.count()):
                 list_item = self.queue_list.item(i)
@@ -20007,6 +20469,11 @@ class ModernMainWindow(QMainWindow):
         _done = stats.get("completed", 0) + stats.get("failed", 0)
         # progress is 0–10000; convert to 0.0–1.0 fraction for this item
         _item_frac = progress / 10000.0
+        # §v10.704 B21: Pre-Analysis belegt 0–25%, Verarbeitung 25–100%.
+        # Skaliere Item-Fortschritt auf den Verarbeitungs-Anteil (75%).
+        _PROCESSING_SHARE = 0.75  # 75% des Gesamtbalkens
+        _PROCESSING_OFFSET = 0.25  # Start bei 25%
+        _item_frac = _PROCESSING_OFFSET + _item_frac * _PROCESSING_SHARE
         _overall_pct = (_done + _item_frac) / _total * 100.0
         val = max(1, min(10000, int(_overall_pct * 100)))
         # Monotonic guard: don't let stale or late-queued signals move the bar
@@ -20111,6 +20578,7 @@ class ModernMainWindow(QMainWindow):
                 _raw = getattr(_med, "primary_material", None)
                 try:
                     from Aurik10.ui.carrier_display import _CARRIER_MEDIUM_DISPLAY
+
                     _medium_label = _CARRIER_MEDIUM_DISPLAY.get(str(_raw), (None, str(_raw)))[1]
                 except Exception:
                     _medium_label = str(_raw) if _raw else None
@@ -20136,24 +20604,44 @@ class ModernMainWindow(QMainWindow):
 
         if base_key == "status.processing_item":
             if _medium_label and _era_label and _genre_label and _score is not None:
-                return t("status.processing_item_rich", file=_file, medium=_medium_label,
-                         era=_era_label, genre=_genre_label, score=_score)
+                return t(
+                    "status.processing_item_rich",
+                    file=_file,
+                    medium=_medium_label,
+                    era=_era_label,
+                    genre=_genre_label,
+                    score=_score,
+                )
             if _medium_label and _era_label:
-                return t("status.processing_item_medium_era", file=_file,
-                         medium=_medium_label, era=_era_label)
+                return t("status.processing_item_medium_era", file=_file, medium=_medium_label, era=_era_label)
             if _medium_label:
                 return t("status.processing_item_medium", file=_file, medium=_medium_label)
         elif base_key == "status.saved_file":
             if _medium_label and _score is not None and _defect_count is not None:
                 if _score >= 70:
-                    return t("status.saved_file_excellent", file=_file, medium=_medium_label,
-                             score=_score, defects=_defect_count)
+                    return t(
+                        "status.saved_file_excellent",
+                        file=_file,
+                        medium=_medium_label,
+                        score=_score,
+                        defects=_defect_count,
+                    )
                 elif _score >= 40:
-                    return t("status.saved_file_improved", file=_file, medium=_medium_label,
-                             score=_score, defects=_defect_count)
+                    return t(
+                        "status.saved_file_improved",
+                        file=_file,
+                        medium=_medium_label,
+                        score=_score,
+                        defects=_defect_count,
+                    )
                 else:
-                    return t("status.saved_file_challenging", file=_file, medium=_medium_label,
-                             score=_score, defects=_defect_count)
+                    return t(
+                        "status.saved_file_challenging",
+                        file=_file,
+                        medium=_medium_label,
+                        score=_score,
+                        defects=_defect_count,
+                    )
         return t(base_key, file=_file)
 
     def _resolve_batch_completion_status(self, item) -> dict[str, str]:
@@ -20162,18 +20650,15 @@ class ModernMainWindow(QMainWindow):
         _result = getattr(item, "restoration_result", None)
         _metadata = getattr(_result, "metadata", {}) or {} if _result is not None else {}
 
-        # §v10.201: Guardian-Revert-Erkennung (höchste Priorität)
-        _dnh = _metadata.get("do_no_harm", {}) or {}
-        if _dnh.get("reverted"):
-            _reason = _dnh.get("reason", "Unbekannte Ursache")
-            _mushra = (_metadata.get("mushra") or {}).get("mushra_score", 0.0)
+        # §v10.700 A3a: Guardian-Revert-Erkennung (höchste Priorität)
+        # A1 liefert flat keys: do_no_harm_reverted, do_no_harm_reason
+        if _metadata.get("do_no_harm_reverted"):
+            _reason = _metadata.get("do_no_harm_reason", "Unbekannte Ursache")
+            _mushra = float(_metadata.get("mushra_score", 0.0))
             _mushra_info = f" · MUSHRA {_mushra:.0f}" if _mushra > 0 else ""
             return {
                 "style": "warning",
-                "text": (
-                    f"⚠️ Bearbeitung verworfen — Original gespeichert: {_out_name}"
-                    f"{_mushra_info} · {_reason}"
-                ),
+                "text": (f"⚠️ Bearbeitung verworfen — Original gespeichert: {_out_name}{_mushra_info}\n{_reason}"),
             }
 
         # Bestehende degradation_status-Logik (unverändert)
@@ -20195,7 +20680,10 @@ class ModernMainWindow(QMainWindow):
                 "style": "warning" if _degradation_status != "blocked" else "error",
                 "text": f"Verarbeitung mit Einschränkungen gespeichert: {_out_name} · {_reason}",
             }
-        return {"style": "success", "text": self._build_context_status("status.saved_file", getattr(item, "input_file", ""))}
+        return {
+            "style": "success",
+            "text": self._build_context_status("status.saved_file", getattr(item, "input_file", "")),
+        }
 
     def _on_item_finished_with_result(self, item_id, restoration_result):
         """Handle item completion mit RestorationResult — aktualisiert Qualitäts-Radar."""
@@ -20260,6 +20748,11 @@ class ModernMainWindow(QMainWindow):
                 _layman = _bridge_get_layman_summary(restoration_result)
                 self._latest_layman_summary = dict(_layman or {})
                 self._latest_experience_insights = dict(_xp or {})
+                # §v10.600: Closed-Loop-Regelkreis-Daten für Narrativ extrahieren
+                _cl_meta = getattr(restoration_result, "metadata", {}) or {}
+                _cl_data = _cl_meta.get("closed_loop", {}) if isinstance(_cl_meta, dict) else {}
+                if _cl_data:
+                    self._closed_loop_narrative_state = dict(_cl_data)
                 _joy = float((_xp or {}).get("joy_index", 0.0) or 0.0)
                 _fat = float((_xp or {}).get("fatigue_index", 0.0) or 0.0)
                 _frisson = float((_xp or {}).get("frisson_index", 0.0) or 0.0)
@@ -20761,6 +21254,7 @@ class ModernMainWindow(QMainWindow):
                 from backend.core.donation_reminder import (
                     PAYPAL_EMAIL,
                     PAYPAL_URL,
+                    mark_reminder_shown,
                     open_donation_link,
                     should_show_reminder,
                 )
@@ -20771,35 +21265,80 @@ class ModernMainWindow(QMainWindow):
                 pass  # non-blocking
 
     def _show_donation_dialog(self) -> None:
-        """Zeigt die Spenden-Erinnerung als freundlichen Dialog mit PayPal-Button."""
+        """§v10.306 Psychologisch optimierter Spenden-Dialog.
+
+        Prinzipien:
+        1. Reziprozität: Zuerst Wert zeigen ("Aurik hat X für Dich getan")
+        2. Anker setzen: Kommerzielle Alternative kostet 399 $ (iZotope RX)
+        3. Konkrete Wahl: 3 feste Beträge statt Freitext (reduziert Entscheidungs paralysis)
+        4. Ausweg: "Später"-Button immer sichtbar (kein Druck)
+        """
         try:
             from backend.core.donation_reminder import (
                 get_donation_info,
+                mark_reminder_shown,
                 open_donation_link,
-                show_reminder,
             )
 
             _info = get_donation_info()
-            _msg = show_reminder(0.8)
+
+            # Personalisierter Qualitäts-Hinweis aus dem letzten Run
+            _stats = self.batch_queue.get_stats() if hasattr(self, "batch_queue") else {}
+            _n_ok = _stats.get("completed", 1)
+
+            _msg = (
+                f"<h3>🎵 Aurik hat {_n_ok} Song(s) erfolgreich restauriert!</h3>"
+                f"<p>Kommerzielle Tools wie iZotope RX kosten dafür <b>399 $</b> — "
+                f"Aurik ist spendenbasiert und für immer werbefrei.</p>"
+                f"<p>Hat Dir Aurik geholfen? Unterstütze die Weiterentwicklung:</p>"
+            )
 
             _dlg = QMessageBox(self)
-            _dlg.setWindowTitle("🎵 Aurik — Danke für Dein Vertrauen!")
+            _dlg.setWindowTitle("Aurik — Danke für Dein Vertrauen!")
             _dlg.setIcon(QMessageBox.Icon.Information)
-            _dlg.setText(_msg.replace("\n", "<br>").replace(
-                _info["url"],
-                f"<a href='{_info['url']}' style='color:#0070ba;'>{_info['url']}</a>",
-            ))
+            _dlg.setText(_msg)
             _dlg.setTextFormat(Qt.TextFormat.RichText)
             _dlg.setStandardButtons(QMessageBox.StandardButton.Close)
-            _btn_donate = _dlg.addButton("💛 Jetzt unterstützen", QMessageBox.ButtonRole.AcceptRole)
-            _btn_donate.setStyleSheet(
+
+            # Drei konkrete Buttons — Psychologie: Menschen spenden eher bei Auswahl
+            _btn_style = (
                 "QPushButton {"
-                "  background-color: #0070ba; color: white; font-weight: bold;"
-                "  padding: 8px 20px; border-radius: 6px; font-size: 13px;"
+                "  font-weight: bold; padding: 10px 18px; border-radius: 8px;"
+                "  font-size: 13px; min-width: 80px;"
                 "}"
-                "QPushButton:hover { background-color: #005ea6; }"
             )
-            _btn_donate.clicked.connect(lambda: open_donation_link())
+
+            _btn5 = QPushButton("☕ 5 €")
+            _btn5.setStyleSheet(
+                _btn_style + "background-color: #0070ba; color: white;QPushButton:hover { background-color: #005ea6; }"
+            )
+            _btn5.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+
+            _btn10 = QPushButton("🎵 10 €")
+            _btn10.setStyleSheet(
+                _btn_style + "background-color: #1a8a4a; color: white;QPushButton:hover { background-color: #146b38; }"
+            )
+            _btn10.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+
+            _btn_custom = QPushButton("💛 Freier Betrag")
+            _btn_custom.setStyleSheet(
+                _btn_style + "background-color: #e8a838; color: #333;QPushButton:hover { background-color: #c98e20; }"
+            )
+            _btn_custom.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+
+            _btn_later = QPushButton("Später")
+            _btn_later.setStyleSheet(
+                _btn_style + "background-color: transparent; color: #888; border: 1px solid #555;"
+                "QPushButton:hover { color: #aaa; border-color: #777; }"
+            )
+            _btn_later.clicked.connect(lambda: _dlg.reject())
+
+            _dlg.addButton(_btn5, QMessageBox.ButtonRole.AcceptRole)
+            _dlg.addButton(_btn10, QMessageBox.ButtonRole.AcceptRole)
+            _dlg.addButton(_btn_custom, QMessageBox.ButtonRole.AcceptRole)
+            _dlg.addButton(_btn_later, QMessageBox.ButtonRole.RejectRole)
+
+            mark_reminder_shown()  # §v10.306: Stamp NACH dem Dialog schreiben
             _dlg.exec()
         except Exception:
             pass  # non-blocking
@@ -21165,8 +21704,8 @@ class ModernMainWindow(QMainWindow):
             self._scrubbing = False
             _frac = self._transport_scrubber.value() / 1000.0
             # Seek in aktueller Audio-Quelle
-            _audio = getattr(self, '_play_audio_ref', None)
-            _sr = getattr(self, '_play_sr_ref', 48000)
+            _audio = getattr(self, "_play_audio_ref", None)
+            _sr = getattr(self, "_play_sr_ref", 48000)
             if _audio is not None and _sr > 0:
                 _pos = int(_frac * len(_audio) if _audio.ndim == 1 else _frac * _audio.shape[-1])
                 self._seek_playback(_pos)
@@ -21174,8 +21713,8 @@ class ModernMainWindow(QMainWindow):
     def _seek_playback(self, sample_pos: int):
         """Springt an eine Sample-Position (falls vom Player unterstützt)."""
         try:
-            _player = getattr(self, '_streaming_player', None)
-            if _player is not None and hasattr(_player, 'seek'):
+            _player = getattr(self, "_streaming_player", None)
+            if _player is not None and hasattr(_player, "seek"):
                 _player.seek(sample_pos)
         except Exception:
             pass
@@ -21184,7 +21723,7 @@ class ModernMainWindow(QMainWindow):
     def keyPressEvent(self, event):
         """Leertaste = Play/Pause, Pfeiltasten = Navigation, Escape = Stop."""
         if event.key() == Qt.Key.Key_Space:
-            if hasattr(self, '_rest_audio') and self._rest_audio is not None:
+            if hasattr(self, "_rest_audio") and self._rest_audio is not None:
                 self._play_restored_or_preview()
             return
         if event.key() == Qt.Key.Key_Escape:
@@ -21208,14 +21747,27 @@ class ModernMainWindow(QMainWindow):
         if event.key() == Qt.Key.Key_4:
             self._set_speed(2.0)
             return
+        if event.key() == Qt.Key.Key_L:
+            # Loop-Region an/aus
+            if hasattr(self, "waveform_widget"):
+                self.waveform_widget.toggle_loop()
+            return
+        if event.key() == Qt.Key.Key_Left and event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            # Shift+← = −30s
+            self._transport_scrubber.setValue(max(0, self._transport_scrubber.value() - 200))
+            return
+        if event.key() == Qt.Key.Key_Right and event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            # Shift+→ = +30s
+            self._transport_scrubber.setValue(min(1000, self._transport_scrubber.value() + 200))
+            return
         super().keyPressEvent(event)
 
     def _set_speed(self, factor: float):
         """Setzt die Playback-Geschwindigkeit."""
         self._speed_label.setText(f"{factor:.1f}×".replace(".0×", "×"))
         try:
-            _player = getattr(self, '_streaming_player', None)
-            if _player is not None and hasattr(_player, 'set_speed'):
+            _player = getattr(self, "_streaming_player", None)
+            if _player is not None and hasattr(_player, "set_speed"):
                 _player.set_speed(factor)
         except Exception:
             pass
@@ -22911,6 +23463,8 @@ class ModernMainWindow(QMainWindow):
                     "Nach Export und Qualitätsprüfung berechneter MOS-Wert.",
                 )
                 self.quality_meter_widget.set_mos(_current)
+                # §v10.702 G9: Echter Messwert gesetzt — Live-Schätzung sperren
+                self._real_quality_set = True
             if _step_ref[0] >= _STEPS:
                 _t.stop()
                 self._last_mos_displayed = target_mos
@@ -22920,6 +23474,8 @@ class ModernMainWindow(QMainWindow):
                         "Nach Export und Qualitätsprüfung berechneter MOS-Wert.",
                     )
                     self.quality_meter_widget.set_mos(target_mos)
+                    # §v10.702 G9: Echter Endwert gesetzt
+                    self._real_quality_set = True
 
         _t.timeout.connect(_tick)
         _t.start(_INTERVAL_MS)
@@ -23166,6 +23722,15 @@ class ModernMainWindow(QMainWindow):
             self._defect_initial_scores = {
                 k: v for k, v in defects.items() if isinstance(v, (int, float)) and k not in ("status", "_no_anim")
             }
+            # §v10.704 B24+: Sofort initiale Event-Counts aus Scores ableiten,
+            # damit Chips beim ersten Rendern korrekte Zahlen zeigen (nicht 0).
+            if not getattr(self, "_defect_initial_event_counts", None):
+                _init_evt: dict[str, int] = {}
+                for k, v in defects.items():
+                    if isinstance(v, (int, float)) and v > 0.01 and k not in ("status", "_no_anim"):
+                        _init_evt[k] = max(1, int(v * 100))
+                self._defect_initial_event_counts = _init_evt
+                self._defect_remaining_event_counts = dict(_init_evt)
         if _status == "detected" and not defects.get("_no_anim"):
             self._defect_anim_target = dict(defects)
             self._defect_anim_frame = 0
@@ -23505,6 +24070,18 @@ class ModernMainWindow(QMainWindow):
                     "reduced_pct": _reduced_pct,
                     "status": _status,
                 }
+                # §v10.704 B24+: Chips in Echtzeit aktualisieren —
+                # synchronisiere _defect_remaining_event_counts mit dem aktuellen Stand.
+                _rem_evt = getattr(self, "_defect_remaining_event_counts", {}) or {}
+                _init_evt_sync = getattr(self, "_defect_initial_event_counts", {}) or {}
+                if _init_evt_sync and _remaining_for_state < _total_for_state:
+                    # Propagiere Reduktion proportional auf alle Event-Counts
+                    _ratio = _remaining_for_state / max(1, _total_for_state)
+                    for _k in _init_evt_sync:
+                        _init_val = _init_evt_sync.get(_k, 0)
+                        if _init_val > 0:
+                            _rem_evt[_k] = max(0, int(_init_val * _ratio))
+                    self._defect_remaining_event_counts = _rem_evt
             else:
                 self._defect_progress_state = {
                     "total": 0,
@@ -24011,26 +24588,28 @@ class ModernMainWindow(QMainWindow):
                 self.defect_count_live_label.setText(
                     f"🔧 {_remaining_def} offen · {_done_def} erledigt ({_resolved_pct}%)"
                 )
-                self.defect_count_live_label.setStyleSheet(
-                    "color: #B8A068; font-size: 10pt; font-weight: bold;"
-                )
+                self.defect_count_live_label.setStyleSheet("color: #B8A068; font-size: 10pt; font-weight: bold;")
                 self.defect_count_live_label.setVisible(True)
             elif _total_def > 0:
+                # §v10.204 #3: Zeige nennenswerte Defekttypen im Tooltip
+                _init_evt = getattr(self, "_defect_initial_event_counts", {}) or {}
+                _top_types = sorted(
+                    [(k, v) for k, v in _init_evt.items() if isinstance(v, (int, float)) and v > 0],
+                    key=lambda x: -x[1]
+                )[:4]
+                _type_hint = ", ".join(f"{k}: {int(v)}" for k, v in _top_types) if _top_types else ""
+                _tooltip = f"{_total_def} akustische Störungen erkannt"
+                if _type_hint:
+                    _tooltip += f" ({_type_hint})"
                 self.defect_count_live_label.setText(
-                    f"🔍 {_total_def} Störungen gefunden"  # §v10.204: "Defekte"→"Störungen" + Tooltip
+                    f"🔍 {_total_def} Störungen gefunden"
                 )
-                self.defect_count_live_label.setToolTip(
-                    "Gesamtzahl erkannter akustischer Störungen (Knackser, Rauschen, Knistern etc.)"
-                )
-                self.defect_count_live_label.setStyleSheet(
-                    "color: #8894A8; font-size: 10pt;"
-                )
+                self.defect_count_live_label.setToolTip(_tooltip)
+                self.defect_count_live_label.setStyleSheet("color: #8894A8; font-size: 10pt;")
                 self.defect_count_live_label.setVisible(True)
             elif _remaining_def == 0 and _total_def > 0:
                 self.defect_count_live_label.setText("✅ Alle Defekte behoben")
-                self.defect_count_live_label.setStyleSheet(
-                    "color: #82B89A; font-size: 10pt; font-weight: bold;"
-                )
+                self.defect_count_live_label.setStyleSheet("color: #82B89A; font-size: 10pt; font-weight: bold;")
                 self.defect_count_live_label.setVisible(True)
         self._refresh_defect_summary_height()
 
@@ -24172,18 +24751,11 @@ class ModernMainWindow(QMainWindow):
             self.status_text.setText(t("status.phase_active_icon", phase=phase_text))
             self._apply_status_text_style("active", pill=True)
         else:
-            # Heartbeat aktiv: kein direkter Re-Entry in _tick_heartbeat(),
-            # da dies rekursive UI-Pfade (_update_phase -> _tick_heartbeat -> ...)
-            # auslösen kann. Stattdessen einmalig in die nächste Event-Loop schieben.
-            if not bool(getattr(self, "_phase_heartbeat_refresh_pending", False)):
-                self._phase_heartbeat_refresh_pending = True
-
-                def _refresh_heartbeat_once() -> None:
-                    self._phase_heartbeat_refresh_pending = False
-                    if self._heartbeat_timer is not None and self._heartbeat_timer.isActive():
-                        self._tick_heartbeat()
-
-                QTimer.singleShot(0, _refresh_heartbeat_once)
+            # §v10.702 G7: Kein QTimer.singleShot-Hack mehr.
+            # _update_phase schreibt nur in den Puffer; _tick_heartbeat baut
+            # daraus die vollständige Status-Zeile inkl. Elapsed/ETA.
+            # Eliminiert das Flackern durch konkurrierende Writer.
+            self._phase_text_buffer = str(phase_text or "")
         if hasattr(self, "resource_status_widget"):
             self.resource_status_widget.update_status(phase=phase_text)
         # Fortschrittsbalken: nur sicherstellen dass Range gesetzt ist.
@@ -24450,9 +25022,15 @@ class ModernMainWindow(QMainWindow):
 
     # §v10.70: Pausiere alle Animationstimers bei Fokusverlust — spart CPU.
     _ANIMATION_TIMER_NAMES: tuple[str, ...] = (
-        "_morph_timer", "_pulse_timer", "_removal_timer",
-        "_preview_timer", "_smooth_timer", "_glow_timer",
-        "_shimmer_timer", "_click_timer", "_responsive_timer",
+        "_morph_timer",
+        "_pulse_timer",
+        "_removal_timer",
+        "_preview_timer",
+        "_smooth_timer",
+        "_glow_timer",
+        "_shimmer_timer",
+        "_click_timer",
+        "_responsive_timer",
     )
 
     def changeEvent(self, event) -> None:
@@ -25249,10 +25827,15 @@ class ModernMainWindow(QMainWindow):
             self.ab_hdr.setText(t("ui.ab_compare"))
 
         # Fallback labels when image assets are unavailable
-        if hasattr(self, "btn_magic_restoration") and self.btn_magic_restoration.text().startswith("💿"):
-            self.btn_magic_restoration.setText(f"💿  {t('action.restore_restoration')}")
-        if hasattr(self, "btn_magic_studio") and self.btn_magic_studio.text().startswith("🎯"):
-            self.btn_magic_studio.setText(f"🎯  {t('action.restore_studio')}")
+        # §v10.204 #4: Stellt Button-Text auch nach "🔄 Läuft…" wieder her
+        if hasattr(self, "btn_magic_restoration"):
+            _cur = self.btn_magic_restoration.text()
+            if _cur.startswith("💿") or _cur.startswith("🔄"):
+                self.btn_magic_restoration.setText(f"💿  {t('action.restore_restoration')}")
+        if hasattr(self, "btn_magic_studio"):
+            _cur = self.btn_magic_studio.text()
+            if _cur.startswith("🎯") or _cur.startswith("🔄"):
+                self.btn_magic_studio.setText(f"🎯  {t('action.restore_studio')}")
 
         # Keep user-facing placeholders translated
         if hasattr(self, "detected_medium_label") and not self.current_file_path:
@@ -25281,6 +25864,314 @@ class ModernMainWindow(QMainWindow):
                     _lbl.setText(t("ui.defects_detected_title"))
 
         self._update_stats()
+
+    # ── §v10.500 Innovatives Kommunikationssystem ───────────────────
+    # Ebene 1: Phasen-bewusste Narrative (jede Phase hat eigene Geschichte)
+    # Ebene 2: Experience-Insights (Joy, Fatigue, Recommendations)
+    # Ebene 3: Song-Personalisierung (Medium, Genre, Ära, Kette)
+    _NARRATIVE_PHASE_MAP: dict[str, str] = {
+        # Pre-Analysis & Scanning
+        "schadensbewertung": "Aurik vermisst die Schäden. Jeder Klick, jedes Knistern, jeder Aussetzer wird millimetergenau lokalisiert und nach seiner Hörbarkeit bewertet.",
+        "analyse": "Aurik analysiert die Aufnahme Schicht für Schicht. Das neuronale Netzwerk unterscheidet dabei Musik von Störsignalen — eine Frequenz nach der anderen.",
+        "scan": "Aurik scannt das gesamte Frequenzspektrum. Diese Detailanalyse ist die Grundlage für jede einzelne Entscheidung, die später getroffen wird.",
+        "defekte werden": "Die Schadensanalyse läuft. Aurik untersucht jede Millisekunde auf Unregelmäßigkeiten — klassifiziert, bewertet und priorisiert.",
+        # Denker & Planung
+        "kette": "Aurik rekonstruiert die Geschichte dieser Aufnahme: Welche Tonträger hat sie durchlaufen? Welche Klangeinbußen sind dabei entstanden? Daraus entsteht der Restaurationsplan.",
+        "globalplan": "Der Restaurationsplan steht. Aurik hat für jedes der {total} akustischen Probleme eine eigene Strategie entwickelt — materialgerecht, phasenoptimiert.",
+        "strategie": "Aurik wählt die Strategie. Für {medium} aus den {era}ern gilt: behutsam restaurieren, den Charakter bewahren, nur das Nötigste eingreifen.",
+        # Noise & Cleanup
+        "denoise": "Aurik entfernt das Grundrauschen. Ein speziell trainiertes neuronales Netzwerk unterscheidet dabei Musik von Störsignalen — Note für Note, Sample für Sample.",
+        "tape_hiss": "Das charakteristische Bandrauschen wird entfernt. Aurik analysiert das Rauschprofil und zieht es ab, ohne die Höhen der Musik zu beeinträchtigen.",
+        "rumble": "Tieffrequentes Rumpeln — vermutlich vom Plattenspieler oder Bandgerät — wird herausgefiltert, ohne den Bassbereich der Musik anzutasten.",
+        "surface_noise": "Das feine Knistern und Kratzen der Oberfläche wird entfernt. Aurik arbeitet hier mit chirurgischer Präzision — jedes einzelne Störevent wird isoliert behandelt.",
+        "noise_gate": "Die stillen Passagen werden bereinigt. Aurik unterscheidet zwischen musikalischer Stille und technischem Rauschen und entfernt nur Letzteres.",
+        # Click/Pop/Crackle
+        "click": "Knackser werden einzeln entfernt. Aurik erkennt sie an ihrer charakteristischen Impulsform und ersetzt sie durch eine aus dem Kontext berechnete, natürliche Wellenform.",
+        "declick": "Die Knackser-Entfernung läuft. Aurik hat {done} von {total} Störimpulsen bereits beseitigt — jeder einzelne chirurgisch exakt, ohne Spuren zu hinterlassen.",
+        "crackle": "Das feine Knistern verschwindet. Anders als bei Knacksern arbeitet Aurik hier flächig — das gesamte Zeit-Frequenz-Bild wird von diesen Mikro-Störungen befreit.",
+        # Repair
+        "hum_removal": "Netzbrummen — {done} von {total} betroffenen Frequenzbändern sind bereits bereinigt. Aurik entfernt die 50-Hz-Oberschwingungen, ohne den musikalischen Bassbereich zu beschädigen.",
+        "dropout": "Kurze Aussetzer und Dropouts werden mit KI rekonstruiert. Aurik analysiert den musikalischen Kontext vor und nach der Lücke und ergänzt die fehlenden Stellen — unhörbar.",
+        "spectral_repair": "Beschädigte Frequenzbereiche werden repariert. Aurik nutzt die Information aus den unbeschädigten Nachbarfrequenzen, um das Fehlende zu rekonstruieren.",
+        "diffusion_inpainting": "Auriks fortschrittlichste KI kommt zum Einsatz: Ein Diffusionsmodell rekonstruiert fehlende Audioteile, indem es die umgebende Musik versteht und das Passende erzeugt.",
+        # Enhancement
+        "harmonic_restoration": "Fehlende Obertöne werden ergänzt. Aurik analysiert die vorhandene harmonische Struktur und berechnet die Obertöne, die durch die Kompression verloren gingen.",
+        "frequency_restoration": "Das obere Frequenzspektrum wird wiederhergestellt. Aurik berechnet aus den vorhandenen Frequenzen, wie die fehlenden Höhen geklungen haben müssen.",
+        "stereo_enhancement": "Das Stereobild wird verbreitert und präzisiert. Aurik trennt Mittensignal und Seitenanteile und bearbeitet sie unabhängig voneinander.",
+        "transient": "Die Anschläge und Impulse werden nachgeschärft. Aurik erkennt perkussive Elemente und verstärkt ihre Präsenz, ohne die Natürlichkeit zu beeinträchtigen.",
+        "exciter": "Ein Hauch von Frische: Aurik fügt psychoakustisch optimierte Obertöne hinzu — so dezent, dass man es nicht hört, aber sofort vermisst, wenn es fehlt.",
+        # Dynamics & Tone
+        "compression": "Die Dynamik wird ausbalanciert. Aurik verdichtet leise und laute Passagen behutsam — die Musik atmet weiter, gewinnt aber an Präsenz.",
+        "eq_correction": "Die Klangbalance wird korrigiert. Aurik gleicht Frequenzüberhänge aus, die durch die Aufnahmetechnik der {era}er Jahre entstanden sind.",
+        "wow_flutter": "Tonhöhenschwankungen vom Bandgerät oder Plattenspieler werden korrigiert. Aurik erkennt die ursprüngliche Geschwindigkeit und gleicht sie über den gesamten Verlauf an.",
+        # Finishing
+        "mastering_polish": "Der letzte Schliff: Aurik rundet das Frequenzbild ab, optimiert die Stereobreite und bereitet die Aufnahme für den Export vor.",
+        "loudness_normalization": "Die Lautstärke wird nach internationalem Standard normalisiert. Aurik stellt sicher, dass die Aufnahme auf jedem Gerät und jeder Plattform optimal klingt.",
+        "de_esser": "Scharfe Zischlaute werden entschärft. Aurik erkennt Sibilanten und reduziert sie — die Stimme bleibt natürlich, verliert aber die unangenehme Schärfe.",
+    }
+
+    def _narrate_status(
+        self,
+        pct: float = 0.0,
+        phase: str = "",
+        defect_state: dict | None = None,
+        eta_remaining_s: float = -1,
+        elapsed_s: float = 0.0,
+    ) -> str:
+        """Erzählt die Geschichte der laufenden Restauration in ganzen Sätzen.
+
+        Drei Innovationsebenen:
+        1. Phasen-bewusste Narrative aus _NARRATIVE_PHASE_MAP
+        2. Experience-Insights (Joy, Fatigue, Recommendations)
+        3. Song-Personalisierung (Medium, Genre, Ära)
+        """
+        _ds = defect_state or {}
+        _total = int(_ds.get("total", 0) or 0)
+        _remaining = int(_ds.get("remaining", _total) or 0)
+        _done = max(0, _total - _remaining)
+
+        # ── Kontext aus Pre-Analysis ──────────────────────────────
+        _medium_raw = str(getattr(self, "_raw_medium_type", "") or "")
+        _genre = str(getattr(self, "_era_genre_cached", "") or "")
+        _era_decade = getattr(self, "_era_genre_badge", "")
+        _medium_friendly = {
+            "vinyl": "Schallplatte", "cassette": "Kassette", "reel_tape": "Tonband",
+            "shellac": "Schellackplatte", "lacquer_disc": "Lackfolie", "wire_recording": "Drahtaufnahme",
+            "mp3_low": "MP3-Datei", "cd_digital": "CD", "tape": "Band", "dat": "DAT-Band",
+            "minidisc": "Minidisc", "wax_cylinder": "Wachszylinder",
+        }.get(_medium_raw, _medium_raw or "Aufnahme")
+
+        _xp = getattr(self, "_latest_experience_insights", {}) or {}
+        # §v10.500: Live-Joy/Fatigue-Proxy — geschätzt bis Echtwerte vom Backend kommen
+        _joy_raw = (_xp.get("joy_runtime_index", {}) or {}).get("joy_index", 0.0)
+        _fatigue_raw = (_xp.get("joy_runtime_index", {}) or {}).get("fatigue_index", 0.0)
+        _joy = float(_joy_raw) if _joy_raw else self._estimate_live_joy(pct, _done, _total)
+        _fatigue = float(_fatigue_raw) if _fatigue_raw else self._estimate_live_fatigue(pct, elapsed_s)
+        _recs = _xp.get("auto_improvement_recommendations", {}) or {}
+        _rec_list = (_recs.get("recommendations") or []) if isinstance(_recs, dict) else []
+        _top_rec = _rec_list[0] if _rec_list else {}
+        _chain_depth = int(getattr(self, "_chain_depth", 1) or 1)
+
+        # ── Zeit ──────────────────────────────────────────────────
+        _el_m, _el_s = divmod(int(elapsed_s), 60)
+        _time_str = f"{_el_m} Minuten und {_el_s} Sekunden" if _el_m > 0 else f"{_el_s} Sekunden"
+
+        _eta_str = ""
+        if eta_remaining_s > 120:
+            _eta_str = f" — Aurik braucht voraussichtlich noch etwa {int(eta_remaining_s / 60)} Minuten"
+        elif eta_remaining_s > 60:
+            _eta_str = f" — nur noch etwa eine Minute"
+        elif eta_remaining_s > 0:
+            _eta_str = " — nur noch ein kurzer Augenblick"
+
+        _phase_lower = (phase or "").lower().replace(" ", "_")
+
+        # ── Ebene 1: Phasen-spezifische Narrative ─────────────────
+        _phase_narrative = ""
+        for _keyword, _template in self._NARRATIVE_PHASE_MAP.items():
+            if _keyword in _phase_lower:
+                _phase_narrative = _template.format(
+                    total=_total, done=_done, remaining=_remaining,
+                    medium=_medium_friendly, era=_era_decade,
+                )
+                break
+
+        # ── Ebene 2: Experience-Insights ──────────────────────────
+        _joy_note = ""
+        if _joy > 0.7:
+            _joy_note = " Die Musik gewinnt spürbar an emotionaler Wirkung — Aurik ist auf dem richtigen Weg."
+        elif _joy > 0.5:
+            _joy_note = " Der Höreindruck verbessert sich kontinuierlich."
+        if _fatigue > 0.5 and _fatigue > _joy:
+            _joy_note += " Aurik arbeitet bewusst konservativ, um den natürlichen Höreindruck nicht zu verfälschen."
+
+        # §v10.600: Closed-Loop-Regelkreis-Einblicke
+        _clc_note = ""
+        _clc_data = getattr(self, "_closed_loop_narrative_state", None) or {}
+        if _clc_data:
+            _regressions = int(_clc_data.get("regression_count", 0) or 0)
+            _skips = int(_clc_data.get("skip_count", 0) or 0)
+            _phases_measured = int(_clc_data.get("phases_measured", 0) or 0)
+            if _regressions > 2:
+                _clc_note = f" Aurik hat {_regressions}× die Stärke reduziert, weil Phasen zu aggressiv waren — der Regelkreis schützt deine Musik."
+            elif _skips > 0:
+                _clc_note = f" {_skips} Phasen wurden als wirkungslos erkannt und übersprungen — Aurik spart gezielt Rechenzeit."
+            elif _phases_measured >= 5:
+                _clc_note = f" Der Regelkreis hat {_phases_measured} Phasen vermessen — alle im grünen Bereich."
+
+        _rec_note = ""
+        if isinstance(_top_rec, dict) and _top_rec.get("focus"):
+            _focus = _top_rec.get("focus", "")
+            _reason = _top_rec.get("reason", "")
+            _focus_de = {"transparenz": "Transparenz", "brillanz": "Brillanz",
+                         "waerme": "Wärme", "bass_kraft": "Basskraft",
+                         "artikulation": "Artikulation", "authentizitaet": "Authentizität",
+                        }.get(_focus, _focus)
+            if _reason:
+                _rec_note = f" Auriks Analyse empfiehlt, besonders die {_focus_de} zu verbessern — {_reason}."
+
+        # ── Ebene 3: Song-Personalisierung ─────────────────────────
+        # §v10.703 B15/B16: Grammatikalisch korrekte, fliessende deutsche Sätze.
+        # Genre in den Dativ setzen für "Arbeit an diesem..."
+        _GENRE_DATIVE: dict[str, str] = {
+            "deutscher schlager": "diesem deutschen Schlager",
+            "schlager": "diesem Schlager",
+            "pop": "diesem Popsong",
+            "rock": "diesem Rocksong",
+            "jazz": "diesem Jazzstück",
+            "klassik": "diesem klassischen Stück",
+            "volksmusik": "diesem Volkslied",
+            "hip hop": "diesem Hip-Hop-Track",
+            "electronic": "diesem elektronischen Track",
+            "r&b": "diesem R&B-Stück",
+            "soul": "diesem Soulstück",
+            "funk": "diesem Funkstück",
+            "blues": "diesem Bluesstück",
+            "country": "diesem Countrysong",
+            "reggae": "diesem Reggaestück",
+            "metal": "diesem Metalsong",
+            "punk": "diesem Punksong",
+            "folk": "diesem Folkstück",
+        }
+        _genre_key = _genre.lower().strip() if _genre else ""
+        _genre_dative = _GENRE_DATIVE.get(_genre_key, f"diesem {_genre.title()}" if _genre else "dieser Aufnahme")
+
+        # Tonträgerkette als Relativsatz
+        _chain_relativ = ""
+        if hasattr(self, "_chain_keys") and self._chain_keys:
+            _chain_keys = getattr(self, "_chain_keys", [])
+        else:
+            _chain_keys = []
+        _CHAIN_STAGE_NAMES: dict[str, str] = {
+            "studio": "im Studio aufgenommen",
+            "master_tape": "auf Masterband aufgezeichnet",
+            "vinyl": "auf Vinyl gepresst",
+            "cassette": "auf Kassette überspielt",
+            "reel_tape": "auf Tonband kopiert",
+            "cd": "auf CD digitalisiert",
+            "mp3": "als MP3 komprimiert",
+            "digital": "digital übertragen",
+            "streaming": "per Streaming verteilt",
+        }
+        if len(_chain_keys) >= 2:
+            _chain_parts = [_CHAIN_STAGE_NAMES.get(str(ck).lower().strip(), str(ck)) for ck in _chain_keys]
+            _chain_relativ = ", " + _chain_parts[0] + ", " + ", dann ".join(_chain_parts[1:])
+        elif _medium_friendly:
+            _medium_key = _medium_raw.lower().strip() if _medium_raw else ""
+            _single_stage = _CHAIN_STAGE_NAMES.get(_medium_key)
+            if _single_stage:
+                _chain_relativ = f", {_single_stage}"
+
+        # Narrativ-Assembly
+        _intro = _genre_dative if _genre_key else "dieser Aufnahme"
+        _chain_text = _chain_relativ if _chain_relativ else ""
+        # §v10.703 B16: Dekade aus Plain-Text-Feld, nicht aus HTML-Badge
+        _era_plain = str(getattr(self, "_era_decade_plain", "") or "")
+        if not _era_plain:
+            # Fallback: aus _era_genre_badge extrahieren (Format "80er Deutscher Schlager")
+            _badge = getattr(self, "_era_genre_badge", "") or ""
+            _era_match = re.match(r'(\d{2,4})er', str(_badge))
+            if _era_match:
+                _era_plain = f"{_era_match.group(1)}ern"
+        _era_text = f" aus den {_era_plain}" if _era_plain else ""
+
+        if pct < 5.0:
+            return (
+                f"Aurik beginnt mit der Arbeit an {_intro}{_chain_text}{_era_text}. "
+                f"Seit {_time_str} analysiert es jede Frequenz, jeden Übergang, jede Nuance. "
+            ).strip()
+
+        if pct < 15.0:
+            _base = (
+                f"Die Analyse ist abgeschlossen. "
+                f"Aurik hat {_total} akustische Störungen entdeckt — "
+                f"jedes einzelne wird nun behandelt. "
+            )
+            return f"{_base}Seit {_time_str} läuft die Restaurierung.".replace("..", ".")
+
+        if pct < 40.0:
+            if _phase_narrative:
+                return f"{_phase_narrative} {_joy_note}{_clc_note}{_eta_str}.".replace("..", ".")
+            if _done > 0 and _total > 0:
+                return (
+                    f"Die Reparatur der Schäden ist in vollem Gange. "
+                    f"{_done} von {_total} Störungen sind bereits behoben — "
+                    f"der Klang wird zunehmend sauberer und transparenter. "
+                    f"Aurik arbeitet jetzt seit {_time_str}{_eta_str}."
+                )
+            return (
+                f"Aurik durchläuft die ersten Restaurierungsphasen. "
+                f"Jede einzelne wird exakt auf {_medium_friendly} abgestimmt. "
+                f"Seit {_time_str} läuft die Verarbeitung{_eta_str}."
+            )
+
+        if pct < 70.0:
+            if _phase_narrative:
+                return f"{_phase_narrative}{_joy_note}{_clc_note}{_rec_note}{_eta_str}.".replace("..", ".")
+            return (
+                f"Die aufwändigsten Reparaturen sind geschafft. "
+                f"{_done} von {_total} Störungen beseitigt. "
+                f"Jetzt folgen die klanglichen Verbesserungen: Brillanz, Wärme, Räumlichkeit. "
+                f"Aurik formt den Klang mit Sorgfalt und Respekt.{_joy_note}{_eta_str}."
+            ).replace("..", ".")
+
+        if pct < 90.0:
+            if _phase_narrative:
+                return f"{_phase_narrative}{_rec_note}{_eta_str}.".replace("..", ".")
+            return (
+                f"Der Feinschliff hat begonnen. Die grossen Arbeiten sind erledigt — "
+                f"{_done} Störungen entfernt. "
+                f"Nun werden die Nuancen herausgearbeitet: Transparenz, Natürlichkeit, Authentizität. "
+                f"Seit {_time_str} arbeitet Aurik an dieser Aufnahme{_eta_str}."
+            )
+
+        if pct < 99.0:
+            return (
+                f"Die Restauration steht kurz vor dem Abschluss. "
+                f"{_done} Störungen wurden behoben, die Musik erklingt klarer "
+                f"und lebendiger als zuvor. "
+                f"Aurik prüft jetzt die Qualität des Ergebnisses — "
+                f"jede Frequenz, jede Phase, jede Nuance.{_eta_str}."
+            ).replace("..", ".")
+
+        return (
+            f"Die Restauration ist vollendet. "
+            f"Nach {_time_str} intensiver Arbeit hat Aurik {_done} akustische Störungen behoben. "
+            f"Das Ergebnis wird jetzt gespeichert."
+        )
+
+    @staticmethod
+    def _estimate_live_joy(pct: float, done: int, total: int) -> float:
+        """Schätzt den Hörgenuss (0-1) live aus Defektfortschritt + Phasenfortschritt.
+
+        Der echte Joy-Wert kommt erst im RestorationResult — dieser Proxy
+        liefert eine plausible Live-Schätzung für das Narrativ.
+        """
+        if total <= 0:
+            return min(0.45, pct / 100.0 * 0.5)
+        _defect_ratio = done / max(total, 1)
+        # Joy steigt mit behobenen Defekten (60% Gewicht) + Fortschritt (40%)
+        _joy = 0.60 * _defect_ratio + 0.40 * (pct / 100.0)
+        # Dämpfung: Joy kann nicht über 0.85 ohne echte Messung
+        return round(min(_joy, 0.85), 3)
+
+    @staticmethod
+    def _estimate_live_fatigue(pct: float, elapsed_s: float) -> float:
+        """Schätzt die Hörermüdung (0-1) live aus verstrichener Zeit.
+
+        Fatigue ist niedrig am Anfang, steigt mit langer Verarbeitungsdauer —
+        das ist eine psychoakustische Schätzung, kein echter Messwert.
+        """
+        if elapsed_s < 30:
+            return 0.05  # Frisch — kaum Ermüdung
+        if elapsed_s < 120:
+            return 0.12
+        if elapsed_s < 600:  # 10 Minuten
+            return 0.2 + (pct / 100.0) * 0.1
+        if elapsed_s < 1800:  # 30 Minuten
+            return 0.3 + (pct / 100.0) * 0.15
+        # >30 Minuten: Fatigue steigt, aber Fortschritt dämpft
+        return round(min(0.55, 0.4 + (elapsed_s / 7200.0) * 0.2 - (pct / 100.0) * 0.1), 3)
 
     def _update_stats(self):
         """Aktualisiert statistics display."""
