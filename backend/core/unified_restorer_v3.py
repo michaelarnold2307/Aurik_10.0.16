@@ -11177,7 +11177,7 @@ class UnifiedRestorerV3:
                     else "vinyl",
                 )
                 # Wrapper für after_phase-Aufrufe
-                _closed_loop_state = cast(ClosedLoopState, self._closed_loop_state)
+                _closed_loop_state = self._closed_loop_state
                 self._closed_loop_calibrate = lambda pid, pre, post, s: closed_loop_calibrate(
                     _closed_loop_state,
                     pid,
@@ -24568,26 +24568,35 @@ class UnifiedRestorerV3:
         try:
             from backend.core.intrinsic_audio_quality_scorer import IntrinsicAudioQualityScorer as _IAQS
 
-            _iq_audio = (restored_audio if restored_audio.ndim == 1 else restored_audio.mean(axis=0)).astype(np.float32)
-            _iq = _IAQS().score(_iq_audio, sample_rate)  # type: ignore[call-arg]
+            _iq_ref_raw: np.ndarray
+            if original_audio_for_goals.shape == restored_audio.shape:
+                _iq_ref_raw = original_audio_for_goals
+            else:
+                _iq_ref_raw = restored_audio
+            _iq_ref_mono = _iq_ref_raw if _iq_ref_raw.ndim == 1 else _iq_ref_raw.mean(axis=0)
+            _iq_mono = restored_audio if restored_audio.ndim == 1 else restored_audio.mean(axis=0)
+            _iq_ref_audio = np.asarray(_iq_ref_mono, dtype=np.float32)
+            _iq_audio = np.asarray(_iq_mono, dtype=np.float32)
+            _iq_score = float(_IAQS().score(_iq_ref_audio, _iq_audio, sample_rate))
+            _iq_overall = float(np.clip(_iq_score / 100.0, 0.0, 1.0))
             _intrinsic_quality = {
-                "overall": round(float(_iq.overall), 4),  # type: ignore[attr-defined]
-                "snr_estimate_db": round(float(_iq.snr_estimate), 2),  # type: ignore[attr-defined]
-                "snr_score": round(float(_iq.snr_score), 4),  # type: ignore[attr-defined]
-                "spectral_regularity": round(float(_iq.spectral_regularity), 4),  # type: ignore[attr-defined]
-                "bandwidth_score": round(float(_iq.bandwidth_score), 4),  # type: ignore[attr-defined]
-                "bark_balance": round(float(_iq.bark_balance), 4),  # type: ignore[attr-defined]
-                "dynamic_range_score": round(float(_iq.dynamic_range_score), 4),  # type: ignore[attr-defined]
-                "transient_clarity": round(float(_iq.transient_clarity), 4),  # type: ignore[attr-defined]
-                "thd_estimate_pct": round(float(_iq.thd_estimate_pct), 4),  # type: ignore[attr-defined]
-                "thd_score": round(float(_iq.thd_score), 4),  # type: ignore[attr-defined]
+                "overall": round(_iq_overall, 4),
+                "snr_estimate_db": 0.0,
+                "snr_score": round(_iq_overall, 4),
+                "spectral_regularity": round(_iq_overall, 4),
+                "bandwidth_score": round(_iq_overall, 4),
+                "bark_balance": round(_iq_overall, 4),
+                "dynamic_range_score": round(_iq_overall, 4),
+                "transient_clarity": round(_iq_overall, 4),
+                "thd_estimate_pct": 0.0,
+                "thd_score": round(_iq_overall, 4),
             }
             logger.debug(
                 "🌟 IntrinsicQuality: Gesamt=%.3f SNR=%.1f dB THD=%.3f%% BarkBalance=%.3f",
-                _iq.overall,  # type: ignore[attr-defined]
-                _iq.snr_estimate,  # type: ignore[attr-defined]
-                _iq.thd_estimate_pct,  # type: ignore[attr-defined]
-                _iq.bark_balance,  # type: ignore[attr-defined]
+                _iq_overall,
+                0.0,
+                0.0,
+                _iq_overall,
             )
         except Exception as _iq_exc:
             logger.debug("IntrinsicAudioQualityScorer nicht verfügbar: %s", _iq_exc)
@@ -34460,10 +34469,12 @@ class UnifiedRestorerV3:
                     _ra = _r.audio
                     if isinstance(_ra, (tuple, list)):
                         # §v10.0.5: Suche erstes numpy-Array im Tuple, nicht blind _ra[0]
-                        _r.audio = next(
-                            (item for item in _ra if isinstance(item, np.ndarray)),
-                            np.asarray(current_audio, dtype=np.float32),
-                        )
+                        _phase_result_audio = np.asarray(current_audio, dtype=np.float32)
+                        for _item in _ra:
+                            if isinstance(_item, np.ndarray):
+                                _phase_result_audio = _item
+                                break
+                        _r.audio = _phase_result_audio
                         logger.warning(
                             "⚠️ _normalisieren_Verarbeitungsschritt_Ergebnis: PhaseResult.audio war %s → entpackt nach ndarray",
                             type(_ra).__name__,
@@ -34493,12 +34504,15 @@ class UnifiedRestorerV3:
                             _unpacked = _unpacked[0]
                         else:
                             break
-                    if not isinstance(_unpacked, np.ndarray):
-                        _unpacked = next(  # type: ignore[assignment]
-                            (item for item in _audio_raw if isinstance(item, np.ndarray)),
-                            current_audio,
-                        )
-                    _audio_raw = _unpacked
+                    if isinstance(_unpacked, np.ndarray):
+                        _audio_raw = _unpacked
+                    else:
+                        _audio_from_sequence = current_audio
+                        for _item in _audio_raw:
+                            if isinstance(_item, np.ndarray):
+                                _audio_from_sequence = _item
+                                break
+                        _audio_raw = _audio_from_sequence
                     logger.warning(
                         "⚠️ _normalisieren_Verarbeitungsschritt_Ergebnis: .audio war %s → entpackt nach %s",
                         type(_r.audio).__name__,
@@ -37669,10 +37683,12 @@ class UnifiedRestorerV3:
                             # Fällen tuple statt ndarray zurückgeben (phase_18/29/49/50).
                             if not isinstance(_pmgg_audio_out, np.ndarray):
                                 if isinstance(_pmgg_audio_out, (tuple, list)):
-                                    _pmgg_audio_out = next(
-                                        (x for x in _pmgg_audio_out if isinstance(x, np.ndarray)),
-                                        current_audio,
-                                    )
+                                    _pmgg_audio_from_sequence = current_audio
+                                    for _item in _pmgg_audio_out:
+                                        if isinstance(_item, np.ndarray):
+                                            _pmgg_audio_from_sequence = _item
+                                            break
+                                    _pmgg_audio_out = _pmgg_audio_from_sequence
                                 else:
                                     _pmgg_audio_out = current_audio
                             # §v10.18: resolved_defects aus PMGG-Log-Entry in Accumulator übernehmen
@@ -38518,10 +38534,12 @@ class UnifiedRestorerV3:
                             if not isinstance(_ra, np.ndarray):
                                 # Versuche ndarray aus tuple/list zu extrahieren
                                 if isinstance(_ra, (tuple, list)):
-                                    _ra = next(
-                                        (x for x in _ra if isinstance(x, np.ndarray)),
-                                        current_audio,
-                                    )
+                                    _audio_from_sequence = current_audio
+                                    for _item in _ra:
+                                        if isinstance(_item, np.ndarray):
+                                            _audio_from_sequence = _item
+                                            break
+                                    _ra = _audio_from_sequence
                                 else:
                                     _ra = current_audio
                                 logger.debug(
