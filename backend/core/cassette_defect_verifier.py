@@ -50,10 +50,19 @@ SEGMENT_CONTEXT_MS: float = 500.0  # Kontext vor/nach Defektstelle (ms)
 class DefectVerificationResult:
     """Ergebnis der Defekt-Verifikation fuer ein einzelnes repariertes Segment."""
 
-    defect_type: str
-    phase_id: str
-    location_start_s: float
-    location_end_s: float
+    defect_type: str = ""
+    phase_id: str = ""
+    location_start_s: float = 0.0
+    location_end_s: float = 0.0
+
+    # ── PDV-Kompatibilität (phase_defect_verifier.py nutzt diese Dataclass kanonisch) ──
+    targeted_defects: list[str] = field(default_factory=list)
+    proxies_before: dict[str, float] = field(default_factory=dict)
+    proxies_after: dict[str, float] = field(default_factory=dict)
+    worst_defect: str = ""
+    worst_relative_change: float = 0.0
+    rollback_triggered: bool = False
+    skipped_defects: list[str] = field(default_factory=list)
 
     # ── Per-Defect HPE ──
     hpe_before: float = 0.0  # HPE des defekten Segments VOR Reparatur
@@ -93,6 +102,33 @@ class BatchVerificationResult:
     mean_residual_db: float = 0.0
     per_segment: list[DefectVerificationResult] = field(default_factory=list)
     overall_verdict: str = ""
+
+
+_PDV_COMPAT_EXPORTS = {
+    "PhaseDefectVerifier",
+    "get_phase_defect_verifier",
+    "_proxy_impulse_ratio",
+    "_proxy_hf_noise_floor",
+    "_proxy_hum_energy",
+    "_proxy_low_freq_energy",
+    "_proxy_dc_offset",
+    "_proxy_dropout_ratio",
+    "_proxy_mono_compat",
+    "_frequency_selective_blend",
+    "_compute_hf_noise_audibility",
+    "_compute_transient_harshness",
+    "_compute_quasi_peak_burstiness",
+    "_compute_modulation_roughness",
+}
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy PDV compatibility exports without creating an import cycle."""
+    if name in _PDV_COMPAT_EXPORTS:
+        from backend.core import phase_defect_verifier as _pdv
+
+        return getattr(_pdv, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # ═══════════════════════════════════════════════════════════════

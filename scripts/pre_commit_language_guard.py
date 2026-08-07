@@ -500,10 +500,19 @@ def fix_file(filepath: Path) -> int:
 
     replacements: list[tuple[int, int, str]] = []
     for node in _logger_message_nodes(tree):
-        if not hasattr(node, "end_lineno") or not hasattr(node, "end_col_offset"):
+        start_lineno = getattr(node, "lineno", None)
+        start_col_offset = getattr(node, "col_offset", None)
+        end_lineno = getattr(node, "end_lineno", None)
+        end_col_offset = getattr(node, "end_col_offset", None)
+        if (
+            not isinstance(start_lineno, int)
+            or not isinstance(start_col_offset, int)
+            or not isinstance(end_lineno, int)
+            or not isinstance(end_col_offset, int)
+        ):
             continue
-        start = _offset(node.lineno, node.col_offset)
-        end = _offset(node.end_lineno, node.end_col_offset)  # type: ignore[arg-type]
+        start = _offset(start_lineno, start_col_offset)
+        end = _offset(end_lineno, end_col_offset)
         segment = source[start:end]
         translated = _translate_source_segment(segment)
         if translated != segment:

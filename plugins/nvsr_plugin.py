@@ -372,7 +372,8 @@ class NvsrPlugin:
         _frame_energy_smooth = np.convolve(_frame_energy, np.ones(5) / 5.0, mode="same")
         # §GEBOT-G04: Adaptiver Transienten-Schwellwert — abhängig von spektraler Dynamik
         # Ruhiges Material → niedrigere Schwelle, dynamisches Material → höhere Schwelle
-        _frame_energy_std = np.std(_frame_energy_smooth) / max(np.mean(_frame_energy_smooth), 1e-12)  # type: ignore[call-overload]
+        _frame_energy_mean = float(np.mean(_frame_energy_smooth))
+        _frame_energy_std = float(np.std(_frame_energy_smooth)) / max(_frame_energy_mean, 1e-12)
         _transient_mult = np.clip(5.0 - _frame_energy_std * 2.0, 2.0, 5.0)
         _is_transient = _frame_energy > np.maximum(_frame_energy_smooth * _transient_mult, 1e-8)
 

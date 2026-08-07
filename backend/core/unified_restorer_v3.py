@@ -24577,26 +24577,40 @@ class UnifiedRestorerV3:
             _iq_mono = restored_audio if restored_audio.ndim == 1 else restored_audio.mean(axis=0)
             _iq_ref_audio = np.asarray(_iq_ref_mono, dtype=np.float32)
             _iq_audio = np.asarray(_iq_mono, dtype=np.float32)
-            _iq_score = float(_IAQS().score(_iq_ref_audio, _iq_audio, sample_rate))
-            _iq_overall = float(np.clip(_iq_score / 100.0, 0.0, 1.0))
+            _iq_analyzer = _IAQS()
+            _iq_detail = _iq_analyzer.analyze(_iq_audio, sample_rate)
+            _iq_score_raw = _iq_analyzer.score(_iq_ref_audio, _iq_audio, sample_rate)
+            _iq_score = (
+                float(_iq_score_raw)
+                if isinstance(_iq_score_raw, (int, float, np.floating))
+                else float(_iq_detail.overall) * 100.0
+            )
+            _iq_overall = float(np.clip(float(_iq_detail.overall), 0.0, 1.0))
             _intrinsic_quality = {
                 "overall": round(_iq_overall, 4),
-                "snr_estimate_db": 0.0,
-                "snr_score": round(_iq_overall, 4),
-                "spectral_regularity": round(_iq_overall, 4),
-                "bandwidth_score": round(_iq_overall, 4),
-                "bark_balance": round(_iq_overall, 4),
-                "dynamic_range_score": round(_iq_overall, 4),
-                "transient_clarity": round(_iq_overall, 4),
-                "thd_estimate_pct": 0.0,
-                "thd_score": round(_iq_overall, 4),
+                "reference_adjusted_score": round(float(np.clip(_iq_score / 100.0, 0.0, 1.0)), 4),
+                "snr_estimate_db": round(float(_iq_detail.snr_estimate), 3),
+                "snr_score": round(float(_iq_detail.snr_score), 4),
+                "spectral_regularity": round(float(_iq_detail.spectral_regularity), 4),
+                "bandwidth_score": round(float(_iq_detail.bandwidth_score), 4),
+                "bark_balance": round(float(_iq_detail.bark_balance), 4),
+                "dynamic_range_score": round(float(_iq_detail.dynamic_range_score), 4),
+                "transient_clarity": round(float(_iq_detail.transient_clarity), 4),
+                "thd_estimate_pct": round(float(_iq_detail.thd_estimate_pct), 4),
+                "thd_score": round(float(_iq_detail.thd_score), 4),
+                "harmonicity": round(float(_iq_detail.harmonicity), 4),
+                "pitch_consistency": round(float(_iq_detail.pitch_consistency), 4),
+                "click_residual": round(float(_iq_detail.click_residual), 4),
+                "clipping_score": round(float(_iq_detail.clipping_score), 4),
+                "codec_artifact_score": round(float(_iq_detail.codec_artifact_score), 4),
+                "warnings": list(_iq_detail.warnings),
             }
             logger.debug(
                 "🌟 IntrinsicQuality: Gesamt=%.3f SNR=%.1f dB THD=%.3f%% BarkBalance=%.3f",
                 _iq_overall,
-                0.0,
-                0.0,
-                _iq_overall,
+                float(_iq_detail.snr_estimate),
+                float(_iq_detail.thd_estimate_pct),
+                float(_iq_detail.bark_balance),
             )
         except Exception as _iq_exc:
             logger.debug("IntrinsicAudioQualityScorer nicht verfügbar: %s", _iq_exc)

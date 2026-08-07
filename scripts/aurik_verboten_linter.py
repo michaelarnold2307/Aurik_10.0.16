@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import ast
 from pathlib import Path
 from typing import NamedTuple
 
@@ -314,6 +315,125 @@ GLOBAL_FILE_SKIP: dict[str, set[str]] = {
 }
 
 
+def _literal_str(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Attribute):
+        base = _literal_str(node.value)
+        return f"{base}.{node.attr}" if base else node.attr
+    if isinstance(node, ast.Name):
+        return node.id
+    return None
+
+
+def _string_values(node: ast.AST) -> set[str]:
+    values: set[str] = set()
+    if isinstance(node, (ast.List, ast.Tuple, ast.Set)):
+        for elt in node.elts:
+            text = _literal_str(elt)
+            if text:
+                values.add(text)
+    elif isinstance(node, ast.Call) and _literal_str(node.func) == "frozenset" and node.args:
+        values.update(_string_values(node.args[0]))
+    else:
+        text = _literal_str(node)
+        if text:
+            values.add(text)
+    return values
+
+
+def _assigned_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Assign):
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                return target.id
+            if isinstance(target, ast.Attribute):
+                return target.attr
+    if isinstance(node, ast.AnnAssign):
+        target = node.target
+        if isinstance(target, ast.Name):
+            return target.id
+        if isinstance(target, ast.Attribute):
+            return target.attr
+    return None
+
+
+def _assigned_value(node: ast.AST) -> ast.AST | None:
+    if isinstance(node, ast.Assign):
+        return node.value
+    if isinstance(node, ast.AnnAssign):
+        return node.value
+    return None
+
+
+def _scan_v32_v33_ast(fp: Path, source: str, rel: Path) -> list[Violation]:
+    issues: list[Violation] = []
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return issues
+
+    exclusions: dict[str, set[str]] = {}
+    critical_transparency_phases: set[str] = set()
+    for node in ast.walk(tree):
+        name = _assigned_name(node)
+        value = _assigned_value(node)
+        if name == "_PHASE_SPECIFIC_DRIFT_EXCLUSIONS" and isinstance(value, ast.Dict):
+            for key, val in zip(value.keys, value.values, strict=False):
+                key_text = _literal_str(key) if key is not None else None
+                if key_text:
+                    exclusions[key_text] = _string_values(val)
+        if name == "CRITICAL_PAIRS" and isinstance(value, (ast.List, ast.Tuple)):
+            for entry in value.elts:
+                if not isinstance(entry, ast.Tuple) or len(entry.elts) < 2:
+                    continue
+                goal_text = _literal_str(entry.elts[1])
+                if goal_text != "transparenz":
+                    continue
+                for phase_text in _string_values(entry.elts[0]):
+                    if phase_text:
+                        critical_transparency_phases.add(phase_text)
+
+    if critical_transparency_phases:
+        for phase_id in sorted(critical_transparency_phases):
+            phase_prefix = "_".join(phase_id.split("_")[:2]) if phase_id.startswith("phase_") else phase_id
+            excluded = exclusions.get(phase_id) or exclusions.get(phase_prefix) or set()
+            if "transparenz" not in excluded:
+                issues.append(
+                    Violation(
+                        rule="V32",
+                        severity="ERROR",
+                        description="Carrier-NR-Phase in CRITICAL_PAIRS ohne transparenz-Exclusion",
+                        file=str(rel),
+                    )
+                )
+                break
+
+    phase_path = str(fp).replace("\\", "/")
+    if "/phases/phase_" in phase_path or fp.name.startswith("phase_"):
+        tracked_names = {"DETECTION_THRESHOLD", "CORRECTION_STRENGTH"}
+        carrier_keys = {"MaterialType.TAPE", "MaterialType.REEL_TAPE", "MaterialType.VINYL", "MaterialType.SHELLAC"}
+        cassette_keys = {"MaterialType.CASSETTE", "CASSETTE", "cassette"}
+        for node in ast.walk(tree):
+            name = _assigned_name(node)
+            value = _assigned_value(node)
+            if name not in tracked_names or not isinstance(value, ast.Dict):
+                continue
+            keys = {_literal_str(key) for key in value.keys if key is not None}
+            keys = {key for key in keys if key}
+            if keys & carrier_keys and not (keys & cassette_keys):
+                issues.append(
+                    Violation(
+                        rule="V33",
+                        severity="ERROR",
+                        description=f"{name} fehlt MaterialType.CASSETTE für materialindizierte Phase-Parameter",
+                        file=str(rel),
+                    )
+                )
+                break
+    return issues
+
+
 def _should_skip_rule(fp: Path, rid: str) -> bool:
     """Check if file should be skipped for a given rule."""
     r = str(fp)
@@ -379,6 +499,7 @@ def scan(fp: Path) -> list[Violation]:
             sev = rule.get("sev", "WARNING")
             issues.append(Violation(rule=rid, severity=sev, description=rule["d"], file=str(rel)))
 
+    issues.extend(_scan_v32_v33_ast(fp, "\n".join(lines), rel))
     return issues
 
 

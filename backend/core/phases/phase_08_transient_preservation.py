@@ -506,7 +506,7 @@ class TransientPreservationPhase(PhaseInterface):
                 import scipy.signal as _sps
 
                 _channels = enhanced if enhanced.ndim == 2 else enhanced[np.newaxis, :]
-                _n_samples = _channels.shape[1]
+                _n_samples = int(_channels.shape[1])
                 _bump_repaired = _channels.copy()
 
                 # ── Ebene 2: Onset-Erkennung für den gesamten Track ──
@@ -525,16 +525,16 @@ class TransientPreservationPhase(PhaseInterface):
 
                 for _t_start, _t_end in _bump_locs:
                     _s = max(0, int(_t_start * sample_rate))
-                    _e = min(_n_samples, int(_t_end * sample_rate))  # type: ignore[misc]
-                    if _e <= _s + 2:  # type: ignore[misc]
+                    _end = min(_n_samples, int(_t_end * sample_rate))
+                    if _end <= _s + 2:
                         continue
 
-                    _dur_s = (_e - _s) / sample_rate  # type: ignore[misc]
-                    _segment = _channels[:, _s:_e]
+                    _dur_s = (_end - _s) / sample_rate
+                    _segment = _channels[:, _s:_end]
                     _seg_mono = np.mean(_segment, axis=0)
 
                     # ── Ebene 2: Onset-Check an Bump-Position ──
-                    _onset_overlap = float(np.mean(_onset_frames[_s:_e]))
+                    _onset_overlap = float(np.mean(_onset_frames[_s:_end]))
                     _onset_scale = 1.0 if _onset_overlap < 0.15 else max(0.30, 1.0 - _onset_overlap * 2.0)
 
                     # ── Ebene 1: Multi-Band-Envelope ──
@@ -557,11 +557,11 @@ class TransientPreservationPhase(PhaseInterface):
 
                     # Referenz pro Band aus Kontext
                     _ctx_before_s = max(0, _s - int(sample_rate * 0.150))
-                    _ctx_after_e = min(_n_samples, _e + int(sample_rate * 0.150))  # type: ignore[misc]
+                    _ctx_after_e = min(_n_samples, _end + int(sample_rate * 0.150))
                     _ctx_mono = np.concatenate(
                         [
                             np.mean(_channels[:, _ctx_before_s:_s], axis=0) if _s > _ctx_before_s else _channels[0, :1],
-                            np.mean(_channels[:, _e:_ctx_after_e], axis=0) if _ctx_after_e > _e else _channels[0, -1:],  # type: ignore[misc]
+                            np.mean(_channels[:, _end:_ctx_after_e], axis=0) if _ctx_after_e > _end else _channels[0, -1:],
                         ]
                     )
                     _ctx_lo = _sps.sosfiltfilt(_sos_lo, _ctx_mono)
@@ -606,17 +606,17 @@ class TransientPreservationPhase(PhaseInterface):
 
                     # Applizieren
                     for _ch in range(_channels.shape[0]):
-                        _bump_repaired[_ch, _s:_e] = _channels[_ch, _s:_e] * _gain_full
+                        _bump_repaired[_ch, _s:_end] = _channels[_ch, _s:_end] * _gain_full
 
                     # ── Ebene 3: Post-Repair-Validierung ──
-                    _post_seg = np.mean(_bump_repaired[:, _s:_e], axis=0)
+                    _post_seg = np.mean(_bump_repaired[:, _s:_end], axis=0)
                     _post_rms = float(np.sqrt(np.mean(_post_seg**2) + 1e-12))
                     _rms_improvement = _post_rms / max(_pre_rms, 1e-12)
 
                     if _rms_improvement < 0.98 or _rms_improvement > 2.0:
                         # Keine Verbesserung oder Überkorrektur → Rollback
                         for _ch in range(_channels.shape[0]):
-                            _bump_repaired[_ch, _s:_e] = _channels[_ch, _s:_e]
+                            _bump_repaired[_ch, _s:_end] = _channels[_ch, _s:_end]
                         _bump_rolled_back += 1
                         continue
 

@@ -148,11 +148,14 @@ class HybridSpeedPitch:
         try:
             from plugins.fcpe_plugin import get_fcpe_plugin
 
-            self.crepe = get_fcpe_plugin()  # type: ignore[assignment]
+            _fcpe_plugin = get_fcpe_plugin()
+            if _fcpe_plugin is None:
+                raise RuntimeError("FCPE plugin factory returned None")
+            self.crepe = _fcpe_plugin  # type: ignore[assignment]
             logger.info(
                 "FCPE plugin geladen for Verarbeitungsschritt 31 speed/pitch detection (model=%s)",
-                self.crepe.model_used,
-            )  # type: ignore[attr-defined]
+                getattr(_fcpe_plugin, "model_used", "fcpe"),
+            )
             return
         except Exception as e:
             logger.debug("FCPE nicht verfügbar (%s) — RMVPE-Ersatzpfad (§4.4 Tier-2)", e)

@@ -206,7 +206,7 @@ class HarmonicCharacterAnalyzer:
             harmonic_freq = f0 * n
 
             # Find closest frequency bin
-            freq_idx = np.argmin(np.abs(freqs - harmonic_freq))
+            freq_idx = int(np.argmin(np.abs(freqs - harmonic_freq)))
 
             # Search in neighborhood (±5% tolerance)
             search_range = int(0.05 * freq_idx)
@@ -214,8 +214,8 @@ class HarmonicCharacterAnalyzer:
             end_idx = min(len(freqs), freq_idx + search_range + 1)
 
             # Find peak in search range
-            if end_idx > start_idx:  # type: ignore[operator]
-                local_peak_idx = np.argmax(magnitude[start_idx:end_idx]) + start_idx  # type: ignore[call-overload]
+            if end_idx > start_idx:
+                local_peak_idx = int(np.argmax(magnitude[start_idx:end_idx])) + start_idx
                 harmonic_power = magnitude[local_peak_idx] ** 2
             else:
                 harmonic_power = 0.0

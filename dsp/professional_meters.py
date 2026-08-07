@@ -486,6 +486,9 @@ class MeterV9:
                 if len(_rel_gated) >= 2:
                     loudness_range = float(np.percentile(_rel_gated, 95) - np.percentile(_rel_gated, 10))
 
+        _spectrum_freqs = np.asarray(spectrum_result["freqs"], dtype=np.float32)
+        _spectrum_db = np.asarray(spectrum_result["power_db"], dtype=np.float32)
+
         # Create result object
         result = MeteringResult(
             integrated_lufs=lufs_result["integrated_lufs"],
@@ -497,8 +500,8 @@ class MeterV9:
             true_peak_exceeded=peak_result["true_peak_exceeded"],  # type: ignore[arg-type]
             phase_correlation=phase_result["phase_correlation"],
             phase_coherence=phase_result["phase_coherence"],
-            spectrum_freqs=spectrum_result["freqs"],
-            spectrum_db=spectrum_result["power_db"],
+            spectrum_freqs=_spectrum_freqs,
+            spectrum_db=_spectrum_db,
             spectral_centroid=spectrum_result["spectral_centroid"],  # type: ignore[arg-type]
             spectral_rolloff=spectrum_result["spectral_rolloff"],  # type: ignore[arg-type]
         )

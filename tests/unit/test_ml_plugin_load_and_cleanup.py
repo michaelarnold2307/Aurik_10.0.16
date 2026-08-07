@@ -32,6 +32,7 @@ import gc
 import os
 import sys
 import tempfile
+from typing import Any
 from unittest import mock
 
 import numpy as np
@@ -765,7 +766,7 @@ class TestApolloPlugin:
                 self.calls.append(("set_active", name, active))
 
         fake_plm = _FakePLM()
-        plugin = ApolloPlugin.__new__(ApolloPlugin)
+        plugin: Any = ApolloPlugin.__new__(ApolloPlugin)
         plugin._model_loaded = True
         plugin._torch_model = mock.Mock()
         plugin._device = "cpu"

@@ -43,8 +43,10 @@ from __future__ import annotations
 
 import importlib
 import logging
+import sys
 import threading
 from types import ModuleType
+from typing import Any
 
 import numpy as np
 
@@ -90,6 +92,13 @@ _PSYCHO_AUDIBILITY_DELTA_TRIGGER: float = 0.05
 _PSYCHO_HARSHNESS_DELTA_TRIGGER: float = 0.05
 _PSYCHO_BURSTINESS_DELTA_TRIGGER: float = 0.04
 _PSYCHO_MODULATION_DELTA_TRIGGER: float = 0.04
+
+
+def _compat_helper(name: str, default: Any) -> Any:
+    """Resolve monkeypatch-compatible helpers from cassette_defect_verifier when present."""
+    cassette_module = sys.modules.get("backend.core.cassette_defect_verifier")
+    candidate = getattr(cassette_module, name, None) if cassette_module is not None else None
+    return candidate if callable(candidate) else default
 
 
 def _norm_goal_key(name: str) -> str:
@@ -722,14 +731,18 @@ class PhaseDefectVerifier:
                 _worst_defect = ""
                 _worst_change = 0.0
                 _rollback = False
-                _hf_aud_before = _compute_hf_noise_audibility(audio_before, sr)
-                _hf_aud_after = _compute_hf_noise_audibility(candidate_audio, sr)
-                _harsh_before = _compute_transient_harshness(audio_before, sr)
-                _harsh_after = _compute_transient_harshness(candidate_audio, sr)
-                _burst_before = _compute_quasi_peak_burstiness(audio_before, sr)
-                _burst_after = _compute_quasi_peak_burstiness(candidate_audio, sr)
-                _mod_before = _compute_modulation_roughness(audio_before, sr)
-                _mod_after = _compute_modulation_roughness(candidate_audio, sr)
+                _hf_fn = _compat_helper("_compute_hf_noise_audibility", _compute_hf_noise_audibility)
+                _harsh_fn = _compat_helper("_compute_transient_harshness", _compute_transient_harshness)
+                _burst_fn = _compat_helper("_compute_quasi_peak_burstiness", _compute_quasi_peak_burstiness)
+                _mod_fn = _compat_helper("_compute_modulation_roughness", _compute_modulation_roughness)
+                _hf_aud_before = _hf_fn(audio_before, sr)
+                _hf_aud_after = _hf_fn(candidate_audio, sr)
+                _harsh_before = _harsh_fn(audio_before, sr)
+                _harsh_after = _harsh_fn(candidate_audio, sr)
+                _burst_before = _burst_fn(audio_before, sr)
+                _burst_after = _burst_fn(candidate_audio, sr)
+                _mod_before = _mod_fn(audio_before, sr)
+                _mod_after = _mod_fn(candidate_audio, sr)
 
                 for dname, val_before in proxies_before.items():
                     val_after = _proxies_after.get(dname, val_before)
@@ -810,7 +823,8 @@ class PhaseDefectVerifier:
                     try:
                         _wd_key = str(worst_defect or "").upper()
                         if _wd_key in {"HUM", "LOW_FREQ_RUMBLE", "DC_OFFSET", "CLICKS", "CRACKLE"}:
-                            blended = _frequency_selective_blend(
+                            _blend_fn = _compat_helper("_frequency_selective_blend", _frequency_selective_blend)
+                            blended = _blend_fn(
                                 audio_before=audio_before,
                                 audio_after=audio_after,
                                 alpha=float(alpha),
@@ -879,14 +893,26 @@ class PhaseDefectVerifier:
                 try:
                     pdv_list = metadata_store.setdefault("phase_defect_verification", [])
                     psycho_before = {
-                        "hf_noise_audibility": _compute_hf_noise_audibility(audio_before, sr),
-                        "transient_harshness": _compute_transient_harshness(audio_before, sr),
-                        "quasi_peak_burstiness": _compute_quasi_peak_burstiness(audio_before, sr),
+                        "hf_noise_audibility": _compat_helper(
+                            "_compute_hf_noise_audibility", _compute_hf_noise_audibility
+                        )(audio_before, sr),
+                        "transient_harshness": _compat_helper(
+                            "_compute_transient_harshness", _compute_transient_harshness
+                        )(audio_before, sr),
+                        "quasi_peak_burstiness": _compat_helper(
+                            "_compute_quasi_peak_burstiness", _compute_quasi_peak_burstiness
+                        )(audio_before, sr),
                     }
                     psycho_after = {
-                        "hf_noise_audibility": _compute_hf_noise_audibility(audio_after, sr),
-                        "transient_harshness": _compute_transient_harshness(audio_after, sr),
-                        "quasi_peak_burstiness": _compute_quasi_peak_burstiness(audio_after, sr),
+                        "hf_noise_audibility": _compat_helper(
+                            "_compute_hf_noise_audibility", _compute_hf_noise_audibility
+                        )(audio_after, sr),
+                        "transient_harshness": _compat_helper(
+                            "_compute_transient_harshness", _compute_transient_harshness
+                        )(audio_after, sr),
+                        "quasi_peak_burstiness": _compat_helper(
+                            "_compute_quasi_peak_burstiness", _compute_quasi_peak_burstiness
+                        )(audio_after, sr),
                     }
                     pdv_list.append(
                         {

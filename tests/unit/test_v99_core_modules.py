@@ -505,12 +505,12 @@ class TestIntrinsicAudioQualityScorer:
 
     @pytest.fixture
     def scorer(self):
-        from backend.core.multi_pass_strategy import IntrinsicAudioQualityScorer
+        from backend.core.intrinsic_audio_quality_scorer import IntrinsicAudioQualityScorer
 
         return IntrinsicAudioQualityScorer()
 
     def test_01_score_returns_result(self, scorer):
-        from backend.core.multi_pass_strategy import IntrinsicQualityScore  # type: ignore[attr-defined]
+        from backend.core.intrinsic_audio_quality_scorer import IntrinsicQualityScore
 
         r = scorer.score(_sine(), SR)
         assert isinstance(r, IntrinsicQualityScore)

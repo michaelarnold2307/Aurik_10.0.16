@@ -873,13 +873,16 @@ def _dsp_fingerprint_decade(
     # Multi-Carrier-Ketten degradieren den gemessenen SNR systematisch.
     # 3 analoge Träger + MP3 = 10–16 dB SNR-Verlust. Der EraClassifier
     # muss diesen Verlust kompensieren, sonst wird 1977 als 1960 fehldatiert.
-    _chain_depth = len(transfer_chain) if transfer_chain else 1
+    _transfer_chain_items = list(transfer_chain or [])
+    _chain_depth = len(_transfer_chain_items) if _transfer_chain_items else 1
     _snr_correction_db = 0.0
     if _chain_depth >= 2:
         # Pro analogem Träger ~4 dB, pro Codec ~3 dB SNR-Verlust
         _analog_steps = sum(
-            1 for c in transfer_chain if c not in {"mp3_low", "mp3_high", "aac", "streaming", "minidisc", "cd_digital"}
-        )  # type: ignore[misc, union-attr]
+            1
+            for c in _transfer_chain_items
+            if c not in {"mp3_low", "mp3_high", "aac", "streaming", "minidisc", "cd_digital"}
+        )
         _codec_steps = _chain_depth - _analog_steps
         _snr_correction_db = _analog_steps * 4.0 + _codec_steps * 3.0
         _snr_correction_db = min(_snr_correction_db, 18.0)  # Cap bei 18 dB
