@@ -146,7 +146,7 @@ class PhaseImpactPredictor:
             from backend.core.phase_impact_recorder import get_phase_impact_recorder
 
             recorder = get_phase_impact_recorder()
-            return recorder.query(material=material, era=era, phase_id=phase_id, mode=mode)
+            return recorder.query(material=material, era=era, phase_id=phase_id, mode=mode)  # type: ignore[no-any-return]
         except Exception as e:
             logger.debug("PhaseImpactPredictor: Datenquelle nicht verfügbar: %s", e)
             return []

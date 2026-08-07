@@ -55,7 +55,7 @@ def _resample_audio(audio: np.ndarray, orig_sr: int, target_sr: int) -> np.ndarr
     # Use polyphase resampling (high-quality anti-aliasing)
     resampled = scipy_signal.resample_poly(audio, up, down, axis=0)
 
-    return resampled
+    return resampled  # type: ignore[no-any-return]
 
 
 class AudioResampler:
@@ -85,7 +85,7 @@ class AudioResampler:
         self.quality = quality
         self.standard_sr = AURIK_STANDARD_SR
 
-        logger.debug("AudioResampler initialized: standard=%s Hz", self.standard_sr)
+        logger.debug("AudioResampler initialisiert: standard=%s Hz", self.standard_sr)
 
     def to_standard(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
         """

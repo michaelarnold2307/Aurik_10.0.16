@@ -91,10 +91,10 @@ class ReelToReelNoiseReduction:
                 return lfilter(b, a, ch.astype(np.float64))
 
             if audio.ndim == 1:
-                return _ch_dbx(audio).astype(audio.dtype)
-            return np.stack([_ch_dbx(c) for c in audio], axis=0).astype(audio.dtype)
+                return _ch_dbx(audio).astype(audio.dtype)  # type: ignore[no-any-return]
+            return np.stack([_ch_dbx(c) for c in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]
         else:  # auto
             stages = [_highshelf_coeffs(3000, -7.0)]
         if audio.ndim == 1:
-            return _ch(audio, stages).astype(audio.dtype)
-        return np.stack([_ch(c, stages) for c in audio], axis=0).astype(audio.dtype)
+            return _ch(audio, stages).astype(audio.dtype)  # type: ignore[no-any-return]
+        return np.stack([_ch(c, stages) for c in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]

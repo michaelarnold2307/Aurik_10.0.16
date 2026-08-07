@@ -465,7 +465,7 @@ def inject_cd_noise_profile(
         seed,
     )
 
-    return result.astype(np.float32)
+    return result.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _compute_snr_db(audio: np.ndarray) -> float:

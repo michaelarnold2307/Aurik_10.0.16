@@ -89,13 +89,13 @@ class PerceptualExportOptimizer:
             dfn = DeepFilterNetV3IIPlugin()
             # DFN erwartet (batch, channels, samples) oder (channels, samples)
             if audio.ndim == 2:
-                processed = dfn.enhance(audio)
+                processed = dfn.enhance(audio)  # type: ignore[call-arg]
             else:
-                processed = dfn.enhance(audio[np.newaxis, :])
-            logger.info("§AQ DeepFilterNet: ML noise/click repair applied")
+                processed = dfn.enhance(audio[np.newaxis, :])  # type: ignore[call-arg]
+            logger.info("§AQ DeepFilterNet: ML noise/click repair angewendet")
             return np.asarray(processed, dtype=np.float32)
         except Exception as e:
-            logger.debug("§AQ DeepFilterNet unavailable: %s", e)
+            logger.debug("§AQ DeepFilterNet nicht verfuegbar: %s", e)
             return audio
 
     def _apply_demucs_vocal_isolation(self, audio: np.ndarray, sr: int) -> np.ndarray:
@@ -111,10 +111,10 @@ class PerceptualExportOptimizer:
                 other = stems.get("other", audio - vocals)
                 # Sanfte Vocal-Anhebung (+1dB) für mehr Präsenz
                 result = other + vocals * 1.12
-                logger.info("§AQ Demucs: vocal isolation + presence boost applied")
+                logger.info("§AQ Demucs: vocal isolation + presence boost angewendet")
                 return np.asarray(result, dtype=np.float32)
         except Exception as e:
-            logger.debug("§AQ Demucs unavailable: %s", e)
+            logger.debug("§AQ Demucs nicht verfuegbar: %s", e)
         return audio
 
     def _apply_flashsr_bandwidth(self, audio: np.ndarray, sr: int, material: str) -> np.ndarray:
@@ -126,11 +126,11 @@ class PerceptualExportOptimizer:
             from plugins.flashsr_plugin import FlashSRPlugin
 
             asr = FlashSRPlugin()
-            result = asr.upsample(audio, sr)
-            logger.info("§AQ FlashSR: ML bandwidth extension applied")
+            result = asr.upsample(audio, sr)  # type: ignore[attr-defined]
+            logger.info("§AQ FlashSR: ML bandwidth extension angewendet")
             return np.asarray(result, dtype=np.float32)
         except Exception as e:
-            logger.debug("§AQ FlashSR unavailable: %s", e)
+            logger.debug("§AQ FlashSR nicht verfuegbar: %s", e)
         return audio
 
     def _apply_listening_adaptation(self, audio: np.ndarray, sr: int, mode: str) -> np.ndarray:
@@ -187,7 +187,7 @@ class PerceptualExportOptimizer:
                     result = sp_sig.sosfilt(sos, result)
             logger.info("§AQ Listening adaptation: %s", mode)
         except Exception as e:
-            logger.warning("perceptual_export_optimizer.py::_apply_listening_adaptation fallback: %s", e)
+            logger.warning("perceptual_Ausgabe_optimizer.py::_anwenden_listening_adaptation Ersatzpfad: %s", e)
 
         return np.clip(result, -1.0, 1.0).astype(np.float32)
 
@@ -203,5 +203,5 @@ class PerceptualExportOptimizer:
             available = meminfo.get("MemAvailable", meminfo.get("MemFree", 0))
             return available / (1024 * 1024)  # KB → GB
         except Exception as e:
-            logger.warning("perceptual_export_optimizer.py::_get_available_ram fallback: %s", e)
+            logger.warning("perceptual_Ausgabe_optimizer.py::_get_verfuegbar_ram Ersatzpfad: %s", e)
             return 8.0  # Conservative fallback

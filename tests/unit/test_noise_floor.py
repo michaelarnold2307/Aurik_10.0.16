@@ -61,7 +61,7 @@ def _very_quiet_signal(target_dbfs: float = -80.0, duration_s: float = 2.0) -> n
     noise = rng.standard_normal(n).astype(np.float32)
     rms_lin = 10.0 ** (target_dbfs / 20.0)
     actual_rms = float(np.sqrt(np.mean(noise**2)) + 1e-15)
-    return ((noise / actual_rms) * rms_lin).astype(np.float32)
+    return ((noise / actual_rms) * rms_lin).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _clean_music(duration_s: float = 3.0) -> np.ndarray:
@@ -71,7 +71,7 @@ def _clean_music(duration_s: float = 3.0) -> np.ndarray:
     for n in range(1, 6):
         sig = sig + (0.4 / n) * np.sin(2 * np.pi * n * 220.0 * t).astype(np.float32)
     peak = float(np.max(np.abs(sig)) + 1e-9)
-    return (sig / peak * 0.3).astype(np.float32)  # ~ −10 dBFS
+    return (sig / peak * 0.3).astype(np.float32)  # ~ −10 dBFS  # type: ignore[return-value]
 
 
 def _rms_dbfs(audio: np.ndarray) -> float:
@@ -95,7 +95,7 @@ def _a_weight_filter(audio: np.ndarray, sr: int) -> np.ndarray:
     # A-weighting: stark gedämpft < 500 Hz, Peak ~3.5 kHz, abfallend > 10 kHz
     sos_hp = butter(4, 1000.0 / (sr / 2), btype="high", output="sos")
     # Grobe Näherung der A-Kurve: Hochpass über 1 kHz
-    return sosfilt(sos_hp, audio.astype(np.float64)).astype(np.float32)
+    return sosfilt(sos_hp, audio.astype(np.float64)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _detect_musical_noise_events(

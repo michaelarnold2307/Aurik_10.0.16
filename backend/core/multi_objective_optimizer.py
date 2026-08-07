@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -55,7 +56,7 @@ class MultiObjectiveOptimizer:
     def optimize(
         self,
         phases: list[str],
-        evaluate_fn: callable,  # (strengths: dict) -> dict[str, float]
+        evaluate_fn: Callable,  # type: ignore[name-defined]  # (strengths: dict) -> dict[str, float]
         initial_strengths: dict[str, float] | None = None,
     ) -> OptimizationResult:
         """Führt die Optimierung durch.
@@ -86,7 +87,7 @@ class MultiObjectiveOptimizer:
         def _cached_evaluate(individual: dict) -> dict[str, float]:
             key = str(sorted(individual.items()))
             if key not in cache:
-                cache[key] = evaluate_fn(individual)
+                cache[key] = evaluate_fn(individual)  # type: ignore[misc]
             return cache[key]
 
         # Fitness: gewichteter Goal-Mittelwert

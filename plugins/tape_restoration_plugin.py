@@ -43,7 +43,7 @@ except Exception as exc:
 _ML_AVAILABLE = _sgmse_available or _df_available
 
 if not _ML_AVAILABLE:
-    logger.warning("⚠️ Tape ML-Chain: Kein ML-Modell verfügbar — reiner DSP-Fallback")
+    logger.warning("⚠️ Tape ML-Chain: Kein ML-Modell verfügbar — reiner DSP-Ersatzpfad")
 
 
 def restore(audio: np.ndarray, sample_rate: int, **kwargs) -> np.ndarray:
@@ -62,7 +62,8 @@ def restore(audio: np.ndarray, sample_rate: int, **kwargs) -> np.ndarray:
     # Step 1: SGMSE+ Diffusion-Inpainting für Dropouts
     if _sgmse_available and _sgmse is not None:
         try:
-            result = _sgmse.enhance(result, sample_rate)
+            _sgmse_result = _sgmse.enhance(result, sample_rate)
+            result = np.asarray(getattr(_sgmse_result, "audio", _sgmse_result), dtype=np.float32)
             logger.debug("Tape: SGMSE+ Dropout-Inpainting angewendet")
         except Exception as exc:
             logger.warning("⚠️ Tape SGMSE+ fehlgeschlagen: %s", exc)

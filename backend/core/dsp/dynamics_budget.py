@@ -67,13 +67,13 @@ _state: threading.local = threading.local()
 def _get_state() -> DynamicsBudgetState:
     if not hasattr(_state, "budget"):
         _state.budget = DynamicsBudgetState()
-    return _state.budget
+    return _state.budget  # type: ignore[no-any-return]
 
 
 def reset_dynamics_budget() -> None:
     """Budget zurücksetzen (vor neuem Pipeline-Lauf)."""
     _state.budget = DynamicsBudgetState()
-    logger.debug("§DYN-BUDGET: zurückgesetzt")
+    logger.debug("§DYN-Grenze: zurückgesetzt")
 
 
 def initialize_budget(audio: np.ndarray, sample_rate: int) -> None:
@@ -89,7 +89,7 @@ def initialize_budget(audio: np.ndarray, sample_rate: int) -> None:
     state.budget_exhausted = False
     state.phases_processed = []
     logger.debug(
-        "§DYN-BUDGET: initialisiert — original_crest=%.1f dB, max_reduction=%.1f dB",
+        "§DYN-Grenze: initialisiert — Originalsignal_crest=%.1f dB, max_reduction=%.1f dB",
         state.original_crest_db,
         MAX_CREST_REDUCTION_DB,
     )
@@ -118,7 +118,7 @@ def get_available_strength_cap(
 
     if state.budget_exhausted:
         logger.info(
-            "§DYN-BUDGET: %s Budget erschöpft (%.1f/%.1f dB) → strength %.2f→%.2f",
+            "§DYN-Grenze: %s Grenze erschöpft (%.1f/%.1f dB) → strength %.2f→%.2f",
             phase_id,
             state.cumulative_reduction_db,
             MAX_CREST_REDUCTION_DB,
@@ -136,7 +136,7 @@ def get_available_strength_cap(
     if projected > remaining and remaining > 0.1:
         capped = float(np.clip(remaining / 2.0, 0.05, current_strength))
         logger.info(
-            "§DYN-BUDGET: %s projiziert %.1f dB → nur %.1f dB verfügbar → strength %.2f→%.2f",
+            "§DYN-Grenze: %s projiziert %.1f dB → nur %.1f dB verfügbar → strength %.2f→%.2f",
             phase_id,
             projected,
             remaining,
@@ -169,9 +169,7 @@ def report_crest_change(
         x = np.asarray(a, dtype=np.float32)
         if x.ndim > 1:
             x = x.mean(axis=1)
-        return float(20.0 * np.log10(
-            np.max(np.abs(x)) / (np.sqrt(np.mean(x**2)) + 1e-12) + 1e-12
-        ))
+        return float(20.0 * np.log10(np.max(np.abs(x)) / (np.sqrt(np.mean(x**2)) + 1e-12) + 1e-12))
 
     crest_before = _crest(audio_before)
     crest_after = _crest(audio_after)
@@ -183,7 +181,7 @@ def report_crest_change(
     if state.cumulative_reduction_db >= MAX_CREST_REDUCTION_DB:
         state.budget_exhausted = True
         logger.warning(
-            "§DYN-BUDGET: ERSCHÖPFT nach %s — kumulativ %.1f/%.1f dB "
+            "§DYN-Grenze: ERSCHÖPFT nach %s — kumulativ %.1f/%.1f dB "
             "(crest %.1f→%.1f dB). Nachfolgende Dynamics-Phasen auf %.2f.",
             phase_id,
             state.cumulative_reduction_db,
@@ -194,7 +192,7 @@ def report_crest_change(
         )
     else:
         logger.debug(
-            "§DYN-BUDGET: %s crest %.1f→%.1f dB (Δ=%.1f dB) — kumulativ %.1f/%.1f dB",
+            "§DYN-Grenze: %s crest %.1f→%.1f dB (Δ=%.1f dB) — kumulativ %.1f/%.1f dB",
             phase_id,
             crest_before,
             crest_after,

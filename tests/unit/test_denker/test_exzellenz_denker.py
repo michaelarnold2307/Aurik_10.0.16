@@ -25,7 +25,7 @@ np.random.seed(42)
 
 def _sine(dur: float = 1.0, freq: float = 440.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), dtype=np.float32)
-    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ─── ExzellenzErgebnis ────────────────────────────────────────────────────────
@@ -42,7 +42,7 @@ class TestExzellenzErgebnisFields:
             musical_goals={"brillanz": 0.87, "waerme": 0.81},
             goals_passed=2,
             goals_total=14,
-            improvements={"brillanz": 0.03},
+            improvements={"brillanz": 0.03},  # type: ignore[arg-type]
             processing_note="Test",
             warnings=[],
         )
@@ -124,8 +124,8 @@ class TestVocalAIBranch:
             _sine(),
             MagicMock(applied_steps=["mock_step"], summary=MagicMock(return_value="ok")),
         )
-        denker._get_optimizer = MagicMock(return_value=fast_opt)
-        denker.messe_ziele = MagicMock(return_value={"brillanz": 0.9, "waerme": 0.85})
+        denker._get_optimizer = MagicMock(return_value=fast_opt)  # type: ignore[method-assign]
+        denker.messe_ziele = MagicMock(return_value={"brillanz": 0.9, "waerme": 0.85})  # type: ignore[method-assign]
         return denker
 
     def _mock_versa_module(self):
@@ -266,8 +266,8 @@ class TestOptimiereInvarianten:
             audio.copy(),
             MagicMock(applied_steps=["mock_step"], summary=MagicMock(return_value="ok")),
         )
-        denker._get_optimizer = MagicMock(return_value=fast_opt)
-        denker.messe_ziele = MagicMock(return_value={"brillanz": 0.9, "waerme": 0.85})
+        denker._get_optimizer = MagicMock(return_value=fast_opt)  # type: ignore[method-assign]
+        denker.messe_ziele = MagicMock(return_value={"brillanz": 0.9, "waerme": 0.85})  # type: ignore[method-assign]
         with patch.dict(
             sys.modules,
             {

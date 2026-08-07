@@ -19,7 +19,7 @@ def _scores(m):
 
 def _sine(sr: int = 48000, seconds: float = 1.0) -> np.ndarray:
     t = np.linspace(0.0, seconds, int(sr * seconds), endpoint=False, dtype=np.float32)
-    return (0.4 * np.sin(2.0 * np.pi * 440.0 * t)).astype(np.float32)
+    return (0.4 * np.sin(2.0 * np.pi * 440.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

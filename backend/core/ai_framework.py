@@ -64,7 +64,7 @@ try:
     VOCAL_AI_AVAILABLE = True
 except ImportError:
     VOCAL_AI_AVAILABLE = False
-    logger.warning("Vocal AI Enhancement not available")
+    logger.warning("Vocal AI Enhancement not verfuegbar")
 
 # Import Dynamics Processing Phases (Phase 10 + 11)
 try:
@@ -77,7 +77,7 @@ try:
 except ImportError:
     DYNAMICS_PHASES_AVAILABLE = False
     PhasesMaterialType = None  # type: ignore[assignment,misc]
-    logger.warning("Dynamics phases (Compression/Limiting) not available")
+    logger.warning("Dynamics phases (Compression/Limiting) not verfuegbar")
 
 
 # ============================================================
@@ -190,7 +190,7 @@ class UnifiedDefectDetector:
 
     def __init__(self, sample_rate: int = 48000):
         self.sr = sample_rate
-        logger.info("Initializing Unified Defect Detector...")
+        logger.info("initialisiere Unified Defect Detector...")
 
         # Load existing detector if available
         try:
@@ -198,10 +198,10 @@ class UnifiedDefectDetector:
 
             self.ml_detector = MLDefectDetector()
             self.has_ml_detector = True
-            logger.info("✓ ML Defect Detector loaded")
+            logger.info("✓ ML Defect Detector geladen")
         except ImportError:
             self.has_ml_detector = False
-            logger.warning("ML Defect Detector not available - using rule-based only")
+            logger.warning("ML Defect Detector not verfuegbar - using rule-based only")
 
     def detect(self, audio: np.ndarray, return_locations: bool = True) -> DefectDetectionResult:
         """
@@ -671,7 +671,7 @@ class UnifiedAudioRestorer:
     def __init__(self, sample_rate: int = 48000):
         self.sr = sample_rate
         self.detector = UnifiedDefectDetector(sample_rate=sample_rate)
-        logger.info("Initializing Unified Audio Restorer...")
+        logger.info("initialisiere Unified Audio Restorer...")
 
     def restore(
         self, audio: np.ndarray, mode: RestorationMode = RestorationMode.BALANCED, auto_detect: bool = True
@@ -690,7 +690,7 @@ class UnifiedAudioRestorer:
         # Detect defects if auto mode
         if auto_detect:
             detection = self.detector.detect(audio)
-            logger.info("Detected %s defect types", len(detection.defects))
+            logger.info("erkannt %s defect types", len(detection.defects))
         else:
             detection = None
 
@@ -900,7 +900,7 @@ class UnifiedAudioEnhancer:
 
     def __init__(self, sample_rate: int = 48000):
         self.sr = sample_rate
-        logger.info("Initializing Unified Audio Enhancer...")
+        logger.info("initialisiere Unified Audio Enhancer...")
 
     def enhance(
         self, audio: np.ndarray, target_clarity: float = 0.7, target_presence: float = 0.7, target_detail: float = 0.7
@@ -1073,7 +1073,7 @@ class RestorationMagicButton:
         self.sr = sample_rate
         self.detector = UnifiedDefectDetector(sample_rate=sample_rate)
         self.restorer = UnifiedAudioRestorer(sample_rate=sample_rate)
-        logger.info("Initializing Restoration Magic Button...")
+        logger.info("initialisiere Restoration Magic Button...")
 
     def process(self, audio: np.ndarray) -> tuple[np.ndarray, dict[str, Any]]:
         """
@@ -1113,7 +1113,7 @@ class RestorationMagicButton:
             },
         }
 
-        logger.info("✅ Restoration Magic Button Complete!")
+        logger.info("✅ Restoration Magic Button vollstaendig!")
 
         return restoration.audio, report
 
@@ -1142,13 +1142,13 @@ class Studio2026Processor:
         if DYNAMICS_PHASES_AVAILABLE:
             self.compression = CompressionPhase()
             self.limiting = LimitingPhase()
-            logger.info("✓ Dynamics phases (Compression/Limiting) loaded")
+            logger.info("✓ Dynamics phases (Compression/Limiting) geladen")
         else:
             self.compression = None  # type: ignore[assignment]
             self.limiting = None  # type: ignore[assignment]
-            logger.warning("⚠ Dynamics phases not available - using fallback")
+            logger.warning("⚠ Dynamics phases not verfuegbar - using Ersatzpfad")
 
-        logger.info("Initializing Studio 2026 Processor...")
+        logger.info("initialisiere Studio 2026 Processor...")
 
     @staticmethod
     def _map_material_type(framework_material: _AiMediaType) -> "_PhaseMaterialType | None":
@@ -1243,7 +1243,7 @@ class Studio2026Processor:
             },
         }
 
-        logger.info("✅ Studio 2026 Processing Complete!")
+        logger.info("✅ Studio 2026 Processing vollstaendig!")
 
         return mastered, report
 
@@ -1354,10 +1354,10 @@ class AurikAIFramework:
         # Initialize Vocal AI Enhancement if available
         if VOCAL_AI_AVAILABLE:
             self.vocal_enhancer = UnifiedVocalAIEnhancer(sample_rate=sample_rate)
-            logger.info("✅ Aurik AI Framework Initialized (with Vocal AI)")
+            logger.info("✅ Aurik AI Framework initialisiert (with Vocal AI)")
         else:
             self.vocal_enhancer = None  # type: ignore[assignment]
-            logger.info("✅ Aurik AI Framework Initialized (Vocal AI not available)")
+            logger.info("✅ Aurik AI Framework initialisiert (Vocal AI not verfuegbar)")
 
     def analyze(self, audio: np.ndarray) -> DefectDetectionResult:
         """Analysiert Audio auf Defekte."""
@@ -1450,14 +1450,14 @@ if __name__ == "__main__":
     audio += hum
 
     # Initialize framework
-    logger.debug("\nInitializing AI Framework...")
+    logger.debug("\ninitialisiere AI Framework...")
     framework = AurikAIFramework(sample_rate=sr)
 
     # Test detection
     logger.debug("\n1. Testing Defect Detection...")
     detection = framework.analyze(audio)
-    logger.debug("   Quality Score: %.2f", detection.overall_quality_score)
-    logger.debug("   Detected Defects:")
+    logger.debug("   Quality Wert: %.2f", detection.overall_quality_score)
+    logger.debug("   erkannt Defects:")
     for defect, confidence in detection.defects.items():
         if confidence > 0.3:
             severity = detection.severity.get(defect, 0)
@@ -1466,7 +1466,7 @@ if __name__ == "__main__":
     # Test restoration
     logger.debug("\n2. Testing Audio Restoration...")
     restoration = framework.restore(audio, mode=RestorationMode.BALANCED)
-    logger.debug("   Processes Applied: %s", ", ".join(restoration.processing_applied))
+    logger.debug("   Processes angewendet: %s", ", ".join(restoration.processing_applied))
     logger.debug("   Defects Removed: %s", sum(restoration.defects_removed.values()))
     logger.debug("   Quality Improvement: +%.2f", restoration.quality_improvement)
 
@@ -1479,10 +1479,10 @@ if __name__ == "__main__":
     # Test Magic Button
     logger.debug("\n4. Testing Magic Button (Studio 2026)...")
     studio_audio, report = framework.magic_button(audio)
-    logger.debug("   ✅ Processed to Studio 2026 Standard")
+    logger.debug("   ✅ verarbeitet to Studio 2026 Standard")
     logger.debug("   Defects Found: %s", report["detection"]["defects_found"])
     logger.debug("   Total Removed: %s", report["restoration"]["defects_removed"])
     logger.debug("   Quality Before: %.2f", report["detection"]["quality_score_before"])
 
     logger.debug("\n" + "=" * 70)
-    logger.debug("✅ AI Framework Test Complete!")
+    logger.debug("✅ AI Framework Test vollstaendig!")

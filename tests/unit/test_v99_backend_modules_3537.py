@@ -33,7 +33,7 @@ SR = 48_000  # interne SR gemäß Spec
 def _sine(freq: float = 440.0, dur: float = 1.0, sr: int = SR) -> np.ndarray:
     np.random.seed(42)
     t = np.linspace(0, dur, int(sr * dur), endpoint=False)
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(dur: float = 1.0, sr: int = SR) -> np.ndarray:

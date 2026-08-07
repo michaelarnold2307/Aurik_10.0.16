@@ -182,7 +182,9 @@ class CrashRecoveryGuard:
             try:
                 os.remove(path)
             except OSError as _crg1_exc:
-                logger.debug("crash_recovery_guard: checkpoint file removal failed (non-critical): %s", _crg1_exc)
+                logger.debug(
+                    "crash_Wiederherstellung_guard: checkpoint file removal fehlgeschlagen (unkritisch): %s", _crg1_exc
+                )
 
     def find_pending_checkpoints(self) -> list[dict[str, Any]]:
         """Discover all valid crash checkpoints awaiting recovery.
@@ -245,7 +247,7 @@ class CrashRecoveryGuard:
                 )
                 saved += 1
             except Exception as exc:
-                logger.error("Emergency checkpoint failed for job %s: %s", job_id, exc)
+                logger.error("Emergency checkpoint fehlgeschlagen for job %s: %s", job_id, exc)
         return saved
 
     # ------------------------------------------------------------------
@@ -299,12 +301,12 @@ class CrashRecoveryGuard:
             os.replace(json_tmp, str(json_path))
 
             logger.info(
-                "CrashRecoveryGuard: Checkpoint saved for job %s (reason: %s)",
+                "CrashRecoveryGuard: Checkpoint gespeichert for job %s (reason: %s)",
                 job_id,
                 failure_reason,
             )
         except Exception as exc:
-            logger.error("CrashRecoveryGuard: Failed to save checkpoint for %s: %s", job_id, exc)
+            logger.error("CrashRecoveryGuard: konnte nicht speichern checkpoint for %s: %s", job_id, exc)
 
     def _cleanup_checkpoint_files(self, json_path: Path) -> None:
         """Remove checkpoint JSON and associated audio NPZ + tmp files."""
@@ -318,7 +320,9 @@ class CrashRecoveryGuard:
             try:
                 os.remove(stem + suffix)
             except OSError as _crg2_exc:
-                logger.debug("crash_recovery_guard: suffix file removal failed (non-critical): %s", _crg2_exc)
+                logger.debug(
+                    "crash_Wiederherstellung_guard: suffix file removal fehlgeschlagen (unkritisch): %s", _crg2_exc
+                )
 
     # ------------------------------------------------------------------
     # SIGTERM integration (§3.9.2 enhancement)
@@ -352,9 +356,9 @@ class CrashRecoveryGuard:
             # default SIG_DFL/SIG_IGN
             if callable(_existing) and _existing not in (signal.SIG_DFL, signal.SIG_IGN):
                 try:
-                    _existing(signum, frame)
+                    _existing(signum, frame)  # type: ignore[arg-type]
                 except Exception as e:
-                    logger.warning("crash_recovery_guard.py::_sigterm_wrapper fallback: %s", e)
+                    logger.warning("crash_Wiederherstellung_guard.py::_sigterm_wrapper Ersatzpfad: %s", e)
             else:
                 # No existing handler — re-raise the original signal to let
                 # the OS default behaviour (process termination) take over.
@@ -366,7 +370,7 @@ class CrashRecoveryGuard:
         except OSError:
             # May happen in non-main threads; that's fine — the
             # main.py handler is sufficient.
-            logger.debug("CrashRecoveryGuard: SIGTERM handler install skipped (non-main thread)")
+            logger.debug("CrashRecoveryGuard: SIGTERM handler install uebersprungen (non-main thread)")
 
 
 # ---------------------------------------------------------------------------

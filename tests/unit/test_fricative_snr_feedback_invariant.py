@@ -47,7 +47,7 @@ def _hf_noise(seconds: float = 2.0, f_lo: float = 6_000.0, f_hi: float = 12_000.
 
     raw = RNG.standard_normal(int(SR * seconds)).astype(np.float32) * 0.3
     sos = butter(4, [f_lo / (SR / 2), f_hi / (SR / 2)], btype="band", output="sos")
-    return sosfilt(sos, raw).astype(np.float32)
+    return sosfilt(sos, raw).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(mono: np.ndarray) -> np.ndarray:
@@ -287,7 +287,7 @@ class TestAssessDeEsserIntelligibility:
     @staticmethod
     def _tone(freq_hz: float, amp: float = 0.3, seconds: float = 1.0) -> np.ndarray:
         t = np.linspace(0.0, seconds, int(SR * seconds), endpoint=False, dtype=np.float32)
-        return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)
+        return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_26_report_is_finite_and_typed(self):
         from backend.core.dsp.deesser_intelligibility import (

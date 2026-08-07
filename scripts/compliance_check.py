@@ -13,12 +13,15 @@ Verwendung:
 
 import argparse
 import io as _io
+import logging
 import re
 import sys
 import tokenize
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Zieldirectories (Produktion) — Tests, Scripts, Models werden nie geprüft
@@ -257,7 +260,7 @@ def _get_string_literal_lines(source: str) -> set[int]:
                 for lineno in range(tok_start[0], tok_end[0] + 1):
                     string_lines.add(lineno)
     except (tokenize.TokenError, IndentationError, SyntaxError):
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     return string_lines
 
 

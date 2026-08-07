@@ -263,14 +263,14 @@ class PipelineProvenanceTracker:
 
             if recovery_recommended:
                 logger.warning(
-                    "§v10.4 Provenance: CRITICAL net delta %.4f nach Phase %s (%d undo events). Recovery empfohlen.",
+                    "§v10.4 Provenance: CRITICAL net delta %.4f nach Verarbeitungsschritt %s (%d undo events). Wiederherstellung empfohlen.",
                     avg_net,
                     phase_id,
                     len(undo_events),
                 )
             elif undo_events:
                 logger.info(
-                    "§v10.4 Provenance: %d undo(s) detektiert in Phase %s: %s",
+                    "§v10.4 Provenance: %d undo(s) detektiert in Verarbeitungsschritt %s: %s",
                     len(undo_events),
                     phase_id,
                     [(u.goal, u.original_contributor) for u in undo_events],

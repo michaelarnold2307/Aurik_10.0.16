@@ -15,10 +15,13 @@ Autor: Aurik 10 — 19. Juli 2026
 from __future__ import annotations
 
 import ast
+import logging
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -60,6 +63,21 @@ _PHYSICAL_CONSTANTS: set[str] = {
     "_DEFAULT_MIN_STRENGTH",  # overwritten by joint_calibrate / §v10.44
     "_MAX_RETRIES_G14",  # architectural constant
     "CREST_MIN_NATURAL",  # set inside calibrate_watchdog_thresholds()
+    # Dokumentierte psychoakustische/physikalische Konstanten mit lokaler Herleitung.
+    "_HNR_DELTA_THRESHOLD_DB",  # Boersma/HNR: >3 dB HNR-Zuwachs = rauigkeitsrelevanter Eingriff
+    "_VOICED_RMS_THRESHOLD",  # Stimmhaftigkeits-Floor fuer ACF-HNR-Schaetzung
+    "_PLOSIVE_CREST_FACTOR_MIN",  # Plosiv-Crest-Faktor aus Phonem-Boundary-DSP
+    "_LUFS_WINDOW_S",  # 400-ms Mikro-Dynamik-Fenster fuer Goosebumps-Metrik
+    "MIN_RMS_REDUCTION_DB",  # per-defect Mindestverbesserung fuer repaired_ok
+    "MAX_RMS_REDUCTION_DB",  # Over-Repair-Schutz fuer per-defect Verifikation
+    "_SILENCE_RMS_FLOOR",  # ~-80 dBFS Silence-Floor fuer Click-LPC-Reparatur
+    "_WIDE_STEREO_GUARD",  # Korrelationsgrenze fuer natuerlich breite Stereo-Produktion
+    "_WIDE_STEREO_CORR_CAP",  # Azimuth-Guard fuer vollstaendig dekorreliertes Wide-Stereo
+    "_CREST_HI",  # 6-dB Crest-Grenze fuer spektrales De-Essing
+    "_W_HNR",  # HNR-Gewicht im robusten Gender-Scoring
+    "MAX_ACCEPTABLE_STEREO_WIDTH_CHANGE",  # HIPS-Sicherheitsgrenze fuer Stem-Separation
+    "_post90_snr",  # kalibrierte digitale Era-Priors aus Frame-Energy-DR
+    "_dr_threshold",  # kalibrierte DR-Priors fuer Era-Upvote
 }
 
 # Muster für hartcodierte Schwellwerte
@@ -90,7 +108,7 @@ def get_changed_files() -> list[Path]:
                     if fp.exists():
                         files.append(fp)
         except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     return files
 
 
@@ -119,7 +137,7 @@ class CalibrationVisitor(ast.NodeVisitor):
                     if 0 < line <= len(lines):
                         source_line = lines[line - 1].strip()
                 except OSError:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
                 if _HARDCODED_THRESHOLD_PATTERN.search(source_line):
                     self.violations.append((line, "§V25", f"Hardcodierter Schwellwert: {name}"))

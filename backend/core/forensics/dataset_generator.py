@@ -195,7 +195,7 @@ class DatasetGenerator:
                     )
                 )
             except Exception as e:
-                logger.debug("⚠️  Failed to load %s: %s", audio_file, e)
+                logger.debug("⚠️  konnte nicht laden %s: %s", audio_file, e)
 
         return samples
 
@@ -494,7 +494,7 @@ class DatasetGenerator:
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
 
-        logger.debug("✅ Dataset saved: %s", output_path)
-        logger.debug("✅ Metadata saved: %s", metadata_path)
+        logger.debug("✅ Dataset gespeichert: %s", output_path)
+        logger.debug("✅ Metadata gespeichert: %s", metadata_path)
 
         return output_path

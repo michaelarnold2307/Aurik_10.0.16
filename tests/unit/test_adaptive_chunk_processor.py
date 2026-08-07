@@ -28,7 +28,7 @@ SR = 48000
 
 def _sine(freq: float = 440.0, secs: float = 5.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _identity_fn(audio, **kwargs):

@@ -264,7 +264,7 @@ def classify_sibilance_pathology(
         return segments
 
     except Exception as exc:
-        logger.debug("sibilance_pathology: fallback (non-blocking) — %s", exc)
+        logger.debug("sibilance_pathology: Ersatzpfad (nicht blockierend) — %s", exc)
         return []
 
 

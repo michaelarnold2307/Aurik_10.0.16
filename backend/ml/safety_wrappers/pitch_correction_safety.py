@@ -78,7 +78,9 @@ class PitchCorrectionSafetyWrapper:
         self.audit_log_path = audit_log_path
 
         logger.info(
-            "PitchCorrectionSafetyWrapper initialized: strict_mode=%s, audit_log=%s", strict_mode, audit_log_path
+            "PitchCorrectionSafetyWrapper initialisiert: strict_Betriebsart=%s, audit_log=%s",
+            strict_mode,
+            audit_log_path,
         )
 
         self.correction_count = 0
@@ -119,7 +121,7 @@ class PitchCorrectionSafetyWrapper:
         try:
             audio_corrected, correction_metadata = self.corrector.correct_pitch(audio, **kwargs)
         except Exception as e:
-            logger.error("[%s] Correction failed: %s", correction_id, e)
+            logger.error("[%s] Correction fehlgeschlagen: %s", correction_id, e)
             self._log_failure(correction_id, str(e), audio_shape=audio.shape)
             raise
 
@@ -152,7 +154,7 @@ class PitchCorrectionSafetyWrapper:
             corrected_shape=audio_corrected.shape,
         )
 
-        logger.info("[%s] HIPS-compliant correction complete", correction_id)
+        logger.info("[%s] HIPS-compliant correction vollstaendig", correction_id)
 
         # Enrich metadata with HIPS checks
         correction_metadata["hips_checks"] = {"pre": pre_check_result, "post": post_check_result}
@@ -392,7 +394,7 @@ class PitchCorrectionSafetyWrapper:
             with open(self.audit_log_path, "a") as f:
                 f.write(json.dumps(log_entry) + "\n")
         except Exception as e:
-            logger.error("Failed to write audit log: %s", e)
+            logger.error("konnte nicht write audit log: %s", e)
 
     def get_statistics(self) -> dict:
         """Gibt zurück: safety wrapper statistics."""

@@ -184,7 +184,7 @@ class TFSPreservationGuard:
                 b, a = butter(4, [f_lo / nyquist, f_hi / nyquist], btype="band")
                 orig_band = safe_filtfilt(b, a, orig_m)
             except Exception:
-                logger.debug("TFS: filter failed for fc=%.0f Hz, skipping", fc)
+                logger.debug("TFS: filter fehlgeschlagen for fc=%.0f Hz, skipping", fc)
                 continue
 
             # Frame-wise energy and coherence (only voiced frames)
@@ -213,7 +213,7 @@ class TFSPreservationGuard:
             try:
                 rest_band = safe_filtfilt(b, a, rest_m)
             except Exception:
-                logger.debug("TFS: restored-band filter failed for fc=%.0f Hz, skipping", fc)
+                logger.debug("TFS: wiederhergestellt-band filter fehlgeschlagen for fc=%.0f Hz, skipping", fc)
                 continue
 
             # Instantaneous phase via Hilbert analytic signal.

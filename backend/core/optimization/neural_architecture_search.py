@@ -338,7 +338,7 @@ class AudioNASNetwork(nn.Module):
             nn.Linear(128, 1),  # Enhancement factor
         )
 
-        logger.info("AudioNASNetwork initialized: %s cells, %s nodes per cell", n_cells, n_nodes)
+        logger.info("AudioNASNetwork initialisiert: %s cells, %s nodes per cell", n_cells, n_nodes)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass through NAS network."""
@@ -407,7 +407,7 @@ class NASTrainer:
 
         self.optimizer_arch = torch.optim.Adam(arch_params, lr=lr_arch, betas=(0.5, 0.999), weight_decay=1e-3)
 
-        logger.info("NASTrainer initialized on %s", device)
+        logger.info("NASTrainer initialisiert on %s", device)
 
     def train_step(
         self, train_data: torch.Tensor, train_target: torch.Tensor, val_data: torch.Tensor, val_target: torch.Tensor
@@ -469,7 +469,7 @@ class NASTrainer:
         # Extract final architecture
         genotype = self.model.get_genotype()
 
-        logger.info("NAS completed!")
+        logger.info("NAS abgeschlossen!")
         logger.info("Final architecture: %s", genotype)
 
         return {"genotype": genotype, "final_train_loss": avg_train_loss, "final_val_loss": avg_val_loss}
@@ -481,14 +481,14 @@ class NASTrainer:
         with open(path, "w") as f:
             json.dump(genotype, f, indent=2)
 
-        logger.info("Architecture saved to %s", path)
+        logger.info("Architecture gespeichert to %s", path)
 
     def load_architecture(self, path: Path) -> dict[str, Any]:
         """Lädt architecture from file."""
         with open(path) as f:
             genotype = json.load(f)
 
-        logger.info("Architecture loaded from %s", path)
+        logger.info("Architecture geladen from %s", path)
         return genotype  # type: ignore[no-any-return]
 
 

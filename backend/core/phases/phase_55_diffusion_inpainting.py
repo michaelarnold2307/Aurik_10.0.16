@@ -261,7 +261,7 @@ def _detect_gaps(audio: np.ndarray, sample_rate: int, min_gap_ms: float) -> list
                     _slope = float(np.polyfit(np.arange(len(_fade_frames_db)), _fade_frames_db, 1)[0])
                     _is_fadeout = _slope < -0.5  # energy was already declining → fadeout, not dropout
                 except Exception as e:
-                    logger.warning("phase_55_diffusion_inpainting.py::unbekannter Fallback: %s", e)
+                    logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::unbekannter Ersatzpfad: %s", e)
             if _pre_db > _gap_db + 8.0 and not _is_fadeout:
                 gaps.append((gap_start, gap_end))
 
@@ -429,7 +429,7 @@ def _nmf_gap_fallback(
             initial_phase=_initial_phase_gap,
         )
     except (ImportError, Exception) as _pghi_err:
-        logger.debug("phase_55 NMF-gap PGHI-Fallback: %s", _pghi_err)
+        logger.debug("Verarbeitungsschritt_55 NMF-gap PGHI-Ersatzpfad: %s", _pghi_err)
         _, _gap_audio = _sps.istft(Z_gap, fs=sr, window="hann", nperseg=_n_fft, noverlap=_n_fft - _hop)
 
     _gap_audio = np.asarray(_gap_audio, dtype=np.float64)
@@ -634,7 +634,7 @@ def _try_consistency_model_inpainting(channel: np.ndarray, start: int, end: int,
         _out_cim: np.ndarray = np.clip(result[:gap_len], -1.0, 1.0).astype(np.float32)
         return _out_cim
     except Exception as _exc:
-        logger.debug("_try_consistency_model_inpainting failed (non-critical): %s", _exc)
+        logger.debug("_try_consistency_model_inpainting fehlgeschlagen (unkritisch): %s", _exc)
         return None
 
 
@@ -686,7 +686,7 @@ def _try_dac_token_inpainting(channel: np.ndarray, start: int, end: int, sample_
         _out_dac: np.ndarray = np.clip(result[:gap_len], -1.0, 1.0).astype(np.float32)
         return _out_dac
     except Exception as _exc:
-        logger.debug("_try_dac_token_inpainting failed (non-critical): %s", _exc)
+        logger.debug("_try_dac_token_inpainting fehlgeschlagen (unkritisch): %s", _exc)
         return None
 
 
@@ -844,14 +844,16 @@ def _process_channel(
         _now_warn = time.monotonic()
         _last_warn_ts = getattr(_is_ml_thrashing, "_last_warn_ts", 0.0)
         if _now_warn - _last_warn_ts >= 60.0:
-            logger.warning("phase_55: ML-Thrashing erkannt — konservativer DSP-Pfad zum Schutz von Musik/Sprache aktiv")
+            logger.warning(
+                "Verarbeitungsschritt_55: ML-Thrashing erkannt — konservativer DSP-Pfad zum Schutz von Musik/Sprache aktiv"
+            )
             _is_ml_thrashing._last_warn_ts = _now_warn  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
     for start, end in gaps:
         if wall_budget_s > 0.0 and (time.perf_counter() - _t_channel_start) > wall_budget_s:
             stats["wall_budget_hits"] += 1
             logger.warning(
-                "phase_55: Wall-Budget %.1fs erreicht — verbleibende Gaps bleiben im sicheren Passthrough",
+                "Verarbeitungsschritt_55: Wall-Grenze %.1fs erreicht — verbleibende Gaps bleiben im sicheren Passthrough",
                 wall_budget_s,
             )
             break
@@ -879,7 +881,7 @@ def _process_channel(
                 if _p55_gs < _pz55_e and _p55_ge > _pz55_s:
                     _p55_vfa_boundary = True
                     logger.debug(
-                        "§V38 phase_55: Gap [%.3f\u2013%.3f s] in VFA-Schutzzone"
+                        "§V38 Verarbeitungsschritt_55: Gap [%.3f\u2013%.3f s] in VFA-Schutzzone"
                         " [%.3f\u2013%.3f s, cap=%.2f] \u2192 Boundary-Fill",
                         _p55_gs,
                         _p55_ge,
@@ -908,7 +910,7 @@ def _process_channel(
         if gap_ms > _MAX_DSP_INPAINT_GAP_MS or (ml_thrashing and gap_ms > _MAX_THRASH_INPAINT_GAP_MS):
             stats["damage_guard_activations"] += 1
             logger.warning(
-                "phase_55: Gap %.1f ms über Inpainting-Limit (thrashing=%s) — konservativer Boundary-Fill",
+                "Verarbeitungsschritt_55: Gap %.1f ms über Inpainting-Limit (thrashing=%s) — konservativer Boundary-Fill",
                 gap_ms,
                 ml_thrashing,
             )
@@ -939,7 +941,7 @@ def _process_channel(
                 candidate = _inpaint_gap_dsp(channel, start, end, n_steps)
             except Exception as _dsp_exc:
                 logger.debug(
-                    "DSP-AR-Diffusion fehlgeschlagen — NMF-\u03b2-Fallback (gap %d:%d): %s", start, end, _dsp_exc
+                    "DSP-AR-Diffusion fehlgeschlagen — NMF-\u03b2-Ersatzpfad (gap %d:%d): %s", start, end, _dsp_exc
                 )
                 candidate = _nmf_gap_fallback(channel, start, end, sample_rate)
         else:
@@ -962,7 +964,7 @@ def _process_channel(
                 # Priorität 0.8: Consistency Model (Song et al. 2023) — 1-Schritt-Diffusions-Inpainting.
                 plugin_result = _try_consistency_model_inpainting(channel, start, end, sample_rate)
                 if plugin_result is not None:
-                    logger.debug("phase_55: Consistency Model Inpainting OK (gap=%.1f ms)", gap_ms)
+                    logger.debug("Verarbeitungsschritt_55: Consistency Model Inpainting OK (gap=%.1f ms)", gap_ms)
                     candidate = plugin_result[: end - start]
                     stats["plugin_used"] = True
                     stats["consistency_model_used"] = stats.get("consistency_model_used", 0) + 1
@@ -978,7 +980,7 @@ def _process_channel(
                         if gap_ms >= 50.0:
                             plugin_result = _try_dac_token_inpainting(channel, start, end, sample_rate)
                             if plugin_result is not None:
-                                logger.debug("phase_55: DAC Token Inpainting OK (gap=%.1f ms)", gap_ms)
+                                logger.debug("Verarbeitungsschritt_55: DAC Token Inpainting OK (gap=%.1f ms)", gap_ms)
                                 candidate = plugin_result[: end - start]
                                 stats["plugin_used"] = True
                                 stats["dac_token_used"] = stats.get("dac_token_used", 0) + 1
@@ -989,7 +991,7 @@ def _process_channel(
                                 candidate = _inpaint_gap_dsp(channel, start, end, n_steps)
                             except Exception as _dsp_exc:
                                 logger.debug(
-                                    "DSP-AR-Diffusion fehlgeschlagen — NMF-\u03b2-Fallback (gap %d:%d): %s",
+                                    "DSP-AR-Diffusion fehlgeschlagen — NMF-\u03b2-Ersatzpfad (gap %d:%d): %s",
                                     start,
                                     end,
                                     _dsp_exc,
@@ -999,7 +1001,7 @@ def _process_channel(
         if _gap_candidate_is_damaging(candidate, channel, start, end):
             stats["damage_guard_activations"] += 1
             logger.warning(
-                "phase_55: Damage-Guard für Gap [%d:%d] (%.1f ms) aktiviert — ersetze riskante Rekonstruktion",
+                "Verarbeitungsschritt_55: Damage-Guard für Gap [%d:%d] (%.1f ms) aktiviert — ersetze riskante Rekonstruktion",
                 start,
                 end,
                 gap_ms,
@@ -1256,7 +1258,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
             )
             _repaired_mono = np.asarray(_repaired_mono, dtype=np.float64)
         except (ImportError, Exception) as _pghi_fb_err:
-            logger.debug("phase_55 NMF-fallback PGHI-Fallback: %s", _pghi_fb_err)
+            logger.debug("Verarbeitungsschritt_55 NMF-Ersatzpfad PGHI-Ersatzpfad: %s", _pghi_fb_err)
             _Z_repaired = _mag_repaired * np.exp(1j * _phase)
             _, _repaired_mono = _sps.istft(_Z_repaired, fs=sr, nperseg=_n_fft, noverlap=_n_fft - _hop, window="hann")
 
@@ -1296,7 +1298,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
 
             _get_plm_evict55().evict_for_phase("phase_55_diffusion_inpainting")
         except Exception as e:
-            logger.warning("phase_55_diffusion_inpainting.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::verarbeiten Ersatzpfad: %s", e)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -1330,7 +1332,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     _zone_frac_55 = float(np.clip(_zone_s_55 / max(1, _n_s_55), 0.0, 1.0))
                     effective_strength = float(np.clip(effective_strength + _zone_frac_55 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_55:
-                logger.debug("Phase55 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_55)
+                logger.debug("Verarbeitungsschritt55 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_55)
         _goal_weights = get_effective_song_goal_weights(kwargs)
         if not isinstance(_goal_weights, dict):
             _goal_weights = None
@@ -1380,11 +1382,11 @@ class DiffusionInpaintingPhase(PhaseInterface):
             if _ssip_zones_p55:
                 _repaired_gaps = list(_repaired_gaps) + _ssip_zones_p55
                 logger.debug(
-                    "§2.68 SSIP phase_55: %d strukturelle Stille-Zone(n) als pre-repaired markiert",
+                    "§2.68 SSIP Verarbeitungsschritt_55: %d strukturelle Stille-Zone(n) als pre-repaired markiert",
                     len(_ssip_zones_p55),
                 )
         except Exception as _ssip_exc_p55:
-            logger.debug("SSIP phase_55 non-blocking: %s", _ssip_exc_p55)
+            logger.debug("SSIP Verarbeitungsschritt_55 nicht blockierend: %s", _ssip_exc_p55)
 
         # §silence-guarantee: gewollte Stille sind KEINE Gaps — Stille-Zonen zur
         # pre-repaired-Liste hinzufügen, damit Inpainting sie vollständig überspringt.
@@ -1406,12 +1408,12 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     _silence_zones_p55 = list(zip(_sil_starts_p55, _sil_ends_p55))
                     _repaired_gaps = list(_repaired_gaps) + _silence_zones_p55
                     logger.debug(
-                        "§silence-guarantee phase_55: %d Stille-Zone(n) als pre-repaired markiert"
+                        "§silence-guarantee Verarbeitungsschritt_55: %d Stille-Zone(n) als pre-repaired markiert"
                         " — Diffusions-Inpainting überspringt sie",
                         len(_silence_zones_p55),
                     )
             except Exception as _sil_exc_p55:
-                logger.debug("§silence-guarantee phase_55: non-blocking error: %s", _sil_exc_p55)
+                logger.debug("§silence-guarantee Verarbeitungsschritt_55: nicht blockierend error: %s", _sil_exc_p55)
 
         # §V38 VFA-Schutzzonen für _process_channel sammeln (§0p Vocal-Supremacy)
         _p55_protected_zones: list[tuple[float, float, float]] = []
@@ -1419,27 +1421,27 @@ class DiffusionInpaintingPhase(PhaseInterface):
             try:
                 _p55_protected_zones.append((float(_z[0]), float(_z[1]), 0.20))  # §0p Vibrato
             except Exception as e:
-                logger.warning("phase_55_diffusion_inpainting.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::unbekannter Ersatzpfad: %s", e)
         for _z in kwargs.get("frisson_zones") or []:
             try:
                 _fz_s = float(getattr(_z, "start_s", None) or _z[0])
                 _fz_e = float(getattr(_z, "end_s", None) or _z[1])
                 _p55_protected_zones.append((_fz_s, _fz_e, 0.30))  # Frisson sakrosankt
             except Exception as e:
-                logger.warning("phase_55_diffusion_inpainting.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::unbekannter Ersatzpfad: %s", e)
         for _z in kwargs.get("whisper_zones") or []:
             try:
                 _p55_protected_zones.append((float(_z[0]), float(_z[1]), 0.25))  # Flüsterpassagen
             except Exception as e:
-                logger.warning("phase_55_diffusion_inpainting.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::unbekannter Ersatzpfad: %s", e)
         for _z in kwargs.get("passaggio_zones") or []:
             try:
                 _p55_protected_zones.append((float(_z[0]), float(_z[1]), 0.35))  # Passaggio-Übergänge
             except Exception as e:
-                logger.warning("phase_55_diffusion_inpainting.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_55_diffusion_inpainting.py::unbekannter Ersatzpfad: %s", e)
         if _p55_protected_zones:
             logger.debug(
-                "§V38 phase_55: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
+                "§V38 Verarbeitungsschritt_55: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
                 len(_p55_protected_zones),
             )
         _p55_pz = _p55_protected_zones or None
@@ -1467,7 +1469,10 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     base_strength=safe_strength,
                 )
             except Exception as _ch55_exc:
-                logger.warning("phase_55 mono channel processing failed, using passthrough candidate: %s", _ch55_exc)
+                logger.warning(
+                    "Verarbeitungsschritt_55 mono channel processing fehlgeschlagen, using passthrough candidate: %s",
+                    _ch55_exc,
+                )
                 repaired = audio.copy()
                 stats = {
                     "n_gaps": 0,
@@ -1499,7 +1504,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
             _was_channel_first = audio.ndim == 2 and audio.shape[0] in (1, 2) and audio.shape[1] > audio.shape[0]
             if _was_channel_first:
                 audio = audio.T  # (2, N) → (N, 2) für korrekte sample-first-Verarbeitung
-                logger.debug("phase_55: Axis-Orientierungs-Korrektur (2,N) → (N,2) angewendet")
+                logger.debug("Verarbeitungsschritt_55: Axis-Orientierungs-Korrektur (2,N) → (N,2) angewendet")
 
             n_channels = audio.shape[1]
             _channel_total = n_channels
@@ -1531,7 +1536,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     )
                 except Exception as _ch55_exc:
                     logger.warning(
-                        "phase_55 stereo channel %d processing failed, using passthrough candidate: %s",
+                        "Verarbeitungsschritt_55 stereo channel %d processing fehlgeschlagen, using passthrough candidate: %s",
                         ch,
                         _ch55_exc,
                     )
@@ -1564,7 +1569,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
 
         if _channel_failures >= _channel_total:
             logger.warning(
-                "phase_55: all channel paths failed (%d/%d) — invoking full-spectrum NMF fallback",
+                "Verarbeitungsschritt_55: all channel paths fehlgeschlagen (%d/%d) — invoking full-spectrum NMF Ersatzpfad",
                 _channel_failures,
                 _channel_total,
             )
@@ -1597,7 +1602,10 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     sr=sample_rate,
                 )
             except Exception as _ssip_audit_exc:
-                logger.debug("SSIP post_inpainting_silence_audit phase_55 (non-blocking): %s", _ssip_audit_exc)
+                logger.debug(
+                    "SSIP post_inpainting_silence_audit Verarbeitungsschritt_55 (nicht blockierend): %s",
+                    _ssip_audit_exc,
+                )
 
         # §2.46f NPA-Guard: Atemgeräusche/Vibrato in Lücken-Rändern nicht überschreiben.
         # §2.46e Hallucination-Guard: ML-Inpainting darf kein neues spektrales Material einbringen.
@@ -1624,7 +1632,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     else:
                         repaired[_npa_mask55] = source_audio[_npa_mask55]
             except Exception as _npa55_exc:
-                logger.debug("§2.46f Phase55 NPA-Guard (non-blocking): %s", _npa55_exc)
+                logger.debug("§2.46f Verarbeitungsschritt55 NPA-Guard (nicht blockierend): %s", _npa55_exc)
             # §2.36 Phonem-Schutz: Konsonanten-Bursts (/p/,/t/,/k/) die als Dropout
             # klassifiziert wurden dürfen nicht durch ML-Inpainting ersetzt werden —
             # Artikulation schlägt Lücken-Filling (§2.36 RELEASE_MUST).
@@ -1646,7 +1654,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                             else:
                                 repaired[_s55:_e55] = source_audio[_s55:_e55]
             except Exception as _ph55_exc:
-                logger.debug("§2.36 Phase55 Phonem-Guard (non-blocking): %s", _ph55_exc)
+                logger.debug("§2.36 Verarbeitungsschritt55 Phonem-Guard (nicht blockierend): %s", _ph55_exc)
             # §2.46e Hallucination-Guard: nur im Restoration-Modus (nicht Studio 2026)
             try:
                 _mode55 = str(kwargs.get("mode", "restoration")).lower()
@@ -1664,20 +1672,20 @@ class DiffusionInpaintingPhase(PhaseInterface):
                     )
                     if _hg_result55.requires_rollback:
                         logger.debug(
-                            "§2.46e Phase55 Hallucination rollback: spectral_novelty=%.3f",
+                            "§2.46e Verarbeitungsschritt55 Hallucination rollback: spectral_novelty=%.3f",
                             _hg_result55.spectral_novelty,
                         )
                         repaired = source_audio
                     if _hg_result55.score_penalty > 0:
                         logger.info(
-                            "§2.46e Phase55 score_penalty=%.1f (spectral_novelty=%.3f)",
+                            "§2.46e Verarbeitungsschritt55 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                             _hg_result55.score_penalty,
                             _hg_result55.spectral_novelty,
                         )
             except Exception as _hg55_exc:
-                logger.debug("§2.46e Phase55 Hallucination-Guard (non-blocking): %s", _hg55_exc)
+                logger.debug("§2.46e Verarbeitungsschritt55 Hallucination-Guard (nicht blockierend): %s", _hg55_exc)
         except Exception as _guard55_exc:
-            logger.debug("§2.46f/§2.46e Phase55 guards (non-blocking): %s", _guard55_exc)
+            logger.debug("§2.46f/§2.46e Verarbeitungsschritt55 guards (nicht blockierend): %s", _guard55_exc)
 
         # §V19 Noise-Textur-Invariante (§NTI): Residual-Rauschen darf Material-Profil nicht ändern (non-blocking)
         try:
@@ -1690,12 +1698,12 @@ class DiffusionInpaintingPhase(PhaseInterface):
             if _nt55_d > _nt55_thr:
                 repaired = (0.5 * repaired + 0.5 * source_audio).astype(np.float32)
                 logger.warning(
-                    "§V19 phase_55 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
+                    "§V19 Verarbeitungsschritt_55 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
                     _nt55_d,
                     _nt55_thr,
                 )
         except Exception as _nt55_exc:
-            logger.debug("§V19 phase_55 noise_texture (non-blocking): %s", _nt55_exc)
+            logger.debug("§V19 Verarbeitungsschritt_55 noise_texture (nicht blockierend): %s", _nt55_exc)
 
         # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Inpainting darf Spektralfarbe nicht verändern
         try:
@@ -1707,9 +1715,9 @@ class DiffusionInpaintingPhase(PhaseInterface):
             if not _sc55.ok:
                 _sc55_wet = 0.70
                 repaired = (_sc55_wet * repaired + (1.0 - _sc55_wet) * source_audio).astype(np.float32)
-                logger.warning("§V24 phase_55 spectral_color non-ok → strength −30%%")
+                logger.warning("§V24 Verarbeitungsschritt_55 spectral_color non-ok → strength −30%%")
         except Exception as _sc55_exc:
-            logger.debug("§V24 phase_55 spectral_color (non-blocking): %s", _sc55_exc)
+            logger.debug("§V24 Verarbeitungsschritt_55 spectral_color (nicht blockierend): %s", _sc55_exc)
 
         return PhaseResult(
             success=True,

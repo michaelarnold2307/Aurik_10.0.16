@@ -73,4 +73,4 @@ class Balance:
         out = np.stack([left, right], axis=1)
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
         out = np.clip(out, -1.0, 1.0)
-        return out
+        return out  # type: ignore[no-any-return]

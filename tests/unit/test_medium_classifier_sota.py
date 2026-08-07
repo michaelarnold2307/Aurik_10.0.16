@@ -35,7 +35,7 @@ def _make_lp_modulated(duration_s: float = 8.0, sr: int = SR) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * sr), dtype=np.float32)
     carrier = np.random.default_rng(0).standard_normal(len(t)).astype(np.float32) * 0.05
     modulation = 1.0 + 0.20 * np.sin(2 * math.pi * 0.556 * t)
-    return carrier * modulation
+    return carrier * modulation  # type: ignore[no-any-return]
 
 
 def _make_shellac_modulated(duration_s: float = 6.0, sr: int = SR) -> np.ndarray:
@@ -43,7 +43,7 @@ def _make_shellac_modulated(duration_s: float = 6.0, sr: int = SR) -> np.ndarray
     t = np.linspace(0, duration_s, int(duration_s * sr), dtype=np.float32)
     carrier = np.random.default_rng(1).standard_normal(len(t)).astype(np.float32) * 0.05
     modulation = 1.0 + 0.22 * np.sin(2 * math.pi * 1.300 * t)
-    return carrier * modulation
+    return carrier * modulation  # type: ignore[no-any-return]
 
 
 def _make_unmodulated(duration_s: float = 8.0, sr: int = SR) -> np.ndarray:
@@ -73,7 +73,7 @@ def _make_mp3_signature(duration_s: float = 4.0, sr: int = SR) -> np.ndarray:
     freqs = np.fft.rfftfreq(n, d=1.0 / sr)
     spec[freqs > 14000.0] = 0.0
     audio = np.fft.irfft(spec, n=n).astype(np.float32)
-    return audio / (np.max(np.abs(audio)) + 1e-8) * 0.1
+    return audio / (np.max(np.abs(audio)) + 1e-8) * 0.1  # type: ignore[no-any-return]
 
 
 def _make_digital_clean(duration_s: float = 4.0, sr: int = SR) -> np.ndarray:
@@ -98,7 +98,7 @@ def _make_vinyl_with_infrasonic(duration_s: float = 6.0, sr: int = SR) -> np.nda
     rumble_l = 0.004 * np.sin(2 * math.pi * 5.0 * t + 0.0)
     rumble_r = 0.004 * np.sin(2 * math.pi * 7.0 * t + 1.2)  # uncorrelated
     stereo = np.stack([music + rumble_l, music + rumble_r], axis=0)
-    return stereo
+    return stereo  # type: ignore[no-any-return]
 
 
 # ============================================================================

@@ -64,8 +64,8 @@ for f in core_files:
 # ---------------------------------------------------------------------------
 uv3_path = os.path.join(ROOT, "backend/core/unified_restorer_v3.py")
 if os.path.exists(uv3_path):
-    with open(uv3_path) as f:
-        uv3 = f.read()
+    with open(uv3_path) as f:  # type: ignore[assignment]
+        uv3 = f.read()  # type: ignore[attr-defined]
     if "perceptual_blend" not in uv3:
         errors.append("unified_restorer_v3.py: perceptual_blend() nicht importiert — §V34 verletzt")
     if "should_skip_phase" not in uv3:

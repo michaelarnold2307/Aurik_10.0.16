@@ -27,7 +27,7 @@ class TestFileExtDigitalPrior:
             0.4 * np.sin(2 * np.pi * 440 * t) + 0.2 * np.sin(2 * np.pi * 880 * t) + 0.1 * np.sin(2 * np.pi * 1320 * t)
         ).astype(np.float32)
         audio += rng.randn(len(audio)).astype(np.float32) * 0.002
-        return audio
+        return audio  # type: ignore[no-any-return]
 
     def test_01_file_ext_mp3_penalizes_analog(self):
         """Mit file_ext='.mp3' werden analoge Bayesian-Posteriors ×0.25 bestraft."""

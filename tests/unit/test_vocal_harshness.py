@@ -28,7 +28,7 @@ def _scanner(sr: int = SR):
 
 def _sine(freq: float = 440.0, amp: float = 0.5, duration: float = 3.0) -> np.ndarray:
     t = np.linspace(0, duration, int(SR * duration), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _clean_vocal_sim(duration: float = 3.0) -> np.ndarray:
@@ -74,7 +74,7 @@ def _harsh_vocal_sim(duration: float = 3.0, harshness: float = 0.8) -> np.ndarra
     # Normalize back
     sig = sig / (np.max(np.abs(sig)) + 1e-8) * 0.9
 
-    return sig
+    return sig  # type: ignore[no-any-return]
 
 
 # ============================================================

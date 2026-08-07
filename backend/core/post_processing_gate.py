@@ -132,7 +132,7 @@ class PostProcessingGate:
             processed = component_fn(audio, sr, strength)
         except Exception as exc:
             logger.warning(
-                "PostGate [%s]: Komponente fehlgeschlagen (%s) — Original zurück",
+                "PostGate [%s]: Komponente fehlgeschlagen (%s) — Originalsignal zurück",
                 label,
                 exc,
             )
@@ -148,7 +148,7 @@ class PostProcessingGate:
         # Sanity: processed muss gleiche Shape haben
         if processed.shape != audio.shape:
             logger.warning(
-                "PostGate [%s]: Shape-Änderung %s → %s — Original zurück",
+                "PostGate [%s]: Shape-Änderung %s → %s — Originalsignal zurück",
                 label,
                 audio.shape,
                 processed.shape,
@@ -274,7 +274,7 @@ class PostProcessingGate:
         except (ValueError, TypeError):
             # C-builtins oder inspect-inkompatible Callables —
             # können wir nicht prüfen, also durchlassen.
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ── Statistik ─────────────────────────────────────────────────────
 

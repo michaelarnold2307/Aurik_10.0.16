@@ -107,7 +107,7 @@ class HarmonicDetector:
         peak_lag = np.argmax(corr_range) + min_lag
         f0 = sr / peak_lag
 
-        return f0
+        return f0  # type: ignore[return-value]
 
     def _measure_harmonic_strength(self, audio: np.ndarray, sr: int, freq: float, bandwidth: float = 50.0) -> float:
         """
@@ -125,7 +125,7 @@ class HarmonicDetector:
         # Sum energy in range
         energy = np.sum(spectrum[low_idx : high_idx + 1])
 
-        return energy
+        return energy  # type: ignore[no-any-return]
 
 
 class SpectralGapFiller:
@@ -235,10 +235,10 @@ class SpectralGapFiller:
 
             if harmonic_info and harmonic_info["f0"] > 0:
                 # Harmonic-aware filling
-                Zxx = self._fill_harmonic_aware(Zxx, f, low_idx, high_idx, harmonic_info)
+                Zxx = self._fill_harmonic_aware(Zxx, f, low_idx, high_idx, harmonic_info)  # type: ignore[arg-type]
             else:
                 # Interpolation-based filling
-                Zxx = self._fill_interpolation(Zxx, low_idx, high_idx)
+                Zxx = self._fill_interpolation(Zxx, low_idx, high_idx)  # type: ignore[arg-type]
 
         # Inverse STFT
         _, audio_filled = istft(Zxx, sr, nperseg=nperseg, noverlap=noverlap)
@@ -252,7 +252,7 @@ class SpectralGapFiller:
         audio_filled = np.clip(np.nan_to_num(audio_filled, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(
             audio.dtype
         )
-        return audio_filled
+        return audio_filled  # type: ignore[no-any-return]
 
     def _fill_harmonic_aware(
         self, Zxx: np.ndarray, f: np.ndarray, low_idx: int, high_idx: int, harmonic_info: dict
@@ -417,7 +417,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Process
     inpainter = VocalSpectralInpainting(
@@ -432,7 +432,7 @@ if __name__ == "__main__":
     logger.info(str("\n" + "=" * 70))
     logger.info("VOCAL SPECTRAL INPAINTING REPORT")
     logger.info(str("=" * 70))
-    logger.info("Gaps detected: %s", report["gaps_detected"])
+    logger.info("Gaps erkannt: %s", report["gaps_detected"])
     logger.info("Gaps filled:   %s", report["gaps_filled"])
 
     if report["gaps_detected"] > 0:
@@ -441,12 +441,12 @@ if __name__ == "__main__":
             logger.info("  Gap %s: %.0f - %.0f Hz (%.0f Hz wide)", i, low, high, high - low)
 
     if report["harmonic_awareness"]:
-        logger.info("\nHarmonic Awareness: Enabled")
-        logger.info("  F0 detected: %.1f Hz", report["f0_detected"])
+        logger.info("\nHarmonic Awareness: aktiviert")
+        logger.info("  F0 erkannt: %.1f Hz", report["f0_detected"])
 
     logger.info(str("=" * 70))
 
     # Save
     if args.output:
         sf.write(args.output, audio_inpainted, sr)
-        logger.info("\n✅ Saved to: %s", args.output)
+        logger.info("\n✅ gespeichert to: %s", args.output)

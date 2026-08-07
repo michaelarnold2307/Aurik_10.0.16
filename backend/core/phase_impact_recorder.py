@@ -82,9 +82,9 @@ class PhaseImpactRecorder:
             ]
             with open(path, "w") as f:
                 json.dump(data, f, indent=2)
-            logger.info("PhaseImpactRecorder: %d impacts saved to %s", len(data), path)
+            logger.info("PhaseImpactRecorder: %d impacts gespeichert to %s", len(data), path)
         except Exception as e:
-            logger.debug("PhaseImpactRecorder flush failed: %s", e)
+            logger.debug("PhaseImpactRecorder flush fehlgeschlagen: %s", e)
 
 
 _recorder = None

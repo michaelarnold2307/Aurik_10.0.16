@@ -28,7 +28,7 @@ import json
 import logging
 from pathlib import Path
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
 import soundfile as sf
@@ -129,10 +129,10 @@ class GoldenSampleBenchmarkRunner:
                 enable_auto_reprocessing=False  # Benchmark = no reprocessing
             )
         else:
-            self.quality_gate = None
+            self.quality_gate = None  # type: ignore[assignment]
 
         logger.info(
-            "BenchmarkRunner initialized: %d samples, mode=%s, perceptual=%s",
+            "BenchmarkRunner initialisiert: %d samples, Betriebsart=%s, perceptual=%s",
             len(self.metadata["golden_samples"]),
             processing_mode.value,
             enable_perceptual_metrics,
@@ -166,7 +166,7 @@ class GoldenSampleBenchmarkRunner:
         if max_samples:
             samples = samples[:max_samples]
 
-        logger.info("Running benchmark on %d samples...", len(samples))
+        logger.info("laeuft benchmark on %d samples...", len(samples))
 
         results = []
 
@@ -179,20 +179,20 @@ class GoldenSampleBenchmarkRunner:
                 avg_improvement = np.mean(list(result.improvements.values())) if result.improvements else 0.0
 
                 logger.info(
-                    "  Result: passed=%s, avg_improvement=%.3f, time=%.2fs",
+                    "  Ergebnis: passed=%s, avg_improvement=%.3f, time=%.2fs",
                     result.passed,
                     avg_improvement,
                     result.processing_time_s,
                 )
 
             except Exception as e:
-                logger.error("  Failed to benchmark %s: %s", sample_meta["filename"], e)
+                logger.error("  konnte nicht benchmark %s: %s", sample_meta["filename"], e)
                 continue
 
         # Generate summary
         summary = self._generate_summary(results)
 
-        logger.info("\n✓ Benchmark complete: %d/%d passed", summary.passed, summary.total_samples)
+        logger.info("\n✓ Benchmark vollstaendig: %d/%d passed", summary.passed, summary.total_samples)
 
         return results, summary
 
@@ -297,7 +297,7 @@ class GoldenSampleBenchmarkRunner:
         failed = total_samples - passed
 
         # Average improvement across all goals
-        all_improvements = []
+        all_improvements: list[Any] = []
         for r in results:
             all_improvements.extend(r.improvements.values())
 
@@ -313,7 +313,7 @@ class GoldenSampleBenchmarkRunner:
         for category in categories:
             cat_results = [r for r in results if r.category == category]
             cat_passed = sum(1 for r in cat_results if r.passed)
-            cat_improvements = []
+            cat_improvements: list[Any] = []
 
             for r in cat_results:
                 cat_improvements.extend(r.improvements.values())
@@ -330,7 +330,7 @@ class GoldenSampleBenchmarkRunner:
         achieved_avg = {}
 
         # Get all goal names
-        all_goals = set()
+        all_goals: set[Any] = set()
         for r in results:
             all_goals.update(r.baseline_scores.keys())
             all_goals.update(r.achieved_scores.keys())
@@ -347,10 +347,10 @@ class GoldenSampleBenchmarkRunner:
             passed=passed,
             failed=failed,
             avg_improvement=avg_improvement,
-            avg_processing_time_s=avg_processing_time,
+            avg_processing_time_s=avg_processing_time,  # type: ignore[arg-type]
             category_results=category_results,
-            baseline_avg=baseline_avg,
-            achieved_avg=achieved_avg
+            baseline_avg=baseline_avg,  # type: ignore[arg-type]
+            achieved_avg=achieved_avg  # type: ignore[arg-type]
         )
 
     def export_report(
@@ -496,7 +496,7 @@ def main():
     mode_map = {
         "RESTORATION": ProcessingMode.RESTORATION,
         "STUDIO_2026": ProcessingMode.STUDIO_2026,
-        "FORENSIC": ProcessingMode.FORENSIC
+        "FORENSIC": ProcessingMode.FORENSIC  # type: ignore[attr-defined]
     }
     processing_mode = mode_map[args.mode]
 
@@ -518,7 +518,7 @@ def main():
                 """Aurik-Restaurierung als Benchmark-Processing-Funktion."""
                 try:
                     result = _restauriere(audio, sr=sr)
-                    return result.audio
+                    return result.audio  # type: ignore[no-any-return]
                 except Exception as exc:
                     logging.warning("Restaurierung fehlgeschlagen (%s) – Passthrough", exc)
                     return audio

@@ -59,7 +59,7 @@ cfg = RestorationConfig(
     enable_phase_skipping=False,
 )
 restorer = UnifiedRestorerV3(config=cfg)
-result = restorer.restore(audio, sample_rate=sr, mode="fast", ml_runtime_budget_s=3.0)
+result = restorer.restore(audio, sample_rate=sr, mode="fast", ml_runtime_budget_s=3.0)  # type: ignore[arg-type]
 restored = np.asarray(result.audio)
 if restored.ndim == 2 and restored.shape[0] < restored.shape[1]:
     restored = restored.T
@@ -68,8 +68,8 @@ restored_mono = np.mean(restored, axis=1) if restored.ndim == 2 else restored
 
 # Measure goals
 checker = MusicalGoalsChecker(mode="restoration")
-goals_before = checker.measure_all(original_mono, sr)
-goals_after = checker.measure_all(restored_mono, sr, reference=original_mono)
+goals_before = checker.measure_all(original_mono, sr)  # type: ignore[arg-type]
+goals_after = checker.measure_all(restored_mono, sr, reference=original_mono)  # type: ignore[arg-type]
 
 # P1/P2 regression check (same as R11 test)
 p1p2 = ["natuerlichkeit", "authentizitaet", "tonal_center", "timbre_authentizitaet", "artikulation"]

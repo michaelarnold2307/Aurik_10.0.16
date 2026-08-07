@@ -23,7 +23,7 @@ def _safe_float(value: Any, default: float) -> float:
     try:
         out = float(value)
     except Exception as e:
-        logger.warning("phase_strength_contract.py::_safe_float fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_strength_contract.py::_safe_float Ersatzpfad: %s", e)
         return float(default)
     if not np.isfinite(out):
         return float(default)

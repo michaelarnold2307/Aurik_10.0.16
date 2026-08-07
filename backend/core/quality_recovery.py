@@ -264,7 +264,7 @@ class QualityRecoverySystem:
             ],
         }
 
-        logger.info("Quality Recovery System initialized (v%s)", self.VERSION)
+        logger.info("Quality Wiederherstellung System initialisiert (v%s)", self.VERSION)
 
     def diagnose_problem(
         self,
@@ -288,7 +288,7 @@ class QualityRecoverySystem:
             RecoveryPlan with actionable strategies
         """
         logger.info("=" * 60)
-        logger.info("QUALITY RECOVERY: Diagnosing Problem")
+        logger.info("QUALITY Wiederherstellung: Diagnosing Problem")
         logger.info("=" * 60)
         del audio, sample_rate
 
@@ -296,7 +296,7 @@ class QualityRecoverySystem:
         problems = self._identify_problems(quality_report, medium_type)
 
         if not problems:
-            logger.warning("No specific problems identified - using generic recovery")
+            logger.warning("No specific problems identified - using generic Wiederherstellung")
             problems = [ProblemType.UNNATURAL_SOUND]
 
         # Select primary problem
@@ -318,7 +318,7 @@ class QualityRecoverySystem:
             fallback_description="Adaptive optimization to find best achievable quality",
         )
 
-        logger.info("Recovery Plan Generated: %s strategies", len(actions))
+        logger.info("Wiederherstellung Plan erzeugt: %s strategies", len(actions))
         for i, action in enumerate(actions, 1):
             logger.info("  %s. [%s] %s", i, action.strategy.value, action.description)
             logger.info("     Expected improvement: %.1f", action.expected_improvement)
@@ -351,14 +351,14 @@ class QualityRecoverySystem:
             RecoveryResult with recovered audio and details
         """
         logger.info("=" * 60)
-        logger.info("QUALITY RECOVERY: Executing Recovery Plan")
+        logger.info("QUALITY Wiederherstellung: Executing Wiederherstellung Plan")
         logger.info("=" * 60)
 
         # Measure original quality
         original_quality = self.analyzer.analyze_quality(original_audio, sample_rate)
         current_quality = self.analyzer.analyze_quality(current_audio, sample_rate)
 
-        logger.info("Original Quality: %.1f/100", original_quality.overall_score)
+        logger.info("Originalsignal Quality: %.1f/100", original_quality.overall_score)
         logger.info("Current Quality: %.1f/100", current_quality.overall_score)
         logger.info("Degradation: %.1f points", current_quality.overall_score - original_quality.overall_score)
 
@@ -388,7 +388,7 @@ class QualityRecoverySystem:
                 elif action.strategy == RecoveryStrategy.SWITCH_MODE:
                     # Return to original with recommendation to switch mode
                     recovered_audio = original_audio.copy()
-                    logger.info("  → Recommendation: Switch to %s mode", action.parameters.get("new_mode"))
+                    logger.info("  → Recommendation: Switch to %s Betriebsart", action.parameters.get("new_mode"))
 
                 elif action.strategy == RecoveryStrategy.INCREMENTAL_PROCESSING:
                     recovered_audio = self._incremental_processing(original_audio, current_audio, action.parameters)
@@ -411,7 +411,7 @@ class QualityRecoverySystem:
 
                 else:
                     logger.warning(
-                        "  Unbekannte Strategy '%s' — verwende MAXIMIZE_QUALITY Fallback",
+                        "  Unbekannte Strategy '%s' — verwende MAXIMIZE_QUALITY Ersatzpfad",
                         action.strategy.value,
                     )
                     recovered_audio = self._maximize_quality(
@@ -434,7 +434,7 @@ class QualityRecoverySystem:
                 )
 
                 if gate_passed:
-                    logger.info("  ✓ Quality gate PASSED after recovery!")
+                    logger.info("  ✓ Quality gate PASSED after Wiederherstellung!")
                     strategy_used = action.strategy
                     actions_taken.append(action.description)
                     break
@@ -443,12 +443,12 @@ class QualityRecoverySystem:
                     actions_taken.append(f"{action.description} (failed)")
 
             except Exception as e:
-                logger.error("  ❌ Strategy failed with error: %s", e)
+                logger.error("  ❌ Strategy fehlgeschlagen with error: %s", e)
                 actions_taken.append(f"{action.description} (error)")
 
         # If no strategy worked, use adaptive optimization fallback
         if not strategy_used:
-            logger.info("All standard strategies tried - using adaptive optimization fallback")
+            logger.info("All standard strategies tried - using adaptive optimization Ersatzpfad")
             recovered_audio = self._maximize_quality(
                 original_audio, current_audio, {"max_iterations": 10}, medium_type, processing_mode, sample_rate
             )
@@ -475,12 +475,12 @@ class QualityRecoverySystem:
         )
 
         logger.info("=" * 60)
-        logger.info("QUALITY RECOVERY: Complete")
+        logger.info("QUALITY Wiederherstellung: vollstaendig")
         logger.info("=" * 60)
         logger.info("Status: %s", "SUCCESS" if success else "FAILED")
         logger.info("Strategy Used: %s", strategy_used.value if strategy_used else "None")
         logger.info("Quality Improvement: %+.1f points", improvement)
-        logger.info("Final Score: %.1f/100", final_quality.overall_score)
+        logger.info("Final Wert: %.1f/100", final_quality.overall_score)
 
         return result
 
@@ -641,7 +641,7 @@ class QualityRecoverySystem:
         # Less processed = more original
         blended = (1 - intensity_factor) * original + intensity_factor * processed
 
-        logger.info("  → Blending: %.1f original + %.1f processed", (1 - intensity_factor), intensity_factor)
+        logger.info("  → Blending: %.1f Originalsignal + %.1f verarbeitet", (1 - intensity_factor), intensity_factor)
 
         return blended.astype(np.float32)  # type: ignore[no-any-return]
 
@@ -671,7 +671,7 @@ class QualityRecoverySystem:
         The overall blend weight is proportional to the fraction of applied modules
         that are being skipped, clamped to [0.20, 0.80].
         """
-        logger.info("  → Would skip modules: %s", ", ".join(modules_to_skip))
+        logger.info("  → Would ueberspringen modules: %s", ", ".join(modules_to_skip))
 
         if original.shape[0] == 0 or processed.shape[0] == 0 or not modules_to_skip:
             return processed.copy()
@@ -772,14 +772,14 @@ class QualityRecoverySystem:
 
             result = np.clip(audio_corr, -1.0, 1.0).astype(np.float32)
             logger.info(
-                "  → STFT-domain correction applied (skip_ratio=%.2f, cats=%s)",
+                "  → STFT-domain correction angewendet (ueberspringen_Verhaeltnis=%.2f, cats=%s)",
                 skip_ratio,
                 skip_cats,
             )
             return result  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.warning("  → STFT correction failed (%s), using time-domain blend.", exc)
+            logger.warning("  → STFT correction fehlgeschlagen (%s), using time-domain blend.", exc)
             blended = blend_orig * original + blend_proc * processed
             return np.clip(blended, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
@@ -887,7 +887,7 @@ class QualityRecoverySystem:
 
             result = np.clip(result, -1.0, 1.0).astype(np.float32)
             logger.info(
-                "  → ADJUST_PARAMETERS: hf_red=%.2f comp=%.2f lf_boost=%.2f applied",
+                "  → anpassen_PARAMETERS: hf_red=%.2f comp=%.2f lf_boost=%.2f angewendet",
                 hf_red,
                 comp_rat,
                 lf_boost,
@@ -895,7 +895,7 @@ class QualityRecoverySystem:
             return result  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.warning("  → _adjust_parameters STFT failed (%s), returning processed unchanged.", exc)
+            logger.warning("  → _anpassen_parameters STFT fehlgeschlagen (%s), returning verarbeitet unchanged.", exc)
             return processed.astype(np.float32)  # type: ignore[no-any-return]
 
     def _use_alternative(
@@ -980,7 +980,7 @@ class QualityRecoverySystem:
 
             result = np.clip(result, -1.0, 1.0).astype(np.float32)
             logger.info(
-                "  → USE_ALTERNATIVE: multi-band blend applied (lf=%.2f lo_mid=%.2f hi_mid=%.2f hf=%.2f)",
+                "  → USE_ALTERNATIVE: multi-band blend angewendet (lf=%.2f lo_mid=%.2f hi_mid=%.2f hf=%.2f)",
                 lf_blend,
                 low_mid_blend,
                 high_mid_blend,
@@ -989,7 +989,7 @@ class QualityRecoverySystem:
             return result  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.warning("  → _use_alternative STFT failed (%s), using blend fallback.", exc)
+            logger.warning("  → _use_alternative STFT fehlgeschlagen (%s), using blend Ersatzpfad.", exc)
             blend = 0.5 * processed + 0.5 * original
             return np.clip(blend, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
@@ -1055,4 +1055,4 @@ if __name__ == "__main__":
             logger.debug("✓ Quality recovered: %+.1f points", demo_recovery_result.improvement)
             sf.write("output/recovered.wav", demo_recovery_result.recovered_audio, demo_sample_rate)
         else:
-            logger.debug("❌ Recovery failed - using original")
+            logger.debug("❌ Wiederherstellung fehlgeschlagen - using Originalsignal")

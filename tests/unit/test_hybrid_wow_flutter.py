@@ -23,7 +23,7 @@ def test_polyphonic_implausible_speed_curve_falls_back_to_pyin(monkeypatch):
             return _FakeBasicPitchResult(t=120, k=min(3, max_polyphony))
 
     est = PolyphonicSpeedCurveEstimator()
-    est._bp = _FakeBasicPitch()
+    est._bp = _FakeBasicPitch()  # type: ignore[assignment]
 
     fallback_pitch = np.full(120, 220.0, dtype=np.float32)
     fallback_conf = np.full(120, 0.42, dtype=np.float32)

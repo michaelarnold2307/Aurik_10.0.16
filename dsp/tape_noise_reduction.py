@@ -129,5 +129,5 @@ class TapeNoiseReduction:
             return y
 
         if audio.ndim == 1:
-            return _process_ch(audio).astype(audio.dtype)
-        return np.stack([_process_ch(ch) for ch in audio], axis=0).astype(audio.dtype)
+            return _process_ch(audio).astype(audio.dtype)  # type: ignore[no-any-return]
+        return np.stack([_process_ch(ch) for ch in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]

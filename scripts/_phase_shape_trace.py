@@ -10,6 +10,7 @@ import os
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 os.chdir(str(PROJECT_ROOT))
@@ -35,7 +36,7 @@ if not os.path.exists(INPUT_FILE):
     sys.exit(1)
 
 SR = 48_000
-_trace_rows = []
+_trace_rows: list[Any] = []
 _input_n_samples = None  # wird nach erstem load gesetzt
 _first_anomaly = None
 
@@ -69,7 +70,10 @@ def _patched_profiled_phase_call(self, phase, audio: np.ndarray, **kwargs):
     try:
         phase_id = phase.get_metadata().phase_id
     except Exception:
-        logger.warning("_phase_shape_trace.py::_patched_profiled_phase_call fallback", exc_info=True)
+        logger.warning(
+            "_Verarbeitungsschritt_shape_trace.py::_patched_profiled_Verarbeitungsschritt_call Ersatzpfad",
+            exc_info=True,
+        )
 
     n_before = audio.shape[0]
     stereo_before = _is_stereo(audio)
@@ -133,7 +137,7 @@ def _patched_profiled_phase_call(self, phase, audio: np.ndarray, **kwargs):
     return result
 
 
-_UVcls._profiled_phase_call = _patched_profiled_phase_call
+_UVcls._profiled_phase_call = _patched_profiled_phase_call  # type: ignore[method-assign]
 
 # ── Load & Run ──────────────────────────────────────────────────────────────
 print("=" * 80)

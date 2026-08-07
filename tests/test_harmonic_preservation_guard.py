@@ -36,7 +36,7 @@ VOICING_CONFIDENCE_MIN = 0.60
 def _sine(freq: float = 440.0, dur: float = 1.0, amp: float = 0.5) -> np.ndarray:
     np.random.seed(42)
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _multi_harmonic(f0: float = 220.0, n_partials: int = 5, dur: float = 1.0) -> np.ndarray:

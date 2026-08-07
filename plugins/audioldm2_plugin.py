@@ -67,6 +67,7 @@ _instance: AudioLDM2Plugin | None = None
 # ONNX session management
 # ---------------------------------------------------------------------------
 
+
 def _load_onnx_session():
     """Thread-safe lazy load of the AudioLDM2 UNet ONNX session."""
     global _onnx_session, _onnx_failed  # pylint: disable=global-statement
@@ -78,7 +79,7 @@ def _load_onnx_session():
         if _onnx_session is not None or _onnx_failed:
             return _onnx_session
         if not _AUDIOLDM2_ONNX_PATH.exists():
-            logger.info("AudioLDM2 ONNX not found at %s — plugin disabled", _AUDIOLDM2_ONNX_PATH)
+            logger.info("AudioLDM2 ONNX not found at %s — plugin deaktiviert", _AUDIOLDM2_ONNX_PATH)
             _onnx_failed = True
             return None
         try:
@@ -198,12 +199,19 @@ def _ddim_scheduler(
         pred_x0 = np.clip(pred_x0, -10.0, 10.0)
 
         # Direction pointing to x_t
-        dir_xt = np.sqrt(1.0 - alpha_bar_t_prev - eta**2 * (1.0 - alpha_bar_t_prev) / max(1.0 - alpha_bar_t, 1e-8)) * noise_pred
+        dir_xt = (
+            np.sqrt(1.0 - alpha_bar_t_prev - eta**2 * (1.0 - alpha_bar_t_prev) / max(1.0 - alpha_bar_t, 1e-8))
+            * noise_pred
+        )
 
         # Random noise for stochastic DDIM (eta > 0)
         if eta > 0:
             noise = np.random.randn(*latent_shape).astype(np.float32)
-            sigma_t = eta * np.sqrt((1.0 - alpha_bar_t_prev) / max(1.0 - alpha_bar_t, 1e-8)) * np.sqrt(1.0 - alpha_bar_t / max(alpha_bar_t_prev, 1e-8))
+            sigma_t = (
+                eta
+                * np.sqrt((1.0 - alpha_bar_t_prev) / max(1.0 - alpha_bar_t, 1e-8))
+                * np.sqrt(1.0 - alpha_bar_t / max(alpha_bar_t_prev, 1e-8))
+            )
             latent = np.sqrt(alpha_bar_t_prev) * pred_x0 + dir_xt + sigma_t * noise
         else:
             latent = np.sqrt(alpha_bar_t_prev) * pred_x0 + dir_xt
@@ -257,15 +265,15 @@ def _get_clap_embeddings(prompt: str) -> np.ndarray | None:
                     if clap is not None and getattr(clap, "_model_loaded", False):
                         _CLAP_ENCODER = clap
                     else:
-                        logger.debug("AudioLDM2: LAION-CLAP not loaded")
+                        logger.debug("AudioLDM2: LAION-CLAP not geladen")
                         return None
                 except Exception as exc:
-                    logger.debug("AudioLDM2: LAION-CLAP unavailable: %s", exc)
+                    logger.debug("AudioLDM2: LAION-CLAP nicht verfuegbar: %s", exc)
                     return None
 
     try:
         # CLAP returns text embedding; shape depends on implementation
-        emb = _CLAP_ENCODER.encode_text(prompt)
+        emb = _CLAP_ENCODER.encode_text(prompt)  # type: ignore[attr-defined]
         if emb is None:
             return None
         emb = np.asarray(emb, dtype=np.float32)
@@ -281,13 +289,13 @@ def _get_clap_embeddings(prompt: str) -> np.ndarray | None:
         # Ensure 768-dim if CLAP returns different dimensionality
         if emb.shape[2] != _AUDIOLDM2_CROSSATTENTION_DIM:
             if emb.shape[2] > _AUDIOLDM2_CROSSATTENTION_DIM:
-                emb = emb[:, :, : _AUDIOLDM2_CROSSATTENTION_DIM]
+                emb = emb[:, :, :_AUDIOLDM2_CROSSATTENTION_DIM]
             else:
                 pad_w = _AUDIOLDM2_CROSSATTENTION_DIM - emb.shape[2]
                 emb = np.pad(emb, ((0, 0), (0, 0), (0, pad_w)))
-        return emb.astype(np.float32)
+        return np.asarray(emb, dtype=np.float32)
     except Exception as exc:
-        logger.debug("AudioLDM2: CLAP encode_text failed: %s", exc)
+        logger.debug("AudioLDM2: CLAP encode_text fehlgeschlagen: %s", exc)
         return None
 
 
@@ -314,7 +322,7 @@ def _get_t5_embeddings(prompt: str) -> tuple[np.ndarray | None, np.ndarray | Non
                     mask = mask[np.newaxis, :]
                 return emb.astype(np.float32), mask
     except Exception:
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # Fallback: use CLAP embedding with padding to T5 dim
     clap_emb = _get_clap_embeddings(prompt)
@@ -346,7 +354,9 @@ def _load_vae_session():
         if _vae_session is not None or _vae_failed:
             return _vae_session
         if not _AUDIOLDM2_VAE_ONNX_PATH.exists():
-            logger.info("AudioLDM2 VAE decoder not found at %s — using Griffin-Lim fallback", _AUDIOLDM2_VAE_ONNX_PATH)
+            logger.info(
+                "AudioLDM2 VAE decoder not found at %s — using Griffin-Lim Ersatzpfad", _AUDIOLDM2_VAE_ONNX_PATH
+            )
             _vae_failed = True
             return None
         try:
@@ -399,7 +409,7 @@ def _latent_to_audio(latent: np.ndarray, target_duration_s: float) -> np.ndarray
             return audio.astype(np.float32)
 
         except Exception as exc:
-            logger.debug("AudioLDM2 VAE decoder failed: %s — falling back to Griffin-Lim", exc)
+            logger.debug("AudioLDM2 VAE decoder fehlgeschlagen: %s — falling back to Griffin-Lim", exc)
 
     # Fallback: numpy upsampling + Griffin-Lim
     return _latent_to_audio_fallback(latent, target_duration_s)
@@ -447,11 +457,11 @@ def _mel_to_audio(mel_spec: np.ndarray, sample_rate: int, hop_length: int) -> np
         hifigan = get_hifigan_plugin()
         if hifigan is not None and getattr(hifigan, "_model_loaded", False):
             # HiFi-GAN expects mel in a specific format
-            audio = hifigan.mel_to_audio(mel_spec.astype(np.float32))
+            audio = hifigan.mel_to_audio(mel_spec.astype(np.float32))  # type: ignore[attr-defined]
             if audio is not None and len(audio) > 0:
                 return np.asarray(audio, dtype=np.float32)
     except Exception as exc:
-        logger.debug("HiFi-GAN unavailable, using Griffin-Lim: %s", exc)
+        logger.debug("HiFi-GAN nicht verfuegbar, using Griffin-Lim: %s", exc)
 
     # Fallback to Griffin-Lim
     return _mel_to_audio_griffin_lim(mel_spec, sample_rate, hop_length)
@@ -500,7 +510,7 @@ def _mel_to_audio_griffin_lim(
         # Upsample envelope to audio rate
         indices = np.clip(np.arange(_n_samples) * len(mel_env) // _n_samples, 0, len(mel_env) - 1)
         envelope = mel_env[indices]
-        return (noise * envelope).astype(np.float32)
+        return (noise * envelope).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -563,7 +573,7 @@ class AudioLDM2Plugin:
             # 1. Get text embeddings
             clap_emb = _get_clap_embeddings(prompt)
             if clap_emb is None:
-                logger.debug("AudioLDM2: CLAP unavailable, using fallback")
+                logger.debug("AudioLDM2: CLAP nicht verfuegbar, using Ersatzpfad")
                 return self._fallback_noise(duration)
 
             t5_emb, t5_mask = _get_t5_embeddings(prompt)
@@ -594,7 +604,7 @@ class AudioLDM2Plugin:
                 latent_shape,
                 encoder_hidden_states_0=clap_emb,
                 encoder_hidden_states_1=t5_emb,
-                encoder_attention_mask_1=t5_mask,
+                encoder_attention_mask_1=t5_mask,  # type: ignore[arg-type]
                 num_inference_steps=_DDIM_NUM_STEPS,
                 guidance_scale=guidance,
             )
@@ -604,7 +614,7 @@ class AudioLDM2Plugin:
             return np.clip(audio, -1.0, 1.0).astype(np.float32)
 
         except Exception as exc:
-            logger.warning("AudioLDM2: generation failed: %s", exc, exc_info=True)
+            logger.warning("AudioLDM2: generation fehlgeschlagen: %s", exc, exc_info=True)
             return self._fallback_noise(duration)
 
     def _run_unet(

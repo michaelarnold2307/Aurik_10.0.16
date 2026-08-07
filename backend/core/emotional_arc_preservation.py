@@ -31,6 +31,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from backend.core.audio_utils import safe_to_mono
+from backend.core.calibration_context import get_calibration_context
 
 logger = logging.getLogger(__name__)
 
@@ -156,7 +157,7 @@ class EmotionalArcPreservationMetric:
         sr: int,
         lyrics_saliency: np.ndarray | None = None,
         frisson_zones=None,
-        transfer_chain_depth: int = 1,
+        transfer_chain_depth: int | None = None,
     ) -> EmotionalArcResult:
         """Misst den Erhalt des emotionalen Bogens.
 
@@ -286,7 +287,7 @@ class EmotionalArcPreservationMetric:
                             break
                     _seg_idx += 1
             except Exception as e:
-                logger.warning("emotional_arc_preservation.py::unbekannter Fallback: %s", e)
+                logger.warning("emotional_arc_preservation.py::unbekannter Ersatzpfad: %s", e)
                 pass  # non-blocking: frisson_zones Fehler darf Messung nicht blockieren
 
         # ----------------------------------------------------------------
@@ -329,7 +330,11 @@ class EmotionalArcPreservationMetric:
         # §v10.200 Depth-adaptive thresholds: tiefere Ketten haben flachere
         # emotionale Bögen durch Rauschmaskierung. Bei depth≥4 ist eine
         # Pearson-Korrelation von 0.85 physikalisch unerreichbar.
-        _td_ea = max(1, int(transfer_chain_depth))
+        _resolved_depth = transfer_chain_depth
+        if _resolved_depth is None:
+            _ctx_ea = get_calibration_context()
+            _resolved_depth = _ctx_ea.transfer_chain_depth if _ctx_ea is not None else 1
+        _td_ea = max(1, int(_resolved_depth))
         if _td_ea >= 4:
             _thr_arousal = 0.50
             _thr_valence = 0.50
@@ -520,7 +525,7 @@ class EmotionalArcPreservationMetric:
                 return 0.0
             return float(np.clip(corr, -1.0, 1.0))
         except Exception as e:
-            logger.warning("emotional_arc_preservation.py::_weighted_pearson fallback: %s", e)
+            logger.warning("emotional_arc_preservation.py::_weighted_pearson Ersatzpfad: %s", e)
             return 0.0
 
     def correct_arc(
@@ -787,7 +792,7 @@ class EmotionalArcPreservationMetric:
                 return restored.copy(), arc_before
 
         logger.info(
-            "EmotionalArc correction applied: arousal %.3f→%.3f  valence %.3f→%.3f  max_gain=±%.1f dB",
+            "EmotionalArc correction angewendet: arousal %.3f→%.3f  valence %.3f→%.3f  max_gain=±%.1f dB",
             arc_before.arousal_pearson,
             arc_after.arousal_pearson,
             arc_before.valence_pearson,
@@ -821,7 +826,7 @@ def measure_emotional_arc(
     sr: int,
     lyrics_saliency: np.ndarray | None = None,
     frisson_zones=None,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> EmotionalArcResult:
     """Convenience-Wrapper: Erhalt des emotionalen Bogens prüfen.
 
@@ -979,7 +984,7 @@ class WaveformPlausibilityGuard:
         try:
             return self._apply_inner(original, restored, sr, mode, material_type, restorability_score, meta)
         except Exception as _exc:
-            logger.warning("WaveformPlausibilityGuard: unhandled exception — skip. %s", _exc)
+            logger.warning("WaveformPlausibilityGuard: unhandled exception — ueberspringen. %s", _exc)
             meta["skipped_reason"] = f"exception:{type(_exc).__name__}"
             return np.asarray(restored, dtype=np.float32).copy(), meta
 
@@ -1078,7 +1083,7 @@ class WaveformPlausibilityGuard:
             meta["quiet_zone_emergency_applied"] = True
             logger.info(
                 "WaveformPlausibilityGuard: Quiet-Zone-Notfallkorrektur aktiv "
-                "(quiet_ratio=%.2f, windows=%d, max=%.1f dB, thr=%.1f dB, mat=%s)",
+                "(quiet_Verhaeltnis=%.2f, windows=%d, max=%.1f dB, thr=%.1f dB, mat=%s)",
                 _quiet_ratio,
                 _expl_count,
                 meta["max_attenuation_db"],
@@ -1147,7 +1152,7 @@ class WaveformPlausibilityGuard:
         )
         logger.warning(
             "WaveformPlausibilityGuard: %d Explosions-Fenster erkannt, "
-            "aber Korrektur verletzt Musical-Goals-Proxy → Skip. "
+            "aber Korrektur verletzt Musical-Goals-Proxy → ueberspringen. "
             "arc: %.3f→%.3f, DR: %.1f→%.1f dB",
             meta["explosions_found"],
             arc_before,

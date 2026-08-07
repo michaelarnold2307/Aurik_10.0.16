@@ -32,7 +32,7 @@ def _make_vocal_signal(sr: int = 48000, duration_s: float = 2.0) -> np.ndarray:
     pause_start = int(0.45 * sr)
     pause_end = int(0.55 * sr)
     sig[pause_start:pause_end] = 0.002 * rng.randn(pause_end - pause_start)
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

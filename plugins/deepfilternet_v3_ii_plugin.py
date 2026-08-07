@@ -89,7 +89,7 @@ class DeepFilterNetV3Plugin:
         for attr, fname in [("_enc", "enc.onnx"), ("_dec", "dec.onnx"), ("_erb_dec", "erb_dec.onnx")]:
             p = os.path.join(d, fname)
             if not os.path.exists(p):
-                logger.warning("DeepFilterNet-Modell fehlt: %s — DSP-Fallback aktiv.", p)
+                logger.warning("DeepFilterNet-Modell fehlt: %s — DSP-Ersatzpfad aktiv.", p)
                 return
         # ── ML-Budget-Check VOR dem Laden (§5.1 OOM-Schutz) ──────────────────
         _allocated = False
@@ -102,13 +102,13 @@ class DeepFilterNetV3Plugin:
                 try:
                     _release("DeepFilterNetV3")
                 except Exception:
-                    logger.warning("deepfilternet_v3_ii_plugin.py::_try_load fallback", exc_info=True)
+                    logger.warning("deepfilternet_v3_ii_plugin.py::_try_laden Ersatzpfad", exc_info=True)
                 if not try_allocate("DeepFilterNetV3", size_gb=0.15):
-                    logger.warning("DeepFilterNet: ML-Budget erschöpft — DSP-Fallback aktiv")
+                    logger.warning("DeepFilterNet: ML-Grenze erschöpft — DSP-Ersatzpfad aktiv")
                     return
             _allocated = True
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         try:
             import onnxruntime as ort
 
@@ -125,7 +125,7 @@ class DeepFilterNetV3Plugin:
             self._enc = ort.InferenceSession(os.path.join(d, "enc.onnx"), sess_options=opts, providers=prov)
             self._dec = ort.InferenceSession(os.path.join(d, "dec.onnx"), sess_options=opts, providers=prov)
             self._erb_dec = ort.InferenceSession(os.path.join(d, "erb_dec.onnx"), sess_options=opts, providers=prov)
-            logger.info("deepfilternet_v3_ii_plugin: ONNX models loaded from: %s", d)
+            logger.info("deepfilternet_v3_ii_plugin: ONNX models geladen from: %s", d)
             try:
                 from backend.core.plugin_lifecycle_manager import register_plugin as _reg_plm
 
@@ -137,9 +137,9 @@ class DeepFilterNetV3Plugin:
                     ),
                 )
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.warning("DeepFilterNet ONNX-Ladefehler: %s — DSP-Fallback aktiv.", exc)
+            logger.warning("DeepFilterNet ONNX-Ladefehler: %s — DSP-Ersatzpfad aktiv.", exc)
             self._enc = self._dec = self._erb_dec = None
             if _allocated:
                 try:
@@ -147,7 +147,7 @@ class DeepFilterNetV3Plugin:
 
                     _release("DeepFilterNetV3")
                 except ImportError:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ── Public API ──────────────────────────────────────────────────────────
 
@@ -217,7 +217,7 @@ class DeepFilterNetV3Plugin:
                 _plm_dfn = _get_plm_dfn()
                 _plm_dfn.set_active("DeepFilterNetV3", True)
             except Exception:
-                logger.warning("deepfilternet_v3_ii_plugin.py::_enhance_channel fallback", exc_info=True)
+                logger.warning("deepfilternet_v3_ii_plugin.py::_verbessern_channel Ersatzpfad", exc_info=True)
             try:
                 out = self._infer_onnx(mono)
             finally:
@@ -225,7 +225,7 @@ class DeepFilterNetV3Plugin:
                     try:
                         _plm_dfn.set_active("DeepFilterNetV3", False)
                     except Exception:
-                        logger.warning("deepfilternet_v3_ii_plugin.py::_enhance_channel fallback", exc_info=True)
+                        logger.warning("deepfilternet_v3_ii_plugin.py::_verbessern_channel Ersatzpfad", exc_info=True)
         else:
             out = self._omlsa_fallback(mono, _SR)
 
@@ -354,7 +354,7 @@ class DeepFilterNetV3Plugin:
             spec_filtered = self._apply_df_filter(spec_filtered, coefs_np, alpha_np)
 
         except Exception as exc:
-            logger.debug("DeepFilterNet ONNX-Inferenz-Fehler: %s — DSP-Fallback.", exc)
+            logger.debug("DeepFilterNet ONNX-Inferenz-Fehler: %s — DSP-Ersatzpfad.", exc)
             return self._omlsa_fallback(mono, _SR)
 
         # ISTFT (vectorized batch-IRFFT + overlap-add)
@@ -422,7 +422,7 @@ class DeepFilterNetV3Plugin:
         if snr_db > 35.0:
             logger.info("DeepFilterNet: hoher Eingangs-SNR %.1f dB — Dry-Signal statt Zusatzbearbeitung.", snr_db)
             return np.clip(np.nan_to_num(mono, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
-        logger.info("DeepFilterNet: OMLSA fehlgeschlagen — Spectral-Gating-Fallback (SNR=%.1f dB).", snr_db)
+        logger.info("DeepFilterNet: OMLSA fehlgeschlagen — Spectral-Gating-Ersatzpfad (SNR=%.1f dB).", snr_db)
         return DeepFilterNetV3Plugin._spectral_gating_fallback(mono, sr)
 
     @staticmethod
@@ -464,7 +464,7 @@ class DeepFilterNetV3Plugin:
         try:
             return DeepFilterNetV3Plugin._omlsa_primary_fallback(mono, sr)
         except Exception as exc:
-            logger.warning("DeepFilterNet OMLSA-Fallback fehlgeschlagen: %s — Sekundärfallback aktiv.", exc)
+            logger.warning("DeepFilterNet OMLSA-Ersatzpfad fehlgeschlagen: %s — Sekundärfallback aktiv.", exc)
             return DeepFilterNetV3Plugin._secondary_fallback(mono, sr)
 
 

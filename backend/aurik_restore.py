@@ -164,7 +164,7 @@ def policy_engine(analysis_result: dict[str, Any]) -> list[Any]:
             if isinstance(selected, list) and selected:
                 return selected
     except Exception as exc:
-        logger.warning("ML-Policy-Engine nicht verfügbar: %s — Fallback-Kette", exc)
+        logger.warning("ML-Policy-Engine nicht verfügbar: %s — Ersatzpfad-Kette", exc)
     return [{"phase": "restaurierung"}, {"phase": "reparatur"}, {"phase": "remastering"}]
 
 
@@ -304,7 +304,7 @@ def export(audio: np.ndarray, sr: int, out_path: str) -> None:
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
-    logger.info("[Export] Datei gespeichert: %s", out_path)
+    logger.info("[Ausgabe] Datei gespeichert: %s", out_path)
 
 
 def main(importfile_path: str, out_path: str) -> None:
@@ -374,9 +374,9 @@ def main(importfile_path: str, out_path: str) -> None:
         # Sibilanten-Score (sofern vorhanden)
         sibilant = raw_tags.get("Sibilance", None)
         if sibilant is not None:
-            logger.info("    Sibilanten-Score: %.2f", sibilant)
+            logger.info("    Sibilanten-Wert: %.2f", sibilant)
         else:
-            logger.info("    Sibilanten-Score: nicht verfügbar")
+            logger.info("    Sibilanten-Wert: nicht verfügbar")
     except Exception as e:
         logger.info("[VocalAnalysis] Transparenz nicht möglich: %s", e)
 
@@ -594,6 +594,6 @@ def auto_detect(audio: np.ndarray, sr: int = 48000) -> dict:
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        logger.info("Nutzung: python aurik_restore.py <importfile.json> <output.wav>")
+        logger.info("Nutzung: python aurik_wiederherstellen.py <importfile.json> <Ausgabe.wav>")
         sys.exit(1)
     main(sys.argv[1], sys.argv[2])

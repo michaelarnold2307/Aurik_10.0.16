@@ -67,7 +67,7 @@ def test_phase41_pipeline_safety_material_mode_matrix(material: MaterialType, qu
     phase = OutputFormatOptimization()
     audio = _make_stereo_samples_first()
 
-    result = phase.process(audio, SR, material, quality_mode=quality_mode)
+    result = phase.process(audio, SR, material, quality_mode=quality_mode)  # type: ignore[arg-type]
 
     assert result.success is True
     assert result.audio.shape == audio.shape
@@ -91,7 +91,7 @@ def test_phase23_flashsr_helper_shape_invariant_matrix(layout: str):
             return np.asarray(audio, dtype=np.float32) * 0.5
 
     phase = SpectralRepair()
-    phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
+    phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
 
     if layout == "mono":
         inp = _make_stereo_samples_first()[:, 0].copy()
@@ -134,7 +134,7 @@ def test_phase42_context_material_matrix_stable_with_stubbed_stem_sep(material: 
             instr = audio[:n] * 0.4
         return vocals, instr, 0.7, "stubbed_stem_sep"
 
-    phase._try_stem_separation = _fake_stem_sep  # type: ignore[method-assign]
+    phase._try_stem_separation = _fake_stem_sep  # type: ignore[assignment]
 
     audio = _make_stereo_samples_first()
     result = phase.process(audio, SR, material=material, **ctx)

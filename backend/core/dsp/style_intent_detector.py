@@ -84,7 +84,7 @@ class StyleIntentDetector:
         if self._fcpe_available:
             logger.debug("StyleIntentDetector: FCPE verfügbar (primär)")
         if self._pyin_available:
-            logger.debug("StyleIntentDetector: librosa.pyin als Fallback verfügbar")
+            logger.debug("StyleIntentDetector: librosa.pyin als Ersatzpfad verfügbar")
 
     # ------------------------------------------------------------------
     # Öffentliche API
@@ -114,7 +114,7 @@ class StyleIntentDetector:
             f0_hz, voiced_flag = self._extract_f0(audio, sr)
             result = self._analyze_pitch_classes(f0_hz, voiced_flag, sr)
         except Exception as exc:
-            logger.debug("StyleIntentDetector.analyze fehlgeschlagen (non-blocking): %s", exc)
+            logger.debug("StyleIntentDetector.analyze fehlgeschlagen (nicht blockierend): %s", exc)
 
         return result
 

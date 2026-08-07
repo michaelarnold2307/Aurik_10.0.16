@@ -54,7 +54,7 @@ def _get_resample_poly() -> Any | None:
         module = importlib.import_module("scipy.signal")
         return module.resample_poly
     except Exception as e:
-        logger.warning("era_classifier.py::_get_resample_poly fallback: %s", e)
+        logger.warning("era_classifier.py::_get_resample_poly Ersatzpfad: %s", e)
         return None
 
 
@@ -610,7 +610,7 @@ def _estimate_spectral_tilt(audio_mono: np.ndarray, sr: int) -> float:
         slope = float(np.linalg.lstsq(A, log_power, rcond=None)[0][0])
         return float(np.clip(slope, -12.0, 2.0))
     except Exception as e:
-        logger.warning("era_classifier.py::_estimate_spectral_tilt fallback: %s", e)
+        logger.warning("era_classifier.py::_estimate_spectral_tilt Ersatzpfad: %s", e)
         return -4.0
 
 
@@ -877,7 +877,9 @@ def _dsp_fingerprint_decade(
     _snr_correction_db = 0.0
     if _chain_depth >= 2:
         # Pro analogem Träger ~4 dB, pro Codec ~3 dB SNR-Verlust
-        _analog_steps = sum(1 for c in transfer_chain if c not in {"mp3_low", "mp3_high", "aac", "streaming", "minidisc", "cd_digital"})
+        _analog_steps = sum(
+            1 for c in transfer_chain if c not in {"mp3_low", "mp3_high", "aac", "streaming", "minidisc", "cd_digital"}
+        )  # type: ignore[misc, union-attr]
         _codec_steps = _chain_depth - _analog_steps
         _snr_correction_db = _analog_steps * 4.0 + _codec_steps * 3.0
         _snr_correction_db = min(_snr_correction_db, 18.0)  # Cap bei 18 dB
@@ -900,7 +902,10 @@ def _dsp_fingerprint_decade(
             decade = min(decade + 10, 1990)
             logger.debug(
                 "EraClassifier: deep-chain bias +10y (depth=%d, hints=%d, SNR %.0f→%.0f)",
-                _chain_depth, _hints_later, snr_db, _snr_corrected,
+                _chain_depth,
+                _hints_later,
+                snr_db,
+                _snr_corrected,
             )
 
     # SNR-based upward correction for 1950–1970 borderline cases:
@@ -1329,12 +1334,12 @@ class EraClassifier:
 
         # RAM-Cache-Key aus SHA256-Prefix + Transfer-Chain (für Chain-Awareness)
         _chain_str = ",".join(sorted(transfer_chain)) if transfer_chain else "nochain"
-        sha = hashlib.sha256((audio_mono.tobytes() + _chain_str.encode())).hexdigest()[:16]
+        sha = hashlib.sha256(audio_mono.tobytes() + _chain_str.encode()).hexdigest()[:16]
         with self._ram_cache_lock:
             cached = self._ram_cache.get(sha)
         if cached is not None:
             logger.debug(
-                "EraClassifier: RAM-Cache-Hit %s → Jahrzehnt=%d, Konfidenz=%.2f, Tier=%d",
+                "EraClassifier: RAM-Zwischenspeicher-Hit %s → Jahrzehnt=%d, Konfidenz=%.2f, Tier=%d",
                 sha,
                 cached.decade,
                 cached.confidence,
@@ -1361,7 +1366,7 @@ class EraClassifier:
             result = self._try_tier1(audio_mono, sr, bark, rolloff_hz, snr_db)
         else:
             logger.debug(
-                "EraClassifier: skip Tier-1 (short clip %.2fs < %.2fs)",
+                "EraClassifier: ueberspringen Tier-1 (short clip %.2fs < %.2fs)",
                 _audio_duration_s,
                 self._tier1_min_duration_s,
             )
@@ -1515,7 +1520,7 @@ class EraClassifier:
             # DSP widerspricht CLAP Tier-1 — DSP ist physikalisch fundiert,
             # CLAP ist general-purpose. Bei Diskrepanz DSP bevorzugen.
             logger.info(
-                "EraClassifier: Tier-2 DSP-Sanity-Check widerspricht CLAP Tier-1 "
+                "EraClassifier: Tier-2 DSP-Sanity-Pruefung widerspricht CLAP Tier-1 "
                 "(CLAP=%d/%.2f, DSP=%d/%.2f) → DSP-Override",
                 result.decade,
                 result.confidence,
@@ -1540,15 +1545,15 @@ class EraClassifier:
                     _ceiling_source = _mat_lower
             if _ceiling < 9999 and result.decade > _ceiling:
                 _original_decade = result.decade
-                result = EraResult(
+                result = EraResult(  # type: ignore[call-arg]
                     decade=_ceiling,
                     confidence=result.confidence * 0.85,  # leichte Unsicherheit
                     material_prior=result.material_prior,
                     noise_profile=result.noise_profile,
                     tier_used=result.tier_used,
-                    tier1_used=result.tier1_used,
-                    regression_snr=result.regression_snr,
-                    regression_mos=result.regression_mos,
+                    tier1_used=result.tier1_used,  # type: ignore[attr-defined]
+                    regression_snr=result.regression_snr,  # type: ignore[attr-defined]
+                    regression_mos=result.regression_mos,  # type: ignore[attr-defined]
                 )
                 logger.info(
                     "🕰️ §2.13 Era-Ceiling: chain=%s → %s ceiling=%d → "
@@ -1589,7 +1594,7 @@ class EraClassifier:
                     getattr(_rm, "hf_rolloff_khz", 0.0),
                 )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Codec-BW plausibility gate (Müller & Ewert 2011; Spijkervet 2020):
         # Modern recordings (≥2000) show fullBW (>18 kHz) + moderate-to-high SNR.
@@ -1610,7 +1615,7 @@ class EraClassifier:
             _original_medium = DECADE_MATERIAL_PRIOR.get(result.decade, "unknown")
             if _original_medium not in _digital_materials:
                 logger.info(
-                    "🕰️ Original-Medium-Inference: decade=%d → %s (override %s → %s)",
+                    "🕰️ Originalsignal-Medium-Inference: decade=%d → %s (override %s → %s)",
                     result.decade,
                     _original_medium,
                     result.material_prior,
@@ -1694,7 +1699,9 @@ class EraClassifier:
                     _sr_clap = 48000
                     logger.debug("EraClassifier Tier-1: resampled %d → 48000 Hz for CLAP embed", sr)
                 except Exception as _rs_exc:
-                    logger.debug("EraClassifier Tier-1: resample failed (%s) — skip CLAP tier", _rs_exc)
+                    logger.debug(
+                        "EraClassifier Tier-1: resample fehlgeschlagen (%s) — ueberspringen CLAP tier", _rs_exc
+                    )
                     return None
             # CLAP-Embedding → Cosinus-Ähnlichkeit zu Ära-Ankern.
             # _clap_plugin ist als object|None typisiert (lazy importiertes Plugin);
@@ -1714,7 +1721,7 @@ class EraClassifier:
                 hf_rolloff_hz=rolloff_hz,
             )
         except Exception as exc:
-            logger.debug("EraClassifier Tier-1 fehlgeschlagen: %s — nutze DSP-Fallback", exc)
+            logger.debug("EraClassifier Tier-1 fehlgeschlagen: %s — nutze DSP-Ersatzpfad", exc)
             return None
 
     def _tier2(
@@ -1802,7 +1809,8 @@ class EraClassifier:
             if _min_decade is not None and result.decade < _min_decade:
                 logger.info(
                     "§v10.304 AST-Era-Floor: %d→%d (instrument constraint)",
-                    result.decade, _min_decade,
+                    result.decade,
+                    _min_decade,
                 )
                 return EraResult(
                     decade=_min_decade,

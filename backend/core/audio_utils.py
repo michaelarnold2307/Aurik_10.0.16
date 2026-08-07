@@ -144,8 +144,8 @@ def safe_sosfiltfilt(
     from scipy.signal import sosfilt, sosfiltfilt
 
     if chain_depth >= 4:
-        return sosfilt(sos, x, axis=axis)
-    return sosfiltfilt(sos, x, axis=axis)
+        return sosfilt(sos, x, axis=axis)  # type: ignore[no-any-return]
+    return sosfiltfilt(sos, x, axis=axis)  # type: ignore[no-any-return]
 
 
 def safe_stft(
@@ -178,12 +178,12 @@ def safe_stft(
     else:
         _noverlap = min(noverlap, max(0, _nperseg - 1))
     try:
-        return _scipy_stft(x, fs=fs, window=window, nperseg=_nperseg, noverlap=_noverlap, **kwargs)
+        return _scipy_stft(x, fs=fs, window=window, nperseg=_nperseg, noverlap=_noverlap, **kwargs)  # type: ignore[no-any-return]
     except ValueError:
         # Last resort: minimum viable STFT
         _nperseg = max(2, n)
         _noverlap = _nperseg // 4
-        return _scipy_stft(x, fs=fs, window="hann", nperseg=_nperseg, noverlap=_noverlap)
+        return _scipy_stft(x, fs=fs, window="hann", nperseg=_nperseg, noverlap=_noverlap)  # type: ignore[no-any-return]
 
 
 def safe_istft(
@@ -210,10 +210,10 @@ def safe_istft(
     else:
         _noverlap = min(noverlap, max(0, nperseg - 1))
     try:
-        return _scipy_istft(Zxx, fs=fs, window=window, nperseg=nperseg, noverlap=_noverlap, **kwargs)
+        return _scipy_istft(Zxx, fs=fs, window=window, nperseg=nperseg, noverlap=_noverlap, **kwargs)  # type: ignore[no-any-return]
     except ValueError:
         _noverlap = nperseg // 4
-        return _scipy_istft(Zxx, fs=fs, window="hann", nperseg=nperseg, noverlap=_noverlap)
+        return _scipy_istft(Zxx, fs=fs, window="hann", nperseg=nperseg, noverlap=_noverlap)  # type: ignore[no-any-return]
 
 
 def audio_sample_count(audio: np.ndarray) -> int:
@@ -363,7 +363,7 @@ def compute_signal_relative_gate_dbfs(  # pylint: disable=too-many-positional-ar
         gate = float(np.clip(noise_floor_db + margin_db, -60.0, -10.0))
         return max(_floor, gate)  # material floor as minimum; signal can only raise it
     except Exception as e:
-        logger.warning("audio_utils.py::compute_signal_relative_gate_dbfs fallback: %s", e)
+        logger.warning("audio_utils.py::berechnen_signal_relative_gate_dbfs Ersatzpfad: %s", e)
         return _floor
 
 
@@ -503,8 +503,8 @@ def quiet_edge_boost_ok(
         len(ref_channels),
     )
 
-    def _p995_dbfs(x: np.ndarray) -> float:
-        return float(20.0 * np.log10(float(np.percentile(np.abs(x.astype(np.float64)), 99.5)) + 1e-12))
+    def _p999_dbfs(x: np.ndarray) -> float:
+        return float(20.0 * np.log10(float(np.percentile(np.abs(x.astype(np.float64)), 99.9)) + 1e-12))
 
     for start, end, channel_flags in (
         (0, edge_len, intro_flags),
@@ -522,8 +522,8 @@ def quiet_edge_boost_ok(
             if cand_edge_db > ref_edge_db + max_edge_boost_db:
                 return False
 
-            ref_edge_peak_db = _p995_dbfs(ref_edge)
-            cand_edge_peak_db = _p995_dbfs(cand_edge)
+            ref_edge_peak_db = _p999_dbfs(ref_edge)
+            cand_edge_peak_db = _p999_dbfs(cand_edge)
             if cand_edge_peak_db > ref_edge_peak_db + max_edge_boost_db + 1.0:
                 return False
     return True
@@ -537,6 +537,8 @@ def _scale_audio_region(
     channel_index: int | None = None,
     *,
     crossfade_samples: int = 480,
+    taper_in: bool = True,
+    taper_out: bool = True,
 ) -> np.ndarray:
     if scale >= 0.9999 or end <= start:
         return audio
@@ -544,10 +546,24 @@ def _scale_audio_region(
     # §2.45a-II v10: Crossfade at region boundaries prevents hard clicks
     # when the gain change creates a discontinuity between the scaled
     # edge region and the unscaled music body.
+    # taper_in/taper_out=False: hold flat at `scale` instead of ramping
+    # to/from 1.0 at that boundary — needed for quiet-edge clamping at a
+    # genuine file start/end, where a ramp toward 1.0 would reintroduce the
+    # very peak the clamp is meant to suppress right inside the measurement
+    # window (§0h Music-Death-Shield). Only the boundary that transitions
+    # into/out of unclamped song content (not a file edge) needs a real ramp.
     cf = min(crossfade_samples, (end - start) // 4, 4800)  # max 100 ms @ 48 kHz
     if cf >= 2:
-        ramp = np.linspace(1.0, float(scale), cf, dtype=np.float32)
-        iramp = np.linspace(float(scale), 1.0, cf, dtype=np.float32)
+        ramp = (
+            np.linspace(1.0, float(scale), cf, dtype=np.float32)
+            if taper_in
+            else np.full(cf, float(scale), dtype=np.float32)
+        )
+        iramp = (
+            np.linspace(float(scale), 1.0, cf, dtype=np.float32)
+            if taper_out
+            else np.full(cf, float(scale), dtype=np.float32)
+        )
         ramp = np.clip(ramp, 0.0, 1.0)
         iramp = np.clip(iramp, 0.0, 1.0)
 
@@ -636,8 +652,8 @@ def limit_quiet_edge_boost(
         len(ref_channels),
     )
 
-    def _p995_dbfs(x: np.ndarray) -> float:
-        return float(20.0 * np.log10(float(np.percentile(np.abs(x.astype(np.float64)), 99.5)) + 1e-12))
+    def _p999_dbfs(x: np.ndarray) -> float:
+        return float(20.0 * np.log10(float(np.percentile(np.abs(x.astype(np.float64)), 99.9)) + 1e-12))
 
     for start, end, channel_flags in (
         (0, edge_len, intro_flags),
@@ -645,6 +661,12 @@ def limit_quiet_edge_boost(
     ):
         if not any(channel_flags):
             continue
+        # Only ramp toward 1.0 at a boundary that hands off to unclamped song
+        # content — a genuine file start/end needs no such ramp (nothing to
+        # blend with) and ramping there would reintroduce the clamped peak
+        # right inside the measurement window (§0h Music-Death-Shield).
+        _taper_in = start != 0
+        _taper_out = end != n
         for channel_index, (ref_channel, cand_channel) in enumerate(zip(ref_channels, cand_channels)):
             if not channel_flags[channel_index]:
                 continue
@@ -652,8 +674,8 @@ def limit_quiet_edge_boost(
             cand_edge = cand_channel[:n][start:end]
             ref_edge_db = compute_gated_rms_dbfs(ref_edge, gate_dbfs=gate_dbfs)
             cand_edge_db = compute_gated_rms_dbfs(cand_edge, gate_dbfs=gate_dbfs)
-            ref_edge_peak_db = _p995_dbfs(ref_edge)
-            cand_edge_peak_db = _p995_dbfs(cand_edge)
+            ref_edge_peak_db = _p999_dbfs(ref_edge)
+            cand_edge_peak_db = _p999_dbfs(cand_edge)
 
             scale = 1.0
             if cand_edge_db > ref_edge_db + max_edge_boost_db:
@@ -663,7 +685,21 @@ def limit_quiet_edge_boost(
                     scale,
                     float(10.0 ** ((ref_edge_peak_db + max_edge_boost_db + 1.0 - cand_edge_peak_db) / 20.0)),
                 )
-            out = _scale_audio_region(out, start, end, max(scale, 0.0), channel_index=channel_index)
+            out = _scale_audio_region(
+                out,
+                start,
+                end,
+                max(scale, 0.0),
+                channel_index=channel_index,
+                taper_in=_taper_in,
+                taper_out=_taper_out,
+                # §Fix: a 10ms crossfade (default) partially retains near-1.0
+                # amplitude for long enough to dominate a percentile(99.9)
+                # peak measurement over the edge region for large corrections
+                # — a short ~0.3ms click-avoidance fade avoids this while
+                # still preventing an audible discontinuity at the boundary.
+                crossfade_samples=min(16, max(sr // 3000, 4)),
+            )
             _, cand_channels = _match_edge_channel_views(reference_audio, out)
     return out  # type: ignore[no-any-return]
 
@@ -849,9 +885,7 @@ def apply_musical_gain_envelope(  # pylint: disable=too-many-positional-argument
                 # Smooth blend: ramp from clamped (t=0) to original (t=edge_len)
                 _ramp = np.linspace(1.0, 0.0, _cf_samples, dtype=np.float32)
                 _iramp = 1.0 - _ramp
-                per_sample_gain[:_cf_samples] = (
-                    _clamped[:_cf_samples] * _ramp + per_sample_gain[:_cf_samples] * _iramp
-                )
+                per_sample_gain[:_cf_samples] = _clamped[:_cf_samples] * _ramp + per_sample_gain[:_cf_samples] * _iramp
                 per_sample_gain[_cf_samples:edge_len] = _clamped[_cf_samples:edge_len]
             else:
                 per_sample_gain[:edge_len] = _clamped
@@ -861,11 +895,11 @@ def apply_musical_gain_envelope(  # pylint: disable=too-many-positional-argument
                 # Smooth blend: ramp from original (t=-edge_len) to clamped (t=-0)
                 _ramp_out = np.linspace(0.0, 1.0, _cf_samples, dtype=np.float32)
                 _iramp_out = 1.0 - _ramp_out
-                per_sample_gain[-edge_len:-edge_len + _cf_samples] = (
+                per_sample_gain[-edge_len : -edge_len + _cf_samples] = (
                     _clamped_outro[:_cf_samples] * _ramp_out
-                    + per_sample_gain[-edge_len:-edge_len + _cf_samples] * _iramp_out
+                    + per_sample_gain[-edge_len : -edge_len + _cf_samples] * _iramp_out
                 )
-                per_sample_gain[-edge_len + _cf_samples:] = _clamped_outro[_cf_samples:]
+                per_sample_gain[-edge_len + _cf_samples :] = _clamped_outro[_cf_samples:]
             else:
                 per_sample_gain[-edge_len:] = _clamped_outro
         out = _render(per_sample_gain)
@@ -1084,6 +1118,7 @@ def apply_edge_taper(
 
 
 # ── §v10.304 Safe Array Construction ────────────────────────────────────
+
 
 def safe_asarray(
     obj: object,

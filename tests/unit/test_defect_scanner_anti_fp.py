@@ -23,7 +23,7 @@ def _scanner(sr: int = SR):
 
 def _sine(freq: float = 440.0, amp: float = 0.5, duration: float = 3.0) -> np.ndarray:
     t = np.linspace(0, duration, int(SR * duration), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _complex_tone(duration: float = 3.0) -> np.ndarray:
@@ -240,7 +240,7 @@ class TestRiaaMediumGate:
         t = np.linspace(0, duration, int(SR * duration), endpoint=False)
         bass = 0.8 * np.sin(2 * np.pi * 80 * t)  # dominant bass
         mid = 0.02 * np.sin(2 * np.pi * 2000 * t)  # very quiet mid
-        return (bass + mid).astype(np.float32)
+        return (bass + mid).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_tape_no_riaa_detection(self):
         """Tape material + bass-heavy signal → RIAA severity must be 0."""

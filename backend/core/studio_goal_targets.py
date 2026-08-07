@@ -92,7 +92,7 @@ def _safe_float(v: object, default: float = 1.0) -> float:
     try:
         f = float(v)  # type: ignore[arg-type]
     except Exception as e:
-        logger.warning("studio_goal_targets.py::_safe_float fallback: %s", e)
+        logger.warning("studio_goal_targets.py::_safe_float Ersatzpfad: %s", e)
         return default
     if not np.isfinite(f):
         return default
@@ -106,7 +106,7 @@ def _safe_int(v: object, default: int | None = None) -> int | None:
         _f = float(v)  # type: ignore[arg-type]
         return int(_f)
     except Exception as e:
-        logger.warning("studio_goal_targets.py::_safe_int fallback: %s", e)
+        logger.warning("studio_goal_targets.py::_safe_int Ersatzpfad: %s", e)
         return default
 
 

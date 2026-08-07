@@ -822,7 +822,7 @@ def _write_json_dict(path: Path, payload: dict[str, Any]) -> None:
 def real_audio_runtime_case(real_audio_gate_case: dict[str, object]) -> dict[str, Any]:
     """Run one real-audio restoration pass and cache runtime metrics for R5-R12."""
     original = _to_samples_first(np.asarray(real_audio_gate_case["audio"], dtype=np.float32))
-    sr = int(real_audio_gate_case["sr"])
+    sr = int(real_audio_gate_case["sr"])  # type: ignore[call-overload]
     selected_ids = _selected_uat_ids_from_argv()
     r5_only_fastpath = selected_ids == {"R5"}
 
@@ -1628,5 +1628,5 @@ def uat_results_collector():
 # MARKER DEFINITIONS
 # ============================================================================
 
-pytest.mark.uat = pytest.mark.uat
-pytest.mark.gate = pytest.mark.gate
+pytest.mark.uat = pytest.mark.uat  # type: ignore[attr-defined]
+pytest.mark.gate = pytest.mark.gate  # type: ignore[attr-defined]

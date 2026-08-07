@@ -69,7 +69,7 @@ def _make_song_with_quiet_zones(
             ]
         )
         return np.column_stack([mono, ch_r])
-    return mono
+    return mono  # type: ignore[no-any-return]
 
 
 def _zone_rms_dbfs(audio: np.ndarray, start: int, end: int) -> float:
@@ -78,7 +78,7 @@ def _zone_rms_dbfs(audio: np.ndarray, start: int, end: int) -> float:
     if seg.ndim == 2:
         seg = np.mean(seg, axis=1)
     rms = float(np.sqrt(np.mean(seg.astype(np.float64) ** 2) + 1e-30))
-    return 20.0 * np.log10(rms + 1e-12)
+    return 20.0 * np.log10(rms + 1e-12)  # type: ignore[no-any-return]
 
 
 def _zone_peak_dbfs(audio: np.ndarray, start: int, end: int) -> float:
@@ -87,7 +87,7 @@ def _zone_peak_dbfs(audio: np.ndarray, start: int, end: int) -> float:
     if seg.ndim == 2:
         seg = np.ravel(seg)
     peak = float(np.percentile(np.abs(seg), 99.9))
-    return 20.0 * np.log10(peak + 1e-12)
+    return 20.0 * np.log10(peak + 1e-12)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +199,7 @@ class TestSosfiltSplitRecombineNoExplosion:
     """
 
     def _make_sos_bandpass(self, f_low: float, f_high: float) -> np.ndarray:
-        return sp_signal.butter(4, [f_low, f_high], btype="band", fs=SR, output="sos")
+        return sp_signal.butter(4, [f_low, f_high], btype="band", fs=SR, output="sos")  # type: ignore[no-any-return]
 
     def test_sosfiltfilt_split_recombine_no_peak_explosion(self) -> None:
         """sosfiltfilt-Split+Recombine darf kein Peak > Input-Peak + 3 dBFS erzeugen."""
@@ -546,7 +546,7 @@ class TestLimitQuietEdgeBoostFinalTolerance:
                 ]
             )
             return np.column_stack([mono, ch_r])
-        return mono
+        return mono  # type: ignore[no-any-return]
 
     @pytest.mark.parametrize("boost_db", [1.0, 2.0, 4.0, 8.0])
     def test_mono_intro_clamped_to_05db(self, boost_db: float) -> None:

@@ -422,8 +422,8 @@ def _measure_temporal_breath(mono: np.ndarray, sr: int) -> float:
         chunk = mono[i : i + win]
         energy.append(float(np.sum(chunk**2)))
 
-    energy = np.array(energy)
-    energy_db = 10.0 * np.log10(energy + 1e-12)
+    energy = np.array(energy)  # type: ignore[assignment]
+    energy_db = 10.0 * np.log10(energy + 1e-12)  # type: ignore[operator]
 
     # Onsets = positive Energie-Sprünge > 3 dB
     onsets = []

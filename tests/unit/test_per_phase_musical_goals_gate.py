@@ -282,7 +282,7 @@ class TestPMGGAudioQuality:
                 m.phase_id = "phase_03_denoise"
                 return m
 
-        out = PerPhaseMusicalGoalsGate._run_phase(_MockProcessPhaseCF(), audio_sf, 0.5)
+        out = PerPhaseMusicalGoalsGate()._run_phase(_MockProcessPhaseCF(), audio_sf, 0.5)
         assert out.shape == audio_sf.shape
         assert np.isfinite(out).all()
 
@@ -313,7 +313,7 @@ class TestPMGGAudioQuality:
                 m.phase_id = "phase_29_tape_hiss_reduction"
                 return m
 
-        out = PerPhaseMusicalGoalsGate._run_phase(_MockProcessPhaseMono(), audio_cf, 0.5)
+        out = PerPhaseMusicalGoalsGate()._run_phase(_MockProcessPhaseMono(), audio_cf, 0.5)
         assert out.shape == audio_cf.shape
         assert np.isfinite(out).all()
 
@@ -334,7 +334,7 @@ class TestPMGGAudioQuality:
                 m.phase_id = "phase_03_denoise"
                 return m
 
-        out = PerPhaseMusicalGoalsGate._run_phase(_MockProcessPhaseFail(), audio, 0.7)
+        out = PerPhaseMusicalGoalsGate()._run_phase(_MockProcessPhaseFail(), audio, 0.7)
         assert out.shape == audio.shape
         assert np.isfinite(out).all()
         assert float(np.max(np.abs(out))) <= 1.0 + 1e-6
@@ -357,7 +357,7 @@ class TestPMGGAudioQuality:
                 m.phase_id = "phase_29_tape_hiss_reduction"
                 return m
 
-        out = PerPhaseMusicalGoalsGate._run_phase(_MockProcessPhaseInvalid(), audio, 0.4)
+        out = PerPhaseMusicalGoalsGate()._run_phase(_MockProcessPhaseInvalid(), audio, 0.4)
         assert out.shape == audio.shape
         assert np.isfinite(out).all()
         assert float(np.max(np.abs(out))) <= 1.0 + 1e-6

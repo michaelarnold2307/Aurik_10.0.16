@@ -107,7 +107,7 @@ class PresetManager:
                     )
                 )
             except Exception:
-                logger.warning("preset_manager.py::get_all_presets fallback", exc_info=True)
+                logger.warning("preset_manager.py::get_all_presets Ersatzpfad", exc_info=True)
         return presets
 
     def get_preset(self, name: str) -> Preset | None:
@@ -169,7 +169,7 @@ class PresetManager:
             self.save_preset(preset)
             return preset
         except Exception:
-            logger.warning("preset_manager.py::import_preset fallback", exc_info=True)
+            logger.warning("preset_manager.py::import_preset Ersatzpfad", exc_info=True)
             return None
 
     def export_preset(self, name: str, path: pathlib.Path) -> bool:

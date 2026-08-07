@@ -26,7 +26,7 @@ def _get_material_type():
 
         return MaterialType
     except Exception as e:
-        logger.warning("medium_classifier.py::_get_material_type fallback: %s", e)
+        logger.warning("medium_classifier.py::_get_material_type Ersatzpfad: %s", e)
         return None
 
 
@@ -222,7 +222,7 @@ class _SpectralFingerprinter:
         try:
             return self._wow_flutter_fcpe(mono, sr)
         except Exception as e:
-            logger.warning("medium_classifier.py::_wow_flutter fallback: %s", e)
+            logger.warning("medium_classifier.py::_wow_flutter Ersatzpfad: %s", e)
             return self._wow_flutter_zcr_fallback(mono, sr)
 
     def _wow_flutter_fcpe(self, mono: np.ndarray, sr: int) -> tuple[float, float]:
@@ -900,7 +900,7 @@ class MediumClassifier:
                         classifier_source="clap_ml",
                     )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         return None
 
     @staticmethod

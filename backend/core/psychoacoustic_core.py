@@ -90,12 +90,12 @@ class PsychoacousticAnalysis:
     def print_summary(self):
         """Gibt menschenlesbare Zusammenfassung der psychoakustischen Analyse aus."""
         logger.info("=" * 70)
-        logger.info("PSYCHOACOUSTIC ANALYSIS SUMMARY")
+        logger.info("PSYCHOACOUSTIC Analyse SUMMARY")
         logger.info("=" * 70)
         logger.info("  Perceptual Centroid: %.2f Bark", self.perceptual_centroid_bark)
         logger.info("  Perceptual Bandwidth: %.2f Bark", self.perceptual_bandwidth_bark)
         logger.info("  Masked Components: %.1f%%", self.masked_components_ratio * 100)
-        logger.info("  Signal-to-Mask Ratio: %.1f dB", self.signal_to_mask_ratio_db)
+        logger.info("  Signal-to-Mask Verhaeltnis: %.1f dB", self.signal_to_mask_ratio_db)
         logger.info("  Peak Bark Band: #%d", self.peak_bark_band)
         logger.info("  Peak Energy: %.4f", self.peak_bark_energy)
         logger.info("  Frequency Balance:")
@@ -189,7 +189,7 @@ class PsychoacousticCore:
         else:
             self.fm_processor = None  # type: ignore[assignment]
 
-        logger.info("PsychoacousticCore initialized with all components enabled")
+        logger.info("PsychoacousticCore initialisiert with all components aktiviert")
 
     def analyze(self, audio: np.ndarray, sr: int) -> PsychoacousticAnalysis:
         """
@@ -303,7 +303,7 @@ class PsychoacousticCore:
                 )
             except Exception:
                 logger.warning(
-                    "⚠️ SOTA Fletcher-Munson adaptive phon nicht verfügbar (LUFS-Messung fehlgeschlagen) — fallback zu listening_level-Map"
+                    "⚠️ SOTA Fletcher-Munson adaptive phon nicht verfügbar (LUFS-Messung fehlgeschlagen) — Ersatzpfad zu listening_level-Map"
                 )
                 pass
 
@@ -447,7 +447,7 @@ if __name__ == "__main__":
     core = PsychoacousticCore()
 
     # Comprehensive analysis
-    logger.debug("Performing comprehensive psychoacoustic analysis...")
+    logger.debug("Performing comprehensive psychoacoustic Analyse...")
     analysis = core.analyze(audio, sr)
 
     # Print summary
@@ -458,7 +458,7 @@ if __name__ == "__main__":
     compensated_quiet = core.apply_loudness_compensation(audio, sr, listening_level="quiet")
     compensated_normal = core.apply_loudness_compensation(audio, sr, listening_level="normal")
 
-    logger.debug("  Original RMS: %.4f", np.sqrt(np.mean(audio**2)))
+    logger.debug("  Originalsignal RMS: %.4f", np.sqrt(np.mean(audio**2)))
     logger.debug("  Quiet (40 phon) RMS: %.4f", np.sqrt(np.mean(compensated_quiet**2)))
     logger.debug("  Normal (60 phon) RMS: %.4f", np.sqrt(np.mean(compensated_normal**2)))
 
@@ -466,7 +466,7 @@ if __name__ == "__main__":
     logger.debug("\nRemoving masked (inaudible) components...")
     audio_unmasked = core.remove_masked_components(audio, sr)
 
-    logger.debug("  Original RMS: %.4f", np.sqrt(np.mean(audio**2)))
+    logger.debug("  Originalsignal RMS: %.4f", np.sqrt(np.mean(audio**2)))
     logger.debug("  After masking removal: %.4f", np.sqrt(np.mean(audio_unmasked**2)))
     logger.debug("  Energy reduction: %.1f%%", (1 - np.mean(audio_unmasked**2) / np.mean(audio**2)) * 100)
 
@@ -492,5 +492,5 @@ if __name__ == "__main__":
             logger.debug("    %6.0f Hz: %+.2f dB", freqs[i], eq_curve[i])
 
     logger.debug("\n" + "=" * 70)
-    logger.debug("Demo complete!")
+    logger.debug("Demo vollstaendig!")
     logger.debug("=" * 70 + "\n")

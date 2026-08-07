@@ -25,7 +25,7 @@ SR = 48000
 
 def _sine(freq: float, duration_s: float = 2.0, sr: int = SR, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * sr), endpoint=False, dtype=np.float32)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise_band(lo_hz: float, hi_hz: float, duration_s: float = 2.0, sr: int = SR, amp: float = 0.5) -> np.ndarray:
@@ -37,7 +37,7 @@ def _noise_band(lo_hz: float, hi_hz: float, duration_s: float = 2.0, sr: int = S
     sos = ss.butter(6, [lo_hz / (sr / 2), hi_hz / (sr / 2)], btype="band", output="sos")
     filtered = ss.sosfilt(sos, white).astype(np.float32)
     peak = np.max(np.abs(filtered)) + 1e-8
-    return (filtered / peak * amp).astype(np.float32)
+    return (filtered / peak * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_phase():
@@ -204,7 +204,7 @@ class TestBreahinessGuardInProcess:
         result = p.process(breathy_vocal_mono, SR, material_type=MaterialType.TAPE)
         assert result.success
         assert "breathiness_ratio" in p.stats, "stats must contain breathiness_ratio"
-        assert 0.0 <= p.stats["breathiness_ratio"] <= 1.0
+        assert 0.0 <= p.stats["breathiness_ratio"] <= 1.0  # type: ignore[operator]
 
     def test_clean_vocal_breathiness_ratio_low(self, clean_vocal_mono):
         from backend.core.phases.phase_19_de_esser import DeEsserPhase, MaterialType
@@ -212,7 +212,7 @@ class TestBreahinessGuardInProcess:
         p = DeEsserPhase(gender_type="female")
         p.process(clean_vocal_mono, SR, material_type=MaterialType.TAPE)
         ratio = p.stats.get("breathiness_ratio", -1.0)
-        assert ratio < 0.5, f"Clean vocal should have low breathiness, got {ratio:.3f}"
+        assert ratio < 0.5, f"Clean vocal should have low breathiness, got {ratio:.3f}"  # type: ignore[operator]
 
     def test_output_shape_mono_unchanged(self, clean_vocal_mono):
         result = self._run(clean_vocal_mono)
@@ -254,10 +254,10 @@ class TestBreahinessGuardInProcess:
         p_breathy.process(breathy_vocal_mono, SR, material_type=MaterialType.TAPE)
         breathy_ratio = p_breathy.stats.get("breathiness_ratio", 0.0)
 
-        assert breathy_ratio > clean_ratio, (
+        assert breathy_ratio > clean_ratio, (  # type: ignore[operator]
             f"Breathy ratio ({breathy_ratio:.3f}) must exceed clean ratio ({clean_ratio:.3f})"
         )
-        assert breathy_ratio > 0.30, f"Breathy signal must trigger guard (ratio={breathy_ratio:.3f} must be > 0.30)"
+        assert breathy_ratio > 0.30, f"Breathy signal must trigger guard (ratio={breathy_ratio:.3f} must be > 0.30)"  # type: ignore[operator]
 
     def test_silence_input_no_crash(self, silence):
         result = self._run(silence)

@@ -76,7 +76,7 @@ class ArchiveManager:
         # Create directory structure
         self._ensure_directory_structure()
 
-        logger.info("ArchiveManager initialized: base_path=%s", self.base_path)
+        logger.info("ArchiveManager initialisiert: base_path=%s", self.base_path)
 
     def _ensure_directory_structure(self) -> None:
         """Erstellt archive directory structure if it doesn't exist."""
@@ -203,10 +203,10 @@ class ArchiveManager:
             # Verify hash matches
             if orig_hash != job.input_file.file_hash:
                 logger.warning(
-                    f"Input file hash mismatch: expected {job.input_file.file_hash[:8]}..., got {orig_hash[:8]}..."
+                    f"Eingabe file hash mismatch: expected {job.input_file.file_hash[:8]}..., got {orig_hash[:8]}..."
                 )
 
-            logger.info("Archived original: %s", orig_dest)
+            logger.info("Archived Originalsignal: %s", orig_dest)
 
             # 2. Archive intermediate files (90-day retention)
             inter_dir = self.intermediates_dir / job_id_str
@@ -227,7 +227,7 @@ class ArchiveManager:
             retention_path = inter_dir / "retention.json"
             with open(retention_path, "w") as f:
                 json.dump(retention_data, f, indent=2)
-            logger.info("Created retention metadata: %s", retention_path)
+            logger.info("erstellt retention metadata: %s", retention_path)
 
             # 3. Archive output file (permanent)
             if job.output_file:
@@ -235,7 +235,7 @@ class ArchiveManager:
                 out_dir.mkdir(parents=True, exist_ok=True)
 
                 if not os.path.exists(job.output_file.file_path):
-                    logger.warning("Output file not found: %s", job.output_file.file_path)
+                    logger.warning("Ausgabe file not found: %s", job.output_file.file_path)
                 else:
                     out_ext = Path(job.output_file.file_path).suffix
                     out_dest = out_dir / f"output{out_ext}"
@@ -244,10 +244,10 @@ class ArchiveManager:
                     # Verify hash
                     if out_hash != job.output_file.file_hash:
                         logger.warning(
-                            f"Output file hash mismatch: expected {job.output_file.file_hash[:8]}..., got {out_hash[:8]}..."
+                            f"Ausgabe file hash mismatch: expected {job.output_file.file_hash[:8]}..., got {out_hash[:8]}..."
                         )
 
-                    logger.info("Archived output: %s", out_dest)
+                    logger.info("Archived Ausgabe: %s", out_dest)
 
             # 4. Archive full job report (permanent JSON)
             report_path = self.reports_dir / f"{job_id_str}.json"
@@ -259,11 +259,11 @@ class ArchiveManager:
             job.archived = True
             job.archive_path = str(self.base_path / job_id_str)
 
-            logger.info("Job %s successfully archived to %s", job_id_str, job.archive_path)
+            logger.info("Job %s erfolgreich archived to %s", job_id_str, job.archive_path)
             return job.archive_path
 
         except Exception as e:
-            logger.error("Failed to archive job %s: %s", job_id_str, e)
+            logger.error("konnte nicht archive job %s: %s", job_id_str, e)
             raise
 
     def retrieve_job(self, job_id: UUID) -> ResturationJob | None:
@@ -293,7 +293,7 @@ class ArchiveManager:
             return job
 
         except Exception as e:
-            logger.error("Failed to retrieve job %s: %s", job_id_str, e)
+            logger.error("konnte nicht retrieve job %s: %s", job_id_str, e)
             return None
 
     def cleanup_expired_intermediates(self, dry_run: bool = False) -> tuple[int, list[str]]:
@@ -310,7 +310,7 @@ class ArchiveManager:
         deleted_count = 0
         deleted_paths = []
 
-        logger.info("Starte intermediate cleanup (dry_run=%s)...", dry_run)
+        logger.info("Starte intermediate cleanup (dry_Ausfuehrung=%s)...", dry_run)
 
         for job_dir in self.intermediates_dir.iterdir():
             if not job_dir.is_dir():
@@ -335,7 +335,7 @@ class ArchiveManager:
                 if now > expire_at:
                     # Retention period expired
                     if dry_run:
-                        logger.info("[DRY RUN] Would delete: %s", job_dir)
+                        logger.info("[DRY Ausfuehrung] Would delete: %s", job_dir)
                         deleted_paths.append(str(job_dir))
                         deleted_count += 1
                     else:
@@ -352,7 +352,7 @@ class ArchiveManager:
                 continue
 
         logger.info(
-            f"Cleanup complete: {deleted_count} intermediate directories {'would be ' if dry_run else ''}deleted"
+            f"Cleanup vollstaendig: {deleted_count} intermediate directories {'would be ' if dry_run else ''}deleted"
         )
         return deleted_count, deleted_paths
 
@@ -477,7 +477,7 @@ class ArchiveManager:
                 )
 
             except Exception as e:
-                logger.warning("Failed to read job report %s: %s", report_path, e)
+                logger.warning("konnte nicht read job report %s: %s", report_path, e)
                 continue
 
         # Sort by creation time (newest first)

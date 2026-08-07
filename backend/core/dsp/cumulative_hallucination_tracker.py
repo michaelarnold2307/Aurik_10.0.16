@@ -108,7 +108,7 @@ class CumulativeHallucinationTracker:
             self._cumulative = 0.0
             self._records = []
             self._warn_checkpoint_idx = None
-            logger.debug("§CHT-1 CumulativeHallucinationTracker reset: mode=%s", self._mode)
+            logger.debug("§CHT-1 CumulativeHallucinationTracker zurueckgesetzt: Betriebsart=%s", self._mode)
 
     # ------------------------------------------------------------------
     # Phase recording
@@ -152,7 +152,7 @@ class CumulativeHallucinationTracker:
 
             if level != "ok":
                 logger.debug(
-                    "§CHT-1 phase=%s delta=%.4f cumulative=%.4f alarm=%s",
+                    "§CHT-1 Verarbeitungsschritt=%s delta=%.4f cumulative=%.4f alarm=%s",
                     phase_id,
                     delta,
                     self._cumulative,

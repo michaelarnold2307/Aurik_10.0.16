@@ -113,7 +113,7 @@ class WowFlutterRemover:
                 _r = _get_fcpe_plugin().analyze(audio.astype(np.float32), self.sr)
                 return _r.f0_hz.astype(np.float64)
             except Exception:
-                logger.warning("FCPE pitch tracking failed, falling back to autocorrelation", exc_info=True)
+                logger.warning("FCPE pitch tracking fehlgeschlagen, falling back to autocorrelation", exc_info=True)
         # Fallback: Autokorrelation (vereinfachte Schätzung)
         # Läuft immer wenn CREPE nicht verfügbar ist oder fehlschlägt.
         # OPTIMIZATION: Increased hop size for performance (50ms instead of 10ms)
@@ -167,7 +167,7 @@ class WowFlutterRemover:
             corrected = corrected.astype(audio.dtype)
         except Exception:
             corrected = np.interp(t_corr, t, audio).astype(audio.dtype)
-        return corrected
+        return corrected  # type: ignore[no-any-return]
 
     def _passes_quality_gates(self, original: npt.NDArray[np.float64], processed: npt.NDArray[np.float64]) -> bool:
         # Schwellen adaptiv aus Policy, sonst GELOCKERTE Thresholds für bessere Wow/Flutter-Korrektur

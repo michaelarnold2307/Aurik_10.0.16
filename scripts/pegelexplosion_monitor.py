@@ -47,7 +47,7 @@ class RealtimePegelexplosionMonitor:
             self.detector = PegelexplosionDetector()
         except ImportError as e:
             logger.error(f"Pegelexplosion-Detektor nicht verfügbar: {e}")
-            self.detector = None
+            self.detector = None  # type: ignore[assignment]
 
     def monitor_loop(self) -> None:
         """Hauptüberwachungs-Schleife."""
@@ -97,11 +97,14 @@ class RealtimePegelexplosionMonitor:
                     _err = result.get("error") if result else "None"
                     if _attempt < _max_retries - 1 and "unpack" in str(_err).lower():
                         logger.debug(
-                            "  ⏳ Load retry %d/%d nach transientem Fehler: %s", _attempt + 1, _max_retries, _err
+                            "  ⏳ laden Wiederholung %d/%d nach transientem Fehler: %s",
+                            _attempt + 1,
+                            _max_retries,
+                            _err,
                         )
                         time.sleep(_retry_delay_s * (_attempt + 1))
                         continue
-                    logger.warning(f"  ✗ Load fehlgeschlagen: {_err}")
+                    logger.warning(f"  ✗ laden fehlgeschlagen: {_err}")
                     return
                 audio = result["audio"]
                 sr = result["sr"]
@@ -109,10 +112,12 @@ class RealtimePegelexplosionMonitor:
                 break
             except Exception as e:
                 if _attempt < _max_retries - 1 and "unpack" in str(e).lower():
-                    logger.debug("  ⏳ Load retry %d/%d nach transientem Fehler: %s", _attempt + 1, _max_retries, e)
+                    logger.debug(
+                        "  ⏳ laden Wiederholung %d/%d nach transientem Fehler: %s", _attempt + 1, _max_retries, e
+                    )
                     time.sleep(_retry_delay_s * (_attempt + 1))
                     continue
-                logger.warning(f"  ✗ Load fehlgeschlagen: {e}")
+                logger.warning(f"  ✗ laden fehlgeschlagen: {e}")
                 return
 
         # Pegelexplosion-Analyse
@@ -205,7 +210,7 @@ Beispiele:
     monitor = RealtimePegelexplosionMonitor(watch_dir=args.watch_dir, interval_s=args.interval)
 
     def signal_handler(sig, frame):
-        logger.info("Shutdown signalisiert...")
+        logger.info("Herunterfahren signalisiert...")
         monitor.shutdown()
 
     import signal

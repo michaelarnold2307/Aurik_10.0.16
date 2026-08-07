@@ -49,7 +49,7 @@ except Exception:
         if _match:
             _VERSION = _match.group(1)
     except Exception:
-        logger.warning("splash_screen.py::unknown fallback", exc_info=True)
+        logger.warning("splash_screen.py::unknown Ersatzpfad", exc_info=True)
 
 
 class AurikSplashScreen(QWidget):

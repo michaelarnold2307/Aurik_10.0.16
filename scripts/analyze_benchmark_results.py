@@ -60,7 +60,7 @@ def load_metrics(metrics_file: Path) -> list[dict[str, Any]]:
     """Load metrics from JSON file"""
     try:
         with open(metrics_file) as f:
-            return json.load(f)
+            return json.load(f)  # type: ignore[no-any-return]
     except FileNotFoundError:
         print_error(f"Metrics file not found: {metrics_file}")
         return []

@@ -134,7 +134,7 @@ def _make_gammatone_filter(fc: float, sr: int, order: int = 4) -> np.ndarray:
     # Normierung: Einheitsenergie
     h = env * carrier
     h /= np.sqrt(np.sum(h**2) + 1e-12)
-    return h.astype(np.float32)
+    return h.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def split_into_gammatone_bands(
@@ -177,17 +177,17 @@ def split_into_gammatone_bands(
 # ── ERB↔Hz Konvertierung (für Gammatone) ──────────────────────────────────
 def hz_to_erb(f_hz: float) -> float:
     """Hz → ERB-Nummer (Glasberg & Moore 1990)."""
-    return 21.4 * np.log10(0.00437 * f_hz + 1.0)
+    return 21.4 * np.log10(0.00437 * f_hz + 1.0)  # type: ignore[no-any-return]
 
 
 def erb_to_hz(erb_num: float) -> float:
     """ERB-Nummer → Hz."""
-    return (10.0 ** (erb_num / 21.4) - 1.0) / 0.00437
+    return (10.0 ** (erb_num / 21.4) - 1.0) / 0.00437  # type: ignore[no-any-return]
 
 
 def hz_to_bark(hz: np.ndarray) -> np.ndarray:
     """Zwicker-Formel: Hz → Bark."""
-    return 13.0 * np.arctan(0.00076 * hz.astype(np.float32)) + 3.5 * np.arctan((hz.astype(np.float32) / 7500.0) ** 2)
+    return 13.0 * np.arctan(0.00076 * hz.astype(np.float32)) + 3.5 * np.arctan((hz.astype(np.float32) / 7500.0) ** 2)  # type: ignore[no-any-return]
 
 
 def split_into_bark_bands(

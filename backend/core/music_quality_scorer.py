@@ -105,7 +105,7 @@ def _harmonicity(frames: np.ndarray) -> float:
             h_idx = f0_idx * k
             if h_idx < len(mag):
                 w = max(1, f0_idx // 4)
-                harmonic_energy += float(np.sum(mag[max(0, h_idx - w) : h_idx + w] ** 2))  # type: ignore[call-overload]
+                harmonic_energy += float(np.sum(mag[max(0, h_idx - w) : h_idx + w] ** 2))  # type: ignore
         total_energy = np.sum(mag**2) + 1e-10
         scores.append(harmonic_energy / total_energy)
 
@@ -308,7 +308,7 @@ def score_music_mos(audio: np.ndarray, sample_rate: int) -> MusicMOS:
         if hasattr(plugin, "score"):
             return plugin.score(audio, sample_rate)  # type: ignore[no-any-return]
     except ImportError:
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # DSP-Pfad
     resampled = _resample_to_16k(audio, sample_rate)

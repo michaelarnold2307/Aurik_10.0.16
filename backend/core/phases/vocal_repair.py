@@ -135,7 +135,7 @@ def apply_vocal_repair(vocal_stem: np.ndarray, sr: int, *, damage: dict | None =
     else:
         result = repaired.reshape(orig_shape)
 
-    return np.clip(result, -1.0, 1.0).astype(np.float32)
+    return np.clip(result, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _extend_bandwidth(mono: np.ndarray, sr: int, bandwidth_hz: float) -> np.ndarray:
@@ -178,10 +178,10 @@ def _repair_distortion(mono: np.ndarray) -> np.ndarray:
     expanded = mono - 0.15 * (mono**3)
 
     # Blend: 50% expanded + 50% original (conservative)
-    return 0.5 * expanded + 0.5 * mono
+    return 0.5 * expanded + 0.5 * mono  # type: ignore[no-any-return]
 
 
 def _to_mono(audio: np.ndarray) -> np.ndarray:
     if audio.ndim == 1:
         return audio
-    return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+    return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]

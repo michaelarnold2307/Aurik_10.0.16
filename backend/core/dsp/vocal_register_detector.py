@@ -69,7 +69,7 @@ def _spectral_flatness(mono: np.ndarray, sr: int) -> float:
         arith_mean = float(np.mean(psd))
         return float(np.clip(geo_mean / (arith_mean + 1e-12), 0.0, 1.0))
     except Exception as e:
-        logger.warning("vocal_register_detector.py::_spectral_flatness fallback: %s", e)
+        logger.warning("vocal_register_detector.py::_spectral_flatness Ersatzpfad: %s", e)
         return 0.5
 
 
@@ -85,7 +85,7 @@ def _estimate_f0_median(mono: np.ndarray, sr: int) -> float | None:
             if len(voiced) >= 3:
                 return float(np.median(voiced))
     except Exception as e:
-        logger.warning("vocal_register_detector.py::_estimate_f0_median fallback: %s", e)
+        logger.warning("vocal_register_detector.py::_estimate_f0_median Ersatzpfad: %s", e)
 
     # pYIN-Fallback
     try:
@@ -102,7 +102,7 @@ def _estimate_f0_median(mono: np.ndarray, sr: int) -> float | None:
         if len(voiced_f0) >= 3:
             return float(np.median(voiced_f0))
     except Exception as e:
-        logger.warning("vocal_register_detector.py::_estimate_f0_median fallback: %s", e)
+        logger.warning("vocal_register_detector.py::_estimate_f0_median Ersatzpfad: %s", e)
 
     return None
 
@@ -379,7 +379,7 @@ def detect_vocal_register_temporal(
         result.append((start_s, end_s, reg, float(bias)))
 
     logger.debug(
-        "§Passaggio detect_vocal_register_temporal: %d Segmente, %d Übergänge geglättet",
+        "§Passaggio erkennen_vocal_register_temporal: %d Segmente, %d Übergänge geglättet",
         len(result),
         sum(1 for i in range(1, len(registers)) if registers[i] != registers[i - 1]),
     )
@@ -508,7 +508,7 @@ def detect_multi_singer(
         is_multi = bool(multi_ratio >= _MULTI_F0_FRAME_VOTE_RATIO)
 
         logger.debug(
-            "§Multi-Singer: ratio=%.2f (%d/%d Frames) → %s",
+            "§Multi-Singer: Verhaeltnis=%.2f (%d/%d Frames) → %s",
             multi_ratio,
             multi_f0_frame_count,
             total_voiced_frames,
@@ -517,5 +517,5 @@ def detect_multi_singer(
         return is_multi
 
     except Exception as exc:
-        logger.debug("detect_multi_singer (non-critical): %s", exc)
+        logger.debug("erkennen_multi_singer (unkritisch): %s", exc)
         return False

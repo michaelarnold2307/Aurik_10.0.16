@@ -311,7 +311,7 @@ class TestWaveformWidgetLiveUpdate:
             widget.sample_rate = 48000
             widget._view_start = 0.25
             widget._view_end = 0.75
-            widget.update = MagicMock()  # Don't actually repaint
+            widget.update = MagicMock()  # Don't actually repaint  # type: ignore[method-assign]
 
             new_audio = np.ones(4800, dtype=np.float32) * 0.5
             widget.update_audio_live(new_audio, 48000)
@@ -340,10 +340,10 @@ class TestWaveformWidgetLiveUpdate:
             widget.sample_rate = 48000
             widget._view_start = 0.25
             widget._view_end = 0.75
-            widget._repair_history = []
+            widget._repair_history = []  # type: ignore[assignment]
             widget._resolved_locations = {}
             widget._active_tool = "old_tool"
-            widget.update = MagicMock()
+            widget.update = MagicMock()  # type: ignore[method-assign]
 
             widget.update_waveform(np.zeros(4800, dtype=np.float32), 48000)
 
@@ -363,7 +363,7 @@ class TestWaveformWidgetLiveUpdate:
 
         try:
             widget = WaveformWidget.__new__(WaveformWidget)
-            widget.update = MagicMock()
+            widget.update = MagicMock()  # type: ignore[method-assign]
             widget._active_tool = "DSP"
             widget._repair_history = {}
             widget._resolved_locations = {}
@@ -396,7 +396,7 @@ class TestWaveformWidgetLiveUpdate:
 
         try:
             widget = WaveformWidget.__new__(WaveformWidget)
-            widget.update = MagicMock()
+            widget.update = MagicMock()  # type: ignore[method-assign]
             widget._active_tool = "DeClick"
             widget._repair_history = {}
             widget._resolved_locations = {}

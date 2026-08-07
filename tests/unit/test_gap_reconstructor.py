@@ -41,7 +41,7 @@ SR = 44100
 
 def _sine(freq: float = 440.0, dur_s: float = 0.5, sr: int = SR, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, dur_s, int(dur_s * sr), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _insert_gap(audio: np.ndarray, start_ms: float, dur_ms: float, sr: int = SR) -> np.ndarray:

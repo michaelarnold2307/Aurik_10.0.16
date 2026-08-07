@@ -127,7 +127,7 @@ def _extract_placeholders(fstring_body: str) -> list[tuple[str, str]] | None:
             # (allows .get('key', default) but rejects tuple expressions)
             if _has_toplevel_comma(expr):
                 return None
-            placeholders.append((expr, fmt_spec, conv))
+            placeholders.append((expr, fmt_spec, conv))  # type: ignore[arg-type]
             i = j
         elif c == "}":
             if i + 1 < n and fstring_body[i + 1] == "}":
@@ -249,7 +249,7 @@ def convert_line(line: str) -> str | None:
     phs = _extract_placeholders(body)
     if phs is None:
         return None
-    result = _build_template_and_args(body, phs)
+    result = _build_template_and_args(body, phs)  # type: ignore[arg-type]
     if result is None:
         return None
     template, args = result
@@ -271,7 +271,7 @@ def convert_file(path: Path, dry_run: bool = False) -> int:
     try:
         source = path.read_text(encoding="utf-8")
     except Exception:
-        logger.warning("_fix_fstring_loggers.py::convert_file fallback", exc_info=True)
+        logger.warning("_fix_fstring_loggers.py::convert_file Ersatzpfad", exc_info=True)
         return 0
 
     lines = source.splitlines(keepends=True)

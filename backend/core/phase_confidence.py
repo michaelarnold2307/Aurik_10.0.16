@@ -52,5 +52,5 @@ def score_strategies(material: str, era: int = 0, mode: str = "restoration") -> 
             )
         return results
     except Exception as e:
-        logger.debug("score_strategies: %s", e)
+        logger.debug("Wert_strategies: %s", e)
         return []

@@ -89,7 +89,7 @@ class MaterialRouter:
 
     def __init__(self) -> None:
         """Initialisiert MaterialRouter."""
-        logger.info("MaterialRouter initialized")
+        logger.info("MaterialRouter initialisiert")
 
     def detect_material(
         self,

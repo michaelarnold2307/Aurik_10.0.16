@@ -97,15 +97,26 @@ def _duration_s(filepath: Path) -> float:
     """Get audio duration in seconds using ffprobe or librosa."""
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-             "-of", "default=noprint_wrappers=1:nokey=1", str(filepath)],
-            capture_output=True, text=True, timeout=30,
+            [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-show_entries",
+                "format=duration",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(filepath),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         return float(result.stdout.strip())
     except (FileNotFoundError, ValueError, subprocess.TimeoutExpired):
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     try:
         import librosa
+
         return float(librosa.get_duration(path=str(filepath)))
     except Exception:
         logger.warning("Cannot determine duration for %s, defaulting to 0.0", filepath)
@@ -116,15 +127,26 @@ def _sample_rate(filepath: Path) -> int:
     """Get audio sample rate."""
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-show_entries", "stream=sample_rate",
-             "-of", "default=noprint_wrappers=1:nokey=1", str(filepath)],
-            capture_output=True, text=True, timeout=30,
+            [
+                "ffprobe",
+                "-v",
+                "quiet",
+                "-show_entries",
+                "stream=sample_rate",
+                "-of",
+                "default=noprint_wrappers=1:nokey=1",
+                str(filepath),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         return int(result.stdout.strip().split("\n")[0])
     except (FileNotFoundError, ValueError, subprocess.TimeoutExpired):
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     try:
         import librosa
+
         return int(librosa.get_samplerate(path=str(filepath)))
     except Exception:
         return 0
@@ -142,16 +164,19 @@ def download_file(url: str, dest: Path, timeout: int = 120) -> bool:
     try:
         subprocess.run(
             ["yt-dlp", "--no-playlist", "-o", str(dest), url],
-            check=True, timeout=timeout, capture_output=True,
+            check=True,
+            timeout=timeout,
+            capture_output=True,
         )
         if dest.exists() and dest.stat().st_size > 0:
             return True
     except (FileNotFoundError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # Fallback: requests
     try:
         import requests
+
         resp = requests.get(url, timeout=timeout, stream=True)
         resp.raise_for_status()
         with open(dest, "wb") as f:
@@ -159,7 +184,7 @@ def download_file(url: str, dest: Path, timeout: int = 120) -> bool:
                 f.write(chunk)
         return dest.stat().st_size > 0
     except Exception as e:
-        logger.error("Download failed for %s: %s", url, e)
+        logger.error("Download fehlgeschlagen for %s: %s", url, e)
         return False
 
 
@@ -183,7 +208,7 @@ def generate_from_sources(
             dest = dest_dir / filename
 
             if dry_run:
-                logger.info("DRY-RUN would download: %s → %s", url, dest)
+                logger.info("DRY-Ausfuehrung would download: %s → %s", url, dest)
                 mat_downloaded.append(dest)
                 continue
 
@@ -255,7 +280,7 @@ def write_manifests(downloaded: dict[str, list[Path]], dry_run: bool = False) ->
         manifest = build_manifest(material, files)
 
         if dry_run:
-            logger.info("DRY-RUN would write: %s", manifest_path)
+            logger.info("DRY-Ausfuehrung would write: %s", manifest_path)
             written.append(manifest_path)
             continue
 
@@ -276,8 +301,7 @@ def import_from_urls_file(urls_file: Path, material: str, dry_run: bool = False)
         logger.error("URLs file not found: %s", urls_file)
         return []
 
-    urls = [line.strip() for line in urls_file.read_text().splitlines()
-            if line.strip() and not line.startswith("#")]
+    urls = [line.strip() for line in urls_file.read_text().splitlines() if line.strip() and not line.startswith("#")]
     dest_dir = CORPUS_ROOT / material / "damaged"
     downloaded: list[Path] = []
 
@@ -285,7 +309,7 @@ def import_from_urls_file(urls_file: Path, material: str, dry_run: bool = False)
         filename = Path(urlparse(url).path).name or f"import_{len(downloaded)}.wav"
         dest = dest_dir / filename
         if dry_run:
-            logger.info("DRY-RUN would download: %s → %s", url, dest)
+            logger.info("DRY-Ausfuehrung would download: %s → %s", url, dest)
             downloaded.append(dest)
         elif download_file(url, dest):
             downloaded.append(dest)
@@ -312,6 +336,7 @@ def check_coverage() -> dict[str, Any]:
             total_files += count
             materials_found.append(mat_dir.name)
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
 
     return {
@@ -320,17 +345,13 @@ def check_coverage() -> dict[str, Any]:
         "total_files": total_files,
         "total_required": MIN_TOTAL_FILES,
         "per_material": per_material,
-        "meets_minimum": (
-            len(materials_found) >= MIN_MATERIALS
-            and total_files >= MIN_TOTAL_FILES
-        ),
+        "meets_minimum": (len(materials_found) >= MIN_MATERIALS and total_files >= MIN_TOTAL_FILES),
     }
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--material", choices=list(PUBLIC_DOMAIN_SOURCES),
-                        help="Nur ein Material herunterladen")
+    parser.add_argument("--material", choices=list(PUBLIC_DOMAIN_SOURCES), help="Nur ein Material herunterladen")
     parser.add_argument("--all", action="store_true", help="Alle Materialien")
     parser.add_argument("--count", type=int, default=5, help="Max Dateien pro Material")
     parser.add_argument("--dry-run", action="store_true", help="Nur anzeigen, nichts herunterladen")
@@ -365,8 +386,7 @@ def main() -> int:
     manifests = write_manifests(grouped, args.dry_run)
 
     if args.dry_run:
-        print(f"DRY-RUN: would write {len(manifests)} manifests for "
-              f"{sum(len(v) for v in grouped.values())} files")
+        print(f"DRY-RUN: would write {len(manifests)} manifests for {sum(len(v) for v in grouped.values())} files")
     else:
         coverage = check_coverage()
         print(json.dumps(coverage, indent=2, ensure_ascii=False))

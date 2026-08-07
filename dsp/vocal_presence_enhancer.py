@@ -134,7 +134,7 @@ class HarmonicEnhancer:
         peak_lag = np.argmax(corr_range) + min_lag
         f0 = sr / peak_lag
 
-        return f0
+        return f0  # type: ignore[return-value]
 
     def _boost_harmonic(self, audio: np.ndarray, sr: int, freq: float, gain_db: float) -> np.ndarray:
         """
@@ -391,7 +391,7 @@ class BroadcastClarityEnhancer:
         # RMS energy
         presence_energy = np.sqrt(np.mean(presence_band**2))
 
-        return presence_energy
+        return presence_energy  # type: ignore[no-any-return]
 
 
 class VocalSaturation:
@@ -579,7 +579,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Process
     enhancer = VocalPresenceEnhancer(
@@ -600,8 +600,8 @@ if __name__ == "__main__":
     harm = report["harmonic_enhancement"]
     if "fundamental_hz" in harm:
         logger.info("  Fundamental:       %.1f Hz", harm["fundamental_hz"])
-        logger.info("  Harmonics enhanced: %s", harm["harmonics_enhanced"])
-        logger.info("  Gain applied:      %.1f dB", harm["gain_db"])
+        logger.info("  Harmonics verbessert: %s", harm["harmonics_enhanced"])
+        logger.info("  Gain angewendet:      %.1f dB", harm["gain_db"])
 
     logger.info("\n[Broadcast Clarity]")
     clar = report["broadcast_clarity"]
@@ -627,4 +627,4 @@ if __name__ == "__main__":
     # Save
     if args.output:
         sf.write(args.output, audio_enhanced, sr)
-        logger.info("\n✅ Saved to: %s", args.output)
+        logger.info("\n✅ gespeichert to: %s", args.output)

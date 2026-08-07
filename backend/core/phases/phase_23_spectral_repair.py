@@ -100,7 +100,9 @@ def _try_get_apollo_instance() -> Any | None:
 
         return get_apollo()
     except Exception as _apollo_import_exc:  # pragma: no cover - environment/ABI dependent
-        logger.debug("phase_23: Apollo lazy import fehlgeschlagen, DSP-Fallback aktiv: %s", _apollo_import_exc)
+        logger.debug(
+            "Verarbeitungsschritt_23: Apollo lazy import fehlgeschlagen, DSP-Ersatzpfad aktiv: %s", _apollo_import_exc
+        )
         return None
 
 
@@ -283,7 +285,7 @@ class SpectralRepair(PhaseInterface):
                     start_s = max(0.0, float(loc[0]))
                     end_s = max(start_s, float(loc[1]))
                 except Exception:
-                    logger.debug("_build_defect_locality_profile: silent except suppressed", exc_info=True)
+                    logger.debug("_build_defect_locality_Profil: silent except suppressed", exc_info=True)
                     continue
                 if end_s <= start_s:
                     continue
@@ -510,12 +512,12 @@ class SpectralRepair(PhaseInterface):
             try:
                 evict_stale_plugins(required_mb=int(required_gb * 1024))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             gc.collect()
             try:
                 ctypes.CDLL("libc.so.6").malloc_trim(0)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             available_gb = float(psutil.virtual_memory().available / (1024**3)) if _PSUTIL_OK else 4.0
 
         if available_gb < required_gb:
@@ -532,8 +534,8 @@ class SpectralRepair(PhaseInterface):
                 }
             )
             logger.warning(
-                "SpectralRepair RAM guard triggered: %.1f GB available, %.1f GB required "
-                "(duration=%.1fs, ch=%d) — using DSP fallback",
+                "SpectralRepair RAM guard triggered: %.1f GB verfuegbar, %.1f GB required "
+                "(duration=%.1fs, ch=%d) — using DSP Ersatzpfad",
                 available_gb,
                 required_gb,
                 duration_s,
@@ -551,8 +553,8 @@ class SpectralRepair(PhaseInterface):
         try:
             vm = psutil.virtual_memory() if _PSUTIL_OK else None
             swap = psutil.swap_memory() if _PSUTIL_OK else None
-            avail_gb = float(vm.available / (1024**3))
-            avail_ratio = float(vm.available / max(vm.total, 1))
+            avail_gb = float(vm.available / (1024**3))  # type: ignore[union-attr]
+            avail_ratio = float(vm.available / max(vm.total, 1))  # type: ignore[union-attr]
             swap_pct = float(getattr(swap, "percent", 100.0))
 
             if for_mrsa:
@@ -568,7 +570,7 @@ class SpectralRepair(PhaseInterface):
                 and swap_pct < self._THRASH_RELAX_ML_MAX_SWAP_PCT
             )
         except Exception as e:
-            logger.warning("phase_23_spectral_repair.py::_can_relax_thrashing_guard fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_23_spectral_repair.py::_can_relax_thrashing_guard Ersatzpfad: %s", e)
             return False
 
     def get_metadata(self) -> PhaseMetadata:
@@ -595,9 +597,9 @@ class SpectralRepair(PhaseInterface):
                 from plugins.flashsr_plugin import FlashSRPlugin
 
                 self._flashsr_plugin = FlashSRPlugin()
-                logger.info("FlashSR plugin loaded successfully")
+                logger.info("FlashSR plugin geladen erfolgreich")
             except Exception as e:
-                logger.warning("Failed to load FlashSR plugin: %s", e)
+                logger.warning("konnte nicht laden FlashSR plugin: %s", e)
                 self._flashsr_plugin = False  # Mark as unavailable
 
         return self._flashsr_plugin if self._flashsr_plugin is not False else None
@@ -608,7 +610,7 @@ class SpectralRepair(PhaseInterface):
         try:
             return bool(is_system_thrashing())
         except Exception as e:
-            logger.warning("phase_23_spectral_repair.py::_is_system_thrashing fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_23_spectral_repair.py::_is_system_thrashing Ersatzpfad: %s", e)
             return False
 
     def process(
@@ -641,11 +643,12 @@ class SpectralRepair(PhaseInterface):
             _pim = apply_pim_intensity(
                 kwargs, "spectral_repair", default_nr=0.45, default_de_ess=0.25, default_comp=1.0
             )
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
 
@@ -653,7 +656,7 @@ class SpectralRepair(PhaseInterface):
         try:
             get_plugin_lifecycle_manager().evict_for_phase("phase_23_spectral_repair")
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
 
         start_time = time.time()
         _progress_cb = kwargs.get("progress_sub_callback")
@@ -687,12 +690,16 @@ class SpectralRepair(PhaseInterface):
         # Budget: min(300s, max(90s, 1.3 × duration)) — for 225s: 292.5s total phase cap.
         _p23_dur_s = float(audio.shape[0]) / float(max(1, sample_rate))
         _phase_deadline = time.monotonic() + min(300.0, max(90.0, 1.3 * _p23_dur_s))
-        logger.info("phase_23: wall-deadline=%.0fs (audio=%.1fs)", min(300.0, max(90.0, 1.3 * _p23_dur_s)), _p23_dur_s)
+        logger.info(
+            "Verarbeitungsschritt_23: wall-deadline=%.0fs (audio=%.1fs)",
+            min(300.0, max(90.0, 1.3 * _p23_dur_s)),
+            _p23_dur_s,
+        )
 
         # Get material-specific parameters
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        stft_cfg = self.STFT_CONFIG.get(_mk, self.STFT_CONFIG[MaterialType.CD_DIGITAL])
-        thresholds = self.DETECTION_THRESHOLDS.get(_mk, self.DETECTION_THRESHOLDS[MaterialType.CD_DIGITAL])
+        stft_cfg = self.STFT_CONFIG.get(_mk, self.STFT_CONFIG[MaterialType.CD_DIGITAL])  # type: ignore[arg-type]
+        thresholds = self.DETECTION_THRESHOLDS.get(_mk, self.DETECTION_THRESHOLDS[MaterialType.CD_DIGITAL])  # type: ignore[arg-type]
 
         # §GEBOT-G55: Signal-adaptive Detection-Thresholds via Noise-Floor-Analyse
         # Zwei Vinyl-Platten können unterschiedliche Rauschböden haben.
@@ -704,13 +711,13 @@ class SpectralRepair(PhaseInterface):
             thresholds = dict(thresholds)
             thresholds["energy_floor_db"] = _energy_floor_adaptive
             logger.debug(
-                "Phase 23 adaptive: energy_floor=%.1f dB (noise_floor=%.1f)",
+                "Verarbeitungsschritt 23 adaptive: energy_floor=%.1f dB (noise_floor=%.1f)",
                 _energy_floor_adaptive,
                 _nf23["noise_floor_db"],
             )
         except Exception as _e:
-            logger.debug("%s: non-critical exception: %s", __name__, _e)
-        repair_strength = self.REPAIR_STRENGTH.get(_mk, 0.75)
+            logger.debug("%s: unkritisch exception: %s", __name__, _e)
+        repair_strength = self.REPAIR_STRENGTH.get(_mk, 0.75)  # type: ignore[arg-type]
         _material_meta_key23 = self._material_key(material)
 
         # Locality-aware modulation from UV3.
@@ -741,13 +748,13 @@ class SpectralRepair(PhaseInterface):
                     _boost_23 = _zone_frac_23 * 0.10
                     repair_strength = float(np.clip(repair_strength + _boost_23, 0.0, 1.0))
                     logger.debug(
-                        "Phase23 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → repair_str=%.3f",
+                        "Verarbeitungsschritt23 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → repair_str=%.3f",
                         _zone_frac_23,
                         _boost_23,
                         repair_strength,
                     )
             except Exception as _fmg_exc_23:
-                logger.debug("Phase23 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_23)
+                logger.debug("Verarbeitungsschritt23 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_23)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -809,11 +816,11 @@ class SpectralRepair(PhaseInterface):
             _ssip_zones_p23 = _ssip_get_zones_p23(kwargs, audio, sample_rate, _mat23_ssip_key)
             if _ssip_zones_p23:
                 logger.debug(
-                    "§2.68 SSIP phase_23: %d strukturelle Stille-Zone(n) erkannt",
+                    "§2.68 SSIP Verarbeitungsschritt_23: %d strukturelle Stille-Zone(n) erkannt",
                     len(_ssip_zones_p23),
                 )
         except Exception as _ssip_init_exc23:
-            logger.debug("SSIP phase_23 init non-blocking: %s", _ssip_init_exc23)
+            logger.debug("SSIP Verarbeitungsschritt_23 init nicht blockierend: %s", _ssip_init_exc23)
 
         # --- Apollo pre-processing for lossy-codec materials ---
         # Apollo TorchScript handles MDCT-specific artefacts (pre-echo, spectral staircase,
@@ -834,12 +841,14 @@ class SpectralRepair(PhaseInterface):
             try:
                 if is_system_thrashing():
                     logger.warning(
-                        "phase_23: Apollo TorchScript übersprungen — Swap-Thrashing erkannt "
+                        "Verarbeitungsschritt_23: Apollo TorchScript übersprungen — Swap-Thrashing erkannt "
                         "(OOM-Killer-Prävention). DSP-Inpainting wird verwendet."
                     )
                     _apollo_swap_blocked = True
             except Exception as _swap_chk_exc:
-                logger.debug("phase_23: Swap-Thrashing-Check fehlgeschlagen (non-critical): %s", _swap_chk_exc)
+                logger.debug(
+                    "Verarbeitungsschritt_23: Swap-Thrashing-Pruefung fehlgeschlagen (unkritisch): %s", _swap_chk_exc
+                )
             # RAM-Guard: Apollo benötigt mind. 6 GB freien RAM (TorchScript + Mamba-State-Space).
             # Swap-Thrashing-Check allein reicht nicht — Crash tritt auch bei niedrigem
             # Swap-Prozent auf wenn nach großen Vorphasen (SGMSE+/MDX) wenig RAM verfügbar ist.
@@ -848,13 +857,13 @@ class SpectralRepair(PhaseInterface):
                     _avail_ram_p23 = psutil.virtual_memory().available / (1024**3) if _PSUTIL_OK else 4.0
                     if _avail_ram_p23 < 6.0:
                         logger.warning(
-                            "phase_23: Apollo TorchScript übersprungen — nur %.1f GB RAM verfügbar "
+                            "Verarbeitungsschritt_23: Apollo TorchScript übersprungen — nur %.1f GB RAM verfügbar "
                             "(< 6.0 GB Mindest-Headroom). DSP-Inpainting wird verwendet.",
                             _avail_ram_p23,
                         )
                         _apollo_swap_blocked = True
                 except Exception as _ram_chk_exc:
-                    logger.debug("phase_23: RAM-Check fehlgeschlagen (non-critical): %s", _ram_chk_exc)
+                    logger.debug("Verarbeitungsschritt_23: RAM-Pruefung fehlgeschlagen (unkritisch): %s", _ram_chk_exc)
 
             _plm23 = None
             if not _apollo_swap_blocked:
@@ -906,13 +915,13 @@ class SpectralRepair(PhaseInterface):
                             del _ap_res
                         _apollo_preproc_applied = True
                         logger.info(
-                            "phase_23: Apollo pre-processing applied (material=%s, hf_gain=+%.1f dB)",
+                            "Verarbeitungsschritt_23: Apollo pre-processing angewendet (material=%s, hf_gain=+%.1f dB)",
                             self._current_material,
                             _apollo_hf_gain_db,
                         )
                         _report_progress(20.0, "Spektralreparatur: Apollo-Vorverarbeitung")
                 except Exception as _apollo_exc:
-                    logger.debug("Apollo pre-processing skipped (non-critical): %s", _apollo_exc)
+                    logger.debug("Apollo pre-processing uebersprungen (unkritisch): %s", _apollo_exc)
                 finally:
                     if _plm23 is not None:
                         try:
@@ -939,7 +948,7 @@ class SpectralRepair(PhaseInterface):
                 if classify_clipping(_clip_check, sample_rate) == ClippingType.CLIPPING:
                     _use_admm = True
             except Exception as _ce:
-                logger.debug("classify_clipping check failed: %s", _ce)
+                logger.debug("classify_clipping Pruefung fehlgeschlagen: %s", _ce)
 
         if _use_admm:
             # Estimate clip ceiling as 99.5th percentile of absolute amplitude
@@ -963,13 +972,15 @@ class SpectralRepair(PhaseInterface):
                 )
                 if _admm_avail_gb < 1.5:
                     logger.warning(
-                        "phase_23: ADMM-OOM-Guard (Notfall) — nur %.1f GB frei, < 1.5 GB "
+                        "Verarbeitungsschritt_23: ADMM-OOM-Guard (Notfall) — nur %.1f GB frei, < 1.5 GB "
                         "— ADMM deaktiviert, Standard-Spektralinpainting wird verwendet",
                         _admm_avail_gb,
                     )
                     _admm_ram_ok = False
             except Exception as _admm_ram_exc:
-                logger.debug("phase_23: ADMM RAM-Check fehlgeschlagen (non-critical): %s", _admm_ram_exc)
+                logger.debug(
+                    "Verarbeitungsschritt_23: ADMM RAM-Pruefung fehlgeschlagen (unkritisch): %s", _admm_ram_exc
+                )
             if not _admm_ram_ok:
                 _use_admm = False
         if _use_admm:
@@ -1076,7 +1087,7 @@ class SpectralRepair(PhaseInterface):
                     repaired_audio = np.clip(repaired_audio, -1.0, 1.0)
                     _tilt_capped_p23 = True
                     logger.info(
-                        "phase_23 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
+                        "Verarbeitungsschritt_23 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
                         _tb23,
                         _ta23,
                         _dev23,
@@ -1084,7 +1095,7 @@ class SpectralRepair(PhaseInterface):
                         _cap23,
                     )
             except Exception as _tc23:
-                logger.debug("phase_23 §2.46b tilt-cap skipped (graceful): %s", _tc23)
+                logger.debug("Verarbeitungsschritt_23 §2.46b tilt-cap uebersprungen (graceful): %s", _tc23)
 
         # §Waerme-Rescue: Analog-Materialien (vinyl/shellac/tape) haben spezifische LF-Wärme.
         # MRSA-Inpainting halluziniert HF-Inhalt der die E(200-800 Hz)/E(800-3000 Hz)-Ratio
@@ -1133,8 +1144,8 @@ class SpectralRepair(PhaseInterface):
                     repaired_audio = _wr_blend * repaired_audio + (1.0 - _wr_blend) * _audio_for_tilt_p23
                     repaired_audio = np.clip(repaired_audio, -1.0, 1.0)
                     logger.info(
-                        "phase_23 §Waerme-Rescue: mat=%s waerme %.4f→%.4f (drop=%.3f > %.2f) "
-                        "→ rescue-blend=%.2f (%.0f%% Original beigemischt)",
+                        "Verarbeitungsschritt_23 §Waerme-Rescue: mat=%s waerme %.4f→%.4f (drop=%.3f > %.2f) "
+                        "→ rescue-blend=%.2f (%.0f%% Originalsignal beigemischt)",
                         _mat_k23_wr,
                         _w_ref,
                         _w_cur,
@@ -1144,7 +1155,7 @@ class SpectralRepair(PhaseInterface):
                         (1.0 - _wr_blend) * 100,
                     )
         except Exception as _wr_exc:
-            logger.debug("phase_23 waerme-rescue non-blocking: %s", _wr_exc)
+            logger.debug("Verarbeitungsschritt_23 waerme-rescue nicht blockierend: %s", _wr_exc)
 
         # §4.5 Psychoacoustic Masking Clamp — only repair audible spectral gaps
         try:
@@ -1156,7 +1167,7 @@ class SpectralRepair(PhaseInterface):
                 mode="additive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase23 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt23 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.36 Phonem-Schutz — Restore plosive burst frames aus Original
         # (Spektralreparatur kann Burst-Transienten dämpfen/glätten)
@@ -1183,7 +1194,7 @@ class SpectralRepair(PhaseInterface):
                         else:
                             repaired_audio[_fs23:_fe23] = audio[_fs23:_fe23]
         except Exception as _ph23_exc:
-            logger.debug("§2.36 Phase23 Phonem-Mask (non-blocking): %s", _ph23_exc)
+            logger.debug("§2.36 Verarbeitungsschritt23 Phonem-Mask (nicht blockierend): %s", _ph23_exc)
 
         # §2.46f NaturalPerformanceArtifacts-Guard — Restore atemgeräusche, vibrato, early-reflections
         try:
@@ -1203,7 +1214,7 @@ class SpectralRepair(PhaseInterface):
                     else:
                         repaired_audio[_npa_mask23] = audio[_npa_mask23]
         except Exception as _npa23_exc:
-            logger.debug("§2.46f Phase23 NPA-Guard (non-blocking): %s", _npa23_exc)
+            logger.debug("§2.46f Verarbeitungsschritt23 NPA-Guard (nicht blockierend): %s", _npa23_exc)
 
         _defect_locality_coverage23 = 0.0
         try:
@@ -1224,7 +1235,7 @@ class SpectralRepair(PhaseInterface):
                         np.float32
                     )
         except Exception as _locality23_exc:
-            logger.debug("phase_23 defect-locality blend (non-blocking): %s", _locality23_exc)
+            logger.debug("Verarbeitungsschritt_23 defect-locality blend (nicht blockierend): %s", _locality23_exc)
 
         # §V38/§0p VFA-Zonen-Blend-Back — VocalFocusAnalyzer-Zonen aus kwargs:
         # Vibrato (cap 0.20), Frisson (cap 0.30), Flüster (cap 0.25), Passaggio (cap 0.35).
@@ -1273,12 +1284,12 @@ class SpectralRepair(PhaseInterface):
                             _blend_p23 * repaired_audio + (1.0 - _blend_p23) * _audio_ref_p23, -1.0, 1.0
                         ).astype(np.float32)
                     logger.debug(
-                        "phase_23 VFA-Blend-Back: %d Schutzzonen, repair_strength=%.2f",
+                        "Verarbeitungsschritt_23 VFA-Blend-Back: %d Schutzzonen, repair_strength=%.2f",
                         len(_vfa_zones_p23),
                         repair_strength,
                     )
         except Exception as _vfa23_exc:
-            logger.debug("phase_23 VFA-Blend-Back (non-blocking): %s", _vfa23_exc)
+            logger.debug("Verarbeitungsschritt_23 VFA-Blend-Back (nicht blockierend): %s", _vfa23_exc)
 
         _mode23 = str(kwargs.get("mode", "restoration")).lower()
         _bw_ceiling_applied23 = False
@@ -1292,12 +1303,12 @@ class SpectralRepair(PhaseInterface):
             )
             if _bw_ceiling_applied23:
                 logger.info(
-                    "§6.2c phase_23 material BW-Ceiling: %s ≤ %.0f Hz before HallucinationGuard",
+                    "§6.2c Verarbeitungsschritt_23 material BW-Ceiling: %s ≤ %.0f Hz before HallucinationGuard",
                     self._material_key(material),
                     float(_bw_ceiling_hz23 or 0.0),
                 )
         except Exception as _bw23_exc:
-            logger.debug("§6.2c Phase23 material BW-Ceiling (non-blocking): %s", _bw23_exc)
+            logger.debug("§6.2c Verarbeitungsschritt23 material BW-Ceiling (nicht blockierend): %s", _bw23_exc)
 
         # §2.46e Hallucination-Guard: Spektral-Inpainting/Reparatur darf kein Material
         # einbringen das nicht im Input physikalisch vorhanden war (Restoration-Modus).
@@ -1348,7 +1359,7 @@ class SpectralRepair(PhaseInterface):
                             )
                         except Exception:
                             # non-blocking: Blend dennoch gegen Guard prüfen
-                            pass
+                            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
                         _cand_mono23 = _candidate23.mean(axis=-1) if _candidate23.ndim == 2 else _candidate23
                         _cand_mono23 = _cand_mono23 if _cand_mono23.ndim == 1 else _cand_mono23.ravel()
@@ -1364,7 +1375,7 @@ class SpectralRepair(PhaseInterface):
                             repaired_audio = _candidate23
                             _salvaged23 = True
                             logger.info(
-                                "§2.46e Phase23 Hallucination Rescue: reason=%s blend=%.2f novelty=%.3f",
+                                "§2.46e Verarbeitungsschritt23 Hallucination Rescue: reason=%s blend=%.2f novelty=%.3f",
                                 _rollback_reason23,
                                 float(_blend23),
                                 float(_cand_hg23.spectral_novelty),
@@ -1373,19 +1384,19 @@ class SpectralRepair(PhaseInterface):
 
                     if not _salvaged23:
                         logger.debug(
-                            "§2.46e Phase23 Hallucination rollback: reason=%s novelty=%.3f",
+                            "§2.46e Verarbeitungsschritt23 Hallucination rollback: reason=%s novelty=%.3f",
                             _rollback_reason23,
                             float(_hg_result23.spectral_novelty),
                         )
                         repaired_audio = audio.copy()
                 if _hg_result23.score_penalty > 0:
                     logger.info(
-                        "§2.46e Phase23 score_penalty=%.1f (spectral_novelty=%.3f)",
+                        "§2.46e Verarbeitungsschritt23 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                         _hg_result23.score_penalty,
                         _hg_result23.spectral_novelty,
                     )
         except Exception as _hg23_exc:
-            logger.debug("§2.46e Phase23 Hallucination-Guard (non-blocking): %s", _hg23_exc)
+            logger.debug("§2.46e Verarbeitungsschritt23 Hallucination-Guard (nicht blockierend): %s", _hg23_exc)
 
         _report_progress(92.0, "Spektralreparatur: Abschluss")
 
@@ -1419,9 +1430,9 @@ class SpectralRepair(PhaseInterface):
                     repaired_audio[-_et23_n:] = (
                         repaired_audio[-_et23_n:] * _et23_fade[::-1] + _orig23_et[-_et23_n:] * (1.0 - _et23_fade[::-1])
                     ).astype(repaired_audio.dtype)
-                logger.debug("Phase23 edge-taper: %.0f ms at intro+outro", _et23_fade_s * 1000)
+                logger.debug("Verarbeitungsschritt23 edge-taper: %.0f ms at intro+outro", _et23_fade_s * 1000)
         except Exception as _et23_exc:
-            logger.debug("Phase23 edge-taper non-blocking: %s", _et23_exc)
+            logger.debug("Verarbeitungsschritt23 edge-taper nicht blockierend: %s", _et23_exc)
 
         # Restore channels-first layout expected by UV3 (2, N)
         if _was_channels_first and repaired_audio.ndim == 2:
@@ -1444,7 +1455,7 @@ class SpectralRepair(PhaseInterface):
                 )
             except Exception as _ssip_audit_exc23:
                 logger.debug(
-                    "SSIP post_inpainting_silence_audit phase_23 (non-blocking): %s",
+                    "SSIP post_inpainting_silence_audit Verarbeitungsschritt_23 (nicht blockierend): %s",
                     _ssip_audit_exc23,
                 )
 
@@ -1470,12 +1481,12 @@ class SpectralRepair(PhaseInterface):
                 _wet_ts_23 = max(0.0, 1.0 - _ts_23.blend_reduction)
                 repaired_audio = (_wet_ts_23 * repaired_audio + (1.0 - _wet_ts_23) * audio).astype(np.float32)
                 logger.warning(
-                    "§V22 phase_23: onset_shift=%.2f ms → blend_reduction=%.2f",
+                    "§V22 Verarbeitungsschritt_23: onset_shift=%.2f ms → blend_reduction=%.2f",
                     _ts_23.max_shift_ms,
                     _ts_23.blend_reduction,
                 )
         except Exception as _v22_23_exc:
-            logger.debug("§V22 phase_23 transient_guard non-blocking: %s", _v22_23_exc)
+            logger.debug("§V22 Verarbeitungsschritt_23 transient_guard nicht blockierend: %s", _v22_23_exc)
 
         # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Reparatur darf Spektralfarbe nicht verändern
         try:
@@ -1489,9 +1500,9 @@ class SpectralRepair(PhaseInterface):
             if not _sc23.ok:
                 _sc23_wet = 0.70
                 repaired_audio = (_sc23_wet * repaired_audio + (1.0 - _sc23_wet) * _orig23_v24).astype(np.float32)
-                logger.warning("§V24 phase_23 spectral_color non-ok → strength −30%%")
+                logger.warning("§V24 Verarbeitungsschritt_23 spectral_color non-ok → strength −30%%")
         except Exception as _sc23_exc:
-            logger.debug("§V24 phase_23 spectral_color (non-blocking): %s", _sc23_exc)
+            logger.debug("§V24 Verarbeitungsschritt_23 spectral_color (nicht blockierend): %s", _sc23_exc)
 
         _result = PhaseResult(
             success=True,
@@ -1577,7 +1588,7 @@ class SpectralRepair(PhaseInterface):
         try:
             pywt = importlib.import_module("pywt")
         except ModuleNotFoundError:
-            logger.warning("pywt not available — ADMM declipping skipped, returning original")
+            logger.warning("pywt not verfuegbar — ADMM declipping uebersprungen, returning Originalsignal")
             return np.asarray(audio, dtype=np.float32)  # type: ignore[no-any-return]
 
         # float32 throughout: 2× faster wavelet ops, 2× less RAM vs float64;
@@ -1658,7 +1669,9 @@ class SpectralRepair(PhaseInterface):
                 e = min(n, of * hop + onset_win)
                 onset_guard[s:e] = True
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)  # No transient guard on error — safe fallback
+            logger.debug(
+                "Operation fehlgeschlagen (unkritisch): %s", _exc
+            )  # No transient guard on error — safe fallback
 
         # --- Wavelet parameters: db4 Level-5 ---
         wavelet = "db4"
@@ -1726,7 +1739,7 @@ class SpectralRepair(PhaseInterface):
             # Wall-time budget check (non-convergence path)
             if time.monotonic() - _admm_t0 > _admm_wall_budget_s:
                 logger.warning(
-                    "ADMM declip: wall-time budget %.0fs exceeded after %d iterations — early exit",
+                    "ADMM declip: wall-time Grenze %.0fs exceeded after %d iterations — early exit",
                     _admm_wall_budget_s,
                     _iter + 1,
                 )
@@ -1791,7 +1804,7 @@ class SpectralRepair(PhaseInterface):
         if allow_ml_under_pressure and self._pressure_relax_ml_attempts >= self._THRASH_RELAX_ML_MAX_ATTEMPTS:
             allow_ml_under_pressure = False
             logger.warning(
-                "phase_23: pressure-relax ML attempt cap reached (%d) — forcing DSP fallback",
+                "Verarbeitungsschritt_23: pressure-relax ML Versuch cap reached (%d) — forcing DSP Ersatzpfad",
                 self._THRASH_RELAX_ML_MAX_ATTEMPTS,
             )
 
@@ -1809,14 +1822,18 @@ class SpectralRepair(PhaseInterface):
         )
         if _in_pytest23 and not _allow_heavy_tests23:
             use_ml = False
-            logger.info("phase_23: ML disabled in default pytest run (crash-safety); use --run-heavy-tests for ML path")
+            logger.info(
+                "Verarbeitungsschritt_23: ML deaktiviert in default pytest Ausfuehrung (crash-safety); use --Ausfuehrung-heavy-tests for ML path"
+            )
         if use_ml and system_thrashing and not allow_ml_under_pressure:
-            logger.warning("phase_23: ML repair skipped — system thrashing detected, forcing DSP fallback")
+            logger.warning(
+                "Verarbeitungsschritt_23: ML repair uebersprungen — system thrashing erkannt, forcing DSP Ersatzpfad"
+            )
             use_ml = False
         elif use_ml and allow_ml_under_pressure:
             self._pressure_relax_ml_attempts += 1
             logger.warning(
-                "phase_23: controlled ML retry under pressure enabled — high RAM headroom detected (attempt %d/%d)",
+                "Verarbeitungsschritt_23: controlled ML Wiederholung under pressure aktiviert — high RAM headroom erkannt (Versuch %d/%d)",
                 self._pressure_relax_ml_attempts,
                 self._THRASH_RELAX_ML_MAX_ATTEMPTS,
             )
@@ -1830,7 +1847,10 @@ class SpectralRepair(PhaseInterface):
         )
         if len(_chain_p23) >= 5 and use_ml:
             use_ml = False
-            logger.info("Phase 23 depth=%d → DSP-only spectral inpainting (FlashSR ML übersprungen)", len(_chain_p23))
+            logger.info(
+                "Verarbeitungsschritt 23 depth=%d → DSP-only spectral inpainting (FlashSR ML übersprungen)",
+                len(_chain_p23),
+            )
 
         if use_ml:
             if not self._has_sufficient_ml_headroom(audio, sample_rate):
@@ -1842,9 +1862,10 @@ class SpectralRepair(PhaseInterface):
                 # Zwei Durchläufe kosten ~650s bei marginalem Nutzen — überspringe Wiederholung.
                 if self._flashsr_pass_count >= 1 and self._flashsr_last_bw_gain_hz < 500.0:
                     logger.info(
-                        "phase_23 FlashSR Early-Exit: letzter BW-Gewinn=%.0f Hz < 500 Hz → "
+                        "Verarbeitungsschritt_23 FlashSR Early-Exit: letzter BW-Gewinn=%.0f Hz < 500 Hz → "
                         "überspringe Pass #%d (kein signifikanter Gewinn erwartet)",
-                        self._flashsr_last_bw_gain_hz, self._flashsr_pass_count + 1,
+                        self._flashsr_last_bw_gain_hz,
+                        self._flashsr_pass_count + 1,
                     )
                     return audio
                 # ML-based repair with FlashSR
@@ -1859,15 +1880,17 @@ class SpectralRepair(PhaseInterface):
                     self._flashsr_last_bw_gain_hz = max(0.0, _bw_after - _bw_before)
                     self._flashsr_pass_count += 1
                     logger.debug(
-                        "phase_23 FlashSR Pass #%d: BW %.0f→%.0f Hz (Δ=%.0f Hz)",
-                        self._flashsr_pass_count, _bw_before, _bw_after,
+                        "Verarbeitungsschritt_23 FlashSR Pass #%d: BW %.0f→%.0f Hz (Δ=%.0f Hz)",
+                        self._flashsr_pass_count,
+                        _bw_before,
+                        _bw_after,
                         self._flashsr_last_bw_gain_hz,
                     )
                 except Exception:
                     pass  # Non-blocking
                 return repaired_audio
             else:
-                logger.warning("FlashSR unavailable, falling back to DSP")
+                logger.warning("FlashSR nicht verfuegbar, falling back to DSP")
 
         # DSP-based repair (fallback or FAST mode)
         log_mode_decision("phase_23", False, f"Mode: {QualityModeConfig.get_mode().value}")
@@ -1885,16 +1908,18 @@ class SpectralRepair(PhaseInterface):
             ):
                 _allow_mrsa_under_pressure = False
                 logger.warning(
-                    "phase_23: pressure-relax MRSA attempt cap reached (%d) — using Single-STFT fallback",
+                    "Verarbeitungsschritt_23: pressure-relax MRSA Versuch cap reached (%d) — using Single-STFT Ersatzpfad",
                     self._THRASH_RELAX_MRSA_MAX_ATTEMPTS,
                 )
             if system_thrashing and not _allow_mrsa_under_pressure:
-                logger.warning("phase_23: MRSA skipped — system thrashing detected, using Single-STFT fallback")
+                logger.warning(
+                    "Verarbeitungsschritt_23: MRSA uebersprungen — system thrashing erkannt, using Single-STFT Ersatzpfad"
+                )
                 _mrsa_ok = False
             elif _allow_mrsa_under_pressure:
                 self._pressure_relax_mrsa_attempts += 1
                 logger.warning(
-                    "phase_23: MRSA allowed under controlled pressure window (attempt %d/%d)",
+                    "Verarbeitungsschritt_23: MRSA allowed under controlled pressure window (Versuch %d/%d)",
                     self._pressure_relax_mrsa_attempts,
                     self._THRASH_RELAX_MRSA_MAX_ATTEMPTS,
                 )
@@ -1903,12 +1928,12 @@ class SpectralRepair(PhaseInterface):
                     _avail_gb = psutil.virtual_memory().available / (1024**3) if _PSUTIL_OK else 4.0
                     if _avail_gb < 4.0:
                         logger.warning(
-                            "phase_23: MRSA-OOM-Preflight fehlgeschlagen (%.1f GB < 4.0 GB) — Single-STFT-Fallback",
+                            "Verarbeitungsschritt_23: MRSA-OOM-Preflight fehlgeschlagen (%.1f GB < 4.0 GB) — Single-STFT-Ersatzpfad",
                             _avail_gb,
                         )
                         _mrsa_ok = False
             except Exception as e:
-                logger.warning("phase_23_spectral_repair.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_23_spectral_repair.py::unbekannter Ersatzpfad: %s", e)
                 pass  # psutil nicht verfügbar — MRSA versuchen
             if _mrsa_ok:
                 try:
@@ -1936,13 +1961,13 @@ class SpectralRepair(PhaseInterface):
                         _atten_ch = float(10.0 ** -((_gain_ch - 3.0) / 20.0))
                         out = np.clip(out * _atten_ch, -1.0, 1.0).astype(np.float32)
                         logger.warning(
-                            "phase_23 _repair_channel: external gain-cap +%.1f dB → capped to +3.0 dB",
+                            "Verarbeitungsschritt_23 _repair_channel: external gain-cap +%.1f dB → capped to +3.0 dB",
                             _gain_ch,
                         )
                     _report(98.0, "MRSA fertig")
                     return out
                 except Exception as _mrsa_err:
-                    logger.warning("MRSA-Reparatur fehlgeschlagen (%s), Single-STFT-Fallback", _mrsa_err)
+                    logger.warning("MRSA-Reparatur fehlgeschlagen (%s), Single-STFT-Ersatzpfad", _mrsa_err)
 
         # Single-STFT fallback (FAST mode or MRSA failure)
         # Apply inpainting strategies
@@ -2023,14 +2048,14 @@ class SpectralRepair(PhaseInterface):
                     _Zxx_pocs = _Zxx_iter
                 Zxx_blended = _Zxx_pocs
                 logger.debug(
-                    "phase_23 POCS: %d Iterationen abgeschlossen (defect_severity=%.2f%%, dur=%.1fs)",
+                    "Verarbeitungsschritt_23 POCS: %d Iterationen abgeschlossen (defect_severity=%.2f%%, dur=%.1fs)",
                     _pocs_n_iter,
                     defect_severity * 100,
                     _pocs_dur_s,
                 )
             except Exception as _pocs_err:
                 # Vollständig non-blocking: Zxx_blended bleibt unverändert
-                logger.debug("phase_23 POCS: nicht-blockierender Fallback — %s", _pocs_err)
+                logger.debug("Verarbeitungsschritt_23 POCS: nicht-blockierender Ersatzpfad — %s", _pocs_err)
             _report(80.0, "POCS fertig")
 
         # Direct ISTFT reconstruction — Zxx_blended retains phase info from original STFT.
@@ -2047,7 +2072,7 @@ class SpectralRepair(PhaseInterface):
             )
             audio_repaired = np.asarray(audio_repaired, dtype=np.float64)
         except Exception as _istft_p23_err:
-            logger.debug("phase_23 single-STFT istft failed (non-critical): %s", _istft_p23_err)
+            logger.debug("Verarbeitungsschritt_23 single-STFT istft fehlgeschlagen (unkritisch): %s", _istft_p23_err)
             audio_repaired = audio.astype(np.float64)  # passthrough
         _report(98.0, "Rekonstruktion")
 
@@ -2094,7 +2119,7 @@ class SpectralRepair(PhaseInterface):
             _mrsa_wall_budget_s = min(600.0, 2.5 * _mrsa_dur_s, _remaining_s)
         else:
             _mrsa_wall_budget_s = min(600.0, 2.5 * _mrsa_dur_s)
-        logger.info("phase_23 MRSA: wall_budget=%.0fs (dur=%.1fs)", _mrsa_wall_budget_s, _mrsa_dur_s)
+        logger.info("Verarbeitungsschritt_23 MRSA: wall_Grenze=%.0fs (dur=%.1fs)", _mrsa_wall_budget_s, _mrsa_dur_s)
         _mrsa_t0 = time.monotonic()
         _mrsa_budget_exceeded = False
 
@@ -2110,7 +2135,7 @@ class SpectralRepair(PhaseInterface):
             if _elapsed > _mrsa_wall_budget_s:
                 _mrsa_budget_exceeded = True
                 logger.warning(
-                    "phase_23 MRSA: intra-zone budget %.0fs überschritten vor '%s'"
+                    "Verarbeitungsschritt_23 MRSA: intra-zone Grenze %.0fs überschritten vor '%s'"
                     " in Zone '%s' (elapsed=%.1fs) — Zone als Passthrough",
                     _mrsa_wall_budget_s,
                     op_label,
@@ -2125,9 +2150,9 @@ class SpectralRepair(PhaseInterface):
                 try:
                     progress_cb(5.0 + 90.0 * (_zi / _n_zones), f"Zone {name}")
                 except Exception:
-                    logger.debug("_intra_zone_budget_exceeded: silent except suppressed", exc_info=True)
+                    logger.debug("_intra_zone_Grenze_exceeded: silent except suppressed", exc_info=True)
             logger.info(
-                "phase_23 MRSA: zone %d/%d '%s' elapsed=%.1fs budget=%.0fs",
+                "Verarbeitungsschritt_23 MRSA: zone %d/%d '%s' elapsed=%.1fs Grenze=%.0fs",
                 _zi + 1,
                 _n_zones,
                 name,
@@ -2137,7 +2162,7 @@ class SpectralRepair(PhaseInterface):
             # Wall-time guard: passthrough remaining zones if budget exceeded
             if not _mrsa_budget_exceeded and (time.monotonic() - _mrsa_t0) > _mrsa_wall_budget_s:
                 logger.warning(
-                    "phase_23 MRSA: wall-time budget %.0fs exceeded after zone %d/%d — remaining zones as passthrough",
+                    "Verarbeitungsschritt_23 MRSA: wall-time Grenze %.0fs exceeded after zone %d/%d — remaining zones as passthrough",
                     _mrsa_wall_budget_s,
                     _zi,
                     _n_zones,
@@ -2152,14 +2177,16 @@ class SpectralRepair(PhaseInterface):
                     )
                     if _mrsa_avail_gb < 1.0:
                         logger.warning(
-                            "phase_23 MRSA: OOM-Guard — nur %.1f GB frei (< 1.0 GB) — Zone %d/%d als Passthrough",
+                            "Verarbeitungsschritt_23 MRSA: OOM-Guard — nur %.1f GB frei (< 1.0 GB) — Zone %d/%d als Passthrough",
                             _mrsa_avail_gb,
                             _zi + 1,
                             _n_zones,
                         )
                         _mrsa_budget_exceeded = True
                 except Exception as _mrsa_ram_exc:
-                    logger.debug("phase_23 MRSA: RAM-Check fehlgeschlagen (non-critical): %s", _mrsa_ram_exc)
+                    logger.debug(
+                        "Verarbeitungsschritt_23 MRSA: RAM-Pruefung fehlgeschlagen (unkritisch): %s", _mrsa_ram_exc
+                    )
 
             _z_cfg = ZONES[name]
             _eff_win = min(_z_cfg["win"], len(audio_f32))
@@ -2231,7 +2258,7 @@ class SpectralRepair(PhaseInterface):
             try:
                 progress_cb(100.0, "Zonen-Merge")
             except Exception:
-                logger.debug("_intra_zone_budget_exceeded: silent except suppressed", exc_info=True)
+                logger.debug("_intra_zone_Grenze_exceeded: silent except suppressed", exc_info=True)
         result = merge_zones(zone_audios, zone_meta, sample_rate, len(audio_f32))
         # §0h Music-Death-Shield: MRSA output must not exceed +3 dB of input RMS.
         # merge_zones sums 5 zone reconstructions — imperfect filterbank overlap or
@@ -2243,7 +2270,7 @@ class SpectralRepair(PhaseInterface):
             _mrsa_atten = float(10.0 ** (-((_mrsa_gain_db - 3.0) / 20.0)))
             result = np.clip(result * _mrsa_atten, -1.0, 1.0).astype(np.float32)
             logger.warning(
-                "phase_23 MRSA: gain-cap applied (+%.1f dB → capped to +3.0 dB, att=%.2f dB)",
+                "Verarbeitungsschritt_23 MRSA: gain-cap angewendet (+%.1f dB → capped to +3.0 dB, att=%.2f dB)",
                 _mrsa_gain_db,
                 _mrsa_gain_db - 3.0,
             )
@@ -2332,7 +2359,9 @@ class SpectralRepair(PhaseInterface):
                 # Using a fixed slice guarantees L and R are trimmed identically → no inter-channel lag.
                 if _use_pad23 and repaired_channel.ndim == 1 and len(repaired_channel) >= _asr23_ctx_n + _orig_len23:
                     repaired_channel = repaired_channel[_asr23_ctx_n : _asr23_ctx_n + _orig_len23]
-                    logger.debug("phase_23 FlashSR: context-padding stripped (%d samples offset)", _asr23_ctx_n)
+                    logger.debug(
+                        "Verarbeitungsschritt_23 FlashSR: context-padding stripped (%d samples offset)", _asr23_ctx_n
+                    )
 
                 if repaired_channel.ndim != 1:
                     logger.warning(
@@ -2355,7 +2384,7 @@ class SpectralRepair(PhaseInterface):
                             mode="edge",
                         )
                     logger.warning(
-                        "phase_23 FlashSR length corrected without resample: cur=%d target=%d",
+                        "Verarbeitungsschritt_23 FlashSR length corrected without resample: cur=%d target=%d",
                         _cur_len23,
                         _target_len23,
                     )
@@ -2435,14 +2464,16 @@ class SpectralRepair(PhaseInterface):
                             ).astype(np.float32)
                     else:
                         result_asr23 = signal.sosfiltfilt(_sos_asr23, result_asr23).astype(np.float32)
-                    logger.debug("§6.2c phase_23 FlashSR BW-Ceiling: %s ≤ %.0f Hz", _mat_asr23, _bw_asr23)
+                    logger.debug(
+                        "§6.2c Verarbeitungsschritt_23 FlashSR BW-Ceiling: %s ≤ %.0f Hz", _mat_asr23, _bw_asr23
+                    )
                 except Exception as _bw_asr23_exc:
-                    logger.debug("§6.2c phase_23 BW-Ceiling (non-blocking): %s", _bw_asr23_exc)
+                    logger.debug("§6.2c Verarbeitungsschritt_23 BW-Ceiling (nicht blockierend): %s", _bw_asr23_exc)
 
             return result_asr23
 
         except Exception as e:
-            logger.warning("FlashSR processing failed (DSP fallback aktiv): %s", e)
+            logger.warning("FlashSR processing fehlgeschlagen (DSP Ersatzpfad aktiv): %s", e)
             # Fallback to DSP (will be handled by caller)
             return audio
         finally:

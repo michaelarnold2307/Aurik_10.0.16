@@ -184,7 +184,7 @@ def compute_strength_envelope(
         # Lower threshold → lower floor (audible content, protect it)
         psy_floor = min_strength + _PSY_MASKED_FLOOR_BOOST * np.clip(psy_mask, 0.0, 1.0)
         envelope = np.maximum(envelope, psy_floor)
-        logger.debug("§2.71: Psychoacoustic floor applied (μ=%.3f)", float(np.mean(psy_floor)))
+        logger.debug("§2.71: Psychoacoustic floor angewendet (μ=%.3f)", float(np.mean(psy_floor)))
 
     # ── Stage 5: Vocal-aware per-frame modulation ────────────────────
     if vocal_timeline is not None and len(vocal_timeline) > 0:
@@ -308,10 +308,10 @@ def _detect_transients(
         ratio_frames = ratio[frame_indices]
 
         # Threshold
-        return (ratio_frames > _TRANSIENT_ENERGY_RATIO).astype(np.float64)
+        return (ratio_frames > _TRANSIENT_ENERGY_RATIO).astype(np.float64)  # type: ignore[no-any-return]
 
     except Exception:
-        logger.debug("§2.71: Transient detection skipped", exc_info=True)
+        logger.debug("§2.71: Transient detection uebersprungen", exc_info=True)
         return None
 
 
@@ -359,7 +359,7 @@ def _smooth_segment(segment: np.ndarray) -> np.ndarray:
     """3-point median filter for click-free smoothing."""
     if len(segment) < 3:
         return segment
-    return ndimage.median_filter(segment, size=3)
+    return ndimage.median_filter(segment, size=3)  # type: ignore[no-any-return]
 
 
 def _apply_temporal_masking(
@@ -454,7 +454,7 @@ def _apply_temporal_masking(
         return np.asarray(envelope_masked, dtype=np.float64)
 
     except Exception as e:
-        logger.warning("strength_envelope.py::unbekannter Fallback: %s", e)
+        logger.warning("strength_envelope.py::unbekannter Ersatzpfad: %s", e)
         return envelope
 
 
@@ -467,7 +467,7 @@ def _resample_1d(data: np.ndarray, target_len: int) -> np.ndarray:
 
     x_orig = np.linspace(0.0, 1.0, len(data))
     x_target = np.linspace(0.0, 1.0, target_len)
-    return interp1d(x_orig, data, kind="linear", fill_value="extrapolate")(x_target)
+    return interp1d(x_orig, data, kind="linear", fill_value="extrapolate")(x_target)  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -512,9 +512,9 @@ def resample_envelope_to_sr(
                 bounds_error=False,
                 fill_value=(float(envelope[0]), float(envelope[-1])),
             )
-            return spline(target_t).astype(np.float32)
+            return spline(target_t).astype(np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("strength_envelope.py::resample_envelope_to_sr fallback: %s", e)
+            logger.warning("strength_envelope.py::resample_envelope_to_sr Ersatzpfad: %s", e)
             pass  # Fallback to linear
 
     return np.interp(target_t, env_t, envelope.astype(np.float64)).astype(np.float32)

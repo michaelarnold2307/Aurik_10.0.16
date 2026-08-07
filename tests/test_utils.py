@@ -410,7 +410,7 @@ def generate_audio_by_quality(
     if peak > 0:
         signal = signal / peak * 0.95
 
-    return signal.astype(np.float32)
+    return signal.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def generate_medium_specific_audio(
@@ -484,7 +484,7 @@ def generate_medium_specific_audio(
     if peak > 0:
         signal = signal / peak * 0.90
 
-    return signal.astype(np.float32)
+    return signal.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def get_expected_thresholds(medium_type: str) -> dict:

@@ -66,7 +66,7 @@ class FrontendWithAnalysisSupervisor:
             # Starte GUI über run_aurik.sh
             gui_script = _WORKSPACE_ROOT / "run_aurik.sh"
             if not gui_script.exists():
-                logger.warning(f"run_aurik.sh nicht gefunden: {gui_script}")
+                logger.warning(f"Ausfuehrung_aurik.sh nicht gefunden: {gui_script}")
                 return False
 
             self.gui_process = subprocess.Popen(
@@ -130,12 +130,12 @@ class FrontendWithAnalysisSupervisor:
             def stream_analyzer_output():
                 try:
                     while not self._shutdown:
-                        line = self.analyzer_process.stdout.readline()
+                        line = self.analyzer_process.stdout.readline()  # type: ignore[union-attr]
                         if not line:
                             break
                         logger.info(f"[ANALYZER] {line.rstrip()}")
                 except Exception as e:
-                    logger.debug(f"Analyzer output stream beendet: {e}")
+                    logger.debug(f"Analyzer Ausgabe stream beendet: {e}")
 
             analyzer_thread = Thread(target=stream_analyzer_output, daemon=True)
             analyzer_thread.start()
@@ -196,7 +196,7 @@ class FrontendWithAnalysisSupervisor:
             except subprocess.TimeoutExpired:
                 self.gui_process.kill()
             except Exception as e:
-                logger.error(f"GUI-Shutdown Fehler: {e}")
+                logger.error(f"GUI-Herunterfahren Fehler: {e}")
                 exit_code = 1
 
         if self.analyzer_process:
@@ -206,7 +206,7 @@ class FrontendWithAnalysisSupervisor:
             except subprocess.TimeoutExpired:
                 self.analyzer_process.kill()
             except Exception as e:
-                logger.error(f"Analyzer-Shutdown Fehler: {e}")
+                logger.error(f"Analyzer-Herunterfahren Fehler: {e}")
                 exit_code = 1
 
         logger.info("=" * 80)

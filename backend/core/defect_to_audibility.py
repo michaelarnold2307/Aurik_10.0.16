@@ -25,7 +25,20 @@ from typing import Any
 
 import numpy as np
 
+from backend.core.calibration_context import get_calibration_context
+
 logger = logging.getLogger(__name__)
+
+MATERIAL_EXPECTED_BW = 20000
+
+
+def _resolve_transfer_chain_depth(value: int | None) -> int:
+    """§G86: Bezieht transfer_chain_depth aus dem CalibrationContext statt einem stillen Default."""
+    if value is not None:
+        return value
+    ctx = get_calibration_context()
+    return ctx.transfer_chain_depth if ctx is not None else 1
+
 
 # ---------------------------------------------------------------------------
 # Defect → dB-Level Mapping (psychoakustisch kalibriert)
@@ -197,6 +210,7 @@ DEFECT_TO_PRIMARY_PHASE: dict[str, str] = {
 # Psychoakustisches Masking-Modell
 # ---------------------------------------------------------------------------
 
+
 def _signal_level_in_defect_band(audio: np.ndarray, sr: int, defect_type: str) -> float:
     """Signalpegel (dB) im Defekt-Frequenzband."""
     defect_band = _defect_frequency_band(defect_type)
@@ -213,7 +227,7 @@ def _signal_level_in_defect_band(audio: np.ndarray, sr: int, defect_type: str) -
     band_mask = (freqs >= defect_band[0]) & (freqs <= defect_band[1])
     if not np.any(band_mask):
         return -60.0
-    band_rms = float(np.sqrt(np.mean(spectrum[band_mask]**2) + 1e-20))
+    band_rms = float(np.sqrt(np.mean(spectrum[band_mask] ** 2) + 1e-20))
     return float(20.0 * np.log10(band_rms + 1e-10))
 
 
@@ -224,7 +238,7 @@ def _estimate_noise_floor(audio: np.ndarray, sr: int) -> float:
     hop = frame_len // 2
     rms_vals = []
     for i in range(0, len(mono) - frame_len, hop):
-        frame = mono[i:i+frame_len]
+        frame = mono[i : i + frame_len]
         rms_vals.append(float(np.sqrt(np.mean(frame**2) + 1e-20)))
     if not rms_vals:
         return -60.0
@@ -298,9 +312,7 @@ def compute_simultaneous_masking(
     return float(np.clip(masking_threshold_db, -80.0, 120.0))
 
 
-def _compute_temporal_masking_boost(
-    audio: np.ndarray, sr: int, defect_band: tuple[float, float]
-) -> float:
+def _compute_temporal_masking_boost(audio: np.ndarray, sr: int, defect_band: tuple[float, float]) -> float:
     """Temporale Maskierung: Forward (200ms) + Backward (5ms) nach ISO 11172-3.
 
     Nach einem lauten Transienten ist das Ohr für ~200 ms desensibilisiert.
@@ -322,7 +334,7 @@ def _compute_temporal_masking_boost(
     rms_frames = np.zeros(n_frames)
     for i in range(n_frames):
         s = i * hop
-        rms_frames[i] = float(np.sqrt(np.mean(audio[s:s+frame_len]**2) + 1e-12))
+        rms_frames[i] = float(np.sqrt(np.mean(audio[s : s + frame_len] ** 2) + 1e-12))
 
     rms_db = 20.0 * np.log10(rms_frames + 1e-10)
     median_rms = float(np.median(rms_db))
@@ -363,23 +375,23 @@ def _compute_temporal_masking_boost(
 def _defect_frequency_band(defect_type: str) -> tuple[float, float]:
     """Gibt das charakteristische Frequenzband eines Defekttyps zurück (Hz)."""
     bands = {
-        "high_freq_noise": (6000, 20000),
-        "hiss": (6000, 20000),
-        "tape_hiss": (6000, 20000),
-        "surface_noise": (4000, 20000),
+        "high_freq_noise": (6000, MATERIAL_EXPECTED_BW),
+        "hiss": (6000, MATERIAL_EXPECTED_BW),
+        "tape_hiss": (6000, MATERIAL_EXPECTED_BW),
+        "surface_noise": (4000, MATERIAL_EXPECTED_BW),
         "modulation_noise": (2000, 8000),
-        "clicks": (2000, 20000),
+        "clicks": (2000, MATERIAL_EXPECTED_BW),
         "crackle": (2000, 16000),
         "hum": (40, 400),
         "rumble": (10, 120),
         "wow": (0, 20),
         "flutter": (4, 20),
-        "bandwidth_loss": (8000, 20000),
-        "hf_loss": (8000, 20000),
-        "dropout": (100, 20000),
-        "dropout_oxide": (100, 20000),
-        "clipping": (100, 20000),
-        "digital_clip": (100, 20000),
+        "bandwidth_loss": (8000, MATERIAL_EXPECTED_BW),
+        "hf_loss": (8000, MATERIAL_EXPECTED_BW),
+        "dropout": (100, MATERIAL_EXPECTED_BW),
+        "dropout_oxide": (100, MATERIAL_EXPECTED_BW),
+        "clipping": (100, MATERIAL_EXPECTED_BW),
+        "digital_clip": (100, MATERIAL_EXPECTED_BW),
         "reverb_excess": (200, 8000),
     }
     return bands.get(defect_type, (500, 8000))
@@ -417,7 +429,7 @@ def required_strength(
     audio: np.ndarray,
     sr: int,
     *,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
     safety_margin_db: float = 3.0,
     stem_audio: np.ndarray | None = None,  # §v10.210: Pro-Stem-Analyse
 ) -> AudibilityTarget:
@@ -446,7 +458,7 @@ def required_strength(
         AudibilityTarget mit required_strength ∈ [0, 1]
     """
     severity = float(np.clip(severity, 0.0, 1.0))
-    depth = max(1, int(transfer_chain_depth))
+    depth = max(1, _resolve_transfer_chain_depth(transfer_chain_depth))
 
     # §v10.210: Stem-Aware Maskierung — wenn Stem-Audio vorhanden,
     # berechne Maskierung NUR auf dem Stem (z.B. Vocals-only für De-Essing)
@@ -514,7 +526,7 @@ def compute_all_strengths(
     audio: np.ndarray,
     sr: int,
     *,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
     min_severity: float = 0.05,
 ) -> dict[str, AudibilityTarget]:
     """Berechnet benötigte Stärken für alle Defekte.
@@ -533,9 +545,7 @@ def compute_all_strengths(
     for defect_type, severity in defect_scores.items():
         if severity < min_severity:
             continue
-        target = required_strength(
-            defect_type, severity, audio, sr, transfer_chain_depth=transfer_chain_depth
-        )
+        target = required_strength(defect_type, severity, audio, sr, transfer_chain_depth=transfer_chain_depth)
         if target.audible:
             results[defect_type] = target
     return results
@@ -546,7 +556,7 @@ def phase_strength_map(
     audio: np.ndarray,
     sr: int,
     *,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> dict[str, float]:
     """Berechnet {phase_id: strength} für alle hörbaren Defekte.
 
@@ -556,9 +566,7 @@ def phase_strength_map(
     Returns:
         {phase_id: strength} — direkt als kwargs für Phase-Wrapper nutzbar
     """
-    all_targets = compute_all_strengths(
-        defect_scores, audio, sr, transfer_chain_depth=transfer_chain_depth
-    )
+    all_targets = compute_all_strengths(defect_scores, audio, sr, transfer_chain_depth=transfer_chain_depth)
 
     phase_strengths: dict[str, float] = {}
     for target in all_targets.values():
@@ -575,7 +583,7 @@ def is_defect_still_audible(
     audio_after: np.ndarray,
     sr: int,
     *,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> tuple[bool, float]:
     """§v10.210 Feedback-Loop: Prüft ob ein Defekt nach der Phase noch hörbar ist.
 
@@ -587,9 +595,7 @@ def is_defect_still_audible(
         (still_audible, redo_strength): True wenn Defekt noch hörbar,
         und die benötigte Stärke für eine Wiederholung.
     """
-    target = required_strength(
-        defect_type, severity, audio_after, sr, transfer_chain_depth=transfer_chain_depth
-    )
+    target = required_strength(defect_type, severity, audio_after, sr, transfer_chain_depth=transfer_chain_depth)
     if target.audible and target.required_strength > 0.02:
         return True, target.required_strength
     return False, 0.0

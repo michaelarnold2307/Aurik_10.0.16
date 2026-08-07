@@ -12,7 +12,7 @@ SR = 48_000
 def _sine(secs: float = 0.3, freq: float = 440.0) -> np.ndarray:
     n = int(SR * secs)
     t = np.arange(n, dtype=np.float32) / SR
-    return (0.1 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (0.1 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 class _PhaseStub:

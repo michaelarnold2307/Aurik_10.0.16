@@ -44,7 +44,9 @@ def _k_weighted_lufs(x: np.ndarray, sr: int = 48000) -> float:
         _a_rlb = np.asarray(_butter_res[1], dtype=np.float64)
         arr = _sig.lfilter(_b_rlb, _a_rlb, arr)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)  # Fallback: Signal ohne Filterung (RMS-Näherung)
+        logger.debug(
+            "Operation fehlgeschlagen (unkritisch): %s", _exc
+        )  # Fallback: Signal ohne Filterung (RMS-Näherung)
 
     mean_sq = float(np.mean(arr**2))
     if mean_sq <= 0.0:
@@ -101,7 +103,7 @@ class StemRemixBalancer:
             logger.debug("_estimate_vocal_weight: %.3f (vr=%.3f br=%.3f)", result, vocal_ratio, bass_ratio)
             return result
         except Exception as exc:
-            logger.warning("_estimate_vocal_weight failed (%s) — using 0.5", exc)
+            logger.warning("_estimate_vocal_weight fehlgeschlagen (%s) — using 0.5", exc)
             return 0.5
 
     def balance_remix(

@@ -28,7 +28,7 @@ def repair_dropouts_precise(audio, sr):
     for i in range(0, n - rms_win, hop):
         seg = mono[i : i + rms_win]
         rms_env.append(float(np.sqrt(np.mean(seg**2) + 1e-12)))
-    rms_env = np.array(rms_env, dtype=np.float64)
+    rms_env = np.array(rms_env, dtype=np.float64)  # type: ignore[assignment]
 
     # ── 2. Gleitende MAD-basierte Ausreißer-Erkennung ──
     # Für jeden Punkt: vergleiche mit lokaler Verteilung (100 Punkte = 500ms)
@@ -39,7 +39,7 @@ def repair_dropouts_precise(audio, sr):
     for i in range(local_n, len(rms_env) - local_n):
         local = rms_env[i - local_n : i + local_n]
         median = float(np.median(local))
-        mad = float(np.median(np.abs(local - median))) * 1.4826  # Skalierung für Normalverteilung
+        mad = float(np.median(np.abs(local - median))) * 1.4826  # type: ignore  # Skalierung für Normalverteilung
         if mad < 1e-12:
             continue
 
@@ -117,6 +117,6 @@ def repair_dropouts_precise(audio, sr):
 
             repaired += 1
         except Exception as e:
-            logger.warning("precision_dropout_repair.py::unbekannter Fallback: %s", e)
+            logger.warning("precision_dropout_repair.py::unbekannter Ersatzpfad: %s", e)
 
     return np.clip(result, -1.0, 1.0).astype(np.float32), len(outliers), repaired

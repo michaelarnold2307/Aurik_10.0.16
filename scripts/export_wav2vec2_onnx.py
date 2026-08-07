@@ -89,7 +89,7 @@ class _Wrapper(torch.nn.Module):
         self._m = m
 
     def forward(self, input_values: torch.Tensor) -> torch.Tensor:
-        return self._m(input_values=input_values).logits
+        return self._m(input_values=input_values).logits  # type: ignore[no-any-return]
 
 
 wrapper = _Wrapper(model)
@@ -98,7 +98,7 @@ wrapper.eval()
 with torch.no_grad():
     torch.onnx.export(
         wrapper,
-        dummy,
+        (dummy,),
         str(ONNX_FP32),
         input_names=["input_values"],
         output_names=["logits"],

@@ -103,7 +103,7 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
     # Manifest laden
     manifest_path = root / "models" / "manifest.json"
     if not manifest_path.exists():
-        logger.warning("startup_check: manifest.json nicht gefunden in %s", manifest_path)
+        logger.warning("Start_Pruefung: manifest.json nicht gefunden in %s", manifest_path)
         return ModelCheckResult(
             all_ok=False,
             mode="DSP_ONLY",
@@ -121,7 +121,7 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
         with open(manifest_path, encoding="utf-8") as fh:
             manifest = json.load(fh)
     except Exception as exc:
-        logger.error("startup_check: manifest.json konnte nicht gelesen werden: %s", exc)
+        logger.error("Start_Pruefung: manifest.json konnte nicht gelesen werden: %s", exc)
         return ModelCheckResult(
             all_ok=False,
             mode="DSP_ONLY",
@@ -149,9 +149,9 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
         file_path = root / bundled_path
         if file_path.exists():
             found_count += 1
-            logger.debug("startup_check: OK — %s (%s)", name, bundled_path)
+            logger.debug("Start_Pruefung: OK — %s (%s)", name, bundled_path)
         else:
-            logger.warning("startup_check: FEHLT — %s (%s)", name, bundled_path)
+            logger.warning("Start_Pruefung: FEHLT — %s (%s)", name, bundled_path)
             info = {
                 "name": name,
                 "path": bundled_path,
@@ -215,7 +215,7 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
         elif missing_optional:
             # Nur optionale fehlen → kein Dialog nötig, nur Log
             logger.info(
-                "startup_check: %d optionale Modelle nicht gefunden — DSP-Fallbacks aktiv.",
+                "Start_Pruefung: %d optionale Modelle nicht gefunden — DSP-Fallbacks aktiv.",
                 len(missing_optional),
             )
 
@@ -239,13 +239,13 @@ def _log_summary(result: ModelCheckResult) -> None:
     """Loggt eine kompakte englische Zusammenfassung des Check-Ergebnisses."""
     if result.all_ok:
         logger.info(
-            "startup_check: ALL OK — %d/%d bundled models present (FULL_ML mode)",
+            "Start_Pruefung: ALL OK — %d/%d bundled models present (FULL_ML Betriebsart)",
             result.found_count,
             result.total_bundled,
         )
     else:
         logger.warning(
-            "startup_check: mode=%s found=%d/%d missing_primary=%d missing_optional=%d",
+            "Start_Pruefung: Betriebsart=%s found=%d/%d missing_primary=%d missing_optional=%d",
             result.mode,
             result.found_count,
             result.total_bundled,
@@ -255,7 +255,7 @@ def _log_summary(result: ModelCheckResult) -> None:
         if result.missing_primary:
             for m in result.missing_primary:
                 logger.warning(
-                    "  MISSING PRIMARY: %s → %s (fallback: %s)",
+                    "  MISSING PRIMARY: %s → %s (Ersatzpfad: %s)",
                     m["name"],
                     m["path"],
                     m.get("fallback", "DSP"),

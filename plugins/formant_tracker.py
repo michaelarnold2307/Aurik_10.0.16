@@ -127,7 +127,7 @@ class FormantTracker:
         self._deepformants_loaded: bool = False
         self._try_load_deepformants()
         logger.debug(
-            "FormantTracker initialized: lpc_order=%d, preemphasis=%.2f, deepformants=%s",
+            "FormantTracker initialisiert: lpc_order=%d, preemphasis=%.2f, deepformants=%s",
             self._order,
             self._preemphasis,
             "ONNX" if self._deepformants_loaded else "LPC-Fallback",
@@ -137,7 +137,7 @@ class FormantTracker:
         """Lädt DeepFormants ONNX-Modell (optisch); LPC-Burg als Fallback."""
         if not _DEEPFORMANTS_ONNX.exists():
             logger.debug(
-                "DeepFormants ONNX nicht gefunden (%s) — LPC-Burg-Fallback aktiv. "
+                "DeepFormants ONNX nicht gefunden (%s) — LPC-Burg-Ersatzpfad aktiv. "
                 "Modell: https://github.com/vokandre/deepformants",
                 _DEEPFORMANTS_ONNX,
             )
@@ -149,10 +149,10 @@ class FormantTracker:
                 from backend.core.ml_memory_budget import try_allocate as _try_alloc
 
                 if not _try_alloc("DeepFormants", size_gb=0.05):
-                    logger.warning("DeepFormants: ML-Budget erschöpft — LPC-Fallback.")
+                    logger.warning("DeepFormants: ML-Grenze erschöpft — LPC-Ersatzpfad.")
                     return
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             opts = ort.SessionOptions()
             opts.inter_op_num_threads = 1
@@ -174,15 +174,15 @@ class FormantTracker:
                     ),
                 )
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.debug("DeepFormants ONNX nicht ladbar: %s — LPC-Burg-Fallback.", exc)
+            logger.debug("DeepFormants ONNX nicht ladbar: %s — LPC-Burg-Ersatzpfad.", exc)
             try:
                 from backend.core.ml_memory_budget import release as _rel
 
                 _rel("DeepFormants")
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # ------------------------------------------------------------------
     # Public API
@@ -218,7 +218,7 @@ class FormantTracker:
             try:
                 return self._analyze_deepformants(audio_f, sample_rate)
             except Exception as exc:
-                logger.warning("DeepFormants ONNX fehlgeschlagen: %s — LPC-Burg-Fallback.", exc)
+                logger.warning("DeepFormants ONNX fehlgeschlagen: %s — LPC-Burg-Ersatzpfad.", exc)
 
         # Fallback: LPC Burg (bisherige Implementierung)
         return self._analyze_lpc(audio_f, sample_rate)
@@ -283,7 +283,7 @@ class FormantTracker:
             _plm = get_plugin_lifecycle_manager()
             _plm.set_active("DeepFormants", True)
         except Exception:
-            logger.warning("formant_tracker.py::_analyze_deepformants fallback", exc_info=True)
+            logger.warning("formant_tracker.py::_analyze_deepformants Ersatzpfad", exc_info=True)
         try:
             ort_out = self._deepformants_session.run(None, {inp_name: inp})
         finally:
@@ -291,7 +291,7 @@ class FormantTracker:
                 try:
                     _plm.set_active("DeepFormants", False)
                 except Exception:
-                    logger.warning("formant_tracker.py::_analyze_deepformants fallback", exc_info=True)
+                    logger.warning("formant_tracker.py::_analyze_deepformants Ersatzpfad", exc_info=True)
         formant_tracks_hz = np.asarray(ort_out[0], dtype=np.float32)  # [1, 4, T] oder [4, T]
 
         if formant_tracks_hz.ndim == 3:
@@ -443,12 +443,12 @@ class FormantTracker:
         """
         try:
             # Try librosa's Burg if available (most accurate)
-            from librosa.core.audio import _burg as _librosa_burg  # type: ignore[import]
+            from librosa.core.audio import _burg as _librosa_burg  # type: ignore[attr-defined]
 
             lpc = _librosa_burg(frame.astype(np.float64), order=order)
             return np.array([1.0, *list(-lpc)], dtype=np.float64)
         except (ImportError, AttributeError):
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # Pure-numpy Burg autocorrelation (bias-corrected)
         x = frame.astype(np.float64)
@@ -546,7 +546,7 @@ class FormantTracker:
             from scipy.signal import resample_poly
 
             g = gcd(dst_sr, src_sr)
-            return resample_poly(audio, dst_sr // g, src_sr // g).astype(np.float32)
+            return resample_poly(audio, dst_sr // g, src_sr // g).astype(np.float32)  # type: ignore[no-any-return]
         except ImportError:
             orig_len = len(audio)
             new_len = int(orig_len * dst_sr / src_sr)

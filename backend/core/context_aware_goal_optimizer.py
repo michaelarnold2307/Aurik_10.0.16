@@ -47,7 +47,7 @@ class ContextAwareGoalOptimizer:
         self.feedback_callback = feedback_callback
         self.goal_weights: dict[str, float] = {}
         self.lock = threading.RLock()
-        logger.info("ContextAwareGoalOptimizer initialized")
+        logger.info("ContextAwareGoalOptimizer initialisiert")
 
     def set_goal_weights(self, weights: dict[str, float]) -> None:
         with self.lock:

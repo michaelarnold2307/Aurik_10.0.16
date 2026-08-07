@@ -56,7 +56,7 @@ def get_interaction_guard() -> CumulativeInteractionGuard:
             _instance.reset()
     except Exception:
         # Defensive: never raise during guard retrieval
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     return _instance
 
 
@@ -355,7 +355,10 @@ _PHASE_SPECIFIC_DRIFT_EXCLUSIONS: dict[str, frozenset[str]] = {
     # the restored audio has MORE spectral structure than the degraded original. natuerlichkeit
     # measures similarity to the degraded reference → drops legitimately (§2.44 Reference-Paradoxon).
     # artikulation/timbre_authentizitaet: additive synthesis changes onset envelope and spectral centroid.
-    "phase_07": frozenset({"artikulation", "timbre_authentizitaet", "natuerlichkeit"}),
+    # authentizitaet: §2.55-Sync (2026-08-06) — Declipper (§v10.18) reconstructs waveform
+    # peaks, changing the roughness profile vs. the clipping reference (identical to
+    # PMGG-Rationale, siehe per_phase_musical_goals_gate.py phase_07).
+    "phase_07": frozenset({"artikulation", "timbre_authentizitaet", "natuerlichkeit", "authentizitaet"}),
     # TDP/HPSS transient detection: harmonic-percussive separation shifts onset energy profile.
     # artikulation: HPSS alters transient sharpness vs. mixed-domain checkpoint.
     "phase_08": frozenset({"artikulation"}),
@@ -397,6 +400,11 @@ _PHASE_SPECIFIC_DRIFT_EXCLUSIONS: dict[str, frozenset[str]] = {
             # CIG-Drift-Rollback (Reference-Paradox §2.44).
             "brillanz",
             "transparenz",
+            # §2.55-Sync (2026-08-06): De-Esser redistribuiert spektrale Energie im
+            # Sibilanzbereich (4–10 kHz) → K-S-Chroma-Verteilung verschiebt sich →
+            # false P2 tonal_center-Regression (identisch zu PMGG-Rationale, siehe
+            # per_phase_musical_goals_gate.py phase_19).
+            "tonal_center",
         }
     ),  # §2.55 sync (2026-04-26): vocal enhancement Stage 6 micro-compression → crest-factor + RMS periodicity false P3 regressions + brillanz/transparenz §V32-Analogie Sibilanz v10.0.0
     # Harmonic exciter: adds synthetic harmonics → spectral shape diverges from pre-exciter reference.
@@ -987,7 +995,7 @@ class CumulativeInteractionGuard:
                 )
                 # §MONITOR structured CIG_ROLLBACK line — parseable by goal_monitor.py
                 logger.info(
-                    "⚠️ CIG_ROLLBACK phase=%s trigger_goal=%s drift=%+.4f tolerance=%+.4f rollback_to=%s",
+                    "⚠️ CIG_ROLLBACK Verarbeitungsschritt=%s trigger_goal=%s drift=%+.4f tolerance=%+.4f rollback_to=%s",
                     phase_id,
                     _trigger_goal,
                     float(worst_drift),
@@ -1021,7 +1029,7 @@ class CumulativeInteractionGuard:
                 if state.consecutive_rollbacks >= _max_rollbacks:
                     state.should_stop = True
                     logger.warning(
-                        "§2.48 Max consecutive rollbacks (%d) reached — pipeline stop, export on best checkpoint",
+                        "§2.48 Max consecutive rollbacks (%d) reached — pipeline stop, Ausgabe on best checkpoint",
                         _max_rollbacks,
                     )
 
@@ -1039,7 +1047,7 @@ class CumulativeInteractionGuard:
             )
             # §MONITOR structured CIG_ROLLBACK line
             logger.info(
-                "⚠️ CIG_ROLLBACK phase=%s trigger_goal=critical_pair drift=0.0000 tolerance=0.0000 rollback_to=%s",
+                "⚠️ CIG_ROLLBACK Verarbeitungsschritt=%s trigger_goal=critical_pair drift=0.0000 tolerance=0.0000 rollback_to=%s",
                 phase_id,
                 state.best_checkpoint.phase_id if state.best_checkpoint else "pre_pipeline",
             )
@@ -1085,20 +1093,20 @@ class CumulativeInteractionGuard:
             # §v10.303: 5% Hysterese verhindert Rollback bei 0.1ms Überschreitung
             if not gdd_ok and _gdd_measured_ms <= _gdd_threshold * 1.05:
                 logger.info(
-                    "§v10.303 GDD-Hysterese: %.2f ms > threshold %.2f ms aber "
-                    "innerhalb 5%%-Margin → kein Rollback",
-                    _gdd_measured_ms, _gdd_threshold,
+                    "§v10.303 GDD-Hysterese: %.2f ms > Schwelle %.2f ms aber innerhalb 5%%-Margin → kein Rollback",
+                    _gdd_measured_ms,
+                    _gdd_threshold,
                 )
                 gdd_ok = True
             logger.debug(
-                "§2.48 STFT group delay deviation: %.2f ms (threshold: %.1f ms, phase=%s)",
+                "§2.48 STFT group delay deviation: %.2f ms (Schwelle: %.1f ms, Verarbeitungsschritt=%s)",
                 _gdd_measured_ms,
                 _gdd_threshold,
                 phase_id,
             )
             if not gdd_ok:
                 logger.warning(
-                    "§2.48 STFT group delay deviation %.1f ms > threshold %.1f ms after %d STFT phases (%s) → rollback",
+                    "§2.48 STFT group delay deviation %.1f ms > Schwelle %.1f ms after %d STFT phases (%s) → rollback",
                     _gdd_measured_ms,
                     _gdd_threshold,
                     len(state.stft_phases_executed),
@@ -1106,7 +1114,7 @@ class CumulativeInteractionGuard:
                 )
                 # §MONITOR structured CIG_ROLLBACK line
                 logger.info(
-                    "⚠️ CIG_ROLLBACK phase=%s trigger_goal=gdd drift=%+.4f tolerance=%+.4f rollback_to=%s",
+                    "⚠️ CIG_ROLLBACK Verarbeitungsschritt=%s trigger_goal=gdd drift=%+.4f tolerance=%+.4f rollback_to=%s",
                     phase_id,
                     float(-_gdd_measured_ms),
                     float(-_gdd_threshold),
@@ -1232,8 +1240,8 @@ class CumulativeInteractionGuard:
                     _phase_excl = _resolve_phase_specific_drift_exclusions(phase_id)
                     if guard_goal in _phase_excl:
                         logger.debug(
-                            "§2.55 Critical-pair '%s' für %s übersprungen: %s liegt in Phase-Exclusions "
-                            "(§2.44 Reference Paradox — intentionale Divergenz, kein Artefakt)",
+                            "§2.55 Critical-pair '%s' für %s übersprungen: %s liegt in Verarbeitungsschritt-Exclusions "
+                            "(§2.44 Referenz Paradox — intentionale Divergenz, kein Artefakt)",
                             description,
                             phase_id,
                             guard_goal,
@@ -1370,6 +1378,9 @@ class CumulativeInteractionGuard:
         # §v10.303: Deep-analog boost — cassette/tape mit depth≥4 bekommt +30%
         if _is_analog and depth >= 4:
             chain_factor = float(chain_factor * 1.30)
+        # §v10.117 Invariante: depth=5 darf max. 1.75× depth=1 sein (test_cross_depth_validation.py) —
+        # der Deep-Analog-Boost darf diese Obergrenze nicht überschreiten.
+        chain_factor = min(chain_factor, 1.75)
         return base * rest_factor * mat_factor * chain_factor
 
     def _measure_group_delay_ms(
@@ -1453,7 +1464,7 @@ class CumulativeInteractionGuard:
             return True  # too short to measure — pass
 
         logger.debug(
-            "§2.48 STFT group delay deviation: %.2f ms (threshold: %.1f ms, phase=%s)",
+            "§2.48 STFT group delay deviation: %.2f ms (Schwelle: %.1f ms, Verarbeitungsschritt=%s)",
             max_deviation_ms,
             threshold_ms,
             phase_id or "unknown",

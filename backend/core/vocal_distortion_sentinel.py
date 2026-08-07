@@ -76,7 +76,7 @@ class VocalDistortionSentinel:
                 logger.warning(
                     "🎤 Sentinel: Harmonic-Restoration aktiv (singing=%.2f) "
                     "aber KEIN De-Esser — PhaseInteractionDenker sollte "
-                    "phase_19_de_esser + phase_43_ml_deesser injizieren",
+                    "Verarbeitungsschritt_19_de_esser + Verarbeitungsschritt_43_ml_deesser injizieren",
                     self._singing_conf,
                 )
 

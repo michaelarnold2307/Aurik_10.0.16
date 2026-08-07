@@ -132,12 +132,12 @@ class VocosPlugin:
             elif os.path.exists(_MODEL_24K):
                 self._try_load(_MODEL_24K)
             else:
-                logger.warning("Vocos ONNX fehlt (48 kHz + 44 kHz + 24 kHz) — Griffin-Lim-Fallback.")
+                logger.warning("Vocos ONNX fehlt (48 kHz + 44 kHz + 24 kHz) — Griffin-Lim-Ersatzpfad.")
 
     def _try_load(self, path: str) -> None:
         """Versucht ONNX-Modell zu laden; setzt Fallback bei Fehler."""
         if not os.path.exists(path):
-            logger.warning("Vocos ONNX fehlt: %s — Griffin-Lim-Fallback.", path)
+            logger.warning("Vocos ONNX fehlt: %s — Griffin-Lim-Ersatzpfad.", path)
             return
         # ── ML-Budget-Check VOR dem Laden (§5.1 OOM-Schutz) ──────────────────
         _allocated = False
@@ -149,13 +149,13 @@ class VocosPlugin:
                 try:
                     _release("Vocos")
                 except Exception:
-                    logger.warning("vocos_plugin.py::_try_load fallback", exc_info=True)
+                    logger.warning("vocos_plugin.py::_try_laden Ersatzpfad", exc_info=True)
                 if not try_allocate("Vocos", size_gb=0.12):
-                    logger.warning("Vocos: ML-Budget erschöpft — Griffin-Lim-Fallback")
+                    logger.warning("Vocos: ML-Grenze erschöpft — Griffin-Lim-Ersatzpfad")
                     return
             _allocated = True
         except ImportError as _imp_exc:
-            logger.debug("Vocos: ml_memory_budget nicht verfügbar, Budget-Check übersprungen: %s", _imp_exc)
+            logger.debug("Vocos: ml_memory_Grenze nicht verfügbar, Grenze-Pruefung übersprungen: %s", _imp_exc)
         try:
             import onnxruntime as ort
 
@@ -204,14 +204,14 @@ class VocosPlugin:
             except ImportError as _plm_exc:
                 logger.debug("Vocos: PluginLifecycleManager nicht verfügbar, LRU-Tracking deaktiviert: %s", _plm_exc)
         except Exception as exc:
-            logger.warning("Vocos ONNX Fehler: %s — Griffin-Lim-Fallback.", exc)
+            logger.warning("Vocos ONNX Fehler: %s — Griffin-Lim-Ersatzpfad.", exc)
             if _allocated:
                 try:
                     from backend.core.ml_memory_budget import release as _release
 
                     _release("Vocos")
                 except ImportError:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ------------------------------------------------------------------
     # Properties
@@ -237,7 +237,7 @@ class VocosPlugin:
 
             _ml_release("Vocos")
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ------------------------------------------------------------------
     # Statische Hilfsmethoden (auch ohne Instanz nutzbar, §3.2)
@@ -362,7 +362,7 @@ class VocosPlugin:
             _plm = get_plugin_lifecycle_manager()
             _plm.set_active("Vocos", True)
         except Exception:
-            logger.warning("vocos_plugin.py::_synthesize_vocos_onnx fallback", exc_info=True)
+            logger.warning("vocos_plugin.py::_synthesize_vocos_onnx Ersatzpfad", exc_info=True)
         try:
             # 1. Resample auf Modell-SR (bei 48 kHz nativem Modell kein Resampling nötig)
             audio_model = self._resample(audio, sr, model_sr)
@@ -445,7 +445,7 @@ class VocosPlugin:
                 try:
                     _plm.set_active("Vocos", False)
                 except Exception:
-                    logger.warning("vocos_plugin.py::unknown fallback", exc_info=True)
+                    logger.warning("vocos_plugin.py::unknown Ersatzpfad", exc_info=True)
 
     def _synthesize_bigvgan_v2(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, str, float]:
         """BigVGAN v2 Fallback-Synthese (Stufe 1.5, §4.4 SOTA-Matrix März 2026).
@@ -466,10 +466,10 @@ class VocosPlugin:
             out = self._match_length(result_obj.audio, target_len)
             out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
             out = np.clip(out, -1.0, 1.0)
-            logger.info("BigVGAN v2 Fallback erfolgreich (Stufe 1.5).")
+            logger.info("BigVGAN v2 Ersatzpfad erfolgreich (Stufe 1.5).")
             return out, "bigvgan_v2_fallback", 0.90
         except Exception as exc:
-            logger.warning("BigVGAN v2 Fallback fehlgeschlagen: %s — HiFi-GAN wird versucht.", exc)
+            logger.warning("BigVGAN v2 Ersatzpfad fehlgeschlagen: %s — HiFi-GAN wird versucht.", exc)
             return np.clip(audio.astype(np.float32), -1.0, 1.0), "bigvgan_v2_unavailable", 0.0
 
     def _synthesize_hifigan(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, str, float]:
@@ -496,10 +496,10 @@ class VocosPlugin:
             out = self._match_length(out, target_len)
             out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
             out = np.clip(out, -1.0, 1.0)
-            logger.info("HiFi-GAN Fallback erfolgreich.")
+            logger.info("HiFi-GAN Ersatzpfad erfolgreich.")
             return out, "hifigan_fallback", 0.78
         except Exception as exc:
-            logger.warning("HiFi-GAN Fallback fehlgeschlagen: %s — Griffin-Lim wird verwendet.", exc)
+            logger.warning("HiFi-GAN Ersatzpfad fehlgeschlagen: %s — Griffin-Lim wird verwendet.", exc)
             result = np.nan_to_num(audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
             return np.clip(result, -1.0, 1.0), "hifigan_unavailable", 0.40
 
@@ -537,7 +537,7 @@ class VocosPlugin:
             result = self._match_length(result, target_len)
             result = np.clip(result, -1.0, 1.0)
         except Exception as e:
-            logger.warning("Phase-coherent iSTFT Fallback Fehler: %s", e)
+            logger.warning("Verarbeitungsschritt-coherent iSTFT Ersatzpfad Fehler: %s", e)
             result = np.clip(audio.copy(), -1.0, 1.0)
 
         return result, "istft_phase_coherent_fallback", 0.60
@@ -573,7 +573,7 @@ class VocosPlugin:
             mos = 1.0 + 4.0 * sig
             return float(np.clip(mos, 1.0, 5.0))
         except Exception:
-            logger.warning("vocos_plugin.py::_estimate_pqs_mos fallback", exc_info=True)
+            logger.warning("vocos_plugin.py::_estimate_pqs_mos Ersatzpfad", exc_info=True)
             return 3.0
 
     def _mel_snr(self, original: np.ndarray, restored: np.ndarray, _sr: int) -> float:
@@ -593,7 +593,7 @@ class VocosPlugin:
                 return 0.0
             return float(10.0 * math.log10(max(signal_pow / noise_pow, 1e-10)))
         except Exception:
-            logger.warning("vocos_plugin.py::_mel_snr fallback", exc_info=True)
+            logger.warning("vocos_plugin.py::_mel_snr Ersatzpfad", exc_info=True)
             return 0.0
 
     def vocode(self, audio: np.ndarray, sr: int, mode: str = "studio2026") -> "VocosResult":
@@ -639,7 +639,7 @@ class VocosPlugin:
                 if model_name == "hifigan_unavailable":
                     out_audio, model_name, confidence = self._synthesize_istft_phase_coherent(audio, sr)
                     logger.warning(
-                        "Vocos + BigVGAN v2 + HiFi-GAN nicht verfügbar — Phase-coherent iSTFT aktiv (Stufe 3, §4.5)."
+                        "Vocos + BigVGAN v2 + HiFi-GAN nicht verfügbar — Verarbeitungsschritt-coherent iSTFT aktiv (Stufe 3, §4.5)."
                     )
         pqs = self._estimate_pqs_mos(audio, out_audio, sr)
         snr = self._mel_snr(audio, out_audio, sr)

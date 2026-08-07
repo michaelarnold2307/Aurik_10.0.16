@@ -183,10 +183,17 @@ class TestMaterialModifiers:
         assert imp.weights["transparenz"] > 1.0
 
     def test_cd_digital_neutral(self):
+        # §v10.15: estimate_goal_importance() always applies a non-neutral
+        # "restoration_mode" baseline (unless is_studio_2026=True) — comparing
+        # against an absolute 1.0 is wrong. cd_digital's _MATERIAL_WEIGHT_
+        # MODIFIERS entry is genuinely empty {} ("no material modifier"), so the
+        # correct comparison is against the SAME call without material_type
+        # (both get the identical restoration_mode baseline, differing only in
+        # the material dimension — which is absent for both).
         imp = estimate_goal_importance(material_type="cd_digital")
-        # CD digital has no material modifier → should be near-neutral
+        baseline = estimate_goal_importance()
         for g in ALL_GOAL_NAMES:
-            assert 0.95 <= imp.weights[g] <= 1.05
+            assert abs(imp.weights[g] - baseline.weights[g]) < 1e-9
 
 
 # ── Vocal detection ─────────────────────────────────────────────────
@@ -471,7 +478,13 @@ class TestAudioSNR:
         assert imp.weights["natuerlichkeit"] > neutral.weights["natuerlichkeit"]
 
     def test_mid_snr_no_change(self):
-        imp = estimate_goal_importance(snr_db=25.0)
+        # §2.59: kontinuierliche SNR-Kurve statt hartem 15dB-Cutoff — die
+        # Transparenz/Brillanz-Anpassung greift für JEDES snr_db < 30.0,
+        # die Natuerlichkeit/Authentizitaet-Anpassung für JEDES snr_db > 35.0.
+        # 25.0 dB ("mid" unter der alten 15dB-Cutoff-Annahme) liegt unter der
+        # aktuellen 30dB-Schwelle und LÖST die Transparenz-Anpassung AUS.
+        # Ein echter "no change"-Wert muss im neutralen Korridor [30, 35] liegen.
+        imp = estimate_goal_importance(snr_db=32.0)
         neutral = estimate_goal_importance()
         for g in ALL_GOAL_NAMES:
             assert abs(imp.weights[g] - neutral.weights[g]) < 0.001
@@ -527,7 +540,10 @@ class TestAudioBPM:
 
 class TestAudioDefects:
     def test_noise_defect_boosts_transparenz(self):
-        imp = estimate_goal_importance(defect_severities={"broadband_noise": 0.8})
+        # §2.59: defect_severities-Keys sind an DefectType.name.lower() gebunden.
+        # "broadband_noise" existiert nicht als DefectType — kanonischer Name
+        # fuer Rausch-Defekte in der _noise_sev-Pruefung ist "high_freq_noise".
+        imp = estimate_goal_importance(defect_severities={"high_freq_noise": 0.8})
         neutral = estimate_goal_importance()
         assert imp.weights["transparenz"] > neutral.weights["transparenz"]
 
@@ -537,7 +553,9 @@ class TestAudioDefects:
         assert imp.weights["groove"] > neutral.weights["groove"]
 
     def test_hf_loss_defect_reduces_brillanz(self):
-        imp = estimate_goal_importance(defect_severities={"hf_loss": 0.8})
+        # §2.59: kanonischer Name ist "bandwidth_loss" (DefectType.BANDWIDTH_LOSS),
+        # nicht "hf_loss" — letzteres ist kein DefectType-Wert.
+        imp = estimate_goal_importance(defect_severities={"bandwidth_loss": 0.8})
         neutral = estimate_goal_importance()
         assert imp.weights["brillanz"] < neutral.weights["brillanz"]
 
@@ -572,7 +590,9 @@ class TestAudioCombinedWithLabels:
             snr_db=14.3,
             effective_bandwidth_hz=12000.0,
             bpm=120.0,
-            defect_severities={"broadband_noise": 0.4, "crackle": 0.6},
+            # §2.59: "broadband_noise" ist kein DefectType-Wert — kanonisch ist
+            # "high_freq_noise" (siehe _noise_sev in song_goal_importance.py).
+            defect_severities={"high_freq_noise": 0.4, "crackle": 0.6},
         )
         # Waerme still prioritised (genre+era+material) but soft-capped
         assert imp.weights["waerme"] > 1.2
@@ -580,8 +600,9 @@ class TestAudioCombinedWithLabels:
         # All within bounds
         for g in ALL_GOAL_NAMES:
             assert _WEIGHT_MIN <= imp.weights[g] <= _WEIGHT_MAX
-        # Reason should mention audio features
-        assert "snr_low" in imp.reason
+        # Reason should mention audio features — actual format is
+        # "snr(14dB→transparenz×1.23)", not the literal substring "snr_low".
+        assert "snr(" in imp.reason
         assert "schlager" in imp.reason.lower() or "genre" in imp.reason.lower()
 
 

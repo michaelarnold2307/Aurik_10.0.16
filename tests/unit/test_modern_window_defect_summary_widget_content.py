@@ -40,7 +40,7 @@ def test_defect_summary_success_text_is_rendered() -> None:
     rr = SimpleNamespace(winning_variant=None)
 
     ModernMainWindow._apply_quality_defect_summary_and_footer(
-        w,
+        w,  # type: ignore[arg-type]
         restoration_result=rr,
         degradation_status="ok",
         fail_reason="",
@@ -71,7 +71,7 @@ def test_defect_summary_passthrough_text_is_rendered() -> None:
     rr = SimpleNamespace(winning_variant="clean_digital_pass_through")
 
     ModernMainWindow._apply_quality_defect_summary_and_footer(
-        w,
+        w,  # type: ignore[arg-type]
         restoration_result=rr,
         degradation_status="ok",
         fail_reason="",
@@ -102,7 +102,7 @@ def test_degraded_status_updates_footer_with_error_code() -> None:
     rr = SimpleNamespace(winning_variant=None)
 
     ModernMainWindow._apply_quality_defect_summary_and_footer(
-        w,
+        w,  # type: ignore[arg-type]
         restoration_result=rr,
         degradation_status="degraded",
         fail_reason="Artifact-Freedom unterschritten",

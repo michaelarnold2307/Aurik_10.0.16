@@ -113,7 +113,7 @@ def test_07_apply_to_audio_shape():
     era = _mock_era()
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _audio(5.0)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     assert out.shape == audio.shape
 
 
@@ -124,7 +124,7 @@ def test_08_apply_to_audio_no_nan():
     era = _mock_era()
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _audio(5.0)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     assert np.isfinite(out).all()
 
 
@@ -135,7 +135,7 @@ def test_09_apply_to_audio_not_clipped():
     era = _mock_era()
     anchor = ras.synthesize(era, "jazz", "vinyl")
     audio = _audio(5.0)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     assert np.max(np.abs(out)) <= 1.0 + 1e-5
 
 
@@ -162,7 +162,7 @@ def test_12_silence_no_crash():
     era = _mock_era()
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _silence(5.0)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     assert np.isfinite(out).all()
 
 
@@ -205,7 +205,7 @@ def test_16_assert_sr():
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _audio(5.0)
     with pytest.raises((AssertionError, ValueError)):
-        ras.apply_to_audio(audio, 44100, anchor)
+        ras.apply_to_audio(audio, 44100, anchor)  # type: ignore[arg-type]
 
 
 def test_17_consistent_anchor():
@@ -225,8 +225,8 @@ def test_18_consistent_apply():
     era = _mock_era()
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _audio(5.0)
-    out1 = ras.apply_to_audio(audio.copy(), SR, anchor)
-    out2 = ras.apply_to_audio(audio.copy(), SR, anchor)
+    out1 = ras.apply_to_audio(audio.copy(), SR, anchor)  # type: ignore[arg-type]
+    out2 = ras.apply_to_audio(audio.copy(), SR, anchor)  # type: ignore[arg-type]
     np.testing.assert_array_almost_equal(out1, out2, decimal=4)
 
 
@@ -237,7 +237,7 @@ def test_19_apply_float64():
     era = _mock_era()
     anchor = ras.synthesize(era, "pop", "tape")
     audio = _audio(5.0).astype(np.float64)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     assert np.isfinite(out).all()
 
 
@@ -249,7 +249,7 @@ def test_20_max_eq_limited():
     era = _mock_era()
     anchor = ras.synthesize(era, "schlager", "tape")
     audio = _audio(5.0)
-    out = ras.apply_to_audio(audio, SR, anchor)
+    out = ras.apply_to_audio(audio, SR, anchor)  # type: ignore[arg-type]
     rms_in = np.sqrt(np.mean(audio**2))
     rms_out = np.sqrt(np.mean(out**2))
     if rms_in > 1e-8 and rms_out > 1e-8:

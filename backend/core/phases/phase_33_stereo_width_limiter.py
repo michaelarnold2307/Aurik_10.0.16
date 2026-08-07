@@ -695,7 +695,7 @@ if __name__ == "__main__":
     logger.debug("\nTest Audio: %ss @ %s Hz (stereo)", demo_duration, demo_sr)
     logger.debug("Multi-frequency content with excessive stereo width:")
     logger.debug("  Mid: 100Hz + 440Hz + 2kHz + 10kHz + noise")
-    logger.debug("  Side: Same frequencies with phase shifts (slightly louder)")
+    logger.debug("  Side: Same frequencies with Verarbeitungsschritt shifts (slightly louder)")
     logger.debug("Simulates: Over-wide stereo requiring limiting (realistic scenario)")
 
     # Test with different materials
@@ -715,7 +715,7 @@ if __name__ == "__main__":
         result = phase.process(demo_audio, demo_sr, test_material)  # type: ignore[arg-type]
 
         if result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2fx realtime)",
                 result.execution_time_seconds,
@@ -746,7 +746,7 @@ if __name__ == "__main__":
                 result.metrics["band_3_width_limit"],
                 result.metrics["band_3_reduction_db"],
             )
-            logger.debug("\n   Soft-Knee Threshold: %.2f", result.modifications["soft_knee_threshold"])
+            logger.debug("\n   Soft-Knee Schwelle: %.2f", result.modifications["soft_knee_threshold"])
             logger.debug("   Transient Preservation: %.2f", result.modifications["transient_preservation"])
             logger.debug(
                 "   Attack/Release: %.0fms / %.0fms",
@@ -755,10 +755,10 @@ if __name__ == "__main__":
             )
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Stereo Width Limiter v2.0 Test Complete!")
+    logger.debug("✅ Professional Stereo Width Limiter v2.0 Test vollstaendig!")
     logger.debug("=" * 80)
     logger.debug("Algorithm: psychoacoustic_multiband_limiting_v2")
-    logger.debug("Scientific Reference: Blumlein (1931), Fletcher & Munson (1933),")
+    logger.debug("Scientific Referenz: Blumlein (1931), Fletcher & Munson (1933),")
     logger.debug("                     Haas (1951), Zwicker (1961), Gerzon (1985, 1992),")
     logger.debug("                     ITU-R BS.775, EBU R128, Rumsey (2001)")
     logger.debug("Benchmark: iZotope Ozone Imager, Brainworx bx_control V2, Waves S1,")

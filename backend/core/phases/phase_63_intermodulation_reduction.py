@@ -228,7 +228,7 @@ def apply(
     if defect_scores is not None:
         imd_score = float(defect_scores.get("intermodulation_distortion", 0.0))
         if imd_score < min_imd_score:
-            logger.debug("Phase 63: IMD score %.3f < %.3f — skipped", imd_score, min_imd_score)
+            logger.debug("Verarbeitungsschritt 63: IMD Wert %.3f < %.3f — uebersprungen", imd_score, min_imd_score)
             return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     stereo = audio.ndim == 2
@@ -380,6 +380,7 @@ class IntermodulationReductionPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -407,6 +408,7 @@ class IntermodulationReductionPhase(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -494,7 +496,7 @@ class IntermodulationReductionPhase(PhaseInterface):
         if _imd_score_63 < _imd_threshold_63:
             _passthrough_63 = np.clip(np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             logger.debug(
-                "Phase 63: IMD %.3f < material-adaptive threshold %.3f (%s) → skip",
+                "Verarbeitungsschritt 63: IMD %.3f < material-adaptive Schwelle %.3f (%s) → ueberspringen",
                 _imd_score_63,
                 _imd_threshold_63,
                 _mat_str_63 or "unknown",
@@ -550,7 +552,7 @@ class IntermodulationReductionPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase63 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt63 masking clamp nicht blockierend: %s", _pm_exc)
 
         # V20 Mikrodynamik-Korrelation (§2.75): IMD-Notch-Filterung darf voiced Frames
         # nicht in ihrer Frame-Energie degradieren (panns_singing ≥ 0.25).
@@ -568,12 +570,12 @@ class IntermodulationReductionPhase(PhaseInterface):
                     _wet63 = recommend_mikrodynamik_wet(_corr63, _panns63, global_need=_need63)
                     result_audio = (_wet63 * result_audio + (1.0 - _wet63) * audio).astype(np.float32)
                     logger.warning(
-                        "Phase63 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                        "Verarbeitungsschritt63 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
                         _corr63,
                         _wet63,
                     )
             except Exception as _dyn63_exc:
-                logger.debug("Phase63 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn63_exc)
+                logger.debug("Verarbeitungsschritt63 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn63_exc)
 
         # V26 Onset-Guard (§2.77): IMD-Notch-Filterung darf Transient-Energie in Onset-
         # Fenstern (0–20 ms nach Transient) nicht um mehr als 1.5 dB verschieben.
@@ -584,7 +586,7 @@ class IntermodulationReductionPhase(PhaseInterface):
 
             result_audio = apply_onset_protection_mask(audio, result_audio, None, max_delta_db=1.5)
         except Exception as _on63_exc:
-            logger.debug("Phase63 V26 Onset-Guard (non-blocking): %s", _on63_exc)
+            logger.debug("Verarbeitungsschritt63 V26 Onset-Guard (nicht blockierend): %s", _on63_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — IMD-Notch-Filtering darf
         # Atemgeräusche (Inter-Phrasen-Energie) und Vibrato-Segmente nicht tilgen.
@@ -612,7 +614,7 @@ class IntermodulationReductionPhase(PhaseInterface):
                 elif result_audio.ndim == 1 and audio.ndim == 1:
                     result_audio[_npa_m63] = audio[_npa_m63]
         except Exception as _npa63_exc:
-            logger.debug("§2.46f phase_63 NPA-Guard (non-blocking): %s", _npa63_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_63 NPA-Guard (nicht blockierend): %s", _npa63_exc)
 
         # §V19 Noise-Textur-Invariante (VERBOTEN-V19): Residual bewahrt Materialcharakter
         _mat63_str = str(material_type or "unknown").lower()
@@ -627,9 +629,9 @@ class IntermodulationReductionPhase(PhaseInterface):
                 )
                 if _nt63_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_63 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt63_d)
+                    logger.warning("§V19 Verarbeitungsschritt_63 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt63_d)
         except Exception as _nt63_exc:
-            logger.debug("§V19 phase_63 noise_texture_guard (non-blocking): %s", _nt63_exc)
+            logger.debug("§V19 Verarbeitungsschritt_63 noise_texture_guard (nicht blockierend): %s", _nt63_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -642,7 +644,7 @@ class IntermodulationReductionPhase(PhaseInterface):
                 if not _sc63.ok:
                     result_audio = (0.70 * result_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc63_exc:
-            logger.debug("§V24 phase_63 spectral_color_guard (non-blocking): %s", _sc63_exc)
+            logger.debug("§V24 Verarbeitungsschritt_63 spectral_color_guard (nicht blockierend): %s", _sc63_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

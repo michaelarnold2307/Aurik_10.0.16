@@ -46,8 +46,8 @@ class TestExperienceMetadataFields:
                 }
             ],
         }
-        assert recs["count"] == len(recs["recommendations"])
-        for rec in recs["recommendations"]:
+        assert recs["count"] == len(recs["recommendations"])  # type: ignore[arg-type]
+        for rec in recs["recommendations"]:  # type: ignore[attr-defined]
             assert "focus" in rec
             assert "action" in rec
             assert "reason" in rec
@@ -440,7 +440,7 @@ class TestTeamCoordinationPropagation:
             ],
             "phase_type_summary": {"restorative": 3, "reconstructive": 2},
         }
-        assert tc["event_count"] >= 0
+        assert tc["event_count"] >= 0  # type: ignore[operator]
         assert isinstance(tc["events"], list)
         assert isinstance(tc["phase_type_summary"], dict)
 

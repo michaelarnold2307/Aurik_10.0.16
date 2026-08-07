@@ -116,7 +116,7 @@ class TestSaveCheckpoint:
             quality_estimate=0.42,
             musical_goals={"brillanz": 0.87, "waerme": 0.82},
         )
-        with open(result) as f:
+        with open(result) as f:  # type: ignore[arg-type]
             data = json.load(f)
 
         assert data["input_path"] == "/tmp/song.mp3"
@@ -291,7 +291,7 @@ class TestLoadCheckpointAudio:
             mode="quality",
             defect_result=_FakeDefectResult(),
         )
-        with open(result) as f:
+        with open(result) as f:  # type: ignore[arg-type]
             data = json.load(f)
         cp = RecoveryCheckpoint(**{k: v for k, v in data.items() if k in RecoveryCheckpoint.__dataclass_fields__})
 

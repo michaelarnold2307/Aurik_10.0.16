@@ -112,7 +112,9 @@ class SongStructureAnalyzer:
         try:
             return self._analyze_librosa(audio, sr, panns_singing_confidence)
         except Exception as exc:
-            logger.warning("SongStructureAnalyzer.analyze_structure failed: %s — Fallback: single segment", exc)
+            logger.warning(
+                "SongStructureAnalyzer.analyze_structure fehlgeschlagen: %s — Ersatzpfad: single segment", exc
+            )
             duration_s = len(audio[0] if audio.ndim == 2 else audio) / sr
             return [
                 SongSegment(
@@ -236,7 +238,7 @@ class SongStructureAnalyzer:
             # Vokal typisch: flatness < 0.15 UND globalem PANNs-Vertrauen
             return flatness < 0.20 and panns_confidence >= 0.20
         except Exception as e:
-            logger.warning("song_structure_analyzer.py::_estimate_vocal_activity fallback: %s", e)
+            logger.warning("song_structure_analyzer.py::_estimate_vocal_activity Ersatzpfad: %s", e)
             return panns_confidence >= 0.35
 
     def _assign_label(

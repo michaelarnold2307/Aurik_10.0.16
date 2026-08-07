@@ -82,7 +82,7 @@ class GlobalGainBudget:
             self._total_budget_db = float(max(self._total_budget_db, min(self._total_budget_db * snr_factor, 24.0)))
 
         logger.info(
-            "§GGB-1: chain-depth=%d snr=%.1fdB mat=%s → total budget = %.1f dB",
+            "§GGB-1: chain-depth=%d snr=%.1fdB mat=%s → total Grenze = %.1f dB",
             depth,
             snr,
             material,
@@ -103,7 +103,7 @@ class GlobalGainBudget:
             new_budget = float(max(self._total_budget_db, min(self._total_budget_db * snr_factor, 24.0)))
             if new_budget > self._total_budget_db:
                 logger.info(
-                    "§GGB-1 SNR-adapt: snr=%.1fdB mat=%s → budget %.1f→%.1f dB (×%.2f)",
+                    "§GGB-1 SNR-adapt: snr=%.1fdB mat=%s → Grenze %.1f→%.1f dB (×%.2f)",
                     snr,
                     material,
                     self._total_budget_db,

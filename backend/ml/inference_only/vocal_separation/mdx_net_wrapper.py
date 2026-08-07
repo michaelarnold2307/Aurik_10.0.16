@@ -57,7 +57,7 @@ class MDXNetSeparator:
         # Device selection — §9.5 Aurik 10.0.0 nutzt ausschließlich CPU. Kein CUDA.
         self.device = "cpu"
 
-        logger.info("MDXNetSeparator initialized on %s", self.device)
+        logger.info("MDXNetSeparator initialisiert on %s", self.device)
 
         # Model loading (placeholder - requires actual MDX-Net model)
         _raw_path = model_path or self._get_default_model_path()
@@ -93,17 +93,17 @@ class MDXNetSeparator:
         3. Load with onnxruntime or PyTorch
         """
         if not self.model_path.exists():
-            logger.warning("MDX-Net model not available. Using fallback mode.")
+            logger.warning("MDX-Net model not verfuegbar. Using Ersatzpfad Betriebsart.")
             return None
 
         try:
             # Placeholder for actual model loading
             # import onnxruntime as ort
             # session = ort.InferenceSession(str(self.model_path))
-            logger.info("MDX-Net model loaded from %s", self.model_path)
+            logger.info("MDX-Net model geladen from %s", self.model_path)
             return None  # Placeholder
         except Exception as e:
-            logger.error("Failed to load MDX-Net model: %s", e)
+            logger.error("konnte nicht laden MDX-Net model: %s", e)
             return None
 
     def separate(self, audio: np.ndarray, sr: int | None = None, return_stems: bool = True) -> dict[str, np.ndarray]:
@@ -144,7 +144,7 @@ class MDXNetSeparator:
 
         # Actual separation (placeholder)
         if self.model is None:
-            logger.warning("MDX-Net model unavailable. Using simple spectral mask.")
+            logger.warning("MDX-Net model nicht verfuegbar. Using simple spectral mask.")
             vocals, instrumental = self._fallback_separation(audio)
         else:
             vocals, instrumental = self._mdx_net_inference(audio)
@@ -161,9 +161,9 @@ class MDXNetSeparator:
 
         if nebenwirkungen["severity"] > 0.3:
             logger.warning(
-                "Separation nebenwirkungen detected: "
+                "Separation nebenwirkungen erkannt: "
                 f"stereo_width_loss={nebenwirkungen['stereo_width_loss']:.2f}, "
-                f"phase_correlation_loss={nebenwirkungen['phase_loss']:.2f}"
+                f"Verarbeitungsschritt_correlation_loss={nebenwirkungen['phase_loss']:.2f}"
             )
 
         # Return stems
@@ -179,7 +179,7 @@ class MDXNetSeparator:
 
         Simple harmonic-percussive separation as baseline.
         """
-        logger.info("Using fallback HPSS for separation")
+        logger.info("Using Ersatzpfad HPSS for separation")
 
         # Process each channel
         vocals_stereo = []
@@ -276,7 +276,7 @@ class MDXNetSeparator:
                 return 1.0
             # Simplified: cross-correlation peak
             xcorr = np.correlate(audio[0], audio[1], mode="valid")
-            return np.max(np.abs(xcorr)) / (np.linalg.norm(audio[0]) * np.linalg.norm(audio[1]) + 1e-10)
+            return np.max(np.abs(xcorr)) / (np.linalg.norm(audio[0]) * np.linalg.norm(audio[1]) + 1e-10)  # type: ignore[no-any-return]
 
         # NaN/Inf-Guard
         phase_original = phase_correlation(original)

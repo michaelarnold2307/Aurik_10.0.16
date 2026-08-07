@@ -346,7 +346,7 @@ class MasteringPolishPhase(PhaseInterface):
                 _p17_sat_scale = 0.40
             _strength = float(_strength * _p17_sat_scale)
             logger.debug(
-                "Phase 17 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
+                "Verarbeitungsschritt 17 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
                 _p17_soft_sat_sev,
                 _p17_soft_sat_preserve,
                 _p17_sat_scale,
@@ -362,7 +362,7 @@ class MasteringPolishPhase(PhaseInterface):
             _vp_scale_17 = float(np.clip(1.0 - 0.40 * _vp_strength_17, 0.60, 1.0))
             _strength = float(_strength * _vp_scale_17)
             logger.debug(
-                "Phase 17: vocal_presence_active → strength_scale=%.2f (vp_strength=%.2f)",
+                "Verarbeitungsschritt 17: vocal_presence_active → strength_scale=%.2f (vp_strength=%.2f)",
                 _vp_scale_17,
                 _vp_strength_17,
             )
@@ -442,7 +442,9 @@ class MasteringPolishPhase(PhaseInterface):
                     mastered[0, :] = _lo
                     mastered[1, :] = _ro
             except Exception as _e:
-                logger.debug("phase_phase_17_mastering_polish: non-critical exception: %s", _e)
+                logger.debug(
+                    "Verarbeitungsschritt_Verarbeitungsschritt_17_mastering_polish: unkritisch exception: %s", _e
+                )
 
         return PhaseResult(
             success=True,
@@ -475,7 +477,7 @@ class MasteringPolishPhase(PhaseInterface):
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
             logger.debug(
-                "phase_17: audio too short (%d < %d), returning passthrough bands",
+                "Verarbeitungsschritt_17: audio too short (%d < %d), returning passthrough bands",
                 len(audio),
                 MIN_AUDIO_SAMPLES,
             )
@@ -518,7 +520,7 @@ class MasteringPolishPhase(PhaseInterface):
         Wendet Multi-Band Parametric EQ an — mit §v10 Spectrum-Aware Adaptation.
         """
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        eq_config = self.MASTERING_EQ.get(_mk, self.MASTERING_EQ[MaterialType.VINYL])
+        eq_config = self.MASTERING_EQ.get(_mk, self.MASTERING_EQ[MaterialType.VINYL])  # type: ignore[call-overload]
 
         # ── §v10 Spectrum-Aware: Messe IST-Spektrum vor EQ ────────────
         # Das Material-Template ist der AUSGANGSPUNKT. Der tatsächliche
@@ -594,7 +596,7 @@ class MasteringPolishPhase(PhaseInterface):
         Wendet Multi-Band Transient Enhancement an (Attack/Sustain Shaping).
         """
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = self.TRANSIENT_ENHANCEMENT.get(_mk, self.TRANSIENT_ENHANCEMENT[MaterialType.VINYL])
+        config = self.TRANSIENT_ENHANCEMENT.get(_mk, self.TRANSIENT_ENHANCEMENT[MaterialType.VINYL])  # type: ignore[call-overload]
         attack_multipliers = config["attack"]
         sustain_multipliers = config["sustain"]
 
@@ -662,7 +664,7 @@ class MasteringPolishPhase(PhaseInterface):
         Wendet Harmonic Excitation (Saturation) an.
         """
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        strength = self.HARMONIC_ENHANCEMENT.get(_mk, self.HARMONIC_ENHANCEMENT[MaterialType.VINYL])
+        strength = self.HARMONIC_ENHANCEMENT.get(_mk, self.HARMONIC_ENHANCEMENT[MaterialType.VINYL])  # type: ignore[call-overload]
 
         # §v10 Harmonic-Aware: Messe vorhandene Sättigung vor Enhancement.
         # Ein bereits gesättigter Song (z.B. verzerrte Gitarre) braucht
@@ -674,7 +676,7 @@ class MasteringPolishPhase(PhaseInterface):
         logger.debug(
             "§v10 Harmonic-Aware: material=%s template=%.2f existing_sat=%.2f scale=%.2f final=%.2f",
             material.name if hasattr(material, "name") else str(material),
-            self.HARMONIC_ENHANCEMENT.get(_mk, 0.25),
+            self.HARMONIC_ENHANCEMENT.get(_mk, 0.25),  # type: ignore[call-overload]
             _existing_saturation,
             _harmonic_scale,
             strength,
@@ -742,7 +744,7 @@ class MasteringPolishPhase(PhaseInterface):
         Wendet Stereo Width Enhancement an (Mid/Side Processing).
         """
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        width = self.STEREO_WIDTH.get(_mk, self.STEREO_WIDTH[MaterialType.VINYL])
+        width = self.STEREO_WIDTH.get(_mk, self.STEREO_WIDTH[MaterialType.VINYL])  # type: ignore[call-overload]
         width = 1.0 + (width - 1.0) * strength  # Scale towards neutral by PMGG strength
 
         if abs(width - 1.0) < 0.01:
@@ -798,7 +800,7 @@ class MasteringPolishPhase(PhaseInterface):
 
         # 2. True Peak Safety Limiter (nur wenn über Target)
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        target_db = self.TARGET_LEVEL_DB.get(_mk, -0.5)
+        target_db = self.TARGET_LEVEL_DB.get(_mk, -0.5)  # type: ignore[call-overload]
         ceiling_linear = 10 ** (target_db / 20)
 
         current_peak = np.abs(polished).max()
@@ -866,7 +868,7 @@ if __name__ == "__main__":
     # Test der MasteringPolishPhase.
 
     logger.debug("=" * 80)
-    logger.debug("Phase 17: Professional Mastering Polish v2.0")
+    logger.debug("Verarbeitungsschritt 17: Professional Mastering Polish v2.0")
     logger.debug("=" * 80)
 
     _test_sr = 44100
@@ -913,7 +915,7 @@ if __name__ == "__main__":
         result = phase.process(test_audio_stereo, _test_sr, _test_mat)
 
         if result.success:
-            logger.debug("\n✅ Professional Mastering Chain Complete:")
+            logger.debug("\n✅ Professional Mastering Chain vollstaendig:")
             logger.debug("   RMS Change: %.2f dB", result.metrics["rms_change_db"])
             logger.debug(
                 "   Peak: %.1f \u2192 %.1f dBFS",
@@ -924,7 +926,7 @@ if __name__ == "__main__":
             # Pipeline Details
             pm = result.metadata["pipeline_metrics"]
 
-            logger.debug("\n   Pipeline Stage Details:")
+            logger.debug("\n   Pipeline Stufe Details:")
 
             # 1. EQ
             if "eq" in pm:

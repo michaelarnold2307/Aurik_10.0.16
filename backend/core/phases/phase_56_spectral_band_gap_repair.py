@@ -89,7 +89,7 @@ try:
     _LIBROSA_OK = True
 except ImportError:
     _LIBROSA_OK = False
-    logger.warning("⚠️ SOTA Phase 56: librosa nicht verfügbar — DSP-Fallback für f₀-Schätzung aktiv")
+    logger.warning("⚠️ SOTA Verarbeitungsschritt 56: librosa nicht verfügbar — DSP-Ersatzpfad für f₀-Schätzung aktiv")
 
 try:
     from plugins.fcpe_plugin import get_fcpe_plugin as _get_pitch_plugin
@@ -103,7 +103,7 @@ except Exception:
     except Exception:
         _CREPE_OK = False
         _get_pitch_plugin = None  # type: ignore[assignment]
-        logger.debug("FCPE/CREPE nicht verfügbar — pYIN-Fallback aktiv")
+        logger.debug("FCPE/CREPE nicht verfügbar — pYIN-Ersatzpfad aktiv")
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +168,7 @@ def _estimate_f0(mono: np.ndarray, sr: int) -> float | None:
         if len(voiced) > 5:
             return float(np.median(voiced[voiced > 20.0]))
     except Exception as exc:
-        logger.debug("FCPE f0 estimation failed: %s", exc)
+        logger.debug("FCPE f0 estimation fehlgeschlagen: %s", exc)
     finally:
         if _plm56_fcpe is not None:
             try:
@@ -194,7 +194,7 @@ def _estimate_f0(mono: np.ndarray, sr: int) -> float | None:
         if len(voiced) > 5:
             return float(np.median(voiced[voiced > 20.0]))
     except Exception as exc:
-        logger.debug("RMVPE f0 estimation failed: %s", exc)
+        logger.debug("RMVPE f0 estimation fehlgeschlagen: %s", exc)
     finally:
         if _plm56_rmvpe is not None:
             try:
@@ -213,7 +213,7 @@ def _estimate_f0(mono: np.ndarray, sr: int) -> float | None:
         if len(voiced) > 5:
             return float(np.median(voiced[voiced > 20.0]))
     except Exception as exc:
-        logger.debug("PESTO f0 estimation failed: %s", exc)
+        logger.debug("PESTO f0 estimation fehlgeschlagen: %s", exc)
 
     # Tier-2: pYIN über librosa
     if _LIBROSA_OK:
@@ -430,11 +430,15 @@ def _pghi_phase_reconstruction(mag: np.ndarray, n_fft: int, hop: int) -> np.ndar
             _phase_out = np.angle(_stft_r).astype(np.float32)
         # Ensure shape matches input
         if _phase_out.shape == mag.shape:
-            logger.debug("Phase 56: PGHI via PghiReconstructor (dsp/pghi.py) — n_fft=%d hop=%d", n_fft, hop)
+            logger.debug(
+                "Verarbeitungsschritt 56: PGHI via PghiReconstructor (dsp/pghi.py) — n_fft=%d hop=%d", n_fft, hop
+            )
             return _phase_out  # type: ignore[no-any-return]
-        logger.debug("Phase 56: PGHI shape mismatch (%s vs %s), IF-Fallback", _phase_out.shape, mag.shape)
+        logger.debug(
+            "Verarbeitungsschritt 56: PGHI shape mismatch (%s vs %s), IF-Ersatzpfad", _phase_out.shape, mag.shape
+        )
     except Exception as _pghi_import_exc:
-        logger.debug("PghiReconstructor nicht verfügbar, IF-Fallback: %s", _pghi_import_exc)
+        logger.debug("PghiReconstructor nicht verfügbar, IF-Ersatzpfad: %s", _pghi_import_exc)
 
     # Fallback: Instantaneous Frequency estimation
     n_bins, n_frames = mag.shape
@@ -477,7 +481,7 @@ def _nmf_beta_refine(
     try:
         from sklearn.decomposition import NMF as _NMF
     except ImportError:
-        logger.warning("⚠️ SOTA Phase 56: sklearn nicht verfügbar — NMF-Verfeinerung deaktiviert")
+        logger.warning("⚠️ SOTA Verarbeitungsschritt 56: sklearn nicht verfügbar — NMF-Verfeinerung deaktiviert")
         return stft_mag
 
     n_bins, n_frames = stft_mag.shape
@@ -696,7 +700,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                     s = int(max(0.0, float(loc[0])) * sample_rate)
                     e = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
-                    logger.debug("_build_locality_profile: silent except suppressed", exc_info=True)
+                    logger.debug("_build_locality_Profil: silent except suppressed", exc_info=True)
                     continue
                 if e <= s:
                     continue
@@ -749,7 +753,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
 
             _get_plm_evict56().evict_for_phase("phase_56_spectral_band_gap_repair")
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -771,7 +775,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                     _zone_frac_56 = float(np.clip(_zone_s_56 / max(1, _n_s_56), 0.0, 1.0))
                     effective_strength = float(np.clip(effective_strength + _zone_frac_56 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_56:
-                logger.debug("Phase56 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_56)
+                logger.debug("Verarbeitungsschritt56 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_56)
 
         if effective_strength <= 1e-6:
             return create_phase_result(
@@ -936,7 +940,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                     else:
                         out[_npa_mask56] = audio[_npa_mask56]
             except Exception as _npa56_exc:
-                logger.debug("§2.46f Phase56 NPA-Guard (non-blocking): %s", _npa56_exc)
+                logger.debug("§2.46f Verarbeitungsschritt56 NPA-Guard (nicht blockierend): %s", _npa56_exc)
             # §2.46e Hallucination-Guard (Restoration-Modus only)
             try:
                 _mode56 = str(kwargs.get("mode", "restoration")).lower()
@@ -953,20 +957,20 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                     )
                     if _hg_result56.requires_rollback:
                         logger.debug(
-                            "§2.46e Phase56 Hallucination rollback: spectral_novelty=%.3f",
+                            "§2.46e Verarbeitungsschritt56 Hallucination rollback: spectral_novelty=%.3f",
                             _hg_result56.spectral_novelty,
                         )
                         out = audio.copy()
                     if _hg_result56.score_penalty > 0:
                         logger.info(
-                            "§2.46e Phase56 score_penalty=%.1f (spectral_novelty=%.3f)",
+                            "§2.46e Verarbeitungsschritt56 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                             _hg_result56.score_penalty,
                             _hg_result56.spectral_novelty,
                         )
             except Exception as _hg56_exc:
-                logger.debug("§2.46e Phase56 Hallucination-Guard (non-blocking): %s", _hg56_exc)
+                logger.debug("§2.46e Verarbeitungsschritt56 Hallucination-Guard (nicht blockierend): %s", _hg56_exc)
         except Exception as _guard56_exc:
-            logger.debug("§2.46f/§2.46e Phase56 guards (non-blocking): %s", _guard56_exc)
+            logger.debug("§2.46f/§2.46e Verarbeitungsschritt56 guards (nicht blockierend): %s", _guard56_exc)
 
         elapsed = __import__("time").time() - t_start
         logger.info(
@@ -1025,7 +1029,9 @@ class SpectralBandGapRepairPhase(PhaseInterface):
             _, _, Zxx_in = signal.stft(audio_in, sr, nperseg=REF_WIN, noverlap=REF_WIN - REF_HOP)
             _, _, Zxx_out = signal.stft(audio_out, sr, nperseg=REF_WIN, noverlap=REF_WIN - REF_HOP)
         except Exception as e:
-            logger.warning("phase_56_spectral_band_gap_repair.py::_mrsa_gain_refinement fallback: %s", e)
+            logger.warning(
+                "Verarbeitungsschritt_56_spectral_band_gap_repair.py::_mrsa_gain_refinement Ersatzpfad: %s", e
+            )
             return audio_out
 
         n_freq = Zxx_in.shape[0]
@@ -1088,7 +1094,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                 np.asarray(Zxx_refined, dtype=np.complex64), sr, nperseg=REF_WIN, noverlap=REF_WIN - REF_HOP
             )
         except Exception as e:
-            logger.warning("phase_56_spectral_band_gap_repair.py::unbekannter Fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_56_spectral_band_gap_repair.py::unbekannter Ersatzpfad: %s", e)
             return audio_out
 
         if len(result) < n:
@@ -1173,7 +1179,7 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                                     _gauss = math.exp(-0.5 * (_db / 1.5) ** 2)
                                     stft_mag[_b] = stft_mag[_b] * (1.0 + 0.15 * _gauss)
                 except Exception as _formant_exc:
-                    logger.debug("Formant-guided band gap repair failed, using standard fill: %s", _formant_exc)
+                    logger.debug("Formant-guided band gap repair fehlgeschlagen, using standard fill: %s", _formant_exc)
 
             # Spectral Flatness prüfen
             gap_region = stft_mag[gap_low:gap_high, :]

@@ -97,6 +97,6 @@ class CDDeemphasis:
         a = np.array([1.0, a1 / a0])
         if audio.ndim == 1:
             out = lfilter(b, a, audio)
-            return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(audio.dtype)
+            return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
         out = np.stack([lfilter(b, a, ch) for ch in audio], axis=0)
-        return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(audio.dtype)
+        return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]

@@ -603,7 +603,7 @@ class RepairDynamicsGuard:
             try:
                 return float(self._guard_wisdom.adaptive_threshold(guard_name, base))
             except Exception as e:
-                logger.warning("repair_dynamics_guard.py::_adaptive_threshold fallback: %s", e)
+                logger.warning("repair_dynamics_guard.py::_adaptive_Schwelle Ersatzpfad: %s", e)
         return base
 
 

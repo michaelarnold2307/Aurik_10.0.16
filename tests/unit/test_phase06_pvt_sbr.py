@@ -47,7 +47,7 @@ def _make_rolloff_audio(dur: float = 0.5, lp_hz: float = 4200.0) -> np.ndarray:
         + 0.08 * np.sin(2 * np.pi * 3800 * t)
     ).astype(np.float32)
     sos = ss.butter(8, lp_hz / (SR / 2), btype="low", output="sos")
-    return ss.sosfiltfilt(sos, src).astype(np.float32)
+    return ss.sosfiltfilt(sos, src).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_broadband_rolloff_audio(dur: float = 1.0, lp_hz: float = 4200.0) -> np.ndarray:
@@ -64,7 +64,7 @@ def _make_broadband_rolloff_audio(dur: float = 1.0, lp_hz: float = 4200.0) -> np
         + 0.15 * rng.randn(n)
     ).astype(np.float32)
     sos = ss.butter(8, lp_hz / (SR / 2), btype="low", output="sos")
-    return ss.sosfiltfilt(sos, src).astype(np.float32)
+    return ss.sosfiltfilt(sos, src).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_zxx(n_src: int = 12, n_frames: int = 60, seed: int = 0) -> np.ndarray:

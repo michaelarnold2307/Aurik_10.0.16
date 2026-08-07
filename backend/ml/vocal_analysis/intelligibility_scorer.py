@@ -148,10 +148,10 @@ class IntelligibilityScorer:
 
         if self.use_phoneme_detection:
             self.phoneme_classifier = PhonemeClassifier()
-            logger.debug("Intelligibility scorer initialized with phoneme detection")
+            logger.debug("Intelligibility scorer initialisiert with phoneme detection")
         else:
-            self.phoneme_classifier = None
-            logger.debug("Intelligibility scorer initialized without phoneme detection")
+            self.phoneme_classifier = None  # type: ignore[assignment]
+            logger.debug("Intelligibility scorer initialisiert without phoneme detection")
 
     def score(
         self,
@@ -345,7 +345,7 @@ class IntelligibilityScorer:
             return None
 
         except Exception as e:
-            logger.warning("Formant extraction failed: %s", e)
+            logger.warning("Formant extraction fehlgeschlagen: %s", e)
             return None
 
     def _assess_formant_clarity(
@@ -427,7 +427,7 @@ class IntelligibilityScorer:
             energy = np.sum(segment**2)
 
             # Accumulate by type
-            if phoneme_info.category in [
+            if phoneme_info.category in [  # type: ignore[attr-defined]
                 PhonemeCategory.VOWEL_OPEN,
                 PhonemeCategory.VOWEL_MID,
                 PhonemeCategory.VOWEL_CLOSE,
@@ -473,7 +473,7 @@ class IntelligibilityScorer:
             phoneme_info = self.phoneme_classifier.classify(phoneme_seg.phoneme)
 
             # Only process consonants
-            if phoneme_info.category in [
+            if phoneme_info.category in [  # type: ignore[attr-defined]
                 PhonemeCategory.VOWEL_OPEN,
                 PhonemeCategory.VOWEL_MID,
                 PhonemeCategory.VOWEL_CLOSE,

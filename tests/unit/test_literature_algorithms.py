@@ -23,7 +23,7 @@ SR = 48_000
 
 def _sine(freq: float = 440.0, seconds: float = 2.0, amp: float = 0.3) -> np.ndarray:
     t = np.linspace(0.0, seconds, int(SR * seconds), endpoint=False, dtype=np.float32)
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _rng_audio(n: int, seed: int = 42) -> np.ndarray:

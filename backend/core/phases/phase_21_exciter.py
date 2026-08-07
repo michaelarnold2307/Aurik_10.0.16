@@ -241,7 +241,7 @@ class Exciter(PhaseInterface):
                     _zone_frac_21 = float(np.clip(_zone_s_21 / max(1, _n_s_21), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_21 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_21:
-                logger.debug("Phase21 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_21)
+                logger.debug("Verarbeitungsschritt21 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_21)
 
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -277,7 +277,7 @@ class Exciter(PhaseInterface):
                 break
         if soft_sat_score >= 0.40:
             logger.info(
-                "Phase 21: SOFT_SATURATION erkannt (score=%.2f) — Exciter übersprungen "
+                "Verarbeitungsschritt 21: SOFT_SATURATION erkannt (Wert=%.2f) — Exciter übersprungen "
                 "(Spec §6.3: Tube-Charakter bewahren)",
                 soft_sat_score,
             )
@@ -313,7 +313,7 @@ class Exciter(PhaseInterface):
                 )
                 if _c_ck < 0.45:
                     logger.info(
-                        "Phase 21: Wide-Stereo erkannt (Korrelation=%.3f < 0.45) — Exciter übersprungen "
+                        "Verarbeitungsschritt 21: Wide-Stereo erkannt (Korrelation=%.3f < 0.45) — Exciter übersprungen "
                         "(§2.51: M/S-Exciter auf stark entkorreliertem Material erzeugt Artefakte)",
                         _c_ck,
                     )
@@ -336,12 +336,12 @@ class Exciter(PhaseInterface):
                         modifications={},
                     )
             except Exception as _wsg_exc:
-                logger.debug("Phase 21 Wide-Stereo-Guard non-blocking: %s", _wsg_exc)
+                logger.debug("Verarbeitungsschritt 21 Wide-Stereo-Guard nicht blockierend: %s", _wsg_exc)
 
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
 
         config: dict[str, Any] = copy.deepcopy(
-            self.EXCITER_CONFIG.get(_mk, self.EXCITER_CONFIG[MaterialType.CD_DIGITAL])
+            self.EXCITER_CONFIG.get(_mk, self.EXCITER_CONFIG[MaterialType.CD_DIGITAL])  # type: ignore[call-overload]
         )
         for band_name in self.EXCITER_BANDS:
             config[band_name]["intensity"] = float(float(config[band_name]["intensity"]) * _effective_strength)
@@ -390,7 +390,7 @@ class Exciter(PhaseInterface):
                 mode="additive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase21 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt21 masking clamp nicht blockierend: %s", _pm_exc)
 
         return PhaseResult(
             success=True,

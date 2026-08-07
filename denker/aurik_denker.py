@@ -398,7 +398,7 @@ class AurikDenker:
             else:
                 audio = audio[:preview_samples].copy()
             logger.info(
-                "§3.5 Preview: Audio auf %.1fs getrimmt (Original: %.1fs)",
+                "§3.5 Preview: Audio auf %.1fs getrimmt (Originalsignal: %.1fs)",
                 _PREVIEW_DURATION_S,
                 original_duration_s,
             )
@@ -407,7 +407,7 @@ class AurikDenker:
 
         _dur_s = len(audio) / max(sr, 1) if audio.ndim == 1 else audio.shape[0] / max(sr, 1)
         logger.info(
-            "AurikDenker.denke() gestartet: mode=%s, sr=%d, duration=%.1fs, shape=%s, "
+            "AurikDenker.denke() gestartet: Betriebsart=%s, sr=%d, duration=%.1fs, shape=%s, "
             "caches=[era=%s, genre=%s, defect=%s, medium=%s, rest=%s]%s",
             mode,
             sr,
@@ -500,7 +500,7 @@ class AurikDenker:
             if kwargs.get("cached_restorability_result") is None and getattr(_pre, "restorability", None) is not None:
                 kwargs["cached_restorability_result"] = _pre.restorability
             logger.debug(
-                "AurikDenker.denke(): pre_analysis_result entpackt (era=%s genre=%s defects=%s medium=%s rest=%s)",
+                "AurikDenker.denke(): pre_Analyse_Ergebnis entpackt (era=%s genre=%s defects=%s medium=%s rest=%s)",
                 "✓" if kwargs.get("cached_era_result") else "—",
                 "✓" if kwargs.get("cached_genre_result") else "—",
                 "✓" if kwargs.get("cached_defect_result") else "—",
@@ -583,7 +583,7 @@ class AurikDenker:
                 if hard_clip_ratio <= 1e-4 and near_clip_ratio <= 1e-3 and rms <= 0.001:
                     logger.warning(
                         "Short silence clip autopass: duration=%.1fs, material=%s, rms=%.4f — "
-                        "To force restoration, use mode='studio2026'",
+                        "To force restoration, use Betriebsart='studio2026'",
                         duration_s,
                         resolved_material,
                         rms,
@@ -597,7 +597,7 @@ class AurikDenker:
                         "rms": float(round(rms, 6)),
                     }
         except Exception as exc:
-            logger.debug("AurikDenker: short-clip guard unavailable: %s", exc)
+            logger.debug("AurikDenker: short-clip guard nicht verfuegbar: %s", exc)
 
         # Never skip restoration when the recording chain has an analog origin.
         # primary_medium = chain[-1] (e.g. "mp3_low"), but if original_medium = "tape",
@@ -631,7 +631,7 @@ class AurikDenker:
             metrics.setdefault("material", resolved_material)
             return benign, metrics
         except Exception as exc:
-            logger.debug("AurikDenker: Clean-digital guard unavailable: %s", exc)
+            logger.debug("AurikDenker: Clean-digital guard nicht verfuegbar: %s", exc)
             return False, {"material": resolved_material, "reason": "guard_unavailable"}
 
     @classmethod
@@ -742,7 +742,7 @@ class AurikDenker:
             )
             canonical_targets = _get_canonical_thresholds_for_mode(is_studio_2026)
         except Exception as exc:
-            logger.debug("AurikDenker: opportunity mining setup unavailable: %s", exc)
+            logger.debug("AurikDenker: opportunity mining setup nicht verfuegbar: %s", exc)
             opportunities["summary"] = {
                 "high_priority_goal_count": 0,
                 "regressive_phase_count": 0,
@@ -1247,7 +1247,7 @@ class AurikDenker:
             _ssc_warm_start = _get_song_strategy_cache().get(_ssc_song_id, effective_mode)
             if _ssc_warm_start is not None:
                 logger.info(
-                    "§SSC-1 Warm-Start: song_id=%s mode=%s HPI=%.3f OQS=%.1f (use_count=%d)",
+                    "§SSC-1 Warm-Start: song_id=%s Betriebsart=%s HPI=%.3f OQS=%.1f (use_count=%d)",
                     _ssc_song_id[:8],
                     effective_mode,
                     _ssc_warm_start.hpi_achieved,
@@ -1255,7 +1255,7 @@ class AurikDenker:
                     _ssc_warm_start.use_count,
                 )
         except Exception as _ssc_exc:
-            logger.debug("§SSC-1 Cache-Lookup non-blocking: %s", _ssc_exc)
+            logger.debug("§SSC-1 Zwischenspeicher-Lookup nicht blockierend: %s", _ssc_exc)
 
         def _budget_ok() -> bool:
             if no_rt_limit:
@@ -1269,7 +1269,7 @@ class AurikDenker:
             # die einzige authoritative Schranke.
             if (time.perf_counter() - t_start) >= _MAX_TOTAL_SECONDS:
                 logger.warning(
-                    "⚠️ 30-Minuten-Absolutlimit erreicht (%.0fs) — Stage wird übersprungen.",
+                    "⚠️ 30-Minuten-Absolutlimit erreicht (%.0fs) — Stufe wird übersprungen.",
                     time.perf_counter() - t_start,
                 )
                 return False
@@ -1311,7 +1311,7 @@ class AurikDenker:
             )
             phases_executed.append("tontraeger_erkennung")
             logger.info(
-                "AurikDenker [1/10] Träger aus Frontend-Cache: %s (%.2f)",
+                "AurikDenker [1/10] Träger aus Frontend-Zwischenspeicher: %s (%.2f)",
                 material,
                 getattr(cached_medium_result, "confidence", 0.0),
             )
@@ -1324,7 +1324,7 @@ class AurikDenker:
                 _input_ext = os.path.splitext(input_path)[1] if input_path else ""
                 if input_path and not _input_ext:
                     logger.warning(
-                        "AurikDenker: input_path=%s hat keine Dateiendung — "
+                        "AurikDenker: Eingabe_path=%s hat keine Dateiendung — "
                         "MediumDetector läuft ohne Digital-Prior (kein ×0.25 Analog-Penalty). "
                         "Bei .mp3/.aac/.ogg fehlt dann die korrekte Material-Erkennung.",
                         input_path,
@@ -1340,7 +1340,7 @@ class AurikDenker:
                 if getattr(toni, "classification_result", None) is not None:
                     cached_medium_result = toni.classification_result
                     logger.info(
-                        "AurikDenker: MediumDetector-ClassificationResult als cached_medium_result übernommen "
+                        "AurikDenker: MediumDetector-ClassificationResult als zwischengespeichert_medium_Ergebnis übernommen "
                         "(material=%s, conf=%.2f)",
                         getattr(cached_medium_result, "material_type", material),
                         getattr(cached_medium_result, "confidence", toni.confidence),
@@ -1436,7 +1436,7 @@ class AurikDenker:
                 if _raw is not None:
                     cached_defect_result = _raw
                     logger.info(
-                        "AurikDenker: DefektScan-Ergebnis (material=%s) als cached_defect_result übernommen.",
+                        "AurikDenker: DefektScan-Ergebnis (material=%s) als zwischengespeichert_defect_Ergebnis übernommen.",
                         getattr(_raw, "material_type", "?"),
                     )
             logger.info(
@@ -1567,7 +1567,7 @@ class AurikDenker:
                 strategie = _strat_future.result(timeout=120.0)
             except (_cf_strat.TimeoutError, TimeoutError):
                 logger.warning(
-                    "§v10.304.18 StrategieDenker Timeout nach 120s — verwende Default-Plan (GPU-Init blockiert)"
+                    "§v10.304.18 StrategieDenker Zeitlimit nach 120s — verwende Default-Plan (GPU-Init blockiert)"
                 )
                 strategie = None  # Fallback: wird unten als Default gehandhabt
                 _strat_future.cancel()
@@ -1586,7 +1586,7 @@ class AurikDenker:
             stage_notes["strategie"] = f"Budget: {_budget_s:.1f}s, Modus: {_strat_mode}"
             phases_executed.append("strategie_plan")
             logger.info(
-                "AurikDenker [5/10] Budget: %.1fs für %.1fs Audio",
+                "AurikDenker [5/10] Grenze: %.1fs für %.1fs Audio",
                 _budget_s,
                 audio_duration_s,
             )
@@ -1606,7 +1606,10 @@ class AurikDenker:
                 strategy_mode=_strat_mode,
             )
         except Exception as _autopilot_exc:
-            logger.warning("Autopilot mode selection failed: %s — defaulting to requested mode", _autopilot_exc)
+            logger.warning(
+                "Autopilot Betriebsart selection fehlgeschlagen: %s — defaulting to requested Betriebsart",
+                _autopilot_exc,
+            )
             effective_mode = requested_mode or "restoration"
             autopilot_note = f"Autopilot fallback (error): {_autopilot_exc}"
         stage_notes["autopilot"] = autopilot_note
@@ -1633,7 +1636,7 @@ class AurikDenker:
         except Exception as _oracle_exc:
             _effective_oracle_rollout = self._normalize_oracle_rollout_mode(phase_strength_oracle_rollout) or "all"
             _oracle_rollout_note = f"Oracle-Rollout-Fallback nach Fehler: {_oracle_exc}"
-            logger.warning("Oracle rollout recommendation failed: %s", _oracle_exc)
+            logger.warning("Oracle rollout recommendation fehlgeschlagen: %s", _oracle_exc)
         stage_notes["oracle_rollout"] = _oracle_rollout_note
         stage_notes["oracle_signal_signature"] = dict(_signal_signature)
         logger.info("AurikDenker [5a/10] %s", _oracle_rollout_note)
@@ -1823,7 +1826,7 @@ class AurikDenker:
                     try:
                         _set_pipeline_active(True)
                     except Exception as _exc:
-                        logger.debug("Operation failed (non-critical): %s", _exc)
+                        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
                     try:
                         _work_audio = aktuelles_audio.copy()
 
@@ -2030,7 +2033,7 @@ class AurikDenker:
                         try:
                             _set_pipeline_active(False)
                         except Exception as _exc:
-                            logger.debug("Operation failed (non-critical): %s", _exc)
+                            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
                 _daemon_rest_thread = not _is_pytest_or_safe_validation_context()
                 _t = threading.Thread(target=_run_rest, daemon=_daemon_rest_thread)
@@ -2114,7 +2117,7 @@ class AurikDenker:
                                 f"Enriched with pipeline era_decade={_era_from_pipeline} (UV3 ML)"
                             )
                         except Exception as _exc:
-                            logger.debug("Operation failed (non-critical): %s", _exc)
+                            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
                 # [6/10] ReparaturDenker-Ergebnis (Preprocessing-Schritt)
                 if _rep_result_box:
                     _rep = _rep_result_box[0]
@@ -2164,7 +2167,7 @@ class AurikDenker:
         else:
             stage_notes["restaurierung"] = "Übersprungen (RT-Budget ausgeschöpft)"
             warnings.append("Restaurierung übersprungen: RT-Budget ausgeschöpft")
-            logger.warning("AurikDenker [8/10] Budget erschöpft, Restaurierung übersprungen")
+            logger.warning("AurikDenker [8/10] Grenze erschöpft, Restaurierung übersprungen")
 
         # ── Stufe 7: Exzellenz-Optimierung + Musical Goals ───────────────────
         _emit(95, "Musikalische Exzellenz wird optimiert …")
@@ -2205,7 +2208,7 @@ class AurikDenker:
             )
             logger.warning(
                 "AurikDenker [9/10] Exzellenz übersprungen: ARE-Rollback aktiv "
-                "(restoration degraded quality, excellence on unrestored audio skipped)",
+                "(restoration degraded quality, excellence on unrestored audio uebersprungen)",
             )
         elif _skip_excellence:
             _skip_mat = _skip_metrics.get("material", _exz_material)
@@ -2328,7 +2331,7 @@ class AurikDenker:
                 )
                 phases_executed.append("exzellenz_messung_repair" if _used_repair_path else "exzellenz_messung")
                 logger.info(
-                    "AurikDenker [9/10] Exzellenz: Score=%.3f, Goals %d/%d%s (%s)",
+                    "AurikDenker [9/10] Exzellenz: Wert=%.3f, Goals %d/%d%s (%s)",
                     excellence_score,
                     goals_passed,
                     _goals_total,
@@ -2358,7 +2361,7 @@ class AurikDenker:
                     goals_passed = sum(1 for v in _finite_bg if v >= 0.75)
                     excellence_score = float(np.mean(_finite_bg)) if _finite_bg else 0.0
                     logger.info(
-                        "AurikDenker [9/10] Goals gemessen trotz Budget-Limit: %d/%d bestanden",
+                        "AurikDenker [9/10] Goals gemessen trotz Grenze-Limit: %d/%d bestanden",
                         goals_passed,
                         len(_budget_goals),
                     )
@@ -2424,7 +2427,7 @@ class AurikDenker:
                                 f"{_best_crit}/{_crit_total}, gesamt {goals_passed}/{len(_best_goals)})"
                             )
                             logger.info(
-                                "AurikDenker [9/10] Goal-Recovery-Blend aktiv: "
+                                "AurikDenker [9/10] Goal-Wiederherstellung-Blend aktiv: "
                                 "kritische Goals %d/%d → %d/%d, gesamt=%d/%d",
                                 _crit_pass_before,
                                 _crit_total,
@@ -2434,7 +2437,7 @@ class AurikDenker:
                                 len(_best_goals),
                             )
             except Exception as _mg_exc:
-                logger.debug("Musical Goals Messung nach Budget-Limit: %s", _mg_exc)
+                logger.debug("Musical Goals Messung nach Grenze-Limit: %s", _mg_exc)
             try:
                 if aktuelles_audio.ndim == 1:
                     _mono_budget = aktuelles_audio
@@ -2450,11 +2453,11 @@ class AurikDenker:
                 _vr_budget = _score_versa_mos(_mono_budget, sr)
                 _exz_versa_mos = float(_vr_budget.mos)
                 logger.info(
-                    "AurikDenker [9/10] VERSA MOS gemessen trotz Budget-Limit: %.3f",
+                    "AurikDenker [9/10] VERSA MOS gemessen trotz Grenze-Limit: %.3f",
                     _exz_versa_mos,
                 )
             except Exception as _ve_budget:
-                logger.debug("VERSA MOS nach Budget-Limit: %s", _ve_budget)
+                logger.debug("VERSA MOS nach Grenze-Limit: %s", _ve_budget)
 
         # ── §APR: Adaptive Post-Repair — zielgerichtete Nachbesserung nach ExzellenzDenker ─────
         # §0a Crossfire-Modus-Invariante: §APR darf NUR in Studio 2026 laufen.
@@ -2584,7 +2587,7 @@ class AurikDenker:
                             _apr_mos_after,
                         )
             except Exception as _apr_exc:
-                logger.debug("§APR Adaptive Post-Repair non-blocking: %s", _apr_exc)
+                logger.debug("§APR Adaptive Post-Repair nicht blockierend: %s", _apr_exc)
 
         # ── Stufe 10: VERSA MOS — finales Qualitätsurteil (§4.4) ────────────
         _emit(97, "VERSA MOS-Qualitätsbewertung läuft …")
@@ -2596,7 +2599,7 @@ class AurikDenker:
             stage_notes["versa_mos"] = f"MOS={_versa_mos:.3f} (ExzellenzDenker-Cache)"
             phases_executed.append("versa_qualitaetsbewertung")
             logger.info(
-                "AurikDenker [10/10] VERSA MOS=%.3f (ExzellenzDenker-Cache) — %s",
+                "AurikDenker [10/10] VERSA MOS=%.3f (ExzellenzDenker-Zwischenspeicher) — %s",
                 _versa_mos,
                 (
                     "✓ Studioqualität"
@@ -2863,7 +2866,7 @@ class AurikDenker:
                         f"Dynamics-Auto-Recovery: {_guard_blend_report.get('dynamics_loss_db', 0):.1f}dB Verlust ausgeglichen"
                     )
             except Exception as _g_exc:
-                logger.debug("AurikDenker: PipelineGuard post-restore: %s", _g_exc)
+                logger.debug("AurikDenker: PipelineGuard post-wiederherstellen: %s", _g_exc)
 
         # Finale NaN/Inf-Bereinigung und Clip
         aktuelles_audio = _normalize_audio_output_layout(aktuelles_audio)
@@ -2906,7 +2909,7 @@ class AurikDenker:
                 _final.confidence,
             )
         except Exception as _orf_exc:
-            logger.debug("§ORCHESTRATOR resolve non-blocking: %s", _orf_exc)
+            logger.debug("§ORCHESTRATOR resolve nicht blockierend: %s", _orf_exc)
 
         note = (
             f"Aurik 10 Restaurierung abgeschlossen: "
@@ -2943,7 +2946,7 @@ class AurikDenker:
                 )
                 _get_song_strategy_cache().store(_ssc_entry)
             except Exception as _ssc_store_exc:
-                logger.debug("§SSC-1 Cache-Store non-blocking: %s", _ssc_store_exc)
+                logger.debug("§SSC-1 Zwischenspeicher-Store nicht blockierend: %s", _ssc_store_exc)
 
         return AurikErgebnis(
             audio=aktuelles_audio,
@@ -3124,7 +3127,7 @@ def _get_musical_sections(audio: Any, sr: int) -> list[tuple[float, float, str]]
 
         return get_sections(np.asarray(audio), int(sr))
     except Exception:
-        logger.warning("aurik_denker.py::_get_musical_sections fallback", exc_info=True)
+        logger.warning("aurik_denker.py::_get_musical_sections Ersatzpfad", exc_info=True)
         return []
 
 

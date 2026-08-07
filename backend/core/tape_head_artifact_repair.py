@@ -143,7 +143,7 @@ class TapeHeadArtifactRepair:
                     else:
                         ch_data[s0:s1] = yi.astype(np.float32)
                 except Exception as e:
-                    logger.warning("tape_head_artifact_repair.py::_repair_short_dropouts fallback: %s", e)
+                    logger.warning("tape_head_artifact_repair.py::_repair_short_dropouts Ersatzpfad: %s", e)
 
             if result.ndim == 2:
                 result[ch] = ch_data[: len(result[ch])]
@@ -193,7 +193,7 @@ class TapeHeadArtifactRepair:
             )
             return result
 
-        logger.info("§AP Azimuth correction: %.1f° phase shift", np.degrees(mean_phase_diff))
+        logger.info("§AP Azimuth correction: %.1f° Verarbeitungsschritt shift", np.degrees(mean_phase_diff))
 
         # Phasen-Korrektur auf rechtem Kanal
         fft_r[hf_mask] *= np.exp(-1j * mean_phase_diff)

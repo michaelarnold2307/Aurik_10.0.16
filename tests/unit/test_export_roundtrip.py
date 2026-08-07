@@ -35,7 +35,7 @@ def _sine(freq: float = 440.0, duration_s: float = 1.0, sr: int = SR) -> np.ndar
     """Erzeugt einen Sinus-Ton als float32 in [-1, 1]."""
     t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
     signal = np.sin(2 * np.pi * freq * t).astype(np.float32)
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 def _stereo(signal: np.ndarray) -> np.ndarray:

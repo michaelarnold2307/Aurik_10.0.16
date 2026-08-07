@@ -122,5 +122,5 @@ class TapeEqualizer:
             return lfilter(b_t, a_t, y)
 
         if audio.ndim == 1:
-            return _apply(audio).astype(audio.dtype)
-        return np.stack([_apply(ch) for ch in audio], axis=0).astype(audio.dtype)
+            return _apply(audio).astype(audio.dtype)  # type: ignore[no-any-return]
+        return np.stack([_apply(ch) for ch in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]

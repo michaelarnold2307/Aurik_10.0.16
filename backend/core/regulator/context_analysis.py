@@ -23,7 +23,7 @@ class ContextAnalyzer:
             try:
                 from backend.core.forensics.medium_detector import MediumDetector  # type: ignore[import]
 
-                self._medium_detector = MediumDetector()
+                self._medium_detector = MediumDetector()  # type: ignore[assignment]
             except ImportError:
                 self._medium_detector = False  # type: ignore[assignment]  # dauerhaft deaktiviert
         return self._medium_detector if self._medium_detector is not False else None
@@ -154,7 +154,7 @@ class ContextAnalyzer:
             cumpower = np.cumsum(power)
             if total_power > 1e-30:
                 rolloff_idx = np.searchsorted(cumpower, 0.85 * total_power)
-                features["spectral_rolloff_hz"] = float(freqs[min(rolloff_idx, len(freqs) - 1)])
+                features["spectral_rolloff_hz"] = float(freqs[min(rolloff_idx, len(freqs) - 1)])  # type: ignore[call-overload]
             else:
                 features["spectral_rolloff_hz"] = 0.0
         else:
@@ -237,7 +237,7 @@ class ContextAnalyzer:
             bpm = 60.0 / (best_lag * frame_sec)
             return float(np.clip(bpm, 40.0, 250.0))
         except Exception as e:
-            logger.warning("context_analysis.py::_estimate_tempo fallback: %s", e)
+            logger.warning("context_Analyse.py::_estimate_tempo Ersatzpfad: %s", e)
             return 0.0
 
     def _classify_genre(

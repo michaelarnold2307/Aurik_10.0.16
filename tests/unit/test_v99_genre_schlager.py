@@ -16,14 +16,14 @@ np.random.seed(42)
 
 def _sine(freq: float, dur: float = 3.0, sr: int = SR) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * sr), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _am_signal(carrier_hz: float, mod_hz: float, dur: float = 5.0) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
     carrier = np.sin(2 * np.pi * carrier_hz * t)
     modulator = 1.0 + 0.5 * np.sin(2 * np.pi * mod_hz * t)
-    return (carrier * modulator).astype(np.float32)
+    return (carrier * modulator).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white_noise(dur: float = 5.0) -> np.ndarray:
@@ -577,8 +577,8 @@ def test_45_build_song_calibration_oper_raises_vocal():
         "max_defect_severity": 0.2,
         "pipeline_confidence": 0.8,
     }
-    profile_klassik = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Klassik")
-    profile_oper = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Oper")
+    profile_klassik = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Klassik")  # type: ignore[arg-type]
+    profile_oper = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Oper")  # type: ignore[arg-type]
     v_klassik = profile_klassik["family_scalars"]["vocal"]
     v_oper = profile_oper["family_scalars"]["vocal"]
     assert v_oper > v_klassik, f"Oper vocal scalar ({v_oper:.3f}) sollte > Klassik ({v_klassik:.3f}) sein"
@@ -598,8 +598,8 @@ def test_46_build_song_calibration_rock_raises_transient():
         "max_defect_severity": 0.2,
         "pipeline_confidence": 0.8,
     }
-    profile_default = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="")
-    profile_rock = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Rock")
+    profile_default = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="")  # type: ignore[arg-type]
+    profile_rock = UnifiedRestorerV3._build_song_calibration_profile(**_shared, genre_label="Rock")  # type: ignore[arg-type]
     t_default = profile_default["family_scalars"]["transient"]
     t_rock = profile_rock["family_scalars"]["transient"]
     assert t_rock >= t_default, f"Rock transient scalar ({t_rock:.3f}) sollte ≥ default ({t_default:.3f}) sein"

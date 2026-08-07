@@ -311,7 +311,7 @@ class PhonemeClassifier:
 
     def __init__(self):
         """Initialisiert phoneme classifier."""
-        logger.info("PhonemeClassifier initialized with %s phoneme mappings", len(self._PHONEME_MAPPINGS))
+        logger.info("PhonemeClassifier initialisiert with %s phoneme mappings", len(self._PHONEME_MAPPINGS))
 
     def classify(self, phoneme: str) -> PhonemeCategory:
         """

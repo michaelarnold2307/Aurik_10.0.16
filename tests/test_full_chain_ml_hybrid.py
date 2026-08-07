@@ -73,7 +73,7 @@ class TestFullChainMLHybrid:
         if max_val > 1.0:
             audio = np.clip(audio, -1.0, 1.0)
 
-        return audio, sr
+        return audio, sr  # type: ignore[return-value]
 
     def test_01_vinyl_full_pipeline_balanced(self):
         """Test full pipeline with real vinyl audio (BALANCED mode with ML)"""
@@ -82,7 +82,7 @@ class TestFullChainMLHybrid:
         print("=" * 80)
 
         # Load vinyl audio
-        audio, sr = self._load_audio(self.test_files["vinyl_jazz"], max_duration=10.0)
+        audio, sr = self._load_audio(self.test_files["vinyl_jazz"], max_duration=10.0)  # type: ignore[attr-defined]
         print(f"\n✓ Audio loaded: {audio.shape} @ {sr} Hz, duration={len(audio) / sr:.1f}s")
 
         # Initialize restorer with BALANCED mode (ML-Hybrid active)
@@ -140,7 +140,7 @@ class TestFullChainMLHybrid:
         print("-" * 80)
 
         # Save results
-        output_file = self.test_dir / "vinyl_balanced_output.wav"
+        output_file = self.test_dir / "vinyl_balanced_output.wav"  # type: ignore[attr-defined]
         sf.write(output_file, result.audio, sr)
         print(f"\n✓ Output saved: {output_file}")
 
@@ -154,7 +154,7 @@ class TestFullChainMLHybrid:
             "defect_scores": {str(k): v for k, v in result.defect_scores.items()},
             "warnings": result.warnings,
         }
-        with open(self.test_dir / "vinyl_balanced_metadata.json", "w") as f:
+        with open(self.test_dir / "vinyl_balanced_metadata.json", "w") as f:  # type: ignore[attr-defined]
             json.dump(metadata, f, indent=2)
 
         # Assertions
@@ -179,7 +179,7 @@ class TestFullChainMLHybrid:
         print("=" * 80)
 
         # Load tape audio
-        audio, sr = self._load_audio(self.test_files["tape_cassette"], max_duration=10.0)
+        audio, sr = self._load_audio(self.test_files["tape_cassette"], max_duration=10.0)  # type: ignore[attr-defined]
         print(f"\n✓ Audio loaded: {audio.shape} @ {sr} Hz, duration={len(audio) / sr:.1f}s")
 
         # Initialize restorer
@@ -205,7 +205,7 @@ class TestFullChainMLHybrid:
         print("-" * 80)
 
         # Save
-        output_file = self.test_dir / "tape_balanced_output.wav"
+        output_file = self.test_dir / "tape_balanced_output.wav"  # type: ignore[attr-defined]
         sf.write(output_file, result.audio, sr)
 
         # Assertions
@@ -219,7 +219,7 @@ class TestFullChainMLHybrid:
         print("=" * 80)
 
         # Load audio
-        audio, sr = self._load_audio(self.test_files["vinyl_rock"], max_duration=10.0)
+        audio, sr = self._load_audio(self.test_files["vinyl_rock"], max_duration=10.0)  # type: ignore[attr-defined]
         print(f"\n✓ Audio loaded: {audio.shape} @ {sr} Hz")
 
         # Process with FAST mode
@@ -253,7 +253,7 @@ class TestFullChainMLHybrid:
         print("=" * 80)
 
         # Load audio (shorter duration for quality mode)
-        audio, sr = self._load_audio(self.test_files["vinyl_classical"], max_duration=5.0)
+        audio, sr = self._load_audio(self.test_files["vinyl_classical"], max_duration=5.0)  # type: ignore[attr-defined]
         print(f"\n✓ Audio loaded: {audio.shape} @ {sr} Hz")
 
         # Process with QUALITY mode
@@ -276,7 +276,7 @@ class TestFullChainMLHybrid:
         print("-" * 80)
 
         # Save best quality output
-        output_file = self.test_dir / "vinyl_quality_output.wav"
+        output_file = self.test_dir / "vinyl_quality_output.wav"  # type: ignore[attr-defined]
         sf.write(output_file, result.audio, sr)
 
         # Assertions
@@ -297,7 +297,7 @@ class TestFullChainMLHybrid:
         results = []
 
         for test_name, expected_material in test_cases:
-            audio, sr = self._load_audio(self.test_files[test_name], max_duration=5.0)
+            audio, sr = self._load_audio(self.test_files[test_name], max_duration=5.0)  # type: ignore[attr-defined]
 
             # Process with auto-detection (material_type=None)
             config = RestorationConfig(
@@ -325,14 +325,14 @@ class TestFullChainMLHybrid:
 
         print("\n" + "-" * 80)
         print("Material Detection Summary:")
-        correct_count = sum(r["correct"] for r in results)
+        correct_count = sum(r["correct"] for r in results)  # type: ignore[misc]
         total_count = len(results)
         accuracy = correct_count / total_count
         print(f"  Accuracy: {correct_count}/{total_count} ({accuracy * 100:.1f}%)")
         print("-" * 80)
 
         # Save results
-        with open(self.test_dir / "material_detection_results.json", "w") as f:
+        with open(self.test_dir / "material_detection_results.json", "w") as f:  # type: ignore[attr-defined]
             json.dump(results, f, indent=2)
 
         # Assertions
@@ -348,7 +348,7 @@ class TestFullChainMLHybrid:
         print("TEST 6: Performance Comparison (FAST vs BALANCED vs QUALITY)")
         print("=" * 80)
 
-        audio, sr = self._load_audio(self.test_files["vinyl_rock"], max_duration=5.0)
+        audio, sr = self._load_audio(self.test_files["vinyl_rock"], max_duration=5.0)  # type: ignore[attr-defined]
 
         results = {}
 
@@ -399,7 +399,7 @@ class TestFullChainMLHybrid:
         print("-" * 80)
 
         # Save results
-        with open(self.test_dir / "performance_comparison.json", "w") as f:
+        with open(self.test_dir / "performance_comparison.json", "w") as f:  # type: ignore[attr-defined]
             json.dump(results, f, indent=2)
 
         # Assertions (relaxed for Performance Guard disabled testing)

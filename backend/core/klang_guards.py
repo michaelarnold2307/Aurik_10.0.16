@@ -59,7 +59,7 @@ class BassPunchCoupling:
                 return 1.0
             return sub / punch
         except Exception as e:
-            logger.warning("klang_guards.py::measure fallback: %s", e)
+            logger.warning("klang_guards.py::measure Ersatzpfad: %s", e)
             return 1.0
 
     def set_baseline(self, audio: np.ndarray, sr: int) -> None:
@@ -122,7 +122,7 @@ class VocalFormantGuard:
                     harmonic_energy += float(np.max(fft[max(0, idx - 2) : idx + 3]))
             return centroid, min(1.0, harmonic_energy / total)
         except Exception as e:
-            logger.warning("klang_guards.py::_measure fallback: %s", e)
+            logger.warning("klang_guards.py::_measure Ersatzpfad: %s", e)
             return 800.0, 0.5
 
     def set_baseline(self, audio: np.ndarray, sr: int) -> None:
@@ -169,7 +169,7 @@ class StereoCoherenceGuard:
             den = np.sqrt(np.mean(L * L) * np.mean(R * R)) + eps
             return float(np.clip(num / den, -1.0, 1.0))
         except Exception as e:
-            logger.warning("klang_guards.py::_iccc fallback: %s", e)
+            logger.warning("klang_guards.py::_iccc Ersatzpfad: %s", e)
             return 1.0
 
     def set_baseline(self, audio: np.ndarray) -> None:
@@ -219,7 +219,7 @@ class DynamicsArcGuard:
                 lufs_vals.append(-0.691 + 10.0 * math.log10(power))
             return np.array(lufs_vals, dtype=np.float32)
         except Exception as e:
-            logger.warning("klang_guards.py::_measure_lufs_arc fallback: %s", e)
+            logger.warning("klang_guards.py::_measure_lufs_arc Ersatzpfad: %s", e)
             return np.zeros(segments, dtype=np.float32)
 
     def set_baseline(self, audio: np.ndarray, sr: int) -> None:
@@ -489,7 +489,7 @@ class EmotionalArcPreserver:
                     valence.append(800.0)
             return np.array(arousal, dtype=np.float32), np.array(valence, dtype=np.float32)
         except Exception as e:
-            logger.warning("klang_guards.py::_measure fallback: %s", e)
+            logger.warning("klang_guards.py::_measure Ersatzpfad: %s", e)
             return np.zeros(segments, dtype=np.float32), np.zeros(segments, dtype=np.float32)
 
     def set_baseline(self, audio: np.ndarray, sr: int) -> None:
@@ -503,7 +503,7 @@ class EmotionalArcPreserver:
         min_len = min(len(self._baseline_arousal), len(cur_a))
         # Korrelation der Verläufe (nicht absolute Werte)
         a_corr = float(np.corrcoef(self._baseline_arousal[:min_len], cur_a[:min_len])[0, 1]) if min_len > 2 else 1.0
-        v_corr = float(np.corrcoef(self._baseline_valence[:min_len], cur_v[:min_len])[0, 1]) if min_len > 2 else 1.0
+        v_corr = float(np.corrcoef(self._baseline_valence[:min_len], cur_v[:min_len])[0, 1]) if min_len > 2 else 1.0  # type: ignore[index]
         ok = a_corr > 0.85 and v_corr > 0.85
         return ok, {
             "arousal_corr": a_corr,
@@ -660,7 +660,7 @@ class HumanizationPass:
                 return result
             return HumanizationPass._process_channel(audio_f, sr, strength)
         except Exception as e:
-            logger.warning("klang_guards.py::apply fallback: %s", e)
+            logger.warning("klang_guards.py::anwenden Ersatzpfad: %s", e)
             return audio
 
     @staticmethod

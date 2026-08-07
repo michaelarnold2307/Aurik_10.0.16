@@ -42,7 +42,7 @@ stereo_matrix_contract = DSPContract(
         "temporal_change_budget": 0.0,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Phasenauslöschung", "expected_when": "width > 1.5", "severity": 0.2}],
+    side_effects=[{"risk": "Phasenauslöschung", "expected_when": "width > 1.5", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["stereo_width", "balance"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -81,4 +81,4 @@ class StereoMatrix:
         out = np.stack([left, right], axis=1)
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
         out = np.clip(out, -1.0, 1.0)
-        return out
+        return out  # type: ignore[no-any-return]

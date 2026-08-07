@@ -28,7 +28,7 @@ def real_audio_innovation_longform_case(real_audio_gate_case: dict[str, object])
     from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3
 
     original = _to_samples_first(np.asarray(real_audio_gate_case["audio"], dtype=np.float32))
-    sr = int(real_audio_gate_case["sr"])
+    sr = int(real_audio_gate_case["sr"])  # type: ignore[call-overload]
 
     # Langform-Fenster: bewusst größer als die üblichen Kurz-Gates.
     max_n = int(sr * 45.0)

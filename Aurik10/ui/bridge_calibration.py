@@ -9,13 +9,13 @@ ALLE Daten fließen über dieses Dict. Der Bridge-Callback ist der EINZIGE Pfad.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from typing import Any
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # BridgeCalibrationData — die EINZIGE Datenstruktur für Backend→Frontend
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass
 class BridgeCalibrationData:

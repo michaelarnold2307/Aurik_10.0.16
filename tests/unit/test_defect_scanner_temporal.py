@@ -38,7 +38,7 @@ def _scanner(sr: int = SR) -> DefectScanner:
 
 def _sine(sr: int = SR, duration: float = 3.0, freq: float = 440.0) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * 0.3).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * 0.3).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white(sr: int = SR, duration: float = 3.0, seed: int = 42, amp: float = 0.1) -> np.ndarray:

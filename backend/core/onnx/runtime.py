@@ -126,7 +126,7 @@ class ONNXInferenceSession:
         except MemoryError:
             raise
         except Exception as _budget_exc:
-            logger.debug("ml_memory_budget nicht verfügbar: %s — Session wird ohne Budget geladen.", _budget_exc)
+            logger.debug("ml_memory_Grenze nicht verfügbar: %s — Sitzung wird ohne Grenze geladen.", _budget_exc)
             _ml_release = None  # type: ignore[assignment]
 
         try:
@@ -138,16 +138,16 @@ class ONNXInferenceSession:
             self.input_shape = self.session.get_inputs()[0].shape
             self.output_shape = self.session.get_outputs()[0].shape
 
-            logger.info("ONNX session initialized: %s", self.model_path.name)
-            logger.info("Input: %s %s", self.input_name, self.input_shape)
-            logger.info("Output: %s %s", self.output_name, self.output_shape)
+            logger.info("ONNX Sitzung initialisiert: %s", self.model_path.name)
+            logger.info("Eingabe: %s %s", self.input_name, self.input_shape)
+            logger.info("Ausgabe: %s %s", self.output_name, self.output_shape)
             logger.info("Providers: %s", self.session.get_providers())
 
         except Exception as e:
             if _ml_release is not None:
                 with contextlib.suppress(Exception):
                     _ml_release(_session_name)
-            logger.error("Failed to initialize ONNX session: %s", e)
+            logger.error("konnte nicht initialisieren ONNX Sitzung: %s", e)
             raise
 
         # Performance tracking
@@ -166,10 +166,10 @@ class ONNXInferenceSession:
             num_iterations: Number of warmup iterations
         """
         if self.is_warmed_up:
-            logger.debug("Session already warmed up")
+            logger.debug("Sitzung already warmed up")
             return
 
-        logger.info("Warming up ONNX session (%s iterations)...", num_iterations)
+        logger.info("Warming up ONNX Sitzung (%s iterations)...", num_iterations)
 
         # Create dummy input matching expected shape
         dummy_shape = list(self.input_shape)
@@ -184,7 +184,7 @@ class ONNXInferenceSession:
             _ = self.session.run([self.output_name], {self.input_name: dummy_input})
 
         self.is_warmed_up = True
-        logger.info("Warmup complete")
+        logger.info("Warmup vollstaendig")
 
     def run(self, inputs: dict[str, np.ndarray], profile: bool = False) -> list[np.ndarray]:
         """
@@ -212,7 +212,7 @@ class ONNXInferenceSession:
             return outputs  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error("ONNX inference failed: %s", e)
+            logger.error("ONNX inference fehlgeschlagen: %s", e)
             raise
 
     def get_stats(self) -> dict[str, Any]:

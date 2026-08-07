@@ -88,11 +88,11 @@ class TestRestorability:
 
 class TestNaNSafety:
     def test_none_quality_mode(self):
-        p = _profile("vinyl", None, 50.0)
+        p = _profile("vinyl", None, 50.0)  # type: ignore[arg-type]
         assert all(np.isfinite(v) for v in p.values())
 
     def test_none_restorability(self):
-        p = ClickPopRemoval._compute_click_repair_profile("vinyl", "balanced", None)
+        p = ClickPopRemoval._compute_click_repair_profile("vinyl", "balanced", None)  # type: ignore[arg-type]
         assert all(np.isfinite(v) for v in p.values())
 
     def test_garbage_mode(self):

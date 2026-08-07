@@ -63,6 +63,11 @@ Jedes GEBOT ist eine nicht verhandelbare Vorschrift. Verstöße sind Build-Fehle
 - Änderungen an Shared Contracts (Bridge-API, Enums) → alle Consumer aktualisieren.
 - Spec-Referenzen (§G1, §V1 etc.) sind in Code-Kommentaren zu verwenden.
 - Keine Ad-hoc-Parameter — alle Konstanten über Config oder Enum.
+- **Canonical Contract Drift Gate**: GUI, CLI, REST und Batch MÜSSEN denselben
+  Pfad durchlaufen (Import → Pre-Analysis → `AurikDenker.denke()` → Bridge-/
+  Exporter-Export) und dieselben Bridge-Resolver (z. B. `normalize_user_mode()`)
+  verwenden. Kein Parallelpfad darf eigene Mode-/Alias-Mappings definieren, die
+  vom kanonischen Bridge-Vertrag abweichen (vgl. `tests/normative/test_canonical_contract_drift_gate.py`).
 
 ---
 

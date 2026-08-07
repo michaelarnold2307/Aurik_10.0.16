@@ -19,7 +19,7 @@ SR = 48_000
 
 def _sine(dur_s: float = 0.5, freq: float = 440.0, sr: int = SR) -> np.ndarray:
     t = np.linspace(0, dur_s, int(dur_s * sr), endpoint=False)
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(dur_s: float = 0.5) -> np.ndarray:

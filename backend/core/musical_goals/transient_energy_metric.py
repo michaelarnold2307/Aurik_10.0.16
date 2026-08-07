@@ -192,7 +192,7 @@ class TransientEnergyMetric:
         try:
             return self._measure_impl(audio_input, audio_restored, sr, mat, material_floor)
         except Exception as exc:
-            logger.debug("TransientEnergyMetric.measure_transient_energy non-blocking: %s", exc)
+            logger.debug("TransientEnergyMetric.measure_transient_energy nicht blockierend: %s", exc)
             return _fallback
 
     def _measure_impl(
@@ -401,7 +401,7 @@ def _hpss_percussive(
         hpss_result = np.asarray(perc, dtype=np.float32)
         return hpss_result
     except Exception as e:
-        logger.warning("transient_energy_metric.py::_hpss_percussive fallback: %s", e)
+        logger.warning("transient_energy_metric.py::_hpss_percussive Ersatzpfad: %s", e)
 
     # Fallback: Spektrale Median-Glättung — High-Variance-Anteile (percussive) extrahieren
     try:
@@ -465,7 +465,7 @@ def _detect_onsets(
             )
             return [int(o) for o in onset_frames]
         except Exception as e:
-            logger.warning("transient_energy_metric.py::_detect_onsets fallback: %s", e)
+            logger.warning("transient_energy_metric.py::_erkennen_onsets Ersatzpfad: %s", e)
 
     # Fallback: Energie-Fluss
     hop = 512

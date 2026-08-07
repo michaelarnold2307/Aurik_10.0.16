@@ -93,7 +93,7 @@ class TestDetectionConfig:
             min_confidence=0.7,
             target_sample_rate=22050,
             use_gpu=False,
-            cache_dir="/tmp/cache",
+            cache_dir="/tmp/cache",  # type: ignore[arg-type]
         )
 
         assert config.model_name == "custom/model"
@@ -182,7 +182,7 @@ class TestPhonemeDetectorInitialization:
         detector = PhonemeDetector(config)
 
         device = detector.device
-        assert isinstance(device, torch.device)  # type: ignore[union-attr]
+        assert isinstance(device, torch.device)  # type: ignore[attr-defined]
         assert device.type == "cpu"
 
     def test_device_property_gpu(self):
@@ -191,7 +191,7 @@ class TestPhonemeDetectorInitialization:
         detector = PhonemeDetector(config)
 
         device = detector.device
-        assert isinstance(device, torch.device)  # type: ignore[union-attr]
+        assert isinstance(device, torch.device)  # type: ignore[attr-defined]
         assert device.type == "cpu"
 
 

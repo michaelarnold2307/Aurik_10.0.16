@@ -404,7 +404,7 @@ class UndoManager:
         self._total_memory = 0
 
         logger.info(
-            f"UndoManager initialized (max_levels={max_undo_levels}, delta_compression={enable_delta_compression})"
+            f"UndoManager initialisiert (max_levels={max_undo_levels}, delta_compression={enable_delta_compression})"
         )
 
     def record_action(self, action: Action):
@@ -438,7 +438,7 @@ class UndoManager:
             State dict from action.revert(), or None if undo stack empty
         """
         if not self.can_undo():
-            logger.warning("Undo failed: stack is empty")
+            logger.warning("Undo fehlgeschlagen: stack is empty")
             return None
 
         action = self.undo_stack.pop()
@@ -456,7 +456,7 @@ class UndoManager:
             State dict from action.apply(), or None if redo stack empty
         """
         if not self.can_redo():
-            logger.warning("Redo failed: stack is empty")
+            logger.warning("Redo fehlgeschlagen: stack is empty")
             return None
 
         action = self.redo_stack.pop()
@@ -503,7 +503,7 @@ class UndoManager:
         self.undo_stack.clear()
         self.redo_stack.clear()
 
-        logger.info("Cleared all undo/redo history")
+        logger.info("geleert all undo/redo history")
 
     def get_memory_usage(self) -> int:
         """

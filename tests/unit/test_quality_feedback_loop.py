@@ -71,9 +71,9 @@ def test_feedback_loop_uses_previous_iteration_improvement():
     phase = _PhaseAlwaysSuccess()
 
     loop = QualityFeedbackLoop(target_naturalness=0.95, max_iterations=3, min_improvement=0.01)
-    loop.metrics = _SeqMetrics([0.50, 0.515, 0.535])
+    loop.metrics = _SeqMetrics([0.50, 0.515, 0.535])  # type: ignore[assignment]
 
-    _ = loop.process_with_feedback(phase, audio, 48000, repair_strength=0.8)
+    _ = loop.process_with_feedback(phase, audio, 48000, repair_strength=0.8)  # type: ignore[arg-type]
     assert phase.calls == 3
 
 
@@ -83,9 +83,9 @@ def test_feedback_loop_fallback_reuses_original_kwargs():
     phase = _PhaseFirstFailThenPass()
 
     loop = QualityFeedbackLoop(target_naturalness=0.80, max_iterations=2, min_improvement=0.01)
-    loop.metrics = _SeqMetrics([0.2, 0.2])
+    loop.metrics = _SeqMetrics([0.2, 0.2])  # type: ignore[assignment]
 
-    _ = loop.process_with_feedback(phase, audio, 48000, custom_threshold=0.42, repair_strength=0.7)
+    _ = loop.process_with_feedback(phase, audio, 48000, custom_threshold=0.42, repair_strength=0.7)  # type: ignore[arg-type]
 
     assert phase.calls == 2
     assert phase.kwargs_seen[1].get("custom_threshold") == 0.42

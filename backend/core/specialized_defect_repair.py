@@ -82,7 +82,7 @@ class SpecializedDefectRepair:
                             dropouts.append((i, min(n, i + win), drop_db))
 
         # Merge overlapping
-        return self._merge_regions(dropouts, max_gap_ms=5, sr=sr)
+        return self._merge_regions(dropouts, max_gap_ms=5, sr=sr)  # type: ignore[no-any-return]
 
     def _find_vocal_scratches(self, audio: np.ndarray, sr: int) -> list[tuple[int, int, float]]:
         """Findet Kratzer in Gesangsfrequenzen (300-4000Hz)."""
@@ -112,7 +112,7 @@ class SpecializedDefectRepair:
                 if 2 <= (s1 - s0) <= int(sr * 0.005):  # Max 5ms
                     scratches.append((s0, s1, 20 * np.log10(peak / local_rms)))
 
-        return self._merge_regions(scratches, max_gap_ms=2, sr=sr)
+        return self._merge_regions(scratches, max_gap_ms=2, sr=sr)  # type: ignore[no-any-return]
 
     def _find_transient_bounds(self, audio, center, sr):
         """Findet genaue Grenzen eines Transienten."""
@@ -152,7 +152,7 @@ class SpecializedDefectRepair:
                     else:
                         ch_data[s0:s1] = yi.astype(np.float32)
                 except Exception as e:
-                    logger.warning("specialized_defect_repair.py::_repair_dropouts fallback: %s", e)
+                    logger.warning("specialized_defect_repair.py::_repair_dropouts Ersatzpfad: %s", e)
         return result
 
     def _repair_scratches(self, audio, sr, scratches):

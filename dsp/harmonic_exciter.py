@@ -162,4 +162,4 @@ class HarmonicExciterStudio:
         peak = float(np.max(np.abs(out))) if out.size > 0 else 0.0
         if peak > 1.0:
             out = np.clip(out, -1.0, 1.0)
-        return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)  # type: ignore[no-any-return]

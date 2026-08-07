@@ -326,7 +326,7 @@ def apply_dsp_chain(
             delta = _compute_snr_db(processed) - snr_before
             if delta < _SKIP_GATE_THRESHOLD_DB:
                 logger.info(
-                    "⏭️ Phase-Skip-Gate: %s revertiert (ΔSNR=%+.2f dB < %.2f dB)",
+                    "⏭️ Verarbeitungsschritt-ueberspringen-Gate: %s revertiert (ΔSNR=%+.2f dB < %.2f dB)",
                     effect_type,
                     delta,
                     _SKIP_GATE_THRESHOLD_DB,
@@ -367,7 +367,9 @@ def apply_dsp_chain_tuple(
         if snr_before is not None:
             delta = _compute_snr_db(processed) - snr_before
             if delta < _SKIP_GATE_THRESHOLD_DB:
-                logger.info("⏭️ Phase-Skip-Gate: %s revertiert (ΔSNR=%+.2f dB)", module_name, delta)
+                logger.info(
+                    "⏭️ Verarbeitungsschritt-ueberspringen-Gate: %s revertiert (ΔSNR=%+.2f dB)", module_name, delta
+                )
                 skipped.append((module_name, delta))
                 continue
 
@@ -376,7 +378,7 @@ def apply_dsp_chain_tuple(
 
     if skipped:
         logger.info(
-            "Phase-Skip-Gate: %d angewendet, %d übersprungen: %s",
+            "Verarbeitungsschritt-ueberspringen-Gate: %d angewendet, %d übersprungen: %s",
             len(applied),
             len(skipped),
             [s[0] for s in skipped],
@@ -408,17 +410,17 @@ def _apply_dsp_module(audio: np.ndarray, sr: int, module_name: str, params: dict
 
             return AutomaticDeclicker(aggressive=params.get("aggressive", False)).process(audio, sr)  # type: ignore[no-any-return,call-arg]
         elif module_name == "ClickpopRemover":
-            from dsp.clickpop_remover import ClickpopRemover  # type: ignore[import]
+            from dsp.clickpop_remover import ClassicClickPopRemover
 
-            return ClickpopRemover().process(audio, sr)  # type: ignore[no-any-return]
+            return ClassicClickPopRemover().process(audio, sr)  # type: ignore[no-any-return]
         elif module_name in ("AutomaticDeclipperVoice", "AutomaticDeclipperMusic", "AutomaticDeclipper"):
             from dsp.automatic_declipper import AutomaticDeclipper  # type: ignore[import]
 
-            return AutomaticDeclipper(mode="voice" if "Voice" in module_name else "music").process(audio, sr)  # type: ignore[no-any-return,call-arg]
+            return AutomaticDeclipper().declip(audio, sr)  # type: ignore[no-any-return]
         elif module_name == "AutomaticDehum":
             from dsp.automatic_dehum import AutomaticDehum  # type: ignore[import]
 
-            return AutomaticDehum().process(audio, sr)  # type: ignore[no-any-return]
+            return AutomaticDehum().dehum(audio, sr)  # type: ignore[no-any-return]
         elif module_name in ("AdaptiveOMLSA", "AdaptiveMCRA"):
             from dsp.adaptive_noise_reduction import AdaptiveNoiseReduction  # type: ignore[import]
 
@@ -432,9 +434,9 @@ def _apply_dsp_module(audio: np.ndarray, sr: int, module_name: str, params: dict
 
             return TapeNoiseReduction().process(audio, sr)  # type: ignore[no-any-return]
         elif module_name == "Dehiss":
-            from dsp.dehiss import Dehiss  # type: ignore[import]
+            from dsp.dehiss import AiDehiss
 
-            return Dehiss().process(audio, sr)  # type: ignore[no-any-return]
+            return AiDehiss().dehiss(audio, sr)  # type: ignore[no-any-return]
         elif module_name == "SpectralGate":
             from dsp.spectral_gate import SpectralGate  # type: ignore[import]
 
@@ -466,19 +468,19 @@ def _apply_dsp_module(audio: np.ndarray, sr: int, module_name: str, params: dict
         elif module_name == "TransientProtectionGuard":
             from dsp.transient_protection_guard import TransientProtectionGuard  # type: ignore[import]
 
-            return TransientProtectionGuard().process(audio, sr)  # type: ignore[no-any-return]
+            return TransientProtectionGuard().process(audio, sr)  # type: ignore[return-value]
         elif module_name == "HarmonicExciterStudio":
             from dsp.harmonic_exciter import HarmonicExciter  # type: ignore[import]
 
             return HarmonicExciter(mode="studio").process(audio, sr)  # type: ignore[no-any-return,call-arg]
         elif module_name == "SpeakerEnhancement":
-            from dsp.speaker_enhancement import SpeakerEnhancement  # type: ignore[import]
+            from dsp.speaker_enhancement import AiSpeakerEnhancement
 
-            return SpeakerEnhancement().process(audio, sr)  # type: ignore[no-any-return]
+            return AiSpeakerEnhancement().process(audio, sr)  # type: ignore[no-any-return]
         elif module_name == "StereoEnhancer":
-            from dsp.stereo_enhancer import StereoEnhancer  # type: ignore[import]
+            from dsp.stereo_enhancer import AiStereoEnhancer
 
-            return StereoEnhancer().process(audio, sr)  # type: ignore[no-any-return]
+            return AiStereoEnhancer().process(audio, sr)  # type: ignore[no-any-return]
         elif module_name == "StereoImageCorrection":
             from dsp.stereo_image_correction import StereoImageCorrection  # type: ignore[import]
 

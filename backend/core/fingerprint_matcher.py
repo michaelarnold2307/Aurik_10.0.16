@@ -56,9 +56,9 @@ class FingerprintMatcher:
             _FINGERPRINT_DB.parent.mkdir(parents=True, exist_ok=True)
             if _FINGERPRINT_DB.exists():
                 with open(_FINGERPRINT_DB) as f:
-                    return json.load(f)
+                    return json.load(f)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("fingerprint_matcher.py::_load_db fallback: %s", e)
+            logger.warning("fingerprint_matcher.py::_laden_db Ersatzpfad: %s", e)
         return {"fingerprints": {}, "parameters": {}}
 
     def _save_db(self) -> None:
@@ -66,7 +66,7 @@ class FingerprintMatcher:
             with open(_FINGERPRINT_DB, "w") as f:
                 json.dump(self._db, f, indent=2, default=str)
         except Exception as e:
-            logger.debug("§AB Fingerprint save failed: %s", e)
+            logger.debug("§AB Fingerprint speichern fehlgeschlagen: %s", e)
 
     def compute_fingerprint(
         self, audio: np.ndarray, sr: int, material: str = "", genre: str = "", defect_types: list[str] | None = None
@@ -123,7 +123,7 @@ class FingerprintMatcher:
                 stereo_width=stereo_width,
             )
         except Exception as e:
-            logger.debug("§AB Fingerprint computation failed: %s", e)
+            logger.debug("§AB Fingerprint computation fehlgeschlagen: %s", e)
             return AudioFingerprint()
 
     def store_result(self, fp: AudioFingerprint, parameters: dict[str, Any]) -> None:

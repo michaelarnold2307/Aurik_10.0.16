@@ -61,7 +61,7 @@ def _get_aurik_version() -> str:
         # Typischer Desktop-Fall: Aurik läuft aus dem Repo ohne pip-Installation.
         pass
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
     try:
         _pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
         content = _pyproject.read_text(encoding="utf-8")
@@ -69,7 +69,7 @@ def _get_aurik_version() -> str:
         if m:
             return m.group(1)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
     return "unknown"
 
 
@@ -171,7 +171,7 @@ def save_checkpoint(
         try:
             import soundfile as sf  # pylint: disable=import-outside-toplevel
         except ImportError:
-            logger.error("Recovery: soundfile not available — cannot save checkpoint")
+            logger.error("Wiederherstellung: soundfile not verfuegbar — cannot speichern checkpoint")
             return None
 
         audio_tmp = str(audio_path) + ".tmp"
@@ -183,7 +183,7 @@ def save_checkpoint(
             audio_to_write = audio_to_write.T  # (2, N) → (N, 2) for soundfile
         sf.write(audio_tmp, audio_to_write, sample_rate, subtype="FLOAT", format="WAV")
         os.replace(audio_tmp, str(audio_path))
-        logger.info("Recovery: Audio-Checkpoint gespeichert: %s", audio_path)
+        logger.info("Wiederherstellung: Audio-Checkpoint gespeichert: %s", audio_path)
 
         # 2. Serialise defect scores
         defect_scores_simple: dict[str, float] = {}
@@ -237,7 +237,7 @@ def save_checkpoint(
             json.dump(asdict(checkpoint), f, indent=2, ensure_ascii=False)
         os.replace(json_tmp, str(json_path))
         logger.info(
-            "Recovery: Checkpoint gespeichert — %d Phasen abgeschlossen, %d verbleibend. %s",
+            "Wiederherstellung: Checkpoint gespeichert — %d Phasen abgeschlossen, %d verbleibend. %s",
             len(phases_executed),
             len(phases_remaining),
             json_path,
@@ -245,7 +245,7 @@ def save_checkpoint(
         return str(json_path)
 
     except Exception as exc:
-        logger.error("Recovery: Checkpoint-Speicherung fehlgeschlagen: %s", exc)
+        logger.error("Wiederherstellung: Checkpoint-Speicherung fehlgeschlagen: %s", exc)
         return None
 
 
@@ -267,14 +267,14 @@ def find_pending_checkpoints() -> list[RecoveryCheckpoint]:
             # Age check
             ts = data.get("timestamp", 0.0)
             if now - ts > _MAX_CHECKPOINT_AGE_S:
-                logger.debug("Recovery: Checkpoint zu alt (%.0f Tage): %s", (now - ts) / 86400, json_file)
+                logger.debug("Wiederherstellung: Checkpoint zu alt (%.0f Tage): %s", (now - ts) / 86400, json_file)
                 _cleanup_checkpoint_files(json_file)
                 continue
 
             # Audio file must exist
             audio_path = data.get("audio_wav_path", "")
             if not os.path.isfile(audio_path):
-                logger.debug("Recovery: Audio-Datei fehlt: %s", audio_path)
+                logger.debug("Wiederherstellung: Audio-Datei fehlt: %s", audio_path)
                 _cleanup_checkpoint_files(json_file)
                 continue
 
@@ -284,7 +284,7 @@ def find_pending_checkpoints() -> list[RecoveryCheckpoint]:
             results.append(checkpoint)
 
         except Exception as exc:
-            logger.debug("Recovery: Ungültiger Checkpoint %s: %s", json_file, exc)
+            logger.debug("Wiederherstellung: Ungültiger Checkpoint %s: %s", json_file, exc)
             _cleanup_checkpoint_files(json_file)
 
     return results
@@ -317,7 +317,7 @@ def load_checkpoint_audio(checkpoint: RecoveryCheckpoint) -> np.ndarray | None:
         import librosa  # pylint: disable=import-outside-toplevel
 
         logger.warning(
-            "Recovery: Resampling resume source from %d Hz to checkpoint SR %d Hz.",
+            "Wiederherstellung: Resampling resume source from %d Hz to checkpoint SR %d Hz.",
             sr_in,
             checkpoint.sample_rate,
         )
@@ -359,13 +359,13 @@ def load_checkpoint_audio(checkpoint: RecoveryCheckpoint) -> np.ndarray | None:
             sr = int(_res["sr"])
             if sr != checkpoint.sample_rate:
                 logger.warning(
-                    "Recovery: SR mismatch in Original — checkpoint %d Hz, Original %d Hz",
+                    "Wiederherstellung: SR mismatch in Originalsignal — checkpoint %d Hz, Originalsignal %d Hz",
                     checkpoint.sample_rate,
                     sr,
                 )
                 audio = _resample_to_checkpoint_sr(audio, sr)
             logger.info(
-                "Recovery: Original-Datei als Primärquelle geladen (Checkpoint nur Notfall-Fallback gemäß §2.39)."
+                "Wiederherstellung: Originalsignal-Datei als Primärquelle geladen (Checkpoint nur Notfall-Ersatzpfad gemäß §2.39)."
             )
             return audio  # type: ignore[no-any-return]
         orig_exc = RuntimeError(str((_res or {}).get("error", "load_audio_file returned invalid result")))
@@ -373,7 +373,7 @@ def load_checkpoint_audio(checkpoint: RecoveryCheckpoint) -> np.ndarray | None:
         orig_exc = _exc
 
     logger.warning(
-        "Recovery: Original-Datei konnte nicht geladen werden (%s) — Notfall-Fallback auf Checkpoint-Audio: %s",
+        "Wiederherstellung: Originalsignal-Datei konnte nicht geladen werden (%s) — Notfall-Ersatzpfad auf Checkpoint-Audio: %s",
         type(orig_exc).__name__ if orig_exc is not None else "UnknownError",
         checkpoint.audio_wav_path,
     )
@@ -387,19 +387,19 @@ def load_checkpoint_audio(checkpoint: RecoveryCheckpoint) -> np.ndarray | None:
         sr = int(_res_cp["sr"])
         if sr != checkpoint.sample_rate:
             logger.warning(
-                "Recovery: SR mismatch — checkpoint %d Hz, WAV %d Hz",
+                "Wiederherstellung: SR mismatch — checkpoint %d Hz, WAV %d Hz",
                 checkpoint.sample_rate,
                 sr,
             )
             audio = _resample_to_checkpoint_sr(audio, sr)
         logger.info(
             "§2.39 OOM-Checkpoint-Ausnahme aktiv: Checkpoint-Audio wird verwendet, "
-            "weil das Original nicht verfügbar/lesbar ist."
+            "weil das Originalsignal nicht verfügbar/lesbar ist."
         )
         return audio  # type: ignore[no-any-return]
     except Exception as cp_exc:
         logger.error(
-            "Recovery: Weder Original noch Checkpoint-Audio konnte geladen werden: Original: %s, Checkpoint: %s",
+            "Wiederherstellung: Weder Originalsignal noch Checkpoint-Audio konnte geladen werden: Originalsignal: %s, Checkpoint: %s",
             orig_exc,
             cp_exc,
         )
@@ -429,7 +429,7 @@ def cleanup_expired_checkpoints() -> int:
             _cleanup_checkpoint_files(json_file)
             removed += 1
     if removed:
-        logger.info("Recovery: %d abgelaufene Checkpoints bereinigt.", removed)
+        logger.info("Wiederherstellung: %d abgelaufene Checkpoints bereinigt.", removed)
     return removed
 
 
@@ -447,6 +447,6 @@ def _cleanup_checkpoint_files(json_path: Path) -> None:
             try:
                 os.remove(path)
             except OSError as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)

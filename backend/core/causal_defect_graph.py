@@ -203,10 +203,10 @@ class CausalDefectGraph:
 
         if len(result) != len(detected_dedup):
             if not self._incomplete_sort_warned:
-                logger.warning("Kausale Sortierung unvollständig — Fallback auf Schweregrad.")
+                logger.warning("Kausale Sortierung unvollständig — Ersatzpfad auf Schweregrad.")
                 self._incomplete_sort_warned = True
             else:
-                logger.debug("Kausale Sortierung weiterhin unvollständig — Fallback auf Schweregrad.")
+                logger.debug("Kausale Sortierung weiterhin unvollständig — Ersatzpfad auf Schweregrad.")
             return sorted(detected_dedup, key=lambda d: d.severity, reverse=True)
 
         logger.debug(

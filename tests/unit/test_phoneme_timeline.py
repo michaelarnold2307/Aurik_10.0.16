@@ -621,7 +621,7 @@ class TestSegmentSelectiveGate:
     def _sibilant_tone(self, duration_s: float = 1.0, freq_hz: float = 7000.0) -> np.ndarray:
         """Pure sine in sibilant band to make de-essing actually do something."""
         t = np.arange(int(duration_s * self.SR)) / self.SR
-        return (0.5 * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)
+        return (0.5 * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
     def _tl_with_sibilant_at_start(self, audio_dur_s: float = 1.0) -> PhonemeTimeline:
         """Timeline with ONE sibilant segment covering the first 0.2 s only."""

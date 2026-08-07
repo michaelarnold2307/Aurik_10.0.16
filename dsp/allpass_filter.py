@@ -88,4 +88,4 @@ class AllpassFilter:
             a2 = 1.0 - alpha
             sos_sections.append([b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0])
         sos_arr = np.array(sos_sections)
-        return sosfilt(sos_arr, audio).astype(audio.dtype)
+        return sosfilt(sos_arr, audio).astype(audio.dtype)  # type: ignore[no-any-return]

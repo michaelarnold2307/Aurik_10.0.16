@@ -286,7 +286,7 @@ def compute_phase_params(
     try:
         params = fn(measurements)
     except Exception as e:
-        logger.debug("compute_phase_params %s: %s — fallback generic", phase_id, e)
+        logger.debug("berechnen_Verarbeitungsschritt_params %s: %s — Ersatzpfad generic", phase_id, e)
         params = _generic_params(measurements)
 
     # Gemeinsame Parameter für ALLE Phasen
@@ -294,7 +294,7 @@ def compute_phase_params(
     params.setdefault("restorability_score", _safe(measurements, "restorability_score", 50.0))
     params.setdefault("bandwidth_loss", _safe(measurements, "bandwidth_loss", 0.0))
 
-    return params
+    return params  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════════

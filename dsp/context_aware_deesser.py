@@ -269,12 +269,14 @@ class ContextAwareDeEsser:
 
         # Initialize phoneme detector
         if not PHONEME_DETECTION_AVAILABLE:
-            logger.warning("Phoneme detection not available (torch/transformers missing) — running in DSP-only mode")
+            logger.warning(
+                "Phoneme detection not verfuegbar (torch/transformers missing) — laeuft in DSP-only Betriebsart"
+            )
             self.phoneme_detector = None
             self.phoneme_classifier = None
         else:
             logger.info(
-                f"Initializing Context-Aware De-Esser v2.0 (mode={self.config.mode.value}, device={self.config.device})"
+                f"initialisiere Context-Aware De-Esser v2.0 (Betriebsart={self.config.mode.value}, device={self.config.device})"
             )
             try:
                 # Create detection config
@@ -288,10 +290,10 @@ class ContextAwareDeEsser:
 
                 self.phoneme_detector = PhonemeDetector(config=detection_config)
                 self.phoneme_classifier = PhonemeClassifier()
-                logger.info("Phoneme detection initialized successfully")
+                logger.info("Phoneme detection initialisiert erfolgreich")
             except Exception as e:
-                logger.error("Failed to initialize phoneme detection: %s", e)
-                logger.warning("Falling back to DSP-only mode")
+                logger.error("konnte nicht initialisieren phoneme detection: %s", e)
+                logger.warning("Falling back to DSP-only Betriebsart")
                 self.phoneme_detector = None
                 self.phoneme_classifier = None
 
@@ -318,7 +320,7 @@ class ContextAwareDeEsser:
         if audio.size == 0:
             raise ValueError("Audio is empty")
 
-        logger.info("Processing %s audio at %s Hz (mode=%s)", audio.shape, sr, self.config.mode.value)
+        logger.info("Processing %s audio at %s Hz (Betriebsart=%s)", audio.shape, sr, self.config.mode.value)
 
         # Handle stereo
         is_stereo = audio.ndim == 2
@@ -340,8 +342,8 @@ class ContextAwareDeEsser:
 
         self.last_report = report
         logger.info(
-            f"De-essing complete: {report.sibilants_processed}/{report.sibilants_detected} "
-            f"sibilants processed ({report.percentage_processed:.1f}% of audio)"
+            f"De-essing vollstaendig: {report.sibilants_processed}/{report.sibilants_detected} "
+            f"sibilants verarbeitet ({report.percentage_processed:.1f}% of audio)"
         )
 
         return processed, report
@@ -360,7 +362,7 @@ class ContextAwareDeEsser:
         try:
             phonemes = self.phoneme_detector.detect(audio, sr)  # type: ignore[union-attr]
         except Exception as e:
-            logger.error("Phoneme detection failed: %s", e)
+            logger.error("Phoneme detection fehlgeschlagen: %s", e)
             # Fallback: return unprocessed audio
             report = ProcessingReport(
                 total_duration_sec=duration_sec,
@@ -373,7 +375,7 @@ class ContextAwareDeEsser:
             )
             return audio.copy(), report
 
-        logger.debug("Detected %s phonemes", len(phonemes))
+        logger.debug("erkannt %s phonemes", len(phonemes))
 
         # Step 2: Filter sibilants
         sibilants = self._filter_sibilants(phonemes)
@@ -436,7 +438,7 @@ class ContextAwareDeEsser:
             phonemes_detected=len(phonemes),
             sibilants_detected=len(sibilants),
             sibilants_processed=len(sibilants),
-            avg_reduction_db=np.mean(reductions_db) if reductions_db else 0.0,
+            avg_reduction_db=np.mean(reductions_db) if reductions_db else 0.0,  # type: ignore[arg-type]
             percentage_processed=percentage_processed,
             sibilant_breakdown=sibilant_counts,
         )
@@ -459,8 +461,8 @@ class ContextAwareDeEsser:
             phoneme_info = self.phoneme_classifier.classify(phoneme_seg.phoneme)  # type: ignore[union-attr]
 
             # Check if sibilant
-            if phoneme_info.is_sibilant and phoneme_info.sibilant_type:
-                sibilants.append((phoneme_seg, phoneme_info.sibilant_type))
+            if phoneme_info.is_sibilant and phoneme_info.sibilant_type:  # type: ignore[union-attr]
+                sibilants.append((phoneme_seg, phoneme_info.sibilant_type))  # type: ignore[union-attr]
 
         return sibilants
 

@@ -27,6 +27,8 @@ from typing import Any
 
 import numpy as np
 
+from backend.core.calibration_context import get_calibration_context
+
 logger = logging.getLogger(__name__)
 
 # Qualitäts-Anker pro Material-Klasse (MUSHRA-Skala 0-100)
@@ -83,7 +85,7 @@ def compute_absolute_quality_delta(
     sr: int = 48000,
     proxy_regression: float = 0.0,
     material_type: str = "unknown",
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
     restorability_score: float = 50.0,
     absolute_mushra_before: float | None = None,
 ) -> AbsoluteQualityDelta:
@@ -103,9 +105,7 @@ def compute_absolute_quality_delta(
     Returns:
         AbsoluteQualityDelta mit Entscheidung ob Rollback overruled werden soll.
     """
-    quality_anchor = MATERIAL_ABSOLUTE_QUALITY_ANCHOR.get(
-        str(material_type).lower(), 70.0
-    )
+    quality_anchor = MATERIAL_ABSOLUTE_QUALITY_ANCHOR.get(str(material_type).lower(), 70.0)
 
     # Wenn kein Referenz-Anker verfügbar ist, kann keine absolute Bewertung erfolgen
     if reference_anchor is None and audio_before is None:
@@ -144,7 +144,7 @@ def compute_absolute_quality_delta(
         result = evaluate_mushra(ref_mono, after_mono, sr, compute_anchor=True)
         absolute_mushra_after = float(result.mushra_score)
     except Exception as e:
-        logger.debug("AbsoluteQualityGate MUSHRA non-blocking: %s", e)
+        logger.debug("AbsoluteQualityGate MUSHRA nicht blockierend: %s", e)
         absolute_mushra_after = absolute_mushra_before or 50.0
 
     if absolute_mushra_before is None:
@@ -153,6 +153,7 @@ def compute_absolute_quality_delta(
             before_mono = audio_before if audio_before.ndim == 1 else audio_before.mean(axis=-1)
             try:
                 from backend.core.mushra_evaluator import evaluate_mushra
+
                 before_result = evaluate_mushra(ref_mono, before_mono, sr, compute_anchor=True)
                 absolute_mushra_before = float(before_result.mushra_score)
             except Exception:
@@ -162,6 +163,9 @@ def compute_absolute_quality_delta(
     absolute_delta = absolute_mushra_after - absolute_mushra_before
 
     # Tiefen-adaptive Toleranz: bei depth≥4 ist schon eine kleine Verbesserung signifikant
+    if transfer_chain_depth is None:
+        _ctx = get_calibration_context()
+        transfer_chain_depth = _ctx.transfer_chain_depth if _ctx is not None else 1
     depth = max(1, int(transfer_chain_depth))
     min_improvement = -1.0 if depth >= 4 else 0.5  # Bei depth≥4: selbst Stagnation ist OK
 
@@ -176,19 +180,14 @@ def compute_absolute_quality_delta(
     reason_parts = []
     if should_override:
         reason_parts.append(
-            f"ABSOLUTE Qualität steigt ({absolute_delta:+.1f} MUSHRA) "
-            f"trotz Proxy-Regression ({proxy_regression:+.3f})"
+            f"ABSOLUTE Qualität steigt ({absolute_delta:+.1f} MUSHRA) trotz Proxy-Regression ({proxy_regression:+.3f})"
         )
-        reason_parts.append(f"Rollback OVERRULED — vertraue absolutem Qualitäts-Modell")
+        reason_parts.append("Rollback OVERRULED — vertraue absolutem Qualitäts-Modell")
     else:
         if absolute_delta < min_improvement:
-            reason_parts.append(
-                f"Absolute Qualität sinkt ({absolute_delta:+.1f}) — Rollback gerechtfertigt"
-            )
+            reason_parts.append(f"Absolute Qualität sinkt ({absolute_delta:+.1f}) — Rollback gerechtfertigt")
         else:
-            reason_parts.append(
-                f"Absolute Qualität stabil ({absolute_delta:+.1f}) — keine Override-Entscheidung"
-            )
+            reason_parts.append(f"Absolute Qualität stabil ({absolute_delta:+.1f}) — keine Override-Entscheidung")
 
     return AbsoluteQualityDelta(
         absolute_mushra=absolute_mushra_after,

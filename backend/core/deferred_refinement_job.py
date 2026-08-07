@@ -93,11 +93,11 @@ class DeferredRefinementJob:
                     _ml_budget_release("kmv_job")
             except Exception as _exc:
                 logger.debug(
-                    "Operation failed (non-critical): %s", _exc
+                    "Operation fehlgeschlagen (unkritisch): %s", _exc
                 )  # best-effort: budget module may not be available in tests
             object.__setattr__(self, "_budget_registered", False)
         # Allow GC to reclaim the potentially large audio array
         try:
             object.__setattr__(self, "audio_original", None)
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)

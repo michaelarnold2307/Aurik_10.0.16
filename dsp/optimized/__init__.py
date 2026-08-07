@@ -20,15 +20,15 @@ try:
     HAS_PYFFTW = True
 except ImportError:
     HAS_PYFFTW = False
-    CachedFFT = None
-    rfft = None
-    irfft = None
-    stft = None
-    istft = None
+    CachedFFT = None  # type: ignore
+    rfft = None  # type: ignore[assignment]
+    irfft = None  # type: ignore[assignment]
+    stft = None  # type: ignore[assignment]
+    istft = None  # type: ignore[assignment]
 
 # Cython loops (requires compilation)
 try:
-    from . import cython_loops
+    from . import cython_loops  # type: ignore[attr-defined]
 
     HAS_CYTHON = True
 except ImportError:

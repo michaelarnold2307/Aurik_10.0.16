@@ -195,7 +195,7 @@ class ApolloPhase0Guard:
                     self._device = getattr(_apollo, "_device", "cpu")
                     self._loaded = True
                     self._shared_from_plm = True
-                    logger.info("Apollo Phase-0 via PLM-Singleton (shared model, 0 MB extra)")
+                    logger.info("Apollo Verarbeitungsschritt-0 via PLM-Singleton (shared model, 0 MB extra)")
                     return True
         except Exception:
             pass
@@ -208,10 +208,10 @@ class ApolloPhase0Guard:
 
             self._device = "cuda" if torch.cuda.is_available() else "cpu"
             self._model = torch.jit.load(self._model_path, map_location=self._device)
-            self._model.eval()
+            self._model.eval()  # type: ignore[attr-defined]
             self._loaded = True
             logger.info(
-                "Apollo Phase-0 geladen (device=%s, %.1f MB)",
+                "Apollo Verarbeitungsschritt-0 geladen (device=%s, %.1f MB)",
                 self._device,
                 __import__("os").path.getsize(self._model_path) / 1e6,
             )
@@ -380,7 +380,7 @@ class ApolloPhase0Guard:
             # ── Apollo erfolgreich ──
             _elapsed = time.perf_counter() - t0
             logger.info(
-                "Apollo Phase-0: %s decompressed (%.2fs, novelty=%.3f, HF=+%.1fdB)",
+                "Apollo Verarbeitungsschritt-0: %s decompressed (%.2fs, novelty=%.3f, HF=+%.1fdB)",
                 _mat,
                 _elapsed,
                 _novelty,
@@ -480,11 +480,11 @@ class ResembleEnhanceGuard:
         try:
             from plugins.resemble_enhance_plugin import get_resemble_enhance_plugin
 
-            self._plugin = get_resemble_enhance_plugin()
+            self._plugin = get_resemble_enhance_plugin()  # type: ignore[assignment]
             self._loaded = getattr(self._plugin, "_session", None) is not None
             if self._loaded:
                 self._shared_from_plm = True
-                logger.info("Resemble Enhance Phase-0 via PLM-Singleton")
+                logger.info("Resemble verbessern Verarbeitungsschritt-0 via PLM-Singleton")
             return self._loaded
         except Exception:
             pass
@@ -492,16 +492,16 @@ class ResembleEnhanceGuard:
         try:
             from plugins.resemble_enhance_plugin import ResembleEnhancePlugin
 
-            self._plugin = ResembleEnhancePlugin()
-            self._loaded = self._plugin._session is not None
+            self._plugin = ResembleEnhancePlugin()  # type: ignore[assignment]
+            self._loaded = self._plugin._session is not None  # type: ignore[attr-defined]
             if self._loaded:
-                logger.info("Resemble Enhance Phase-0 geladen")
+                logger.info("Resemble verbessern Verarbeitungsschritt-0 geladen")
             return self._loaded
         except ImportError:
-            logger.debug("Resemble Enhance Plugin nicht verfügbar")
+            logger.debug("Resemble verbessern Plugin nicht verfügbar")
             return False
         except Exception as exc:
-            logger.warning("Resemble Enhance Ladefehler: %s", exc)
+            logger.warning("Resemble verbessern Ladefehler: %s", exc)
             return False
 
     def process(self, audio: np.ndarray, sr: int = 48000) -> tuple[np.ndarray, bool]:
@@ -530,7 +530,7 @@ class ResembleEnhanceGuard:
             _novelty = _spectral_novelty(_audio, _processed, sr)
             if _novelty > self._threshold:
                 logger.warning(
-                    "Resemble Enhance Hallucination-Guard: novelty=%.3f > %.2f → Rollback",
+                    "Resemble verbessern Hallucination-Guard: novelty=%.3f > %.2f → Rollback",
                     _novelty,
                     self._threshold,
                 )
@@ -546,7 +546,7 @@ class ResembleEnhanceGuard:
             )
             if _degraded:
                 logger.warning(
-                    "Resemble Enhance Quality-Guard: Degradation → Rollback. RMS=%.1fdB Crest=%.3f HF=%.1fdB",
+                    "Resemble verbessern Quality-Guard: Degradation → Rollback. RMS=%.1fdB Crest=%.3f HF=%.1fdB",
                     _qual["rms_delta_db"],
                     _qual["crest_delta"],
                     _qual["hf_delta_db"],
@@ -555,7 +555,7 @@ class ResembleEnhanceGuard:
 
             _elapsed = time.perf_counter() - t0
             logger.info(
-                "Resemble Enhance Phase-0b: %.2fs, novelty=%.3f, HF=+%.1fdB",
+                "Resemble verbessern Verarbeitungsschritt-0b: %.2fs, novelty=%.3f, HF=+%.1fdB",
                 _elapsed,
                 _novelty,
                 _qual.get("hf_delta_db", 0.0),
@@ -563,7 +563,7 @@ class ResembleEnhanceGuard:
             return _processed, True
 
         except Exception as exc:
-            logger.warning("Resemble Enhance fehlgeschlagen: %s", exc)
+            logger.warning("Resemble verbessern fehlgeschlagen: %s", exc)
             return _audio, False
 
 
@@ -600,14 +600,14 @@ class EARVAEPhase0Stage:
         try:
             from plugins.ear_vae_plugin import get_ear_vae_plugin
 
-            self._plugin = get_ear_vae_plugin()
+            self._plugin = get_ear_vae_plugin()  # type: ignore[assignment]
             if self._plugin is not None and self._plugin._ok:
-                logger.info("EAR_VAE Phase-0 stage available")
+                logger.info("EAR_VAE Verarbeitungsschritt-0 Stufe verfuegbar")
             else:
-                logger.debug("EAR_VAE Phase-0: plugin not loaded")
+                logger.debug("EAR_VAE Verarbeitungsschritt-0: plugin not geladen")
                 self._plugin = None
         except Exception as exc:
-            logger.debug("EAR_VAE Phase-0 unavailable: %s", exc)
+            logger.debug("EAR_VAE Verarbeitungsschritt-0 nicht verfuegbar: %s", exc)
             self._plugin = None
         return self._plugin
 
@@ -653,7 +653,9 @@ class EARVAEPhase0Stage:
                         channels.append(resample_poly(ch, num, ch.shape[-1]))
                     _audio = np.stack(channels, axis=0).astype(np.float32)
                 except Exception:
-                    logger.debug("Phase-0: resample_poly für EAR_VAE fehlgeschlagen — überspringe Resample")
+                    logger.debug(
+                        "Verarbeitungsschritt-0: resample_poly für EAR_VAE fehlgeschlagen — überspringe Resample"
+                    )
 
             # Run neural clean-pass
             # §v10.360: PLM-Schutz für EAR_VAE (643 MB)
@@ -664,21 +666,21 @@ class EARVAEPhase0Stage:
                 _plm.set_active("EAR_VAE", True)
                 _plm.touch("EAR_VAE")  # §v10.370: LRU-Update
             except Exception:
-                logger.debug("Phase-0: PLM EAR_VAE Aktivierung fehlgeschlagen")
+                logger.debug("Verarbeitungsschritt-0: PLM EAR_VAE Aktivierung fehlgeschlagen")
             try:
                 out = plugin.process(_audio, sample_rate=48000)
             finally:
                 try:
                     get_plugin_lifecycle_manager().set_active("EAR_VAE", False)
                 except Exception:
-                    logger.debug("Phase-0: PLM EAR_VAE Deaktivierung fehlgeschlagen")
+                    logger.debug("Verarbeitungsschritt-0: PLM EAR_VAE Deaktivierung fehlgeschlagen")
             if out is None:
                 return audio, False
 
             # Quality guard: skip if spectral novelty > 40%
             _novelty = _spectral_novelty(audio, out, sr=48000)
             if _novelty > 0.40:
-                logger.debug("EAR_VAE skipped: novelty %.3f > 0.40", _novelty)
+                logger.debug("EAR_VAE uebersprungen: novelty %.3f > 0.40", _novelty)
                 return audio, False
 
             # Resample back to original SR if needed
@@ -692,7 +694,7 @@ class EARVAEPhase0Stage:
                         channels.append(resample_poly(out[c], num, out[c].shape[-1]))
                     out = np.stack(channels, axis=0).astype(np.float32)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
             # Convert back to original channel layout
             if audio.ndim == 1:
@@ -709,11 +711,11 @@ class EARVAEPhase0Stage:
                 else:
                     out = out[:min_len]
 
-            logger.info("EAR_VAE Phase-0 applied: novelty=%.3f", _novelty)
+            logger.info("EAR_VAE Verarbeitungsschritt-0 angewendet: novelty=%.3f", _novelty)
             return out.astype(np.float32), True
 
         except Exception as exc:
-            logger.debug("EAR_VAE Phase-0 failed: %s", exc)
+            logger.debug("EAR_VAE Verarbeitungsschritt-0 fehlgeschlagen: %s", exc)
             return audio, False
 
 
@@ -788,7 +790,7 @@ class ChainedPhase0Preprocessor:
                     {"stage": s.strip(), "applied": True} for s in _cached_stages_str.split(",") if s.strip()
                 ]
                 if len(_cached_audio) == len(_current):
-                    logger.info("§v10.303.18 Phase-0 Cache HIT: %s", _cache_key[:16])
+                    logger.info("§v10.303.18 Verarbeitungsschritt-0 Zwischenspeicher HIT: %s", _cache_key[:16])
                     return ApolloResult(
                         audio=_cached_audio.astype(np.float32),
                         applied=True,
@@ -829,14 +831,14 @@ class ChainedPhase0Preprocessor:
                 _plm.set_active("Apollo", True)
                 _plm.touch("Apollo")  # §v10.370: LRU-Update
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             try:
                 _apollo_result = self._apollo.process(_current, sr, material)
             finally:
                 try:
                     get_plugin_lifecycle_manager().set_active("Apollo", False)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             if _apollo_result.applied:
                 _current = _apollo_result.audio
                 _any_applied = True
@@ -871,14 +873,14 @@ class ChainedPhase0Preprocessor:
                 _plm.set_active("DeepFilterNetV3", True)
                 _plm.touch("DeepFilterNetV3")  # §v10.370: LRU-Update
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             try:
                 _dfn_out, _dfn_applied = self._deepfilter.process(_current, sr)
             finally:
                 try:
                     get_plugin_lifecycle_manager().set_active("DeepFilterNetV3", False)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             if _dfn_applied:
                 _current = _dfn_out
                 _any_applied = True
@@ -891,7 +893,7 @@ class ChainedPhase0Preprocessor:
             _meta_stages.append({"stage": "deepfilternet", "applied": False, "reason": _reason})
             if _vocal_conf < 0.5 and _vocal_conf > 0:
                 logger.debug(
-                    "DeepFilterNet skipped: panns_singing=%.2f < 0.5 (Musik/Instrumental — außerhalb Trainingsbereich)",
+                    "DeepFilterNet uebersprungen: panns_singing=%.2f < 0.5 (Musik/Instrumental — außerhalb Trainingsbereich)",
                     _vocal_conf,
                 )
         # §v10.306: DeepFilterNet sofort entladen — 34 MB RAM freigeben
@@ -909,14 +911,14 @@ class ChainedPhase0Preprocessor:
                 _plm.set_active("ResembleEnhance", True)
                 _plm.touch("ResembleEnhance")  # §v10.370: LRU-Update
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             try:
                 _re_out, _re_applied = self._resemble.process(_current, sr)
             finally:
                 try:
                     get_plugin_lifecycle_manager().set_active("ResembleEnhance", False)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             if _re_applied:
                 _current = _re_out
                 _any_applied = True
@@ -940,7 +942,7 @@ class ChainedPhase0Preprocessor:
                     audio=_current.astype(np.float32),
                     stage_info=np.array([_stage_info]),
                 )
-                logger.debug("§v10.303.18 Phase-0 Cache saved: %s", _cache_key[:16])
+                logger.debug("§v10.303.18 Verarbeitungsschritt-0 Zwischenspeicher gespeichert: %s", _cache_key[:16])
             except Exception:
                 pass
 
@@ -1030,10 +1032,10 @@ class DeepFilterNetGuard:
         try:
             from plugins.deepfilternet_v3_ii_plugin import get_deepfilternet_plugin
 
-            self._plugin = get_deepfilternet_plugin()
+            self._plugin = get_deepfilternet_plugin()  # type: ignore[assignment]
             self._loaded = True
             self._shared_from_plm = True
-            logger.info("DeepFilterNet Phase-0 via PLM-Singleton")
+            logger.info("DeepFilterNet Verarbeitungsschritt-0 via PLM-Singleton")
             return True
         except Exception:
             pass
@@ -1041,9 +1043,9 @@ class DeepFilterNetGuard:
         try:
             from plugins.deepfilternet_v3_ii_plugin import DeepFilterNetV3Plugin
 
-            self._plugin = DeepFilterNetV3Plugin()
+            self._plugin = DeepFilterNetV3Plugin()  # type: ignore[assignment]
             self._loaded = True
-            logger.info("DeepFilterNet v3 Phase-0b geladen")
+            logger.info("DeepFilterNet v3 Verarbeitungsschritt-0b geladen")
             return True
         except ImportError:
             logger.debug("DeepFilterNet Plugin nicht verfügbar")
@@ -1162,7 +1164,7 @@ class DeepFilterNetGuard:
 
             _elapsed = time.perf_counter() - t0
             logger.info(
-                "DeepFilterNet Phase-0b: %.2fs, novelty=%.3f, RMS=%.1fdB",
+                "DeepFilterNet Verarbeitungsschritt-0b: %.2fs, novelty=%.3f, RMS=%.1fdB",
                 _elapsed,
                 _novelty,
                 _qual.get("rms_delta_db", 0.0),
@@ -1195,7 +1197,7 @@ class DeepFilterNetGuard:
             _segments.append((_seg_start, len(mask)))
         # Merge adjacent segments closer than 30 ms @ 48 kHz
         _gap_samples = int(0.030 * 48000)
-        _merged = []
+        _merged: list[Any] = []
         for _s, _e in _segments:
             if _merged and _s - _merged[-1][1] <= _gap_samples:
                 _merged[-1] = (_merged[-1][0], _e)

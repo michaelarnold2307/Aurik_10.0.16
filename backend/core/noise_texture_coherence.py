@@ -135,7 +135,7 @@ def compute_noise_texture_coherence(
 
         freqs, psd = welch(residual_noise, fs=sr, nperseg=nperseg, noverlap=nperseg // 2)
     except Exception as exc:
-        logger.debug("Welch PSD failed (non-blocking): %s", exc)
+        logger.debug("Welch PSD fehlgeschlagen (nicht blockierend): %s", exc)
         return NoiseTextureResult(
             coherence=1.0,
             material_type=material_type,

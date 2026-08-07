@@ -114,7 +114,7 @@ class MultibandCompressor:
                 if maxval > 1.0:
                     out = np.clip(out, -1.0, 1.0)
                 self._audit_log({"bands": self.bands, "shape": out.shape, "success": True})
-                return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)
+                return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)  # type: ignore[no-any-return]
             else:
                 self._audit_log({"bands": self.bands, "error": "No bands processed"})
                 return audio.astype(orig_dtype)
@@ -245,7 +245,7 @@ class MultibandCompressor:
             padded = np.pad(sq, (left, right), mode="edge")
             csum = np.cumsum(np.concatenate(([0.0], padded)))
             avg = (csum[window:] - csum[:-window]) / float(window)
-            return np.sqrt(np.maximum(avg, 0.0))
+            return np.sqrt(np.maximum(avg, 0.0))  # type: ignore[no-any-return]
         return np.apply_along_axis(lambda ch: MultibandCompressor._moving_rms(ch, window), axis=-1, arr=x)
 
 
@@ -296,7 +296,7 @@ class MultibandCompressorStudio:
             if _peak_p99 > 0:
                 out = out / _peak_p99
             self._audit_log({"bands": 3, "shape": out.shape, "success": True})
-            return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)
+            return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)  # type: ignore[no-any-return]
         except Exception as e:
             _logger.error("MultibandCompressorStudio Fehler: %s", e)
             self._audit_log({"bands": 3, "error": str(e)})

@@ -38,7 +38,7 @@ def mono_sine_44(sr44) -> np.ndarray:
     """440-Hz-Sinus, 0.25s@44100Hz, float32. Einmal pro Worker."""
     n = int(sr44 * DUR)
     t = np.linspace(0, DUR, n, endpoint=False, dtype=np.float32)
-    return 0.5 * np.sin(2 * np.pi * 440 * t)
+    return 0.5 * np.sin(2 * np.pi * 440 * t)  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="session")
@@ -46,7 +46,7 @@ def mono_sine_48(sr48) -> np.ndarray:
     """440-Hz-Sinus, 0.25s@48000Hz, float32. Einmal pro Worker."""
     n = int(sr48 * DUR)
     t = np.linspace(0, DUR, n, endpoint=False, dtype=np.float32)
-    return 0.5 * np.sin(2 * np.pi * 440 * t)
+    return 0.5 * np.sin(2 * np.pi * 440 * t)  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="session")

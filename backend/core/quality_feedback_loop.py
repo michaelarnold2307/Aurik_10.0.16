@@ -219,7 +219,9 @@ class QualityFeedbackLoop:
             result = phase.process(audio, sample_rate, **kwargs)
 
             if not result.success:
-                logger.warning("Phase %s failed in iteration %s", phase.get_metadata().name, iteration)
+                logger.warning(
+                    "Verarbeitungsschritt %s fehlgeschlagen in iteration %s", phase.get_metadata().name, iteration
+                )
                 break
 
             # Measure naturalness
@@ -251,7 +253,7 @@ class QualityFeedbackLoop:
 
                 # Check if improvement is too small to continue
                 if prev_naturalness is not None and (naturalness - prev_naturalness) < self.min_improvement:
-                    logger.info("⚠️  Improvement too small (%.3f), stopping", naturalness - prev_naturalness)
+                    logger.info("⚠️  Improvement too small (%.3f), stoppe", naturalness - prev_naturalness)
                     break
 
                 prev_naturalness = naturalness
@@ -264,7 +266,7 @@ class QualityFeedbackLoop:
                     logger.info("🔧 Adapting parameters for iteration %s...", iteration + 2)
 
             except Exception as e:
-                logger.error("Quality measurement failed: %s", e)
+                logger.error("Quality measurement fehlgeschlagen: %s", e)
                 if best_result is None:
                     best_result = result
                 break
@@ -272,7 +274,7 @@ class QualityFeedbackLoop:
         # Return best result achieved
         if best_result is None:
             # Fallback: return original processing result
-            logger.warning("No valid result achieved, returning original processing")
+            logger.warning("No valid Ergebnis achieved, returning Originalsignal processing")
             return phase.process(original_audio, sample_rate, **original_kwargs)
 
         return best_result
@@ -320,7 +322,7 @@ class QualityFeedbackLoop:
 
             if "threshold" in adapted:
                 adapted["threshold"] = adapted["threshold"] * 1.2
-                logger.debug("  threshold: %s → %s", params.get("threshold"), adapted["threshold"])
+                logger.debug("  Schwelle: %s → %s", params.get("threshold"), adapted["threshold"])
 
             # If temporal smoothness is low, reduce attack speed
             if temporal_smoothness < 0.6 and "attack_ms" in adapted:
@@ -406,7 +408,7 @@ class QualityFeedbackLoop:
 
         # If temporal smoothness is low, defects likely present
         if initial_quality["temporal_smoothness"] < 0.7:
-            logger.debug("Defects detected (smoothness: %.2f), using feedback", initial_quality["temporal_smoothness"])
+            logger.debug("Defects erkannt (smoothness: %.2f), using feedback", initial_quality["temporal_smoothness"])
             return True
 
         return False
@@ -481,7 +483,7 @@ class QualityGating:
                 temporal_smoothness = quality.get("temporal_smoothness", 1.0)
                 if temporal_smoothness > 0.90:
                     logger.info(
-                        "⏭️  Skipping %s: No crackle detected (smoothness: %.2f)",
+                        "⏭️  Skipping %s: No crackle erkannt (smoothness: %.2f)",
                         metadata.name,
                         temporal_smoothness,
                     )
@@ -495,7 +497,7 @@ class QualityGating:
             return True
 
         except Exception as e:
-            logger.warning("Quality gating check failed: %s, processing anyway", e)
+            logger.warning("Quality gating Pruefung fehlgeschlagen: %s, processing anyway", e)
             return True
 
 
@@ -558,7 +560,7 @@ if __name__ == "__main__":
 
     mock_phase = MockPhase()
     should_process = gating.should_process_phase(mock_phase, demo_audio, sr)
-    logger.debug("\nShould process phase: %s", should_process)
+    logger.debug("\nShould verarbeiten Verarbeitungsschritt: %s", should_process)
 
     logger.debug("\n%s", "=" * 70)
     logger.debug("✅ Quality Feedback Loop Module operational")

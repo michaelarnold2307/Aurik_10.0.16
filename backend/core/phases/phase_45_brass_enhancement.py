@@ -192,7 +192,7 @@ class BrassEnhancementPhase(PhaseInterface):
                     _zone_frac_45 = float(np.clip(_zone_s_45 / max(1, _n_s_45), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_45 * 0.15, 0.0, 1.0))  # type: ignore[no-redef]
             except Exception as _fmg_exc_45:
-                logger.debug("Phase45 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_45)
+                logger.debug("Verarbeitungsschritt45 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_45)
 
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -224,7 +224,7 @@ class BrassEnhancementPhase(PhaseInterface):
                 _p45_sat_scale = 0.35
             _effective_strength = float(_effective_strength * _p45_sat_scale)
             logger.debug(
-                "Phase 45 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
+                "Verarbeitungsschritt 45 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
                 _p45_soft_sat_sev,
                 _p45_soft_sat_preserve,
                 _p45_sat_scale,
@@ -299,7 +299,7 @@ class BrassEnhancementPhase(PhaseInterface):
         processed = np.clip(x, -1.0, 1.0).astype(audio.dtype)
 
         logger.info(
-            "Phase 45 BrassEnhancement: gain_h2=%.3f, presence=+%.1fdB, air=+%.1fdB",
+            "Verarbeitungsschritt 45 BrassEnhancement: gain_h2=%.3f, presence=+%.1fdB, air=+%.1fdB",
             gain_h2,
             presence_db,
             air_db,
@@ -318,9 +318,9 @@ class BrassEnhancementPhase(PhaseInterface):
                     processed, sample_rate, instrument="brass", correction_strength=0.20
                 )
                 igt_frames = igt_report.get("frames_processed", 0)
-                logger.debug("Phase 45 InstrumentFormant: brass frames=%d", igt_frames)
+                logger.debug("Verarbeitungsschritt 45 InstrumentFormant: brass frames=%d", igt_frames)
         except Exception as _igt_exc:
-            logger.debug("Phase 45 instrument_guided_enhance skipped: %s", _igt_exc)
+            logger.debug("Verarbeitungsschritt 45 instrument_guided_verbessern uebersprungen: %s", _igt_exc)
 
         # Formant-Drift-Korrektur via DTW (Schritt 3)
         try:
@@ -328,14 +328,14 @@ class BrassEnhancementPhase(PhaseInterface):
                 drift_result = _correct_instrument_formant_drift(processed, sample_rate, instrument="brass")
                 processed = drift_result.audio
                 logger.debug(
-                    "Phase 45 drift correction: detected=%s frames=%d/%d drift=%.1fHz",
+                    "Verarbeitungsschritt 45 drift correction: erkannt=%s frames=%d/%d drift=%.1fHz",
                     drift_result.drift_detected,
                     drift_result.n_frames_corrected,
                     drift_result.total_frames,
                     drift_result.mean_drift_hz,
                 )
         except Exception as _drift_exc:
-            logger.debug("Phase 45 drift correction skipped: %s", _drift_exc)
+            logger.debug("Verarbeitungsschritt 45 drift correction uebersprungen: %s", _drift_exc)
 
         # Sub-Stem-Verarbeitung (Schritt 4)
         try:
@@ -345,12 +345,12 @@ class BrassEnhancementPhase(PhaseInterface):
                 ss_result = _process_sub_stems(processed, sample_rate, instrument="brass", processing_strength=0.55)
                 processed = ss_result.audio
                 logger.debug(
-                    "Phase 45 sub-stem: bands=%d strength=%.2f",
+                    "Verarbeitungsschritt 45 sub-stem: bands=%d strength=%.2f",
                     ss_result.n_bands,
                     ss_result.processing_strength,
                 )
         except Exception as _ss_exc:
-            logger.debug("Phase 45 sub-stem skipped: %s", _ss_exc)
+            logger.debug("Verarbeitungsschritt 45 sub-stem uebersprungen: %s", _ss_exc)
 
         # Physics-Resonanz (Schritt 5 — Biquad Body Resonance)
         try:
@@ -361,12 +361,12 @@ class BrassEnhancementPhase(PhaseInterface):
                 )
                 processed = pr_result.audio
                 logger.debug(
-                    "Phase 45 physics resonance: peaks=%d strength=%.2f",
+                    "Verarbeitungsschritt 45 physics resonance: peaks=%d strength=%.2f",
                     pr_result.n_peaks,
                     pr_result.enhancement_strength,
                 )
         except Exception as _pr_exc:
-            logger.debug("Phase 45 physics resonance skipped: %s", _pr_exc)
+            logger.debug("Verarbeitungsschritt 45 physics resonance uebersprungen: %s", _pr_exc)
 
         if 0.0 < _effective_strength < 1.0 and processed.shape == audio.shape:
             processed = audio + _effective_strength * (processed - audio)
@@ -397,9 +397,9 @@ class BrassEnhancementPhase(PhaseInterface):
             )
             if _hg45.requires_rollback:
                 processed = audio.copy()
-                logger.warning("§2.46e phase_45 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_45 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg45_exc:
-            logger.debug("§2.46e phase_45 HallucinationGuard (non-blocking): %s", _hg45_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_45 HallucinationGuard (nicht blockierend): %s", _hg45_exc)
 
         return PhaseResult(
             success=True,

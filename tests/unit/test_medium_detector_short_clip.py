@@ -47,7 +47,7 @@ def _make_vinyl_short(duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
     for pos in positions:
         pink_approx[pos : pos + 3] += rng.standard_normal(3).astype(np.float32) * 0.3
 
-    return np.clip(pink_approx, -1.0, 1.0)
+    return np.clip(pink_approx, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _make_tape_short(duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
@@ -70,7 +70,7 @@ def _make_tape_short(duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
     peak = np.max(np.abs(tape_noise))
     if peak > 1e-6:
         tape_noise /= peak * 2.0  # normalisieren auf ca. ±0.5
-    return np.clip(tape_noise, -1.0, 1.0)
+    return np.clip(tape_noise, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

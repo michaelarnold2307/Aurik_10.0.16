@@ -414,7 +414,7 @@ class OutputFormatOptimization(PhaseInterface):
                 sr=sample_rate,
                 reference_for_gate=audio,
             )
-            audio_normalized = limit_quiet_edge_boost(audio, audio_normalized, sr=sample_rate)
+            audio_normalized = limit_quiet_edge_boost(audio, audio_normalized, sr=sample_rate, max_edge_boost_db=0.5)
         else:
             audio_normalized = audio * gain_linear
 
@@ -436,7 +436,7 @@ class OutputFormatOptimization(PhaseInterface):
                 meter_result = meter.measure(meter_audio, sample_rate)
                 return float(meter_result.get("integrated_lufs", -70.0))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Fallback: conservative RMS proxy (kept for resilience if meter backend is unavailable).
         if audio_arr.ndim == 2:
@@ -628,7 +628,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Phase 41: Professional Output Format Optimization v2.0")
+    logger.debug("Verarbeitungsschritt 41: Professional Ausgabe Format Optimization v2.0")
     logger.debug("=" * 80)
     logger.debug("")
 
@@ -645,7 +645,7 @@ if __name__ == "__main__":
     # Stereo
     test_signal_stereo = np.column_stack([test_signal, test_signal * 0.95])
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, demo_sr)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, demo_sr)
     logger.debug("Signal: 1kHz sine + noise (stereo)")
     logger.debug("")
 
@@ -665,10 +665,10 @@ if __name__ == "__main__":
         phase = OutputFormatOptimization()
         demo_result = phase.process(test_signal_stereo, demo_sr, demo_material)  # type: ignore[arg-type]
 
-        logger.debug("✅ Professional Output Format Optimization:")
-        logger.debug("   Input: %s Hz", demo_result.metrics["input_sample_rate"])
+        logger.debug("✅ Professional Ausgabe Format Optimization:")
+        logger.debug("   Eingabe: %s Hz", demo_result.metrics["input_sample_rate"])
         logger.debug(
-            "   Output: %s Hz, %s-bit",
+            "   Ausgabe: %s Hz, %s-bit",
             demo_result.metrics["output_sample_rate"],
             demo_result.metrics["output_bit_depth"],
         )
@@ -690,5 +690,5 @@ if __name__ == "__main__":
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test completed")
+    logger.debug("Test abgeschlossen")
     logger.debug("=" * 80)

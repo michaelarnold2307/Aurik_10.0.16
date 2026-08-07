@@ -43,7 +43,7 @@ def _make_frisson_signal(duration: float = 5.0) -> np.ndarray:
     envelope[int(4.0 * SR) : int(4.5 * SR)] = ramp_down
     envelope[int(4.5 * SR) :] = 0.08  # −22 dB (Outro)
 
-    return (signal * envelope).astype(np.float32)
+    return (signal * envelope).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

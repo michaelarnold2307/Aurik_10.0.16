@@ -242,7 +242,7 @@ class PerceptualAttentionModel:
             max_e = float(np.max(perc_energy)) + 1e-10
             return perc_energy / max_e  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("perceptual_attention_model.py::_compute_percussive_energy fallback: %s", e)
+            logger.warning("perceptual_attention_model.py::_berechnen_percussive_energy Ersatzpfad: %s", e)
             return np.zeros(n_frames, dtype=np.float32)  # type: ignore[no-any-return]
 
     def _heuristic_vocal_detection(self, frame: np.ndarray, sr: int) -> bool:

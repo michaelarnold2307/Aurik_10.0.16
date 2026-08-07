@@ -121,8 +121,8 @@ def _check_startle_attack(mono: np.ndarray, sr: int) -> float:
     for i in range(win, len(mono) - win, win // 4):
         chunk = env[i : i + win]
         peaks.append(float(np.max(chunk)))
-    peaks = np.array(peaks)
-    peaks_db = 20.0 * np.log10(peaks + 1e-12)
+    peaks = np.array(peaks)  # type: ignore[assignment]
+    peaks_db = 20.0 * np.log10(peaks + 1e-12)  # type: ignore[operator]
 
     jumps = np.diff(peaks_db)
     startling = np.sum(jumps > 18.0)
@@ -173,7 +173,7 @@ def _check_gate_pumping(mono: np.ndarray, sr: int) -> float:
         chunk = mono[i : i + win]
         rms = float(np.sqrt(np.mean(chunk**2)))
         rms_timeline.append(rms)
-    rms = np.array(rms_timeline)
+    rms = np.array(rms_timeline)  # type: ignore[assignment]
     rms_db = 20.0 * np.log10(rms + 1e-12)
 
     diffs = np.abs(np.diff(rms_db))

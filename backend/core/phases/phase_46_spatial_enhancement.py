@@ -187,7 +187,7 @@ class SpatialEnhancementPhase(PhaseInterface):
                     _zone_frac_46 = float(np.clip(_zone_s_46 / max(1, _n_s_46), 0.0, 1.0))
                     effective_strength = float(np.clip(effective_strength + _zone_frac_46 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_46:
-                logger.debug("Phase46 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_46)
+                logger.debug("Verarbeitungsschritt46 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_46)
 
         if effective_strength <= 1e-6:
             dry = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -223,7 +223,7 @@ class SpatialEnhancementPhase(PhaseInterface):
                 _tag_singing = float(_panns_tags.get("singing", 0.0))
                 _p46_panns = max(_p46_panns, _tag_vocal, _tag_singing)
             except Exception as e:
-                logger.warning("phase_46_spatial_enhancement.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_46_spatial_enhancement.py::verarbeiten Ersatzpfad: %s", e)
 
         _vocal_echo_guard = (not _is_studio_mode) and _p46_panns >= 0.25
         _side_width_gain = 1.0
@@ -232,14 +232,14 @@ class SpatialEnhancementPhase(PhaseInterface):
             # Phase bleibt dennoch sinnvoll: minimale, IACC-gesicherte Stereo-Balance.
             _side_width_gain = 1.03
             logger.warning(
-                "Phase 46 VocalEcho-Guard: restoration-safe mode (panns_singing=%.2f)",
+                "Verarbeitungsschritt 46 VocalEcho-Guard: restoration-safe Betriebsart (panns_singing=%.2f)",
                 _p46_panns,
             )
 
         if not _is_studio_mode:
             effective_strength = float(np.clip(effective_strength, 0.0, 0.20))
             logger.debug(
-                "phase_46: Restoration-Mode — Strength auf %.2f gedeckelt (kein künstlicher Hall)",
+                "Verarbeitungsschritt_46: Restoration-Betriebsart — Strength auf %.2f gedeckelt (kein künstlicher Hall)",
                 effective_strength,
             )
         dry_wet: float = float(kwargs.get("dry_wet", 0.18 if _is_studio_mode else 0.05))
@@ -305,7 +305,10 @@ class SpatialEnhancementPhase(PhaseInterface):
                 L_out = (M + S_red) * inv_sqrt2
                 R_out = (M - S_red) * inv_sqrt2
                 logger.debug(
-                    "Phase 46 IACC-Guard: iacc=%.3f < %.2f → side_reduction=%.2f", iacc_val, _IACC_MIN, side_reduction
+                    "Verarbeitungsschritt 46 IACC-Guard: iacc=%.3f < %.2f → side_reduction=%.2f",
+                    iacc_val,
+                    _IACC_MIN,
+                    side_reduction,
                 )
 
         processed = np.column_stack([L_out, R_out])
@@ -322,7 +325,7 @@ class SpatialEnhancementPhase(PhaseInterface):
         processed = np.clip(processed, -1.0, 1.0)
 
         logger.info(
-            "Phase 46 SpatialEnhancement: dry_wet=%.2f, diffuse=%s, iacc=%.3f, side_red=%.2f",
+            "Verarbeitungsschritt 46 SpatialEnhancement: dry_wet=%.2f, diffuse=%s, iacc=%.3f, side_red=%.2f",
             dry_wet,
             diffuse,
             iacc_val,
@@ -340,9 +343,9 @@ class SpatialEnhancementPhase(PhaseInterface):
             _hg_result_46 = _hg_46(audio, processed, sr=sample_rate, mode=_mode_46)
             if getattr(_hg_result_46, "requires_rollback", False):
                 processed = audio.copy()
-                logger.warning("Phase46 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
+                logger.warning("Verarbeitungsschritt46 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
         except Exception as _hg_exc_46:
-            logger.debug("Phase46 §2.46e Hallucination-Guard (non-blocking): %s", _hg_exc_46)
+            logger.debug("Verarbeitungsschritt46 §2.46e Hallucination-Guard (nicht blockierend): %s", _hg_exc_46)
 
         return PhaseResult(
             success=True,

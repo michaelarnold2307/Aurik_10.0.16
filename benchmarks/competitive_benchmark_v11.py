@@ -16,6 +16,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -56,7 +57,7 @@ def compute_snr_improvement(original: np.ndarray, processed: np.ndarray) -> floa
     noise = original - processed[: len(original)]
     signal_rms = float(np.sqrt(np.mean(original**2)) + 1e-12)
     noise_rms = float(np.sqrt(np.mean(noise**2)) + 1e-12)
-    return 20.0 * np.log10(signal_rms / (noise_rms + 1e-12))
+    return 20.0 * np.log10(signal_rms / (noise_rms + 1e-12))  # type: ignore[no-any-return]
 
 
 def compute_stereo_preservation(original: np.ndarray, processed: np.ndarray) -> float:
@@ -65,7 +66,7 @@ def compute_stereo_preservation(original: np.ndarray, processed: np.ndarray) -> 
         return 1.0
     orig_ms = np.corrcoef(original[:, 0], original[:, 1])[0, 1]
     proc_ms = np.corrcoef(processed[:, 0], processed[:, 1])[0, 1]
-    return 1.0 - abs(orig_ms - proc_ms)
+    return 1.0 - abs(orig_ms - proc_ms)  # type: ignore[no-any-return]
 
 
 def compute_spectral_flatness(audio: np.ndarray) -> float:
@@ -77,12 +78,12 @@ def compute_spectral_flatness(audio: np.ndarray) -> float:
     return float(geo_mean / arith_mean)
 
 
-def compute_mushra_proxy(audio: np.ndarray, sr: int) -> float:
+def compute_mushra_proxy(original: np.ndarray, processed: np.ndarray, sr: int) -> float:
     """MERT-basierter MUSHRA-Proxy-Score (0-100)."""
     try:
         from backend.core.mert_mushra_proxy import estimate_mushra_proxy
 
-        return float(estimate_mushra_proxy(audio, sr)[0] * 100)
+        return float(estimate_mushra_proxy(original, processed, sr).proxy_score)
     except Exception:
         logger.warning("competitive_benchmark_v11.py::compute_mushra_proxy fallback", exc_info=True)
         return 50.0
@@ -96,7 +97,7 @@ def compute_all_metrics(original: np.ndarray, processed: np.ndarray, sr: int) ->
         "snr_improvement_db": round(compute_snr_improvement(original, proc), 1),
         "stereo_preservation": round(compute_stereo_preservation(original, proc), 3),
         "spectral_flatness": round(compute_spectral_flatness(proc), 4),
-        "mushra_proxy": round(compute_mushra_proxy(proc, sr), 1),
+        "mushra_proxy": round(compute_mushra_proxy(original, proc, sr), 1),
     }
 
 
@@ -107,7 +108,7 @@ def compare_tools(
     cedar_dir: str | None,
 ) -> dict:
     """Führt den Vergleich durch."""
-    results = {"per_file": {}, "summary": {}}
+    results: Any = {"per_file": {}, "summary": {}}
     aurik_path = Path(aurik_dir)
     izotope_path = Path(izotope_dir) if izotope_dir else None
     cedar_path = Path(cedar_dir) if cedar_dir else None
@@ -120,6 +121,7 @@ def compare_tools(
         try:
             original, sr = load_audio(str(tf_path))
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
 
         file_result = {}
@@ -177,7 +179,7 @@ def compare_tools(
             higher_better = metric != "spectral_flatness"
             results["winners"][metric] = max(avgs, key=avgs.get) if higher_better else min(avgs, key=avgs.get)
 
-    return results
+    return results  # type: ignore[no-any-return]
 
 
 def generate_report(results: dict, output_path: str):

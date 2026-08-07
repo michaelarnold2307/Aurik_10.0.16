@@ -39,7 +39,7 @@ decrackler_contract = DSPContract(
         "temporal_change_budget": 0.05,
         "compute_cost": 0.05,
     },
-    side_effects=[{"risk": "transient_smear", "expected_when": "True", "severity": 0.2}],
+    side_effects=[{"risk": "transient_smear", "expected_when": "True", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["crackle_removal_score"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -200,7 +200,7 @@ class AiDecrackler:
             return pred
 
         except Exception:
-            logger.warning("decrackler.py::_ar_predict_forward fallback", exc_info=True)
+            logger.warning("decrackler.py::_ar_predict_forward Ersatzpfad", exc_info=True)
             return AiDecrackler._cubic_fallback(context, n_predict)
 
     @staticmethod
@@ -215,7 +215,7 @@ class AiDecrackler:
             t = np.arange(len(context), dtype=np.float64)
             cs = CubicSpline(t, context.astype(np.float64), bc_type="natural")
             t_pred = np.linspace(len(context) - 1, len(context) + n_predict - 1, n_predict)
-            return cs(t_pred).astype(np.float64)
+            return cs(t_pred).astype(np.float64)  # type: ignore[no-any-return]
         except Exception:
             last_val = float(context[-1])
             return np.full(n_predict, last_val, dtype=np.float64)
@@ -279,7 +279,7 @@ class AiDecrackler:
             return a[1:].astype(np.float64)
 
         except Exception:
-            logger.warning("decrackler.py::_burg_ar fallback", exc_info=True)
+            logger.warning("decrackler.py::_burg_ar Ersatzpfad", exc_info=True)
             return None
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
@@ -432,7 +432,7 @@ class AiDebuzz:
         Zxx_clean = mag * G * np.exp(1j * phase)
         _, out = _istft(Zxx_clean, nperseg=self._NPERSEG, noverlap=noverlap)
         out = np.nan_to_num(out[: len(x)], nan=0.0, posinf=0.0, neginf=0.0)
-        return np.clip(out, -1.0, 1.0).astype(np.float32)
+        return np.clip(out, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """Entfernt Buzz/Summen. ML-Primär (falls geladen), sonst STFT-Schmalband-DSP."""

@@ -9,7 +9,7 @@ import numpy as np
 
 def _audio(sr: int = 48000, duration: float = 0.25) -> np.ndarray:
     t = np.linspace(0.0, duration, int(sr * duration), endpoint=False)
-    return (0.2 * np.sin(2.0 * np.pi * 440.0 * t)).astype(np.float32)
+    return (0.2 * np.sin(2.0 * np.pi * 440.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

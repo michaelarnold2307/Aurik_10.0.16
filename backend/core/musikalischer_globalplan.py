@@ -459,7 +459,7 @@ def _estimate_warmth(mono: np.ndarray, sr: int) -> float:
         warmth = float(np.clip(low_energy / (low_energy + mid_energy), 0.0, 1.0))
         return warmth
     except Exception as e:
-        logger.warning("musikalischer_globalplan.py::_estimate_warmth fallback: %s", e, exc_info=True)
+        logger.warning("musikalischer_globalplan.py::_estimate_warmth Ersatzpfad: %s", e, exc_info=True)
         # §v10.92: Statt hartem 0.5 — Zeitdomain-Proxy aus Signal-Energie
         try:
             rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2) + 1e-12))
@@ -497,7 +497,7 @@ def _estimate_brightness(mono: np.ndarray, sr: int) -> float:
         brightness = float(np.clip(hf_energy / total_energy * 10.0, 0.0, 1.0))
         return brightness
     except Exception as e:
-        logger.warning("musikalischer_globalplan.py::_estimate_brightness fallback: %s", e, exc_info=True)
+        logger.warning("musikalischer_globalplan.py::_estimate_brightness Ersatzpfad: %s", e, exc_info=True)
         # §v10.92: Zeitdomain-Brillanz aus Zero-Crossing-Rate
         try:
             zcr = float(np.mean(np.abs(np.diff(np.sign(mono))) / 2.0))
@@ -539,7 +539,7 @@ def _estimate_dynamic_range(mono: np.ndarray) -> float:
         dr = float(np.clip((p95 - p10) / (p95 + 1e-12), 0.0, 1.0))
         return dr
     except Exception as e:
-        logger.warning("musikalischer_globalplan.py::_estimate_dynamic_range fallback: %s", e, exc_info=True)
+        logger.warning("musikalischer_globalplan.py::_estimate_dynamic_range Ersatzpfad: %s", e, exc_info=True)
         # §v10.92: Peak/RMS-Crest-Faktor als DR-Proxy
         try:
             peak = float(np.max(np.abs(mono)) + 1e-12)

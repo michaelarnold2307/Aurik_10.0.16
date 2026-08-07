@@ -94,7 +94,7 @@ class NaturalPerformanceDetector:
                 len(result.early_reflection_zones),
             )
         except Exception as exc:
-            logger.debug("§2.46f NaturalPerformanceDetector.detect failed (non-blocking): %s", exc)
+            logger.debug("§2.46f NaturalPerformanceDetector.erkennen fehlgeschlagen (nicht blockierend): %s", exc)
         return result
 
     def _detect_breath_zones(self, mono: np.ndarray, sr: int) -> list[tuple[float, float]]:
@@ -230,7 +230,7 @@ class NaturalPerformanceDetector:
 
             zones = self._merge_overlapping(zones)
         except Exception as exc:
-            logger.debug("§2.46f vibrato detection failed (non-blocking): %s", exc)
+            logger.debug("§2.46f vibrato detection fehlgeschlagen (nicht blockierend): %s", exc)
 
         return zones
 
@@ -294,7 +294,7 @@ class NaturalPerformanceDetector:
 
             zones = self._merge_overlapping(zones)
         except Exception as exc:
-            logger.debug("§2.46f early reflection detection failed (non-blocking): %s", exc)
+            logger.debug("§2.46f early reflection detection fehlgeschlagen (nicht blockierend): %s", exc)
         return zones
 
     @staticmethod

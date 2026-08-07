@@ -63,7 +63,7 @@ def smooth_stereo_correction(audio: np.ndarray, delay_samples: int, sr: int, smo
 
     result = np.stack([l, r], axis=-1).astype(np.float32)
     logger.debug("STCG smooth: delay=%d samples → %dms fade", delay_samples, int(smooth_s * 1000))
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def dropout_fade(

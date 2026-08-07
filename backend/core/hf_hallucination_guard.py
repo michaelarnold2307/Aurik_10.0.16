@@ -120,7 +120,7 @@ def _estimate_hf_energy_ratio(audio: np.ndarray, sr: int, cutoff_hz: float) -> f
         hf_energy = float(np.sum(spectrum[freqs >= cutoff_hz]))
         return float(np.clip(hf_energy / total, 0.0, 1.0))
     except Exception as e:
-        logger.warning("hf_hallucination_guard.py::_estimate_hf_energy_ratio fallback: %s", e)
+        logger.warning("hf_hallucination_guard.py::_estimate_hf_energy_Verhaeltnis Ersatzpfad: %s", e)
         return 0.0
 
 

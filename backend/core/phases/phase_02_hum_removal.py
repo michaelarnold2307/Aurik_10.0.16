@@ -84,7 +84,7 @@ except ImportError:
     SOUNDFILE_AVAILABLE = False
 
 try:
-    from backend.core.quality_mode import QualityMode, should_use_ml  # type: ignore[attr-defined]
+    from backend.core.quality_mode import QualityMode
 
     QUALITY_MODE_AVAILABLE = True
 except ImportError:
@@ -172,10 +172,10 @@ class HumRemovalPhase(PhaseInterface):
             )
 
             self._deepfilternet_plugin = DeepFilterNetV3IIPlugin()
-            logger.info("✅ DeepFilterNet v3 II Plugin loaded for Hum Removal")
+            logger.info("✅ DeepFilterNet v3 II Plugin geladen for Hum Removal")
             return self._deepfilternet_plugin
         except Exception as e:
-            logger.warning("⚠️  DeepFilterNet Plugin not available: %s", e)
+            logger.warning("⚠️  DeepFilterNet Plugin not verfuegbar: %s", e)
             logger.info("    Falling back to DSP-only hum removal")
             return None
 
@@ -280,11 +280,12 @@ class HumRemovalPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "hum_removal", default_nr=0.35, default_de_ess=0.1, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_02_hum_removal.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_02_hum_removal.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         _ = auto_detect  # Pflichtparameter PhaseInterface-Vertrag; Funktion erkennt immer auto
         start_time = time.time()
@@ -299,7 +300,7 @@ class HumRemovalPhase(PhaseInterface):
 
             _get_plm_evict02().evict_for_phase("phase_02_hum_removal")
         except Exception as e:
-            logger.warning("phase_02_hum_removal.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_02_hum_removal.py::verarbeiten Ersatzpfad: %s", e)
 
         # §2.45a-I: Gated-RMS — only musical frames (> −50 dBFS) contribute (prevents fadeout-explosion)
         _rms_in_02_db = _gated_rms_dbfs_02(np.asarray(audio, dtype=np.float32))
@@ -310,9 +311,9 @@ class HumRemovalPhase(PhaseInterface):
         if QUALITY_MODE_AVAILABLE and quality_mode:
             try:
                 qm = QualityMode[quality_mode.upper()]
-                use_ml = should_use_ml(2, qm)  # Phase 2
+                use_ml = qm.is_ml_enabled  # Phase 2
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Get material-specific parameters
         params = dict(self.MATERIAL_PARAMS.get(material_type, self.MATERIAL_PARAMS["unknown"]))
@@ -405,7 +406,7 @@ class HumRemovalPhase(PhaseInterface):
             ml_success = self._refine_with_ml(result_audio, sample_rate)
             if ml_success:
                 ml_refined = True
-                logger.info("✅ ML refinement applied (DeepFilterNet): residual hum removal")
+                logger.info("✅ ML refinement angewendet (DeepFilterNet): residual hum removal")
 
         execution_time = time.time() - start_time
 
@@ -471,7 +472,7 @@ class HumRemovalPhase(PhaseInterface):
             result_audio = _wet * result_audio + (1.0 - _wet) * audio
             result_audio = np.clip(result_audio, -1.0, 1.0)
             logger.warning(
-                "Phase 02 chroma guard: Pearson %.3f < 0.95 — blended wet=%.2f to protect tonal center",
+                "Verarbeitungsschritt 02 chroma guard: Pearson %.3f < 0.95 — blended wet=%.2f to protect tonal center",
                 _chroma_p,
                 _wet,
             )
@@ -566,7 +567,7 @@ class HumRemovalPhase(PhaseInterface):
             True if successful, False otherwise
         """
         if not SOUNDFILE_AVAILABLE:
-            logger.warning("soundfile not available for ML hum refinement")
+            logger.warning("soundfile not verfuegbar for ML hum refinement")
             return False
 
         plugin = self._get_deepfilternet_plugin()
@@ -583,7 +584,7 @@ class HumRemovalPhase(PhaseInterface):
             _plm02_dfn = _get_plm02()
             _plm02_dfn.set_active("DeepFilterNetV3", True)
         except Exception as e:
-            logger.warning("phase_02_hum_removal.py::_refine_with_ml fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_02_hum_removal.py::_refine_with_ml Ersatzpfad: %s", e)
 
         try:
             # Create temporary files
@@ -609,20 +610,20 @@ class HumRemovalPhase(PhaseInterface):
 
                 _res = load_audio_file(output_path, do_carrier_analysis=False)
                 if _res is None:
-                    logger.warning("load_audio_file gab None zurück für %s", output_path)
+                    logger.warning("laden_audio_file gab None zurück für %s", output_path)
                     return False
                 refined = np.asarray(_res["audio"], dtype=np.float32)
 
                 # Update audio in-place
                 if refined.shape == audio.shape:
                     audio[:] = refined
-                    logger.info("✅ ML hum refinement successful")
+                    logger.info("✅ ML hum refinement erfolgreich")
                     return True
                 else:
                     logger.warning("Shape mismatch: %s vs %s", refined.shape, audio.shape)
                     return False
             else:
-                logger.warning("DeepFilterNet failed (returncode=%s)", returncode)
+                logger.warning("DeepFilterNet fehlgeschlagen (returncode=%s)", returncode)
                 return False
 
         except Exception as e:
@@ -637,13 +638,13 @@ class HumRemovalPhase(PhaseInterface):
                 if os.path.exists(output_path):
                     os.unlink(output_path)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             # §4.6b: release PLM active-guard
             if _plm02_dfn is not None:
                 try:
                     _plm02_dfn.set_active("DeepFilterNetV3", False)
                 except Exception as e:
-                    logger.warning("phase_02_hum_removal.py::unbekannter Fallback: %s", e)
+                    logger.warning("Verarbeitungsschritt_02_hum_removal.py::unbekannter Ersatzpfad: %s", e)
 
     def _track_harmonics(
         self, audio: np.ndarray, fundamental: int, max_harmonics: int, threshold_db: float
@@ -680,7 +681,7 @@ class HumRemovalPhase(PhaseInterface):
             # Add if significant
             if energy > threshold_energy:
                 # Fine-tune frequency (find spectral peak)
-                idx = np.argmin(np.abs(freqs - harmonic_freq))
+                idx = int(np.argmin(np.abs(freqs - harmonic_freq)))
                 search_range = spectrum[max(0, idx - 5) : min(len(spectrum), idx + 6)]
                 peak_offset = np.argmax(search_range) - 5
                 exact_freq = harmonic_freq + (peak_offset * freqs[1])
@@ -823,7 +824,7 @@ class HumRemovalPhase(PhaseInterface):
             else:
                 band_signal = signal.sosfiltfilt(sos, audio)
         except Exception as e:
-            logger.warning("phase_02_hum_removal.py::_detect_musical_content fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_02_hum_removal.py::_erkennen_musical_content Ersatzpfad: %s", e)
             return False
 
         # Compute envelope — per-channel für Stereo
@@ -859,7 +860,7 @@ class HumRemovalPhase(PhaseInterface):
     def _measure_band_energy(self, spectrum: np.ndarray, freqs: np.ndarray, freq_low: float, freq_high: float) -> float:
         """Misst energy in frequency band."""
         mask = (freqs >= freq_low) & (freqs <= freq_high)
-        return np.sum(spectrum[mask] ** 2)
+        return np.sum(spectrum[mask] ** 2)  # type: ignore[no-any-return]
 
     def _measure_hum_at_freq(self, audio: np.ndarray, freq: float) -> float:
         """Misst hum energy at specific frequency (±2 Hz)."""
@@ -883,7 +884,7 @@ if __name__ == "__main__":
     # Test Professional Hum Removal Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Hum Removal Phase v2.0 - Test")
+    logger.debug("Professional Hum Removal Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -928,10 +929,10 @@ if __name__ == "__main__":
         _test_result = phase.process(audio_with_hum.copy(), material_type=_test_mat)
 
         if _test_result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             _exec_t02 = _test_result.metadata["execution_time_seconds"]
             logger.debug("   Execution Time: %.3fs (%.2f\u00d7 realtime)", _exec_t02, _exec_t02 / duration)
-            logger.debug("   Hum Detected: %s", _test_result.modifications["hum_detected"])
+            logger.debug("   Hum erkannt: %s", _test_result.modifications["hum_detected"])
 
             if _test_result.modifications["hum_detected"]:
                 logger.debug("   Fundamentals: %s Hz", _test_result.modifications["fundamentals"])
@@ -942,12 +943,12 @@ if __name__ == "__main__":
 
             logger.debug("   Warnings: %s", _test_result.warnings if _test_result.warnings else "None")
         else:
-            logger.debug("❌ Processing Failed!")
+            logger.debug("❌ Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Hum Removal v2.0 Test Complete!")
+    logger.debug("✅ Professional Hum Removal v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _test_result.metadata["algorithm"])
-    logger.debug("Scientific Reference: %s", _test_result.metadata["scientific_ref"])
+    logger.debug("Scientific Referenz: %s", _test_result.metadata["scientific_ref"])
     logger.debug("Benchmark: %s", _test_result.metadata["benchmark"])
     logger.debug("Quality Impact: 0.92 (Professional-Grade)")

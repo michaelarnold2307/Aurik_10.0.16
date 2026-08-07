@@ -24,7 +24,7 @@ def _scrape_flutter_signal(secs: float = 5.0, carrier_hz: float = 880.0, scrape_
     audio = 0.28 * np.sin(2.0 * np.pi * carrier_hz * t)
     audio += 0.10 * np.sin(2.0 * np.pi * (carrier_hz - scrape_rate_hz) * t)
     audio += 0.10 * np.sin(2.0 * np.pi * (carrier_hz + scrape_rate_hz) * t)
-    return np.clip(audio.astype(np.float32), -1.0, 1.0)
+    return np.clip(audio.astype(np.float32), -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _head_clog_signal(secs: float = 5.0) -> np.ndarray:

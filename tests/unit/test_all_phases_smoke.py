@@ -155,21 +155,21 @@ def _assert_phase_result(
     assert result_cls_name == "PhaseResult", (
         f"[{phase_id}] Kein PhaseResult: {type(result)} (Hinweis: importlib-Mode kann Doppelregistrierung verursachen)"
     )
-    assert result.success is True, f"[{phase_id}] success=False — {result}"
-    assert isinstance(result.audio, np.ndarray), f"[{phase_id}] result.audio ist kein ndarray"
-    assert np.issubdtype(result.audio.dtype, np.floating), f"[{phase_id}] Dtype nicht float: {result.audio.dtype}"
-    assert np.all(np.isfinite(result.audio)), (
+    assert result.success is True, f"[{phase_id}] success=False — {result}"  # type: ignore[attr-defined]
+    assert isinstance(result.audio, np.ndarray), f"[{phase_id}] result.audio ist kein ndarray"  # type: ignore[attr-defined]
+    assert np.issubdtype(result.audio.dtype, np.floating), f"[{phase_id}] Dtype nicht float: {result.audio.dtype}"  # type: ignore[attr-defined]
+    assert np.all(np.isfinite(result.audio)), (  # type: ignore[attr-defined]
         f"[{phase_id}] NaN/Inf im Ausgang: "
-        f"nan={int(np.sum(np.isnan(result.audio)))} "
-        f"inf={int(np.sum(np.isinf(result.audio)))}"
+        f"nan={int(np.sum(np.isnan(result.audio)))} "  # type: ignore[attr-defined]
+        f"inf={int(np.sum(np.isinf(result.audio)))}"  # type: ignore[attr-defined]
     )
-    peak = float(np.max(np.abs(result.audio)))
+    peak = float(np.max(np.abs(result.audio)))  # type: ignore[attr-defined]
     assert peak <= 2.0, f"[{phase_id}] Hard-Clipping: max|audio|={peak:.4f} > 2.0"
     if not skip_shape_check:
-        assert result.audio.shape == orig_audio.shape, (
-            f"[{phase_id}] Shape verändert: {orig_audio.shape} → {result.audio.shape}"
+        assert result.audio.shape == orig_audio.shape, (  # type: ignore[attr-defined]
+            f"[{phase_id}] Shape verändert: {orig_audio.shape} → {result.audio.shape}"  # type: ignore[attr-defined]
         )
-    assert isinstance(result.metadata, dict), f"[{phase_id}] metadata kein dict"
+    assert isinstance(result.metadata, dict), f"[{phase_id}] metadata kein dict"  # type: ignore[attr-defined]
 
 
 # ─────────────────────────────────────────────────────────────────────────────

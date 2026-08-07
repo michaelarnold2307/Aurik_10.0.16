@@ -141,4 +141,4 @@ class CDErrorCorrection:
 
         if audio.ndim == 1:
             return _repair_1d(audio).astype(audio.dtype)
-        return np.stack([_repair_1d(ch) for ch in audio], axis=0).astype(audio.dtype)
+        return np.stack([_repair_1d(ch) for ch in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]

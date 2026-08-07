@@ -231,7 +231,7 @@ class GoalExplainer:
             {"step": "Original", "scores": initial_scores, "audio_hash": hash(original_audio.tobytes())}  # type: ignore[dict-item]
         )
 
-        logger.info("Started goal tracking in %s mode", mode.value)
+        logger.info("gestartet goal tracking in %s Betriebsart", mode.value)
         logger.info("Initial scores: %s", initial_scores)
 
     def record_step(
@@ -271,7 +271,7 @@ class GoalExplainer:
     def stop_tracking(self) -> None:
         """Stop tracking."""
         self.is_tracking = False
-        logger.info("Stopped goal tracking")
+        logger.info("gestoppt goal tracking")
 
     # =========================================================================
     # Explanation Generation
@@ -717,4 +717,4 @@ if __name__ == "__main__":
     for goal_name, traj in explanation.goal_trajectories.items():
         logger.debug("\n%s", traj.explanation)
 
-    logger.debug("\n=== Test Complete ===")
+    logger.debug("\n=== Test vollstaendig ===")

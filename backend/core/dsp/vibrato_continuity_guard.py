@@ -103,7 +103,7 @@ class VibratoContinuityGuard:
         try:
             vibrato_rate, f0_phase_end = self._estimate_vibrato(mono, sr)
         except Exception as _exc:
-            logger.debug("VibratoContinuityGuard: Vibrato-Schätzung fehlgeschlagen (non-blocking): %s", _exc)
+            logger.debug("VibratoContinuityGuard: Vibrato-Schätzung fehlgeschlagen (nicht blockierend): %s", _exc)
             self._prev_f0_phase = None
             self._prev_f0_rate_hz = None
             return audio_in.copy()  # type: ignore[no-any-return]
@@ -224,7 +224,7 @@ class VibratoContinuityGuard:
             analytic = _hilbert(f0_curve - float(np.mean(f0_curve)))
             return float(np.arctan2(analytic.imag, analytic.real)[0])
         except Exception as e:
-            logger.warning("vibrato_continuity_guard.py::_estimate_f0_phase_at_start fallback: %s", e)
+            logger.warning("vibrato_continuity_guard.py::_estimate_f0_Verarbeitungsschritt_at_start Ersatzpfad: %s", e)
             return None
 
     @staticmethod
@@ -373,7 +373,7 @@ class VibratoContinuityGuard:
             analytic = _hilbert(f0_detrended)
             return float(np.arctan2(analytic.imag, analytic.real)[-1])
         except Exception as e:
-            logger.warning("vibrato_continuity_guard.py::_estimate_phase_end fallback: %s", e)
+            logger.warning("vibrato_continuity_guard.py::_estimate_Verarbeitungsschritt_end Ersatzpfad: %s", e)
             return 0.0
 
     @staticmethod

@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
@@ -270,7 +271,7 @@ class PrecisionDefectLocator:
                 groups.append([d])
 
         # Nur den höchst-priorisierten Defekt pro Gruppe behalten
-        resolved = []
+        resolved: list[Any] = []
         for g in groups:
             d = g[0]
             d.overlap_group = len(resolved)

@@ -232,7 +232,7 @@ class IntelligentPhasePruner:
                     result.skipped_phases.append(phase_id)
                     result.reasons[phase_id] = f"Kein {'/'.join(required)} detektiert"
                     logger.debug(
-                        "PhasePruner SKIP %s: no defect match (needs=%s, have=%s)",
+                        "PhasePruner ueberspringen %s: no defect match (needs=%s, have=%s)",
                         phase_id,
                         required,
                         sorted(defects_lower)[:15],

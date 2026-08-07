@@ -13,18 +13,56 @@ Datum: 14. Februar 2026
 """
 
 import logging
+from typing import TYPE_CHECKING, Any, cast
 
-try:
+if TYPE_CHECKING:
     import torch
+else:
+    try:
+        import torch
 
-    _HAS_TORCH = True
-except ImportError:
-    torch = None  # type: ignore[assignment]
-    _HAS_TORCH = False
+        _HAS_TORCH = True
+    except ImportError:
+        torch = None  # type: ignore[assignment]
+        _HAS_TORCH = False
 import torch.nn as nn
 import torch.nn.functional as F
 
 logger = logging.getLogger(__name__)
+
+
+def _mel_filterbank(n_fft: int, n_mels: int, sr: int, device: "torch.device", dtype: "torch.dtype") -> torch.Tensor:
+    """Baut eine echte HTK-Dreiecks-Mel-Filterbank [n_mels, n_fft//2+1].
+
+    Slaney/HTK-Formel (identisch zu librosa.filters.mel, unabhängig implementiert
+    um keine zusätzliche Hard-Dependency einzuführen). Rein in Torch, differenzierbar
+    bzgl. der Eingabe (die Filterbank selbst ist konstant, keine Parameter).
+    """
+    n_freqs = n_fft // 2 + 1
+    fmin, fmax = 0.0, sr / 2.0
+
+    def _hz_to_mel(f: float) -> float:
+        return 2595.0 * float(torch.log10(torch.tensor(1.0 + f / 700.0)))
+
+    def _mel_to_hz(m: torch.Tensor) -> torch.Tensor:
+        return 700.0 * (10.0 ** (m / 2595.0) - 1.0)  # type: ignore[no-any-return]
+
+    mel_min, mel_max = _hz_to_mel(fmin), _hz_to_mel(fmax)
+    mel_points = torch.linspace(mel_min, mel_max, n_mels + 2)
+    hz_points = _mel_to_hz(mel_points)
+    bin_points = torch.floor((n_fft + 1) * hz_points / sr).long().clamp(0, n_freqs - 1)
+
+    fb = torch.zeros(n_mels, n_freqs)
+    for m in range(1, n_mels + 1):
+        f_left, f_center, f_right = int(bin_points[m - 1]), int(bin_points[m]), int(bin_points[m + 1])
+        if f_center > f_left:
+            for k in range(f_left, f_center):
+                fb[m - 1, k] = (k - f_left) / (f_center - f_left)
+        if f_right > f_center:
+            for k in range(f_center, f_right):
+                fb[m - 1, k] = (f_right - k) / (f_right - f_center)
+
+    return fb.to(device=device, dtype=dtype)
 
 
 class MultiResolutionSTFTLoss(nn.Module):
@@ -90,7 +128,7 @@ class MultiResolutionSTFTLoss(nn.Module):
 
     def spectral_convergence_loss(self, output_mag: torch.Tensor, target_mag: torch.Tensor) -> torch.Tensor:
         """Spectral convergence loss."""
-        return torch.norm(target_mag - output_mag, p="fro") / (torch.norm(target_mag, p="fro") + self.epsilon)
+        return torch.norm(target_mag - output_mag, p="fro") / (torch.norm(target_mag, p="fro") + self.epsilon)  # type: ignore[no-any-return]
 
     def log_magnitude_loss(self, output_mag: torch.Tensor, target_mag: torch.Tensor) -> torch.Tensor:
         """Protokolliert magnitude loss."""
@@ -129,8 +167,8 @@ class MultiResolutionSTFTLoss(nn.Module):
             sc_loss = self.spectral_convergence_loss(output_mag, target_mag)
             mag_loss = self.log_magnitude_loss(output_mag, target_mag)
 
-            total_sc_loss += sc_loss
-            total_mag_loss += mag_loss
+            total_sc_loss += sc_loss  # type: ignore[assignment]
+            total_mag_loss += mag_loss  # type: ignore[assignment]
 
             details[f"sc_loss_{fft_size}"] = sc_loss.item()
             details[f"mag_loss_{fft_size}"] = mag_loss.item()
@@ -145,18 +183,26 @@ class MultiResolutionSTFTLoss(nn.Module):
         details["total_sc_loss"] = total_sc_loss.item()  # type: ignore[attr-defined]
         details["total_mag_loss"] = total_mag_loss.item()  # type: ignore[attr-defined]
 
-        return total_loss, details
+        return total_loss, details  # type: ignore[return-value]
 
 
 class PANNsPerceptualLoss(nn.Module):
     """
     PANNs-based High-Level Perceptual Loss.
 
-    Nutzt Pre-trained PANNs (Pre-trained Audio Neural Networks) zur Feature-Extraktion
-    und berechnet Distanz im Embedding-Space.
+    Lädt das echte CNN14-Backbone (Kong et al. 2020, qiuqiangkong/audioset_tagging_cnn)
+    differenzierbar via torch.hub und vergleicht Distanzen in den tatsächlichen
+    Zwischen-Layer-Embeddings (conv_block1..4) via Forward-Hooks — kein Platzhalter.
+
+    `PANNsPlugin` (plugins/panns_plugin.py) ist eine reine numpy/ONNX-Inferenz-API
+    und daher für eine Backprop-fähige Loss-Funktion architektonisch ungeeignet;
+    deshalb wird hier das rohe PyTorch-Backbone separat geladen (analog zu
+    PANNsPlugin._try_load_torch_panns(), aber mit aktivem Grad-Fluss zu den Hooks).
 
     Referenz: Kong et al. (2020): "PANNs: Large-Scale Pretrained Audio Neural Networks"
     """
+
+    _MODEL_SR: int = 32_000
 
     def __init__(
         self,
@@ -164,69 +210,126 @@ class PANNsPerceptualLoss(nn.Module):
         feature_layers: list[str] | None = None,
         feature_weights: list[float] | None = None,
         distance_metric: str = "l1",
+        sr: int = 48000,
     ) -> None:
         super().__init__()
+        _ = panns_model_path  # torch.hub lädt den offiziellen Checkpoint; expliziter Pfad hier nicht anwendbar
         if feature_layers is None:
             feature_layers = ["conv_block1", "conv_block2", "conv_block3", "conv_block4"]
-
-        try:
-            # Lazy import für PANNs
-            from plugins.panns_plugin import PANNSPlugin
-
-            self.panns_available = True
-
-            # Initialize PANNs model
-            self.panns = PANNSPlugin()
-            logger.info("PANNs model loaded for perceptual loss")
-
-        except ImportError:
-            logger.warning("PANNs not available, using fallback spectral features")
-            self.panns_available = False
-
+        if feature_weights is not None and len(feature_weights) != len(feature_layers):
+            raise ValueError(
+                f"feature_weights (len={len(feature_weights)}) muss zu feature_layers "
+                f"(len={len(feature_layers)}) passen"
+            )
         self.feature_layers = feature_layers
         self.feature_weights = feature_weights or [1.0] * len(feature_layers)
         self.distance_metric = distance_metric
+        self.sr = sr
+
+        self._activations: dict[str, torch.Tensor] = {}
+        self.panns_available = False
+        self._resampler: Any = None
+
+        try:
+            self.panns = torch.hub.load(
+                "qiuqiangkong/audioset_tagging_cnn",
+                "Cnn14",
+                pretrained=True,
+                trust_repo=True,
+            )
+            self.panns.eval()
+            for p in self.panns.parameters():
+                p.requires_grad_(False)
+
+            for name in self.feature_layers:
+                module = getattr(self.panns, name, None)
+                if module is None:
+                    raise AttributeError(f"CNN14-Backbone hat kein Modul '{name}'")
+                module.register_forward_hook(self._make_hook(name))
+
+            if self.sr != self._MODEL_SR:
+                try:
+                    import torchaudio
+
+                    self._resampler = torchaudio.transforms.Resample(orig_freq=self.sr, new_freq=self._MODEL_SR)
+                except ImportError:
+                    logger.warning(
+                        "torchaudio nicht verfügbar — PANNs-Resampling via linearer Interpolation (Ersatzpfad)"
+                    )
+
+            self.panns_available = True
+            logger.info(
+                "PANNsPerceptualLoss: CNN14 (torch.hub, differenzierbar) geladen — Layers=%s",
+                self.feature_layers,
+            )
+        except Exception as exc:
+            logger.warning(
+                "PANNsPerceptualLoss: CNN14-Backbone nicht ladbar (%s) — Ersatzpfad auf Mel-Spektrogramm-Features",
+                exc,
+            )
+            self.panns = None  # type: ignore[assignment]
+            self.panns_available = False
+
+    def _make_hook(self, name: str) -> Any:
+        def _hook(_module: nn.Module, _inp: Any, out: torch.Tensor) -> None:
+            self._activations[name] = out
+
+        return _hook
+
+    def _resample_to_model_sr(self, audio: torch.Tensor) -> torch.Tensor:
+        """Resampelt auf die CNN14-Modell-Sample-Rate (32 kHz), falls nötig."""
+        if self.sr == self._MODEL_SR:
+            return audio
+        if self._resampler is not None:
+            return cast(torch.Tensor, self._resampler.to(device=audio.device)(audio))
+        # Fallback ohne torchaudio: differenzierbare lineare Interpolation
+        n_out = max(1, round(audio.shape[-1] * self._MODEL_SR / self.sr))
+        return F.interpolate(audio.unsqueeze(1), size=n_out, mode="linear", align_corners=False).squeeze(1)  # type: ignore[no-any-return]
 
     def extract_features(self, audio: torch.Tensor) -> dict[str, torch.Tensor]:
-        """Extrahiert features from audio using PANNs."""
+        """Extrahiert echte CNN14-Zwischen-Layer-Embeddings via Forward-Hooks."""
         if not self.panns_available:
-            # Fallback: Use spectral features
             return self._extract_spectral_features(audio)
 
-        # PANNs expects [batch, samples]
-        if audio.ndim == 3:
-            audio = audio.squeeze(1)  # Remove channel dimension if present
+        audio_mono = audio.squeeze(1) if audio.ndim == 3 else audio
+        audio_32k = self._resample_to_model_sr(audio_mono)
 
-        # Get PANNs embeddings (implementation depends on PANNs API)
-        # This is a placeholder - actual implementation depends on PANNs integration
-        features = {}
+        self._activations.clear()
+        self.panns(audio_32k)  # Hooks befüllen self._activations; Rückgabewert (Tags) hier irrelevant
 
-        # Extract multi-level features
-        # Note: Actual feature extraction depends on PANNs model architecture
-        features["high_level"] = audio.mean(dim=-1)  # Placeholder
+        if len(self._activations) != len(self.feature_layers):
+            logger.warning(
+                "PANNsPerceptualLoss: nur %d/%d Hook-Aktivierungen erhalten — Ersatzpfad",
+                len(self._activations),
+                len(self.feature_layers),
+            )
+            return self._extract_spectral_features(audio)
 
-        return features
+        return dict(self._activations)
 
     def _extract_spectral_features(self, audio: torch.Tensor) -> dict[str, torch.Tensor]:
-        """Fallback: Extract spectral features."""
-        # Compute mel-spectrogram as fallback
+        """Fallback: echte Mel-Spektrogramm-Features (HTK-Dreiecks-Filterbank), falls CNN14 nicht ladbar ist."""
         n_fft = 2048
         hop_length = 512
+        n_mels = 64
 
+        audio_mono = audio.squeeze(1) if audio.ndim == 3 else audio
+        window = torch.hann_window(n_fft, device=audio.device, dtype=audio.dtype)
         spec = torch.stft(
-            audio.squeeze(1) if audio.ndim == 3 else audio,
+            audio_mono,
             n_fft=n_fft,
             hop_length=hop_length,
+            window=window,
             return_complex=True,
             center=True,
         )
-
         mag = torch.abs(spec)
 
-        # Mel filterbank (simplified)
-        mel_features = mag.mean(dim=1)  # Simplified
+        mel_fb = _mel_filterbank(n_fft=n_fft, n_mels=n_mels, sr=self.sr, device=audio.device, dtype=audio.dtype)
+        mel_spec = torch.matmul(mel_fb, mag)  # [n_mels, n_freq] @ [batch, n_freq, frames] -> [batch, n_mels, frames]
+        log_mel = torch.log(mel_spec + 1e-6)
 
-        return {"spectral": mel_features}
+        return {"mel_spectrogram": log_mel}
 
     def forward(self, output: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, dict[str, float]]:
         """
@@ -240,14 +343,19 @@ class PANNsPerceptualLoss(nn.Module):
             loss: Perceptual loss in feature space
             details: Dictionary with feature-wise losses
         """
-        # Extract features
         output_features = self.extract_features(output)
         target_features = self.extract_features(target)
 
-        total_loss = 0.0
-        details = {}
+        # Layer-Gewichte anwenden — bei Fallback (ein einzelner Key) wird das erste Gewicht genutzt.
+        weight_map = (
+            dict(zip(self.feature_layers, self.feature_weights))
+            if self.panns_available
+            else dict.fromkeys(output_features, self.feature_weights[0])
+        )
 
-        # Compute distance in each feature space
+        total_loss = torch.zeros((), device=output.device, dtype=output.dtype)
+        details: dict[str, float] = {}
+
         for key in output_features:
             output_feat = output_features[key]
             target_feat = target_features[key]
@@ -261,7 +369,7 @@ class PANNsPerceptualLoss(nn.Module):
             else:
                 raise ValueError(f"Unknown distance metric: {self.distance_metric}")
 
-            total_loss += feat_loss
+            total_loss = total_loss + weight_map.get(key, 1.0) * feat_loss
             details[f"feat_loss_{key}"] = feat_loss.item()
 
         return total_loss, details
@@ -402,7 +510,7 @@ class PsychoacousticMaskingLoss(nn.Module):
         # 27 dB/Bark spreading slope
         spread_db = -27.0 * dz
         spread_linear = 10.0 ** (spread_db / 10.0)
-        return spread_linear
+        return cast(torch.Tensor, spread_linear)
 
     def forward(self, output: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, dict[str, float]]:
         """
@@ -416,7 +524,7 @@ class PsychoacousticMaskingLoss(nn.Module):
             loss: Psychoacoustically weighted loss
             details: Dictionary with loss components
         """
-        stft_window = self._stft_window.to(device=output.device, dtype=output.dtype)
+        stft_window = cast(torch.Tensor, self._stft_window).to(device=output.device, dtype=output.dtype)
 
         # Compute STFT
         output_stft = torch.stft(
@@ -449,8 +557,10 @@ class PsychoacousticMaskingLoss(nn.Module):
         # Group error into Bark bands
         bark_errors = []
         for i in range(len(self.bark_boundaries) - 1):
-            start_bin = self.bark_boundaries[i]
-            end_bin = self.bark_boundaries[i + 1]
+            start_bin = int(self.bark_boundaries[i].item())
+            end_bin = int(self.bark_boundaries[i + 1].item())
+            if end_bin <= start_bin:
+                end_bin = start_bin + 1  # Guard gegen leeren Slice → NaN (analog compute_masking_threshold)
 
             band_error = error[:, start_bin:end_bin, :].mean(dim=1, keepdim=True)
             bark_errors.append(band_error)
@@ -588,30 +698,86 @@ class MusicalFeatureLoss(nn.Module):
         self.rhythmic_weight = rhythmic_weight
         self.timbral_weight = timbral_weight
         self.register_buffer("_timbral_stft_window", torch.hann_window(2048), persistent=False)
+        self.register_buffer("_harmonic_stft_window", torch.hann_window(1024), persistent=False)
+        self.register_buffer("_rhythmic_stft_window", torch.hann_window(1024), persistent=False)
 
     def compute_harmonic_loss(self, output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        """Berechnet loss based on harmonic content preservation."""
-        # Simplified: Compare low-frequency energy ratios
-        # Full implementation would use proper harmonic analysis
+        """Berechnet Loss auf Basis der harmonischen Anregungsstruktur (HNR-Prinzip).
 
-        # Low-pass filter for fundamental frequencies
-        # Placeholder implementation
-        output_harmonic = output  # Would apply harmonic separation
-        target_harmonic = target
+        Homomorphe Dekonvolution (cepstrales Liftering, Oppenheim & Schafer 2009,
+        Kap. 13): Der reale Cepstrum trennt die spektrale Hüllkurve (Formanten,
+        niedrige Quefrenz) von der Anregungsquelle (Tonhöhen-/Harmonischen-Struktur,
+        hohe Quefrenz — der periodische Pulszug erzeugt dort einen Peak bei der
+        Grundperiode). Ein Hoch-Lifter isoliert genau diesen Harmonischen-Anteil,
+        unabhängig vom Timbre/Formanten-Verlauf — echte Harmonic-Content-Analyse
+        statt reinem Waveform-Vergleich.
+        """
+        n_fft = 1024
+        hop_length = 256
+        window = cast(torch.Tensor, self._harmonic_stft_window).to(device=output.device, dtype=output.dtype)
 
-        return F.mse_loss(output_harmonic, target_harmonic)
+        def _harmonic_cepstral_component(audio: torch.Tensor) -> torch.Tensor:
+            audio_mono = audio.squeeze(1) if audio.ndim == 3 else audio
+            spec = torch.stft(
+                audio_mono,
+                n_fft=n_fft,
+                hop_length=hop_length,
+                window=window,
+                return_complex=True,
+                center=True,
+            )
+            log_mag = torch.log(torch.abs(spec) + 1e-8)  # [batch, n_freq, frames]
+            # Realer Cepstrum via inverse reelle FFT entlang der Frequenzachse.
+            cepstrum = torch.fft.irfft(log_mag.transpose(1, 2), n=n_fft, dim=-1)  # [batch, frames, n_fft]
+            # Hoch-Lifter: niedrige Quefrenz (Hüllkurve/Formanten) auf 0 setzen,
+            # nur der Harmonischen-/Tonhöhen-Anteil (hohe Quefrenz) bleibt erhalten.
+            lifter_cutoff = n_fft // 32
+            cepstrum[..., :lifter_cutoff] = 0.0
+            cepstrum[..., n_fft - lifter_cutoff + 1 :] = 0.0  # Spiegel-Hälfte (reelles Cepstrum ist symmetrisch)
+            harmonic_log_mag = torch.fft.rfft(cepstrum, n=n_fft, dim=-1).real  # [batch, frames, n_freq]
+            return harmonic_log_mag.transpose(1, 2)  # type: ignore[no-any-return]  # [batch, n_freq, frames]
+
+        output_harmonic = _harmonic_cepstral_component(output)
+        target_harmonic = _harmonic_cepstral_component(target)
+
+        return F.l1_loss(output_harmonic, target_harmonic)
 
     def compute_rhythmic_loss(self, output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
-        """Berechnet loss based on rhythmic consistency."""
-        # Compute onset envelope similarity
-        # Simplified implementation
+        """Berechnet Loss auf Basis der Onset-Stärke-Funktion (Spectral Flux).
 
-        # Compute energy envelope
-        output_envelope = output.abs().mean(dim=1) if output.ndim == 3 else output.abs()
-        target_envelope = target.abs().mean(dim=1) if target.ndim == 3 else target.abs()
+        Spectral Flux (Bello et al. 2005; Dixon 2006): halbwellen-gleichgerichtete
+        Differenz aufeinanderfolgender STFT-Magnitude-Frames, über alle Frequenz-
+        bänder summiert — die Standard-Onset-Detektionsfunktion im MIR-Bereich.
+        Ein reiner Amplituden-Envelope-Vergleich (Vorgänger-Implementierung) kodiert
+        keine Transienten-/Onset-Information: ein Dauerton und ein perkussiver
+        Transient mit gleicher RMS-Hüllkurve wären ununterscheidbar.
+        """
+        n_fft = 1024
+        hop_length = 256
+        window = cast(torch.Tensor, self._rhythmic_stft_window).to(device=output.device, dtype=output.dtype)
 
-        # Compare envelopes
-        return F.mse_loss(output_envelope, target_envelope)
+        def _onset_strength(audio: torch.Tensor) -> torch.Tensor:
+            audio_mono = audio.squeeze(1) if audio.ndim == 3 else audio
+            spec = torch.stft(
+                audio_mono,
+                n_fft=n_fft,
+                hop_length=hop_length,
+                window=window,
+                return_complex=True,
+                center=True,
+            )
+            mag = torch.abs(spec)  # [batch, n_freq, frames]
+            # Halbwellen-Gleichrichtung: nur Energiezuwächse zählen als Onset-Beitrag.
+            flux = F.relu(mag[:, :, 1:] - mag[:, :, :-1]).sum(dim=1)  # [batch, frames-1]
+            # log1p-Kompression: rohe Flux-Summen (über alle Frequenzbins) sind
+            # unbeschränkt und würden diese Komponente gegenüber den übrigen
+            # (bereits normierten) Loss-Termen um Größenordnungen dominieren.
+            return torch.log1p(flux)
+
+        output_flux = _onset_strength(output)
+        target_flux = _onset_strength(target)
+
+        return F.mse_loss(output_flux, target_flux)
 
     def compute_timbral_loss(self, output: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         """Berechnet loss based on timbral characteristics."""
@@ -620,7 +786,7 @@ class MusicalFeatureLoss(nn.Module):
 
         n_fft = 2048
         hop_length = 512
-        stft_window = self._timbral_stft_window.to(device=output.device, dtype=output.dtype)
+        stft_window = cast(torch.Tensor, self._timbral_stft_window).to(device=output.device, dtype=output.dtype)
 
         output_spec = torch.stft(
             output.squeeze(1) if output.ndim == 3 else output,
@@ -643,8 +809,11 @@ class MusicalFeatureLoss(nn.Module):
         output_mag = torch.abs(output_spec)
         target_mag = torch.abs(target_spec)
 
-        # Spectral centroid (weighted frequency mean)
-        freqs = torch.linspace(0, self.sr / 2, n_fft // 2 + 1, device=output.device)
+        # Spectral centroid (weighted frequency mean), normiert auf Nyquist ∈ [0, 1] —
+        # rohe Hz-Werte (bis 24 kHz) würden den MSE-Term um 4-5 Größenordnungen gegenüber
+        # den übrigen (bereits normierten) Loss-Komponenten dominieren.
+        nyquist = self.sr / 2.0
+        freqs = torch.linspace(0, nyquist, n_fft // 2 + 1, device=output.device) / nyquist
         freqs = freqs.view(1, -1, 1)
 
         output_centroid = (output_mag * freqs).sum(dim=1) / (output_mag.sum(dim=1) + 1e-8)
@@ -712,7 +881,7 @@ class CombinedPerceptualLoss(nn.Module):
         self.stft_loss = MultiResolutionSTFTLoss()
 
         if use_panns:
-            self.panns_loss = PANNsPerceptualLoss()
+            self.panns_loss = PANNsPerceptualLoss(sr=sr)
         else:
             self.panns_loss = None  # type: ignore[assignment]
 
@@ -726,11 +895,11 @@ class CombinedPerceptualLoss(nn.Module):
         else:
             self.musical_loss = None  # type: ignore[assignment]
 
-        logger.info("CombinedPerceptualLoss initialized with sr=%s", sr)
+        logger.info("CombinedPerceptualLoss initialisiert with sr=%s", sr)
         logger.info("  STFT weight: %s", stft_weight)
-        logger.info("  PANNs weight: %s (enabled: %s)", panns_weight, use_panns)
-        logger.info("  Psychoacoustic weight: %s (enabled: %s)", psychoacoustic_weight, use_psychoacoustic)
-        logger.info("  Musical weight: %s (enabled: %s)", musical_weight, use_musical)
+        logger.info("  PANNs weight: %s (aktiviert: %s)", panns_weight, use_panns)
+        logger.info("  Psychoacoustic weight: %s (aktiviert: %s)", psychoacoustic_weight, use_psychoacoustic)
+        logger.info("  Musical weight: %s (aktiviert: %s)", musical_weight, use_musical)
 
     def forward(
         self, output: torch.Tensor, target: torch.Tensor, return_details: bool = False
@@ -747,8 +916,8 @@ class CombinedPerceptualLoss(nn.Module):
             loss: Combined perceptual loss
             details: (optional) Dictionary with all component losses
         """
-        total_loss = 0.0
-        all_details = {}
+        total_loss: torch.Tensor = torch.zeros((), device=output.device, dtype=output.dtype)
+        all_details: dict[str, float] = {}
 
         # 1. Multi-Resolution STFT Loss
         stft_loss, stft_details = self.stft_loss(output, target)

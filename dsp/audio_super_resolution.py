@@ -62,7 +62,7 @@ class AudioSuperResolution:
                 audio_up = resample(audio, n_samples)
                 audio_up = np.nan_to_num(audio_up, nan=0.0, posinf=0.0, neginf=0.0)
                 audio_up = np.clip(audio_up, -1.0, 1.0)
-                logger.info("Fallback: Spline-Upsampling auf %s Hz.", self.target_sr)
+                logger.info("Ersatzpfad: Spline-Upsampling auf %s Hz.", self.target_sr)
                 fallback_used = True
             else:
                 # Deep-Learning-Inferenz
@@ -81,9 +81,9 @@ class AudioSuperResolution:
             upsample_factor = self.target_sr / sr
             n_samples = int(len(audio) * upsample_factor)
             audio_up = resample(audio, n_samples)
-            logger.info("Fallback nach Fehler: Spline-Upsampling auf %s Hz.", self.target_sr)
+            logger.info("Ersatzpfad nach Fehler: Spline-Upsampling auf %s Hz.", self.target_sr)
             fallback_used = True
 
         if audit_log:
-            logger.info("AudioSuperResolution: target_sr=%s, fallback_used=%s", self.target_sr, fallback_used)
-        return audio_up.astype(audio.dtype)
+            logger.info("AudioSuperResolution: target_sr=%s, Ersatzpfad_used=%s", self.target_sr, fallback_used)
+        return audio_up.astype(audio.dtype)  # type: ignore[no-any-return]

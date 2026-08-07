@@ -53,7 +53,7 @@ class AiVoiceConversion:
         from backend.file_import import load_audio_file
 
         _res = load_audio_file(output_path, do_carrier_analysis=False)
-        enhanced_audio = np.asarray(_res["audio"], dtype=np.float32)
+        enhanced_audio = np.asarray(_res["audio"], dtype=np.float32)  # type: ignore[index]
         return enhanced_audio.astype(audio.dtype)
 
     def aurik_foundation_features(self, audio: np.ndarray[Any, Any], sr: int) -> dict[str, Any]:
@@ -220,5 +220,5 @@ class AiVoiceConversion:
         from backend.file_import import load_audio_file
 
         _res = load_audio_file(output_path, do_carrier_analysis=False)
-        restored_audio = np.asarray(_res["audio"], dtype=np.float32)
+        restored_audio = np.asarray(_res["audio"], dtype=np.float32)  # type: ignore[index]
         return restored_audio.astype(audio.dtype)

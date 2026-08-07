@@ -7,6 +7,11 @@
 default_language_version:
   python: python3.10
 
+default_install_hook_types:
+  - pre-commit
+  - commit-msg
+  - pre-push
+
 exclude: |
   (?x)^(
     models/.*|
@@ -52,9 +57,6 @@ repos:
         args: [--fix=lf]
       - id: no-commit-to-branch
         args: [--branch=release]
-      - id: pretty-format-json
-        args: [--autofix, --indent=2]
-        exclude: '^(\.vscode/|analysis_results/)'
 
   # ---------------------------------------------------------------------------
   # 2. Ruff — Schneller Linter + Formatter (ersetzt Black, isort, autoflake)
@@ -218,13 +220,23 @@ repos:
         pass_filenames: false
         files: ^(backend|core|dsp|plugins|denker|Aurik10)/.*\.py$
 
-      # Aurik AST VERBOTEN-Linter (V01-V33)
-      - id: aurik-verboten-linter
-        name: "Aurik AST VERBOTEN-Linter (V01-V33)"
-        entry: bash -c '.venv_aurik/bin/python scripts/aurik_verboten_linter.py --ci 2>&1 | grep -v "spec_constitution" || true'
+      # Kritische statische Regressionen: F821 logger/NameError, F601 Dict-Duplikate,
+      # B009 unsafe getattr, I001 Importordnung. Explizit, damit diese Bugklassen
+      # auch dann blocken, wenn pyproject/Hook-Defaults spaeter weicher werden.
+      - id: aurik-ruff-critical-static-gate
+        name: "Aurik Critical Static Gate (F821/F601/B009/I001)"
+        entry: .venv_aurik/bin/python -m ruff check --select F821,F601,B009,I001 --no-cache
         language: system
-        pass_filenames: false
-        files: ^(backend|plugins)/.*\.py$
+        pass_filenames: true
+        files: ^(backend|plugins|denker|Aurik10|cli|scripts)/.*\.py$
+
+      # Aurik AST VERBOTEN-Linter (V01-V58+) — ERRORs blockieren, WARNINGs bleiben advisory.
+      - id: aurik-verboten-linter
+        name: "Aurik AST VERBOTEN-Linter (ERRORs fail-closed)"
+        entry: .venv_aurik/bin/python scripts/aurik_verboten_linter.py --ci --errors-only
+        language: system
+        pass_filenames: true
+        files: ^(backend|plugins|Aurik10|cli)/.*\.py$
 
       # §v10.105 Bug-Prevention: Exception-Forensik Anti-Pattern Scanner
       - id: aurik-bug-prevention
@@ -356,7 +368,7 @@ repos:
       # §v10.600 Closed-Loop-Guard: Regelkreis-Integrität (Strength, Signalquelle, Selbstkalibrierung)
       - id: aurik-closed-loop-guard
         name: "§v10.600 Closed-Loop-Guard (Regelkreis, Signalquelle, Kalibrierung, Chunked-Persistenz)"
-        entry: python3 scripts/pre_commit_closed_loop_guard.py
+        entry: .venv_aurik/bin/python scripts/pre_commit_closed_loop_guard.py
         language: system
         pass_filenames: false
         always_run: true
@@ -364,7 +376,7 @@ repos:
       # §v10.702 B1/B2/B3 Reproduzierbarkeits-Guard (MQA-Verbesserung, Per-Defekt-Scoring, Chunk-Determinismus, Full-Song-Presence)
       - id: aurik-reproducibility-guard
         name: "§v10.702 Reproduzierbarkeits-Guard (B1 MQA, B2 Per-Defekt, B3 Chunk-Determinismus, B3-P2 Full-Song-Scan)"
-        entry: python3 scripts/pre_commit_reproducibility_guard.py
+        entry: .venv_aurik/bin/python scripts/pre_commit_reproducibility_guard.py
         language: system
         pass_filenames: false
         always_run: true
@@ -372,10 +384,18 @@ repos:
       # §v10.340 SOTA-Guard: Startup-Qualitätsregeln (torch.zeros, i18n, lock-discipline, imports, OOM, Bayesian, Causal-Reasoning)
       - id: aurik-sota-guard
         name: "§v10.340 SOTA-Guard (GPU-Safety, i18n, Lock-Discipline, Imports, OOM-Resilienz, Causal-Material)"
-        entry: python3 scripts/pre_commit_sota_guard.py
+        entry: .venv_aurik/bin/python scripts/pre_commit_sota_guard.py
         language: system
         pass_filenames: false
         always_run: true
+
+      # Unit-Smoke nach Spec §10.2: schnell, low-overhead, kein E2E/ML-Gate im Commit-Pfad.
+      - id: aurik-unit-smoke
+        name: "Aurik Unit-Smoke (tests/unit, maxfail=3)"
+        entry: bash -c 'AURIK_MEM_GB=12 AURIK_SWAP_MB=2048 AURIK_BATCH_FILES=12 AURIK_CHUNK_LIMIT=1 "${PWD}/run_tests_chunked_safe.sh" tests/unit --timeout=20 --tb=line -qq -o console_output_style=count --maxfail=3 -x'
+        language: system
+        pass_filenames: false
+        files: ^(backend|plugins|denker|Aurik10|cli|tests/unit)/.*\.py$
 
       # Conventional Commits Message Validation
       - id: conventional-commit-msg

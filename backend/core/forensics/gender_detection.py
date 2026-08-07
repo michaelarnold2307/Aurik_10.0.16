@@ -50,7 +50,7 @@ class GenderDetector:
             else:
                 return "unknown"
         except Exception as e:
-            logger.warning("gender_detection.py::detect_gender fallback: %s", e)
+            logger.warning("gender_detection.py::erkennen_gender Ersatzpfad: %s", e)
             return "unknown"
 
     def _estimate_pitch(self, wav, sr=16000) -> float:

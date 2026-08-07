@@ -51,7 +51,7 @@ def _silence(duration_s: float = 1.0) -> np.ndarray:
 
 def _sine(freq_hz: float = 440.0, duration_s: float = 1.0) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return (np.sin(2 * np.pi * freq_hz * t) * 0.4).astype(np.float32)
+    return (np.sin(2 * np.pi * freq_hz * t) * 0.4).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _colored_noise(beta: float = 2.0, duration_s: float = 1.5, seed: int = 42) -> np.ndarray:
@@ -62,7 +62,7 @@ def _colored_noise(beta: float = 2.0, duration_s: float = 1.5, seed: int = 42) -
     a = 1.0 - 0.97 * min(beta / 2.0, 1.0)
     colored = lfilter([1.0], [1.0, -(1.0 - a)], white).astype(np.float32)
     colored /= np.max(np.abs(colored)) + 1e-10
-    return colored * 0.3
+    return colored * 0.3  # type: ignore[no-any-return]
 
 
 def _stereo(mono: np.ndarray) -> np.ndarray:
@@ -76,7 +76,7 @@ def _add_degradation(audio: np.ndarray, snr_db: float = 20.0) -> np.ndarray:
     np.random.seed(99)
     noise = np.random.randn(len(audio)).astype(np.float32) * math.sqrt(noise_power)
     degraded = audio + noise
-    return np.clip(degraded, -1.0, 1.0)
+    return np.clip(degraded, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ============================================================================

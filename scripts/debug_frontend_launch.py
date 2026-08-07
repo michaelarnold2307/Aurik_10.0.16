@@ -290,7 +290,7 @@ class _InstrumentedModernMainWindow(_OrigModernMainWindow):
 
 
 # Patch im Modul ersetzen (main.py importiert ModernMainWindow)
-_mw_module.ModernMainWindow = _InstrumentedModernMainWindow
+_mw_module.ModernMainWindow = _InstrumentedModernMainWindow  # type: ignore[misc]
 
 
 # ── Start ────────────────────────────────────────────────────────────────────

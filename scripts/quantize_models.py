@@ -91,7 +91,7 @@ class ModelRegistryQuantizer:
         )
         self.quantizer = ModelQuantizer(config)
 
-        logger.info(f"Loaded registry with {len(self.registry['models'])} models")
+        logger.info(f"geladen registry with {len(self.registry['models'])} models")
 
     def get_quantizable_models(self) -> list[tuple[str, dict, dict]]:
         """
@@ -145,7 +145,7 @@ class ModelRegistryQuantizer:
         logger.info(f"  Size: {onnx_model['model_size_mb']:.1f} MB")
 
         if self.dry_run:
-            logger.info("  [DRY RUN] Skipping actual quantization")
+            logger.info("  [DRY Ausfuehrung] Skipping actual quantization")
             return True, {
                 "model_id": model_id,
                 "model_name": onnx_model["name"],
@@ -156,15 +156,15 @@ class ModelRegistryQuantizer:
         try:
             # Quantize
             start_time = time.time()
-            success = self.quantizer.quantize(model_path=str(model_path), output_path=str(quantized_path))
+            success = self.quantizer.quantize(model_path=str(model_path), output_path=str(quantized_path))  # type: ignore[arg-type]
             elapsed = time.time() - start_time
 
             if not success:
-                logger.error("  ✗ Quantization failed")
+                logger.error("  ✗ Quantization fehlgeschlagen")
                 return False, None
 
             # Get stats
-            stats = self.quantizer.get_statistics()
+            stats = self.quantizer.get_statistics()  # type: ignore[attr-defined]
 
             # Calculate size reduction
             quantized_size_mb = quantized_path.stat().st_size / (1024 * 1024)
@@ -172,7 +172,7 @@ class ModelRegistryQuantizer:
                 (onnx_model["model_size_mb"] - quantized_size_mb) / onnx_model["model_size_mb"] * 100
             )
 
-            logger.info(f"  ✓ Quantized successfully in {elapsed:.1f}s")
+            logger.info(f"  ✓ Quantized erfolgreich in {elapsed:.1f}s")
             logger.info(
                 f"  Size: {onnx_model['model_size_mb']:.1f} MB → {quantized_size_mb:.1f} MB ({size_reduction_percent:.1f}% reduction)"
             )
@@ -215,7 +215,7 @@ class ModelRegistryQuantizer:
 
         logger.info(f"Found {len(quantizable)} models to quantize")
         if self.dry_run:
-            logger.info("[DRY RUN MODE] No actual quantization will be performed")
+            logger.info("[DRY Ausfuehrung Betriebsart] No actual quantization will be performed")
 
         results = []
         success_count = 0
@@ -256,7 +256,7 @@ class ModelRegistryQuantizer:
         logger.info("=" * 80)
         logger.info(f"Total models: {summary['total']}")
         logger.info(f"Quantized: {summary['quantized']}")
-        logger.info(f"Failed: {summary['failed']}")
+        logger.info(f"fehlgeschlagen: {summary['failed']}")
 
         if not self.dry_run:
             logger.info(f"Total size reduction: {summary['total_size_reduction_mb']:.1f} MB")

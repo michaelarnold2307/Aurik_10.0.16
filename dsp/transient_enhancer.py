@@ -52,7 +52,7 @@ ai_transient_enhancer_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Überbetonung", "expected_when": "amount zu hoch", "severity": 0.2}],
+    side_effects=[{"risk": "Überbetonung", "expected_when": "amount zu hoch", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["transient_enhancement_score"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -113,7 +113,7 @@ class AiTransientEnhancer:
                     audio_out = _raw
             except Exception as _onnx_err:
                 logger.warning(
-                    "AiTransientEnhancer: ONNX-Inferenz fehlgeschlagen (%s) — Envelope-DSP-Fallback aktiv.",
+                    "AiTransientEnhancer: ONNX-Inferenz fehlgeschlagen (%s) — Envelope-DSP-Ersatzpfad aktiv.",
                     _onnx_err,
                 )
-        return np.clip(np.nan_to_num(audio_out, nan=0.0), -1.0, 1.0).astype(audio.dtype)
+        return np.clip(np.nan_to_num(audio_out, nan=0.0), -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]

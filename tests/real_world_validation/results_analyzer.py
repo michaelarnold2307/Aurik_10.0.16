@@ -17,6 +17,7 @@ import argparse
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from scipy import stats
@@ -215,7 +216,7 @@ class ResultsAnalyzer:
 
         # Collect ratings by criterion
         criteria = ["overall_quality", "naturalness", "clarity", "character_preservation"]
-        ratings_by_criterion = {criterion: [] for criterion in criteria}
+        ratings_by_criterion: Any = {criterion: [] for criterion in criteria}
 
         for result in rating_results:
             for criterion in criteria:

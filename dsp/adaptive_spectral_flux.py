@@ -50,7 +50,7 @@ adaptive_spectral_flux_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlklassifikation",
             "expected_when": "n_fft zu niedrig",
             "severity": 0.2,

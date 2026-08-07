@@ -130,7 +130,7 @@ class StemTargetedNRPhase(PhaseInterface):
             if sep is not None:
                 return sep, "bs_roformer"
         except Exception as _e:
-            logger.debug("phase_66: BS-RoFormer nicht verfügbar: %s", _e)
+            logger.debug("Verarbeitungsschritt_66: BS-RoFormer nicht verfügbar: %s", _e)
         try:
             from plugins.htdemucs_plugin import get_htdemucs_plugin
 
@@ -138,7 +138,7 @@ class StemTargetedNRPhase(PhaseInterface):
             if _sep_fb is not None:
                 return _sep_fb, "mdx23c_fallback"
         except Exception as _e2:
-            logger.debug("phase_66: MDX23C-Fallback nicht verfügbar: %s", _e2)
+            logger.debug("Verarbeitungsschritt_66: MDX23C-Ersatzpfad nicht verfügbar: %s", _e2)
         return None, "unavailable"
 
     @staticmethod
@@ -149,7 +149,7 @@ class StemTargetedNRPhase(PhaseInterface):
 
             return DeepFilterNetV3IIPlugin()
         except Exception as _e:
-            logger.debug("phase_66: DFN nicht verfügbar: %s", _e)
+            logger.debug("Verarbeitungsschritt_66: DFN nicht verfügbar: %s", _e)
         return None
 
     # ------------------------------------------------------------------
@@ -186,7 +186,7 @@ class StemTargetedNRPhase(PhaseInterface):
             try:
                 return np.asarray(dfn_plugin.enhance(stem_f, sr, energy_bias_db=energy_bias_db), dtype=np.float32)  # type: ignore[no-any-return]
             except Exception as _e:
-                logger.debug("phase_66: DFN enhance Fehler (OMLSA-Fallback): %s", _e)
+                logger.debug("Verarbeitungsschritt_66: DFN verbessern Fehler (OMLSA-Ersatzpfad): %s", _e)
 
         # OMLSA-DSP-Fallback (AiDehiss OMLSA/MMSE-LSA — kanonische Implementierung in dsp/dehiss.py)
         try:
@@ -200,7 +200,7 @@ class StemTargetedNRPhase(PhaseInterface):
                 return np.asarray(np.clip(stem_f + diff[:, np.newaxis], -1.0, 1.0), dtype=np.float32)  # type: ignore[no-any-return]
             return np.asarray(np.clip(cleaned, -1.0, 1.0), dtype=np.float32)  # type: ignore[no-any-return]
         except Exception as _e2:
-            logger.debug("phase_66: OMLSA-Fallback Fehler: %s", _e2)
+            logger.debug("Verarbeitungsschritt_66: OMLSA-Ersatzpfad Fehler: %s", _e2)
         return stem_f  # type: ignore[no-any-return]
 
     def process(  # type: ignore[override]  # pylint: disable=arguments-differ
@@ -231,11 +231,12 @@ class StemTargetedNRPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "stem_nr", default_nr=0.5, default_de_ess=0.3, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_66_stem_targeted_nr.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_66_stem_targeted_nr.py::verarbeiten Ersatzpfad: %s", e)
         audio, _p66_transposed = to_channels_last(audio)
         self.validate_input(audio)
         t0 = time.time()
@@ -300,7 +301,7 @@ class StemTargetedNRPhase(PhaseInterface):
                 vqi_before = float(_vqi_ref.get("vqi", 0.0))
                 _p66_meta["vqi_before"] = vqi_before
             except Exception as _vqi_e:
-                logger.debug("phase_66: VQI-Baseline Fehler (non-blocking): %s", _vqi_e)
+                logger.debug("Verarbeitungsschritt_66: VQI-Baseline Fehler (nicht blockierend): %s", _vqi_e)
 
         # --- Stem-Separation ---
         separator, sep_name = self._get_separator()
@@ -325,7 +326,7 @@ class StemTargetedNRPhase(PhaseInterface):
                 return _passthrough("Kein vocals/other Stem im Ergebnis")
 
         except Exception as _sep_e:
-            logger.debug("phase_66: Stem-Separation Fehler: %s", _sep_e)
+            logger.debug("Verarbeitungsschritt_66: Stem-Separation Fehler: %s", _sep_e)
             return _passthrough(f"Separation Exception: {_sep_e}")
 
         # --- Stem-weise NR ---
@@ -336,7 +337,7 @@ class StemTargetedNRPhase(PhaseInterface):
             vocals_clean = self._apply_dsp_nr(vocals_stem, sample_rate, _ENERGY_BIAS_VOCAL_DB, dfn_plugin)
             _p66_meta["vocal_nr_applied"] = True
         except Exception as _vnr_e:
-            logger.debug("phase_66: Vokal-NR Fehler, Vokal-Original verwendet: %s", _vnr_e)
+            logger.debug("Verarbeitungsschritt_66: Vokal-NR Fehler, Vokal-Originalsignal verwendet: %s", _vnr_e)
             vocals_clean = np.asarray(vocals_stem, dtype=np.float32)
 
         # Begleitung: instrumental-optimierter energy_bias (§0j)
@@ -344,7 +345,7 @@ class StemTargetedNRPhase(PhaseInterface):
             acc_clean = self._apply_dsp_nr(other_stem, sample_rate, _ENERGY_BIAS_ACC_DB, dfn_plugin)
             _p66_meta["acc_nr_applied"] = True
         except Exception as _anr_e:
-            logger.debug("phase_66: Acc-NR Fehler, Acc-Original verwendet: %s", _anr_e)
+            logger.debug("Verarbeitungsschritt_66: Acc-NR Fehler, Acc-Originalsignal verwendet: %s", _anr_e)
             acc_clean = np.asarray(other_stem, dtype=np.float32)
 
         # --- Rekombination ---
@@ -366,7 +367,7 @@ class StemTargetedNRPhase(PhaseInterface):
 
             audio_combined = vc[:_n] + ac[:_n]
         except Exception as _comb_e:
-            logger.debug("phase_66: Rekombination Fehler: %s", _comb_e)
+            logger.debug("Verarbeitungsschritt_66: Rekombination Fehler: %s", _comb_e)
             return _passthrough(f"Rekombination Exception: {_comb_e}")
 
         # Längen- und Formatsicherung
@@ -406,10 +407,10 @@ class StemTargetedNRPhase(PhaseInterface):
                     self._to_mono_mix(audio_combined),
                 )
                 if _hg.requires_rollback:
-                    logger.debug("phase_66: HallucinationGuard → Rollback")
+                    logger.debug("Verarbeitungsschritt_66: HallucinationGuard → Rollback")
                     return _passthrough("HallucinationGuard Rollback (Studio 2026)")
             except Exception as _hg_e:
-                logger.debug("phase_66: HallucinationGuard non-blocking: %s", _hg_e)
+                logger.debug("Verarbeitungsschritt_66: HallucinationGuard nicht blockierend: %s", _hg_e)
 
         # --- §0p VQI-Guard ---
         if panns_singing >= 0.35 and vqi_before is not None:
@@ -423,14 +424,14 @@ class StemTargetedNRPhase(PhaseInterface):
                 _p66_meta["vqi_after"] = vqi_after
                 if vqi_after < vqi_before + _VQI_ROLLBACK_THRESHOLD:
                     logger.debug(
-                        "phase_66: VQI-Rollback: %.3f → %.3f (Delta=%.3f)",
+                        "Verarbeitungsschritt_66: VQI-Rollback: %.3f → %.3f (Delta=%.3f)",
                         vqi_before,
                         vqi_after,
                         vqi_after - vqi_before,
                     )
                     return _passthrough(f"VQI-Guard Rollback: VQI {vqi_before:.3f}→{vqi_after:.3f}")
             except Exception as _vqi_after_e:
-                logger.debug("phase_66: VQI-After Fehler (non-blocking): %s", _vqi_after_e)
+                logger.debug("Verarbeitungsschritt_66: VQI-After Fehler (nicht blockierend): %s", _vqi_after_e)
 
         _p66_meta["activation_triggered"] = True
 
@@ -446,9 +447,9 @@ class StemTargetedNRPhase(PhaseInterface):
             _nt66_dist = _nt66_dist_fn(_nt66_residual, _nt66_mat, sr=sample_rate)
             if _nt66_dist > 0.25:
                 audio_combined = (0.5 * audio_combined + 0.5 * audio).astype(np.float32)
-                logger.warning("Phase66 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend", _nt66_dist)
+                logger.warning("Verarbeitungsschritt66 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend", _nt66_dist)
         except Exception as _nt66_exc:
-            logger.debug("Phase66 V19 Noise-Textur-Guard (non-blocking): %s", _nt66_exc)
+            logger.debug("Verarbeitungsschritt66 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt66_exc)
 
         # §V24 Spektralfarbe-Prüfung nach Stem-NR (§2.74, non-blocking WARNING)
         try:
@@ -461,7 +462,7 @@ class StemTargetedNRPhase(PhaseInterface):
                 _sc_wet_66 = 0.70  # Phase-Strength −30 % (§V24)
                 audio_combined = (_sc_wet_66 * audio_combined + (1.0 - _sc_wet_66) * audio).astype(np.float32)
         except Exception as _sc_exc_66:
-            logger.debug("§V24 phase_66 spectral_color non-blocking: %s", _sc_exc_66)
+            logger.debug("§V24 Verarbeitungsschritt_66 spectral_color nicht blockierend: %s", _sc_exc_66)
 
         # V26 Onset-Guard (§2.77): Transients nach Stem-NR schützen (non-blocking)
         try:
@@ -471,12 +472,12 @@ class StemTargetedNRPhase(PhaseInterface):
 
             audio_combined = _opg66(audio, audio_combined, None, max_delta_db=1.5)
         except Exception as _on66_exc:
-            logger.debug("Phase66 V26 Onset-Guard (non-blocking): %s", _on66_exc)
+            logger.debug("Verarbeitungsschritt66 V26 Onset-Guard (nicht blockierend): %s", _on66_exc)
 
         if _p66_transposed:
             audio_combined = audio_combined.T
 
-        logger.info("phase=%s score=%.2f", self._PHASE_ID, 1.0)
+        logger.info("Verarbeitungsschritt=%s Wert=%.2f", self._PHASE_ID, 1.0)
 
         return PhaseResult(
             success=True,

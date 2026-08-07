@@ -137,7 +137,7 @@ def train_e2e_optimization(
     logger.info("Starte E2E Optimization Training")
     logger.info("=" * 80)
     logger.info("Dataset: %s", dataset_path)
-    logger.info("Output: %s", output_path)
+    logger.info("Ausgabe: %s", output_path)
     logger.info("Epochs: %s", epochs)
     logger.info("Batch size: %s", batch_size)
     logger.info("Learning rate: %s", learning_rate)
@@ -185,7 +185,7 @@ def train_e2e_optimization(
         # Validate
         val_metrics = framework.validate(val_loader)
 
-        logger.info("\nValidation metrics:")
+        logger.info("\nValidierung metrics:")
         for key, value in val_metrics.items():
             logger.info("  %s: %.4f", key, value)
 
@@ -197,7 +197,7 @@ def train_e2e_optimization(
             framework.save_checkpoint(epoch, {"train": train_metrics, "val": val_metrics})  # type: ignore[dict-item]
 
             if is_best:
-                logger.info("  *** New best validation loss: %.4f ***", best_val_loss)
+                logger.info("  *** New best Validierung loss: %.4f ***", best_val_loss)
 
     # Export optimized parameters
     final_params = framework.export_optimized_parameters()
@@ -206,8 +206,8 @@ def train_e2e_optimization(
     with open(params_file, "w", encoding="utf-8") as f:
         yaml.dump(final_params, f, default_flow_style=False)
 
-    logger.info("\nOptimized parameters saved: %s", params_file)
-    logger.info("\nTraining completed!")
+    logger.info("\noptimiert parameters gespeichert: %s", params_file)
+    logger.info("\nTraining abgeschlossen!")
 
 
 def train_hyperparameter_optimization(  # type: ignore[return]
@@ -227,7 +227,7 @@ def train_hyperparameter_optimization(  # type: ignore[return]
     logger.info("Starte Hyperparameter Optimization for %s", material_type)
     logger.info("=" * 80)
     logger.info("Dataset: %s", dataset_path)
-    logger.info("Output: %s", output_path)
+    logger.info("Ausgabe: %s", output_path)
     logger.info("Trials: %s", n_trials)
     logger.info("Jobs: %s", n_jobs)
     logger.info("=" * 80)
@@ -251,9 +251,9 @@ def train_hyperparameter_optimization(  # type: ignore[return]
     # Run optimization
     results = optimizer.optimize(evaluation_dataset=eval_dataset, process_function=process_audio)
 
-    logger.info("\nOptimization completed!")
-    logger.info("Best score: %.4f", results["best_score"])
-    logger.info("Best params saved to: %s", output_path / material_type)
+    logger.info("\nOptimization abgeschlossen!")
+    logger.info("Best Wert: %.4f", results["best_score"])
+    logger.info("Best params gespeichert to: %s", output_path / material_type)
 
 
 def train_all_materials(dataset_path: Path, output_path: Path, n_trials: int = 100) -> None:
@@ -286,8 +286,8 @@ def train_all_materials(dataset_path: Path, output_path: Path, n_trials: int = 1
     # Run optimization for all materials
     optimizer.optimize_all(datasets=datasets, process_functions=process_functions)
 
-    logger.info("\nAll materials optimized!")
-    logger.info("Results saved to: %s", output_path)
+    logger.info("\nAll materials optimiert!")
+    logger.info("Results gespeichert to: %s", output_path)
 
 
 def main() -> None:
@@ -386,7 +386,7 @@ def main() -> None:
 
     elif args.mode == "hyperopt":
         if not args.material:
-            logger.error("--material is required for hyperopt mode")
+            logger.error("--material is required for hyperopt Betriebsart")
             sys.exit(1)
 
         train_hyperparameter_optimization(

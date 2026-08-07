@@ -344,7 +344,7 @@ class ArtisticIntentDiscriminator:
             thd = float(np.clip(hf_ratio * 2.0 * (1.0 - flatness * 0.5), 0.0, 1.0))
             return thd
         except Exception as e:
-            logger.warning("artistic_intent_discriminator.py::_measure_harmonic_distortion fallback: %s", e)
+            logger.warning("artistic_intent_discriminator.py::_measure_harmonic_distortion Ersatzpfad: %s", e)
             return 0.0
 
     @staticmethod
@@ -384,7 +384,7 @@ class ArtisticIntentDiscriminator:
                         b_s = int(b)
                     covered += max(0, min(b_s, n_samples) - max(0, a_s))
             except Exception as e:
-                logger.warning("artistic_intent_discriminator.py::_fraction_in_zones fallback: %s", e)
+                logger.warning("artistic_intent_discriminator.py::_fraction_in_zones Ersatzpfad: %s", e)
         return float(np.clip(covered / max(1, n_samples), 0.0, 1.0))
 
     @staticmethod
@@ -413,7 +413,7 @@ class ArtisticIntentDiscriminator:
             # Low CV = high consistency = likely intentional
             return float(np.clip(1.0 - cv * 2.0, 0.0, 1.0))
         except Exception as e:
-            logger.warning("artistic_intent_discriminator.py::_measure_repetition_consistency fallback: %s", e)
+            logger.warning("artistic_intent_discriminator.py::_measure_repetition_consistency Ersatzpfad: %s", e)
             return 0.0
 
     @staticmethod

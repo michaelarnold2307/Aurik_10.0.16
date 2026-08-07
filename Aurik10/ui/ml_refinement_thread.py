@@ -91,7 +91,7 @@ except ImportError as _bridge_exc:
 
     logger = logging.getLogger(__name__)
     logger.warning(
-        "MLRefinementThread: Bridge-Import fehlgeschlagen (%s), verwende lokalen Fallback fuer DeferredRefinementJob",
+        "MLRefinementThread: Bridge-Import fehlgeschlagen (%s), verwende lokalen Ersatzpfad fuer DeferredRefinementJob",
         _bridge_exc,
     )
 
@@ -107,7 +107,7 @@ def _set_job_budget_registered(job: object, registered: bool) -> None:
         object.__setattr__(job, "_budget_registered", bool(registered))
     except Exception:
         logger.debug(
-            "KMV Stufe 2: _budget_registered konnte nicht gesetzt werden (non-fatal)",
+            "KMV Stufe 2: _Grenze_registered konnte nicht gesetzt werden (non-fatal)",
             exc_info=True,
         )
 
@@ -151,7 +151,7 @@ class MLRefinementThread(QThread):
                 logger.info("KMV Stufe 2 nicht gestartet: nur %.1f GB RAM frei (< 4 GB)", avail_gb)
                 return False
         except Exception:
-            logger.debug("KMV should_start: psutil nicht verfuegbar, RAM-Check uebersprungen", exc_info=True)
+            logger.debug("KMV should_start: psutil nicht verfuegbar, RAM-Pruefung uebersprungen", exc_info=True)
             # psutil not available -> proceed without check
         return True
 
@@ -176,7 +176,7 @@ class MLRefinementThread(QThread):
 
         self.refinement_started.emit(output_path, job.n_deferred)
         logger.info(
-            "KMV Stufe 2 gestartet: %d deferred phases | output=%s",
+            "KMV Stufe 2 gestartet: %d deferred phases | Ausgabe=%s",
             job.n_deferred,
             output_path,
         )
@@ -191,14 +191,14 @@ class MLRefinementThread(QThread):
             _set_job_budget_registered(job, _budget_registered)
             if not _budget_registered:
                 logger.warning(
-                    "KMV Stufe 2: ml_memory_budget.try_allocate('kmv_job', %.2f GB) fehlgeschlagen"
-                    " — Stufe-2-Export abgebrochen.",
+                    "KMV Stufe 2: ml_memory_Grenze.try_allocate('kmv_job', %.2f GB) fehlgeschlagen"
+                    " — Stufe-2-Ausgabe abgebrochen.",
                     job.audio_size_gb,
                 )
                 self.refinement_cancelled.emit(output_path)
                 return
         except ImportError as _be:
-            logger.debug("ml_memory_budget nicht verfügbar (KMV): %s", _be)
+            logger.debug("ml_memory_Grenze nicht verfügbar (KMV): %s", _be)
             # Continue without budget guard if module absent (test environments)
             _budget_registered = False
             _set_job_budget_registered(job, False)
@@ -262,7 +262,7 @@ class MLRefinementThread(QThread):
 
             if _stufe2_quality is None or _stufe2_quality < job.stufe1_quality:
                 logger.info(
-                    "KMV Stufe 2: Qualität nicht verbessert (Stufe2=%.3f < Stufe1=%.3f) — Stufe-1-Export behalten.",
+                    "KMV Stufe 2: Qualität nicht verbessert (Stufe2=%.3f < Stufe1=%.3f) — Stufe-1-Ausgabe behalten.",
                     _stufe2_quality if _stufe2_quality is not None else float("nan"),
                     job.stufe1_quality,
                 )
@@ -274,7 +274,7 @@ class MLRefinementThread(QThread):
             # ── 4. Extract audio and write atomically ──────────────────────
             _audio = _extract_audio(_r)
             if _audio is None or _audio.size == 0:
-                logger.warning("KMV Stufe 2: Kein Audio im Ergebnis — Stufe-1-Export behalten.")
+                logger.warning("KMV Stufe 2: Kein Audio im Ergebnis — Stufe-1-Ausgabe behalten.")
                 self.refinement_cancelled.emit(output_path)
                 return
 
@@ -300,7 +300,7 @@ class MLRefinementThread(QThread):
                 _r.refinement_complete = True
                 _r.stufe2_quality_estimate = float(_stufe2_quality)
             except Exception:
-                logger.debug("KMV Stufe 2: Result-Metadaten konnten nicht gesetzt werden", exc_info=True)
+                logger.debug("KMV Stufe 2: Ergebnis-Metadaten konnten nicht gesetzt werden", exc_info=True)
 
             elapsed = time.perf_counter() - t0
             logger.info(
@@ -324,7 +324,7 @@ class MLRefinementThread(QThread):
             try:
                 job.release_buffer()
             except Exception as _rel_err:
-                logger.debug("KMV buffer release failed (non-fatal): %s", _rel_err)
+                logger.debug("KMV buffer release fehlgeschlagen (non-fatal): %s", _rel_err)
 
 
 # ── Private helpers ────────────────────────────────────────────────────────────
@@ -375,7 +375,7 @@ def _write_audio(audio: np.ndarray, sr: int, path: str) -> None:
         sf.write(path, mono_or_stereo, sr, subtype="FLOAT")
         return
     except Exception:
-        logger.debug("KMV _write_audio: soundfile write fehlgeschlagen, nutze scipy-Fallback", exc_info=True)
+        logger.debug("KMV _write_audio: soundfile write fehlgeschlagen, nutze scipy-Ersatzpfad", exc_info=True)
     import scipy.io.wavfile as _wf  # pylint: disable=import-outside-toplevel
 
     _a = (audio * 32767).astype(np.int16)

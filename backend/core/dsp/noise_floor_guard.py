@@ -215,7 +215,7 @@ def apply_noise_floor_minimum(
                     _psd_profiles[0] = _psd_base
                     _psd_profiles[1] = _psd_base
             except Exception as _psd_exc:
-                logger.debug("Era-Textur PSD-Extraktion (non-blocking): %s", _psd_exc)
+                logger.debug("Era-Textur PSD-Extraktion (nicht blockierend): %s", _psd_exc)
 
         def _process_channel(ch: np.ndarray, ch_idx: int = 0) -> np.ndarray:
             ch_out = ch.copy()
@@ -251,5 +251,5 @@ def apply_noise_floor_minimum(
         return out
 
     except Exception as exc:
-        logger.debug("apply_noise_floor_minimum non-blocking: %s", exc)
+        logger.debug("anwenden_noise_floor_minimum nicht blockierend: %s", exc)
         return audio

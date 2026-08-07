@@ -34,10 +34,10 @@ def test_import_stage():
     from backend.file_import import load_audio_file
 
     result = load_audio_file(AUDIO_FILE, target_sr=48000)
-    audio = result["audio"]
-    sr = result["sr"]
+    audio = result["audio"]  # type: ignore[index]
+    sr = result["sr"]  # type: ignore[index]
     print(
-        f"  Loaded: shape={audio.shape}, sr={sr}, lag_before={result.get('interchannel_lag_samples_before')}, lag_after={result.get('interchannel_lag_samples_after')}"
+        f"  Loaded: shape={audio.shape}, sr={sr}, lag_before={result.get('interchannel_lag_samples_before')}, lag_after={result.get('interchannel_lag_samples_after')}"  # type: ignore[union-attr]
     )
     measure_lag(audio, sr, "AFTER_IMPORT")
     return audio, sr

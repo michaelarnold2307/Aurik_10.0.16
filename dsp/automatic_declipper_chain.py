@@ -19,7 +19,7 @@ except (ImportError, ModuleNotFoundError):
         from core.contracts import DSPContract  # type: ignore[import-untyped]
     except (ImportError, ModuleNotFoundError):
 
-        class DSPContract:
+        class DSPContract:  # type: ignore[no-redef]
             def __init__(self, name, version, description):
                 self.name = name
                 self.version = version

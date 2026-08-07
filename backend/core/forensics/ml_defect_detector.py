@@ -654,7 +654,7 @@ class MLDefectDetector:
 
         if verbose:
             logger.info("\n" + "=" * 60)
-            logger.info("   Training Complete!")
+            logger.info("   Training vollstaendig!")
             logger.info("=" * 60)
 
         return all_metrics
@@ -763,7 +763,7 @@ class MLDefectDetector:
         with open(filepath, "wb") as f:
             pickle.dump(model_data, f)
 
-        logger.info("Model saved to %s", filepath)
+        logger.info("Model gespeichert to %s", filepath)
 
     def load(self, filepath: str) -> None:
         """Lädt trained models from file."""
@@ -780,7 +780,7 @@ class MLDefectDetector:
         self.training_metrics = model_data.get("training_metrics", {})
         self.cv_recalls = model_data.get("cv_recalls", {})
 
-        logger.info("Model loaded from %s", filepath)
+        logger.info("Model geladen from %s", filepath)
 
 
 def train_ml_defect_detector_from_dataset(

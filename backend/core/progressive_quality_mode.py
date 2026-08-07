@@ -158,7 +158,7 @@ class ProgressiveQualityMode:
             progress_callback(100.0, "Vorschau fertig", 0.0)
 
         logger.info(
-            "🔍 Stage-1 Vorschau: MOS=%.2f | Defekte=%s | t=%.2f s",
+            "🔍 Stufe-1 Vorschau: MOS=%.2f | Defekte=%s | t=%.2f s",
             preview_mos,
             detected_defects,
             t_elapsed,
@@ -200,7 +200,7 @@ class ProgressiveQualityMode:
 
         if preview_cache is not None:
             logger.debug(
-                "Stage-2 nutzt Stage-1-Cache: preview_mos=%.2f, defects=%s",
+                "Stufe-2 nutzt Stufe-1-Zwischenspeicher: preview_mos=%.2f, defects=%s",
                 float(getattr(preview_cache, "preview_mos", 0.0)),
                 list(getattr(preview_cache, "detected_defects", []) or []),
             )
@@ -300,7 +300,7 @@ class ProgressiveQualityMode:
                 audio = _omlsa_stage1_nr(audio)
         except Exception as _exc:
             logger.debug(
-                "Operation failed (non-critical): %s", _exc
+                "Operation fehlgeschlagen (unkritisch): %s", _exc
             )  # Fallback: Pass-Through (NR nicht kritisch in Stage-1-Vorschau)
 
         audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -327,7 +327,7 @@ class ProgressiveQualityMode:
             mos = 1.0 + 4.0 / (1.0 + math.exp(-(snr - 15.0) / 8.0))
             return float(np.clip(mos, 1.0, 5.0))
         except Exception as e:
-            logger.warning("progressive_quality_mode.py::_estimate_mos fallback: %s", e)
+            logger.warning("progressive_quality_Betriebsart.py::_estimate_mos Ersatzpfad: %s", e)
             return 3.0
 
     def _defect_result_to_labels(self, defect_result) -> list[str]:
@@ -352,7 +352,7 @@ class ProgressiveQualityMode:
                         defect_name = str(defect.name if hasattr(defect, "name") else defect)
                         labels.append(label_map.get(defect_name, defect_name))
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         return labels[:5]  # Max 5
 
     def _quick_defect_heuristic(self, audio: np.ndarray, sr: int) -> list[str]:

@@ -41,6 +41,8 @@ from backend.core.forensics.feature_extractor import AudioFeatures, FeatureExtra
 
 logger = logging.getLogger(__name__)
 
+MATERIAL_EXPECTED_BW = 20000.0
+
 
 @dataclass
 class EraFeatures:
@@ -49,7 +51,7 @@ class EraFeatures:
     # Frequency characteristics
     bandwidth_low_hz: float = 0.0
     bandwidth_high_hz: float = 0.0
-    bandwidth_ratio: float = 0.0  # (high - low) / 20000
+    bandwidth_ratio: float = 0.0  # (high - low) / MATERIAL_EXPECTED_BW
 
     # Dynamic range
     dynamic_range_db: float = 0.0
@@ -155,7 +157,9 @@ class EraFeatureExtractor:
         # 1. Bandwidth analysis
         era_features.bandwidth_low_hz = base_features.bandwidth_3db_low
         era_features.bandwidth_high_hz = base_features.bandwidth_3db_high
-        era_features.bandwidth_ratio = (era_features.bandwidth_high_hz - era_features.bandwidth_low_hz) / 20000.0
+        era_features.bandwidth_ratio = (
+            era_features.bandwidth_high_hz - era_features.bandwidth_low_hz
+        ) / MATERIAL_EXPECTED_BW
 
         # 2. Dynamic range
         era_features.dynamic_range_db = base_features.dynamic_range_db
@@ -342,7 +346,7 @@ class MLEraDetector:
 
         # Cross-validation
         if verbose:
-            logger.info("   Running %s-fold cross-validation...", cv_folds)
+            logger.info("   laeuft %s-fold cross-Validierung...", cv_folds)
 
         cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=self.random_state)
         rf_cv_scores = cross_val_score(self.rf_model, X_scaled, y_encoded, cv=cv, n_jobs=-1)
@@ -372,7 +376,7 @@ class MLEraDetector:
 
         if verbose:
             logger.info("   " + "=" * 50)
-            logger.info("   ✅ Training Complete!")
+            logger.info("   ✅ Training vollstaendig!")
             logger.info("   RF Train Accuracy:     %.4f", rf_train_acc)
             logger.info("   GB Train Accuracy:     %.4f", gb_train_acc)
             logger.info("   Ensemble Train Acc:    %.4f", self.training_accuracy)
@@ -551,7 +555,7 @@ class MLEraDetector:
         with open(filepath, "wb") as f:
             pickle.dump(model_data, f)
 
-        logger.info("✅ Era Detector model saved to %s", filepath)
+        logger.info("✅ Era Detector model gespeichert to %s", filepath)
 
     def load(self, filepath: Path) -> None:
         """Lädt trained model from disk."""
@@ -569,7 +573,7 @@ class MLEraDetector:
 
         self.is_trained = True
 
-        logger.info("✅ Era Detector model loaded from %s", filepath)
+        logger.info("✅ Era Detector model geladen from %s", filepath)
         logger.info("   Version: %s", model_data.get("version", "unknown"))
         logger.info("   Eras: %s", self.n_classes)
         logger.info("   CV Accuracy: %.4f", self.cv_accuracy)
@@ -602,11 +606,11 @@ def train_ml_era_detector_from_dataset(
     labels = []
 
     if verbose:
-        logger.info("📊 Extracting era features from %s samples...", len(dataset["samples"]))
+        logger.info("📊 extrahiere era features from %s samples...", len(dataset["samples"]))
 
     for i, sample in enumerate(dataset["samples"]):
         if verbose and (i + 1) % 50 == 0:
-            logger.info("   Processed %s/%s...", i + 1, len(dataset["samples"]))
+            logger.info("   verarbeitet %s/%s...", i + 1, len(dataset["samples"]))
 
         base_features, era_features = extractor.extract_era_features(sample.audio, sample.sample_rate, verbose=False)
 

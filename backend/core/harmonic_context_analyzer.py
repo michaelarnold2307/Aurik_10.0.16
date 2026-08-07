@@ -244,7 +244,7 @@ class HarmonicContextAnalyzer:
                     np.float32
                 )
         except Exception as e:
-            logger.warning("harmonic_context_analyzer.py::_compute_chroma fallback: %s", e)
+            logger.warning("harmonic_context_analyzer.py::_berechnen_chroma Ersatzpfad: %s", e)
         # Fallback: STFT chroma
         return self._stft_chroma(mono, sr)
 
@@ -256,7 +256,7 @@ class HarmonicContextAnalyzer:
         hop = self.HOP_LENGTH
         noverlap = min(max(0, n_fft - hop), n_fft - 1)
         if len(mono) < n_fft:
-            return
+            return  # type: ignore[return-value]
         _, _, Zxx = stft(mono, sr, nperseg=n_fft, noverlap=noverlap, boundary="even")
         mag = np.abs(Zxx).astype(np.float32)  # (F, T)
         n_freqs, n_frames = mag.shape
@@ -369,7 +369,11 @@ class HarmonicContextAnalyzer:
         """
         from scipy.signal import stft  # pylint: disable=import-outside-toplevel
 
-        n_fft = self.N_FFT
+        # §Fix: scipy.signal.stft silently caps nperseg to len(mono) when the
+        # signal is shorter than N_FFT (no error raised) — using the static
+        # self.N_FFT for `freqs`/pitch-class computation would then mismatch
+        # the actual Zxx bin count. Cap n_fft up-front so both stay consistent.
+        n_fft = min(self.N_FFT, max(1, int(mono.shape[0])))
         hop = self.HOP_LENGTH
         _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.103
         try:
@@ -382,7 +386,11 @@ class HarmonicContextAnalyzer:
 
         n_fft_bins, n_stft_frames = Zxx.shape
         mag = np.abs(Zxx).astype(np.float32)
-        freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr).astype(np.float32)
+        # Derive freqs from the actual bin count returned by stft (not the
+        # static self.N_FFT) so it always matches n_fft_bins exactly, even if
+        # scipy internally adjusted nperseg further (e.g. odd-length signals).
+        _actual_n_fft = 2 * (n_fft_bins - 1)
+        freqs = np.fft.rfftfreq(_actual_n_fft, d=1.0 / sr).astype(np.float32)
 
         # Resample chord_ids to match stft frame count (nearest-neighbour)
         t_chroma = np.arange(len(chord_ids))

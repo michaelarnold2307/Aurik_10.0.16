@@ -32,7 +32,7 @@ SR = 48_000
 
 def _sine(dur: float = 1.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), endpoint=False)
-    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_reparatur_ergebnis():
@@ -40,7 +40,7 @@ def _make_reparatur_ergebnis():
     try:
         from denker.reparatur_denker import ReparaturErgebnis
 
-        return ReparaturErgebnis(
+        return ReparaturErgebnis(  # type: ignore[call-arg]
             audio=_sine(0.5),
             repairs_applied=["phase_01_click_removal", "phase_09_crackle_removal"],
             quality_delta=0.12,

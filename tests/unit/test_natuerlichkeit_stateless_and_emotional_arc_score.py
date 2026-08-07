@@ -30,7 +30,7 @@ import pytest
 
 def _sine(freq: float = 440.0, sr: int = 48000, dur: float = 2.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, dur, int(sr * dur), endpoint=False, dtype=np.float32)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white_noise(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
@@ -42,7 +42,7 @@ def _harmonic_signal(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
     """Tonal multi-harmonic signal (tonal → high flatness_score → natural)."""
     t = np.linspace(0, dur, int(sr * dur), endpoint=False, dtype=np.float32)
     sig = sum((1.0 / k) * np.sin(2 * np.pi * k * 220.0 * t) for k in range(1, 9))
-    return (sig / np.max(np.abs(sig) + 1e-9) * 0.4).astype(np.float32)
+    return (sig / np.max(np.abs(sig) + 1e-9) * 0.4).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -159,7 +159,7 @@ class TestEmotionalArcPreservationScore:
             "arc_preserved": True,
         }
         defaults.update(kwargs)
-        return EmotionalArcResult(**defaults)
+        return EmotionalArcResult(**defaults)  # type: ignore[arg-type]
 
     def test_property_exists(self):
         """EmotionalArcResult hat preservation_score Property."""

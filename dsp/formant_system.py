@@ -27,7 +27,7 @@ try:
     _HAS_PYWORLD: bool = True
 except ImportError:
     _pw = None  # type: ignore[assignment]
-    _HAS_PYWORLD: bool = False
+    _HAS_PYWORLD: bool = False  # type: ignore[no-redef]
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -91,23 +91,23 @@ class FormantTracker:
             formant_freqs.append(freqs)
             formant_bandwidths.append(bws)
 
-        formant_freqs = np.array(formant_freqs)
-        formant_bandwidths = np.array(formant_bandwidths)
+        formant_freqs = np.array(formant_freqs)  # type: ignore[assignment]
+        formant_bandwidths = np.array(formant_bandwidths)  # type: ignore[assignment]
 
         # Smooth trajectories (removes outliers)
-        formant_freqs = self._smooth_trajectories(formant_freqs)
+        formant_freqs = self._smooth_trajectories(formant_freqs)  # type: ignore[arg-type, assignment]
 
         # NaN/Inf-Guard
-        formant_freqs = np.nan_to_num(formant_freqs, nan=0.0, posinf=0.0, neginf=0.0)
-        formant_bandwidths = np.nan_to_num(formant_bandwidths, nan=0.0, posinf=0.0, neginf=0.0)
+        formant_freqs = np.nan_to_num(formant_freqs, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[assignment]
+        formant_bandwidths = np.nan_to_num(formant_bandwidths, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[assignment]
 
-        return formant_freqs, formant_bandwidths
+        return formant_freqs, formant_bandwidths  # type: ignore[return-value]
 
     def _pre_emphasis(self, audio: np.ndarray, coeff: float = 0.97) -> np.ndarray:
         """
         Wendet an: pre-emphasis filter to boost high frequencies.
         """
-        return lfilter([1, -coeff], [1], audio)
+        return lfilter([1, -coeff], [1], audio)  # type: ignore[no-any-return]
 
     def _extract_frames(self, audio: np.ndarray, frame_length: int, hop_length: int) -> list[np.ndarray]:
         """
@@ -386,7 +386,7 @@ class FormantCorrector:
         audio_corrected = np.nan_to_num(audio_corrected, nan=0.0, posinf=0.0, neginf=0.0)
         audio_corrected = np.clip(audio_corrected, -1.0, 1.0)
 
-        return audio_corrected
+        return audio_corrected  # type: ignore[no-any-return]
 
     def _apply_formant_shift_eq(self, audio: np.ndarray, sr: int, center_freq: float, shift_hz: float) -> np.ndarray:
         """
@@ -876,7 +876,7 @@ class FormantSystem:
         try:
             formant_freqs, _ = self.tracker.track(audio, sr)  # (n_frames, n_formants)
         except Exception as _e:
-            logger.debug("phoneme_guided_enhance: FormantTracker fehlgeschlagen: %s", _e)
+            logger.debug("phoneme_guided_verbessern: FormantTracker fehlgeschlagen: %s", _e)
             return audio.copy(), {"vowel_segments_processed": 0, "error": str(_e)}
 
         n_frames = len(formant_freqs)
@@ -946,7 +946,7 @@ class FormantSystem:
         enhanced = np.clip(enhanced, -1.0, 1.0)
 
         logger.debug(
-            "phoneme_guided_enhance: gender=%s, vowel_frames=%d/%d, strength=%.2f",
+            "phoneme_guided_verbessern: gender=%s, vowel_frames=%d/%d, strength=%.2f",
             gender,
             vowel_count,
             n_frames,
@@ -990,7 +990,7 @@ def _apply_peak_eq_frame(audio: np.ndarray, sr: int, freq: float, bandwidth: flo
     a2 = 1.0 - alpha / A
     b_coef = np.array([b0, b1, b2]) / a0
     a_coef = np.array([1.0, a1 / a0, a2 / a0])
-    return signal.lfilter(b_coef, a_coef, audio)
+    return signal.lfilter(b_coef, a_coef, audio)  # type: ignore[no-any-return]
 
 
 # ── VowelPhonemeFormantTargets ───────────────────────────────────────────────
@@ -1273,7 +1273,7 @@ def _instrument_guided_enhance(
     # Look up targets — graceful no-op when instrument is unsupported
     row = InstrumentFormantTargets.get_targets(instrument)
     if row is None:
-        logger.debug("instrument_guided_enhance: unknown instrument '%s' — passthrough", instrument)
+        logger.debug("instrument_guided_verbessern: unknown instrument '%s' — passthrough", instrument)
         audio = np.clip(audio, -1.0, 1.0)
         return audio, {
             "instrument": instrument,
@@ -1300,7 +1300,7 @@ def _instrument_guided_enhance(
     try:
         formant_freqs, _ = self.tracker.track(audio_mono, sr)
     except Exception as _e:
-        logger.debug("instrument_guided_enhance: FormantTracker failed: %s", _e)
+        logger.debug("instrument_guided_verbessern: FormantTracker fehlgeschlagen: %s", _e)
         audio = np.clip(audio, -1.0, 1.0)
         return audio, {
             "instrument": instrument,
@@ -1365,7 +1365,7 @@ def _instrument_guided_enhance(
     out = np.clip(out, -1.0, 1.0)
 
     logger.debug(
-        "instrument_guided_enhance: instrument=%s, frames=%d/%d, strength=%.2f",
+        "instrument_guided_verbessern: instrument=%s, frames=%d/%d, strength=%.2f",
         instrument,
         frames_done,
         total_frames,
@@ -1403,7 +1403,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Process
     formant_sys = FormantSystem(
@@ -1433,7 +1433,7 @@ if __name__ == "__main__":
     if "has_singers_formant" in report["singers_formant"]:
         logger.info("")
         logger.info("[Singer's Formant]")
-        logger.info("  Detected: %s", report["singers_formant"]["has_singers_formant"])
+        logger.info("  erkannt: %s", report["singers_formant"]["has_singers_formant"])
         logger.info("  Enhancement: %.1f dB", report["singers_formant"]["gain_applied_db"])
 
     logger.info("=" * 70)
@@ -1442,4 +1442,4 @@ if __name__ == "__main__":
     if args.output:
         sf.write(args.output, audio_processed, sr)
         logger.info("")
-        logger.info("✅ Saved to: %s", args.output)
+        logger.info("✅ gespeichert to: %s", args.output)

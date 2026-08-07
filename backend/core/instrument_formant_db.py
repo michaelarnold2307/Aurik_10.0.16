@@ -731,7 +731,7 @@ def get_formant_profile(instrument_key: str) -> FormantProfile | None:
     key = instrument_key.strip().lower().replace(" ", "_").replace("-", "_")
     profile = INSTRUMENT_DB.get(key)
     if profile is None:
-        logger.debug("instrument_formant_db: no profile for %r", instrument_key)
+        logger.debug("instrument_formant_db: no Profil for %r", instrument_key)
     return profile
 
 

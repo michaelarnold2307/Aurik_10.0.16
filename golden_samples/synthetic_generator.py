@@ -21,6 +21,7 @@ Autor: AI Team
 Datum: 11. Februar 2026
 """
 
+from typing import Any
 from dataclasses import dataclass, field
 from datetime import datetime
 import json
@@ -41,7 +42,7 @@ class GoldenSampleSpec:
     filename: str
     duration_s: float
     sample_rate: int
-    characteristics: dict[str, any]  # Frequency content, dynamics, etc.
+    characteristics: dict[str, Any]  # Frequency content, dynamics, etc.
     quality_baseline: dict[str, float]
     metadata: dict[str, str] = field(default_factory=dict)
 
@@ -78,7 +79,7 @@ class SyntheticGoldenSampleGenerator:
         for category in ["vocal", "instrumental", "classical", "jazz", "references"]:
             (self.output_dir / category).mkdir(parents=True, exist_ok=True)
 
-        logger.info("SyntheticGoldenSampleGenerator initialized: %s, %s Hz", output_dir, sample_rate)
+        logger.info("SyntheticGoldenSampleGenerator initialisiert: %s, %s Hz", output_dir, sample_rate)
 
     def generate_all(self, target_counts: dict[str, int] | None = None) -> list[GoldenSampleSpec]:
         """
@@ -108,7 +109,7 @@ class SyntheticGoldenSampleGenerator:
         # Update metadata.json
         self._update_metadata(all_specs)
 
-        logger.info("✓ Generated %s synthetic golden samples", len(all_specs))
+        logger.info("✓ erzeugt %s synthetic golden samples", len(all_specs))
 
         return all_specs
 
@@ -190,7 +191,7 @@ class SyntheticGoldenSampleGenerator:
             },
         )
 
-        logger.debug("Generated: %s/%s", category, filename)
+        logger.debug("erzeugt: %s/%s", category, filename)
 
         return spec
 
@@ -238,7 +239,7 @@ class SyntheticGoldenSampleGenerator:
         # Normalize
         audio = audio / np.max(np.abs(audio)) * 0.8
 
-        return audio.astype(np.float32)
+        return audio.astype(np.float32)  # type: ignore[no-any-return]
 
     def _generate_instrumental(self, duration_s: float) -> np.ndarray:
         """
@@ -284,7 +285,7 @@ class SyntheticGoldenSampleGenerator:
         # Normalize
         audio = audio / np.max(np.abs(audio)) * 0.8
 
-        return audio.astype(np.float32)
+        return audio.astype(np.float32)  # type: ignore[no-any-return]
 
     def _generate_classical(self, duration_s: float) -> np.ndarray:
         """
@@ -327,7 +328,7 @@ class SyntheticGoldenSampleGenerator:
         # Normalize
         audio = audio / np.max(np.abs(audio)) * 0.75
 
-        return audio.astype(np.float32)
+        return audio.astype(np.float32)  # type: ignore[no-any-return]
 
     def _generate_jazz(self, duration_s: float) -> np.ndarray:
         """
@@ -380,7 +381,7 @@ class SyntheticGoldenSampleGenerator:
         # Normalize
         audio = audio / np.max(np.abs(audio)) * 0.8
 
-        return audio.astype(np.float32)
+        return audio.astype(np.float32)  # type: ignore[no-any-return]
 
     def _update_metadata(self, specs: list[GoldenSampleSpec]) -> None:
         """Update golden_samples/metadata.json with generated samples."""
@@ -404,12 +405,12 @@ class SyntheticGoldenSampleGenerator:
             )
 
         # Count by category
-        category_counts = {}
+        category_counts: dict[Any, Any] = {}
         for spec in specs:
             category_counts[spec.category] = category_counts.get(spec.category, 0) + 1
 
         # Calculate average quality baseline (15 Musical Goals)
-        all_goal_keys = set()
+        all_goal_keys: set[Any] = set()
         for s in specs:
             all_goal_keys.update(s.quality_baseline.keys())
         quality_baseline_avg = {}

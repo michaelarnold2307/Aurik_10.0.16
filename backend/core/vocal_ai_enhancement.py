@@ -446,7 +446,7 @@ class GenderDetector:
                         breathiness = float(np.mean(np.sqrt(np.maximum(ap_band, 0.0))))
                         return min(1.0, breathiness * 2.0)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         # DSP fallback: HF energy ratio (breathy voices have more noise above 3 kHz)
         hp_sos = signal.butter(4, 3000, "high", fs=self.sr, output="sos")
         hf_signal = signal.sosfilt(hp_sos, audio)
@@ -843,7 +843,7 @@ class UnifiedVocalAIEnhancer:
         self.deesser = GenderAwareDeEsser(sample_rate=sample_rate)
         self.breath_processor = BreathPreservingProcessor(sample_rate=sample_rate)
 
-        logger.info("✅ Unified Vocal AI Enhancer initialized")
+        logger.info("✅ Unified Vocal AI Enhancer initialisiert")
 
     def enhance(
         self,
@@ -920,7 +920,7 @@ class UnifiedVocalAIEnhancer:
         # Compute quality improvement
         quality_improvement = self._compute_quality_improvement(audio, result_audio)
 
-        logger.info("✅ Vocal enhancement complete!")
+        logger.info("✅ Vocal enhancement vollstaendig!")
 
         return VocalEnhancementResult(
             audio=result_audio,
@@ -1051,7 +1051,7 @@ def _demo() -> None:
     vocal = vocal / _peak_p99 * 0.7 if _peak_p99 > 1e-8 else vocal
 
     # Initialize enhancer
-    logger.debug("\nInitializing Vocal AI Enhancer...")
+    logger.debug("\ninitialisiere Vocal AI Enhancer...")
     enhancer = UnifiedVocalAIEnhancer(sample_rate=sr)
 
     # Test enhancement
@@ -1063,7 +1063,7 @@ def _demo() -> None:
     logger.debug("\n%s", "=" * 70)
     logger.debug("RESULTS:")
     logger.debug("%s", "=" * 70)
-    logger.debug("Gender Detected: %s", demo_result.characteristics.gender.value)
+    logger.debug("Gender erkannt: %s", demo_result.characteristics.gender.value)
     if demo_result.characteristics.age_group:
         logger.debug("Age Group: %s", demo_result.characteristics.age_group.value)
     logger.debug("F0: %.1f Hz", demo_result.characteristics.fundamental_freq)
@@ -1073,12 +1073,12 @@ def _demo() -> None:
     logger.debug("Emotion Preservation: %.1f%%", demo_result.emotion_preservation_score)
     logger.debug("Formant Preservation: %.1f", demo_result.formant_preservation_score)
     logger.debug("Quality Improvement: %+.2f", demo_result.quality_improvement)
-    logger.debug("\nProcessing Applied:")
+    logger.debug("\nProcessing angewendet:")
     for proc in demo_result.processing_applied:
         logger.debug("  ✓ %s", proc)
 
     logger.debug("\n%s", "=" * 70)
-    logger.debug("✅ Vocal AI Enhancement Test Complete!")
+    logger.debug("✅ Vocal AI Enhancement Test vollstaendig!")
 
 
 if __name__ == "__main__":

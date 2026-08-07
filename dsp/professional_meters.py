@@ -345,7 +345,7 @@ class PhaseCorrelationMeter:
         """
         if audio.ndim == 1 or audio.shape[0] != 2:
             # Mono or not stereo
-            return {"phase_correlation": None, "phase_coherence": None, "stereo_width": None}
+            return {"phase_correlation": None, "phase_coherence": None, "stereo_width": None}  # type: ignore[dict-item]
 
         left = audio[0]
         right = audio[1]
@@ -382,7 +382,7 @@ class SpectrumAnalyzer:
         self.sr = sr
         self.n_fft = n_fft
 
-    def analyze(self, audio: np.ndarray, sr: int) -> dict[str, np.ndarray]:
+    def analyze(self, audio: np.ndarray, sr: int) -> dict[str, np.ndarray | float]:
         """
         Berechnet frequency spectrum.
 
@@ -494,13 +494,13 @@ class MeterV9:
             short_term_lufs=short_term_lufs,
             true_peak_db=peak_result["true_peak_db"],
             sample_peak_db=peak_result["sample_peak_db"],
-            true_peak_exceeded=peak_result["true_peak_exceeded"],
+            true_peak_exceeded=peak_result["true_peak_exceeded"],  # type: ignore[arg-type]
             phase_correlation=phase_result["phase_correlation"],
             phase_coherence=phase_result["phase_coherence"],
             spectrum_freqs=spectrum_result["freqs"],
             spectrum_db=spectrum_result["power_db"],
-            spectral_centroid=spectrum_result["spectral_centroid"],
-            spectral_rolloff=spectrum_result["spectral_rolloff"],
+            spectral_centroid=spectrum_result["spectral_centroid"],  # type: ignore[arg-type]
+            spectral_rolloff=spectrum_result["spectral_rolloff"],  # type: ignore[arg-type]
         )
 
         if verbose:

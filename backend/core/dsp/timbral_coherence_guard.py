@@ -103,7 +103,7 @@ def _estimate_noise_spectrum(
         return aggregated
 
     except Exception as exc:
-        logger.debug("_estimate_noise_spectrum Fehler (non-critical): %s", exc)
+        logger.debug("_estimate_noise_spectrum Fehler (unkritisch): %s", exc)
         return np.zeros(n_bins)
 
 
@@ -163,7 +163,7 @@ def extract_song_noise_profile(
     reference_profile: npt.NDArray[np.float64] = np.asarray(np.median(profile_arr, axis=0), dtype=np.float64)
 
     logger.debug(
-        "§CSTC song_noise_profile: %d Segmente analysiert, Referenz aus %d ruhigsten",
+        "§CSTC song_noise_Profil: %d Segmente analysiert, Referenz aus %d ruhigsten",
         len(segment_rms),
         n_quiet,
     )
@@ -217,14 +217,14 @@ def compute_timbral_coherence_score(
 
     if not result["pass"]:
         logger.warning(
-            "§CSTC Timbral-Kohärenz FAIL: score=%.2f < %.2f (spectral_drift=%.3f) — Rauschboden-Textur verändert",
+            "§CSTC Timbral-Kohärenz FAIL: Wert=%.2f < %.2f (spectral_drift=%.3f) — Rauschboden-Textur verändert",
             coherence,
             COHERENCE_SCORE_MIN,
             spectral_drift,
         )
     else:
         logger.debug(
-            "§CSTC Timbral-Kohärenz OK: score=%.2f (spectral_drift=%.3f)",
+            "§CSTC Timbral-Kohärenz OK: Wert=%.2f (spectral_drift=%.3f)",
             coherence,
             spectral_drift,
         )
@@ -342,6 +342,6 @@ def apply_timbral_coherence_correction(
         return corrected, diag
 
     except Exception as exc:
-        logger.debug("§CSTC Timbral-Kohärenz-Korrektur fehlgeschlagen (non-critical): %s", exc)
+        logger.debug("§CSTC Timbral-Kohärenz-Korrektur fehlgeschlagen (unkritisch): %s", exc)
         diag["correction_applied"] = False
         return audio_processed, diag

@@ -26,7 +26,7 @@ _N = SR // 4  # 11025 Samples (0.25s) — Default für alle Hilfsfunktionen
 
 def _sine(n: int = _N, freq: float = 440.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(n: int = _N) -> np.ndarray:
@@ -36,7 +36,7 @@ def _silence(n: int = _N) -> np.ndarray:
 def _loud(n: int = _N, amp: float = 2.0) -> np.ndarray:
     """Übersteuertes Signal (über 0 dBFS)."""
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * 440.0 * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * 440.0 * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noisy(n: int = _N, noise_amp: float = 0.05) -> np.ndarray:

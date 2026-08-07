@@ -88,7 +88,7 @@ def _sanitize_confidence(value: object | None, default: float = 0.65) -> float:
             return float(default)
         return float(np.clip(v, 0.0, 1.0))
     except Exception as e:
-        logger.warning("adaptive_phase_rescheduler.py::_sanitize_confidence fallback: %s", e)
+        logger.warning("adaptive_Verarbeitungsschritt_rescheduler.py::_sanitize_confidence Ersatzpfad: %s", e)
         return float(default)
 
 
@@ -375,7 +375,7 @@ class AdaptivePhaseRescheduler:
                 ),
             )
         except Exception as exc:
-            logger.debug("§2.78 AdaptivePhaseRescheduler.reschedule() non-blocking: %s", exc)
+            logger.debug("§2.78 AdaptivePhaseRescheduler.reschedule() nicht blockierend: %s", exc)
             return RescheduleResult()
 
     # ─── Private Implementierung ────────────────────────────────────────────────
@@ -534,7 +534,7 @@ class AdaptivePhaseRescheduler:
                 # High-risk low-utility Injektionen unter Unsicherheit vermeiden.
                 if _expected_utility <= max(0.015, _gap_thr * 0.45):
                     logger.debug(
-                        "§2.78 risk-pricing: %s für goal=%s übersprungen (gap=%.3f risk=%.3f budget=%.3f utility=%.3f)",
+                        "§2.78 risk-pricing: %s für goal=%s übersprungen (gap=%.3f risk=%.3f Grenze=%.3f utility=%.3f)",
                         _primary_phase,
                         _goal_name,
                         _gap_val,
@@ -566,7 +566,7 @@ class AdaptivePhaseRescheduler:
                 _injected_this_call.append(_primary_phase)
                 _gaps_triggered[_goal_name] = round(_gap_val, 4)
                 logger.info(
-                    "§2.78 Rescheduler: %s für goal=%s (gap=%.3f risk=%.2f budget=%.2f utility=%.3f) vorgemerkt",
+                    "§2.78 Rescheduler: %s für goal=%s (gap=%.3f risk=%.2f Grenze=%.2f utility=%.3f) vorgemerkt",
                     _primary_phase,
                     _goal_name,
                     _gap_val,

@@ -37,7 +37,7 @@ RNG = np.random.default_rng(42)  # Reproduzierbarkeit §5.4
 def _sine(freq: float, duration: float = 1.0, sr: int = SR) -> np.ndarray:
     """Reiner Sinuston."""
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _fricative(sr: int = SR, duration: float = 1.0) -> np.ndarray:
@@ -50,14 +50,14 @@ def _fricative(sr: int = SR, duration: float = 1.0) -> np.ndarray:
 
     sos = butter(4, [6_000 / (sr / 2), 12_000 / (sr / 2)], btype="band", output="sos")
     fric = sosfilt(sos, noise) + 0.1 * carrier
-    return (fric / (np.max(np.abs(fric)) + 1e-9)).astype(np.float32)
+    return (fric / (np.max(np.abs(fric)) + 1e-9)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _voiced(sr: int = SR, duration: float = 1.0) -> np.ndarray:
     """Synthetisches Vokal-Signal (200 Hz Grundton + Obertöne)."""
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
     sig = sum(np.sin(2 * np.pi * 200 * n * t) / n for n in range(1, 8))
-    return (sig / (np.max(np.abs(sig)) + 1e-9) * 0.8).astype(np.float32)
+    return (sig / (np.max(np.abs(sig)) + 1e-9) * 0.8).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

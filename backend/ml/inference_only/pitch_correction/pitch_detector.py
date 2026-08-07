@@ -7,6 +7,7 @@ analysis to distinguish pitch errors from musical expression.
 """
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -78,11 +79,11 @@ class CREPEPitchDetector:
 
         if not CREPE_AVAILABLE:
             logger.warning(
-                "CREPE not available. Install with: pip install crepe-tf2. Falling back to basic pitch tracking."
+                "CREPE not verfuegbar. Install with: pip install crepe-tf2. Falling back to basic pitch tracking."
             )
 
         logger.info(
-            "CREPEPitchDetector initialized: sr=%s, model=%s, step=%sms", sample_rate, model_capacity, step_size
+            "CREPEPitchDetector initialisiert: sr=%s, model=%s, step=%sms", sample_rate, model_capacity, step_size
         )
 
     def detect(self, audio: np.ndarray, min_confidence: float = 0.85) -> PitchAnalysis:
@@ -131,7 +132,7 @@ class CREPEPitchDetector:
         )
 
         logger.info(
-            f"Pitch detection complete: {len(f0_hz)} frames, "
+            f"Pitch detection vollstaendig: {len(f0_hz)} frames, "
             f"vibrato={vibrato_detected}, glissando={glissando_detected}, "
             f"errors={len(pitch_errors)}, epistemic_conf={epistemic_confidence:.2f}"
         )
@@ -235,7 +236,7 @@ class CREPEPitchDetector:
         mean_power = np.mean(fft)
 
         # Vibrato detected if clear peak in expected range
-        return peak_power > 3 * mean_power
+        return peak_power > 3 * mean_power  # type: ignore[no-any-return]
 
     def _detect_glissando(
         self,
@@ -310,7 +311,7 @@ class CREPEPitchDetector:
         2. Detect large deviations from the smoothed trend
         3. Combine with jump detection for sudden errors
         """
-        errors = []
+        errors: list[Any] = []
 
         # Remove zeros
         voiced_mask = (f0_hz > 0) & (confidence > 0.85)

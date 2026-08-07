@@ -30,7 +30,7 @@ def phase():
 
 def _sine(freq: float, dur: float = 0.5, amp: float = 0.5) -> np.ndarray:
     t = np.arange(int(dur * SR)) / SR
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _loud_quiet(loud_amp: float = 0.8, quiet_amp: float = 0.1, dur: float = 1.0) -> np.ndarray:

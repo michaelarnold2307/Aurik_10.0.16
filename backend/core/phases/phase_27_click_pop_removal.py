@@ -300,24 +300,24 @@ class ClickPopRemoval(PhaseInterface):
             try:
                 _p27_protected_zones.append((float(_z[0]), float(_z[1]), 0.20))
             except Exception as e:
-                logger.warning("phase_27_click_pop_removal.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_27_click_pop_removal.py::verarbeiten Ersatzpfad: %s", e)
         for _z in kwargs.get("frisson_zones") or []:
             try:
                 _fz_s = float(getattr(_z, "start_s", None) or _z[0])
                 _fz_e = float(getattr(_z, "end_s", None) or _z[1])
                 _p27_protected_zones.append((_fz_s, _fz_e, 0.30))
             except Exception as e:
-                logger.warning("phase_27_click_pop_removal.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_27_click_pop_removal.py::verarbeiten Ersatzpfad: %s", e)
         for _z in kwargs.get("whisper_zones") or []:
             try:
                 _p27_protected_zones.append((float(_z[0]), float(_z[1]), 0.25))
             except Exception as e:
-                logger.warning("phase_27_click_pop_removal.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_27_click_pop_removal.py::verarbeiten Ersatzpfad: %s", e)
         for _z in kwargs.get("passaggio_zones") or []:
             try:
                 _p27_protected_zones.append((float(_z[0]), float(_z[1]), 0.35))
             except Exception as e:
-                logger.warning("phase_27_click_pop_removal.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_27_click_pop_removal.py::verarbeiten Ersatzpfad: %s", e)
         _p27_pz = _p27_protected_zones or None
 
         if _effective_strength <= 0.0:
@@ -384,7 +384,7 @@ class ClickPopRemoval(PhaseInterface):
                             else:
                                 cleaned_audio[_s:_e] = audio[_s:_e]
             except Exception as _p27_exc:
-                logger.debug("§2.36 Phase27 Phonem-Guard (non-blocking): %s", _p27_exc)
+                logger.debug("§2.36 Verarbeitungsschritt27 Phonem-Guard (nicht blockierend): %s", _p27_exc)
             # §2.46f NPA-Guard
             try:
                 _npa_mask27 = (
@@ -396,9 +396,9 @@ class ClickPopRemoval(PhaseInterface):
                     else:
                         cleaned_audio[_npa_mask27] = audio[_npa_mask27]
             except Exception as _npa27_exc:
-                logger.debug("§2.46f Phase27 NPA-Guard (non-blocking): %s", _npa27_exc)
+                logger.debug("§2.46f Verarbeitungsschritt27 NPA-Guard (nicht blockierend): %s", _npa27_exc)
         except Exception as _guard27_exc:
-            logger.debug("§2.36/§2.46f Phase27 guards (non-blocking): %s", _guard27_exc)
+            logger.debug("§2.36/§2.46f Verarbeitungsschritt27 guards (nicht blockierend): %s", _guard27_exc)
 
         # §V19 Noise-Textur-Invariante (VERBOTEN-V19): Residual bewahrt Materialcharakter
         _mat27_str = str(material_type or "unknown").lower()
@@ -413,9 +413,9 @@ class ClickPopRemoval(PhaseInterface):
                 )
                 if _nt27_d > 0.25:
                     cleaned_audio = (0.5 * cleaned_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_27 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt27_d)
+                    logger.warning("§V19 Verarbeitungsschritt_27 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt27_d)
         except Exception as _nt27_exc:
-            logger.debug("§V19 phase_27 noise_texture_guard (non-blocking): %s", _nt27_exc)
+            logger.debug("§V19 Verarbeitungsschritt_27 noise_texture_guard (nicht blockierend): %s", _nt27_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -428,7 +428,7 @@ class ClickPopRemoval(PhaseInterface):
                 if not _sc27.ok:
                     cleaned_audio = (0.70 * cleaned_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc27_exc:
-            logger.debug("§V24 phase_27 spectral_color_guard (non-blocking): %s", _sc27_exc)
+            logger.debug("§V24 Verarbeitungsschritt_27 spectral_color_guard (nicht blockierend): %s", _sc27_exc)
 
         return PhaseResult(
             success=True,
@@ -712,7 +712,7 @@ class ClickPopRemoval(PhaseInterface):
         try:
             coeffs = np.linalg.lstsq(X, y, rcond=None)[0]
         except Exception as e:
-            logger.warning("phase_27_click_pop_removal.py::_ar_prediction fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_27_click_pop_removal.py::_ar_prediction Ersatzpfad: %s", e)
             return self._cubic_interpolation(audio, start, end)
 
         # Predict

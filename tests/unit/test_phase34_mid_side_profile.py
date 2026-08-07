@@ -71,7 +71,7 @@ class TestMidSideProfileQualityMode:
         assert fast < base
 
     def test_none_quality_mode_uses_default(self):
-        val = _profile("vinyl", None)["transient_preserve"]
+        val = _profile("vinyl", None)["transient_preserve"]  # type: ignore[arg-type]
         assert 0.50 <= val <= 0.95
 
 

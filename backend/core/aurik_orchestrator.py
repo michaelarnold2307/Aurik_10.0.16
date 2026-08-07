@@ -214,7 +214,7 @@ def gatekeep(
             should_run=True,
             max_phases=8,
             mode="conservative",
-            allowed_phase_families=_REPAIR_FAMILIES,
+            allowed_phase_families=_REPAIR_FAMILIES,  # type: ignore[arg-type]
             restorability_score=rs,
             reason=(
                 f"Restorability={rs:.0f}/100, bw_loss={bw:.2f}, depth={depth}: "
@@ -229,7 +229,7 @@ def gatekeep(
             should_run=True,
             max_phases=20,
             mode="repair_only",
-            allowed_phase_families=_REPAIR_FAMILIES | _ENHANCE_FAMILIES,
+            allowed_phase_families=_REPAIR_FAMILIES | _ENHANCE_FAMILIES,  # type: ignore[arg-type]
             restorability_score=rs,
             reason=(f"Restorability={rs:.0f}/100: Repair-Mode. Basis-Enhancement erlaubt, keine riskanten Phasen."),
         )
@@ -239,7 +239,7 @@ def gatekeep(
         should_run=True,
         max_phases=50,
         mode="full",
-        allowed_phase_families=_REPAIR_FAMILIES | _ENHANCE_FAMILIES | _RISKY_FAMILIES,
+        allowed_phase_families=_REPAIR_FAMILIES | _ENHANCE_FAMILIES | _RISKY_FAMILIES,  # type: ignore[arg-type]
         restorability_score=rs,
         reason=f"Restorability={rs:.0f}/100: Full pipeline freigegeben.",
     )
@@ -391,13 +391,13 @@ class SessionLearner:
                 best_match = entry
         if best_match and best_score > 0.4:
             logger.info(
-                "§SESSION-MEMORY: recall '%s' rs=%.0f → %s (score=%.2f)",
+                "§Sitzung-MEMORY: recall '%s' rs=%.0f → %s (Wert=%.2f)",
                 material_type,
                 restorability,
                 best_match.get("verdict", "?"),
                 best_score,
             )
-            return best_match
+            return best_match  # type: ignore[no-any-return]
         return None
 
     def record(
@@ -438,19 +438,19 @@ class SessionLearner:
             self._MEMORY_PATH.parent.mkdir(parents=True, exist_ok=True)
             self._MEMORY_PATH.write_text(json.dumps(self._memory, indent=2))
             logger.info(
-                "§SESSION-MEMORY: %d songs persisted to %s",
+                "§Sitzung-MEMORY: %d songs persisted to %s",
                 len(songs),
                 self._MEMORY_PATH,
             )
         except Exception as e:
-            logger.debug("§SESSION-MEMORY persist: %s", e)
+            logger.debug("§Sitzung-MEMORY persist: %s", e)
 
     def _load(self) -> dict[str, Any]:
         try:
             if self._MEMORY_PATH.exists():
-                return json.loads(self._MEMORY_PATH.read_text())
+                return json.loads(self._MEMORY_PATH.read_text())  # type: ignore[no-any-return]
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         return {"songs": []}
 
 
@@ -714,7 +714,7 @@ class AurikOrchestrator:
 
         if not result.continue_pipeline:
             logger.warning(
-                "§WATCHDOG STOP: %s nach Phase %s",
+                "§WATCHDOG STOP: %s nach Verarbeitungsschritt %s",
                 result.reason,
                 phase_id,
             )

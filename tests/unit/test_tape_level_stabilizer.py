@@ -64,7 +64,7 @@ def _make_tone_with_dips(
 
         audio[start:end] *= env
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.fixture

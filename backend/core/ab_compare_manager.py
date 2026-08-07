@@ -214,13 +214,13 @@ class ABCompareManager:
             # LRU: älteste Session entfernen wenn Limit erreicht
             while len(self._sessions) > MAX_SESSIONS:
                 removed_id, _ = self._sessions.popitem(last=False)
-                logger.debug("ABCompare: LRU-Entfernung von Session %s", removed_id[:8])
+                logger.debug("ABCompare: LRU-Entfernung von Sitzung %s", removed_id[:8])
 
         # JSON-Sidecar schreiben (kein Audio, nur Metriken)
         self._write_sidecar(session)
 
         logger.info(
-            "📊 A/B-Session %s: %s | RMS-Delta %.1f dB | Ähnlichkeit %.2f",
+            "📊 A/B-Sitzung %s: %s | RMS-Delta %.1f dB | Ähnlichkeit %.2f",
             session_id[:8],
             material,
             diff.rms_improvement_db,
@@ -264,7 +264,7 @@ class ABCompareManager:
         """Löscht alle Sessions aus dem RAM (Sidecar-Dateien bleiben)."""
         with self._lock:
             self._sessions.clear()
-        logger.debug("ABCompareManager: RAM-Cache geleert")
+        logger.debug("ABCompareManager: RAM-Zwischenspeicher geleert")
 
     # -------------------------------------------------------------------
     # Interne Berechnungen
@@ -335,7 +335,7 @@ class ABCompareManager:
             return sim
 
         except Exception as exc:
-            logger.debug("spectral_similarity Fallback: %s", exc)
+            logger.debug("spectral_similarity Ersatzpfad: %s", exc)
             return 0.5
 
     @staticmethod

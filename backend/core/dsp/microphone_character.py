@@ -461,7 +461,7 @@ def detect_microphone_character(
                 best_fp = fp
 
         if best_fp is None or best_score < 0.25:
-            logger.debug("mic_character: no confident match (best_score=%.2f) → unknown", best_score)
+            logger.debug("mic_character: no confident match (best_Wert=%.2f) → unknown", best_score)
             return _default
 
         # Schutz-EQ-Parameter ableiten
@@ -484,7 +484,7 @@ def detect_microphone_character(
         )
 
         logger.debug(
-            "mic_character: detected=%s confidence=%.2f proximity=%.1f dB/oct presence=%.0f Hz rolloff=%.0f Hz",
+            "mic_character: erkannt=%s confidence=%.2f proximity=%.1f dB/oct presence=%.0f Hz rolloff=%.0f Hz",
             sig_out.detected_mic,
             best_score,
             sig_out.proximity_slope_db_oct,
@@ -494,5 +494,5 @@ def detect_microphone_character(
         return sig_out
 
     except Exception as exc:
-        logger.debug("detect_microphone_character: non-blocking fallback — %s", exc)
+        logger.debug("erkennen_microphone_character: nicht blockierend Ersatzpfad — %s", exc)
         return _default

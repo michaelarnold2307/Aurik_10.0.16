@@ -357,7 +357,9 @@ def integrate_ethics_into_pipeline(pipeline, ethics_engine: EthicsEngine):
         if hasattr(pipeline, "register_phase_hook"):
             # Primäre Schnittstelle: dedizierter Hook-Mechanismus
             pipeline.register_phase_hook("phase_4_5_ethics", ethics_engine.epistemic_gate)
-            logger.info("Ethics Engine: Phase-4.5-Hook via register_phase_hook() registriert.")
+            logger.info(
+                "Ethics Engine: Verarbeitungsschritt-4.5-Hook via register_Verarbeitungsschritt_hook() registriert."
+            )
         elif hasattr(pipeline, "ethics_engine"):
             # Sekundäre Schnittstelle: direktes Attribut
             pipeline.ethics_engine = ethics_engine
@@ -398,7 +400,7 @@ if __name__ == "__main__":
     report = engine.epistemic_gate(context_vinyl)
     logger.debug("\n=== Example 1: Vinyl mit Clicks ===")
     logger.debug("Decision: %s", report.decision.value)
-    logger.debug("Mode: %s", report.mode.value if report.mode else "N/A")
+    logger.debug("Betriebsart: %s", report.mode.value if report.mode else "N/A")
     logger.debug("Reasoning: %s", report.reasoning)
     logger.debug("Recommendation: %s", report.recommendation)
 
@@ -432,7 +434,7 @@ if __name__ == "__main__":
     report3 = engine.epistemic_gate(context_modern)
     logger.debug("\n=== Example 3: Modern Reproduction ===")
     logger.debug("Decision: %s", report3.decision.value)
-    logger.debug("Mode: %s", report3.mode.value if report3.mode else "N/A")
+    logger.debug("Betriebsart: %s", report3.mode.value if report3.mode else "N/A")
     logger.debug("Recommendation: %s", report3.recommendation)
 
     # Example 4: Conduct Regulator Check

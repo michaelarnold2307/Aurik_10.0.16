@@ -33,7 +33,7 @@ class Dither:
     @staticmethod
     def _rng_for_audio(audio: npt.NDArray[np.float64]) -> np.random.Generator:
         data = np.ascontiguousarray(np.asarray(audio, dtype=np.float64))
-        digest = hashlib.md5(data.tobytes()).digest()
+        digest = hashlib.md5(data.tobytes(), usedforsecurity=False).digest()
         seed = int.from_bytes(digest[:8], byteorder="little", signed=False) % (2**32)
         return np.random.default_rng(seed=seed)
 

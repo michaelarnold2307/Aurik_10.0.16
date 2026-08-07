@@ -210,7 +210,7 @@ def compute_imcra_noise_estimate(
             q=q,
         )
     except Exception as _e:
-        logger.warning("compute_imcra_noise_estimate fallback (error: %s)", _e)
+        logger.warning("berechnen_imcra_noise_estimate Ersatzpfad (error: %s)", _e)
         # Fallback: simple sliding-minimum noise floor (1D averaged over time)
         n_overlap = n_fft - hop_length
         try:
@@ -219,7 +219,7 @@ def compute_imcra_noise_estimate(
             noise_floor = np.median(power, axis=1, keepdims=True)
             return np.broadcast_to(noise_floor, power.shape).copy()  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("noise_estimator.py::compute_imcra_noise_estimate fallback: %s", e)
+            logger.warning("noise_estimator.py::berechnen_imcra_noise_estimate Ersatzpfad: %s", e)
             return np.full((n_fft // 2 + 1, 1), 1e-8, dtype=np.float32)  # type: ignore[no-any-return]
 
 

@@ -16,7 +16,7 @@ def _write(path: Path, text: str) -> None:
 def _get_mode_check(report: dict) -> dict:
     for chk in report["checks"]:
         if chk["id"] == "mode_contract":
-            return chk
+            return chk  # type: ignore[no-any-return]
     raise AssertionError("mode_contract-Check nicht gefunden")
 
 
@@ -74,7 +74,7 @@ def test_mode_contract_accepts_ui_studio_2026(tmp_path: Path) -> None:
 def _get_check(report: dict, check_id: str) -> dict:
     for chk in report["checks"]:
         if chk["id"] == check_id:
-            return chk
+            return chk  # type: ignore[no-any-return]
     raise AssertionError(f"{check_id}-Check nicht gefunden")
 
 

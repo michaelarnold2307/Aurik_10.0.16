@@ -159,9 +159,9 @@ class PreferenceLearner:
             _PREFERENCE_FILE.parent.mkdir(parents=True, exist_ok=True)
             if _PREFERENCE_FILE.exists():
                 with open(_PREFERENCE_FILE) as f:
-                    return json.load(f)
+                    return json.load(f)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("preference_learner.py::_load fallback: %s", e)
+            logger.warning("preference_learner.py::_laden Ersatzpfad: %s", e)
         return {"sessions": [], "genre_weights": {}, "material_weights": {}}
 
     def _save(self) -> None:
@@ -170,7 +170,7 @@ class PreferenceLearner:
             with open(_PREFERENCE_FILE, "w") as f:
                 json.dump(self._prefs, f, indent=2, default=str)
         except Exception as e:
-            logger.debug("§W Preference save failed: %s", e)
+            logger.debug("§W Preference speichern fehlgeschlagen: %s", e)
 
     def record_choice(
         self,
@@ -300,7 +300,7 @@ class BatchIntelligence:
             )
             r["phase_strengths"] = {k: float(np.median(v)) for k, v in self._strengths.items() if len(v) >= 2}
             r["eq"] = {k: float(np.mean(v)) for k, v in self._eq.items() if len(v) >= 2}
-            all_s = {}
+            all_s: dict[Any, Any] = {}
             for s in self._songs:
                 for g, v in s.get("scores", {}).items():
                     all_s.setdefault(g, []).append(v)

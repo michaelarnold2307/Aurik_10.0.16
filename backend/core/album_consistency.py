@@ -96,7 +96,7 @@ class AlbumConsistencyPass:
     """Track-übergreifende Album-Konsistenz: LUFS + Tilt + Gain."""
 
     def __init__(self) -> None:
-        pass
+        self.enabled = True
 
     # -- Messung --
 
@@ -347,4 +347,4 @@ def normalize_track(audio: np.ndarray, sr: int, target: AlbumTarget) -> np.ndarr
     gain = target_rms / rms
     gain = float(np.clip(gain, 0.1, 10.0))
     logger.info("AlbumConsistency: gain=%.1f dB", 20.0 * np.log10(gain))
-    return np.clip(audio * gain, -1.0, 1.0).astype(np.float32)
+    return np.clip(audio * gain, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]

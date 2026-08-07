@@ -5,6 +5,7 @@ Tests PolicyManager and FeatureExtractor classes
 
 import os
 import sys
+from typing import Any
 
 import numpy as np
 import pytest
@@ -28,7 +29,7 @@ class TestPolicyManager:
 
     def test_policy_manager_custom_escalation(self):
         """Test PolicyManager with custom escalation levels"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         escalation = {"warn": 2, "bypass": 4, "hard_bypass": 6}
         pm = PolicyManager(policy, escalation_levels=escalation)
 
@@ -37,7 +38,7 @@ class TestPolicyManager:
 
     def test_policy_update_fail_count(self):
         """Test policy update increments fail count"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # Trigger failure
@@ -50,7 +51,7 @@ class TestPolicyManager:
 
     def test_policy_escalation_warn_level(self):
         """Test policy escalation to warn level"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # Trigger 3 failures to reach warn level
@@ -64,7 +65,7 @@ class TestPolicyManager:
 
     def test_policy_escalation_bypass_level(self):
         """Test policy escalation to bypass level"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # Trigger 5 failures to reach bypass level
@@ -77,7 +78,7 @@ class TestPolicyManager:
 
     def test_policy_escalation_hard_bypass(self):
         """Test policy escalation to hard_bypass level"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # Trigger 7 failures to reach hard_bypass level
@@ -90,7 +91,7 @@ class TestPolicyManager:
 
     def test_policy_success_no_increment(self):
         """Test that successful gates don't increment fail count"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # First failure
@@ -103,7 +104,7 @@ class TestPolicyManager:
 
     def test_policy_callback_invoked(self):
         """Test that callback is invoked on escalation"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         callback_events = []
 
         def test_callback(event):
@@ -123,7 +124,7 @@ class TestPolicyManager:
 
     def test_policy_log_created(self):
         """Test that policy log is created"""
-        policy = {}
+        policy: dict[Any, Any] = {}
         pm = PolicyManager(policy)
 
         # Trigger escalation to create log entry

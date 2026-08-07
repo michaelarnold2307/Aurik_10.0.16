@@ -192,7 +192,7 @@ def curved_arrow(ax, x0, y0, x1, y1, color="#64748b", lw=0.6, rad=0.2):
 # ---------------------------------------------------------------------------
 fig = plt.figure(figsize=(FIG_W, FIG_H), dpi=DPI)
 fig.patch.set_facecolor(C_BG)
-ax = fig.add_axes([0, 0, 1, 1])
+ax = fig.add_axes([0, 0, 1, 1])  # type: ignore[call-overload]
 ax.set_xlim(0, 1)
 ax.set_ylim(0, 1)
 ax.set_aspect("auto")

@@ -1,0 +1,71 @@
+# benchmarks/quality/corpus_manifest_schema.yaml
+# §v10.700 — Qualitäts-Benchmark-Corpus Schema
+#
+# Jede Aufnahme wird mit Material, Ära, Genre und Defekten beschrieben.
+# Das Corpus dient als Grundlage für automatisierte Qualitäts-Benchmarks.
+#
+# Nutzung:
+#   corpus/
+#   ├── manifest.yaml          # Diese Datei
+#   ├── shellac/
+#   │   └── 1920s_jazz.wav     # Public Domain, Internet Archive
+#   ├── vinyl/
+#   │   └── 1970s_schlager.wav # CC0, Musopen
+#   └── tape/
+#       └── 1980s_demo.wav     # Eigenaufnahme
+
+version: "1.0"
+description: "Aurik Quality Benchmark Corpus"
+license: "CC0 / Public Domain"
+min_files: 20
+categories:
+  - shellac
+  - vinyl
+  - tape
+  - cassette
+  - digital_lossy
+  - digital_lossless
+
+files:
+  # Template — ein Eintrag pro Audio-Datei:
+  # - path: "shellac/1920s_jazz.wav"
+  #   material: "shellac"
+  #   era: 1920
+  #   genre: "jazz"
+  #   duration_s: 187.3
+  #   sample_rate: 48000
+  #   channels: 1
+  #   source: "Internet Archive / Public Domain"
+  #   defects:
+  #     clicks: 0.7
+  #     crackle: 0.5
+  #     surface_noise: 0.6
+  #     bandwidth_loss: 0.8
+  #     wow_flutter: 0.3
+  #   expected_improvement:
+  #     min_snr_gain_db: 3.0
+  #     min_quality_estimate: 0.4
+
+metrics:
+  # Objektive Metriken für jedes File
+  - name: "snr_db"
+    description: "Signal-to-Noise Ratio Verbesserung"
+    pass_threshold: 1.0   # mindestens 1dB Verbesserung
+  - name: "pesq_mos"
+    description: "PESQ MOS (Perceptual Evaluation of Speech Quality)"
+    pass_threshold: 2.0   # Fair quality or better
+  - name: "stoi"
+    description: "Short-Time Objective Intelligibility"
+    pass_threshold: 0.7   # Good intelligibility
+  - name: "si_sdr_db"
+    description: "Scale-Invariant Signal-to-Distortion Ratio"
+    pass_threshold: 3.0   # 3dB Verbesserung
+  - name: "aurik_quality_estimate"
+    description: "Auriks eigene Qualitätsschätzung (0-1)"
+    pass_threshold: 0.5
+
+ci_gate:
+  # CI schlägt fehl wenn:
+  min_pass_rate: 0.8       # weniger als 80% der Files bestehen
+  min_avg_snr_gain_db: 1.0 # weniger als 1dB durchschnittliche SNR-Verbesserung
+  max_regression_pct: 10   # mehr als 10% Regression zum letzten Lauf

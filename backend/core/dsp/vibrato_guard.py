@@ -155,5 +155,5 @@ def check_vibrato_depth_preservation(
         )
 
     except Exception as exc:
-        logger.debug("check_vibrato_depth_preservation non-blocking: %s", exc)
+        logger.debug("Pruefung_vibrato_depth_preservation nicht blockierend: %s", exc)
         return _fallback

@@ -213,7 +213,7 @@ def phase_vocoder_timestretch_fast(
             sf_samples = np.full(n_samples, sf[0], dtype=np.float32)
         else:
             src_idx = np.linspace(0, n_samples - 1, len(sf), dtype=np.float32)
-            sf_samples = np.interp(np.arange(n_samples, dtype=np.float32), src_idx, sf)
+            sf_samples = np.interp(np.arange(n_samples, dtype=np.float32), src_idx, sf)  # type: ignore[assignment]
 
         sf_samples = np.clip(sf_samples, _MIN_STRETCH, _MAX_STRETCH)
         src_step = 1.0 / sf_samples

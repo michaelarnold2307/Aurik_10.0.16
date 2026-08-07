@@ -18,13 +18,14 @@ import ast
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 PHASE_DIR = Path("backend/core/phases")
 
 
 def find_undefined_in_functions(tree: ast.AST, source_file: str) -> list[str]:
     """Find variables used in inner functions but not in their parameter list."""
-    issues = []
+    issues: list[Any] = []
 
     class InnerFuncVisitor(ast.NodeVisitor):
         def __init__(self):

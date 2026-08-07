@@ -73,7 +73,7 @@ try:
     _CREPE_OK = True
 except Exception:
     _CREPE_OK = False
-    logger.debug("FCPE/CREPE nicht verfügbar — RMVPE/PESTO/pYIN-Fallback für HPG aktiv")
+    logger.debug("FCPE/CREPE nicht verfügbar — RMVPE/PESTO/pYIN-Ersatzpfad für HPG aktiv")
 
 try:
     from plugins.rmvpe_plugin import get_rmvpe_plugin as _get_rmvpe
@@ -81,7 +81,7 @@ try:
     _RMVPE_OK = True
 except Exception:
     _RMVPE_OK = False
-    logger.debug("RMVPE nicht verfügbar — PESTO/pYIN-Fallback für HPG aktiv")
+    logger.debug("RMVPE nicht verfügbar — PESTO/pYIN-Ersatzpfad für HPG aktiv")
 
 try:
     import librosa
@@ -89,7 +89,7 @@ try:
     _LIBROSA_OK = True
 except ImportError:
     _LIBROSA_OK = False
-    logger.debug("librosa nicht verfügbar — PESTO/Autokorrelations-Fallback für f₀")
+    logger.debug("librosa nicht verfügbar — PESTO/Autokorrelations-Ersatzpfad für f₀")
 
 try:
     from dsp.pesto_pitch import estimate_pitch as _pesto_estimate
@@ -97,7 +97,7 @@ try:
     _PESTO_OK = True
 except Exception:
     _PESTO_OK = False
-    logger.debug("dsp.pesto_pitch nicht verfügbar — direkt pYIN-Fallback")
+    logger.debug("dsp.pesto_pitch nicht verfügbar — direkt pYIN-Ersatzpfad")
 
 
 # ---------------------------------------------------------------------------

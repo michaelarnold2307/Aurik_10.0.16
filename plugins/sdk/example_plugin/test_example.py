@@ -21,7 +21,7 @@ class TestExamplePlugin:
     def plugin(self):
         from plugins.sdk.example_plugin.example_plugin import ExamplePlugin
 
-        return ExamplePlugin()
+        return ExamplePlugin()  # type: ignore[abstract]
 
     @pytest.fixture
     def pipeline(self):

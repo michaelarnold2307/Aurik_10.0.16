@@ -171,13 +171,15 @@ class ModuleParallelProcessor:
             if phase_results:
                 current_audio = phase_results[-1].audio
 
-            logger.debug("Phase %s complete: %s modules, %.3fs", phase_idx, len(phase_modules), phase_time)
+            logger.debug(
+                "Verarbeitungsschritt %s vollstaendig: %s modules, %.3fs", phase_idx, len(phase_modules), phase_time
+            )
 
         processing_time = time.time() - start_time
         self._processing_stats["total_processed"] += 1  # type: ignore[operator]
 
         logger.debug(
-            "Module pipeline complete: %.3fs, %s phases, %s modules", processing_time, len(phases), len(modules)
+            "Module pipeline vollstaendig: %.3fs, %s phases, %s modules", processing_time, len(phases), len(modules)
         )
 
         return current_audio
@@ -337,7 +339,7 @@ class ModuleParallelProcessor:
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error("Module %s failed: %s", module.name, e)
+            logger.error("Module %s fehlgeschlagen: %s", module.name, e)
 
             return ModuleResult(
                 module_name=module.name,

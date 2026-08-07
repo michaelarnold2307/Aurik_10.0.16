@@ -194,7 +194,7 @@ class DCOffsetRemoval(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.HP_CONFIG.get(_mk, self.HP_CONFIG[MaterialType.VINYL]))
+        config = dict(self.HP_CONFIG.get(_mk, self.HP_CONFIG[MaterialType.VINYL]))  # type: ignore[call-overload]
 
         # Locality-aware intensity control from UV3.
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
@@ -269,7 +269,7 @@ class DCOffsetRemoval(PhaseInterface):
         )
         if abs(_makeup_db) > 0.01:
             logger.info(
-                "Phase 30 loudness-preservation: material=%s rms_drop=%+.2f dB via makeup %+.2f dB",
+                "Verarbeitungsschritt 30 loudness-preservation: material=%s rms_drop=%+.2f dB via makeup %+.2f dB",
                 material.value,
                 _rms_drop_db,
                 _makeup_db,
@@ -311,7 +311,9 @@ class DCOffsetRemoval(PhaseInterface):
         # For audio < minimum window size, passthrough instead of crashing
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz — minimum safe for any filter
         if len(audio) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_30: audio too short (%d < %d), passthrough", len(audio), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_30: audio too short (%d < %d), passthrough", len(audio), MIN_AUDIO_SAMPLES
+            )
             return np.asarray(audio, dtype=np.float32)  # type: ignore[no-any-return]
 
         # Stage 1: always remove static DC bias directly.
@@ -371,7 +373,7 @@ class DCOffsetRemoval(PhaseInterface):
         if orig.shape != proc.shape:
             return np.clip(np.asarray(processed_audio, dtype=np.float32), -1.0, 1.0), 0.0, 0.0
 
-        max_drop_db = {
+        max_drop_db = {  # type: ignore[call-overload]
             MaterialType.SHELLAC: 1.1,
             MaterialType.VINYL: 0.9,
             MaterialType.TAPE: 1.0,
@@ -428,7 +430,7 @@ class DCOffsetRemoval(PhaseInterface):
 
 # Test harness
 if __name__ == "__main__":
-    logger.debug("=== Phase 30: DC Offset Removal v2 Professional Test ===\n")
+    logger.debug("=== Verarbeitungsschritt 30: DC Offset Removal v2 Professional Test ===\n")
 
     processor = DCOffsetRemoval()
 

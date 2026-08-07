@@ -309,7 +309,7 @@ class CompressionPhase(PhaseInterface):
         if "studio" not in _mode_10:
             for _b in comp_params:
                 _t, _r, _a, _rel, _k, _m = comp_params[_b]
-                comp_params[_b] = (_t, min(_r, 2.0), max(_a, 20.0), _rel, _k, _m)
+                comp_params[_b] = (_t, min(_r, 2.0), max(_a, 20.0), _rel, _k, _m)  # type: ignore[assignment]
         parallel_blend = float(self.PARALLEL_BLEND[phase_material] * _effective_strength)
         detection_mode = self.DETECTION_MODE[phase_material]
 
@@ -554,7 +554,7 @@ class CompressionPhase(PhaseInterface):
 def _run_manual_demo() -> None:
     """Lokaler Manuelltest für die Kompressionsphase."""
     logger.debug("=" * 70)
-    logger.debug("Phase 10: Professional Multi-Band Parallel Compression v2.0 - Test")
+    logger.debug("Verarbeitungsschritt 10: Professional Multi-Band Parallel Compression v2.0 - Test")
     logger.debug("=" * 70)
     logger.debug("")
 
@@ -609,12 +609,12 @@ def _run_manual_demo() -> None:
             meta["dynamic_range_reduction_db"],
         )
         logger.debug("    Parallel blend: %.0f%% wet", meta["parallel_blend"] * 100)
-        logger.debug("    Detection mode: %s", meta["detection_mode"])
+        logger.debug("    Detection Betriebsart: %s", meta["detection_mode"])
         logger.debug("")
         logger.debug("  Per-Band Compression:")
         for band_name, band_metrics in meta["band_metrics"].items():
             logger.debug(
-                "    %12s: Ratio %.1f:1, Max GR %+5.1f dB, RMS %+5.2f dB",
+                "    %12s: Verhaeltnis %.1f:1, Max GR %+5.1f dB, RMS %+5.2f dB",
                 band_name.replace("_", "-").title(),
                 band_metrics["ratio"],
                 band_metrics["max_gain_reduction_db"],

@@ -295,6 +295,7 @@ class TransparentDynamicsV1(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -331,6 +332,7 @@ class TransparentDynamicsV1(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -381,11 +383,12 @@ class TransparentDynamicsV1(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "transparent_dyn", default_nr=0.3, default_de_ess=0.2, default_comp=1.3)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_54_transparent_dynamics.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_54_transparent_dynamics.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         audio, _p54_transposed = to_channels_last(audio)
         start_time = time.time()
@@ -417,7 +420,7 @@ class TransparentDynamicsV1(PhaseInterface):
             _vocal_protect = float(np.clip(1.0 - 0.45 * (_panns_singing - 0.35) / 0.65, 0.55, 1.0))
             control_strength = float(control_strength * _vocal_protect)
             logger.debug(
-                "§v10 Phase 54 Vocal-Protect: panns=%.2f factor=%.2f control=%.2f",
+                "§v10 Verarbeitungsschritt 54 Vocal-Protect: panns=%.2f factor=%.2f control=%.2f",
                 _panns_singing,
                 _vocal_protect,
                 control_strength,
@@ -478,11 +481,12 @@ class TransparentDynamicsV1(PhaseInterface):
                 _smp = get_medium_profile(str(getattr(material_enum, "value", material_enum)).lower())
                 _is_compressed_mat = bool(getattr(_smp, "is_compressed", _is_compressed_mat))
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 pass
             if _is_compressed_mat:
                 ratio = float(np.clip(ratio, 1.1, 2.5))
                 logger.info(
-                    "§v10.303.17 Material-Guard: ratio auf %.1f:1 gedeckelt (Material bereits komprimiert)",
+                    "§v10.303.17 Material-Guard: Verhaeltnis auf %.1f:1 gedeckelt (Material bereits komprimiert)",
                     ratio,
                 )
             attack_ms = float(np.clip(attack_ms * (1.05 + 0.30 * hard_norm), 3.0, 120.0))
@@ -495,7 +499,7 @@ class TransparentDynamicsV1(PhaseInterface):
         audio_mono = np.mean(audio, axis=1) if is_stereo else audio.copy()
 
         logger.info(
-            "Transparent Dynamics: %s, genre=%s, ratio=%.1f:1, threshold=%sdB, "
+            "Transparent Dynamics: %s, genre=%s, Verhaeltnis=%.1f:1, Schwelle=%sdB, "
             "attack=%sms, release=%sms, comp_pressure=%.2f, control=%.2f",
             material_enum.value,
             genre_key,
@@ -575,7 +579,7 @@ class TransparentDynamicsV1(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase54 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt54 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — Dynamik-Kompression darf
         # Atemgeräusche zwischen Phrasen nicht gaten und Vibrato nicht glätten.
@@ -599,7 +603,7 @@ class TransparentDynamicsV1(PhaseInterface):
                 elif audio_out.ndim == 1 and audio.ndim == 1:
                     audio_out[_npa_m54] = audio[_npa_m54]
         except Exception as _npa54_exc:
-            logger.debug("§2.46f phase_54 NPA-Guard (non-blocking): %s", _npa54_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_54 NPA-Guard (nicht blockierend): %s", _npa54_exc)
 
         # §V24 Spektralfarbe-Prüfung nach Dynamik-Kompression (§2.74, non-blocking WARNING)
         try:
@@ -612,7 +616,7 @@ class TransparentDynamicsV1(PhaseInterface):
                 _sc_wet_54 = 0.70  # Phase-Strength −30 % (§V24)
                 audio_out = (_sc_wet_54 * audio_out + (1.0 - _sc_wet_54) * audio).astype(np.float32)
         except Exception as _sc_exc_54:
-            logger.debug("§V24 phase_54 spectral_color non-blocking: %s", _sc_exc_54)
+            logger.debug("§V24 Verarbeitungsschritt_54 spectral_color nicht blockierend: %s", _sc_exc_54)
 
         # V26 Onset-Guard (§2.77): Transients nach Dynamik-Kompression schützen (non-blocking)
         try:
@@ -622,7 +626,7 @@ class TransparentDynamicsV1(PhaseInterface):
 
             audio_out = _opg54(audio, audio_out, None, max_delta_db=1.5)
         except Exception as _on54_exc:
-            logger.debug("Phase54 V26 Onset-Guard (non-blocking): %s", _on54_exc)
+            logger.debug("Verarbeitungsschritt54 V26 Onset-Guard (nicht blockierend): %s", _on54_exc)
 
         return PhaseResult(
             success=True,
@@ -899,7 +903,7 @@ if __name__ == "__main__":
     # Normalize
     test_audio = test_audio / np.percentile(np.abs(test_audio), 99.9) * 0.7
 
-    logger.debug("\n🎵 Test Audio Generated:")
+    logger.debug("\n🎵 Test Audio erzeugt:")
     logger.debug("   Duration: %ss", duration)
     logger.debug("   Dynamics: Quiet (0-0.5s), Loud (0.5-1.0s), Quiet (1.0-2.0s)")
     logger.debug("   Transients: %s drum hits", len(transient_times))
@@ -910,7 +914,7 @@ if __name__ == "__main__":
 
     metadata = phase.get_metadata()
 
-    logger.debug("\n📋 Phase Metadata:")
+    logger.debug("\n📋 Verarbeitungsschritt Metadata:")
     logger.debug("   ID: %s", metadata.phase_id)
     logger.debug("   Name: %s", metadata.name)
     logger.debug("   Priority: %s", metadata.priority)
@@ -927,7 +931,7 @@ if __name__ == "__main__":
             rt_factor = result.execution_time_seconds / duration
 
             logger.debug(
-                "\n   %-12s × %-15s: time=%.3fs (%.3f× RT), max=%.3f, ratio=%.1f:1",
+                "\n   %-12s × %-15s: time=%.3fs (%.3f× RT), max=%.3f, Verhaeltnis=%.1f:1",
                 genre_name,
                 material.value,
                 result.execution_time_seconds,
@@ -937,10 +941,10 @@ if __name__ == "__main__":
             )
 
     logger.debug("\n%s", "=" * 70)
-    logger.debug("✅ TRANSPARENT DYNAMICS TEST COMPLETE")
+    logger.debug("✅ TRANSPARENT DYNAMICS TEST vollstaendig")
     logger.debug("=" * 70)
     logger.debug("\n🎯 Next Steps:")
     logger.debug("   1. Add to __init__.py exports")
     logger.debug("   2. Integrate into UnifiedRestorerV3 _select_phases()")
-    logger.debug("   3. Create integration tests")
-    logger.debug("   4. Finalize Tier 1 (12/14 modules = 86%)")
+    logger.debug("   3. erstellen integration tests")
+    logger.debug("   4. abschliessen Tier 1 (12/14 modules = 86%)")

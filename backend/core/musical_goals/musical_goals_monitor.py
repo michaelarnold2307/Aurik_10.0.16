@@ -183,7 +183,7 @@ class MusicalGoalsMonitor:
         self.pre_validation_result = result
 
         logger.info(
-            f"Pre-validation complete: confidence={confidence:.3f}, "
+            f"Pre-Validierung vollstaendig: confidence={confidence:.3f}, "
             f"{len([r for r in recommendations if 'WARNING' in r])} warnings"
         )
 
@@ -221,7 +221,7 @@ class MusicalGoalsMonitor:
 
         if violations:
             logger.warning(
-                "Checkpoint '%s': %s violations detected - %s", step_name, len(violations), ", ".join(violations)
+                "Checkpoint '%s': %s violations erkannt - %s", step_name, len(violations), ", ".join(violations)
             )
         else:
             logger.info("Checkpoint '%s': All goals OK", step_name)
@@ -391,7 +391,7 @@ if __name__ == "__main__":
     monitor = MusicalGoalsMonitor()
 
     # Pre-validation
-    logger.debug("1. Pre-validation:")
+    logger.debug("1. Pre-Validierung:")
     pre_result = monitor.pre_validate(
         original_audio=audio, sr=sr, processing_config={"algorithm": "DeepFilterNet", "strength": 0.8}
     )
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     monitor.add_checkpoint("Enhancement", audio, sr, confidence=0.80)
 
     # Final validation
-    logger.debug("\n4. Final validation:")
+    logger.debug("\n4. Final Validierung:")
     checker = MusicalGoalsChecker()
     final_goals = checker.measure_all(audio, sr)
     report = monitor.finalize(final_goals)
@@ -424,4 +424,4 @@ if __name__ == "__main__":
     for rec in report.recommendations:
         logger.debug("      - %s", rec)
 
-    logger.debug("\n=== Test complete ===")
+    logger.debug("\n=== Test vollstaendig ===")

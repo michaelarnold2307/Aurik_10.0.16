@@ -62,7 +62,7 @@ def test_riaa_slope_profiles_unknown_is_none():
 def test_riaa_slope_profiles_riaa_values():
     from backend.core.dsp.riaa_curve_classifier import RIAA_SLOPE_PROFILES
 
-    slope, bass, hf, bt = RIAA_SLOPE_PROFILES["riaa"]
+    slope, bass, hf, bt = RIAA_SLOPE_PROFILES["riaa"]  # type: ignore[misc]
     assert slope == pytest.approx(-5.0)
     assert bass == pytest.approx(13.7)
     assert hf == pytest.approx(2122.0)
@@ -72,7 +72,7 @@ def test_riaa_slope_profiles_columbia_bass_higher_than_riaa():
     from backend.core.dsp.riaa_curve_classifier import RIAA_SLOPE_PROFILES
 
     # Columbia hat mehr Bass-Boost als RIAA
-    assert RIAA_SLOPE_PROFILES["columbia"][1] > RIAA_SLOPE_PROFILES["riaa"][1]
+    assert RIAA_SLOPE_PROFILES["columbia"][1] > RIAA_SLOPE_PROFILES["riaa"][1]  # type: ignore[index]
 
 
 # ---------------------------------------------------------------------------

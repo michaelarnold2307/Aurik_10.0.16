@@ -31,7 +31,7 @@ SR = 48000
 def _sine(duration_s: float, freq: float = 440.0, sr: int = SR) -> np.ndarray:
     """Mono-Sinussignal als float32."""
     t = np.linspace(0, duration_s, int(duration_s * sr), endpoint=False)
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(duration_s: float) -> np.ndarray:

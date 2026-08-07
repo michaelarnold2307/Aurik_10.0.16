@@ -90,10 +90,10 @@ def check_for_update(current_version: str | None = None) -> VersionCheckResult:
             )
         return VersionCheckResult(current_version=cur, latest_version=tag.lstrip("vV"))
     except URLError as exc:
-        logger.debug("Update check failed (offline?): %s", exc)
+        logger.debug("Aktualisierung Pruefung fehlgeschlagen (offline?): %s", exc)
         return VersionCheckResult(current_version=cur, error=str(exc))
     except Exception as exc:
-        logger.debug("Update check error: %s", exc)
+        logger.debug("Aktualisierung Pruefung error: %s", exc)
         return VersionCheckResult(current_version=cur, error=str(exc))
 
 

@@ -154,7 +154,7 @@ class PreEchoDetector:
         try:
             return self._detect_pre_echo_events(mono, sr, mat)
         except Exception as exc:
-            logger.debug("PreEchoDetector.detect non-blocking: %s", exc)
+            logger.debug("PreEchoDetector.erkennen nicht blockierend: %s", exc)
             return []
 
     def _detect_pre_echo_events(
@@ -250,7 +250,7 @@ class PreEchoDetector:
             )
 
         logger.debug(
-            "PreEchoDetector: %d events detected, material=%s, threshold=%.1f dB",
+            "PreEchoDetector: %d events erkannt, material=%s, Schwelle=%.1f dB",
             len(events),
             mat,
             threshold_db,

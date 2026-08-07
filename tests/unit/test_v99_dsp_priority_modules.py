@@ -41,7 +41,7 @@ HOP = 256
 def make_mag_spec(audio: np.ndarray, n_fft: int = N_FFT, hop: int = HOP) -> np.ndarray:
     """Hilfsfunktion: Magnitude-Spektrogramm aus Mono-Audio."""
     _, _, Zxx = scipy_stft(audio, nperseg=n_fft, noverlap=n_fft - hop)
-    return np.abs(Zxx).astype(np.float64)
+    return np.abs(Zxx).astype(np.float64)  # type: ignore[no-any-return]
 
 
 def make_power_spec(audio: np.ndarray, n_fft: int = N_FFT, hop: int = HOP) -> np.ndarray:
@@ -1941,7 +1941,7 @@ def _make_bow_signal(sr: int = SR) -> np.ndarray:
     envelope = np.ones(n, dtype=np.float64)
     envelope[:ramp_samples] = ramp
     sine = np.sin(2 * np.pi * 200 * t)  # 200 Hz Grundton (tief)
-    return (sine * envelope * 0.8).astype(np.float32)
+    return (sine * envelope * 0.8).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_strike_signal(sr: int = SR) -> np.ndarray:
@@ -2158,7 +2158,7 @@ class TestInstrumentFormantDriftCorrector:
     @staticmethod
     def _make_sine(freq_hz: float, duration_s: float = 1.0, amp: float = 0.3) -> np.ndarray:
         t = np.linspace(0, duration_s, int(SR * duration_s), endpoint=False)
-        return (np.sin(2 * np.pi * freq_hz * t) * amp).astype(np.float32)
+        return (np.sin(2 * np.pi * freq_hz * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
     # ── 01: Import & instantiation ─────────────────────────────────────────
 
@@ -2404,7 +2404,7 @@ class TestSubStemProcessor:
     @staticmethod
     def _sine(freq: float = 220.0, dur: float = 1.0, amp: float = 0.3) -> np.ndarray:
         t = np.linspace(0, dur, int(SR * dur), endpoint=False)
-        return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+        return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
     # ── 01: Import & instantiation ────────────────────────────────────────
 
@@ -2651,7 +2651,7 @@ class TestPhysicsResonanceEnhancer:
     @staticmethod
     def _sine(freq: float = 220.0, dur: float = 1.0, amp: float = 0.3) -> np.ndarray:
         t = np.linspace(0, dur, int(SR * dur), endpoint=False)
-        return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+        return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
     # ── 01: Import & instantiation ────────────────────────────────────────
 

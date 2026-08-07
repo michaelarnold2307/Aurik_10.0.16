@@ -254,7 +254,7 @@ class TestApplyDither:
 
         called = []
 
-        def _fake_powr3(audio, bit_depth):
+        def _fake_powr3(audio, bit_depth, **kwargs):
             called.append(bit_depth)
             return audio
 

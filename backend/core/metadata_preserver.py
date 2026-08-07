@@ -114,7 +114,7 @@ class MetadataPreserver:
             if mf is None:
                 return meta
         except Exception as exc:
-            logger.debug("metadata extract failed for %s: %s", src.name, exc)
+            logger.debug("metadata extrahieren fehlgeschlagen for %s: %s", src.name, exc)
             return meta
 
         # --- ID3-based (MP3, AIFF) ---
@@ -224,10 +224,10 @@ class MetadataPreserver:
             elif ext in (".aiff", ".aif"):
                 return self._apply_aiff(tgt, metadata, aurik_version, original_hash, transfer_chain)
             else:
-                logger.debug("metadata apply: unsupported format %s", ext)
+                logger.debug("metadata anwenden: unsupported format %s", ext)
                 return False
         except Exception as exc:
-            logger.warning("metadata apply failed for %s: %s", tgt.name, exc)
+            logger.warning("metadata anwenden fehlgeschlagen for %s: %s", tgt.name, exc)
             return False
 
     def transfer(
@@ -266,13 +266,13 @@ class MetadataPreserver:
             target_path, meta, aurik_version=aurik_version, original_hash=orig_hash, transfer_chain=transfer_chain
         )
         # Store for downstream access (e.g. chain metadata injection)
-        self._last_metadata: dict[str, object] = {
+        self._last_metadata: dict[str, object] = {  # type: ignore[no-redef]
             "title": meta.title,
             "artist": meta.artist,
             "album": meta.album,
             "aurik_version": aurik_version,
             "original_hash": orig_hash,
-            "transfer_chain": transfer_chain or [],
+            "transfer_chain": transfer_chain or [],  # type: ignore[dict-item]
         }
         return result
 
@@ -324,7 +324,7 @@ class MetadataPreserver:
             )
 
         tags.save(str(path))
-        logger.info("metadata applied (ID3): %s", path.name)
+        logger.info("metadata angewendet (ID3): %s", path.name)
         return True
 
     def _apply_flac(
@@ -344,7 +344,7 @@ class MetadataPreserver:
             pic.type = 3  # Cover (front)
             mf.add_picture(pic)
         mf.save()
-        logger.info("metadata applied (FLAC): %s", path.name)
+        logger.info("metadata angewendet (FLAC): %s", path.name)
         return True
 
     def _apply_vorbis(
@@ -358,7 +358,7 @@ class MetadataPreserver:
         if version:
             mf["COMMENT"] = [self._provenance_comment(version, orig_hash, transfer_chain)]
         mf.save()
-        logger.info("metadata applied (Vorbis): %s", path.name)
+        logger.info("metadata angewendet (Vorbis): %s", path.name)
         return True
 
     def _apply_aiff(
@@ -395,7 +395,7 @@ class MetadataPreserver:
                 )
             )
         mf.save()
-        logger.info("metadata applied (AIFF/ID3): %s", path.name)
+        logger.info("metadata angewendet (AIFF/ID3): %s", path.name)
         return True
 
     @staticmethod

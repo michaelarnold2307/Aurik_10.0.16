@@ -58,7 +58,7 @@ adaptive_transient_preservation_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Überbetonung", "expected_when": "gain zu hoch", "severity": 0.2}],
+    side_effects=[{"risk": "Überbetonung", "expected_when": "gain zu hoch", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["transient_enhancement"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -71,14 +71,14 @@ class AdaptiveTransientPreservation:
 
     def __init__(self, threshold=2.0, gain=1.2):
         if not (0.5 <= threshold <= 10.0):
-            logger.error("Ungültiger threshold: %s. Muss zwischen 0.5 und 10.0 liegen.", threshold)
+            logger.error("Ungültiger Schwelle: %s. Muss zwischen 0.5 und 10.0 liegen.", threshold)
             raise ValueError("threshold muss zwischen 0.5 und 10.0 liegen.")
         if not (1.0 <= gain <= 2.0):
             logger.error("Ungültiger gain: %s. Muss zwischen 1.0 und 2.0 liegen.", gain)
             raise ValueError("gain muss zwischen 1.0 und 2.0 liegen.")
         self.threshold = threshold
         self.gain = gain
-        logger.info("AdaptiveTransientPreservation initialisiert mit threshold=%s, gain=%s", self.threshold, self.gain)
+        logger.info("AdaptiveTransientPreservation initialisiert mit Schwelle=%s, gain=%s", self.threshold, self.gain)
 
     def log_contract(self):
         contract_dict = asdict(adaptive_transient_preservation_contract)
@@ -120,7 +120,7 @@ class AdaptiveTransientPreservation:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._preserve_classic(signal, envelope, threshold, gain)
                 else:
@@ -128,7 +128,7 @@ class AdaptiveTransientPreservation:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('transient_preservation.pt')
                     # output = model(torch.from_numpy(signal).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._preserve_classic(signal, envelope, threshold, gain)
             else:
@@ -141,7 +141,7 @@ class AdaptiveTransientPreservation:
         if audit_log:
             enhancement = float(np.mean(np.abs(output - signal))) if output is not None else float("nan")
             logger.info(
-                f"AdaptiveTransientPreservation: transient_enhancement={enhancement:.6f}, fallback_used={fallback_used}, threshold={threshold}, gain={gain}"
+                f"AdaptiveTransientPreservation: transient_enhancement={enhancement:.6f}, Ersatzpfad_used={fallback_used}, Schwelle={threshold}, gain={gain}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_transient_preservation_contract))
         return output
@@ -168,4 +168,4 @@ class AdaptiveTransientPreservation:
         else:
             self.threshold = 3.0
             self.gain = 1.1
-        logger.info("Parameter auto-optimiert: threshold=%s, gain=%s", self.threshold, self.gain)
+        logger.info("Parameter auto-optimiert: Schwelle=%s, gain=%s", self.threshold, self.gain)

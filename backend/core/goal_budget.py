@@ -123,13 +123,13 @@ def create_goal_budget(
     targets = dict(_DEFAULT_GOAL_BUDGET)
     if genre_key:
         try:
-            from backend.core.genre_goal_profile import get_genre_goal_profile
+            from backend.core.genre_goal_profile import get_genre_profile
 
-            profile = get_genre_goal_profile(genre_key)
+            profile = get_genre_profile(genre_key)
             # Genre-Ziele überschreiben Defaults
-            for goal, weight in profile.goal_weights.items():
+            for goal, weight in profile.weights.items():
                 if goal in targets:
                     targets[goal] = round(0.30 * weight / 2.0, 3)  # weight 2.0 → 0.30 Budget
         except Exception as e:
-            logger.warning("goal_budget.py::create_goal_budget fallback: %s", e)
+            logger.warning("goal_Grenze.py::erstellen_goal_Grenze Ersatzpfad: %s", e)
     return GoalBudget(targets, material_key=material_key)

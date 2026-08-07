@@ -70,7 +70,7 @@ try:
     _PGHI_AVAILABLE = True
 except Exception:
     _PGHI_AVAILABLE = False
-    logger.warning("PGHI not available; scipy.signal.istft fallback active for phase_28")
+    logger.warning("PGHI not verfuegbar; scipy.signal.istft Ersatzpfad active for Verarbeitungsschritt_28")
 
 
 class SurfaceNoiseProfiling(PhaseInterface):
@@ -216,7 +216,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
             try:
                 return float(goal_weights.get(name, default))
             except Exception as e:
-                logger.warning("phase_28_surface_noise_profiling.py::_w fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_28_surface_noise_Messung.py::_w Ersatzpfad: %s", e)
                 return default
 
         naturalness = float(np.clip(_w("natuerlichkeit"), 0.3, 2.0))
@@ -275,11 +275,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "surface_noise", default_nr=0.5, default_de_ess=0.2, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_28_surface_noise_profiling.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_28_surface_noise_Messung.py::verarbeiten Ersatzpfad: %s", e)
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         audio, _p28_transposed = to_channels_last(audio)
@@ -295,7 +296,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
 
             _npa_result_28 = get_natural_performance_detector().detect(audio, sample_rate)
         except Exception as _npa_exc_28:
-            logger.debug("§2.46f NPA detection non-blocking: %s", _npa_exc_28)
+            logger.debug("§2.46f NPA detection nicht blockierend: %s", _npa_exc_28)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -313,7 +314,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
         if _mat_str in _digital_mats or _snr_28 > 40.0:
             _reason = f"digital_material={_mat_str}" if _mat_str in _digital_mats else f"snr={_snr_28:.0f}dB"
             logger.info(
-                "§v10.96 Surface-Noise-Skip: %s → surface noise profiling skipped",
+                "§v10.96 Surface-Noise-ueberspringen: %s → surface noise Messung uebersprungen",
                 _reason,
             )
             _effective_strength = 0.0
@@ -327,7 +328,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
             _nmr_result_28 = _nmr_fn_28(audio, sample_rate)
             if not _nmr_result_28.ok:
                 logger.warning(
-                    "Phase28 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt28 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -337,12 +338,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase28 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt28 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_28.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_28:
-            logger.debug("Phase28 §V40 NMR non-blocking: %s", _nmr_exc_28)
+            logger.debug("Verarbeitungsschritt28 §V40 NMR nicht blockierend: %s", _nmr_exc_28)
 
         _material_key = str(getattr(material, "name", material)).lower()
         _panns_tags = {k: float(v) for k, v in kwargs.get("panns_tags", {}).items() if isinstance(v, (int, float, str))}
@@ -368,7 +369,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.NOISE_CONFIG.get(_mk, self.NOISE_CONFIG[MaterialType.CD_DIGITAL]))
+        config = dict(self.NOISE_CONFIG.get(_mk, self.NOISE_CONFIG[MaterialType.CD_DIGITAL]))  # type: ignore[call-overload]
 
         # §v10.200 Depth-adaptive: tiefere Ketten brauchen höheren spectral_floor
         # und sensitiveren VAD-Threshold (mehr Rauschen → mehr erkennen)
@@ -387,12 +388,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
             _nf28 = derive_noise_floor(audio, sample_rate)
             config["vad_threshold_db"] = float(np.clip(_nf28["noise_floor_db"] + 6.0, -60.0, -25.0))
             logger.debug(
-                "Phase 28 adaptive: vad_threshold=%.0fdB (noise_floor=%.1fdB)",
+                "Verarbeitungsschritt 28 adaptive: vad_Schwelle=%.0fdB (noise_floor=%.1fdB)",
                 config["vad_threshold_db"],
                 _nf28["noise_floor_db"],
             )
         except Exception as _e:
-            logger.debug("%s: non-critical exception: %s", __name__, _e)
+            logger.debug("%s: unkritisch exception: %s", __name__, _e)
 
         config["over_subtraction_alpha"] = float(1.0 + (config["over_subtraction_alpha"] - 1.0) * _safe_strength)
         config["spectral_floor"] = float(
@@ -452,7 +453,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 denoised_audio = _masked_mono
             denoised_audio = np.clip(denoised_audio, -1.0, 1.0)
         except Exception as _pm_exc:
-            logger.debug("Phase28 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt28 masking clamp nicht blockierend: %s", _pm_exc)
 
         denoised_audio, loudness_stats = self._apply_material_loudness_preservation(
             audio,
@@ -473,9 +474,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
                         denoised_audio.ndim == 1 and audio.ndim == 1
                     ):
                         denoised_audio[_npa_mask_28] = audio[_npa_mask_28]
-                    logger.debug("§2.46f NPA phase28: restored %d protected samples", int(np.sum(_npa_mask_28)))
+                    logger.debug(
+                        "§2.46f NPA Verarbeitungsschritt28: wiederhergestellt %d protected samples",
+                        int(np.sum(_npa_mask_28)),
+                    )
             except Exception as _npa_rest_28:
-                logger.debug("§2.46f NPA restoration non-blocking: %s", _npa_rest_28)
+                logger.debug("§2.46f NPA restoration nicht blockierend: %s", _npa_rest_28)
 
         denoised_audio = np.nan_to_num(denoised_audio, nan=0.0, posinf=0.0, neginf=0.0)
         denoised_audio = np.clip(denoised_audio, -1.0, 1.0)
@@ -492,7 +496,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 if _hnr_diag_28.get("over_cleaned"):
                     denoised_audio = _hnr_blended_28
             except Exception as _hnr_28_exc:
-                logger.debug("§0p HNR-Blend phase_28 (non-blocking): %s", _hnr_28_exc)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_28 (nicht blockierend): %s", _hnr_28_exc)
 
         _nt28_residual = audio - denoised_audio
         try:
@@ -504,9 +508,11 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 _nt28_d = _nt28_dist_fn(_nt28_residual, _material_key, sr=sample_rate)
                 if _nt28_d > 0.25:
                     denoised_audio = (0.5 * denoised_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_28: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt28_d)
+                    logger.warning(
+                        "§V19 Verarbeitungsschritt_28: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt28_d
+                    )
         except Exception as _nt28_exc:
-            logger.debug("§V19 phase_28 noise_texture non-blocking: %s", _nt28_exc)
+            logger.debug("§V19 Verarbeitungsschritt_28 noise_texture nicht blockierend: %s", _nt28_exc)
 
         if _p28_panns >= 0.25:
             try:
@@ -523,9 +529,11 @@ class SurfaceNoiseProfiling(PhaseInterface):
                     # §v10.101 Material-adaptiv
                     _wet28 = _recommend_mkk_wet(_corr28, _p28_panns, global_need=_need28, material=_material_key)
                     denoised_audio = (_wet28 * denoised_audio + (1.0 - _wet28) * audio).astype(np.float32)
-                    logger.warning("§V20 phase_28: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr28, _wet28)
+                    logger.warning(
+                        "§V20 Verarbeitungsschritt_28: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr28, _wet28
+                    )
             except Exception as _v20_28_exc:
-                logger.debug("§V20 phase_28 mikrodynamik non-blocking: %s", _v20_28_exc)
+                logger.debug("§V20 Verarbeitungsschritt_28 mikrodynamik nicht blockierend: %s", _v20_28_exc)
 
         if any(x in _material_key for x in ("shellac", "vinyl", "tape", "analog")):
             try:
@@ -535,7 +543,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
 
                 denoised_audio = _nfmin28(denoised_audio, sample_rate, _material_key, original_audio=audio)
             except Exception as _v21_28_exc:
-                logger.debug("§V21 phase_28 noise_floor non-blocking: %s", _v21_28_exc)
+                logger.debug("§V21 Verarbeitungsschritt_28 noise_floor nicht blockierend: %s", _v21_28_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -548,7 +556,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 _sc_wet_28 = 0.70  # Phase-Strength −30 % (§V24)
                 denoised_audio = (_sc_wet_28 * denoised_audio + (1.0 - _sc_wet_28) * audio).astype(np.float32)
         except Exception as _sc_exc_28:
-            logger.debug("§V24 phase_28 spectral_color non-blocking: %s", _sc_exc_28)
+            logger.debug("§V24 Verarbeitungsschritt_28 spectral_color nicht blockierend: %s", _sc_exc_28)
 
         try:
             from backend.core.dsp.onset_guard import (
@@ -557,7 +565,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
 
             denoised_audio = _opm28(audio, denoised_audio, None, max_delta_db=1.5)
         except Exception as _v26_28_exc:
-            logger.debug("§V26 phase_28 onset_guard non-blocking: %s", _v26_28_exc)
+            logger.debug("§V26 Verarbeitungsschritt_28 onset_guard nicht blockierend: %s", _v26_28_exc)
 
         if _p28_panns >= 0.25:
             try:
@@ -569,11 +577,11 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 if not _vibr28.ok:
                     denoised_audio = (0.5 * denoised_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§2.72 phase_28: vibrato_reduction=%.1f%% → 50%% dry-blend",
+                        "§2.72 Verarbeitungsschritt_28: vibrato_reduction=%.1f%% → 50%% dry-blend",
                         _vibr28.depth_reduction_pct,
                     )
             except Exception as _vib28_exc:
-                logger.debug("§2.72 phase_28 vibrato non-blocking: %s", _vib28_exc)
+                logger.debug("§2.72 Verarbeitungsschritt_28 vibrato nicht blockierend: %s", _vib28_exc)
 
         denoised_audio = np.nan_to_num(denoised_audio, nan=0.0, posinf=0.0, neginf=0.0)
         denoised_audio = np.clip(denoised_audio, -1.0, 1.0)
@@ -594,11 +602,11 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 )
                 if float(np.mean(np.abs(denoised_audio - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 28: Δ=%.4f RMS",
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 28: Δ=%.4f RMS",
                         float(np.mean(np.abs(denoised_audio - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return PhaseResult(
             success=True,
@@ -658,7 +666,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
                     )
                     makeup_gain_db = _approved
                 except Exception as _e:
-                    logger.debug("%s: non-critical exception: %s", __name__, _e)
+                    logger.debug("%s: unkritisch exception: %s", __name__, _e)
             if makeup_gain_db > 0.0:
                 _gain_lin = float(10.0 ** (makeup_gain_db / 20.0))
                 # §2.45a-II: gain applied ONLY to musical frames via envelope.
@@ -690,7 +698,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 _rms_out_db = compute_gated_rms_dbfs(np.asarray(processed_audio, dtype=np.float32))
                 rms_drop_db = (_rms_out_db - _rms_in_db) if _rms_in_db > -90.0 else 0.0
                 logger.info(
-                    "Phase 28 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
+                    "Verarbeitungsschritt 28 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
                     material_key,
                     rms_drop_db,
                     makeup_gain_db,
@@ -744,9 +752,11 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 np.linspace(0.0, sample_rate / 2.0, gain.shape[0], dtype=np.float32), _mfreqs_p28, _mfloor_p28
             ).astype(np.float32)
             gain = np.maximum(gain, _mfloor_interp[:, np.newaxis])
-            logger.debug("§2.62 phase_28 Masking-Guard: mean_floor=%.3f", float(np.mean(_mfloor_p28)))
+            logger.debug("§2.62 Verarbeitungsschritt_28 Masking-Guard: mean_floor=%.3f", float(np.mean(_mfloor_p28)))
         except Exception as _msk28_exc:
-            logger.debug("§2.62 phase_28 Masking-Guard nicht verfügbar (non-blocking): %s", _msk28_exc)
+            logger.debug(
+                "§2.62 Verarbeitungsschritt_28 Masking-Guard nicht verfügbar (nicht blockierend): %s", _msk28_exc
+            )
 
         # Step 4: Cappé-Gain-Glättung (vectorised IIR via lfilter — O(F) per col, no Python loop)
         alpha_g = 1.0 - 1.0 / max(config["smoothing_frames"], 1)
@@ -774,12 +784,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 if len(_pidx_p28) > 0:
                     gain_smooth[:, _pidx_p28] = 1.0
                     logger.debug(
-                        "§2.36 phase_28 Phonem-Bypass: %d/%d Frames auf G=1.0",
+                        "§2.36 Verarbeitungsschritt_28 Phonem-Bypass: %d/%d Frames auf G=1.0",
                         len(_pidx_p28),
                         _n_t_p28,
                     )
         except Exception as _pm28_exc:
-            logger.debug("§2.36 phase_28 Phonem-Mask (non-blocking): %s", _pm28_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_28 Phonem-Mask (nicht blockierend): %s", _pm28_exc)
 
         # Step 5: Spectrum anwenden
         cleaned_mag = magnitude * gain_smooth
@@ -800,7 +810,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
             )
             denoised = np.asarray(denoised, dtype=np.float32)
         except Exception as _istft_exc:
-            logger.debug("phase_28 istft failed (non-critical): %s", _istft_exc)
+            logger.debug("Verarbeitungsschritt_28 istft fehlgeschlagen (unkritisch): %s", _istft_exc)
             denoised = audio.astype(np.float32)  # passthrough fallback
 
         # Länge anpassen + NaN/Clipping-Schutz

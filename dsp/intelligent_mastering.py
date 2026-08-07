@@ -72,7 +72,7 @@ class LUFSNormalizer:
         sos_hp = butter(2, 38 / nyq, btype="high", output="sos")
         filtered = sosfilt(sos_hp, filtered, axis=0)
 
-        return filtered
+        return filtered  # type: ignore[no-any-return]
 
     def _compute_lufs(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -107,7 +107,7 @@ class LUFSNormalizer:
         if weighted.ndim == 2:
             lufs -= 3.0  # Stereo adjustment
 
-        return lufs
+        return lufs  # type: ignore[no-any-return]
 
     def _compute_true_peak(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -127,7 +127,7 @@ class LUFSNormalizer:
         # Convert to dB
         true_peak_db = 20 * np.log10(true_peak + 1e-10)
 
-        return true_peak_db
+        return true_peak_db  # type: ignore[no-any-return]
 
     def normalize(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, dict]:
         """
@@ -447,7 +447,7 @@ class FinalMaximizer:
         window_samples = max(1, int(sr / 1000))
         envelope = uniform_filter1d(envelope, size=window_samples, mode="nearest")
 
-        return envelope
+        return envelope  # type: ignore[no-any-return]
 
     def maximize(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, dict]:
         """
@@ -627,7 +627,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
     _logger.info("Input: %s (%s Hz, %s)", args.input, sr, "stereo" if audio.ndim == 2 else "mono")
 
     # Create mastering chain

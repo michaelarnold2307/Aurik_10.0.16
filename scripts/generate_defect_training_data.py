@@ -63,7 +63,7 @@ def apply_bandwidth_limit(
 
     normalized_cutoff = cutoff_hz / nyquist
     sos = butter(filter_order, normalized_cutoff, btype="low", output="sos")
-    return sosfiltfilt(sos, audio)
+    return sosfiltfilt(sos, audio)  # type: ignore[no-any-return]
 
 
 def spec_to_log_mel(y: np.ndarray, sr: int, n_mels: int = 256) -> np.ndarray:
@@ -88,7 +88,7 @@ def spec_to_log_mel(y: np.ndarray, sr: int, n_mels: int = 256) -> np.ndarray:
     mel_spec = np.log10(mel_spec + 1e-6)
     mel_spec = (mel_spec - mel_spec.min()) / (mel_spec.max() - mel_spec.min() + 1e-8)
 
-    return mel_spec.astype(np.float32)
+    return mel_spec.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _mel_filterbank(sr: int, n_fft: int, n_mels: int) -> np.ndarray:

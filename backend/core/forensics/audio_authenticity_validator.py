@@ -164,7 +164,7 @@ class AudioForensicsAnalyzer:
                         Higher = more sensitive but more false positives
         """
         self.sensitivity = sensitivity
-        logger.info("AudioForensicsAnalyzer initialized (sensitivity=%s)", sensitivity)
+        logger.info("AudioForensicsAnalyzer initialisiert (sensitivity=%s)", sensitivity)
 
     def analyze(
         self,
@@ -186,7 +186,7 @@ class AudioForensicsAnalyzer:
         # Convert to mono
         audio_mono = np.mean(audio, axis=0) if audio.ndim > 1 else audio
 
-        logger.debug("Analyzing %.2fs audio for authenticity", len(audio_mono) / sr)
+        logger.debug("analysiere %.2fs audio for authenticity", len(audio_mono) / sr)
 
         # 1. AI-generation detection
         ai_confidence, gan_detected, diffusion_detected = self._detect_ai_generation(audio_mono, sr)

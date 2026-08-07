@@ -84,7 +84,7 @@ def apply(
         mn_score = float(defect_scores.get("modulation_noise", 0.0))
         if mn_score < min_modulation_noise_score:
             logger.debug(
-                "Phase 59: modulation_noise score %.3f < %.3f — skipped",
+                "Verarbeitungsschritt 59: modulation_noise Wert %.3f < %.3f — uebersprungen",
                 mn_score,
                 min_modulation_noise_score,
             )
@@ -148,7 +148,7 @@ def apply(
         ).astype(np.float32)
         gain = np.maximum(gain, _mfloor_interp59[:, np.newaxis])
     except Exception as e:
-        logger.warning("phase_59_modulation_noise_reduction.py::unbekannter Fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_59_modulation_noise_reduction.py::unbekannter Ersatzpfad: %s", e)
         pass  # nie pipeline-blockierend
 
     # Apply gain and reconstruct
@@ -266,6 +266,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -290,6 +291,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 try:
                     start_s, end_s = float(loc[0]), float(loc[1])
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 s = int(max(0.0, start_s) * sample_rate)
                 e = int(max(0.0, end_s) * sample_rate)
@@ -374,7 +376,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
             _nmr_result_59 = _nmr_fn_59(audio, sample_rate)
             if not _nmr_result_59.ok:
                 logger.warning(
-                    "Phase59 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt59 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -384,12 +386,12 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase59 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt59 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_59.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_59:  # pylint: disable=broad-except
-            logger.debug("Phase59 §V40 NMR non-blocking: %s", _nmr_exc_59)
+            logger.debug("Verarbeitungsschritt59 §V40 NMR nicht blockierend: %s", _nmr_exc_59)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -445,7 +447,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase59 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt59 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.36 Phonem-Schutz: Plosiv-/Frikativ-Frames via get_phoneme_mask() schützen.
         # Das signal-adaptive Spektral-Gating dämpft Konsonanten-Bursts wie Modulationsrauschen.
@@ -477,12 +479,12 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 elif result_audio.ndim == 1 and audio.ndim == 1:
                     result_audio[_smask_59] = audio[_smask_59]
                 logger.debug(
-                    "§2.36 phase_59 Phonem-Schutz: %d/%d Frames restauriert",
+                    "§2.36 Verarbeitungsschritt_59 Phonem-Schutz: %d/%d Frames restauriert",
                     int(np.sum(_pmask_59)),
                     len(_pmask_59),
                 )
         except Exception as _pmask59_exc:
-            logger.debug("§2.36 phase_59 Phonem-Mask (non-blocking): %s", _pmask59_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_59 Phonem-Mask (nicht blockierend): %s", _pmask59_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — Atemgeräusche und Vibrato schützen.
         # Das Gating dämpft Atemgeräusche zwischen Phrasen als "niedrig-pegel Rauschen".
@@ -509,9 +511,11 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                         result_audio[_npa_m59, :] = audio[_npa_m59, :]
                 elif result_audio.ndim == 1 and audio.ndim == 1:
                     result_audio[_npa_m59] = audio[_npa_m59]
-                logger.debug("§2.46f phase_59 NPA: %d protected samples restauriert", int(np.sum(_npa_m59)))
+                logger.debug(
+                    "§2.46f Verarbeitungsschritt_59 NPA: %d protected samples restauriert", int(np.sum(_npa_m59))
+                )
         except Exception as _npa59_exc:
-            logger.debug("§2.46f phase_59 NPA-Guard (non-blocking): %s", _npa59_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_59 NPA-Guard (nicht blockierend): %s", _npa59_exc)
 
         # §0p/V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach Modulations-NR (RELEASE_MUST §0p V19-V26)
         _p59_panns = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
@@ -526,7 +530,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 if _hnr_diag_59.get("over_cleaned"):
                     result_audio = _hnr_blended_59
             except Exception as _hnr_59_exc:
-                logger.debug("§0p HNR-Blend phase_59 (non-blocking): %s", _hnr_59_exc)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_59 (nicht blockierend): %s", _hnr_59_exc)
 
         _nt59_residual = audio - result_audio
         try:
@@ -538,9 +542,11 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 _nt59_d = _nt59_dist_fn(_nt59_residual, _mat59_guards, sr=sample_rate)
                 if _nt59_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_59: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt59_d)
+                    logger.warning(
+                        "§V19 Verarbeitungsschritt_59: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt59_d
+                    )
         except Exception as _nt59_exc:
-            logger.debug("§V19 phase_59 noise_texture non-blocking: %s", _nt59_exc)
+            logger.debug("§V19 Verarbeitungsschritt_59 noise_texture nicht blockierend: %s", _nt59_exc)
 
         if _p59_panns >= 0.25:
             try:
@@ -556,9 +562,11 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                     _need59 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
                     _wet59 = _recommend_mkk_wet(_corr59, _p59_panns, global_need=_need59)
                     result_audio = (_wet59 * result_audio + (1.0 - _wet59) * audio).astype(np.float32)
-                    logger.warning("§V20 phase_59: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr59, _wet59)
+                    logger.warning(
+                        "§V20 Verarbeitungsschritt_59: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr59, _wet59
+                    )
             except Exception as _v20_59_exc:
-                logger.debug("§V20 phase_59 mikrodynamik non-blocking: %s", _v20_59_exc)
+                logger.debug("§V20 Verarbeitungsschritt_59 mikrodynamik nicht blockierend: %s", _v20_59_exc)
 
         if any(x in _mat59_guards for x in ("shellac", "vinyl", "tape", "analog")):
             try:
@@ -568,7 +576,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
 
                 result_audio = _nfmin59(result_audio, sample_rate, _mat59_guards, original_audio=audio)
             except Exception as _v21_59_exc:
-                logger.debug("§V21 phase_59 noise_floor non-blocking: %s", _v21_59_exc)
+                logger.debug("§V21 Verarbeitungsschritt_59 noise_floor nicht blockierend: %s", _v21_59_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -581,7 +589,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 _sc_wet_59 = 0.70  # Phase-Strength −30 % (§V24)
                 result_audio = (_sc_wet_59 * result_audio + (1.0 - _sc_wet_59) * audio).astype(np.float32)
         except Exception as _sc_exc_59:  # pylint: disable=broad-except
-            logger.debug("§V24 phase_59 spectral_color non-blocking: %s", _sc_exc_59)
+            logger.debug("§V24 Verarbeitungsschritt_59 spectral_color nicht blockierend: %s", _sc_exc_59)
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel
@@ -590,7 +598,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
 
             result_audio = _opm59(audio, result_audio, None, max_delta_db=1.5)
         except Exception as _v26_59_exc:
-            logger.debug("§V26 phase_59 onset_guard non-blocking: %s", _v26_59_exc)
+            logger.debug("§V26 Verarbeitungsschritt_59 onset_guard nicht blockierend: %s", _v26_59_exc)
 
         if _p59_panns >= 0.25:
             try:
@@ -602,11 +610,11 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 if not _vibr59.ok:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§2.72 phase_59: vibrato_reduction=%.1f%% → 50%% dry-blend",
+                        "§2.72 Verarbeitungsschritt_59: vibrato_reduction=%.1f%% → 50%% dry-blend",
                         _vibr59.depth_reduction_pct,
                     )
             except Exception as _vib59_exc:
-                logger.debug("§2.72 phase_59 vibrato non-blocking: %s", _vib59_exc)
+                logger.debug("§2.72 Verarbeitungsschritt_59 vibrato nicht blockierend: %s", _vib59_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

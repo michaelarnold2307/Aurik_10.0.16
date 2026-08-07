@@ -2143,7 +2143,7 @@ class DefectPhaseMapper:
 
         variant_name = f"specialist_{defect_type.value.replace('_', '')}"
         logger.info(
-            "Specialist-Config für %s (severity=%.2f, mode_factor=%.1f, mat_factor=%.2f): phases=%s",
+            "Specialist-Config für %s (severity=%.2f, Betriebsart_factor=%.1f, mat_factor=%.2f): phases=%s",
             defect_type.value,
             severity,
             mode_factor,
@@ -2187,7 +2187,7 @@ class DefectPhaseMapper:
                     return float(default)
                 return max(0.0, min(1.0, v))
             except Exception as e:
-                logger.warning("defect_phase_mapper.py::_sanitize_01 fallback: %s", e)
+                logger.warning("defect_Verarbeitungsschritt_mapper.py::_sanitize_01 Ersatzpfad: %s", e)
                 return float(default)
 
         seen: dict[str, float] = {}  # phase_id → max_severity
@@ -2356,7 +2356,7 @@ def get_phase_defect_severity(
     for dt in target_defects:
         if _use_merged:
             # Try string key first (defect_severity_map uses string keys like "CLICKS")
-            sev = defect_severity_map.get(dt.value if hasattr(dt, "value") else str(dt))
+            sev = defect_severity_map.get(dt.value if hasattr(dt, "value") else str(dt))  # type: ignore[union-attr]
             if sev is not None:
                 found_any = True
                 max_severity = max(max_severity, float(sev))

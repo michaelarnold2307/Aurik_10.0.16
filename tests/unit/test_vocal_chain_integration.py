@@ -34,7 +34,7 @@ def _make_vocal_signal(duration_s: float = 1.0, f0: float = 220.0) -> np.ndarray
     noise = rng.standard_normal(n) * 0.02
     sig += noise
     sig = sig / (np.max(np.abs(sig)) + 1e-12) * 0.8
-    return sig.astype(np.float64)
+    return sig.astype(np.float64)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

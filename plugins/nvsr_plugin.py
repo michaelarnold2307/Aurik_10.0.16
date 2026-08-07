@@ -104,7 +104,7 @@ class NvsrPlugin:
             "model_path": str(_NVSR_ONNX_PATH),
             "model_loaded": False,
         }
-        logger.info("NvsrPlugin: productive SBR/NVSR adapter initialized (model path=%s)", _NVSR_ONNX_PATH)
+        logger.info("NvsrPlugin: productive SBR/NVSR adapter initialisiert (model path=%s)", _NVSR_ONNX_PATH)
 
     @property
     def route_metadata(self) -> dict[str, Any]:
@@ -198,7 +198,7 @@ class NvsrPlugin:
             try:
                 return self._process_onnx(audio, sr, effective_target, strength, energy_bias_db)
             except Exception as _onnx_exc:
-                logger.warning("NvsrPlugin: ONNX-Fehler → DSP-Fallback: %s", _onnx_exc)
+                logger.warning("NvsrPlugin: ONNX-Fehler → DSP-Ersatzpfad: %s", _onnx_exc)
 
         return self._process_dsp_sbr(audio, sr, effective_target, strength, energy_bias_db, panns_singing)
 
@@ -287,7 +287,7 @@ class NvsrPlugin:
             _e_out = float(np.mean(np.abs(_Zout[_hf_mask]) ** 2)) + 1e-20
             hf_added_db = float(10.0 * np.log10(_e_out / _e_in))
         except Exception:
-            logger.debug("nvsr_plugin.py::_process_dsp_sbr energy calc fallback", exc_info=True)
+            logger.debug("nvsr_plugin.py::_verarbeiten_dsp_sbr energy calc Ersatzpfad", exc_info=True)
 
         self._last_route_metadata = self._metadata(
             strategy="dsp_sbr",
@@ -351,7 +351,7 @@ class NvsrPlugin:
             channel_out = channel_out[pad_len : pad_len + n]
             if len(channel_out) < n:
                 channel_out = np.pad(channel_out, (0, n - len(channel_out)))
-            return channel_out.astype(np.float32)
+            return channel_out.astype(np.float32)  # type: ignore[no-any-return]
 
         # SBR-Kern: Spektrale Einhüllende aus Quellband ableiten
         src_mag = np.abs(Zxx[src_low_bin : src_high_bin + 1, :])  # (src_bins, T)
@@ -372,7 +372,7 @@ class NvsrPlugin:
         _frame_energy_smooth = np.convolve(_frame_energy, np.ones(5) / 5.0, mode="same")
         # §GEBOT-G04: Adaptiver Transienten-Schwellwert — abhängig von spektraler Dynamik
         # Ruhiges Material → niedrigere Schwelle, dynamisches Material → höhere Schwelle
-        _frame_energy_std = np.std(_frame_energy_smooth) / max(np.mean(_frame_energy_smooth), 1e-12)
+        _frame_energy_std = np.std(_frame_energy_smooth) / max(np.mean(_frame_energy_smooth), 1e-12)  # type: ignore[call-overload]
         _transient_mult = np.clip(5.0 - _frame_energy_std * 2.0, 2.0, 5.0)
         _is_transient = _frame_energy > np.maximum(_frame_energy_smooth * _transient_mult, 1e-8)
 
@@ -428,9 +428,9 @@ class NvsrPlugin:
         # §GEBOT-G03: Adaptiver Energy-Bias — spektrale Balance des Quellbands respektieren
         # Quelle mit viel HF-Energie → weniger Bias nötig (natürlich hell)
         # Quelle mit wenig HF-Energie → mehr Bias (konservativ, kein Übersteuern)
-        _hf_ratio = float(
-            np.mean(src_env_smooth[n_src_bins // 2 :]) / max(np.mean(src_env_smooth[: n_src_bins // 2]), 1e-12)
-        )
+        _hf_num = float(np.mean(src_env_smooth[n_src_bins // 2 :]))
+        _hf_den = max(float(np.mean(src_env_smooth[: n_src_bins // 2])), 1e-12)
+        _hf_ratio = _hf_num / _hf_den
         _hf_ratio_db = 10.0 * np.log10(max(_hf_ratio, 1e-6))
         if panns_singing >= 0.4:
             _bias_base = 0.0  # Gesang: volle HF-Präsenz

@@ -399,7 +399,7 @@ class ListeningFatigueAnalyzer:
             bark_energy: float = float(np.sum(magnitude[bark_mask] ** 2))
             bark_energies.append(bark_energy)
 
-        bark_energies = np.array(bark_energies)
+        bark_energies = np.array(bark_energies)  # type: ignore[assignment]
 
         # Normalize energies
         bark_energies_norm = bark_energies / (np.sum(bark_energies) + 1e-10)
@@ -607,20 +607,20 @@ if __name__ == "__main__":
 
     # Load audio
     audio_path = sys.argv[1]
-    logger.debug("Analyzing: %s", audio_path)
+    logger.debug("analysiere: %s", audio_path)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(audio_path)
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Analyze
     analysis = analyze_listening_fatigue(audio, sr)
 
     # Report
     logger.debug("\n" + "=" * 70)
-    logger.debug("LISTENING FATIGUE ANALYSIS")
+    logger.debug("LISTENING FATIGUE Analyse")
     logger.debug("=" * 70)
-    logger.debug("Overall Fatigue Score: %.3f (threshold: 0.90)", analysis.fatigue_score)
+    logger.debug("Overall Fatigue Wert: %.3f (Schwelle: 0.90)", analysis.fatigue_score)
     logger.debug("Status: %s", "✅ PASSED" if analysis.passed else "❌ FAILED")
     logger.debug("")
     logger.debug("Component Scores (1.0 = Perfect):")
@@ -636,5 +636,5 @@ if __name__ == "__main__":
     logger.debug("=" * 70)
 
     if not analysis.passed:
-        logger.debug("\n⚠️  WARNING: High listening fatigue detected!")
-        logger.debug("Recommendation: Apply fatigue reduction processing")
+        logger.debug("\n⚠️  WARNING: High listening fatigue erkannt!")
+        logger.debug("Recommendation: anwenden fatigue reduction processing")

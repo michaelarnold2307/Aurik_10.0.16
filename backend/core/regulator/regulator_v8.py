@@ -150,7 +150,7 @@ class RegulatorV8:
 
         for goal_name, predicted_score in predicted_goals.items():
             if goal_name not in thresholds:
-                logger.warning("No threshold for goal '%s', skipping", goal_name)
+                logger.warning("No Schwelle for goal '%s', skipping", goal_name)
                 continue
 
             threshold = thresholds[goal_name]
@@ -162,15 +162,15 @@ class RegulatorV8:
                 violation_severities[goal_name] = threshold - predicted_score
                 hard_stop_required = True
                 logger.error(
-                    f"HARD STOP: {goal_name} predicted score {predicted_score:.3f} "
-                    f"< hard stop threshold {hard_stop_threshold:.2f}"
+                    f"HARD STOP: {goal_name} predicted Wert {predicted_score:.3f} "
+                    f"< hard stop Schwelle {hard_stop_threshold:.2f}"
                 )
             elif predicted_score < threshold:
                 # MINOR: Below threshold but above hard stop
                 violations.append(goal_name)
                 violation_severities[goal_name] = threshold - predicted_score
                 logger.warning(
-                    f"Violation: {goal_name} predicted score {predicted_score:.3f} < threshold {threshold:.2f}"
+                    f"Violation: {goal_name} predicted Wert {predicted_score:.3f} < Schwelle {threshold:.2f}"
                 )
 
         # Determine violation type
@@ -240,15 +240,15 @@ class RegulatorV8:
                 violation_severities[goal_name] = threshold - processed_score
                 hard_stop_required = True
                 logger.error(
-                    f"POST-VALIDATION FAILURE: {goal_name} actual score {processed_score:.3f} "
-                    f"< hard stop threshold {hard_stop_threshold:.2f}"
+                    f"POST-Validierung Fehlschlag: {goal_name} actual Wert {processed_score:.3f} "
+                    f"< hard stop Schwelle {hard_stop_threshold:.2f}"
                 )
             elif processed_score < threshold:
                 violations.append(goal_name)
                 violation_severities[goal_name] = threshold - processed_score
                 logger.warning(
-                    f"Post-validation violation: {goal_name} actual score {processed_score:.3f} "
-                    f"< threshold {threshold:.2f}"
+                    f"Post-Validierung violation: {goal_name} actual Wert {processed_score:.3f} "
+                    f"< Schwelle {threshold:.2f}"
                 )
 
         if hard_stop_required:
@@ -433,7 +433,7 @@ if __name__ == "__main__":
     logger.debug("   Reasoning: %s\n", decision3.reasoning)
 
     # Test Case 4: Post-validation (all ok)
-    logger.debug("Test 4: Post-validation (all goals preserved)")
+    logger.debug("Test 4: Post-Validierung (all goals preserved)")
     original_goals = predicted_goals_ok
     processed_goals = predicted_goals_ok.copy()
     decision4 = regulator.post_validate(original_goals, processed_goals, thresholds)
@@ -445,7 +445,7 @@ if __name__ == "__main__":
     logger.debug("Statistics:")
     stats = regulator.get_statistics()
     logger.debug("   Allow: %s", stats["allow_count"])
-    logger.debug("   Adjust Down: %s", stats["adjust_down_count"])
+    logger.debug("   anpassen Down: %s", stats["adjust_down_count"])
     logger.debug("   Hard Stop: %s", stats["hard_stop_count"])
 
-    logger.debug("\n=== Test complete ===")
+    logger.debug("\n=== Test vollstaendig ===")

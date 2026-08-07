@@ -23,7 +23,7 @@ import logging
 from dataclasses import dataclass, field
 
 import numpy as np
-from scipy.signal import butter, sosfilt
+from scipy.signal import butter, sosfilt, sosfiltfilt
 
 logger = logging.getLogger(__name__)
 
@@ -216,9 +216,9 @@ class AdaptiveListeningEQ:
             for sos in sos_list:
                 if result_audio.ndim == 2:
                     for ch in range(min(result_audio.shape[0], 2)):
-                        result_audio[ch] = sosfiltfilt(sos, result_audio[ch])
+                        result_audio[ch] = sosfiltfilt(sos, result_audio[ch])  # type: ignore[name-defined]
                 else:
-                    result_audio = sosfiltfilt(sos, result_audio)
+                    result_audio = sosfiltfilt(sos, result_audio)  # type: ignore[name-defined]
 
             result_audio = np.clip(np.nan_to_num(result_audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(
                 np.float32
@@ -249,7 +249,7 @@ class AdaptiveListeningEQ:
             )
 
         except Exception as exc:
-            logger.warning("AdaptiveEQ fehlgeschlagen: %s — Original zurück", exc)
+            logger.warning("AdaptiveEQ fehlgeschlagen: %s — Originalsignal zurück", exc)
             return AdaptiveEQResult(audio=audio)
 
     # ── Interne Methoden ──────────────────────────────────────────────
@@ -331,7 +331,7 @@ class AdaptiveListeningEQ:
                 # Skaliere den Gain
                 gain_linear = 10 ** (gain_db / 20.0)
                 sos[:, :3] *= gain_linear
-                return sos
+                return sos  # type: ignore[no-any-return]
             except AttributeError:
                 # Fallback: butter bandpass
                 nyq = sr / 2
@@ -340,8 +340,15 @@ class AdaptiveListeningEQ:
                 sos = butter(2, [lo_norm, hi_norm], btype="band", output="sos")
                 gain_linear = 10 ** (gain_db / 20.0)
                 sos[:, :3] *= gain_linear
-                return sos
+                return sos  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.debug("AdaptiveEQ band_eq failed (%.0f-%.0f Hz): %s", lo, hi, exc)
+            logger.debug("AdaptiveEQ band_eq fehlgeschlagen (%.0f-%.0f Hz): %s", lo, hi, exc)
             return None
+
+
+def apply_adaptive_eq(audio: np.ndarray, sr: int, mode: str = "headphones") -> np.ndarray:
+    """Free-Function-Wrapper um `AdaptiveListeningEQ.analyze_and_apply()`,
+    der nur das bearbeitete Audio zurückgibt (für Aufrufer ohne Interesse
+    an den Korrektur-Metadaten)."""
+    return AdaptiveListeningEQ.analyze_and_apply(audio, sr, mode=mode).audio

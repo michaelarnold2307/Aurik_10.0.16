@@ -86,7 +86,7 @@ class PipelineGuard:
         try:
             self._original_profile = self._dp().capture_original(audio, sr)
         except Exception as e:
-            logger.debug("PipelineGuard: dynamics capture error: %s", e)
+            logger.debug("PipelineGuard: dynamics Erfassung error: %s", e)
 
         # CLP: Kritische Frequenzzonen analysieren
         try:
@@ -100,7 +100,7 @@ class PipelineGuard:
                 {z: f"{s:.2f}" for z, s in self._clp_result.zone_scores.items()},
             )
         except Exception as e:
-            logger.debug("PipelineGuard: CLP analysis error: %s", e)
+            logger.debug("PipelineGuard: CLP Analyse error: %s", e)
 
         # Whisper: Leise Gesangsdetails erkennen
         try:
@@ -115,7 +115,7 @@ class PipelineGuard:
                     self._whisper_result.max_attenuation_db,
                 )
         except Exception as e:
-            logger.debug("PipelineGuard: Whisper analysis error: %s", e)
+            logger.debug("PipelineGuard: Whisper Analyse error: %s", e)
 
         return len(issues) == 0, issues
 
@@ -126,30 +126,30 @@ class PipelineGuard:
         try:
             self._wd().on_phase_start(name)
         except Exception as e:
-            logger.debug("PipelineGuard: phase_start error: %s", e)
+            logger.debug("PipelineGuard: Verarbeitungsschritt_start error: %s", e)
 
     def phase_end(self, name: str, audio: np.ndarray, sr: int) -> None:
         try:
             self._wd().on_phase_end(name, audio, sr)
         except Exception as e:
-            logger.debug("PipelineGuard: phase_end watchdog error: %s", e)
+            logger.debug("PipelineGuard: Verarbeitungsschritt_end watchdog error: %s", e)
 
         try:
             self._dp().check_phase(name, audio, sr)
         except Exception as e:
-            logger.debug("PipelineGuard: phase_end dynamics error: %s", e)
+            logger.debug("PipelineGuard: Verarbeitungsschritt_end dynamics error: %s", e)
 
     def record_strength(self, value: float) -> None:
         try:
             self._wd().record_cumulative_effect(value)
         except Exception as e:
-            logger.debug("PipelineGuard: record_strength error: %s", e)
+            logger.debug("PipelineGuard: aufzeichnen_strength error: %s", e)
 
     def record_silent_exception(self, context: str = "") -> None:
         try:
             self._wd().record_silent_exception(context)
         except Exception as e:
-            logger.debug("PipelineGuard: record_silent_exception error: %s", e)
+            logger.debug("PipelineGuard: aufzeichnen_silent_exception error: %s", e)
 
     # ── §v10.106 Bug-Pattern-Klassifikation ────────────────────────────
     # Klassifiziert Exceptions nach den 6 bekannten Anti-Patterns aus der
@@ -221,14 +221,16 @@ class PipelineGuard:
         if self._original_profile is not None:
             try:
                 if self._dp().should_restore():
-                    logger.info("PipelineGuard: Auto-Recovery Dynamics (loss=%.1fdB)", self._dp().cumulative_loss_db)
+                    logger.info(
+                        "PipelineGuard: Auto-Wiederherstellung Dynamics (loss=%.1fdB)", self._dp().cumulative_loss_db
+                    )
                     from backend.core.dynamics_preserver import restore_dynamics
 
                     result = restore_dynamics(result, sr, self._original_profile, strength=0.7)
                     report["dynamics_restored"] = True
                     report["dynamics_loss_db"] = round(self._dp().cumulative_loss_db, 2)
             except Exception as e:
-                logger.debug("PipelineGuard: Dynamics recovery error: %s", e)
+                logger.debug("PipelineGuard: Dynamics Wiederherstellung error: %s", e)
 
         return result, report
 
@@ -267,7 +269,7 @@ class PipelineGuard:
             if hpe.issues:
                 report["pleasantness_issues"] = hpe.issues
         except Exception as e:
-            logger.debug("PipelineGuard: HPE unavailable: %s", e)
+            logger.debug("PipelineGuard: HPE nicht verfuegbar: %s", e)
 
         # Adaptive Goal Evaluation: dynamische Schwellen aus Materialphysik
         try:
@@ -471,7 +473,7 @@ class PipelineGuard:
             if 0 <= frame_idx < len(mask):
                 return float(mask[frame_idx])
         except Exception as _e:
-            logger.debug("pipeline_guard: non-critical exception: %s", _e)
+            logger.debug("pipeline_guard: unkritisch exception: %s", _e)
         return 0.0
 
     def check_and_restore_dynamics(self, audio: np.ndarray, sr: int, phase_name: str) -> np.ndarray:
@@ -489,17 +491,19 @@ class PipelineGuard:
                 from backend.core.dynamics_preserver import restore_dynamics
 
                 logger.info(
-                    "PipelineGuard: Auto-Dynamics-Recovery after %s (loss=%.1fdB)", phase_name, dyn.cumulative_loss_db
+                    "PipelineGuard: Auto-Dynamics-Wiederherstellung after %s (loss=%.1fdB)",
+                    phase_name,
+                    dyn.cumulative_loss_db,
                 )
                 return restore_dynamics(audio, sr, self._original_profile, strength=0.5)
             if loss.severity == "moderate":
                 logger.debug(
-                    "PipelineGuard: Dynamics loss after %s: %.1fdB (moderate, no recovery)",
+                    "PipelineGuard: Dynamics loss after %s: %.1fdB (moderate, no Wiederherstellung)",
                     phase_name,
                     loss.total_loss_db,
                 )
         except Exception as e:
-            logger.debug("PipelineGuard: dynamics check error: %s", e)
+            logger.debug("PipelineGuard: dynamics Pruefung error: %s", e)
         return audio
 
     # ── Combined NR Protection (CLP + Whisper) ───────────────────────
@@ -541,7 +545,7 @@ class PipelineGuard:
         try:
             self._wd().reset()
         except Exception as _e:
-            logger.debug("pipeline_guard: non-critical exception: %s", _e)
+            logger.debug("pipeline_guard: unkritisch exception: %s", _e)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

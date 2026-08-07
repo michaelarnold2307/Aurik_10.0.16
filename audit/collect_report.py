@@ -1,10 +1,11 @@
 # Typing-Imports für Typannotationen
 import json
 import os
+from typing import Any
 
 
 def collect_results(result_dir="results_sota"):
-    summary = {"jobs": [], "scores": [], "errors": [], "policy_events": []}
+    summary: Any = {"jobs": [], "scores": [], "errors": [], "policy_events": []}
     for fname in os.listdir(result_dir):
         if fname.startswith("result_") and fname.endswith(".json"):
             with open(os.path.join(result_dir, fname)) as f:

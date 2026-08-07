@@ -143,7 +143,7 @@ class AdaptiveTonalBalanceRestorer:
         ]
 
         # Metrics storage for reporting
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def log_contract(self):
         """Protokolliert DSPContract for auditability."""
@@ -255,7 +255,7 @@ class AdaptiveTonalBalanceRestorer:
         # Convert dB to linear
         correction_linear = 10 ** (correction_db / 20)
 
-        return correction_linear
+        return correction_linear  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -322,7 +322,7 @@ class AdaptiveTonalBalanceRestorer:
         # Quality gate: Prevent clipping
         peak = np.max(np.abs(audio_corrected))
         if peak > 0.99:
-            logger.warning("[QualityGate] Warning: Near-clipping detected (peak=%.3f), applying limiter", peak)
+            logger.warning("[QualityGate] Warning: Near-clipping erkannt (peak=%.3f), applying limiter", peak)
             audio_corrected = audio_corrected / (peak / 0.95)
 
         # Store correction amount for reporting
@@ -333,7 +333,7 @@ class AdaptiveTonalBalanceRestorer:
         audio_corrected = np.nan_to_num(audio_corrected, nan=0.0, posinf=0.0, neginf=0.0)
         audio_corrected = np.clip(audio_corrected, -1.0, 1.0)
 
-        logger.info("[AdaptiveTonalBalance] Applied %.1f%% brightness correction", correction_amount * 100)
+        logger.info("[AdaptiveTonalBalance] angewendet %.1f%% brightness correction", correction_amount * 100)
 
         return audio_corrected
 
@@ -418,7 +418,7 @@ class LowEndClarityEnhancer:
         self.mud_zone = (120, 300)  # Muddiness zone (reduce)
         self.clarity_zone = (300, 500)  # Clarity zone (enhance definition)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def log_contract(self):
         logger.debug("[DSPContract LowEndClarityEnhancer] %s", asdict(low_end_clarity_contract))
@@ -504,7 +504,7 @@ class LowEndClarityEnhancer:
         # Convert to linear
         eq_linear = 10 ** (eq_db / 20)
 
-        return eq_linear
+        return eq_linear  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -569,7 +569,7 @@ class LowEndClarityEnhancer:
 
         self.metrics["correction_db"] = -6.0 * muddiness * self.strength * self.target_tightness
 
-        logger.info("[LowEndClarity] Applied %.1f dB mud reduction", self.metrics["correction_db"])
+        logger.info("[LowEndClarity] angewendet %.1f dB mud reduction", self.metrics["correction_db"])
 
         return audio_processed
 
@@ -659,7 +659,7 @@ class FrequencyDeMasker:
         self.demasking_strength = np.clip(demasking_strength, 0.0, 1.0)
         self.preserve_balance = np.clip(preserve_balance, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def log_contract(self):
         logger.debug("[DSPContract FrequencyDeMasker] %s", asdict(frequency_demasking_contract))
@@ -709,7 +709,7 @@ class FrequencyDeMasker:
             band_energy_db = 20 * np.log10(band_energy + 1e-8)
             band_energies_db.append(band_energy_db)
 
-        band_energies_db = np.array(band_energies_db)
+        band_energies_db = np.array(band_energies_db)  # type: ignore[assignment]
 
         # Detect masking: Compare each band to neighbors
         # Masked if significantly lower energy than neighbors
@@ -786,7 +786,7 @@ class FrequencyDeMasker:
         # Convert to linear
         eq_linear = 10 ** (eq_db / 20)
 
-        return eq_linear
+        return eq_linear  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -814,10 +814,10 @@ class FrequencyDeMasker:
         analysis = self.analyze_masking(audio, sr)
         self.metrics = {"masking_detected": analysis["masking_count"], "bands_adjusted": analysis["masking_count"]}
 
-        logger.info("[FrequencyDeMasker] Detected %s masked bands out of %s", analysis["masking_count"], self.n_bands)
+        logger.info("[FrequencyDeMasker] erkannt %s masked bands out of %s", analysis["masking_count"], self.n_bands)
 
         if analysis["masking_count"] == 0:
-            logger.info("[FrequencyDeMasker] No masking detected, no correction needed")
+            logger.info("[FrequencyDeMasker] No masking erkannt, no correction needed")
             return audio
 
         # STFT
@@ -849,7 +849,7 @@ class FrequencyDeMasker:
         self.metrics["clarity_improvement"] = analysis["masking_count"] * 10  # % improvement estimate
 
         logger.info(
-            f"[FrequencyDeMasker] Applied de-masking to {analysis['masking_count']} bands, "
+            f"[FrequencyDeMasker] angewendet de-masking to {analysis['masking_count']} bands, "
             f"estimated {self.metrics['clarity_improvement']:.0f}% clarity improvement"
         )
 
@@ -950,7 +950,7 @@ class TonalBalanceRestorer:
             audio_processed = self.demasker.process(audio_processed, sr)
 
         logger.info("\n" + "=" * 80)
-        logger.info("TONAL BALANCE RESTORATION COMPLETE")
+        logger.info("TONAL BALANCE RESTORATION vollstaendig")
         logger.info("=" * 80 + "\n")
 
         return audio_processed
@@ -991,7 +991,7 @@ if __name__ == "__main__":
     logger.info(str("=" * 80))
 
     if len(sys.argv) < 3:
-        logger.info("\nUsage: python tonal_balance_restorer.py <input.wav> <output.wav> [options]")
+        logger.info("\nUsage: python tonal_balance_restorer.py <Eingabe.wav> <Ausgabe.wav> [options]")
         logger.info("\nOptions:")
         logger.info("  --brightness <0.0-1.0>     Target brightness (default: 0.5)")
         logger.info("  --tightness <0.0-1.0>      Low-end tightness (default: 0.6)")
@@ -1041,19 +1041,19 @@ if __name__ == "__main__":
             i += 1
 
     # Load audio
-    logger.info("\nLoading: %s", input_file)
+    logger.info("\nlade: %s", input_file)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(input_file)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Ensure mono for processing (or handle stereo properly)
     if audio.ndim > 1:
-        logger.info("Input is stereo (%s channels), processing both channels", audio.shape[1])
+        logger.info("Eingabe is stereo (%s channels), processing both channels", audio.shape[1])
         audio = audio.T  # Shape: (channels, samples)
 
     # Process
-    restorer = TonalBalanceRestorer(**options)
+    restorer = TonalBalanceRestorer(**options)  # type: ignore[arg-type]
     audio_restored = restorer.process(audio, sr)
 
     # Get metrics
@@ -1062,10 +1062,10 @@ if __name__ == "__main__":
     logger.info(str(metrics))
 
     # Save
-    logger.info("\nSaving: %s", output_file)
+    logger.info("\nspeichere: %s", output_file)
     if audio_restored.ndim > 1:
         audio_restored = audio_restored.T  # Back to (samples, channels)
     sf.write(output_file, audio_restored, sr)
 
-    logger.info("\n✅ Tonal Balance Restoration complete!")
+    logger.info("\n✅ Tonal Balance Restoration vollstaendig!")
     logger.info("Audio now has professional-grade tonal balance and clarity.")

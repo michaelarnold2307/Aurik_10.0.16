@@ -27,6 +27,7 @@ Date: 2026-07-13
 """
 
 import logging
+import os
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
@@ -66,7 +67,7 @@ class ParallelPhaseExecutor:
 
     def __init__(self, max_workers: int | None = None):
         # import os → module level (§v10.105)
-        self.max_workers = max_workers or max(1, os.cpu_count() - 1 if os.cpu_count() else 2)
+        self.max_workers = max_workers or max(1, os.cpu_count() - 1 if os.cpu_count() else 2)  # type: ignore[name-defined]
         logger.info("ParallelPhaseExecutor: max_workers=%d (parallele Arbeiter)", self.max_workers)
 
     def execute_groups(
@@ -97,7 +98,7 @@ class ParallelPhaseExecutor:
                 try:
                     audio_after_seq = phase_funcs[phase_id](audio_after_seq, sr, context)
                 except Exception as e:
-                    logger.warning("Sequenzielle Phase %s fehlgeschlagen: %s", phase_id, e)
+                    logger.warning("Sequenzielle Verarbeitungsschritt %s fehlgeschlagen: %s", phase_id, e)
 
         # Step 2: Run parallel groups
         results = {}  # group_name → processed audio for that group's band
@@ -144,7 +145,7 @@ class ParallelPhaseExecutor:
             try:
                 current = phase_funcs[phase_id](current, sr, context)
             except Exception as e:
-                logger.debug("Phase %s in Gruppe fehlgeschlagen: %s", phase_id, e)
+                logger.debug("Verarbeitungsschritt %s in Gruppe fehlgeschlagen: %s", phase_id, e)
         return current
 
 

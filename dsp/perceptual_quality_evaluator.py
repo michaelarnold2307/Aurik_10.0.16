@@ -130,7 +130,7 @@ class AdaptivePerceptualQualityEvaluator:
                     if math.isfinite(cdpam_score):
                         results["cdpam"] = cdpam_score  # niedriger = besser
                 except Exception as e:
-                    self._logger.debug("CDPAM-Fehler (ignoriert): %s", e)
+                    self._logger.debug("CDPAM-Fehler (ignoriert): %s", e)  # type: ignore[attr-defined]
 
             # HINWEIS: DNSMOS / NISQA / PESQ / STOI werden hier absichtlich
             # NICHT berechnet — Sprach-Metriken, ungeeignet für Musik (Aurik 10.0.0 Pflicht).
@@ -153,7 +153,7 @@ class AdaptivePerceptualQualityEvaluator:
             arith_mean = float(np.mean(mag))
             return float(np.clip(geo_mean / (arith_mean + 1e-10), 0.0, 1.0))
         except Exception:
-            logger.warning("perceptual_quality_evaluator.py::_spectral_flatness fallback", exc_info=True)
+            logger.warning("perceptual_quality_evaluator.py::_spectral_flatness Ersatzpfad", exc_info=True)
             return 0.5
 
     def _audit_log(self, results: dict, sr: int | None = None) -> None:

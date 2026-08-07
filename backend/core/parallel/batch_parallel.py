@@ -163,7 +163,7 @@ class BatchParallelProcessor:
             >>> results = processor.process_batch(tasks, restore_audio)
         """
         if not tasks:
-            logger.warning("No tasks to process")
+            logger.warning("No tasks to verarbeiten")
             return []
 
         logger.info("Processing %s files with %s workers", len(tasks), self.n_jobs)
@@ -206,11 +206,13 @@ class BatchParallelProcessor:
                         if result.status == ProcessingStatus.COMPLETED:
                             completed_count += 1
                             if self.show_progress:
-                                logger.info("✓ Completed: %s (%.2fs)", result.input_path.name, result.processing_time)
+                                logger.info(
+                                    "✓ abgeschlossen: %s (%.2fs)", result.input_path.name, result.processing_time
+                                )
                         elif result.status == ProcessingStatus.FAILED:
                             failed_count += 1
                             if self.show_progress:
-                                logger.error("❌ Failed: %s - %s", result.input_path.name, result.error)
+                                logger.error("❌ fehlgeschlagen: %s - %s", result.input_path.name, result.error)
 
                         # Progress callback
                         if progress_callback:
@@ -224,7 +226,7 @@ class BatchParallelProcessor:
                             progress_callback(progress)
 
                     except Exception as e:
-                        logger.error("Task %s failed with exception: %s", task.task_id, e)
+                        logger.error("Task %s fehlgeschlagen with exception: %s", task.task_id, e)
                         results.append(
                             FileResult(
                                 task_id=task.task_id,
@@ -253,7 +255,12 @@ class BatchParallelProcessor:
         self._processing_stats["total_successes"] += completed_count  # type: ignore[operator]
         self._processing_stats["total_failures"] += failed_count  # type: ignore[operator]
 
-        logger.info("Batch complete: %s succeeded, %s failed, %.2fs total", completed_count, failed_count, total_time)
+        logger.info(
+            "Batch vollstaendig: %s succeeded, %s fehlgeschlagen, %.2fs total",
+            completed_count,
+            failed_count,
+            total_time,
+        )
 
         # Sort results by task_id
         results.sort(key=lambda r: r.task_id)

@@ -187,7 +187,7 @@ def _proxy_impulse_ratio(audio: np.ndarray) -> float:
         p999 = float(np.percentile(np.abs(mono), 99.9))
         return float(p999 / rms)
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_impulse_ratio fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_impulse_Verhaeltnis Ersatzpfad: %s", e)
         return 1.0
 
 
@@ -218,7 +218,7 @@ def _proxy_hf_noise_floor(audio: np.ndarray, sr: int) -> float:
                 return float(np.percentile(quiet_energies, 5))
             return float(np.percentile(frame_energies, 5))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_hf_noise_floor fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_hf_noise_floor Ersatzpfad: %s", e)
     return 0.0
 
 
@@ -261,7 +261,7 @@ def _compute_hf_noise_audibility(audio: np.ndarray, sr: int) -> float:
             return 0.0
         return float(np.clip(np.percentile(audible_scores, 80), 0.0, 1.0))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_compute_hf_noise_audibility fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_berechnen_hf_noise_audibility Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -302,7 +302,7 @@ def _compute_transient_harshness(audio: np.ndarray, sr: int) -> float:
         ratio = burst / ref
         return float(np.clip(ratio / 6.0, 0.0, 1.0))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_compute_transient_harshness fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_berechnen_transient_harshness Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -337,7 +337,7 @@ def _compute_quasi_peak_burstiness(audio: np.ndarray, sr: int) -> float:
         ratio = p95 / med
         return float(np.clip((ratio - 1.0) / 8.0, 0.0, 1.0))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_compute_quasi_peak_burstiness fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_berechnen_quasi_peak_burstiness Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -372,7 +372,7 @@ def _compute_modulation_roughness(audio: np.ndarray, sr: int) -> float:
         ratio = jitter / ref
         return float(np.clip(ratio / 0.35, 0.0, 1.0))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_compute_modulation_roughness fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_berechnen_modulation_roughness Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -488,7 +488,7 @@ def _proxy_hum_energy(audio: np.ndarray, sr: int) -> float:
                     energy += float(mag[b])
         return float(energy)
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_hum_energy fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_hum_energy Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -502,7 +502,7 @@ def _proxy_low_freq_energy(audio: np.ndarray, sr: int) -> float:
         if bin_80 > 0 and bin_80 < len(mag):
             return float(np.mean(mag[:bin_80]))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_low_freq_energy fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_low_freq_energy Ersatzpfad: %s", e)
     return 0.0
 
 
@@ -512,7 +512,7 @@ def _proxy_dc_offset(audio: np.ndarray) -> float:
         mono = _as_mono(audio)
         return float(abs(np.mean(mono)))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_dc_offset fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_dc_offset Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -533,7 +533,7 @@ def _proxy_dropout_ratio(audio: np.ndarray, sr: int) -> float:
                 silent += 1
         return float(silent / n_frames)
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_dropout_ratio fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_dropout_Verhaeltnis Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -549,7 +549,7 @@ def _proxy_mono_compat(audio: np.ndarray) -> float:
         side_rms = float(np.sqrt(np.mean(side**2)) + 1e-12)
         return float(np.clip(mid_rms / (mid_rms + side_rms + 1e-12), 0.0, 1.0))
     except Exception as e:
-        logger.warning("phase_defect_verifier.py::_proxy_mono_compat fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_defect_verifier.py::_proxy_mono_compat Ersatzpfad: %s", e)
         return 1.0
 
 
@@ -649,7 +649,7 @@ class PhaseDefectVerifier:
                         # Convert DefectType enum values to string names
                         self._reverse_map = {pid: [dt.name for dt in dtypes] for pid, dtypes in raw.items()}
                     except Exception as exc:
-                        logger.debug("PDV: reverse map load failed: %s", exc)
+                        logger.debug("PDV: reverse map laden fehlgeschlagen: %s", exc)
                         self._reverse_map = {}
         return self._reverse_map or {}
 
@@ -672,7 +672,7 @@ class PhaseDefectVerifier:
                 result[dname] = _compute_proxy(pname, audio, sr)
             return result
         except Exception as exc:
-            logger.debug("PDV.measure_proxies(%s) failed: %s", phase_id, exc)
+            logger.debug("PDV.measure_proxies(%s) fehlgeschlagen: %s", phase_id, exc)
             return {}
 
     def check(
@@ -843,9 +843,9 @@ class PhaseDefectVerifier:
                             )
                             break
                     except Exception as _rw_exc:
-                        logger.debug("PDV reweight alpha=%.2f failed for %s: %s", alpha, phase_id, _rw_exc)
+                        logger.debug("PDV reweight alpha=%.2f fehlgeschlagen for %s: %s", alpha, phase_id, _rw_exc)
 
-            result = DefectVerificationResult(
+            result = DefectVerificationResult(  # type: ignore[call-arg]
                 phase_id=phase_id,
                 targeted_defects=list(proxies_before.keys()),
                 proxies_before=proxies_before,
@@ -858,7 +858,7 @@ class PhaseDefectVerifier:
 
             if rollback:
                 logger.warning(
-                    "§PDV rollback: %s worsened %s by %.1f%% (pre=%.4f, post=%.4f) — reverting to pre-phase audio",
+                    "§PDV rollback: %s worsened %s by %.1f%% (pre=%.4f, post=%.4f) — reverting to pre-Verarbeitungsschritt audio",
                     phase_id,
                     worst_defect,
                     worst_change * 100.0,
@@ -867,7 +867,7 @@ class PhaseDefectVerifier:
                 )
             elif worst_change > 0.0:
                 logger.debug(
-                    "§PDV: %s minor drift on %s (+%.1f%%) — below rollback threshold, keeping",
+                    "§PDV: %s minor drift on %s (+%.1f%%) — below rollback Schwelle, keeping",
                     phase_id,
                     worst_defect,
                     worst_change * 100.0,
@@ -891,10 +891,10 @@ class PhaseDefectVerifier:
                     pdv_list.append(
                         {
                             "phase_id": phase_id,
-                            "targeted_defects": result.targeted_defects,
-                            "worst_defect": result.worst_defect,
-                            "worst_relative_change": result.worst_relative_change,
-                            "rollback": result.rollback_triggered,
+                            "targeted_defects": result.targeted_defects,  # type: ignore[attr-defined]
+                            "worst_defect": result.worst_defect,  # type: ignore[attr-defined]
+                            "worst_relative_change": result.worst_relative_change,  # type: ignore[attr-defined]
+                            "rollback": result.rollback_triggered,  # type: ignore[attr-defined]
                             "reweight_applied": _reweight_applied,
                             "reweight_alpha": _reweight_alpha,
                             "reweight_strategy": _reweight_strategy,
@@ -906,12 +906,12 @@ class PhaseDefectVerifier:
                         }
                     )
                 except Exception as e:
-                    logger.warning("phase_defect_verifier.py::unbekannter Fallback: %s", e)
+                    logger.warning("Verarbeitungsschritt_defect_verifier.py::unbekannter Ersatzpfad: %s", e)
 
             return audio_before if rollback else audio_after
 
         except Exception as exc:
-            logger.debug("PDV.check(%s) failed: %s — returning audio_after unchanged", phase_id, exc)
+            logger.debug("PDV.Pruefung(%s) fehlgeschlagen: %s — returning audio_after unchanged", phase_id, exc)
             return audio_after
 
     def _record_telemetry(self, result: DefectVerificationResult) -> None:
@@ -920,13 +920,13 @@ class PhaseDefectVerifier:
                 self._session_telemetry.append(
                     {
                         "phase_id": result.phase_id,
-                        "worst_defect": result.worst_defect,
-                        "worst_relative_change": result.worst_relative_change,
-                        "rollback": result.rollback_triggered,
+                        "worst_defect": result.worst_defect,  # type: ignore[attr-defined]
+                        "worst_relative_change": result.worst_relative_change,  # type: ignore[attr-defined]
+                        "rollback": result.rollback_triggered,  # type: ignore[attr-defined]
                     }
                 )
         except Exception as e:
-            logger.warning("phase_defect_verifier.py::_record_telemetry fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_defect_verifier.py::_aufzeichnen_telemetry Ersatzpfad: %s", e)
 
     def get_session_summary(self) -> dict:
         """Gibt a summary of all PDV checks in this session zurück."""
@@ -943,7 +943,7 @@ class PhaseDefectVerifier:
                 "miss_phases": [e["phase_id"] for e in misses],
             }
         except Exception as e:
-            logger.warning("phase_defect_verifier.py::get_session_summary fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_defect_verifier.py::get_Sitzung_summary Ersatzpfad: %s", e)
             return {}
 
     def reset_session(self) -> None:

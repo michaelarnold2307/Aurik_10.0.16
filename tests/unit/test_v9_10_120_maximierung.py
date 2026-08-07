@@ -19,7 +19,7 @@ SR = 48000
 
 def _tone(freq: float, dur: float = 2.0, amp: float = 0.3) -> np.ndarray:
     t = np.arange(int(SR * dur)) / SR
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _rich_music(dur: float = 2.0, seed: int = 42) -> np.ndarray:
@@ -49,7 +49,7 @@ def _warm_signal(dur: float = 2.0) -> np.ndarray:
     sig += 0.10 * np.sin(2 * np.pi * 4 * f0 * t)  # H4 (even)
     sig += 0.03 * np.sin(2 * np.pi * 3 * f0 * t)  # H3 (odd, small)
     sig += 0.02 * np.sin(2 * np.pi * 5 * f0 * t)  # H5 (odd, small)
-    return np.clip(sig, -1.0, 1.0).astype(np.float32)
+    return np.clip(sig, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _dynamic_music(dur: float = 3.0, seed: int = 99) -> np.ndarray:
@@ -59,7 +59,7 @@ def _dynamic_music(dur: float = 3.0, seed: int = 99) -> np.ndarray:
     envelope = 0.15 + 0.35 * np.sin(2 * np.pi * 0.5 * t)  # slow swell
     sig = envelope * np.sin(2 * np.pi * 440 * t)
     sig += 0.02 * rng.normal(0, 1, len(t))
-    return np.clip(sig, -1.0, 1.0).astype(np.float32)
+    return np.clip(sig, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -401,7 +401,7 @@ class TestHarmonization:
             name = type(m).__name__
             # Some metrics need reference; skip those needing 2 signals
             try:
-                score = m.measure(audio, SR)
+                score = m.measure(audio, SR)  # type: ignore[attr-defined]
             except TypeError:
                 # Some only accept (audio, ref, sr) — skip
                 continue
@@ -463,7 +463,7 @@ class TestNaNInfGuards:
 
         audio = np.zeros(SR * 2, dtype=np.float32)
         for MetricCls in [BrillanzMetric, TransparenzMetric, WaermeMetric, NatuerlichkeitMetric]:
-            score = MetricCls().measure(audio, SR)
+            score = MetricCls().measure(audio, SR)  # type: ignore[attr-defined]
             assert np.isfinite(score), f"{MetricCls.__name__} returned non-finite: {score}"
 
     def test_37_very_short_audio(self):
@@ -476,7 +476,7 @@ class TestNaNInfGuards:
 
         audio = np.array([0.1, -0.1, 0.05], dtype=np.float32)
         for MetricCls in [BrillanzMetric, TransparenzMetric, WaermeMetric, NatuerlichkeitMetric]:
-            score = MetricCls().measure(audio, SR)
+            score = MetricCls().measure(audio, SR)  # type: ignore[attr-defined]
             assert np.isfinite(score), f"{MetricCls.__name__} NaN on short audio"
 
     def test_38_nan_input_guarded(self):

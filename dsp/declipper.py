@@ -159,7 +159,7 @@ class Declipper:
         _, restored = _istft(Zxx_clean, nperseg=self._NPERSEG, noverlap=noverlap)
         restored = np.nan_to_num(restored[:n], nan=0.0, posinf=0.0, neginf=0.0)
 
-        return np.clip(restored, -1.0, 1.0).astype(np.float32)
+        return np.clip(restored, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """Entfernt Clipping-Artefakte.
@@ -179,7 +179,7 @@ class Declipper:
                 result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
                 return np.clip(result, -1.0, 1.0).astype(np.float32)
             except Exception as exc:
-                logger.warning("[Declipper] ML-Inferenz fehlgeschlagen (%s), nutze DSP-Fallback.", exc)
+                logger.warning("[Declipper] ML-Inferenz fehlgeschlagen (%s), nutze DSP-Ersatzpfad.", exc)
 
         # DSP-Fallback: kanalweise
         audio_f32 = np.nan_to_num(audio.astype(np.float32), nan=0.0, posinf=1.0, neginf=-1.0)

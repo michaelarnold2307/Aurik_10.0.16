@@ -26,7 +26,7 @@ SR = 48000
 
 def _sine(freq: float = 440.0, secs: float = 2.0) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(secs: float = 2.0, amp: float = 0.1) -> np.ndarray:
@@ -85,17 +85,17 @@ class TestAudioEmbeddingDataclass:
 
     def test_07_embedding_vector_is_ndarray(self):
         emb = self._make_embedding()
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert isinstance(vec, np.ndarray)
 
     def test_08_embedding_no_nan(self):
         emb = self._make_embedding()
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isnan(vec))
 
     def test_09_embedding_no_inf(self):
         emb = self._make_embedding()
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isinf(vec))
 
     def test_10_cosine_similarity_same_signal_is_one(self):
@@ -150,7 +150,7 @@ class TestEmbedAudioMono:
     def test_17_mono_2s_no_nan(self):
         audio = _sine(secs=2.0)
         emb = embed_audio(audio, SR)
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isnan(vec))
 
     def test_18_mono_noise_returns_embedding(self):
@@ -166,7 +166,7 @@ class TestEmbedAudioMono:
     def test_20_silence_no_nan(self):
         audio = np.zeros(2 * SR, dtype=np.float32)
         emb = embed_audio(audio, SR)
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isnan(vec))
 
     def test_21_clipped_audio_safe(self):
@@ -194,7 +194,7 @@ class TestEmbedAudioStereo:
     def test_24_stereo_no_nan(self):
         audio = _stereo(secs=2.0)
         emb = embed_audio(audio, SR)
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isnan(vec))
 
     def test_25_stereo_vs_mono_different(self):
@@ -256,7 +256,7 @@ class TestEdgeCases:
     def test_32_embed_no_nan_with_full_scale(self):
         audio = np.ones(2 * SR, dtype=np.float32)
         emb = embed_audio(audio, SR)
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert not np.any(np.isnan(vec))
 
     def test_33_nan_input_produces_finite_embedding(self):
@@ -269,7 +269,7 @@ class TestEdgeCases:
             # Explizite Exception ist akzeptabel
             pytest.skip(f"embed_audio wirft bei NaN-Eingang Exception (akzeptabel): {exc}")
             return
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert np.all(np.isfinite(vec)), (
             f"NaN-Eingang ergab nicht-finites Embedding: {np.sum(~np.isfinite(vec))} nicht-finite Werte"
         )
@@ -290,5 +290,5 @@ class TestEdgeCases:
     def test_36_embed_returns_finite_values(self):
         audio = _sine(secs=2.0)
         emb = embed_audio(audio, SR)
-        vec = emb.vector if hasattr(emb, "vector") else emb.embedding
+        vec = emb.vector if hasattr(emb, "vector") else emb.embedding  # type: ignore[attr-defined]
         assert np.all(np.isfinite(vec))

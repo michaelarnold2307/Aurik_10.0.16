@@ -72,7 +72,7 @@ def estimate_snr(audio: np.ndarray, sr: int) -> float:
         energy = np.mean(frame**2)
         energies.append(energy)
 
-    energies = np.array(energies)
+    energies = np.array(energies)  # type: ignore[assignment]
 
     # Signal = top 25% of energy
     signal_threshold = np.percentile(energies, 75)
@@ -328,10 +328,10 @@ def check_temporal_continuity(audio: np.ndarray, sr: int) -> float:
         energy = np.mean(frame)
         frame_energies.append(energy)
 
-    frame_energies = np.array(frame_energies)
+    frame_energies = np.array(frame_energies)  # type: ignore[assignment]
 
     # Count sudden drops (> 20 dB)
-    frame_energies_db = 20 * np.log10(frame_energies + 1e-10)
+    frame_energies_db = 20 * np.log10(frame_energies + 1e-10)  # type: ignore[operator]
     drops = np.abs(np.diff(frame_energies_db)) > 20
 
     n_drops = np.sum(drops)
@@ -419,7 +419,7 @@ class DeNoiseSafety(BaseSafetyWrapper):
 
         # Classify noise type
         noise_type, noise_conf = classify_noise_type(audio, sr)
-        metadata["noise_type"] = noise_type
+        metadata["noise_type"] = noise_type  # type: ignore[assignment]
         metadata["noise_classification_confidence"] = noise_conf
 
         if noise_conf < 0.5:
@@ -427,7 +427,7 @@ class DeNoiseSafety(BaseSafetyWrapper):
 
         # Measure spectral balance
         balance_before = measure_spectral_balance(audio, sr)
-        metadata["spectral_balance_before"] = balance_before
+        metadata["spectral_balance_before"] = balance_before  # type: ignore[assignment]
 
         # Check temporal continuity
         continuity = check_temporal_continuity(audio, sr)
@@ -514,8 +514,8 @@ class DeNoiseSafety(BaseSafetyWrapper):
         balance_before = measure_spectral_balance(original, sr)
         balance_after = measure_spectral_balance(processed, sr)
 
-        metrics["spectral_balance_before"] = balance_before
-        metrics["spectral_balance_after"] = balance_after
+        metrics["spectral_balance_before"] = balance_before  # type: ignore[assignment]
+        metrics["spectral_balance_after"] = balance_after  # type: ignore[assignment]
 
         # Check each band
         for band in balance_before:

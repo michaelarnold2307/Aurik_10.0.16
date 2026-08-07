@@ -91,7 +91,7 @@ class FeedbackChain:
 
                 self._pqs_score_fn = score_audio_absolute
             except Exception as exc:
-                logger.debug("FeedbackChain: PQS scorer unavailable, heuristic fallback active: %s", exc)
+                logger.debug("FeedbackChain: PQS scorer nicht verfuegbar, heuristic Ersatzpfad active: %s", exc)
         if self.use_versa_in_loop:
             try:
                 from plugins.versa_plugin import (  # pylint: disable=import-outside-toplevel
@@ -105,7 +105,7 @@ class FeedbackChain:
                 if _versa_plugin is not None:
                     self._versa_score_fn = _versa_plugin.score
             except Exception as exc:
-                logger.debug("FeedbackChain: VERSA scorer unavailable, fallback active: %s", exc)
+                logger.debug("FeedbackChain: VERSA scorer nicht verfuegbar, Ersatzpfad active: %s", exc)
         # target_score: explizit gesetzt oder aus excellence_mode abgeleitet
         excellence_target = EXCELLENCE_TARGET_SCORE if excellence_mode else DEFAULT_TARGET_SCORE
         if target_score is not None:
@@ -135,7 +135,7 @@ class FeedbackChain:
                     base_mos = float(np.clip(versa_mos, 1.0, 5.0))
                     return self._apply_vqi_dual_objective(audio, sr, base_mos)
             except Exception as exc:
-                logger.debug("FeedbackChain: VERSA loop score failed, trying PQS fallback: %s", exc)
+                logger.debug("FeedbackChain: VERSA loop Wert fehlgeschlagen, trying PQS Ersatzpfad: %s", exc)
         if self._pqs_score_fn is not None:
             try:
                 pqs = self._pqs_score_fn(audio, sr)
@@ -145,7 +145,7 @@ class FeedbackChain:
                     base_mos = float(np.clip(pqs_mos, 1.0, 5.0))
                     return self._apply_vqi_dual_objective(audio, sr, base_mos)
             except Exception as exc:
-                logger.debug("FeedbackChain: PQS loop score failed, fallback active: %s", exc)
+                logger.debug("FeedbackChain: PQS loop Wert fehlgeschlagen, Ersatzpfad active: %s", exc)
         self._last_score_source = "heuristic_rms"
         base_mos = self.compute_perceptual_score(audio)
         return self._apply_vqi_dual_objective(audio, sr, base_mos)
@@ -176,7 +176,7 @@ class FeedbackChain:
 
                 _era_profile = get_era_vocal_profile(int(getattr(self, "era_decade", 1975) or 1975))
             except Exception as _ep_exc:
-                logger.debug("FeedbackChain era_profile nicht geladen: %s", _ep_exc)
+                logger.debug("FeedbackChain era_Profil nicht geladen: %s", _ep_exc)
 
             vqi_result = compute_vqi(self._vqi_orig_audio, audio, sr, era_profile=_era_profile)
             vqi_score = float(np.clip(vqi_result.get("vqi", 1.0), 0.01, 1.0))
@@ -186,7 +186,7 @@ class FeedbackChain:
             # → FeedbackChain konvergiert nicht mehr in VQI < 0.72 Region.
             loop_score = float(np.clip(base_mos * (vqi_score**0.5), 1.0, 5.0))
             logger.debug(
-                "FeedbackChain §0p VQI-Dual-Objective: base_mos=%.3f vqi=%.3f loop_score=%.3f era=%d",
+                "FeedbackChain §0p VQI-Dual-Objective: base_mos=%.3f vqi=%.3f loop_Wert=%.3f era=%d",
                 base_mos,
                 vqi_score,
                 loop_score,
@@ -236,16 +236,16 @@ class FeedbackChain:
                     if _frisson_penalty < 1.0:
                         loop_score = float(np.clip(loop_score * _frisson_penalty, 1.0, 5.0))
                         logger.debug(
-                            "FeedbackChain §Frisson-Penalty: %.4f → loop_score=%.3f (%d Zonen)",
+                            "FeedbackChain §Frisson-Penalty: %.4f → loop_Wert=%.3f (%d Zonen)",
                             _frisson_penalty,
                             loop_score,
                             _zones_checked,
                         )
                 except Exception as _frisson_exc:
-                    logger.debug("FeedbackChain §Frisson non-blocking: %s", _frisson_exc)
+                    logger.debug("FeedbackChain §Frisson nicht blockierend: %s", _frisson_exc)
             return loop_score
         except Exception as exc:
-            logger.debug("FeedbackChain VQI dual-objective non-blocking: %s", exc)
+            logger.debug("FeedbackChain VQI dual-objective nicht blockierend: %s", exc)
             return base_mos
 
     def _compute_versa_segmented_score(self, audio: np.ndarray, sr: int) -> float:
@@ -536,7 +536,7 @@ class FeedbackChain:
             try:
                 self._vqi_orig_audio = np.asarray(audio, dtype=np.float32).copy()
             except Exception as _vqi_exc:
-                logger.debug("FeedbackChain: VQI orig-audio capture fehlgeschlagen: %s", _vqi_exc)
+                logger.debug("FeedbackChain: VQI orig-audio Erfassung fehlgeschlagen: %s", _vqi_exc)
 
         # --- Adaptive Per-Phase Pruning for phase-list mode ---
         # In the first iteration, evaluate each phase individually.
@@ -560,7 +560,7 @@ class FeedbackChain:
                 if any(_pid_str.startswith(_ppid) for _ppid in self.pre_pruned_phase_ids):
                     _pruned_phases.append(_pid_str)
                     _pre_prune_count += 1
-                    logger.debug("FeedbackChain §Hebel5: pre-pruned sub-JND phase %s", _pid_str)
+                    logger.debug("FeedbackChain §Hebel5: pre-pruned sub-JND Verarbeitungsschritt %s", _pid_str)
                 else:
                     _filtered.append(_entry)
             if _pre_prune_count:
@@ -589,7 +589,8 @@ class FeedbackChain:
                     _pareto_prop_list = _gp_opt.propose_pareto(material=_mat, n_init=5)
                 except Exception as _pareto_not_avail:
                     logger.debug(
-                        "FeedbackChain §Hebel1: propose_pareto nicht verfügbar, Legacy-Fallback: %s", _pareto_not_avail
+                        "FeedbackChain §Hebel1: propose_pareto nicht verfügbar, Legacy-Ersatzpfad: %s",
+                        _pareto_not_avail,
                     )
                 # Wähle besten Pareto-Kandidaten (höchster UCB-Score), fallback auf propose()
                 _proposal = None
@@ -625,13 +626,13 @@ class FeedbackChain:
                     if _hints_applied > 0:
                         _gp_advisory_applied = True
                         logger.info(
-                            "FeedbackChain: GP advisory applied %d strength hints (material=%s, pareto=%s)",
+                            "FeedbackChain: GP advisory angewendet %d strength hints (material=%s, pareto=%s)",
                             _hints_applied,
                             _mat,
                             bool(_pareto_prop_list),
                         )
             except Exception as _gp_exc:
-                logger.debug("FeedbackChain: GP advisory lookup non-blocking: %s", _gp_exc)
+                logger.debug("FeedbackChain: GP advisory lookup nicht blockierend: %s", _gp_exc)
 
         if _phase_list_mode:
 
@@ -645,7 +646,7 @@ class FeedbackChain:
                             out = _fn(out, _sr2, **_kw) if _kw else _fn(out, _sr2)
                         except Exception as phase_exc:
                             logger.debug(
-                                "FeedbackChain: phase callable failed (%s): %s",
+                                "FeedbackChain: Verarbeitungsschritt callable fehlgeschlagen (%s): %s",
                                 _pid,
                                 phase_exc,
                             )
@@ -671,8 +672,8 @@ class FeedbackChain:
         _init_score_elapsed = time.perf_counter() - _t_before_init_score
         if _init_score_elapsed > 30.0:
             logger.warning(
-                "FeedbackChain: initial score call took %.1fs (audio=%.0fs) — "
-                "likely ML scorer without length cap; iterations will be skipped if budget exhausted",
+                "FeedbackChain: initial Wert call took %.1fs (audio=%.0fs) — "
+                "likely ML scorer without length cap; iterations will be uebersprungen if Grenze exhausted",
                 _init_score_elapsed,
                 _audio_dur_s,
             )
@@ -723,7 +724,7 @@ class FeedbackChain:
             _elapsed = time.perf_counter() - _t0
             if _elapsed > _time_budget_s:
                 logger.warning(
-                    "FeedbackChain: time budget exceeded (%.1fs > %.1fs) — aborting at iteration %d",
+                    "FeedbackChain: time Grenze exceeded (%.1fs > %.1fs) — aborting at iteration %d",
                     _elapsed,
                     _time_budget_s,
                     i,
@@ -755,7 +756,7 @@ class FeedbackChain:
                         # Scale up to 2× more lenient: deficit=0.05→factor 1.20; 0.25→2.0 (cap)
                         _fc_deficit_factor = float(min(2.0, 1.0 + 4.0 * _max_deficit))
                         logger.info(
-                            "FeedbackChain §goal-deficit: %d/%d goals below threshold "
+                            "FeedbackChain §goal-deficit: %d/%d goals below Schwelle "
                             "(max_deficit=%.3f) → pruning %.2f× more lenient",
                             len(_deficits),
                             len(_prev_goals),
@@ -828,21 +829,21 @@ class FeedbackChain:
                                     _kw_adapted["strength"] = float(np.clip(_cur_str * 0.90, 0.1, 1.0))
                             _surviving_phases.append((_pid, _fn, _kw_adapted))
                             logger.debug(
-                                "FeedbackChain: phase %s kept (Δ=%.4f)",
+                                "FeedbackChain: Verarbeitungsschritt %s kept (Δ=%.4f)",
                                 _pid,
                                 _delta,
                             )
                         else:
                             _pruned_phases.append(str(_pid))
                             logger.info(
-                                "FeedbackChain: phase %s pruned — degraded MOS by %.4f",
+                                "FeedbackChain: Verarbeitungsschritt %s pruned — degraded MOS by %.4f",
                                 _pid,
                                 _delta,
                             )
                     except Exception as _eval_exc:
                         _surviving_phases.append((_pid, _fn, _kw))
                         logger.debug(
-                            "FeedbackChain: phase %s evaluation failed (%s) — keeping",
+                            "FeedbackChain: Verarbeitungsschritt %s evaluation fehlgeschlagen (%s) — keeping",
                             _pid,
                             _eval_exc,
                         )
@@ -941,7 +942,7 @@ class FeedbackChain:
                         )
                     )
                 except Exception as mg_exc:
-                    logger.debug("FeedbackChain: initial musical-goals read failed: %s", mg_exc)
+                    logger.debug("FeedbackChain: initial musical-goals read fehlgeschlagen: %s", mg_exc)
 
             # §9.8 Goal-aware candidate selection: prefer candidates passing more goals
             _candidate_better = mos > best_mos

@@ -350,8 +350,8 @@ class PhysicalMediumChainModel:
 
         # 1. Bias-HF-Rolloff ausgleichen
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        rolloff_freq = self.TAPE_HF_ROLLOFF.get(_mk, 8000)
-        boost_db = self.TAPE_HF_BOOST_DB.get(_mk, 0.0)
+        rolloff_freq = self.TAPE_HF_ROLLOFF.get(_mk, 8000)  # type: ignore[call-overload]
+        boost_db = self.TAPE_HF_BOOST_DB.get(_mk, 0.0)  # type: ignore[call-overload]
         audio_out = self._apply_hf_shelf_boost(audio_out, sr, rolloff_freq, boost_db)
         corrections.append(f"bias_hf_rolloff_compensation_{int(rolloff_freq)}hz_{boost_db}dB")
 

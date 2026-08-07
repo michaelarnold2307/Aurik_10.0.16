@@ -16,7 +16,7 @@ import pytest
 
 def _sine(freq_hz: float, sr: int = 48_000, duration: float = 0.5) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (0.5 * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _mix(*arrays: np.ndarray) -> np.ndarray:

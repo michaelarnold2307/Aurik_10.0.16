@@ -376,14 +376,13 @@ class TontraegerketteDenker:
     (z. B. Vinyl → Kassette → MP3) und erstellt einen konsolidierten
     Restaurierungsplan für alle beteiligten Medien.
 
-    Temporal-Ordnungs-Algorithmus:
-        Jedes erkannte Medium erhält einen Zeitrang aus _MEDIUM_ORDER.
-        Die Kette wird aufsteigend nach Zeitrang sortiert:
-            0 = physikalisch-analoges Original  (Vinyl, Shellac, Wachswalze)
-            1 = analoges Zwischenformat         (Kassette, Spulenband)
-            2 = verlustfreies Digitalformat      (CD, DAT)
-            3 = verlustbehaftetes Endformat      (MP3, AAC, Streaming)
-        Medien mit identischem Zeitrang werden nach Score (absteigend) sortiert.
+    Temporal-Ordnung:
+        Die Kette wird in der Reihenfolge übernommen, in der sie ankommt — entweder
+        aus `_erkennen()` (abgeleitet von `MediumDetectionResult.transfer_chain`, vom
+        MediumDetector selbst mit vollem Signal-Kontext chronologisch geordnet) oder aus
+        einem gecachten Ergebnis (§2.47a Direct Handover). `_MEDIUM_ORDER` dient nur noch
+        als Referenztabelle (Degradationstyp/Phasen-Lookup), NICHT mehr als Re-Sort-Schlüssel
+        — ein nachträglicher Re-Sort würde die bereits kontextreichere Ordnung verfälschen.
 
     Kettenkomplexität:
         complexity = clip(1 − ∏(1 − w_i), 0, 1)
@@ -415,12 +414,12 @@ class TontraegerketteDenker:
             1. NaN/Inf-Schutz (§3.1)
             2. MediumDetector.detect(audio, sr, file_ext=...) → Rohbefund
                (überspringen wenn cached_medium_result übergeben, §2.47a)
-            3. detected_media (List[Tuple[str, float]]) extrahieren
-            4. Zeitliche Sortierung via _MEDIUM_ORDER
-            5. KettenGlieder mit Phasen-Empfehlungen aufbauen
-            6. Kettenkomplexität berechnen: 1 − ∏(1 − w_i)
-            7. Reasoning auf Deutsch formulieren
-            8. KettenErgebnis zurückgeben
+            3. detected_media (List[Tuple[str, float]]) extrahieren, bereits
+               chronologisch geordnet (Quelle → Container)
+            4. KettenGlieder mit Phasen-Empfehlungen aufbauen
+            5. Kettenkomplexität berechnen: 1 − ∏(1 − w_i)
+            6. Reasoning auf Deutsch formulieren
+            7. KettenErgebnis zurückgeben
 
         Args:
             audio:                Float32-Array ∈ [-1, 1], mono oder stereo.
@@ -460,7 +459,7 @@ class TontraegerketteDenker:
             if not _weak_cached_chain:
                 logger.debug(
                     "TontraegerketteDenker.analysiere(): gecachtes MediumResult übernommen "
-                    "(primary_material=%s, conf=%.2f, chain_len=%d) — detect() NICHT aufgerufen",
+                    "(primary_material=%s, conf=%.2f, chain_len=%d) — erkennen() NICHT aufgerufen",
                     _cached_primary,
                     _cached_conf,
                     _chain_len,
@@ -469,8 +468,8 @@ class TontraegerketteDenker:
                 return raw
 
             logger.debug(
-                "TontraegerketteDenker.analysiere(): schwaches Cache-Ergebnis erkannt "
-                "(primary_material=%s, conf=%.2f, chain_len=%d) — detect() Recovery wird ausgeführt",
+                "TontraegerketteDenker.analysiere(): schwaches Zwischenspeicher-Ergebnis erkannt "
+                "(primary_material=%s, conf=%.2f, chain_len=%d) — erkennen() Wiederherstellung wird ausgeführt",
                 _cached_primary,
                 _cached_conf,
                 _chain_len,
@@ -480,8 +479,8 @@ class TontraegerketteDenker:
         import os as _os
 
         _file_ext = _os.path.splitext(file_path)[1] if file_path else ""
-        raw = self._erkennen(audio, sr, file_ext=_file_ext)
-        return self._aufbereiten(raw)
+        raw = self._erkennen(audio, sr, file_ext=_file_ext)  # type: ignore[assignment]
+        return self._aufbereiten(raw)  # type: ignore[arg-type]
 
     def leite_phasen_ab(self, ketten_ergebnis: KettenErgebnis) -> ChainPhasePlan:
         """Leitet §2.46-konformen Pflicht-Phasenplan aus der Trägerkette ab.
@@ -571,7 +570,7 @@ class TontraegerketteDenker:
         """
         try:
             detector = self._get_detector()
-            result = detector.detect(audio, sr, file_ext=file_ext)  # type: ignore[union-attr]
+            result = detector.detect(audio, sr, file_ext=file_ext)  # type: ignore[attr-defined]
 
             # MediumDetectionResult auf dict normalisieren
             if hasattr(result, "as_dict"):
@@ -590,7 +589,7 @@ class TontraegerketteDenker:
             # Fallback: dict wurde direkt zurückgegeben (Legacy)
             if isinstance(result, dict):
                 return result
-            logger.warning("MediumDetector.detect() gab unbekannten Typ zurück: %s", type(result))
+            logger.warning("MediumDetector.erkennen() gab unbekannten Typ zurück: %s", type(result))
             return {}
         except Exception as exc:
             logger.warning("MediumDetector fehlgeschlagen: %s", exc)
@@ -639,10 +638,14 @@ class TontraegerketteDenker:
         """Wandelt das Rohresultat des MediumDetectors in ein KettenErgebnis um.
 
         Temporal ordering:
-            detected_media ist nach Score sortiert (höchster zuerst).
-            Wir sortieren stattdessen nach _MEDIUM_ORDER[medium] aufsteigend,
-            um die zeitliche Reihenfolge (Quelle → Container) herzustellen.
-            Bei gleichem Zeitrang entscheidet der Score absteigend.
+            `detected_media` kommt bereits chronologisch geordnet an (Quelle → Container):
+            entweder aus `_erkennen()` (abgeleitet von `MediumDetectionResult.transfer_chain`,
+            das der MediumDetector selbst mit vollem Signal-Kontext sortiert) oder aus einem
+            gecachten Ergebnis (§2.47a Direct Handover — bereits von der Pre-Analysis
+            geordnet). Ein zusätzlicher Re-Sort hier nach der simplen `_MEDIUM_ORDER`-Ära-
+            Heuristik würde diese bereits korrekte, kontextreichere Ordnung überschreiben
+            und in Sonderfällen (z. B. Vinyl-zu-Band-Überspielung) verfälschen — die
+            gegebene Reihenfolge wird deshalb unverändert übernommen.
 
         Complexity formula:
             Gegeben Gewichte w_i aus _COMPLEXITY_WEIGHT:
@@ -661,13 +664,8 @@ class TontraegerketteDenker:
             medium_type = str(raw["type"])
             detected_media = [(medium_type, confidence)]
 
-        # --- 2. Zeitliche Sortierung ---
-        def _zeitrang(item: tuple[str, float]) -> tuple[int, float]:
-            medium, score = item
-            order = _MEDIUM_ORDER.get(medium, 1)  # unbekannte Medien = Ära 1
-            return (order, -score)  # gleicher Rang → höchster Score zuerst
-
-        chain_sorted = sorted(detected_media, key=_zeitrang)
+        # --- 2. Gegebene chronologische Reihenfolge übernehmen (kein Re-Sort) ---
+        chain_sorted = list(detected_media)
 
         # --- 3. Kettenglieder aufbauen ---
         glieder: list[KettenGlied] = []
@@ -682,7 +680,7 @@ class TontraegerketteDenker:
                 label=_LABEL.get(medium, medium),
             )
             glieder.append(glied)
-            logger.debug("Kettenglied %d: %s (Score %.2f)", pos, medium, safe_score)
+            logger.debug("Kettenglied %d: %s (Wert %.2f)", pos, medium, safe_score)
 
         # --- 4. Kettenliste & Strings ---
         chain: list[str] = [g.medium for g in glieder]

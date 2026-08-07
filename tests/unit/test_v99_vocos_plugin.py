@@ -58,7 +58,7 @@ def _silence(n: int = 48000) -> np.ndarray:
 
 def _sine(freq: float = 440.0, duration: float = 1.0, sr: int = AURIK_SR) -> np.ndarray:
     t = np.arange(int(duration * sr)) / sr
-    return np.sin(2 * np.pi * freq * t).astype(np.float32) * 0.5
+    return np.sin(2 * np.pi * freq * t).astype(np.float32) * 0.5  # type: ignore[no-any-return]
 
 
 def _dirac(n: int = 48000) -> np.ndarray:
@@ -302,44 +302,44 @@ class TestVocosPluginFallback(unittest.TestCase):
     def test_25_fallback_output_shape(self):
         """Griffin-Lim Fallback: Output-Länge = Input-Länge."""
         x = _white_noise(48000)
-        result, name, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        result, name, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertEqual(len(result), len(x))
 
     def test_26_fallback_no_nan(self):
         """Griffin-Lim Fallback: kein NaN im Output."""
         x = _sine()
-        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertTrue(np.isfinite(result).all())
 
     def test_27_fallback_clipped(self):
         """Griffin-Lim Fallback: Ausgabe liegt in [-1, 1]."""
         x = _white_noise(48000)
-        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertLessEqual(float(np.max(np.abs(result))), 1.0)
 
     def test_28_fallback_model_name(self):
         """Griffin-Lim Fallback: model_name korrekt."""
         x = _silence(4800)
-        _, name, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        _, name, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertIn("griffin_lim", name)
 
     def test_29_fallback_confidence_lower(self):
         """Fallback-Konfidenz ist < 0.85 (schlechter als neuronales Modell)."""
         x = _white_noise(4800)
-        _, _, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        _, _, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertLess(conf, 0.85)
 
     def test_30_fallback_silence_input(self):
         """Stille als Eingabe: Griffin-Lim gibt Stille (oder nahezu) zurück."""
         x = _silence(48000)
-        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+        result, _, _ = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
         self.assertLess(float(np.max(np.abs(result))), 0.1)
 
     def test_31_fallback_short_audio(self):
         """Sehr kurzes Audio (< 1024 Samples): kein Absturz."""
         x = np.zeros(100, dtype=np.float32)
         try:
-            result, name, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)
+            result, name, conf = self.plugin._synthesize_griffin_lim(x, AURIK_SR)  # type: ignore[attr-defined]
             self.assertEqual(len(result), 100)
         except Exception:
             logger.warning("test fallback", exc_info=True)

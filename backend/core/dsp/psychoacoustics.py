@@ -377,7 +377,7 @@ def compute_specific_loudness_zwicker(
     try:
         return _compute_zwicker_internal(audio, sr, analysis_window_s, center_window)
     except Exception as _e:
-        logger.warning("compute_specific_loudness_zwicker Fehler (Fallback 0): %s", _e)
+        logger.warning("berechnen_specific_loudness_zwicker Fehler (Ersatzpfad 0): %s", _e)
         return ZwickerLoudnessResult(
             total_loudness_sone=0.0,
             specific_loudness=np.zeros(N_BARK, dtype=np.float64),
@@ -440,6 +440,7 @@ def _compute_zwicker_internal(
         try:
             filtered = _sp_signal.sosfilt(sos, arr)
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
 
         # RMS → dBFS
@@ -539,7 +540,7 @@ def evaluate_mid_pipeline_loudness_delta(
 
     if action in ("warning", "fail_dry_wet_rescue"):
         logger.warning(
-            "§4.1b Zwicker-Lautheit: Phase=%s ΔN=%.2f sone (%.1f phon) → %s",
+            "§4.1b Zwicker-Lautheit: Verarbeitungsschritt=%s ΔN=%.2f sone (%.1f phon) → %s",
             phase_name,
             delta_sone,
             delta_phon,
@@ -547,7 +548,7 @@ def evaluate_mid_pipeline_loudness_delta(
         )
     elif action == "info":
         logger.info(
-            "§4.1b Zwicker-Lautheit: Phase=%s ΔN=%.2f sone (%.1f phon) → info",
+            "§4.1b Zwicker-Lautheit: Verarbeitungsschritt=%s ΔN=%.2f sone (%.1f phon) → info",
             phase_name,
             delta_sone,
             delta_phon,
@@ -620,7 +621,7 @@ def compute_bark_energy_profile(audio: np.ndarray, sr: int) -> np.ndarray:
             profile[b] = float(np.sqrt(np.mean(filtered**2)))
         return np.nan_to_num(profile, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[no-any-return]
     except Exception as _e:
-        logger.debug("compute_bark_energy_profile Fehler: %s", _e)
+        logger.debug("berechnen_bark_energy_Profil Fehler: %s", _e)
         return np.zeros(N_BARK, dtype=np.float64)  # type: ignore[no-any-return]
 
 
@@ -738,7 +739,7 @@ def compute_noise_texture_profile(
         return np.nan_to_num(profile, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[no-any-return]
 
     except Exception as _e:
-        logger.debug("compute_noise_texture_profile error: %s", _e)
+        logger.debug("berechnen_noise_texture_Profil error: %s", _e)
         return np.zeros(8, dtype=np.float64)  # type: ignore[no-any-return]
 
 
@@ -955,7 +956,7 @@ def compute_time_varying_loudness(
         return np.nan_to_num(smoothed, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[no-any-return]
 
     except Exception as _e:
-        logger.debug("compute_time_varying_loudness error: %s", _e)
+        logger.debug("berechnen_time_varying_loudness error: %s", _e)
         return np.zeros(1, dtype=np.float64)  # type: ignore[no-any-return]
 
 
@@ -997,7 +998,7 @@ def compute_loudness_envelope_delta(
             "valid": True,
         }
     except Exception as _e:
-        logger.debug("compute_loudness_envelope_delta error: %s", _e)
+        logger.debug("berechnen_loudness_envelope_delta error: %s", _e)
         return {"valid": False}
 
 
@@ -1142,7 +1143,7 @@ def apply_psychoacoustic_masking_clamp(
         return processed_audio
 
     except Exception as _e:
-        logger.debug("apply_psychoacoustic_masking_clamp non-blocking: %s", _e)
+        logger.debug("anwenden_psychoacoustic_masking_clamp nicht blockierend: %s", _e)
         return processed_audio
 
 
@@ -1202,7 +1203,7 @@ def compute_erb_masking_threshold(
         return threshold  # type: ignore[no-any-return]
 
     except Exception as _e:
-        logger.debug("compute_erb_masking_threshold error: %s", _e)
+        logger.debug("berechnen_erb_masking_Schwelle error: %s", _e)
         return np.full(n_fft // 2 + 1, -120.0, dtype=np.float64)  # type: ignore[no-any-return]
 
 

@@ -45,7 +45,7 @@ class ImportPipeline:
         self.policy_manager = PolicyManager(self.policy)
         self.extractor = FeatureExtractor()
         self.audit_log: list[dict[str, Any]] = []
-        logger.info("ImportPipeline initialized")
+        logger.info("ImportPipeline initialisiert")
 
     def import_audio(
         self, audio: np.ndarray, sr: int, reference: np.ndarray | None = None

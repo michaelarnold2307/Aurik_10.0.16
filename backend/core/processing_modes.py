@@ -429,7 +429,7 @@ if __name__ == "__main__":
         logger.debug("  %s", description)
 
     logger.debug("\n" + "=" * 60)
-    logger.debug("\nExample: RESTORATION mode parameters:")
+    logger.debug("\nExample: RESTORATION Betriebsart parameters:")
     logger.debug("=" * 60)
     restoration = get_processing_config(ProcessingMode.RESTORATION)
     import json

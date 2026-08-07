@@ -94,7 +94,7 @@ class PhaseSteeringEngine:
             reset_tracker()
             self._tracker = get_tracker()
         except Exception as e:
-            logger.debug("tracker init fallback: %s", e)
+            logger.debug("tracker init Ersatzpfad: %s", e)
             self._tracker = None
 
     @property
@@ -110,7 +110,7 @@ class PhaseSteeringEngine:
 
             return float(compute_pleasantness(audio, sr).score)
         except Exception as e:
-            logger.debug("_compute_hpe fallback: %s", e)
+            logger.debug("_berechnen_hpe Ersatzpfad: %s", e)
             mono = audio.mean(axis=1) if audio.ndim == 2 and audio.shape[1] <= 2 else audio.ravel()
             rms = float(np.sqrt(np.mean(mono**2)) + 1e-12)
             return float(np.clip(0.3 + rms * 2.0, 0.0, 1.0))
@@ -133,7 +133,7 @@ class PhaseSteeringEngine:
                 )
             )
         except Exception as e:
-            logger.warning("_compute_pmgg: %s", e)
+            logger.warning("_berechnen_pmgg: %s", e)
             return 0.5
 
     # ── Entscheidungslogik ────────────────────────────────────────────────
@@ -168,7 +168,7 @@ class PhaseSteeringEngine:
                     s.retry_count += 1
                     new_str = max(0.3, phase_strength * 0.7)
                     logger.info(
-                        "Steering %s: RETRY_LIGHTER (Δ%+.3f, str %.2f→%.2f, retry %d/%d)",
+                        "Steering %s: Wiederholung_LIGHTER (Δ%+.3f, str %.2f→%.2f, Wiederholung %d/%d)",
                         phase_name,
                         delta,
                         phase_strength,
@@ -185,7 +185,7 @@ class PhaseSteeringEngine:
                 else:
                     s.retry_count = 0
                     s.skipped_phases.append(phase_name)
-                    logger.info("Steering %s: Max Retries erreicht → SKIP", phase_name)
+                    logger.info("Steering %s: Max Retries erreicht → ueberspringen", phase_name)
                     return SteeringDecision(
                         SteerAction.SKIP, f"Max Retries ({s.MAX_RETRIES}) → überspringe {phase_name}", delta_hpe=delta
                     )
@@ -193,7 +193,7 @@ class PhaseSteeringEngine:
             # Case 4: Deutliche Verschlechterung → SKIP
             if delta > -0.10:
                 s.skipped_phases.append(phase_name)
-                logger.info("Steering %s: SKIP (Δ%+.3f, zu starke Verschlechterung)", phase_name, delta)
+                logger.info("Steering %s: ueberspringen (Δ%+.3f, zu starke Verschlechterung)", phase_name, delta)
                 return SteeringDecision(
                     SteerAction.SKIP, f"Deutliche Verschlechterung → überspringe {phase_name}", delta_hpe=delta
                 )
@@ -203,7 +203,7 @@ class PhaseSteeringEngine:
                 s.rollback_count += 1
                 s.retry_count = 0
                 logger.warning(
-                    "Steering %s: ROLLBACK #%d (Δ%+.3f, restore best HPE %.3f)",
+                    "Steering %s: ROLLBACK #%d (Δ%+.3f, wiederherstellen best HPE %.3f)",
                     phase_name,
                     s.rollback_count,
                     delta,
@@ -285,7 +285,7 @@ def install_steering() -> PhaseSteeringEngine:
         return _engine
 
     _engine = PhaseSteeringEngine()
-    logger.debug("PhaseSteeringGuard: Engine-Singleton erzeugt (enabled=%s)", _engine.enabled)
+    logger.debug("PhaseSteeringGuard: Engine-Singleton erzeugt (aktiviert=%s)", _engine.enabled)
     return _engine
 
 
@@ -332,7 +332,9 @@ def wrap_steering(engine: PhaseSteeringEngine, original_fn):
         elif decision.action == SteerAction.RETRY_LIGHTER:
             new_kwargs = dict(kwargs)
             new_kwargs["strength"] = decision.new_strength
-            logger.info("Steering %s: RETRY_LIGHTER (str %.2f→%.2f)", phase_name, strength, decision.new_strength)
+            logger.info(
+                "Steering %s: Wiederholung_LIGHTER (str %.2f→%.2f)", phase_name, strength, decision.new_strength
+            )
             result2 = original_fn(self, phase, audio, **new_kwargs)
             result2_audio = result2.audio if hasattr(result2, "audio") else result2
             hpe2 = engine._compute_hpe(result2_audio, sr)
@@ -345,7 +347,11 @@ def wrap_steering(engine: PhaseSteeringEngine, original_fn):
 
         elif decision.action == SteerAction.SKIP:
             logger.info(
-                "Steering %s: SKIP (HPE %.3f→%.3f Δ%+.3f)", phase_name, hpe_before, hpe_after, decision.delta_hpe
+                "Steering %s: ueberspringen (HPE %.3f→%.3f Δ%+.3f)",
+                phase_name,
+                hpe_before,
+                hpe_after,
+                decision.delta_hpe,
             )
             engine.record_phase(phase_name + "_skipped", audio, hpe_before, engine._compute_pmgg(audio, sr))
             return type(result)(audio=audio) if hasattr(result, "audio") else audio

@@ -16,7 +16,7 @@ def _vocal_like(duration_s: float, freq: float = 220.0) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False, dtype=np.float32)
     envelope = 0.45 + 0.30 * np.sin(2 * np.pi * 2.3 * t)
     harmonics = sum((1.0 / idx) * np.sin(2 * np.pi * freq * idx * t) for idx in range(1, 6))
-    return np.clip(0.20 * envelope * harmonics, -1.0, 1.0).astype(np.float32)
+    return np.clip(0.20 * envelope * harmonics, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

@@ -60,7 +60,7 @@ adaptive_multiband_expansion_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Überexpansion", "expected_when": "ratio zu hoch", "severity": 0.2}],
+    side_effects=[{"risk": "Überexpansion", "expected_when": "ratio zu hoch", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["expansion_score"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )

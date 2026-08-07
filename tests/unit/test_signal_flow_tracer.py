@@ -19,7 +19,7 @@ import pytest
 
 def _make_sine(freq: float = 440.0, sr: int = 48000, duration: float = 0.5) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (0.3 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.3 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_silence(sr: int = 48000, duration: float = 0.1) -> np.ndarray:

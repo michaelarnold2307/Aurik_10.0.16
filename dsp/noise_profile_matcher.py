@@ -50,7 +50,7 @@ class NoiseProfileMatcher:
         for _, i in frames[:n_quiet]:
             mag = np.abs(np.fft.rfft(audio[i : i + frame_len] * np.hanning(frame_len)))
             spectra.append(mag**2)
-        return np.mean(spectra, axis=0)
+        return np.mean(spectra, axis=0)  # type: ignore[no-any-return]
 
     @staticmethod
     def _classify(power_spectrum: np.ndarray, sr: int) -> str:
@@ -103,5 +103,5 @@ class NoiseProfileMatcher:
                 return None
             return self._classify(spectrum, sr)
         except Exception:
-            logger.warning("noise_profile_matcher.py::match_profile fallback", exc_info=True)
+            logger.warning("noise_Profil_matcher.py::match_Profil Ersatzpfad", exc_info=True)
             return None

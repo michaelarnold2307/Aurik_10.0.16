@@ -194,7 +194,6 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
         "priority": 2,
         "human_label": "Surface Noise",
     },
-
     # ── Additive (Enhancement / Restoration) ───────────────────────────
     "phase_38_presence_boost": {
         "affects": [
@@ -296,7 +295,6 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
         "priority": 5,
         "human_label": "Transient Preservation",
     },
-
     # ── Dynamics ───────────────────────────────────────────────────────
     "phase_40_loudness_normalization": {
         "affects": [
@@ -341,7 +339,6 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
         "priority": 7,
         "human_label": "Compression",
     },
-
     # ── Corrective (Phase/Stereo) ──────────────────────────────────────
     "phase_14_phase_correction": {
         "affects": [
@@ -398,7 +395,6 @@ PHASE_FREQ_PROFILES: dict[str, dict[str, Any]] = {
         "priority": 3,
         "human_label": "Stereo Balance",
     },
-
     # ── Other ──────────────────────────────────────────────────────────
     "phase_04_eq_correction": {
         "affects": [
@@ -994,9 +990,9 @@ class CrossPhaseCoordinator:
                 if rough_score > 0.15:
                     result["passed"] = False
                     result["flags"].append("roughness_regression")
-                    logger.warning("CrossPhaseCoordinator: Roughness-Regression (score=%.3f)", rough_score)
+                    logger.warning("CrossPhaseCoordinator: Roughness-Regression (Wert=%.3f)", rough_score)
 
         except Exception as exc:
-            logger.debug("CrossPhaseCoordinator.validate_naturalness: %s", exc)
+            logger.debug("CrossPhaseCoordinator.validieren_naturalness: %s", exc)
 
         return result

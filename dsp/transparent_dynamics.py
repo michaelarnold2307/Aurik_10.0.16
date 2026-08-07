@@ -158,7 +158,7 @@ class TransparentDynamicsProcessor:
         self.release_ms = np.clip(release_ms, 50.0, 1000.0)
         self.adaptive = adaptive
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def log_contract(self):
         logger.debug("[DSPContract TransparentDynamicsProcessor] %s", asdict(transparent_dynamics_contract))
@@ -185,7 +185,7 @@ class TransparentDynamicsProcessor:
             audio_squared = audio**2
             rms = np.sqrt(np.convolve(audio_squared, np.ones(window_samples) / window_samples, mode="same"))
             rms_db = 20 * np.log10(rms + 1e-8)
-            return rms_db
+            return rms_db  # type: ignore[no-any-return]
 
         # Window size for RMS (adaptive: shorter for transient-rich, longer for sustained)
         if self.adaptive:
@@ -213,7 +213,7 @@ class TransparentDynamicsProcessor:
         # Convert to dB
         rms_db = 20 * np.log10(rms + 1e-8)
 
-        return rms_db
+        return rms_db  # type: ignore[no-any-return]
 
     def compute_gain_reduction(self, envelope_db: np.ndarray) -> np.ndarray:
         """
@@ -404,7 +404,7 @@ class TransparentDynamicsProcessor:
 
         # Check if compression needed
         if analysis_before["peak_db"] < self.threshold_db:
-            logger.info("[TransparentDynamics] No compression needed (below threshold)")
+            logger.info("[TransparentDynamics] No compression needed (below Schwelle)")
             return audio
 
         # Compute envelope
@@ -455,7 +455,7 @@ class TransparentDynamicsProcessor:
         audio_compressed = np.nan_to_num(audio_compressed, nan=0.0, posinf=0.0, neginf=0.0)
         audio_compressed = np.clip(audio_compressed, -1.0, 1.0)
 
-        return audio_compressed
+        return audio_compressed  # type: ignore[no-any-return]
 
 
 # =============================================================================
@@ -541,7 +541,7 @@ class MicroDynamicsEnhancer:
         self.time_window_ms = np.clip(time_window_ms, 10, 200)
         self.frequency_selective = frequency_selective
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def log_contract(self):
         logger.info("[DSPContract MicroDynamicsEnhancer]", asdict(micro_dynamics_contract))
@@ -564,7 +564,7 @@ class MicroDynamicsEnhancer:
                 window_rms = np.sqrt(np.mean(window**2))
                 rms_values.append(window_rms)
 
-        rms_values = np.array(rms_values)
+        rms_values = np.array(rms_values)  # type: ignore[assignment]
 
         if len(rms_values) < 2:
             return {"micro_dynamics_score": 0.0}
@@ -616,7 +616,7 @@ class MicroDynamicsEnhancer:
         # Apply enhancement
         audio_enhanced = audio * enhancement_curve
 
-        return audio_enhanced
+        return audio_enhanced  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -650,7 +650,7 @@ class MicroDynamicsEnhancer:
         analysis = self.analyze_micro_dynamics(audio, sr)
         self.metrics = analysis
 
-        logger.info("[MicroDynamics] Micro-Dynamics Score: %.3f", analysis["micro_dynamics_score"])
+        logger.info("[MicroDynamics] Micro-Dynamics Wert: %.3f", analysis["micro_dynamics_score"])
 
         # Check if enhancement needed
         if analysis["micro_dynamics_score"] < 0.1:
@@ -698,9 +698,9 @@ class MicroDynamicsEnhancer:
         enhancement_db = 20 * np.log10((rms_after + 1e-8) / (rms_before + 1e-8))
         self.metrics["enhancement_applied_db"] = float(enhancement_db)
 
-        logger.info("[MicroDynamics] Enhancement applied: %+.2f dB", enhancement_db)
+        logger.info("[MicroDynamics] Enhancement angewendet: %+.2f dB", enhancement_db)
 
-        return audio_final
+        return audio_final  # type: ignore[no-any-return]
 
 
 # =============================================================================
@@ -778,7 +778,7 @@ class DynamicsProcessor:
             audio_processed = self.micro_enhancer.process(audio_processed, sr)
 
         logger.info("\n" + "=" * 80)
-        logger.info("DYNAMICS PROCESSING COMPLETE")
+        logger.info("DYNAMICS PROCESSING vollstaendig")
         logger.info("=" * 80 + "\n")
 
         return audio_processed
@@ -816,16 +816,18 @@ if __name__ == "__main__":
     logger.info(str("=" * 80))
 
     if len(sys.argv) < 3:
-        logger.info("\nUsage: python transparent_dynamics.py <input.wav> <output.wav> [options]")
+        logger.info("\nUsage: python transparent_dynamics.py <Eingabe.wav> <Ausgabe.wav> [options]")
         logger.info("\nOptions:")
-        logger.info("  --ratio <1.0-10.0>         Compression ratio (default: 2.0)")
-        logger.info("  --threshold <-40 to 0>     Threshold in dB (default: -20)")
+        logger.info("  --Verhaeltnis <1.0-10.0>         Compression Verhaeltnis (default: 2.0)")
+        logger.info("  --Schwelle <-40 to 0>     Schwelle in dB (default: -20)")
         logger.info("  --knee <0-12>              Soft knee in dB (default: 6)")
         logger.info("  --enhancement <0.0-1.0>    Micro-dynamics enhancement (default: 0.5)")
         logger.info("  --disable-compression      Disable transparent dynamics")
         logger.info("  --disable-micro            Disable micro-dynamics enhancement")
         logger.info("\nExample:")
-        logger.info("  python transparent_dynamics.py flat_audio.wav lively_audio.wav --ratio 3.0 --enhancement 0.7")
+        logger.info(
+            "  python transparent_dynamics.py flat_audio.wav lively_audio.wav --Verhaeltnis 3.0 --enhancement 0.7"
+        )
         sys.exit(1)
 
     input_file = sys.argv[1]
@@ -866,19 +868,19 @@ if __name__ == "__main__":
             i += 1
 
     # Load audio
-    logger.info("\nLoading: %s", input_file)
+    logger.info("\nlade: %s", input_file)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(input_file)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Ensure mono for processing (or handle stereo properly)
     if audio.ndim > 1:
-        logger.info("Input is stereo (%s channels), processing both channels", audio.shape[1])
+        logger.info("Eingabe is stereo (%s channels), processing both channels", audio.shape[1])
         audio = audio.T  # Shape: (channels, samples)
 
     # Process
-    processor = DynamicsProcessor(**options)
+    processor = DynamicsProcessor(**options)  # type: ignore[arg-type]
     audio_processed = processor.process(audio, sr)
 
     # Get metrics
@@ -887,10 +889,10 @@ if __name__ == "__main__":
     logger.info(str(metrics))
 
     # Save
-    logger.info("\nSaving: %s", output_file)
+    logger.info("\nspeichere: %s", output_file)
     if audio_processed.ndim > 1:
         audio_processed = audio_processed.T  # Back to (samples, channels)
     sf.write(output_file, audio_processed, sr)
 
-    logger.info("\n✅ Dynamics Processing complete!")
+    logger.info("\n✅ Dynamics Processing vollstaendig!")
     logger.info("Audio now has transparent dynamics and preserved micro-nuances.")

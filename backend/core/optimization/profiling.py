@@ -49,7 +49,7 @@ class PerformanceProfiler:
                 efficiency.process(audio_f32, sr, use_multicore=False)
             except Exception as exc:
                 errors.append(f"efficiency:{exc}")
-                logger.debug("PerformanceProfiler: efficiency stage failed: %s", exc)
+                logger.debug("PerformanceProfiler: efficiency Stufe fehlgeschlagen: %s", exc)
             dt = time.perf_counter() - t0
             components.append({"name": "efficiency", "rt_factor": dt / (duration_s + 1e-12)})
 
@@ -61,7 +61,7 @@ class PerformanceProfiler:
                 vocal_enhancer.process(audio_f32, sr)
             except Exception as exc:
                 errors.append(f"vocal_enhancer:{exc}")
-                logger.debug("PerformanceProfiler: vocal_enhancer stage failed: %s", exc)
+                logger.debug("PerformanceProfiler: vocal_enhancer Stufe fehlgeschlagen: %s", exc)
             dt = time.perf_counter() - t0
             components.append({"name": "vocal_enhancer", "rt_factor": dt / (duration_s + 1e-12)})
 
@@ -71,7 +71,7 @@ class PerformanceProfiler:
             self.processor.process(audio_f32, sr)
         except Exception as exc:
             errors.append(f"pipeline:{exc}")
-            logger.debug("PerformanceProfiler: full pipeline failed: %s", exc)
+            logger.debug("PerformanceProfiler: full pipeline fehlgeschlagen: %s", exc)
         total_time = time.perf_counter() - t0
         total_rt = total_time / (duration_s + 1e-12)
 
@@ -115,7 +115,7 @@ class QualityValidator:
         try:
             processed = self.processor.process(audio_f32, sr)
         except Exception as exc:
-            logger.debug("QualityValidator: processor failed, falling back to passthrough: %s", exc)
+            logger.debug("QualityValidator: processor fehlgeschlagen, falling back to passthrough: %s", exc)
             processed = audio_f32
 
         processed = np.asarray(processed, dtype=np.float32)

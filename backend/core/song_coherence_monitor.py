@@ -127,7 +127,7 @@ class SongCoherenceMonitor:
                 len(result.inconsistent_sections),
             )
         except Exception as exc:
-            logger.debug("SongCoherenceMonitor non-blocking: %s", exc)
+            logger.debug("SongCoherenceMonitor nicht blockierend: %s", exc)
         return result
 
     # ------------------------------------------------------------------
@@ -183,7 +183,7 @@ class SongCoherenceMonitor:
             mfcc = _lb.feature.mfcc(y=seg, sr=sr, n_mfcc=_N_MFCC, n_fft=2048, hop_length=512)
             return mfcc.mean(axis=1).astype(np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("song_coherence_monitor.py::_mfcc_mean fallback: %s", e)
+            logger.warning("song_coherence_monitor.py::_mfcc_mean Ersatzpfad: %s", e)
 
         # Lightweight fallback: log-energy in 13 mel-like bands
         n_fft = 2048
@@ -233,5 +233,5 @@ def get_song_coherence_monitor() -> SongCoherenceMonitor:
         with _lock:
             if _instance is None:
                 _instance = SongCoherenceMonitor()
-                logger.info("SongCoherenceMonitor initialized (§Gap2)")
+                logger.info("SongCoherenceMonitor initialisiert (§Gap2)")
     return _instance

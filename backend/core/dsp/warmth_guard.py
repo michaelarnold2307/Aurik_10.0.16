@@ -58,7 +58,7 @@ def _bandpass_energy_db(audio: np.ndarray, sr: int) -> float:
         rms = float(np.sqrt(np.mean(filtered**2) + 1e-12))
         return float(20.0 * np.log10(rms + 1e-12))
     except Exception as e:
-        logger.warning("warmth_guard.py::_bandpass_energy_db fallback: %s", e)
+        logger.warning("warmth_guard.py::_bandpass_energy_db Ersatzpfad: %s", e)
         return -120.0
 
 
@@ -122,5 +122,5 @@ def measure_warmth_band_delta(
         )
 
     except Exception as exc:
-        logger.debug("measure_warmth_band_delta non-blocking: %s", exc)
+        logger.debug("measure_warmth_band_delta nicht blockierend: %s", exc)
         return _fallback

@@ -23,7 +23,7 @@ def test_parse_version_simple():
 
 
 def test_parse_version_with_v_prefix():
-    assert _parse_version("v10.0.0") == (9, 10, 80)
+    assert _parse_version("v10.0.0") == (10, 0, 0)
 
 
 def test_parse_version_with_V_prefix():
@@ -31,18 +31,18 @@ def test_parse_version_with_V_prefix():
 
 
 def test_parse_version_non_numeric():
-    assert _parse_version("v10.0.0.beta") == (9, 10)
+    assert _parse_version("v10.0.0.beta") == (10, 0, 0)
 
 
 def test_parse_version_hotfix_suffix():
-    assert _parse_version("v10.0.0-hotfix.2") == (9, 12, 9, 2)
+    assert _parse_version("v10.0.0-hotfix.2") == (10, 0, 0, 2)
 
 
 def test_parse_version_comparison():
     assert _parse_version("9.10.80") > _parse_version("9.10.77")
     assert _parse_version("9.11.0") > _parse_version("9.10.99")
     assert _parse_version("10.0.0") > _parse_version("9.99.99")
-    assert _parse_version("9.10.77") == _parse_version("v10.0.0")
+    assert _parse_version("v10.0.0") > _parse_version("9.10.77")
     assert _parse_version("9.12.9-hotfix.2") > _parse_version("9.12.9-hotfix.1")
 
 
@@ -99,12 +99,12 @@ def test_check_newer_available(mock_urlopen):
 @patch("Aurik10.core.version_checker.urlopen")
 def test_check_up_to_date(mock_urlopen):
     resp = MagicMock()
-    resp.read.return_value = _mock_release("v10.0.0")
+    resp.read.return_value = _mock_release("v10.0.15")
     resp.__enter__ = MagicMock(return_value=resp)
     resp.__exit__ = MagicMock(return_value=False)
     mock_urlopen.return_value = resp
 
-    result = check_for_update("9.10.77")
+    result = check_for_update("10.0.15")
     assert result.available is False
     assert result.error == ""
 
@@ -112,12 +112,12 @@ def test_check_up_to_date(mock_urlopen):
 @patch("Aurik10.core.version_checker.urlopen")
 def test_check_older_than_current(mock_urlopen):
     resp = MagicMock()
-    resp.read.return_value = _mock_release("v10.0.0")
+    resp.read.return_value = _mock_release("v9.9.0")
     resp.__enter__ = MagicMock(return_value=resp)
     resp.__exit__ = MagicMock(return_value=False)
     mock_urlopen.return_value = resp
 
-    result = check_for_update("9.10.77")
+    result = check_for_update("10.0.15")
     assert result.available is False
 
 

@@ -403,7 +403,7 @@ class RestaurierDenker:
         """
         assert sr == 48000, f"RestaurierDenker.restauriere() erwartet sr=48000 Hz, erhalten: {sr} Hz"
         logger.info(
-            "RestaurierDenker.restauriere() gestartet: mode=%s, material=%s, duration=%.1fs, caches=%s",
+            "RestaurierDenker.restauriere() gestartet: Betriebsart=%s, material=%s, duration=%.1fs, caches=%s",
             mode,
             material,
             len(audio) / max(sr, 1),
@@ -417,7 +417,7 @@ class RestaurierDenker:
         # §2.39 OOM-Recovery: explicit resume path via persisted checkpoint.
         if recovery_checkpoint is not None:
             logger.info(
-                "RestaurierDenker: OOM-Recovery-Wiederaufnahme aktiv (remaining_phases=%d, failure_phase=%s)",
+                "RestaurierDenker: OOM-Wiederherstellung-Wiederaufnahme aktiv (remaining_phases=%d, Fehlschlag_Verarbeitungsschritt=%s)",
                 len(getattr(recovery_checkpoint, "phases_remaining", []) or []),
                 getattr(recovery_checkpoint, "failure_phase", "?"),
             )
@@ -439,7 +439,7 @@ class RestaurierDenker:
                 )
                 return self._konvertiere(raw, material=material)
             except Exception as cp_exc:
-                logger.warning("RestaurierDenker: OOM-Recovery fehlgeschlagen: %s", cp_exc)
+                logger.warning("RestaurierDenker: OOM-Wiederherstellung fehlgeschlagen: %s", cp_exc)
                 return self._fallback(audio, material or "unknown", f"OOM-Recovery fehlgeschlagen: {cp_exc}")
 
         # ── v10.0.0: Direkt-UV3-Pfad (kein ARE-Umweg) ─────────────────────
@@ -549,7 +549,7 @@ class RestaurierDenker:
                     _uv3_kwargs["bitrate_aware_limits"] = get_bitrate_aware_limits(str(material), audio, sr)
                     logger.info("RestaurierDenker: Bitrate ~%d kbps (conf=%.2f)", _kbps, _conf)
             except Exception as e:
-                logger.warning("restaurier_denker.py::unbekannter Fallback: %s", e)
+                logger.warning("restaurier_denker.py::unbekannter Ersatzpfad: %s", e)
 
             try:
                 # §v10 HPE Baseline + Inviting VOR UV3
@@ -631,7 +631,7 @@ class RestaurierDenker:
                                 for w in _sweet.warnings[:3]:
                                     logger.info("  - %s", w)
                         except Exception as e:
-                            logger.warning("restaurier_denker.py::unbekannter Fallback: %s", e)
+                            logger.warning("restaurier_denker.py::unbekannter Ersatzpfad: %s", e)
 
                         if _sweet is not None and _sweet.all_green:
                             # PERFEKT — alle Metriken in Grünzone + Aura Check
@@ -644,7 +644,7 @@ class RestaurierDenker:
                                 if not _aura_cmp.get("aura_preserved", True):
                                     logger.warning("RestaurierDenker: AURA VERLETZT — %s", _aura_cmp.get("verdict", ""))
                             except Exception as e:
-                                logger.warning("restaurier_denker.py::unbekannter Fallback: %s", e)
+                                logger.warning("restaurier_denker.py::unbekannter Ersatzpfad: %s", e)
                             # §v10 Song-Profil aktualisieren
                             try:
                                 from backend.core.aurik_completion_engine import update_song_profile
@@ -659,19 +659,19 @@ class RestaurierDenker:
                         # Nicht am Sweet Spot → iterative Optimierung
                         _optimized = self._optimize_to_sweet_spot(audio, _restored_f32, sr, result, max_iterations=3)
                         if _optimized is not None:
-                            return _optimized
+                            return _optimized  # type: ignore[no-any-return]
 
                         # Optimierung nicht erfolgreich → FAILSAFE
                         _fail_msg = "Sweet Spot nicht erreichbar"
                         if _sweet is not None:
                             _fail_msg += f" ({_sweet.green_count}/7 green)"
-                        logger.warning("RestaurierDenker: %s — versuche RETRY_LIGHTER", _fail_msg)
+                        logger.warning("RestaurierDenker: %s — versuche Wiederholung_LIGHTER", _fail_msg)
                         _retry = self._retry_lighter(audio, sr, restorer, _uv3_kwargs, material)
                         if _retry is not None:
                             return _retry
 
                         # §v10 STUFE 3: Original zurück
-                        logger.error("RestaurierDenker: Alle Rettungsversuche gescheitert — Original unverändert")
+                        logger.error("RestaurierDenker: Alle Rettungsversuche gescheitert — Originalsignal unverändert")
                         fallback = self._fallback(audio, material or "unknown", _fail_msg)
                         fallback.audio = audio.copy()
                         return fallback
@@ -691,7 +691,7 @@ class RestaurierDenker:
 
                 return result
             except Exception as uv3_exc:
-                logger.warning("UV3 Direkt-Pfad fehlgeschlagen: %s — Fallback.", uv3_exc, exc_info=True)
+                logger.warning("UV3 Direkt-Pfad fehlgeschlagen: %s — Ersatzpfad.", uv3_exc, exc_info=True)
                 return self._fallback(audio, material or "unknown", str(uv3_exc))
 
         # ── Fallback ohne Caches: ARE → UV3 (Legacy-Pfad) ────────────────────
@@ -763,7 +763,7 @@ class RestaurierDenker:
                         logger.warning("UV3 auf ARE-Audio fehlgeschlagen: %s", uv3_exc)
                         return self._fallback(_are_audio, material or "unknown", str(uv3_exc))
             except Exception as are_exc:
-                logger.warning("AurikAutonomousPipeline fehlgeschlagen: %s — Fallback auf UV3", are_exc)
+                logger.warning("AurikAutonomousPipeline fehlgeschlagen: %s — Ersatzpfad auf UV3", are_exc)
 
         # ── §v10.5 UV3 immer direkt (ARE-Pfad deprecated) ──────────────────
         restorer = self._get_restorer(mode=mode)
@@ -817,14 +817,16 @@ class RestaurierDenker:
                     return self._konvertiere(raw, material=material)
                 except Exception as _sar_exc:
                     logger.warning(
-                        "§3.0 SourceAwareRestorer fehlgeschlagen: %s — Fallback auf Standard-UV3",
+                        "§3.0 SourceAwareRestorer fehlgeschlagen: %s — Ersatzpfad auf Standard-UV3",
                         _sar_exc,
                     )
                     # Fallthrough zum Standard-UV3-Pfad
 
             raw = restorer.restore(audio, **_restore_kwargs)
         except Exception as exc:
-            logger.warning("UnifiedRestorerV3.restore() fehlgeschlagen: %s — Fallback auf Original", exc)
+            logger.warning(
+                "UnifiedRestorerV3.wiederherstellen() fehlgeschlagen: %s — Ersatzpfad auf Originalsignal", exc
+            )
             return self._fallback(audio, material or "unknown", str(exc))
 
         return self._konvertiere(raw, material=material)
@@ -884,7 +886,7 @@ class RestaurierDenker:
             )
 
             logger.info(
-                "\U0001f3b5 RestaurierDenker: UnifiedRestorerV3 init (mode=%s, num_cores=%d, system_cores=%d)",
+                "\U0001f3b5 RestaurierDenker: UnifiedRestorerV3 init (Betriebsart=%s, num_cores=%d, system_cores=%d)",
                 mode,
                 _auto_cores,
                 _system_cores,
@@ -921,7 +923,7 @@ class RestaurierDenker:
             return pipeline
         except Exception as exc:
             logger.warning(
-                "AurikAutonomousPipeline nicht verf\u00fcgbar (%s) \u2014 UnifiedRestorerV3 als Fallback",
+                "AurikAutonomousPipeline nicht verf\u00fcgbar (%s) \u2014 UnifiedRestorerV3 als Ersatzpfad",
                 exc,
             )
             return None
@@ -1135,13 +1137,13 @@ class RestaurierDenker:
         Aurik es mit SANFTEREN Parametern — nicht aufgeben, nachsteuern.
         """
         try:
-            logger.info("RestaurierDenker: RETRY_LIGHTER — versuche mit reduzierter Intensität")
+            logger.info("RestaurierDenker: Wiederholung_LIGHTER — versuche mit reduzierter Intensität")
             _lighter_kwargs = dict(uv3_kwargs)
             _lighter_kwargs["mode"] = "balanced"  # Weniger aggressiv als "quality"
             raw2 = restorer.restore(audio, **_lighter_kwargs)
             from denker.restaurier_denker import RestaurierDenker
 
-            result2 = RestaurierDenker._konvertiere.__func__(None, raw2, material=material)
+            result2 = RestaurierDenker._konvertiere.__func__(None, raw2, material=material)  # type: ignore[attr-defined]
 
             # Prüfe ob der Retry besser ist
             from backend.core.human_pleasantness_estimator import compare_pleasantness
@@ -1152,14 +1154,14 @@ class RestaurierDenker:
             _cmp2 = compare_pleasantness(np.asarray(audio, dtype=np.float32), np.asarray(_r2, dtype=np.float32), sr)
             _delta2 = float(_cmp2.get("delta_score", 0.0))
             if _delta2 > -0.02:
-                logger.info("RestaurierDenker RETRY_LIGHTER erfolgreich: HPE %+.3f", _delta2)
+                logger.info("RestaurierDenker Wiederholung_LIGHTER erfolgreich: HPE %+.3f", _delta2)
                 result2.quality_delta = _delta2
-                return result2
+                return result2  # type: ignore[no-any-return]
             else:
-                logger.warning("RestaurierDenker RETRY_LIGHTER gescheitert: HPE %+.3f", _delta2)
+                logger.warning("RestaurierDenker Wiederholung_LIGHTER gescheitert: HPE %+.3f", _delta2)
                 return None
         except Exception as e:
-            logger.warning("RestaurierDenker RETRY_LIGHTER Fehler: %s", e)
+            logger.warning("RestaurierDenker Wiederholung_LIGHTER Fehler: %s", e)
             return None
 
     @staticmethod
@@ -1401,7 +1403,7 @@ def get_restaurier_denker() -> RestaurierDenker:
                             details={"conflict": conf},
                         )
         except Exception:
-            logger.debug("_check_undo_provenance: silent except suppressed", exc_info=True)
+            logger.debug("_Pruefung_undo_provenance: silent except suppressed", exc_info=True)
         return None
 
     def _check_paralysis(self, ctx: DenkerContext) -> Decision | None:
@@ -1441,7 +1443,7 @@ def get_restaurier_denker() -> RestaurierDenker:
                             },
                         )
             except Exception:
-                logger.debug("_check_paralysis: silent except suppressed", exc_info=True)
+                logger.debug("_Pruefung_paralysis: silent except suppressed", exc_info=True)
         return None
 
     def _get_alternative_regression(self, ctx: DenkerContext) -> float | None:

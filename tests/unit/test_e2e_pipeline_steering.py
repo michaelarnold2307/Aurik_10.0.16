@@ -35,12 +35,12 @@ def _make_defective_audio(duration: float = 3.0) -> np.ndarray:
     for i in range(5, len(t), frame * 10):
         if i + 10 < len(sine):
             sine[i : i + 10] *= 0.3
-    return np.clip(sine + noise + hum, -1, 1)
+    return np.clip(sine + noise + hum, -1, 1)  # type: ignore[no-any-return]
 
 
 def _make_stereo_defective() -> np.ndarray:
     mono = _make_defective_audio()
-    return np.stack([mono, mono * 0.85], axis=1).astype(np.float32)
+    return np.stack([mono, mono * 0.85], axis=1).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

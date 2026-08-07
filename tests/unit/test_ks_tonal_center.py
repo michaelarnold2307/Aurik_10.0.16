@@ -22,7 +22,7 @@ def _make_c_major_chord(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
     c = 0.3 * np.sin(2 * np.pi * 261.63 * t)
     e = 0.3 * np.sin(2 * np.pi * 329.63 * t)
     g = 0.3 * np.sin(2 * np.pi * 392.00 * t)
-    return (c + e + g).astype(np.float32)
+    return (c + e + g).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_a_minor_chord(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
@@ -31,7 +31,7 @@ def _make_a_minor_chord(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
     a = 0.3 * np.sin(2 * np.pi * 220.00 * t)
     c = 0.3 * np.sin(2 * np.pi * 261.63 * t)
     e = 0.3 * np.sin(2 * np.pi * 329.63 * t)
-    return (a + c + e).astype(np.float32)
+    return (a + c + e).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _chromagram_12(audio: np.ndarray, sr: int) -> np.ndarray:

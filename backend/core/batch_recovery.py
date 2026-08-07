@@ -39,9 +39,9 @@ class BatchRecoveryManager:
     def _load_manifest(self) -> dict:
         if self._manifest_path.exists():
             try:
-                return json.loads(self._manifest_path.read_text())
+                return json.loads(self._manifest_path.read_text())  # type: ignore[no-any-return]
             except Exception as e:
-                logger.warning("batch_recovery.py::_load_manifest fallback: %s", e)
+                logger.warning("batch_Wiederherstellung.py::_laden_manifest Ersatzpfad: %s", e)
         return {
             "batch_id": self._batch_id,
             "created": time.time(),
@@ -107,7 +107,7 @@ class BatchRecoveryManager:
                 self._manifest["checkpoint_files"][file_path] = str(cp_path)
             self._save_manifest()
         except Exception as e:
-            logger.warning("Checkpoint failed for %s: %s", file_path, e)
+            logger.warning("Checkpoint fehlgeschlagen for %s: %s", file_path, e)
             if tmp.exists():
                 tmp.unlink(missing_ok=True)
 
@@ -126,7 +126,7 @@ class BatchRecoveryManager:
                 metadata = json.loads(meta_path.read_text()) if meta_path.exists() else {}
                 return audio, metadata
             except Exception as e:
-                logger.warning("Load checkpoint failed: %s", e)
+                logger.warning("laden checkpoint fehlgeschlagen: %s", e)
         return None
 
     # ── Recovery ──────────────────────────────────────────────────────────
@@ -152,7 +152,7 @@ class BatchRecoveryManager:
                     Path(cp_path).unlink(missing_ok=True)
                     Path(cp_path).with_suffix(".json").unlink(missing_ok=True)
                 except Exception as e:
-                    logger.warning("batch_recovery.py::cleanup fallback: %s", e)
+                    logger.warning("batch_Wiederherstellung.py::cleanup Ersatzpfad: %s", e)
             self._manifest_path.unlink(missing_ok=True)
 
     def get_progress(self) -> dict:

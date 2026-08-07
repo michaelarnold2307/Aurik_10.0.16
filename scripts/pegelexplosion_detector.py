@@ -19,6 +19,7 @@ import logging
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -103,11 +104,11 @@ class PegelexplosionDetector:
             times.append(pos / sr)
             pos += hop_samples
 
-        lufs_frames = np.array(lufs_frames)
-        times = np.array(times)
+        lufs_frames = np.array(lufs_frames)  # type: ignore[assignment]
+        times = np.array(times)  # type: ignore[assignment]
 
         # Spikes erkennen (LUFS-Gradienten)
-        spike_locations, spike_magnitudes = self._detect_spikes(times, lufs_frames)
+        spike_locations, spike_magnitudes = self._detect_spikes(times, lufs_frames)  # type: ignore[arg-type]
 
         # Kontext-Analyse
         findings = self._analyze_spike_context(
@@ -115,8 +116,8 @@ class PegelexplosionDetector:
             sr,
             spike_locations,
             spike_magnitudes,
-            lufs_frames,
-            times,
+            lufs_frames,  # type: ignore[arg-type]
+            times,  # type: ignore[arg-type]
             phase_id,
             reference_audio,
         )
@@ -139,8 +140,8 @@ class PegelexplosionDetector:
 
     def _detect_spikes(self, times: np.ndarray, lufs_frames: np.ndarray) -> tuple[list[float], list[float]]:
         """Erkennt Spikes in LUFS-Verlauf."""
-        spike_locs = []
-        spike_mags = []
+        spike_locs: list[Any] = []
+        spike_mags: list[Any] = []
 
         if len(lufs_frames) < 3:
             return spike_locs, spike_mags

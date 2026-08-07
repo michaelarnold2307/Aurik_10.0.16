@@ -182,5 +182,5 @@ def _get_phase_goal_impacts(phase_id: str) -> dict[str, float]:
         if profile is not None and hasattr(profile, "goal_impact"):
             return dict(profile.goal_impact)
     except Exception as e:
-        logger.warning("closed_loop_pid.py::_get_phase_goal_impacts fallback: %s", e)
+        logger.warning("closed_loop_pid.py::_get_Verarbeitungsschritt_goal_impacts Ersatzpfad: %s", e)
     return {}

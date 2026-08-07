@@ -210,7 +210,7 @@ class WatchdogMonitor:
                 return False, integrity.issues
             return True, []
         except Exception as exc:
-            logger.debug("WatchdogMonitor.pre_flight_check: %s", exc)
+            logger.debug("WatchdogMonitor.pre_flight_Pruefung: %s", exc)
             return True, []  # Watchdog-Fehler blockiert nie
 
     def on_phase_start(self, phase_name: str) -> None:
@@ -267,7 +267,7 @@ class WatchdogMonitor:
                     if rms_drop < -RMS_CRITICAL_DROP_DB:
                         watch.errors.append(f"RMS-Kollaps: {rms_drop:.1f}dB Abfall in {phase_name}")
             except Exception as exc:
-                logger.debug("WatchdogMonitor.on_phase_end integrity check: %s", exc)
+                logger.debug("WatchdogMonitor.on_Verarbeitungsschritt_end integrity Pruefung: %s", exc)
 
             self._phase_watches.append(watch)
             self._current_phase = None
@@ -278,7 +278,7 @@ class WatchdogMonitor:
             self._silent_except_total += 1
             if self._silent_except_total >= SILENT_EXCEPT_WARN:
                 logger.warning(
-                    "Watchdog: %d silent exceptions in this run (context: %s)",
+                    "Watchdog: %d silent exceptions in this Ausfuehrung (context: %s)",
                     self._silent_except_total,
                     context or "unknown",
                 )
@@ -326,7 +326,7 @@ class WatchdogMonitor:
                     f"{pleasantness.issues[0] if pleasantness.issues else 'Leichte Optimierung möglich'}"
                 )
         except Exception as exc:
-            logger.debug("WatchdogMonitor HPE-Check non-blocking: %s", exc)
+            logger.debug("WatchdogMonitor HPE-Pruefung nicht blockierend: %s", exc)
 
         # Phasen-Fehler sammeln
         for watch in report.phase_watches:
@@ -380,7 +380,9 @@ class WatchdogMonitor:
             est_artifact = max(0.80, integrity_factor * report.pleasantness_score)
             est_hpi = max(0.0, min(1.0, report.pleasantness_score * integrity_factor))
             # §0h Veto-Check
-            pq_v = const.check_paragraph_zero(audio, sr, artifact_freedom=est_artifact, hpi=est_hpi, chain_depth=chain_depth)
+            pq_v = const.check_paragraph_zero(
+                audio, sr, artifact_freedom=est_artifact, hpi=est_hpi, chain_depth=chain_depth
+            )
             for v in pq_v:
                 if "VETO" in v:
                     report.criticals.append(f"CONSTITUTION: {v}")
@@ -412,7 +414,7 @@ class WatchdogMonitor:
                 for f in failed:
                     report.warnings.append(f"Spec-Goal: {f}")
             except Exception as _e:
-                logger.debug("watchdog_monitor: non-critical exception: %s", _e)
+                logger.debug("watchdog_monitor: unkritisch exception: %s", _e)
             # Continuous Improvement Loop
             try:
                 from backend.core.spec_improvement_loop import get_improvement_loop
@@ -430,9 +432,9 @@ class WatchdogMonitor:
                 if imp.get("audit") and imp["audit"]["health"] != "healthy":
                     report.warnings.append(f"⚠️ Spec-Audit: {imp['audit']['health']}")
             except Exception as _e:
-                logger.debug("watchdog_monitor: non-critical exception: %s", _e)
+                logger.debug("watchdog_monitor: unkritisch exception: %s", _e)
         except Exception as exc:
-            logger.debug("Watchdog spec constitution check non-blocking: %s", exc)
+            logger.debug("Watchdog spec constitution Pruefung nicht blockierend: %s", exc)
 
         report.all_checks_passed = (
             len(report.criticals) == 0 and report.pre_flight_ok and report.pleasantness_score >= HPE_MIN_ACCEPTABLE

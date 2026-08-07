@@ -203,7 +203,7 @@ class ConsonantEnhancement:
         sib_mask = self._sibilant_mask(mono, sr)
         n_fricative_frames = int(np.sum(sib_mask))
         if n_fricative_frames == 0:
-            logger.debug("ConsonantEnhancement: keine Frikativ-Segmente gefunden, Skip.")
+            logger.debug("ConsonantEnhancement: keine Frikativ-Segmente gefunden, ueberspringen.")
             return ConsonantEnhancementResult(
                 audio=np.clip(audio, -1.0, 1.0),
                 fricative_segments=0,
@@ -363,7 +363,7 @@ class ConsonantEnhancement:
             cd_result = get_consonant_detector().detect(mono, sr)
             if cd_result.mask.shape[0] == mono.shape[0]:
                 logger.debug(
-                    "ConsonantDetector: %d Frikativ-Frames (ratio=%.2f)",
+                    "ConsonantDetector: %d Frikativ-Frames (Verhaeltnis=%.2f)",
                     cd_result.n_fricative_frames,
                     cd_result.fricative_ratio,
                 )
@@ -474,7 +474,7 @@ def _snr_in_band(mono: np.ndarray, sr: int, f_lo: float, f_hi: float) -> float:
         sos = sig.butter(4, [f_lo_n, f_hi_n], btype="band", output="sos")
         band = sig.sosfilt(sos, mono)
     except Exception as e:
-        logger.warning("consonant_enhancement.py::_snr_in_band fallback: %s", e)
+        logger.warning("consonant_enhancement.py::_snr_in_band Ersatzpfad: %s", e)
         return 0.0
     band_rms = float(np.sqrt(np.mean(band**2)) + 1e-12)
     total_rms = float(np.sqrt(np.mean(mono**2)) + 1e-12)
@@ -739,7 +739,7 @@ class PlosiveBurstPreserver:
         out = np.clip(out, -1.0, 1.0)
 
         logger.debug(
-            "PlosiveBurstPreserver: detected=%d, restored=%d, blend=%.2f",
+            "PlosiveBurstPreserver: erkannt=%d, wiederhergestellt=%d, blend=%.2f",
             len(onsets),
             n_restored,
             blend,

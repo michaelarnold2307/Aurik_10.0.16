@@ -228,7 +228,7 @@ def measure_candidate_dims(
     # Fehlgeschlagene Einzelmessung: aktueller Wert (0.80) als konservativer Boden.
     for _k in _failed:
         dims[_k] = 0.80
-        logger.debug("CBS: %s Messung fehlgeschlagen → konservativer Fallback 0.80.", _k)
+        logger.debug("CBS: %s Messung fehlgeschlagen → konservativer Ersatzpfad 0.80.", _k)
 
     _elapsed = time.monotonic() - _t0
     logger.debug(
@@ -340,7 +340,7 @@ def _build_silence_mask(
                 mask[i_start:i_end] = 0.0
         except Exception as _cbs_zone_exc:
             logger.debug(
-                "consensus_balance_synthesizer: zone mask computation failed (non-critical): %s", _cbs_zone_exc
+                "consensus_balance_synthesizer: zone mask computation fehlgeschlagen (unkritisch): %s", _cbs_zone_exc
             )
             continue
 
@@ -433,7 +433,7 @@ def apply_dgwcs(
 
     for ref_name, ref_audio in references.items():
         if time.monotonic() >= _deadline:
-            logger.debug("CBS: Zeit-Budget erschöpft, verbleibende Kandidaten übersprungen.")
+            logger.debug("CBS: Zeit-Grenze erschöpft, verbleibende Kandidaten übersprungen.")
             break
         if not isinstance(ref_audio, np.ndarray):
             continue

@@ -165,7 +165,7 @@ def generate_feature_matrix_table():
         row = [feature]
 
         for tool in ["aurik", "izotope_rx11", "accusonus_era", "waves_clarity"]:
-            data = tools[tool]
+            data = tools[tool]  # type: ignore[index]
 
             if "supported" in data:
                 if data["supported"]:
@@ -207,16 +207,16 @@ def generate_feature_matrix_table():
     lines.append("")
     lines.append("## Summary")
     lines.append(
-        f"- **AURIK v8:** {sum(1 for f in FEATURE_MATRIX.values() if f['aurik'].get('supported', False))} / {len(FEATURE_MATRIX)} features"
+        f"- **AURIK v8:** {sum(1 for f in FEATURE_MATRIX.values() if f['aurik'].get('supported', False))} / {len(FEATURE_MATRIX)} features"  # type: ignore
     )
     lines.append(
-        f"- **iZotope RX 11:** {sum(1 for f in FEATURE_MATRIX.values() if f['izotope_rx11'].get('supported', False))} / {len(FEATURE_MATRIX)} features"
+        f"- **iZotope RX 11:** {sum(1 for f in FEATURE_MATRIX.values() if f['izotope_rx11'].get('supported', False))} / {len(FEATURE_MATRIX)} features"  # type: ignore
     )
     lines.append(
-        f"- **Accusonus ERA:** {sum(1 for f in FEATURE_MATRIX.values() if f['accusonus_era'].get('supported', False))} / {len(FEATURE_MATRIX)} features"
+        f"- **Accusonus ERA:** {sum(1 for f in FEATURE_MATRIX.values() if f['accusonus_era'].get('supported', False))} / {len(FEATURE_MATRIX)} features"  # type: ignore
     )
     lines.append(
-        f"- **Waves Clarity:** {sum(1 for f in FEATURE_MATRIX.values() if f['waves_clarity'].get('supported', False))} / {len(FEATURE_MATRIX)} features"
+        f"- **Waves Clarity:** {sum(1 for f in FEATURE_MATRIX.values() if f['waves_clarity'].get('supported', False))} / {len(FEATURE_MATRIX)} features"  # type: ignore
     )
 
     return "\n".join(lines)

@@ -90,6 +90,8 @@ def get_exports(filepath: str) -> set[str]:
             for target in node.targets:
                 if isinstance(target, ast.Name):
                     exports.add(target.id)
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            exports.add(node.target.id)
     return exports
 
 
@@ -130,6 +132,7 @@ def main() -> None:
             with open(fp) as f:
                 content = f.read()
         except Exception:
+            logger.debug("Import-Breaking-Strukturpruefung uebersprungen", exc_info=True)
             continue
         if "_defekt_hint" in content or "defekt_hint" in content:
             # Check: does file have _defekt_hint = { but no defect_types?

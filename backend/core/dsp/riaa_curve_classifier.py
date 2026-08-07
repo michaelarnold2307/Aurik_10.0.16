@@ -259,7 +259,7 @@ def classify_riaa_curve(audio: np.ndarray, sr: int, era_decade: int | None = Non
     best_conf = posteriors[best_curve]
 
     logger.debug(
-        "classify_riaa_curve: best=%s conf=%.3f (threshold=%.2f)",
+        "classify_riaa_curve: best=%s conf=%.3f (Schwelle=%.2f)",
         best_curve,
         best_conf,
         _CONFIDENCE_THRESHOLD,

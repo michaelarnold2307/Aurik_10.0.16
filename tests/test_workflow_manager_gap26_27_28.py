@@ -450,7 +450,7 @@ class TestWorkflowSessionManager:
 
         # Mock the backend if available
         if session_manager.backend_manager:
-            session_manager.backend_manager.create_session = MagicMock(return_value="session_123")
+            session_manager.backend_manager.create_session = MagicMock(return_value="session_123")  # type: ignore[method-assign]
             session_id = session_manager.create_session("Test Session", "Description")
             assert session_id == "session_123"
             assert session_manager.current_session_id == "session_123"
@@ -466,7 +466,7 @@ class TestWorkflowSessionManager:
         # Mock the backend if available
         if session_manager.backend_manager:
             mock_session = MagicMock()
-            session_manager.backend_manager.load_session = MagicMock(return_value=mock_session)
+            session_manager.backend_manager.load_session = MagicMock(return_value=mock_session)  # type: ignore[method-assign]
             success = session_manager.load_session("session_456")
             assert success
             assert session_manager.current_session_id == "session_456"
@@ -478,7 +478,7 @@ class TestWorkflowSessionManager:
     def test_add_processed_file_without_backend(self, test_dir):
         """Test adding processed file when backend not available."""
         session_manager = WorkflowSessionManager(sessions_dir=test_dir / "sessions")
-        session_manager.backend_manager = None
+        session_manager.backend_manager = None  # type: ignore[assignment]
 
         # Should not raise exception
         session_manager.add_processed_file(Path("input.wav"), Path("output.wav"), {"mode": "balanced"}, success=True)

@@ -14,9 +14,7 @@ import soundfile as sf
 from backend.core.metadata_preserver import get_metadata_preserver
 
 try:
-    from backend.core.version import get_aurik_version as _get_aurik_version
-
-    _AURIK_VERSION: str = _get_aurik_version()
+    from backend.core.version import AURIK_VERSION as _AURIK_VERSION
 except Exception:
     _AURIK_VERSION = "unknown"
 
@@ -244,12 +242,12 @@ def _export_guard(audio: np.ndarray) -> np.ndarray:
     peak = float(np.max(np.abs(audio_clean)))
     if peak > _TRUE_PEAK_LIMIT:
         logger.warning(
-            "Export-Guard: True-Peak %.4f dBTP \xfcberschreitet 0 dBTP — wird begrenzt.",
+            "Ausgabe-Guard: True-Peak %.4f dBTP \xfcberschreitet 0 dBTP — wird begrenzt.",
             20 * math.log10(peak) if peak > 0 else -math.inf,
         )
     elif peak > 10 ** (_TRUE_PEAK_WARN_DBTP / 20):
         logger.warning(
-            "Export-Guard: True-Peak %.2f dBFS n\xe4hert sich 0 dBTP.",
+            "Ausgabe-Guard: True-Peak %.2f dBFS n\xe4hert sich 0 dBTP.",
             20 * math.log10(peak) if peak > 0 else -math.inf,
         )
 
@@ -298,7 +296,7 @@ def _export_nuance_guard(audio: np.ndarray, sr: int) -> np.ndarray:
                 g_r = float(np.clip((l_rms * max_ratio) / (r_rms + 1e-12), 0.80, 1.0))
             a[:, 0] = np.clip(a[:, 0] * g_l, -1.0, 1.0)
             a[:, 1] = np.clip(a[:, 1] * g_r, -1.0, 1.0)
-            logger.info("Export-NuanceGuard: Stereobalance korrigiert (%.2f dB, gL=%.3f gR=%.3f)", bal_db, g_l, g_r)
+            logger.info("Ausgabe-NuanceGuard: Stereobalance korrigiert (%.2f dB, gL=%.3f gR=%.3f)", bal_db, g_l, g_r)
 
     # 3) Gentle HF-harshness guard (only on clear excess treble energy).
     if _SCIPY_AVAILABLE and _scipy_signal is not None:
@@ -324,7 +322,7 @@ def _export_nuance_guard(audio: np.ndarray, sr: int) -> np.ndarray:
                         high = a[:, ch].astype(np.float64) - low
                         out[:, ch] = np.clip((low + high * att).astype(np.float32), -1.0, 1.0)
                     a = out
-                logger.info("Export-NuanceGuard: sanfte Höhenglättung aktiv (ratio=%.3f, att=%.3f)", ratio, att)
+                logger.info("Ausgabe-NuanceGuard: sanfte Höhenglättung aktiv (Verhaeltnis=%.3f, att=%.3f)", ratio, att)
 
     guarded = np.asarray(np.clip(np.nan_to_num(a, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0), dtype=np.float32)
     return cast(np.ndarray, guarded)
@@ -555,19 +553,28 @@ def validate_export_quality(result: Any) -> tuple[bool, list[str]]:
     # (HPI ≥ 0.75) unisono "Excellent" sagen, werden objektive P1/P2-Warnungen
     # auf Warning-only herabgestuft. Das Ohr hat Vorrang vor Proxies.
     # Gleiche Logik wie DoNoHarmGuardian.perceptual_override (§5/5).
-    _hpi = (_nested_float(meta, "hpi") or _nested_float(meta, "holistic_perceptual_index")
-            or _nested_float(meta, "analytics", "hpi")
-            or getattr(result, "hpi", None) or getattr(result, "holistic_perceptual_index", None))
-    _mushra = (_nested_float(meta, "mushra_score") or _nested_float(meta, "mushra")
-               or _nested_float(meta, "analytics", "mushra", "mushra_score")
-               or _nested_float(meta, "analytics", "mushra_score")
-               or getattr(result, "mushra_score", None) or getattr(result, "mushra", None))
-    _perceptual_override = (_hpi is not None and _hpi >= 0.75 and _mushra is not None and _mushra >= 85.0)
+    _hpi = (
+        _nested_float(meta, "hpi")
+        or _nested_float(meta, "holistic_perceptual_index")
+        or _nested_float(meta, "analytics", "hpi")
+        or getattr(result, "hpi", None)
+        or getattr(result, "holistic_perceptual_index", None)
+    )
+    _mushra = (
+        _nested_float(meta, "mushra_score")
+        or _nested_float(meta, "mushra")
+        or _nested_float(meta, "analytics", "mushra", "mushra_score")
+        or _nested_float(meta, "analytics", "mushra_score")
+        or getattr(result, "mushra_score", None)
+        or getattr(result, "mushra", None)
+    )
+    _perceptual_override = _hpi is not None and _hpi >= 0.75 and _mushra is not None and _mushra >= 85.0
     if _perceptual_override:
         logger.info(
-            "Export-Gate: PERCEPTUAL OVERRIDE — MUSHRA=%.0f≥85 HPI=%.3f≥0.75 → "
+            "Ausgabe-Gate: PERCEPTUAL OVERRIDE — MUSHRA=%.0f≥85 HPI=%.3f≥0.75 → "
             "objektive P1/P2-Warnungen werden auf Warning herabgestuft",
-            _mushra, _hpi,
+            _mushra,
+            _hpi,
         )
 
     for goal_name, mat_floor in _material_fallback.items():
@@ -584,7 +591,7 @@ def validate_export_quality(result: Any) -> tuple[bool, list[str]]:
             if _perceptual_override:
                 # HPI+MUSHRA unisono "Excellent" → downgrade zu Warning
                 warnings.append(_msg.replace("KRITISCH:", "WARNUNG (override):"))
-                logger.info("Export-Gate: %s override aktiv — kein Hard-Fail", goal_name)
+                logger.info("Ausgabe-Gate: %s override aktiv — kein Hard-Fail", goal_name)
             else:
                 warnings.append(_msg)
                 passed = False
@@ -598,7 +605,7 @@ def validate_export_quality(result: Any) -> tuple[bool, list[str]]:
         )
 
     for w in warnings:
-        logger.warning("Export-Qualitätsprüfung: %s", w)
+        logger.warning("Ausgabe-Qualitätsprüfung: %s", w)
 
     return passed, warnings
 
@@ -654,11 +661,11 @@ def export_audio(
     try:
         audio, sr = sf.read(io.BytesIO(audio_bytes), always_2d=False)
     except Exception as e:
-        logger.error("Export: Audiodaten konnten nicht gelesen werden: %s", e)
+        logger.error("Ausgabe: Audiodaten konnten nicht gelesen werden: %s", e)
         raise RuntimeError(f"Fehler beim Lesen der Audiodaten: {e}") from e
 
     logger.info(
-        "💿 Export gestartet: Pfad=%s, Format=%s, Bittiefe=%d, Abtastrate=%d, Shape=%s, Dauer=%.1fs",
+        "💿 Ausgabe gestartet: Pfad=%s, Format=%s, Bittiefe=%d, Abtastrate=%d, Shape=%s, Dauer=%.1fs",
         export_path,
         export_format,
         bit_depth,
@@ -688,7 +695,7 @@ def export_audio(
         else:
             audio = inject_cd_noise_profile(audio, sr, bit_depth=bit_depth, seed=dither_seed)
     except Exception:
-        logger.debug("CD-Rauschprofil-Injektion übersprungen (non-blocking)")
+        logger.debug("CD-Rauschprofil-Injektion übersprungen (nicht blockierend)")
 
     # 3. Dithering before integer quantisation (spec §DSP-Spezialregeln)
     if bit_depth < 32 and export_format.lower() not in ("mp3", "aac", "m4a", "opus"):
@@ -712,7 +719,7 @@ def export_audio(
                 if _chain_dict:
                     _chain_list = [str(v) for v in _chain_dict.values() if v]
             except Exception as _e:
-                logger.debug("exporter: non-critical exception: %s", _e)
+                logger.debug("exporter: unkritisch exception: %s", _e)
             _transfer_metadata(source_path, export_path, transfer_chain=_chain_list)
             # BWF-Metadaten für WAV/RF64 schreiben
             if export_format.lower() in ("wav", "rf64"):
@@ -726,12 +733,16 @@ def export_audio(
                     logger.debug("BWF-Metadaten-Schreiben übersprungen: %s", _bwf_exc)
             _size_mb = os.path.getsize(export_path) / (1024 * 1024)
             logger.info(
-                "Export abgeschlossen: %s (%.1f MB, %s %d-bit)", export_path, _size_mb, export_format.upper(), bit_depth
+                "Ausgabe abgeschlossen: %s (%.1f MB, %s %d-bit)",
+                export_path,
+                _size_mb,
+                export_format.upper(),
+                bit_depth,
             )
             return True
         except Exception as e:
             # Cleanup orphaned tmp on failure
-            logger.error("Export fehlgeschlagen (%s): %s", export_format, e)
+            logger.error("Ausgabe fehlgeschlagen (%s): %s", export_format, e)
             try:
                 os.remove(tmp_path)
             except OSError as _exc:
@@ -762,14 +773,14 @@ def export_audio(
                 if _chain_dict2:
                     _chain_list2 = [str(v) for v in _chain_dict2.values() if v]
             except Exception as _e:
-                logger.debug("exporter: non-critical exception: %s", _e)
+                logger.debug("exporter: unkritisch exception: %s", _e)
             _transfer_metadata(source_path, export_path, transfer_chain=_chain_list2)
             _size_mb = os.path.getsize(export_path) / (1024 * 1024)
-            logger.info("Export abgeschlossen: %s (%.1f MB, %s)", export_path, _size_mb, export_format.upper())
+            logger.info("Ausgabe abgeschlossen: %s (%.1f MB, %s)", export_path, _size_mb, export_format.upper())
             return True
         except Exception as e:
             # Cleanup orphaned tmp files
-            logger.error("Export fehlgeschlagen (%s via ffmpeg): %s", export_format, e)
+            logger.error("Ausgabe fehlgeschlagen (%s via ffmpeg): %s", export_format, e)
             for _p in (tmp_out,):
                 try:
                     os.remove(_p)

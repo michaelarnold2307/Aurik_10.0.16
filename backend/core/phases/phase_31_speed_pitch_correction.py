@@ -88,7 +88,7 @@ try:
 
     ML_HYBRID_AVAILABLE = True
 except ImportError:
-    pass
+    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 
 class SpeedPitchCorrectionPhase(PhaseInterface):
@@ -228,6 +228,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -262,6 +263,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -528,7 +530,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                 _new_cs = float(params["correction_strength"]) * (1.0 - 0.80 * _style_cov_p31)
                 params["correction_strength"] = max(_new_cs, 0.0)
                 logger.info(
-                    "Phase31 §P2 style-intent-guard: %d Zonen, coverage=%.1f%% → correction_strength %.3f→%.3f",
+                    "Verarbeitungsschritt31 §P2 style-intent-guard: %d Zonen, coverage=%.1f%% → correction_strength %.3f→%.3f",
                     len(_style_intent_zones_p31),
                     _style_cov_p31 * 100,
                     float(params["correction_strength"]) / max(1.0 - 0.80 * _style_cov_p31, 1e-6),
@@ -575,7 +577,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                 shift_semitones = abs(12.0 * np.log2(max(correction_ratio, 1e-6)))
                 if vocals_conf >= 0.4 and shift_semitones > 2.0:
                     logger.debug(
-                        "Phase 31: PSOLA aktiviert (PANNs Vocals=%.2f, Δ=%.1f st)",
+                        "Verarbeitungsschritt 31: PSOLA aktiviert (PANNs Vocals=%.2f, Δ=%.1f st)",
                         vocals_conf,
                         shift_semitones,
                     )
@@ -634,7 +636,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                     else:
                         result_audio[_npa_mask31] = audio[_npa_mask31]
             except Exception as _npa31_exc:
-                logger.debug("§2.46f Phase31 NPA-Guard (non-blocking): %s", _npa31_exc)
+                logger.debug("§2.46f Verarbeitungsschritt31 NPA-Guard (nicht blockierend): %s", _npa31_exc)
 
             # §V24 Spektralfarbe-Prüfung nach Pitch-/Speed-Korrektur (§2.74, non-blocking)
             try:
@@ -647,7 +649,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                     _sc_wet_31 = 0.70  # Phase-Strength −30 % (§V24)
                     result_audio = (_sc_wet_31 * result_audio + (1.0 - _sc_wet_31) * audio).astype(np.float32)
             except Exception as _sc_exc_31:
-                logger.debug("§V24 phase_31 spectral_color non-blocking: %s", _sc_exc_31)
+                logger.debug("§V24 Verarbeitungsschritt_31 spectral_color nicht blockierend: %s", _sc_exc_31)
 
             # V26 Onset-Guard (§2.77): Transients nach Pitch-Korrektur schützen (non-blocking)
             try:
@@ -657,7 +659,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
 
                 result_audio = _opg31(audio, result_audio, None, max_delta_db=1.5)
             except Exception as _on31_exc:
-                logger.debug("Phase31 V26 Onset-Guard (non-blocking): %s", _on31_exc)
+                logger.debug("Verarbeitungsschritt31 V26 Onset-Guard (nicht blockierend): %s", _on31_exc)
 
             return create_phase_result(
                 audio=result_audio,
@@ -844,7 +846,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                                 out = np.vstack([ch_l[np.newaxis, :], shifted_r[np.newaxis, :]]).astype(np.float32)
                             meta["phase31_stereo_delay_corrected"] = True
         except Exception as exc:
-            logger.debug("Phase 31 damage shield: STCG skipped (%s)", exc)
+            logger.debug("Verarbeitungsschritt 31 damage shield: STCG uebersprungen (%s)", exc)
 
         try:
             # §V04 signal-relative gate: derive from pre-phase noise floor + material floor
@@ -859,7 +861,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                 out = out * attenuation_lin
                 meta["phase31_rms_cap_applied"] = True
         except Exception as exc:
-            logger.debug("Phase 31 damage shield: RMS cap skipped (%s)", exc)
+            logger.debug("Verarbeitungsschritt 31 damage shield: RMS cap uebersprungen (%s)", exc)
 
         peak99_before = float(np.percentile(np.abs(out), 99.9)) if out.size else 0.0
         meta["phase31_peak99_before"] = peak99_before
@@ -934,7 +936,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             return pitch_hz, confidence
 
         except Exception as e:
-            logger.debug("pYIN fehlgeschlagen (%s), DSP-Notfall-Fallback: librosa.yin", e)
+            logger.debug("pYIN fehlgeschlagen (%s), DSP-Notfall-Ersatzpfad: librosa.yin", e)
             try:
                 # Notfall-Fallback: librosa.yin (einfaches YIN — nur als letzter Ausweg)
                 f0_yin = librosa.yin(segment, fmin=60, fmax=800, sr=self.sample_rate)
@@ -943,7 +945,9 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                     return 0.0, 0.0
                 return float(np.median(valid)), 0.4  # Feste niedrige Konfidenz
             except Exception as e:
-                logger.warning("phase_31_speed_pitch_correction.py::_detect_pitch_pyin fallback: %s", e)
+                logger.warning(
+                    "Verarbeitungsschritt_31_speed_pitch_correction.py::_erkennen_pitch_pyin Ersatzpfad: %s", e
+                )
                 return 0.0, 0.0
 
     def _compute_tuning_offset(
@@ -1043,7 +1047,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             speed_ratio = float(2.0 ** (tuning_offset_cents / 1200.0))
 
             logger.info(
-                "Phase 31 tuning-offset: %.2f cents  speed_ratio=%.6f  voiced_frames=%d  a4=%.1f Hz",
+                "Verarbeitungsschritt 31 tuning-offset: %.2f cents  speed_Verhaeltnis=%.6f  voiced_frames=%d  a4=%.1f Hz",
                 tuning_offset_cents,
                 speed_ratio,
                 len(voiced_f0),
@@ -1052,7 +1056,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             return tuning_offset_cents, speed_ratio
 
         except Exception as exc:
-            logger.warning("_compute_tuning_offset failed (%s) — no correction", exc)
+            logger.warning("_berechnen_tuning_offset fehlgeschlagen (%s) — no correction", exc)
             return 0.0, 1.0
 
     def _correct_wsola(self, audio: np.ndarray, ratio: float, params: dict[str, Any]) -> np.ndarray:
@@ -1234,7 +1238,9 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                 boundary=True,
             )
         except Exception as _istft_p31_exc:
-            logger.debug("phase_31 istft failed, switching to OLA fallback: %s", _istft_p31_exc)
+            logger.debug(
+                "Verarbeitungsschritt_31 istft fehlgeschlagen, switching to OLA Ersatzpfad: %s", _istft_p31_exc
+            )
             audio_shifted = self._istft_fallback_ola(
                 np.asarray(Zxx_shifted, dtype=np.complex64),
                 nperseg=nperseg,
@@ -1288,7 +1294,9 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             output = output / norm
             return np.nan_to_num(output, nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[no-any-return]
         except Exception as _ola_exc:
-            logger.debug("phase_31 OLA fallback failed, returning original audio: %s", _ola_exc)
+            logger.debug(
+                "Verarbeitungsschritt_31 OLA Ersatzpfad fehlgeschlagen, returning Originalsignal audio: %s", _ola_exc
+            )
             if isinstance(original_audio, np.ndarray) and original_audio.size > 0:
                 return np.nan_to_num(np.asarray(original_audio, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[no-any-return]
             return np.zeros(max(nperseg, hop), dtype=np.float64)  # type: ignore[no-any-return]
@@ -1373,7 +1381,9 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             _p31_periods = np.clip(np.round(sr / np.maximum(f0_safe, 1.0)).astype(int), 20, sr // 50)
             return _p31_periods  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("phase_31_speed_pitch_correction.py::_psola_compute_periods_mono fallback: %s", e)
+            logger.warning(
+                "Verarbeitungsschritt_31_speed_pitch_correction.py::_psola_berechnen_periods_mono Ersatzpfad: %s", e
+            )
             return None
 
     def _psola_apply_mono(self, y_1d: np.ndarray, period_samps: np.ndarray, ratio: float) -> np.ndarray:
@@ -1528,7 +1538,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             n_valid = int(np.sum(valid_mask))
 
             if n_valid < 3:
-                logger.debug("PolyphonicSpeedCurveEstimator: too few valid frames (%d) — fallback", n_valid)
+                logger.debug("PolyphonicSpeedCurveEstimator: too few valid frames (%d) — Ersatzpfad", n_valid)
                 return 0.0, 0.0, np.array([]), np.array([])
 
             # Savitzky-Golay smoothing of pitch curve (window=51, polyorder=3)
@@ -1562,7 +1572,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             return global_pitch, confidence, smoothed_curve, times
 
         except Exception as exc:
-            logger.warning("PolyphonicSpeedCurveEstimator failed: %s — pYIN/CREPE fallback", exc)
+            logger.warning("PolyphonicSpeedCurveEstimator fehlgeschlagen: %s — pYIN/CREPE Ersatzpfad", exc)
             return 0.0, 0.0, np.array([]), np.array([])
 
     def _detect_pitch_ml_hybrid(
@@ -1591,7 +1601,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
                 poly_pitch, poly_conf, poly_curve, _ = self._estimate_speed_curve_polyphonic(audio, sample_rate)
                 if poly_pitch > 0.0 and poly_conf >= 0.30:
                     logger.info(
-                        "Phase 31 §2.12 PolyphonicSpeedCurveEstimator: pitch=%.2f Hz, conf=%.3f",
+                        "Verarbeitungsschritt 31 §2.12 PolyphonicSpeedCurveEstimator: pitch=%.2f Hz, conf=%.3f",
                         poly_pitch,
                         poly_conf,
                     )
@@ -1625,7 +1635,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             result = detector.detect_global_pitch(audio, sample_rate)
 
             logger.info(
-                "Phase 31 ML-Hybrid: pitch=%.2f Hz, confidence=%.3f, strategy=%s, pYIN=%s, CREPE=%s, time=%.2fs",
+                "Verarbeitungsschritt 31 ML-Hybrid: pitch=%.2f Hz, confidence=%.3f, strategy=%s, pYIN=%s, CREPE=%s, time=%.2fs",
                 result.detected_pitch,
                 result.confidence,
                 result.strategy_used.value,
@@ -1648,7 +1658,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             return result.detected_pitch, result.confidence, metadata
 
         except Exception as e:
-            logger.warning("ML-Hybrid pitch detection failed (pYIN fallback aktiv): %s", e)
+            logger.warning("ML-Hybrid pitch detection fehlgeschlagen (pYIN Ersatzpfad aktiv): %s", e)
             # Fallback zu pYIN (Mauch & Dixon 2014)
             params = self.MATERIAL_PARAMS.get("vinyl", self.MATERIAL_PARAMS["unknown"])
             pitch, conf = self._detect_pitch_pyin(audio, params)
@@ -1663,7 +1673,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
 def _run_test() -> None:  # pragma: no cover
     """Test Professional Speed/Pitch Correction Phase."""
     logger.debug("=" * 80)
-    logger.debug("Professional Speed/Pitch Correction Phase v2.0 - Test")
+    logger.debug("Professional Speed/Pitch Correction Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -1705,16 +1715,16 @@ def _run_test() -> None:  # pragma: no cover
         result = phase.process(audio.copy(), material_type=material, reference_pitch=true_pitch)
 
         if result.success and result.modifications["processing"] == "applied":
-            logger.debug("Processing Complete!")
+            logger.debug("Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f× realtime)",
                 result.metadata["execution_time_seconds"],
                 result.metadata["execution_time_seconds"] / duration,
             )
-            logger.debug("   Detected Pitch: %.2f Hz", result.modifications["detected_pitch"])
+            logger.debug("   erkannt Pitch: %.2f Hz", result.modifications["detected_pitch"])
             logger.debug("   Confidence: %.2f", result.modifications["confidence"])
             logger.debug("   Speed Error: %.2f%%", result.modifications["speed_error_percent"])
-            logger.debug("   Correction Ratio: %.4f", result.modifications["correction_ratio"])
+            logger.debug("   Correction Verhaeltnis: %.4f", result.modifications["correction_ratio"])
             logger.debug("   Algorithm: %s", result.metadata["algorithm"])
             logger.debug(
                 "   Samples: %s → %s",
@@ -1722,14 +1732,14 @@ def _run_test() -> None:  # pragma: no cover
                 result.modifications["samples_after"],
             )
         else:
-            logger.debug("Processing Skipped")
+            logger.debug("Processing uebersprungen")
             logger.debug("   Reason: %s", result.modifications.get("reason", "unknown"))
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("Professional Speed/Pitch Correction v2.0 Test Complete!")
+    logger.debug("Professional Speed/Pitch Correction v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", result.metadata["algorithm"])
-    logger.debug("Scientific Reference: %s", result.metadata.get("scientific_ref", "N/A"))
+    logger.debug("Scientific Referenz: %s", result.metadata.get("scientific_ref", "N/A"))
     logger.debug("Benchmark: %s", result.metadata.get("benchmark", "N/A"))
     logger.debug("Quality Impact: 0.94 (Professional-Grade)")
 

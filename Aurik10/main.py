@@ -16,6 +16,8 @@ import weakref
 from logging.handlers import RotatingFileHandler as _RFH
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
 # ── OpenBLAS/OMP thread-safety: must be set BEFORE any numpy/scipy import ────
 # When multiple Python threads call into numpy simultaneously (pre-analysis
 # ThreadPoolExecutor, pipeline workers), OpenBLAS spawning its own threads
@@ -68,7 +70,7 @@ try:
 
     _torch.set_num_threads(os.cpu_count() or 4)
 except Exception:  # torch not installed / import error on first run
-    pass
+    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 # Add parent + plugins directory to path (für PANNs, VERSA, Bridge-Plugins)
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -179,7 +181,7 @@ def _enable_crash_forensics() -> None:
                 pass
         logger.info("Crash forensics active (faulthandler): %s", crash_log)
     except Exception as exc:
-        logger.warning("Faulthandler setup failed (non-fatal): %s", exc)
+        logger.warning("Faulthandler setup fehlgeschlagen (non-fatal): %s", exc)
 
 
 # PyQt5 and Aurik imports must come after logging setup and sys.path configuration.
@@ -263,7 +265,7 @@ def _run_startup_model_check(_app: QApplication) -> None:
                     )
     except Exception as exc:
         # Startup check must never block app startup
-        logger.warning("Startup model check failed (non-fatal): %s", exc)
+        logger.warning("Start model Pruefung fehlgeschlagen (non-fatal): %s", exc)
 
 
 def _warmup_models_background() -> None:
@@ -277,7 +279,7 @@ def _warmup_models_background() -> None:
 
             _wb()
         except Exception as _e:
-            logger.debug("Warmup failed (non-fatal): %s", _e)
+            logger.debug("Warmup fehlgeschlagen (non-fatal): %s", _e)
 
     t = threading.Thread(target=_run, daemon=True, name="AurikWarmup")
     t.start()
@@ -307,9 +309,9 @@ def _emergency_checkpoint_if_running() -> None:
                 if callable(save_fn):
                     save_fn()
             except Exception as _ce:
-                logger.debug("Emergency checkpoint failed (non-fatal): %s", _ce)
+                logger.debug("Emergency checkpoint fehlgeschlagen (non-fatal): %s", _ce)
     except Exception as _exc:
-        logger.debug("_emergency_checkpoint_if_running skipped: %s", _exc)
+        logger.debug("_emergency_checkpoint_if_laeuft uebersprungen: %s", _exc)
 
 
 _sigterm_shutdown_started = threading.Event()
@@ -329,7 +331,7 @@ def _sigterm_handler(signum: int, _frame: object) -> None:
         return
     # Set immediately to prevent re-entry from concurrent SIGTERMs
     _sigterm_shutdown_started.set()
-    logger.warning("SIGTERM received (signum=%d) — initiating emergency shutdown", signum)
+    logger.warning("SIGTERM received (signum=%d) — initiating emergency Herunterfahren", signum)
 
     def _finalize_sigterm_shutdown() -> None:
         """Finalize shutdown: checkpoint → quit."""
@@ -339,7 +341,7 @@ def _sigterm_handler(signum: int, _frame: object) -> None:
             if _app2:
                 _app2.quit()
         except Exception as _exc:
-            logger.debug("Qt-Quit after SIGTERM failed: %s", _exc)
+            logger.debug("Qt-Quit after SIGTERM fehlgeschlagen: %s", _exc)
         # If Qt.quit fails, process will exit from SIGTERM anyhow
 
     try:
@@ -349,7 +351,7 @@ def _sigterm_handler(signum: int, _frame: object) -> None:
             QTimer.singleShot(0, _finalize_sigterm_shutdown)
             return
     except Exception as _exc:
-        logger.debug("SIGTERM QTimer dispatch failed, fallback: %s", _exc)
+        logger.debug("SIGTERM QTimer dispatch fehlgeschlagen, Ersatzpfad: %s", _exc)
 
     # Fallback if QTimer dispatch failed (e.g., no event loop)
     _finalize_sigterm_shutdown()
@@ -411,7 +413,7 @@ def main():
 
         qInstallMessageHandler(_qt_msg_handler)
     except Exception as exc:
-        logger.debug("Qt message handler setup skipped: %s", exc)
+        logger.debug("Qt message handler setup uebersprungen: %s", exc)
 
     # Global QToolTip styling — prevents the default black/system-colored tooltip box.
     # Border uses the app's purple accent; background matches the dark UI palette.
@@ -447,7 +449,7 @@ def main():
 
     except Exception as _exc:
         # Splash must never block the application from starting
-        logger.warning("Splash screen could not be loaded (non-fatal): %s", _exc)
+        logger.warning("Splash screen could not be geladen (non-fatal): %s", _exc)
         splash = None
 
     # ── GPU-Erkennung im Hauptthread (§v10.304.30) ─────────────────────────
@@ -462,7 +464,7 @@ def main():
         from backend.core.ml_device_manager import get_ml_device_manager as _gpu_mgr
 
         _mgr = _gpu_mgr()
-        _mgr.wait_for_detection(timeout=5.0)
+        _mgr.wait_for_detection(timeout=5.0)  # type: ignore[call-arg]
         logger.info("main: GPU-Erkennung abgeschlossen — %s", _mgr.gpu_name)
     except Exception as _gpu_exc:
         logger.debug("main: GPU-Erkennung fehlgeschlagen (CPU-only): %s", _gpu_exc)
@@ -495,10 +497,10 @@ def main():
         except AttributeError:
             pass  # numba dispatcher issue on this path — already handled above
 
-        logger.info("librosa numba JIT warmup complete (main thread)")
+        logger.info("librosa numba JIT warmup vollstaendig (main thread)")
         del _dummy, _np_warmup, _librosa_warmup, _sf_warmup, _BytesIO
     except Exception as _wup_exc:
-        logger.debug("librosa warmup skipped (non-fatal): %s", _wup_exc)
+        logger.debug("librosa warmup uebersprungen (non-fatal): %s", _wup_exc)
 
     # ── Build main window ─────────────────────────────────────────────────────
     if splash:

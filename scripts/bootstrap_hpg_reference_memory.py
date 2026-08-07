@@ -165,7 +165,7 @@ def _generate_synthetic_audio(sr: int, freq_hz: float, noise_sigma: float, durat
     if noise_sigma > 0.0:
         audio = audio + (noise_sigma * rng.standard_normal(n)).astype(np.float32)
     peak = float(np.max(np.abs(audio))) + 1e-9
-    return np.clip(audio / peak * 0.9, -1.0, 1.0).astype(np.float32)
+    return np.clip(audio / peak * 0.9, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _cleanup_stale_entries(gate: object) -> int:  # type: ignore[type-arg]
@@ -195,7 +195,7 @@ def _cleanup_stale_entries(gate: object) -> int:  # type: ignore[type-arg]
             if callable(_save):
                 _save()
         except Exception as _e:
-            logger.debug("Stale-Cleanup Persist non-blocking: %s", _e)
+            logger.debug("Stale-Cleanup Persist nicht blockierend: %s", _e)
     return len(stale_keys)
 
 
@@ -243,7 +243,7 @@ def _seed_synthetic_prototypes(gate: object) -> int:  # type: ignore[type-arg]
         try:
             audio = _generate_synthetic_audio(sr, freq_hz, noise_sigma)
             if compute_embed is None:
-                logger.warning("_compute_embedding nicht verfügbar — Gate-Fallback.")
+                logger.warning("_berechnen_embedding nicht verfügbar — Gate-Ersatzpfad.")
                 break
             embed = compute_embed(audio, sr)
             with ref_lock:
@@ -263,7 +263,7 @@ def _seed_synthetic_prototypes(gate: object) -> int:  # type: ignore[type-arg]
             if callable(_save):
                 _save()
         except Exception as _e:
-            logger.debug("Synth-Persist non-blocking: %s", _e)
+            logger.debug("Synth-Persist nicht blockierend: %s", _e)
     return seeded
 
 
@@ -291,7 +291,18 @@ def run_bootstrap(references_dir: pathlib.Path) -> int:
             import soundfile as sf
 
             def load_audio_file(path: str) -> tuple:  # type: ignore[misc]
-                audio, sr = sf.read(path, always_2d=False)
+                _max_load_retries = 3
+                for _load_attempt in range(_max_load_retries):
+                    try:
+                        audio, sr = sf.read(path, always_2d=False)
+                        break
+                    except Exception:
+                        if _load_attempt < _max_load_retries - 1:
+                            logger.debug(
+                                "soundfile.read Wiederholung %d/%d", _load_attempt + 1, _max_load_retries, exc_info=True
+                            )
+                            continue
+                        raise
                 import numpy as np
 
                 return np.asarray(audio, dtype=np.float32), int(sr)
@@ -312,7 +323,7 @@ def run_bootstrap(references_dir: pathlib.Path) -> int:
         try:
             _result = load_audio_file(str(audio_path))
             if not isinstance(_result, dict) or _result.get("error"):
-                logger.warning("  ✗ %s: load_audio_file Fehler: %s", audio_path.name, (_result or {}).get("error"))
+                logger.warning("  ✗ %s: laden_audio_file Fehler: %s", audio_path.name, (_result or {}).get("error"))
                 continue
             import numpy as np
 
@@ -350,13 +361,14 @@ def main() -> None:
     total = 0
 
     # v10.0.0 Phase 0: Stale-Entry-Cleanup (falsche Ära-Formate)
-    logger.info("§2.44 v10.0.0 Phase 0: Stale-Entry-Cleanup")
+    logger.info("§2.44 v10.0.0 Verarbeitungsschritt 0: Stale-Entry-Cleanup")
     removed = _cleanup_stale_entries(gate)
     logger.info("  %d veraltete Einträge bereinigt.", removed)
 
     # Phase 1: Synthetische Prototypen für alle Material×Ära-Kombinationen
     logger.info(
-        "§2.44 v10.0.0 Phase 1: Synthetische Prototyp-Embeddings (%d Kombinationen)", len(_SYNTHETIC_PROTOTYPES)
+        "§2.44 v10.0.0 Verarbeitungsschritt 1: Synthetische Prototyp-Embeddings (%d Kombinationen)",
+        len(_SYNTHETIC_PROTOTYPES),
     )
     synth_count = _seed_synthetic_prototypes(gate)
     total += synth_count
@@ -365,15 +377,15 @@ def main() -> None:
     # Phase 2: Golden-Samples (echte digitale Referenz-Audio)
     references_dir = _REPO_ROOT / "golden_samples" / "references"
     if references_dir.exists():
-        logger.info("§2.44 v10.0.0 Phase 2: Golden-Samples aus %s", references_dir)
+        logger.info("§2.44 v10.0.0 Verarbeitungsschritt 2: Golden-Samples aus %s", references_dir)
         audio_count = run_bootstrap(references_dir)
         total += audio_count
         logger.info("  %d Golden-Sample-Einträge geseedet.", audio_count)
     else:
-        logger.info("Golden-Samples-Verzeichnis nicht gefunden — Phase 2 übersprungen.")
+        logger.info("Golden-Samples-Verzeichnis nicht gefunden — Verarbeitungsschritt 2 übersprungen.")
 
     logger.info(
-        "§2.44 HPG Bootstrap v10.0.0 fertig: %d neue Embeddings gespeichert in ~/.aurik/hpg_reference_memory.json",
+        "§2.44 HPG Bootstrap v10.0.0 fertig: %d neue Embeddings gespeichert in ~/.aurik/hpg_Referenz_memory.json",
         total,
     )
 

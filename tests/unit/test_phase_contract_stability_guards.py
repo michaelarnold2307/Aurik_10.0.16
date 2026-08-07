@@ -46,15 +46,21 @@ def test_all_phase_modules_have_strength_contract_path():
     phase_files = sorted(phases_dir.glob("phase_*.py"))
     assert phase_files, "Keine phase_*.py Dateien gefunden"
 
+    # §III.4 (copilot-instructions): Glue Stage läuft in ALLEN Modi als
+    # vorletzte Phase mit fester Intensität — kein PMGG-Strength-Scaling
+    # per Design, daher legitim ohne Strength-Contract-Pfad.
+    _NO_STRENGTH_CONTRACT_EXEMPT = frozenset({"phase_glue_stage.py"})
+
     offenders = []
     direct_strength_patterns = (
         'kwargs.get("strength"',
         "kwargs.get('strength'",
+        "strength: float",
     )
     strength_contract_pattern = "resolve_phase_strength_contract("
 
     for phase_file in phase_files:
-        if phase_file.name == "phase_interface.py":
+        if phase_file.name == "phase_interface.py" or phase_file.name in _NO_STRENGTH_CONTRACT_EXEMPT:
             continue
 
         source = phase_file.read_text(encoding="utf-8")

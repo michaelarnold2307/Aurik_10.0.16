@@ -82,7 +82,7 @@ class ONNXPluginManager:
         self.total_inferences = 0
         self.total_inference_time_ms = 0.0
 
-        logger.info("ONNX Plugin Manager initialized with %s models", len(self.registry["models"]))
+        logger.info("ONNX Plugin Manager initialisiert with %s models", len(self.registry["models"]))
 
     def get_available_models(self) -> list[str]:
         """
@@ -127,7 +127,7 @@ class ONNXPluginManager:
 
         # Check if already loaded
         if model_id in self.loaded_models and not force_reload:
-            logger.debug("Model %s already loaded", model_id)
+            logger.debug("Model %s already geladen", model_id)
             return True
 
         # Get model config
@@ -145,10 +145,10 @@ class ONNXPluginManager:
             # Choose FP32 or INT8
             if use_quantized and onnx_config.get("quantized", False):
                 model_path = Path(onnx_config["quantized_path"])
-                logger.info("Loading quantized model: %s", model_path)
+                logger.info("lade quantized model: %s", model_path)
             else:
                 model_path = Path(onnx_config["path"])
-                logger.info("Loading FP32 model: %s", model_path)
+                logger.info("lade FP32 model: %s", model_path)
 
             # Check if model exists
             if not model_path.exists():
@@ -165,14 +165,14 @@ class ONNXPluginManager:
                 )
 
                 onnx_models[onnx_config["name"]] = onnx_model
-                logger.info("Loaded ONNX model: %s/%s", model_id, onnx_config["name"])
+                logger.info("geladen ONNX model: %s/%s", model_id, onnx_config["name"])
 
             except Exception as e:
-                logger.error("Failed to load %s/%s: %s", model_id, onnx_config["name"], e)
+                logger.error("konnte nicht laden %s/%s: %s", model_id, onnx_config["name"], e)
                 continue
 
         if not onnx_models:
-            logger.error("No ONNX models loaded for %s", model_id)
+            logger.error("No ONNX models geladen for %s", model_id)
             return False
 
         # Multi-model-Plugins (z.B. DeepFilterNet: encoder + decoder + erb_dec)
@@ -199,11 +199,11 @@ class ONNXPluginManager:
                 if _pt_path.exists():
                     pytorch_fallback = _torch.jit.load(str(_pt_path), map_location="cpu")
                     pytorch_fallback.eval()
-                    logger.info("PyTorch-Fallback geladen (CPU-only): %s", _pt_path.name)
+                    logger.info("PyTorch-Ersatzpfad geladen (CPU-only): %s", _pt_path.name)
                 else:
-                    logger.debug("PyTorch-Fallback-Pfad nicht gefunden: %s", pytorch_path_str)
+                    logger.debug("PyTorch-Ersatzpfad-Pfad nicht gefunden: %s", pytorch_path_str)
             except Exception as _pt_err:
-                logger.debug("PyTorch-Fallback nicht geladen (%s) — nur ONNX aktiv.", _pt_err)
+                logger.debug("PyTorch-Ersatzpfad nicht geladen (%s) — nur ONNX aktiv.", _pt_err)
 
         wrapped_model = ONNXModelWithFallback(
             name=model_id,
@@ -213,7 +213,7 @@ class ONNXPluginManager:
         )
 
         self.loaded_models[model_id] = wrapped_model
-        logger.info("Successfully loaded model: %s", model_id)
+        logger.info("erfolgreich geladen model: %s", model_id)
         return True
 
     def unload_model(self, model_id: str) -> bool:
@@ -227,7 +227,7 @@ class ONNXPluginManager:
             True if unloaded successfully
         """
         if model_id not in self.loaded_models:
-            logger.warning("Model %s not loaded", model_id)
+            logger.warning("Model %s not geladen", model_id)
             return False
 
         del self.loaded_models[model_id]
@@ -260,7 +260,7 @@ class ONNXPluginManager:
             Processed audio or None if failed
         """
         if model_id not in self.loaded_models:
-            logger.error("Model %s not loaded. Call load_model() first.", model_id)
+            logger.error("Model %s not geladen. Call laden_model() first.", model_id)
             return None
 
         try:
@@ -358,7 +358,7 @@ class ONNXPluginManager:
 
         successful = sum(results.values())
         total = len(results)
-        logger.info("Loaded %s/%s models", successful, total)
+        logger.info("geladen %s/%s models", successful, total)
 
         return results
 

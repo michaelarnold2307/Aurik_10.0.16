@@ -154,7 +154,7 @@ class TestValenceKrumhanslSchmuckler:
         third_hz = root_hz * 2 ** (third_interval / 12.0)
         fifth_hz = root_hz * 2 ** (7 / 12.0)
         sig = np.sin(2 * np.pi * root_hz * t) + np.sin(2 * np.pi * third_hz * t) + np.sin(2 * np.pi * fifth_hz * t)
-        return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.7).astype(np.float32)
+        return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.7).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_major_chord_higher_valence_than_minor(self):
         """Dur-Dreiklang muss höhere Valenz als Moll-Dreiklang ergeben."""

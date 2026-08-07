@@ -28,9 +28,9 @@ def _cig_for_phase(phase_id: str, cig_dict: dict) -> frozenset:
     """Prefix-basierter CIG-Lookup (identische Logik wie _resolve_phase_specific_drift_exclusions)."""
     for prefix, excl in cig_dict.items():
         if phase_id == prefix:
-            return excl
+            return excl  # type: ignore[no-any-return]
         if phase_id.startswith(prefix) and (len(phase_id) == len(prefix) or phase_id[len(prefix)] in "_-"):
-            return excl
+            return excl  # type: ignore[no-any-return]
     return frozenset()
 
 

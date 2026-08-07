@@ -201,7 +201,7 @@ class SubBassEnhancer:
             return 0.0
 
         fundamental = sr / lag
-        return fundamental
+        return float(fundamental)
 
 
 # =============================================================================
@@ -689,7 +689,7 @@ class BassEnhancementSystem:
             report["dynamics"] = dyn_report
 
         # Calculate overall metrics
-        report["stages_applied"] = 4 if self.dynamics_control else 3
+        report["stages_applied"] = 4 if self.dynamics_control else 3  # type: ignore[assignment]
         report["total_bass_enhancement_db"] = (
             sub_report["sub_bass_energy_change_db"] + harm_report["harmonics_energy_change_db"]
         ) / 2.0
@@ -730,7 +730,7 @@ def main():
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Make mono for processing
     audio_mono = np.mean(audio, axis=1) if audio.shape[1] == 2 else audio[:, 0]

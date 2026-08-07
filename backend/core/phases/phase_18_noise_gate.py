@@ -132,7 +132,7 @@ def _compute_band_masking_gain_floors(audio: np.ndarray, sample_rate: int) -> li
             _floors.append(_band_floor)
         return _floors
     except Exception as exc:
-        logger.debug("§2.62 phase_18 Masking-Guard nicht verfügbar (non-blocking): %s", exc)
+        logger.debug("§2.62 Verarbeitungsschritt_18 Masking-Guard nicht verfügbar (nicht blockierend): %s", exc)
         return None
 
 
@@ -284,9 +284,9 @@ class NoiseGate(PhaseInterface):
                     raise RuntimeError("Silero plugin unavailable")
 
                 self._silero_vad = _get_silero_plugin_18()
-                logger.info("Silero VAD plugin loaded successfully")
+                logger.info("Silero VAD plugin geladen erfolgreich")
             except Exception as e:
-                logger.warning("Failed to load Silero VAD plugin: %s", e)
+                logger.warning("konnte nicht laden Silero VAD plugin: %s", e)
                 self._silero_vad = False  # Mark as unavailable
 
         return self._silero_vad if self._silero_vad is not False else None
@@ -314,7 +314,7 @@ class NoiseGate(PhaseInterface):
             vad_probabilities = np.nan_to_num(vad_probabilities, nan=1.0, posinf=1.0, neginf=0.0)
             return np.asarray(np.clip(vad_probabilities, 0.0, 1.0), dtype=np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("Voice activity detection failed (DSP-only Modus): %s", e)
+            logger.warning("Voice activity detection fehlgeschlagen (DSP-only Modus): %s", e)
             # Fallback: Gate komplett offen (kein Signalverlust)
             return np.ones(len(audio), dtype=np.float32)  # type: ignore[no-any-return]
 
@@ -346,10 +346,10 @@ class NoiseGate(PhaseInterface):
             _pim_params = apply_pim_intensity(
                 kwargs, "noise_gate", default_nr=0.3, default_de_ess=0.2, default_comp=1.0
             )
-            if "noise_reduction_strength" in kwargs:
+            if kwargs.get("pim_intensity_map") is not None and "noise_reduction_strength" in kwargs:
                 kwargs["noise_reduction_strength"] = _pim_params["nr_strength"]
         except Exception as e:
-            logger.warning("phase_18_noise_gate.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_18_noise_gate.py::verarbeiten Ersatzpfad: %s", e)
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         start_time = time.time()
@@ -370,12 +370,14 @@ class NoiseGate(PhaseInterface):
         # Echoeffekte. Der Gate öffnet/schließt auf der Hiss-Grenze →
         # hörbare Atmung. Phase 29 (Tape Hiss) ist die korrekte Behandlung.
         _CONTINUOUS_NOISE_MATERIALS = {
-            MaterialType.CASSETTE, MaterialType.TAPE, MaterialType.REEL_TAPE,
+            MaterialType.CASSETTE,
+            MaterialType.TAPE,
+            MaterialType.REEL_TAPE,
         }
         if material in _CONTINUOUS_NOISE_MATERIALS:
             logger.info(
-                "§v10.303.16 Continuous-Noise-Guard: %s → Noise Gate skipped "
-                "(kontinuierliches Rauschen, Gate würde pumpen. Phase 29 übernimmt)",
+                "§v10.303.16 Continuous-Noise-Guard: %s → Noise Gate uebersprungen "
+                "(kontinuierliches Rauschen, Gate würde pumpen. Verarbeitungsschritt 29 übernimmt)",
                 material.name,
             )
             return PhaseResult(
@@ -399,7 +401,7 @@ class NoiseGate(PhaseInterface):
             _nmr_result_18 = _nmr_fn_18(audio, sample_rate)
             if not _nmr_result_18.ok:
                 logger.warning(
-                    "Phase18 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt18 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -409,12 +411,12 @@ class NoiseGate(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase18 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt18 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_18.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_18:
-            logger.debug("Phase18 §V40 NMR non-blocking: %s", _nmr_exc_18)
+            logger.debug("Verarbeitungsschritt18 §V40 NMR nicht blockierend: %s", _nmr_exc_18)
 
         # §2.17 SectionStrengthEnvelope: Kontinuierliche per-Segment-Modulation.
         # Reduziert Noise-Gate-Intensität in leisen Strophen (wo das Gate
@@ -430,12 +432,12 @@ class NoiseGate(PhaseInterface):
                 _env_val = get_section_strength_at(_envelope, 0, _n_total)
                 _effective_strength = float(np.clip(_effective_strength * _env_val, 0.0, 1.0))
                 logger.debug(
-                    "Phase18 §2.17 SectionStrengthEnvelope: env=%.3f → eff_str=%.3f",
+                    "Verarbeitungsschritt18 §2.17 SectionStrengthEnvelope: env=%.3f → eff_str=%.3f",
                     _env_val,
                     _effective_strength,
                 )
             except Exception as _env_exc_18:
-                logger.debug("Phase18 §2.17 SectionStrengthEnvelope non-blocking: %s", _env_exc_18)
+                logger.debug("Verarbeitungsschritt18 §2.17 SectionStrengthEnvelope nicht blockierend: %s", _env_exc_18)
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
@@ -450,15 +452,15 @@ class NoiseGate(PhaseInterface):
             _nf18 = derive_noise_floor(audio, sample_rate)
             # Adaptiere Schwellen: +6dB über Noise-Floor, aber innerhalb [-55, -25] dB
             _base_threshold = float(np.clip(_nf18["noise_floor_db"] + 8.0, -55.0, -25.0))
-            _n_bands = len(config["thresholds_db"])
+            _n_bands = len(config["thresholds_db"])  # type: ignore[arg-type]
             config["thresholds_db"] = [_base_threshold + i * 3.0 for i in range(_n_bands)]
             logger.debug(
-                "Phase 18 adaptive: noise_floor=%.1fdB → gate_thresholds=%s",
+                "Verarbeitungsschritt 18 adaptive: noise_floor=%.1fdB → gate_thresholds=%s",
                 _nf18["noise_floor_db"],
-                [f"{t:.0f}" for t in config["thresholds_db"]],
+                [f"{t:.0f}" for t in config["thresholds_db"]],  # type: ignore[attr-defined]
             )
         except Exception as _e:
-            logger.debug("%s: non-critical exception: %s", __name__, _e)
+            logger.debug("%s: unkritisch exception: %s", __name__, _e)
 
         config["masking_gain_floors"] = _compute_band_masking_gain_floors(audio, sample_rate)
 
@@ -523,7 +525,7 @@ class NoiseGate(PhaseInterface):
             _wet = max(0.30, 1.0 / _blend)  # how much gated signal to keep
             gated_audio = _wet * gated_audio + (1.0 - _wet) * audio
             logger.warning(
-                "Phase 18 low-freq guard: LF ratio %.2f < 0.60 — blended wet=%.2f to protect bass",
+                "Verarbeitungsschritt 18 low-freq guard: LF Verhaeltnis %.2f < 0.60 — blended wet=%.2f to protect bass",
                 _lf_loss_ratio,
                 _wet,
             )
@@ -563,12 +565,12 @@ class NoiseGate(PhaseInterface):
                 else:
                     gated_audio[_smask_18] = audio[_smask_18]
                 logger.debug(
-                    "§2.36 phase_18 Phonem-Schutz: %d/%d Frames restauriert",
+                    "§2.36 Verarbeitungsschritt_18 Phonem-Schutz: %d/%d Frames restauriert",
                     int(np.sum(_pmask_18)),
                     len(_pmask_18),
                 )
         except Exception as _pmask18_exc:
-            logger.debug("§2.36 phase_18 Phonem-Mask (non-blocking): %s", _pmask18_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_18 Phonem-Mask (nicht blockierend): %s", _pmask18_exc)
 
         gated_audio, loudness_stats = self._apply_material_loudness_preservation(audio, gated_audio, material)
 
@@ -599,7 +601,7 @@ class NoiseGate(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase18 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt18 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — restore breath zones gated as silence.
         # Atemgeräusche (−55 bis −40 dBFS, 50–500 ms) werden vom Gate als Stille klassifiziert
@@ -630,11 +632,11 @@ class NoiseGate(PhaseInterface):
                 elif gated_audio.ndim == 1 and audio.ndim == 1:
                     gated_audio[_npa_mask_18] = audio[_npa_mask_18]
                 logger.debug(
-                    "§2.46f phase_18 NPA: %d protected samples restauriert (Atemgeräusche/Vibrato)",
+                    "§2.46f Verarbeitungsschritt_18 NPA: %d protected samples restauriert (Atemgeräusche/Vibrato)",
                     int(np.sum(_npa_mask_18)),
                 )
         except Exception as _npa18_exc:
-            logger.debug("§2.46f phase_18 NPA-Guard (non-blocking): %s", _npa18_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_18 NPA-Guard (nicht blockierend): %s", _npa18_exc)
 
         # §0p/V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach Noise-Gate (RELEASE_MUST §0p V19-V26)
         _p18_panns = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
@@ -649,7 +651,7 @@ class NoiseGate(PhaseInterface):
                 if _hnr_diag_18.get("over_cleaned"):
                     gated_audio = _hnr_blended_18
             except Exception as _hnr_18_exc:
-                logger.debug("§0p HNR-Blend phase_18 (non-blocking): %s", _hnr_18_exc)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_18 (nicht blockierend): %s", _hnr_18_exc)
 
         _nt18_residual = audio - gated_audio
         try:
@@ -666,13 +668,13 @@ class NoiseGate(PhaseInterface):
                     _wet_ratio = 1.0 - _dry_ratio
                     gated_audio = (_wet_ratio * gated_audio + _dry_ratio * audio).astype(np.float32)
                     logger.info(
-                        "§V19 phase_18: noise_texture_dist=%.3f → %.0f/%.0f wet/dry-blend",
+                        "§V19 Verarbeitungsschritt_18: noise_texture_dist=%.3f → %.0f/%.0f wet/dry-blend",
                         _nt18_d,
                         _wet_ratio * 100,
                         _dry_ratio * 100,
                     )
         except Exception as _nt18_exc:
-            logger.debug("§V19 phase_18 noise_texture non-blocking: %s", _nt18_exc)
+            logger.debug("§V19 Verarbeitungsschritt_18 noise_texture nicht blockierend: %s", _nt18_exc)
 
         if _p18_panns >= 0.25:
             try:
@@ -688,9 +690,11 @@ class NoiseGate(PhaseInterface):
                     _need18 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
                     _wet18 = _recommend_mkk_wet(_corr18, _p18_panns, global_need=_need18)
                     gated_audio = (_wet18 * gated_audio + (1.0 - _wet18) * audio).astype(np.float32)
-                    logger.warning("§V20 phase_18: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr18, _wet18)
+                    logger.warning(
+                        "§V20 Verarbeitungsschritt_18: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr18, _wet18
+                    )
             except Exception as _v20_18_exc:
-                logger.debug("§V20 phase_18 mikrodynamik non-blocking: %s", _v20_18_exc)
+                logger.debug("§V20 Verarbeitungsschritt_18 mikrodynamik nicht blockierend: %s", _v20_18_exc)
 
         if any(x in _mat18_guards for x in ("shellac", "vinyl", "tape", "analog")):
             try:
@@ -700,7 +704,7 @@ class NoiseGate(PhaseInterface):
 
                 gated_audio = _nfmin18(gated_audio, sample_rate, _mat18_guards, original_audio=audio)
             except Exception as _v21_18_exc:
-                logger.debug("§V21 phase_18 noise_floor non-blocking: %s", _v21_18_exc)
+                logger.debug("§V21 Verarbeitungsschritt_18 noise_floor nicht blockierend: %s", _v21_18_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -713,7 +717,7 @@ class NoiseGate(PhaseInterface):
                 _sc_wet_18 = 0.70  # Phase-Strength −30 % (§V24)
                 gated_audio = (_sc_wet_18 * gated_audio + (1.0 - _sc_wet_18) * audio).astype(np.float32)
         except Exception as _sc_exc_18:
-            logger.debug("§V24 phase_18 spectral_color non-blocking: %s", _sc_exc_18)
+            logger.debug("§V24 Verarbeitungsschritt_18 spectral_color nicht blockierend: %s", _sc_exc_18)
 
         try:
             from backend.core.dsp.onset_guard import (
@@ -722,7 +726,7 @@ class NoiseGate(PhaseInterface):
 
             gated_audio = _opm18(audio, gated_audio, None, max_delta_db=1.5)
         except Exception as _v26_18_exc:
-            logger.debug("§V26 phase_18 onset_guard non-blocking: %s", _v26_18_exc)
+            logger.debug("§V26 Verarbeitungsschritt_18 onset_guard nicht blockierend: %s", _v26_18_exc)
 
         if _p18_panns >= 0.25:
             try:
@@ -734,11 +738,11 @@ class NoiseGate(PhaseInterface):
                 if not _vibr18.ok:
                     gated_audio = (0.5 * gated_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§2.72 phase_18: vibrato_reduction=%.1f%% → 50%% dry-blend",
+                        "§2.72 Verarbeitungsschritt_18: vibrato_reduction=%.1f%% → 50%% dry-blend",
                         _vibr18.depth_reduction_pct,
                     )
             except Exception as _vib18_exc:
-                logger.debug("§2.72 phase_18 vibrato non-blocking: %s", _vib18_exc)
+                logger.debug("§2.72 Verarbeitungsschritt_18 vibrato nicht blockierend: %s", _vib18_exc)
 
         # Metrics — §2.45a-I: gated RMS, ignoriert Stille-Frames
         _rms_orig_db = _rms_dbfs_gated(audio)
@@ -839,8 +843,8 @@ class NoiseGate(PhaseInterface):
             mode = "pre-makeup" if alert_a else "post-makeup"
             wet = float(np.clip(music_ratio / max(MUSIC_DROP_A, MUSIC_DROP_B) * 0.55, 0.25, 0.55))
             logger.warning(
-                "Phase 18 §2.45a MUSIC/SILENCE INVERSION (%s): "
-                "music_ratio=%.3f silence_ratio=%.3f → Rescue wet=%.2f "
+                "Verarbeitungsschritt 18 §2.45a MUSIC/SILENCE INVERSION (%s): "
+                "music_Verhaeltnis=%.3f silence_Verhaeltnis=%.3f → Rescue wet=%.2f "
                 "(n_music=%d, n_silence=%d)",
                 mode,
                 music_ratio,
@@ -853,7 +857,7 @@ class NoiseGate(PhaseInterface):
 
         if music_ratio < 0.80 or silence_ratio > 1.02:
             logger.info(
-                "Phase 18 §2.45a level check: music_ratio=%.3f silence_ratio=%.3f — OK (no rescue)",
+                "Verarbeitungsschritt 18 §2.45a level Pruefung: music_Verhaeltnis=%.3f silence_Verhaeltnis=%.3f — OK (no rescue)",
                 music_ratio,
                 silence_ratio,
             )
@@ -889,10 +893,10 @@ class NoiseGate(PhaseInterface):
                 _gate_dbfs_18 = compute_signal_relative_gate_dbfs(original_audio, material_key=material_key)
                 if _genre_18 in ("schlager", "pop", "rock", "metal"):
                     _gate_dbfs_18 = float(_gate_dbfs_18) + 6.0  # 6 dB softer gate
-                    logger.debug("Phase 18: genre=%s → gate softened by +6dB", _genre_18)
+                    logger.debug("Verarbeitungsschritt 18: genre=%s → gate softened by +6dB", _genre_18)
                 elif _genre_18 in ("klassik", "oper", "jazz"):
                     _gate_dbfs_18 = float(_gate_dbfs_18) - 3.0  # 3 dB deeper gate
-                    logger.debug("Phase 18: genre=%s → gate deepened by -3dB", _genre_18)
+                    logger.debug("Verarbeitungsschritt 18: genre=%s → gate deepened by -3dB", _genre_18)
                 processed_audio = apply_musical_gain_envelope(
                     processed_audio,
                     _gain_lin,
@@ -917,7 +921,7 @@ class NoiseGate(PhaseInterface):
                 _rms_out_db = _rms_dbfs_gated(np.asarray(processed_audio, dtype=np.float32))
                 rms_drop_db = (_rms_out_db - _rms_in_db) if _rms_in_db > -90.0 else 0.0
                 logger.info(
-                    "Phase 18 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
+                    "Verarbeitungsschritt 18 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
                     material_key,
                     rms_drop_db,
                     makeup_gain_db,
@@ -948,7 +952,7 @@ class NoiseGate(PhaseInterface):
                         _vad_budget_ok = True
                         _vad_release = _release_ml_budget_18
                     else:
-                        logger.debug("SileroVAD_phase18: ml_memory_budget insufficient — DSP-Fallback")
+                        logger.debug("SileroVAD_Verarbeitungsschritt18: ml_memory_Grenze insufficient — DSP-Ersatzpfad")
                 except ImportError:
                     _vad_budget_ok = True  # budget tracking unavailable — allow inference
                 if _vad_budget_ok:
@@ -957,7 +961,7 @@ class NoiseGate(PhaseInterface):
                         # Get voice activity probabilities (0-1 for each frame)
                         vad_probabilities = self._detect_voice_activity(audio, sample_rate, silero)
                     except Exception as e:
-                        logger.warning("Silero VAD failed: %s, using DSP only", e)
+                        logger.warning("Silero VAD fehlgeschlagen: %s, using DSP only", e)
                     finally:
                         if _vad_release is not None:
                             _vad_release("SileroVAD_phase18")

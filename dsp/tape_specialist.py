@@ -12,6 +12,7 @@ Date: 8. Februar 2026
 
 import logging
 import warnings
+from typing import Any
 
 import numpy as np
 from scipy import fft, signal
@@ -87,7 +88,7 @@ class TapePrintThroughRemover:
         self.post_echo_detection = post_echo_detection
         self.adaptive_strength = np.clip(adaptive_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -310,11 +311,11 @@ class TapePrintThroughRemover:
         # Log detection
         if detection["post_echo_detected"]:
             logger.info(
-                f"[PrintThrough] Post-echo detected: {detection['post_echo_delay_ms']:.1f}ms, "
+                f"[PrintThrough] Post-echo erkannt: {detection['post_echo_delay_ms']:.1f}ms, "
                 f"{detection['post_echo_attenuation_db']:.1f} dB"
             )
         else:
-            logger.info("[PrintThrough] No significant print-through detected")
+            logger.info("[PrintThrough] No significant print-through erkannt")
 
         # Remove if detected
         if detection["post_echo_detected"] or detection["pre_echo_detected"]:
@@ -393,7 +394,7 @@ class TapeAzimuthCorrector:
         self.phase_threshold_degrees = np.clip(phase_threshold_degrees, 1.0, 45.0)
         self.preserve_stereo_width = preserve_stereo_width
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -541,25 +542,25 @@ class TapeAzimuthCorrector:
         """
         # Require stereo
         if audio.ndim != 2 or audio.shape[0] != 2:
-            logger.warning("[Azimuth] Warning: Requires stereo input, returning unchanged")
+            logger.warning("[Azimuth] Warning: Requires stereo Eingabe, returning unchanged")
             return audio
 
         left = audio[0]
         right = audio[1]
 
         # Detect phase error
-        logger.debug("[Azimuth] Detecting phase error...")
+        logger.debug("[Azimuth] Detecting Verarbeitungsschritt error...")
         detection = self.detect_phase_error(left, right, sample_rate)
 
         # Log detection
         if detection["phase_error_detected"]:
             logger.info(
-                f"[Azimuth] Phase error detected: {detection['max_phase_error_degrees']:.1f}°, "
+                f"[Azimuth] Verarbeitungsschritt error erkannt: {detection['max_phase_error_degrees']:.1f}°, "
                 f"Delay: {detection['delay_ms']:.2f}ms"
             )
         else:
             logger.debug(
-                f"[Azimuth] Phase error minimal ({detection['max_phase_error_degrees']:.1f}°), no correction needed"
+                f"[Azimuth] Verarbeitungsschritt error minimal ({detection['max_phase_error_degrees']:.1f}°), no correction needed"
             )
 
         # Correct if needed
@@ -666,7 +667,7 @@ class TapeSpecialist:
             logger.info("\n[TapeSpecialist] Step 2/2: Print-Through Removal")
             output = self.print_through_remover.process(output, sample_rate)
 
-        logger.info("\n[TapeSpecialist] Processing complete!")
+        logger.info("\n[TapeSpecialist] Processing vollstaendig!")
         return output
 
     def get_metrics(self) -> dict:
@@ -712,12 +713,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio = np.asarray(_res["audio"])
-    sr = int(_res["sr"])
+    audio = np.asarray(_res["audio"])  # type: ignore[index]
+    sr = int(_res["sr"])  # type: ignore[index]
 
     # Transpose if stereo (convert from channels-last to channels-first if needed)
     if audio.ndim == 2 and audio.shape[1] < audio.shape[0]:
@@ -756,4 +757,4 @@ if __name__ == "__main__":
         output = output.T
 
     sf.write(args.output, output, sr)
-    logger.info("Saved: %s", args.output)
+    logger.info("gespeichert: %s", args.output)

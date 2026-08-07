@@ -195,7 +195,7 @@ class MaskingAnalyzer:
         """
         self.config = config or MaskingConfig()
         logger.debug(
-            "MaskingAnalyzer initialized (simultaneous=%s, temporal=%s)",
+            "MaskingAnalyzer initialisiert (simultaneous=%s, temporal=%s)",
             self.config.enable_simultaneous,
             self.config.enable_temporal,
         )
@@ -429,7 +429,7 @@ class MaskingAnalyzer:
 
         # Handle potential NaN/Inf
         if np.any(~np.isfinite(audio_filtered)):
-            logger.warning("NaN/Inf detected after masking, returning original audio")
+            logger.warning("NaN/Inf erkannt after masking, returning Originalsignal audio")
             return audio
 
         # Match length
@@ -530,7 +530,7 @@ def _demo() -> None:
     _analyzer = MaskingAnalyzer()
     _profile = _analyzer.analyze(_audio, _sr)
 
-    logger.debug("Masking Profile Analysis:")
+    logger.debug("Masking Profil Analyse:")
     logger.debug("  STFT Shape: %s freq bins x %s time frames", _profile.shape[0], _profile.shape[1])
     logger.debug("  Frequency Range: %.0f - %.0f Hz", _profile.frequencies[0], _profile.frequencies[-1])
     logger.debug("  Time Range: %.3f - %.3f s", _profile.times[0], _profile.times[-1])
@@ -554,11 +554,11 @@ def _demo() -> None:
     logger.debug("\n  Applying masking filter...")
     _audio_filtered = _analyzer.apply_masking(_audio, _sr, _profile)
 
-    logger.debug("    Original RMS: %.4f", np.sqrt(np.mean(_audio**2)))
+    logger.debug("    Originalsignal RMS: %.4f", np.sqrt(np.mean(_audio**2)))
     logger.debug("    Filtered RMS: %.4f", np.sqrt(np.mean(_audio_filtered**2)))
 
     logger.debug("\n%s", _sep)
-    logger.debug("Demo complete!")
+    logger.debug("Demo vollstaendig!")
     logger.debug("%s\n", _sep)
 
 

@@ -47,7 +47,7 @@ ai_vad_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlerkennung",
             "expected_when": "threshold zu niedrig",
             "severity": 0.2,

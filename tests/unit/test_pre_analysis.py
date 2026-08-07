@@ -44,7 +44,7 @@ class TestPreAnalysisProgress:
         ps = ProgressState(pct=75.0, step_msg="Analyse: defect done", done_steps=1)
         d = {"pct": ps.pct, "step_msg": ps.step_msg, "done_steps": ps.done_steps}
         assert d["pct"] == 75.0
-        assert "defect" in d["step_msg"]
+        assert "defect" in d["step_msg"]  # type: ignore[operator]
 
 
 class TestRunPreAnalysisFlow:

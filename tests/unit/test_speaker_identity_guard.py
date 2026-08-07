@@ -196,7 +196,7 @@ class TestSpeakerIdentityGuard:
 
     def test_capture_pre_embedding(self, vocal_like, sr):
         guard = SpeakerIdentityGuard()
-        emb = guard.capture_pre_embedding(vocal_like, sr)
+        emb = guard.capture_pre_embedding(vocal_like, sr)  # type: ignore[func-returns-value]
         assert emb is None  # capture_pre_embedding returns None (stores internally)  # returns None (stores internally)
         assert guard.get_pre_embedding() is not None
 
@@ -282,8 +282,8 @@ class TestSpeakerIdentityGuard:
         guard.capture_pre_embedding(vocal_like, sr)
         emb1 = guard.get_pre_embedding()
         emb2 = guard.get_pre_embedding()
-        np.testing.assert_array_almost_equal(emb1, emb2)  # returns same ref
-        np.testing.assert_array_almost_equal(emb1, emb2)
+        np.testing.assert_array_almost_equal(emb1, emb2)  # returns same ref  # type: ignore
+        np.testing.assert_array_almost_equal(emb1, emb2)  # type: ignore[arg-type]
 
     def test_stereo_input_to_guard(self, stereo_vocal, sr):
         """Guard should handle stereo input."""

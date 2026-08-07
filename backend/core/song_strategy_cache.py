@@ -88,7 +88,7 @@ class SongStrategyCache:
                     if isinstance(raw, dict):
                         self._data = raw
         except Exception as exc:
-            logger.debug("§SSC-1 Cache-Lade-Fehler (non-blocking): %s", exc)
+            logger.debug("§SSC-1 Zwischenspeicher-Lade-Fehler (nicht blockierend): %s", exc)
             self._data = {}
         self._loaded = True
 
@@ -108,7 +108,7 @@ class SongStrategyCache:
             with open(self._cache_file, "w", encoding="utf-8") as f:
                 json.dump(self._data, f, indent=2, ensure_ascii=False)
         except Exception as exc:
-            logger.debug("§SSC-1 Cache-Speicher-Fehler (non-blocking): %s", exc)
+            logger.debug("§SSC-1 Zwischenspeicher-Speicher-Fehler (nicht blockierend): %s", exc)
 
     def _make_cache_key(self, song_id: str, mode: str) -> str:
         return f"{song_id}::{mode}"
@@ -128,7 +128,7 @@ class SongStrategyCache:
                 self._data[key]["use_count"] = int(raw.get("use_count", 0)) + 1
                 return entry
             except Exception as exc:
-                logger.debug("§SSC-1 cache read error for %s: %s", key, exc)
+                logger.debug("§SSC-1 Zwischenspeicher read error for %s: %s", key, exc)
                 return None
 
     def store(self, entry: PhaseStrategyEntry) -> None:
@@ -138,7 +138,7 @@ class SongStrategyCache:
         """
         if entry.confidence < _MIN_CONFIDENCE_TO_STORE:
             logger.debug(
-                "§SSC-1 cache store skipped: confidence=%.2f < %.2f",
+                "§SSC-1 Zwischenspeicher store uebersprungen: confidence=%.2f < %.2f",
                 entry.confidence,
                 _MIN_CONFIDENCE_TO_STORE,
             )
@@ -160,7 +160,7 @@ class SongStrategyCache:
             self._data[key] = raw
             self._save()
             logger.info(
-                "§SSC-1 strategy stored: song_id=%s mode=%s HPI=%.3f VQI=%.3f OQS=%.1f confidence=%.2f",
+                "§SSC-1 strategy stored: song_id=%s Betriebsart=%s HPI=%.3f VQI=%.3f OQS=%.1f confidence=%.2f",
                 entry.song_id[:8],
                 entry.mode,
                 entry.hpi_achieved,
@@ -216,7 +216,7 @@ def compute_audio_fingerprint(audio: np.ndarray, sr: int) -> str:
         h = hashlib.sha256(fingerprint_payload).hexdigest()
         return h[:16]
     except Exception as exc:
-        logger.debug("audio fingerprint failed: %s", exc)
+        logger.debug("audio fingerprint fehlgeschlagen: %s", exc)
         # Fallback: time-based (no cache hit guaranteed)
         return hashlib.sha256(str(time.time()).encode()).hexdigest()[:16]
 

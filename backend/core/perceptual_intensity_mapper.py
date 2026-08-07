@@ -276,10 +276,10 @@ class PerceptualIntensityMapper:
             imap.per_segment.append(PerSegmentIntensity(section_type="verse", start_sample=0, end_sample=len(mono)))
 
         # ── Finale Clamp- und Safety-Guards ──
-        for band in imap.per_band.values():
-            band.noise_reduction_strength = float(np.clip(band.noise_reduction_strength, 0.0, 0.95))
-            band.de_ess_strength = float(np.clip(band.de_ess_strength, 0.0, 0.90))
-            band.compression_ratio = float(np.clip(band.compression_ratio, 1.0, 4.0))
+        for band_intensity in imap.per_band.values():
+            band_intensity.noise_reduction_strength = float(np.clip(band_intensity.noise_reduction_strength, 0.0, 0.95))
+            band_intensity.de_ess_strength = float(np.clip(band_intensity.de_ess_strength, 0.0, 0.90))
+            band_intensity.compression_ratio = float(np.clip(band_intensity.compression_ratio, 1.0, 4.0))
 
         imap.global_modifiers["nr_global"] = float(np.clip(imap.global_modifiers.get("nr_global", 1.0), 0.1, 2.0))
 

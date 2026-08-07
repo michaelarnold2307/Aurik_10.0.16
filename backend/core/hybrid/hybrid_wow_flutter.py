@@ -133,14 +133,14 @@ class PolyphonicSpeedCurveEstimator:
             self._bp = get_basicpitch_plugin()  # type: ignore[assignment]
             _was_loaded = getattr(self._bp, "_model_loaded", False)
             if _was_loaded:
-                logger.debug("PolyphonicSpeedCurveEstimator: BasicPitch bereits geladen (model_loaded=True)")
+                logger.debug("PolyphonicSpeedCurveEstimator: BasicPitch bereits geladen (model_geladen=True)")
             else:
                 logger.info(
-                    "PolyphonicSpeedCurveEstimator: BasicPitch geladen (model_loaded=%s)",
+                    "PolyphonicSpeedCurveEstimator: BasicPitch geladen (model_geladen=%s)",
                     _was_loaded,
                 )
         except Exception as exc:
-            logger.warning("BasicPitch nicht verfügbar (%s) — pYIN-Fallback aktiv", exc)
+            logger.warning("BasicPitch nicht verfügbar (%s) — pYIN-Ersatzpfad aktiv", exc)
             self._bp = None
 
     def estimate(self, audio: np.ndarray, sr: int) -> tuple[np.ndarray, np.ndarray]:
@@ -162,7 +162,7 @@ class PolyphonicSpeedCurveEstimator:
             return self._estimate_polyphonic(audio, sr)
         except Exception as exc:
             logger.warning(
-                "PolyphonicSpeedCurveEstimator._estimate_polyphonic fehlgeschlagen (%s) — pYIN-Fallback",
+                "PolyphonicSpeedCurveEstimator._estimate_polyphonic fehlgeschlagen (%s) — pYIN-Ersatzpfad",
                 exc,
             )
             return self._pyin_fallback(audio, sr)
@@ -272,6 +272,19 @@ class PolyphonicSpeedCurveEstimator:
 
         # Step 5: fill NaN gaps
         nan_mask = np.isnan(speed_curve)
+        if nan_mask.all():
+            # §Fix: zero real per-frame consensus was EVER achieved (e.g. all
+            # voices share an identical, non-octave-related deviation so the
+            # Step-3b inter-voice fold-check excludes every voice at every
+            # frame). _fill_gaps() would zero-fill this as "0 cents deviation"
+            # — a false-plausible reading that silently defeats the Step-6b
+            # implausibility guard below. A curve with NO real data point is
+            # definitionally untrustworthy — route straight to pYIN fallback.
+            logger.info(
+                "PolyphonicSpeedCurveEstimator: consensus NEVER reached (0/%d frames) — pYIN-Ersatzpfad",
+                T,
+            )
+            return self._pyin_fallback(audio, sr)
         if nan_mask.any():
             speed_curve = self._fill_gaps(speed_curve, result.frame_times_s)
 
@@ -292,7 +305,7 @@ class PolyphonicSpeedCurveEstimator:
         _max_abs_cents = float(np.percentile(np.abs(speed_curve), 99.0)) if len(speed_curve) > 0 else 0.0
         if _max_abs_cents > 200.0:
             logger.info(
-                "PolyphonicSpeedCurveEstimator: speed_range implausible (max |%.1f| cents > 200) — switching to pYIN fallback",
+                "PolyphonicSpeedCurveEstimator: speed_range implausible (max |%.1f| cents > 200) — switching to pYIN Ersatzpfad",
                 _max_abs_cents,
             )
             return self._pyin_fallback(audio, sr)
@@ -405,10 +418,10 @@ class HybridWowFlutter:
             from plugins.fcpe_plugin import get_fcpe_plugin
 
             self.crepe = get_fcpe_plugin()  # type: ignore[assignment]
-            logger.info("FCPE pitch plugin loaded for wow/flutter detection (model=%s)", self.crepe.model_used)  # type: ignore[attr-defined]
+            logger.info("FCPE pitch plugin geladen for wow/flutter detection (model=%s)", self.crepe.model_used)  # type: ignore[attr-defined]
             return
         except Exception as e:
-            logger.debug("FCPE-Plugin nicht verfügbar (%s) — RMVPE-Fallback (§4.4 Tier-2)", e)
+            logger.debug("FCPE-Plugin nicht verfügbar (%s) — RMVPE-Ersatzpfad (§4.4 Tier-2)", e)
         # Tier-2: RMVPE — before CREPE per §4.4 (30 % lower pitch error, Wei ICASSP 2023)
         try:
             from plugins.rmvpe_plugin import get_rmvpe_plugin
@@ -417,7 +430,7 @@ class HybridWowFlutter:
             logger.info("RMVPE plugin geladen für wow/flutter-Detektion (§4.4 Tier-2)")
             return
         except Exception as e:
-            logger.debug("RMVPE nicht verfügbar (%s) — CREPE-Fallback (§4.4 Tier-3)", e)
+            logger.debug("RMVPE nicht verfügbar (%s) — CREPE-Ersatzpfad (§4.4 Tier-3)", e)
         # Tier-3: PESTO
         try:
             from plugins.pesto_plugin import get_pesto_plugin  # pylint: disable=no-name-in-module
@@ -426,7 +439,7 @@ class HybridWowFlutter:
             logger.info("PESTO plugin geladen für wow/flutter-Detektion (§4.4 Tier-3)")
             return
         except Exception as e:
-            logger.debug("PESTO nicht verfügbar (%s) — CREPE-Fallback (§4.4 Tier-4)", e)
+            logger.debug("PESTO nicht verfügbar (%s) — CREPE-Ersatzpfad (§4.4 Tier-4)", e)
         # Tier-4: CREPE (legacy — only if PESTO unavailable)
         try:
             from plugins.crepe_plugin import get_crepe_plugin
@@ -434,7 +447,7 @@ class HybridWowFlutter:
             self.crepe = get_crepe_plugin()  # type: ignore[assignment]
             logger.info("CREPE plugin geladen für wow/flutter-Detektion (§4.4 Tier-4 legacy)")
         except Exception as e:
-            logger.warning("Kein Pitch-ML-Plugin verfügbar (%s) — pYIN-Fallback", e)
+            logger.warning("Kein Pitch-ML-Plugin verfügbar (%s) — pYIN-Ersatzpfad", e)
             self.crepe = None
 
     def detect_pitch(self, audio: np.ndarray, sample_rate: int = 48000) -> WowFlutterResult:
@@ -585,7 +598,7 @@ class HybridWowFlutter:
             conf = np.clip(np.nan_to_num(result.voiced_prob.astype(np.float32)), 0.0, 1.0)
             return f0, conf
         except Exception as exc:
-            logger.warning("FCPE/CREPE Pitch-Inferenz fehlgeschlagen (%s) — pYIN Fallback", exc)
+            logger.warning("FCPE/CREPE Pitch-Inferenz fehlgeschlagen (%s) — pYIN Ersatzpfad", exc)
             return self._apply_pyin(audio, sample_rate)
 
     def _blend_pitch_estimates(
@@ -651,7 +664,7 @@ if __name__ == "__main__":
     phase = np.cumsum(2 * np.pi * base_freq * pitch_variation / sample_rate)
     audio = 0.5 * np.sin(phase)
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, sample_rate)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, sample_rate)
     logger.debug("Base frequency: %s Hz with %.1f%% wow at %s Hz", base_freq, wow_amount * 100, wow_freq)
     logger.debug("")
 
@@ -672,12 +685,12 @@ if __name__ == "__main__":
         result = detector.detect_pitch(audio, sample_rate)
 
         logger.debug("✅ Strategy used: %s", result.strategy_used.value)
-        logger.debug("   pYIN applied: %s", result.pyin_applied)
-        logger.debug("   CREPE applied: %s", result.crepe_applied)
+        logger.debug("   pYIN angewendet: %s", result.pyin_applied)
+        logger.debug("   CREPE angewendet: %s", result.crepe_applied)
         logger.debug("   Mean confidence: %.3f", result.mean_confidence)
         logger.debug("   Pitch estimates: %s", len(result.pitch_trajectory[result.pitch_trajectory > 0]))
         logger.debug("   Processing time: %.2fs", result.processing_time)
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test complete")
+    logger.debug("Test vollstaendig")

@@ -345,5 +345,5 @@ def should_show_onboarding() -> bool:
         s = QSettings("AURIK", "AURIK Professional")
         return not s.value("onboarding/shown", False, type=bool)
     except Exception:
-        logger.warning("onboarding.py::should_show_onboarding fallback", exc_info=True)
+        logger.warning("onboarding.py::should_show_onboarding Ersatzpfad", exc_info=True)
         return True

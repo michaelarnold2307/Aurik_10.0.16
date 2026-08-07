@@ -154,7 +154,7 @@ class PghiReconstructor:
                 raise ValueError("PGHI Phasen nicht-finite")
             method = "pghi"
         except Exception as e:
-            logger.debug("PGHI Fallback (Griffin-Lim): %s", e)
+            logger.debug("PGHI Ersatzpfad (Griffin-Lim): %s", e)
             phase = self._griffin_lim(magnitude, ws, h)
             method = "griffin_lim_fallback"
 
@@ -437,7 +437,7 @@ class PghiReconstructor:
             boundary=None,
             padded=False,
         )
-        return Zxx.astype(np.complex128)  # [n_bins, n_frames]  # type: ignore[no-any-return]
+        return Zxx.astype(np.complex128)  # type: ignore  # [n_bins, n_frames]
 
     def _istft(
         self,

@@ -46,7 +46,7 @@ ull_limiter_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Limiter-Pumpen",
             "expected_when": "Lookahead zu kurz",
             "severity": 0.1,
@@ -73,7 +73,7 @@ ull_denoiser_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Artefakte", "expected_when": "Threshold zu niedrig", "severity": 0.2}],
+    side_effects=[{"risk": "Artefakte", "expected_when": "Threshold zu niedrig", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["denoising_accuracy"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -96,7 +96,7 @@ ull_gate_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Falschabschaltung",
             "expected_when": "Threshold zu hoch",
             "severity": 0.2,
@@ -125,7 +125,7 @@ class UltraLowLatencyLimiter:
         audio_f = audio.astype(float)
         # Tanh-Waveshaping: weich begrenzen, kein hartes Clipping
         result = ceiling * np.tanh(audio_f / (ceiling + 1e-9))
-        return result.astype(audio.dtype)
+        return result.astype(audio.dtype)  # type: ignore[no-any-return]
 
 
 class UltraLowLatencyDenoiser:

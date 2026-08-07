@@ -157,7 +157,7 @@ def apply_era_eq(
         return np.clip(result, -1.0, 1.0).astype(np.float32)
 
     except Exception as exc:
-        logger.debug("§2.73a Era-EQ non-blocking: %s", exc)
+        logger.debug("§2.73a Era-EQ nicht blockierend: %s", exc)
         return np.asarray(audio, dtype=np.float32)
 
 
@@ -252,10 +252,10 @@ def apply_cd_noise_texture(
                 len(band_noise),
                 max(band_noise) - min(band_noise),
             )
-            return np.clip(result, -1.0, 1.0).astype(np.float32)
+            return np.clip(result, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("§2.73b CD-Noise-Texture non-blocking: %s", exc)
+        logger.debug("§2.73b CD-Noise-Texture nicht blockierend: %s", exc)
 
     return np.asarray(audio, dtype=np.float32)
 
@@ -358,10 +358,10 @@ def apply_noise_shaped_dither(
             rms_dither / lsb,
         )
 
-        return result.astype(np.float32)
+        return result.astype(np.float32)  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("§2.73c Dither non-blocking: %s", exc)
+        logger.debug("§2.73c Dither nicht blockierend: %s", exc)
         return np.asarray(audio, dtype=np.float32)
 
 

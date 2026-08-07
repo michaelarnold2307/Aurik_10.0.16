@@ -218,7 +218,7 @@
 > Jede Konstante MUSS entweder physikalisch begründet oder aus dem Signal abgeleitet sein.
 
 | Verbot | Begründung | Korrektur |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | Statischer BW-Threshold (15 kHz) | Unterschiedliche Quellen haben unterschiedliche native Bandbreiten | `adaptive = max(8kHz, sr*0.35)` (§GEBOT-G05) |
 | Statischer HF-Rolloff `linspace(1.0, 0.50)` | Flache vs. steile Quellspektren brauchen unterschiedlichen Rolloff | Lineare Regression → `_rolloff_end = f(tilt)` (§GEBOT-G02) |
 | Statischer Energy-Bias (−6/−9 dB) | Moderne Aufnahmen gedämpft, historische übersteuert | `_bias = base + clip(hf_ratio+6, −3, +3)` (§GEBOT-G03) |
@@ -234,7 +234,7 @@
 > Keine künstliche Erweiterung über das hinaus, was die Quelle hergibt.
 
 | Verbot | Begründung | Korrektur |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | Bandbreiten-Erweiterung ohne Quellband-Energie-Prüfung | SBR aus leerem/rauschigem Quellband produziert unnatürliche Artefakte | `_src_band_energy < 1e-8 → Passthrough` (§Physik-Guard) |
 | target_hz > 2× detektierte Bandbreite | Maximal eine Oktave Erweiterung ist physikalisch plausibel; mehr klingt synthetisch | `target_hz ≤ min(rolloff*2.0, 22050)` (§Physik-Guard) |
 | HF-Synthese oberhalb 22 kHz | Menschliches Gehör endet bei ~20 kHz; Energie >22 kHz ist Verschwendung + potenzielle Aliasing-Quelle | `target_hz ≤ 22050` (§Physik-Guard) |
@@ -244,7 +244,7 @@
 ## Budget & Integrität [NEU 2026-07-13]
 
 | Verbot | Begründung | Korrektur |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | Statisches Wall-Budget ohne Duration-Scaling | 600s-Song bekommt gleiches Budget wie 225s → Phasen-Überspringung | `base × max(1.0, duration/225)` |
 | Budget-Formel ohne reale Messwerte | 1200+2250=3450 war 4s zu knapp für gemessene 3454s | `overhead=1800, per_sec=15` |
 | Stereo-Lag nur detektieren, nicht korrigieren | LAG_PROBE zeigt -8900 samples → 183ms bleiben | Iterative Korrektur (3 Versuche) mit Verifikation |
@@ -255,7 +255,7 @@
 > **Quelle**: Konkrete Fehler, gefunden während Audit & Optimierung.
 
 | Verbot | Begründung | Korrektur |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | ML-Fallback als INFO loggen | AudioSR → SBR-DSP 20× pro Run, nur INFO sichtbar → Nutzer merkt nicht, dass ML defekt ist | WARNING beim ersten Fallback, ERROR nach 3 konsekutiven |
 | Parameter an Plugin übergeben, die das Plugin selbst berechnet | Phase-06 −6dB + NVSR −6dB = −12dB → unhörbare HF-Extension | Eine Quelle entfernen (§GEBOT-G43) |
 | Statischer Zahlenwert ohne Herkunfts-Kommentar | `linspace(1.0, 0.25)` — niemand wusste warum | (a) Herkunft (b) Kalibrierungsmessung (c) Validierungsdatum (§GEBOT-G44) |
@@ -270,7 +270,7 @@
 > **Prinzip**: Keine Metrik, die Abweichung vom degradierten Original als Fehler wertet.
 
 | Verbot | Begründung | Korrektur |
-|--------|-----------|-----------|
+| --- | --- | --- |
 | PQS-MOS-Vergleich mit degradiertem Original als alleiniges Qualitätskriterium | MOS=2.39 bedeutet "anders als degradiertes Original" — genau das soll Restoration | RQI als Cross-Validation (§GEBOT-G52) |
 | SNR-Verbesserung als Pflicht für niedrige Baseline | Bei 12dB SNR kann NR auch Signalenergie entfernen → leichter SNR-Drop ist normal | Min-Improvement −0.5dB für Baseline ≤28dB |
 | "Keine Veränderung" als Bestehen-Kriterium | Kassette mit 0% THD-Änderung = keine Restaurierung durchgeführt | RQI misst Verbesserung, nicht Ähnlichkeit |

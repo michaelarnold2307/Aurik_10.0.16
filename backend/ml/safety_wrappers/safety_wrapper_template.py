@@ -448,7 +448,7 @@ class BaseSafetyWrapper:
             # Map delta [-1,1] to score [0,1] where positive delta = high score
             hpe_score = float(np.clip(0.5 + hpe_delta * 0.5, 0.0, 1.0))
         except Exception:
-            logger.warning("safety_wrapper_template.py::_compute_quality_score fallback", exc_info=True)
+            logger.warning("safety_wrapper_template.py::_berechnen_quality_Wert Ersatzpfad", exc_info=True)
 
         # §v10: 50% HPE + 30% structure + 20% SNR
         return float(np.clip(0.50 * hpe_score + 0.30 * struct_score + 0.20 * snr_ratio, 0.0, 1.0))

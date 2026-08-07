@@ -26,7 +26,7 @@ def _make_test_audio(channels: int = 1) -> np.ndarray:
     signal = signal.astype(np.float32)
     if channels == 2:
         return np.column_stack([signal, signal * 0.9])
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 def _assert_no_nan(audio: np.ndarray, name: str = "output") -> None:

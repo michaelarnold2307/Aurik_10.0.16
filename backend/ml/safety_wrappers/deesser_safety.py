@@ -294,8 +294,8 @@ class DeEsserSafety(BaseSafetyWrapper):
         # Detect sibilance
         has_sibilance, intensity, band_energies = detect_sibilance(audio, sr)
         metadata["has_sibilance"] = has_sibilance
-        metadata["sibilance_intensity"] = intensity
-        metadata.update(band_energies)
+        metadata["sibilance_intensity"] = intensity  # type: ignore[assignment]
+        metadata.update(band_energies)  # type: ignore[arg-type]
 
         if not has_sibilance:
             return PreCheckResult(passed=False, confidence=0.0, reasons=["No sibilance detected in audio"])
@@ -309,19 +309,19 @@ class DeEsserSafety(BaseSafetyWrapper):
 
         # Classify vocal profile
         profile, profile_conf = classify_vocal_profile(audio, sr)
-        metadata["vocal_profile"] = profile
-        metadata["profile_confidence"] = profile_conf
+        metadata["vocal_profile"] = profile  # type: ignore[assignment]
+        metadata["profile_confidence"] = profile_conf  # type: ignore[assignment]
 
         if profile_conf < 0.5:
             warnings.append(f"Uncertain vocal profile classification: {profile} (confidence {profile_conf:.2f})")
 
         # Measure initial consonant clarity
         clarity_before = measure_consonant_clarity(audio, sr)
-        metadata["consonant_clarity_before"] = clarity_before
+        metadata["consonant_clarity_before"] = clarity_before  # type: ignore[assignment]
 
         # Measure initial intelligibility
         intelligibility_before = compute_intelligibility_score(audio, sr)
-        metadata["intelligibility_before"] = intelligibility_before
+        metadata["intelligibility_before"] = intelligibility_before  # type: ignore[assignment]
 
         if intelligibility_before < self.min_intelligibility:
             warnings.append(

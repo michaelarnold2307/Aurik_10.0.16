@@ -217,7 +217,7 @@ class ReferenceAnchorMatcher:
         try:
             return self._compute_anchor(era_decade, genre_label, material_type)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("ReferenceAnchorMatcher non-blocking error: %s", exc)
+            logger.debug("ReferenceAnchorMatcher nicht blockierend error: %s", exc)
             return ReferenceAnchor(
                 era_decade=era_decade,
                 genre_label=genre_label,

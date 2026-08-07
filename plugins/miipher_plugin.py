@@ -134,7 +134,7 @@ class MiipherPlugin:
             if dfn is not None and bool(getattr(dfn, "_model_loaded", False)):
                 return True
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("MIIPHER adapter capability check unavailable: %s", exc)
+            logger.debug("MIIPHER adapter capability Pruefung nicht verfuegbar: %s", exc)
         return False
 
     def _try_load_model(self) -> None:
@@ -159,7 +159,7 @@ class MiipherPlugin:
                 providers=get_ort_providers("MIIPHER"),
             )
             self._model_loaded = True
-            logger.info("MIIPHER ONNX loaded — §4.4 last-resort NR for SNR < 10 dB.")
+            logger.info("MIIPHER ONNX geladen — §4.4 last-resort NR for SNR < 10 dB.")
             try:
                 _reg = _load_symbol("backend.core.plugin_lifecycle_manager", "register_plugin")
 
@@ -173,9 +173,9 @@ class MiipherPlugin:
                     unload_fn=_miipher_unload,
                 )
             except Exception as _exc:
-                logger.debug("PLM-Registrierung MIIPHER (non-critical): %s", _exc)
+                logger.debug("PLM-Registrierung MIIPHER (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.debug("MIIPHER ONNX not loadable: %s — adapter fallback active.", exc)
+            logger.debug("MIIPHER ONNX not loadable: %s — adapter Ersatzpfad active.", exc)
 
     def should_activate(self, noise_snr_db: float, panns_singing: float) -> bool:
         """
@@ -247,7 +247,7 @@ class MiipherPlugin:
             return result
         except Exception as exc:  # pylint: disable=broad-except
             fallback_chain.append(f"sgmse_plus:{type(exc).__name__}")
-            logger.debug("MIIPHER adapter SGMSE+ unavailable: %s — DeepFilterNet fallback.", exc)
+            logger.debug("MIIPHER adapter SGMSE+ nicht verfuegbar: %s — DeepFilterNet Ersatzpfad.", exc)
 
         # Fallback: DeepFilterNet v3.II
         try:
@@ -270,7 +270,7 @@ class MiipherPlugin:
             return result
         except Exception as exc:  # pylint: disable=broad-except
             fallback_chain.append(f"deepfilternet_v3_ii:{type(exc).__name__}")
-            logger.warning("DeepFilterNet fallback failed: %s — Wiener DSP fallback.", exc)
+            logger.warning("DeepFilterNet Ersatzpfad fehlgeschlagen: %s — Wiener DSP Ersatzpfad.", exc)
 
         # Last-Resort: DSP Wiener-Filter
         result = self._enhance_wiener_fallback(reference, sr)
@@ -517,7 +517,7 @@ class MiipherPlugin:
                 return self._run_native_miipher_onnx(audio, sr)
             except Exception as _native_exc:  # pylint: disable=broad-except
                 logger.debug(
-                    "MIIPHER native ONNX Inferenz fehlgeschlagen: %s — SGMSE+ Fallback",
+                    "MIIPHER native ONNX Inferenz fehlgeschlagen: %s — SGMSE+ Ersatzpfad",
                     _native_exc,
                 )
 
@@ -528,7 +528,7 @@ class MiipherPlugin:
             return _stem_result
         except Exception as _stem_exc:
             logger.debug(
-                "MIIPHER adapter: Stem-SGMSE+ nicht verfügbar (%s) — Full-Mix-SGMSE+ Fallback",
+                "MIIPHER adapter: Stem-SGMSE+ nicht verfügbar (%s) — Full-Mix-SGMSE+ Ersatzpfad",
                 _stem_exc,
             )
 
@@ -561,7 +561,7 @@ class MiipherPlugin:
         except RuntimeError:
             raise
         except Exception as exc:
-            logger.debug("MIIPHER adapter: SGMSE+ error: %s — DFN fallback", exc)
+            logger.debug("MIIPHER adapter: SGMSE+ error: %s — DFN Ersatzpfad", exc)
             raise RuntimeError(f"SGMSE+ not available for MIIPHER adapter: {exc}") from exc
 
     def _enhance_dfn_fallback(
@@ -661,7 +661,7 @@ class MiipherPlugin:
                         _n_frames_stft,
                     )
             except Exception as _fcpe_exc:
-                logger.debug("MIIPHER DFN: FCPE harmonic protection non-blocking: %s", _fcpe_exc)
+                logger.debug("MIIPHER DFN: FCPE harmonic protection nicht blockierend: %s", _fcpe_exc)
                 _harmonic_gain_floor = None
 
             for _ch_om in _chs_om:
@@ -688,12 +688,12 @@ class MiipherPlugin:
             if _omlsa_f32.shape == out_f32.shape:
                 # Soft blend: 70% OMLSA result + 30% DFN (preserves DFN transient sharpness)
                 out_f32 = np.clip(0.70 * _omlsa_f32 + 0.30 * out_f32, -1.0, 1.0)
-                logger.debug("MIIPHER DFN: IMCRA post-filter applied (bias=%.1fdB)", _snr_adaptive_bias)
+                logger.debug("MIIPHER DFN: IMCRA post-filter angewendet (bias=%.1fdB)", _snr_adaptive_bias)
         except Exception as _omlsa_exc:
-            logger.debug("MIIPHER DFN: OMLSA post-filter non-blocking: %s", _omlsa_exc)
+            logger.debug("MIIPHER DFN: OMLSA post-filter nicht blockierend: %s", _omlsa_exc)
 
         logger.debug(
-            "MIIPHER adapter: DeepFilterNet fallback succeeded (energy_bias=%.1f dB snr=%.1f dB)",
+            "MIIPHER adapter: DeepFilterNet Ersatzpfad succeeded (energy_bias=%.1f dB snr=%.1f dB)",
             _snr_adaptive_bias,
             noise_snr_db,
         )
@@ -729,7 +729,7 @@ class MiipherPlugin:
                 1.0,
             )
         except Exception as hnr_exc:  # pylint: disable=broad-except
-            logger.debug("MIIPHER adapter %s: HNR-Blend unavailable (non-blocking): %s", model_name, hnr_exc)
+            logger.debug("MIIPHER adapter %s: HNR-Blend nicht verfuegbar (nicht blockierend): %s", model_name, hnr_exc)
 
         try:
             check_hallucination = _load_symbol("backend.core.dsp.hallucination_guard", "check_hallucination")
@@ -743,11 +743,11 @@ class MiipherPlugin:
                 )
                 raise RuntimeError(f"Hallucination-Guard rollback for {model_name}")
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         except RuntimeError:
             raise
         except Exception as hg_exc:  # pylint: disable=broad-except
-            logger.debug("MIIPHER adapter %s: Hallucination-Guard error (non-blocking): %s", model_name, hg_exc)
+            logger.debug("MIIPHER adapter %s: Hallucination-Guard error (nicht blockierend): %s", model_name, hg_exc)
 
         return enhanced.astype(np.float32)
 
@@ -817,7 +817,7 @@ class MiipherPlugin:
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
         out = np.clip(out, -1.0, 1.0).astype(np.float32)
 
-        logger.debug("MIIPHER: Wiener-Filter Last-Resort DSP-Fallback angewendet")
+        logger.debug("MIIPHER: Wiener-Filter Last-Resort DSP-Ersatzpfad angewendet")
 
         if is_stereo:
             # Signal-Ratio Stereo-Rekonstruktion

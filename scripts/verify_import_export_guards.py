@@ -102,7 +102,7 @@ def _to_mono(audio: np.ndarray) -> np.ndarray:
         return 0.5 * (arr[:, 0] + arr[:, 1])
     if arr.shape[0] == 2:
         return 0.5 * (arr[0, :] + arr[1, :])
-    return np.mean(arr, axis=1)
+    return np.mean(arr, axis=1)  # type: ignore[no-any-return]
 
 
 def _resample_if_needed(audio: np.ndarray, src_sr: int, dst_sr: int) -> np.ndarray:
@@ -111,7 +111,7 @@ def _resample_if_needed(audio: np.ndarray, src_sr: int, dst_sr: int) -> np.ndarr
     g = math.gcd(int(src_sr), int(dst_sr))
     up = int(dst_sr // g)
     down = int(src_sr // g)
-    return signal.resample_poly(audio.astype(np.float32), up, down).astype(np.float32)
+    return signal.resample_poly(audio.astype(np.float32), up, down).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _rms_dbfs(x: np.ndarray) -> float:

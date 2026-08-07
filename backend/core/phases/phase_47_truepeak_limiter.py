@@ -142,20 +142,30 @@ class TruePeakLimiterPhase(PhaseInterface):
 
             _hp_freq = 20.0
             _hp_sos = butter(4, _hp_freq / (sample_rate / 2), btype="high", output="sos")
+            # §Boundary-Guard: sosfiltfilt's default padtype="odd" force-mirrors
+            # the signal antisymmetrically about each edge sample. For broadband/
+            # noise-like content this creates a discontinuous derivative at the
+            # boundary that a highpass filter rings on — producing an audible
+            # edge artifact up to ~1.5x the source peak within the first/last
+            # few hundred samples (§v10.62 boundary-artifact class). padtype=
+            # "even" mirrors symmetrically (continuous derivative) and a longer
+            # explicit padlen lets the filter's impulse response fully settle.
+            _hp_n = audio.shape[0] if audio.ndim == 2 else len(audio)
+            _hp_padlen = min(3000, max(0, _hp_n // 3 - 1))
             is_stereo = audio.ndim == 2
             if is_stereo:
                 audio_hp = np.column_stack(
                     [
-                        sosfiltfilt(_hp_sos, audio[:, 0]),
-                        sosfiltfilt(_hp_sos, audio[:, 1]),
+                        sosfiltfilt(_hp_sos, audio[:, 0], padtype="even", padlen=_hp_padlen),
+                        sosfiltfilt(_hp_sos, audio[:, 1], padtype="even", padlen=_hp_padlen),
                     ]
                 )
             else:
-                audio_hp = sosfiltfilt(_hp_sos, audio)
+                audio_hp = sosfiltfilt(_hp_sos, audio, padtype="even", padlen=_hp_padlen)
             audio = audio_hp.astype(np.float32)
-            logger.debug("Phase47 §Pre-Limiter-HP: 20 Hz LR4 applied")
+            logger.debug("Verarbeitungsschritt47 §Pre-Limiter-HP: 20 Hz LR4 angewendet")
         except Exception as _hp_exc:
-            logger.debug("Phase47 §Pre-Limiter-HP non-blocking: %s", _hp_exc)
+            logger.debug("Verarbeitungsschritt47 §Pre-Limiter-HP nicht blockierend: %s", _hp_exc)
 
         ceiling_dbfs: float = float(kwargs.get("ceiling_dbfs", _DEFAULT_CEILING_DBFS))
         ceiling_lin: float = 10 ** (ceiling_dbfs / 20.0)
@@ -188,7 +198,7 @@ class TruePeakLimiterPhase(PhaseInterface):
         gain_reduction_db = tp_before - tp_after
 
         logger.info(
-            "Phase 47 TruePeak: ceiling=%.1f dBFS, TP %+.2f → %+.2f dBFS, GR=%.2f dB, t=%.3fs",
+            "Verarbeitungsschritt 47 TruePeak: ceiling=%.1f dBFS, TP %+.2f → %+.2f dBFS, GR=%.2f dB, t=%.3fs",
             ceiling_dbfs,
             tp_before,
             tp_after,

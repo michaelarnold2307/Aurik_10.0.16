@@ -56,7 +56,7 @@ class QualityMonitoringOrchestrator:
         self._status_file = _WORKSPACE_ROOT / "temp_repro" / "monitoring_status.json"
         self._status_file.parent.mkdir(parents=True, exist_ok=True)
 
-    def start_all(self) -> int:
+    def start_all(self) -> int:  # type: ignore[return]
         """Startet alle Komponenten."""
         logger.info("=" * 100)
         logger.info("AURIK 9 — QUALITÄTS-MONITORING ÖKOSYSTEM")
@@ -96,7 +96,7 @@ class QualityMonitoringOrchestrator:
         logger.info("Starte PyQt5-Frontend...")
         gui_script = _WORKSPACE_ROOT / "run_aurik.sh"
         if not gui_script.exists():
-            logger.warning(f"run_aurik.sh nicht gefunden: {gui_script}")
+            logger.warning(f"Ausfuehrung_aurik.sh nicht gefunden: {gui_script}")
             return
 
         try:
@@ -217,7 +217,7 @@ class QualityMonitoringOrchestrator:
                     if line:
                         logger.info(f"[{name.upper()}] {line.rstrip()}")
         except Exception as e:
-            logger.debug(f"{name} output stream beendet: {e}")
+            logger.debug(f"{name} Ausgabe stream beendet: {e}")
 
     def _update_status_file(self) -> None:
         """Aktualisiert Status-Datei."""
@@ -231,7 +231,7 @@ class QualityMonitoringOrchestrator:
             with open(self._status_file, "w") as f:
                 json.dump(status, f, indent=2)
         except Exception as e:
-            logger.debug(f"Status-Datei-Update fehlgeschlagen: {e}")
+            logger.debug(f"Status-Datei-Aktualisierung fehlgeschlagen: {e}")
 
     def shutdown_all(self) -> int:
         """Fährt alle Komponenten herunter."""
@@ -247,7 +247,7 @@ class QualityMonitoringOrchestrator:
                     proc.terminate()
                     proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
-                    logger.warning(f"  Timeout bei {name}, force-kill...")
+                    logger.warning(f"  Zeitlimit bei {name}, force-kill...")
                     proc.kill()
                 except Exception as e:
                     logger.error(f"  Fehler bei {name}: {e}")

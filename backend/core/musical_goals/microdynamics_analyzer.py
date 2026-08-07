@@ -489,20 +489,20 @@ if __name__ == "__main__":
 
     # Load audio
     audio_path = sys.argv[1]
-    logger.debug("Analyzing: %s", audio_path)
+    logger.debug("analysiere: %s", audio_path)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(audio_path)
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Analyze
     analysis = analyze_microdynamics(audio, sr)
 
     # Report
     logger.debug("\n" + "=" * 70)
-    logger.debug("MICRODYNAMICS ANALYSIS")
+    logger.debug("MICRODYNAMICS Analyse")
     logger.debug("=" * 70)
-    logger.debug("Overall Microdynamics Score: %.3f (threshold: 0.70)", analysis.microdynamics_score)
+    logger.debug("Overall Microdynamics Wert: %.3f (Schwelle: 0.70)", analysis.microdynamics_score)
     logger.debug("Status: %s", "✅ PASSED" if analysis.passed else "❌ FAILED")
     logger.debug("")
     logger.debug("Component Scores (1.0 = Perfect):")
@@ -517,7 +517,7 @@ if __name__ == "__main__":
     logger.debug("=" * 70)
 
     if not analysis.passed:
-        logger.debug("\n⚠️  WARNING: Low microdynamics detected!")
+        logger.debug("\n⚠️  WARNING: Low microdynamics erkannt!")
         logger.debug("Recommendation: Sound may be flat/dead. Consider dynamic expansion.")
     else:
         logger.debug("\n✅ Excellent microdynamics - expressive, living sound!")

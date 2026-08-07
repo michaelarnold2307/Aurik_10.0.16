@@ -37,7 +37,7 @@ SR = 48000
 def make_sine(freq: float = 440.0, duration_s: float = 2.0, sr: int = SR) -> np.ndarray:
     """Einfacher Sinus als Test-Audio."""
     t = np.arange(int(duration_s * sr)) / float(sr)
-    return (np.sin(2.0 * np.pi * freq * t) * 0.5).astype(np.float32)
+    return (np.sin(2.0 * np.pi * freq * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def make_noise(duration_s: float = 2.0, sr: int = SR) -> np.ndarray:
@@ -69,7 +69,7 @@ def make_complex(duration_s: float = 5.0, sr: int = SR) -> np.ndarray:
         + 0.2 * np.sin(2 * np.pi * 880.0 * t)
         + 0.1 * np.random.randn(n)
     ).astype(np.float32)
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ===========================================================================

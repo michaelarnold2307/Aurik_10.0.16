@@ -94,9 +94,9 @@ class MushraProxy:
             self._mert_available = True
             logger.info("§v10.703 MUSHRA-Proxy: MERT-Modell geladen — perzeptueller Closed-Loop aktiv")
         except ImportError:
-            logger.info("§v10.703 MUSHRA-Proxy: MERT nicht verfügbar — Fallback auf Bark-Band-Heuristik")
+            logger.info("§v10.703 MUSHRA-Proxy: MERT nicht verfügbar — Ersatzpfad auf Bark-Band-Heuristik")
         except Exception as exc:
-            logger.warning("§v10.703 MUSHRA-Proxy: MERT-Ladefehler: %s — Fallback aktiv", exc)
+            logger.warning("§v10.703 MUSHRA-Proxy: MERT-Ladefehler: %s — Ersatzpfad aktiv", exc)
 
     def is_available(self) -> bool:
         """True wenn der Proxy einsatzbereit ist (MERT oder Fallback)."""
@@ -113,9 +113,9 @@ class MushraProxy:
                 from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
                 _mert = _get_mert()
-                self._session_reference_embedding = _mert.compute_embedding(audio, sample_rate)
+                self._session_reference_embedding = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
                 logger.debug(
-                    "§v10.703 MUSHRA-Proxy: Session-Referenz-Embedding berechnet (shape=%s)",
+                    "§v10.703 MUSHRA-Proxy: Sitzung-Referenz-Embedding berechnet (shape=%s)",
                     self._session_reference_embedding.shape
                     if self._session_reference_embedding is not None
                     else "None",
@@ -239,8 +239,8 @@ class MushraProxy:
             from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
-            _emb_a = _mert.compute_embedding(audio, sample_rate)
-            _emb_r = _mert.compute_embedding(reference, sample_rate)
+            _emb_a = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
+            _emb_r = _mert.compute_embedding(reference, sample_rate)  # type: ignore[attr-defined]
 
             if _emb_a is None or _emb_r is None:
                 return 50.0
@@ -264,7 +264,7 @@ class MushraProxy:
             from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
-            _embedding = _mert.compute_embedding(audio, sample_rate)
+            _embedding = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
 
             if _embedding is None or self._session_reference_embedding is None:
                 return 50.0
@@ -288,7 +288,7 @@ class MushraProxy:
             return _mushra
 
         except Exception as exc:
-            logger.debug("§v10.703 MUSHRA-Proxy MERT: %s — Fallback", exc)
+            logger.debug("§v10.703 MUSHRA-Proxy MERT: %s — Ersatzpfad", exc)
             return self._estimate_mushra_fallback(audio, sample_rate)
 
     # ── Heuristik-Fallback ───────────────────────────────────────────────
@@ -333,7 +333,7 @@ class MushraProxy:
             return _mushra
 
         except Exception as exc:
-            logger.debug("§v10.703 MUSHRA-Proxy Fallback: %s", exc)
+            logger.debug("§v10.703 MUSHRA-Proxy Ersatzpfad: %s", exc)
             return 50.0
 
     # ── Session-Statistik ────────────────────────────────────────────────

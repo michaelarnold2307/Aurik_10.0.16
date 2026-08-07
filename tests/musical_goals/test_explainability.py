@@ -67,7 +67,7 @@ def explainer():
                 out[goal] = score
             return out
 
-    return GoalExplainer(checker=_FastDeterministicChecker())
+    return GoalExplainer(checker=_FastDeterministicChecker())  # type: ignore[arg-type]
 
 
 @pytest.fixture

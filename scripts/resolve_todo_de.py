@@ -15,9 +15,12 @@ Aufruf:
 from __future__ import annotations
 
 import argparse
+import logging
 import re
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Hilfsfunktionen
@@ -780,7 +783,7 @@ def main() -> None:
                     content = path.read_text(encoding="utf-8", errors="replace")
                     remaining += content.count("TODO(de):")
                 except OSError:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         print(f"Verbleibende TODO(de):-Marker: {remaining}")
 
 

@@ -33,7 +33,7 @@ def _sine_plus_noise(freq: float = 440.0, secs: float = 2.0, noise_amp: float = 
     sig = 0.25 * np.sin(2 * np.pi * freq * t).astype(np.float32)
     rng = np.random.default_rng(7)
     noise = rng.standard_normal(len(sig)).astype(np.float32) * noise_amp
-    return np.clip(sig + noise, -1.0, 1.0)
+    return np.clip(sig + noise, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

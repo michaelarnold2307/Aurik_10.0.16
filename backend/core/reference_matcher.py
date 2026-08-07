@@ -6,15 +6,16 @@ Nutzer gibt Referenz-Track → Aurik matched EQ, Dynamics, Stereo-Width.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 
 import numpy as np
 
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass  # type: ignore[name-defined]
 class MatchProfile:
-    target_eq_curve: np.ndarray = None
+    target_eq_curve: np.ndarray = None  # type: ignore[assignment]
     target_rms_db: float = -18.0
     target_stereo_width: float = 0.5
     target_spectral_centroid: float = 2000.0
@@ -45,7 +46,7 @@ def analyze_reference(audio: np.ndarray, sr: int) -> MatchProfile:
         l, r = audio[:, 0], audio[:, 1]
         stereo = float(np.clip(1.0 - abs(np.corrcoef(l, r)[0, 1]), 0.0, 1.0))
 
-    return MatchProfile(
+    return MatchProfile(  # type: ignore[call-arg]
         target_eq_curve=long_spec.astype(np.float32),
         target_rms_db=20 * np.log10(rms),
         target_stereo_width=stereo,
@@ -88,5 +89,5 @@ def apply_match(audio: np.ndarray, sr: int, target: MatchProfile) -> np.ndarray:
     gain = target_rms / src_rms
     result = np.clip(result * gain, -1.0, 1.0)
 
-    logger.info("ReferenceMatch: EQ+dynamic applied")
+    logger.info("ReferenceMatch: EQ+dynamic angewendet")
     return result.astype(np.float32)

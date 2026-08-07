@@ -166,7 +166,7 @@ class PluginLifecycleManager:
             0.0  # Cooldown für Swap-Druck-Warnungen (min. 60 s zwischen identischen Meldungen)
         )
         self._start_auto_evict_monitor()
-        logger.info("PluginLifecycleManager: initialized (RAM eviction threshold %.0f %%)", _RAM_EVICT_THRESHOLD_PCT)
+        logger.info("PluginLifecycleManager: initialisiert (RAM eviction Schwelle %.0f %%)", _RAM_EVICT_THRESHOLD_PCT)
 
     # ------------------------------------------------------------------
     # Registrierung
@@ -266,7 +266,7 @@ class PluginLifecycleManager:
             _now = time.monotonic()
             # §v10.306: Adaptiver Cooldown. Wenn letzter Evict nichts brachte,
             # 5 Minuten warten statt jede Minute warnen.
-            _cooldown = 300.0 if getattr(self, '_last_evict_was_empty', False) else 60.0
+            _cooldown = 300.0 if getattr(self, "_last_evict_was_empty", False) else 60.0
             if _now - self._last_swap_warn_ts >= _cooldown:
                 _log_fn = logger.warning if (free_mb < _MIN_FREE_MB_HARD or swap_emergency) else logger.info
                 _log_fn(
@@ -288,7 +288,7 @@ class PluginLifecycleManager:
         )
         if swap_emergency and not (ram_pct > _RAM_EVICT_THRESHOLD_PCT or free_mb < _MIN_FREE_MB_HARD):
             _now_s = time.monotonic()
-            _cooldown = 300.0 if getattr(self, '_last_evict_was_empty', False) else 60.0
+            _cooldown = 300.0 if getattr(self, "_last_evict_was_empty", False) else 60.0
             if _now_s - self._last_swap_warn_ts >= _cooldown:
                 logger.warning(
                     "PLM: Swap-Druck kritisch (%.0f %%) — erzwinge Eviction inaktiver Plugins (RAM=%.0f %%, frei=%.0f MB)",
@@ -301,7 +301,7 @@ class PluginLifecycleManager:
             return 0
         _evicted = self._do_evict(target_pct=_RAM_TARGET_PCT, required_mb=required_mb)
         # §v10.306: Tracke ob letzte Eviction leer war → Cooldown-Verlängerung
-        self._last_evict_was_empty = (_evicted == 0)
+        self._last_evict_was_empty = _evicted == 0
         return _evicted
 
     def force_evict_all(self) -> int:
@@ -428,7 +428,7 @@ class PluginLifecycleManager:
         for entry in candidates:
             try:
                 logger.info(
-                    "PLM: Entlade '%s' (%.2f GB) vor %s — von keiner anstehenden Phase benötigt (Look-Ahead)",
+                    "PLM: Entlade '%s' (%.2f GB) vor %s — von keiner anstehenden Verarbeitungsschritt benötigt (Look-Ahead)",
                     entry.name,
                     entry.size_gb,
                     _current_phase,
@@ -557,7 +557,7 @@ class PluginLifecycleManager:
             try:
                 return float(_psutil.swap_memory().percent)
             except Exception as e:
-                logger.warning("plugin_lifecycle_manager.py::_swap_percent fallback: %s", e)
+                logger.warning("plugin_lifecycle_manager.py::_swap_percent Ersatzpfad: %s", e)
                 return 0.0
         return 0.0
 

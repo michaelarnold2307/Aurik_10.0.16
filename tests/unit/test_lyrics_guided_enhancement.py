@@ -61,14 +61,14 @@ np.random.seed(42)
 def _make_audio(duration_s: float = 5.0, freq: float = 440.0) -> np.ndarray:
     """Synthetischer Sinuston, mono, float32."""
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_am_audio(duration_s: float = 5.0, carrier: float = 440.0, mod: float = 8.0) -> np.ndarray:
     """AM-modulierter Sinuston (Akkordeon-ähnlich)."""
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
     envelope = 1.0 + 0.5 * np.sin(2 * np.pi * mod * t)
-    return (np.sin(2 * np.pi * carrier * t) * envelope * 0.4).astype(np.float32)
+    return (np.sin(2 * np.pi * carrier * t) * envelope * 0.4).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_fricative_audio(duration_s: float = 0.2, sr: int = SR) -> np.ndarray:
@@ -285,7 +285,7 @@ class TestComputeLyricsSaliency:
         base = _dummy_saliency(20)
         for ptype in ("vowel", "fricative", "plosive", "silence", "mixed"):
             tr = _dummy_transcription(phoneme_type=ptype, stressed=True)
-            result = cap.compute_lyrics_saliency(base, tr, SR)
+            result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
             assert result.shape == base.shape
             assert np.all(result >= 0.29), f"Zu niedrig bei {ptype}"
             assert np.all(result <= 2.01), f"Zu hoch bei {ptype}"
@@ -294,7 +294,7 @@ class TestComputeLyricsSaliency:
         cap = self._cap()
         base = np.ones((20, N_BARK_BANDS), dtype=np.float32)
         tr = _dummy_transcription(n_words=15, phoneme_type="fricative", stressed=True)
-        result = cap.compute_lyrics_saliency(base, tr, SR)
+        result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         # HF-Bänder 17–23 sollten durch fricative_stressed-Boost (2.0) erhöht sein
         hf_mean = float(np.mean(result[:, HF_BARK_START:HF_BARK_END]))
         lf_mean = float(np.mean(result[:, :HF_BARK_START]))
@@ -305,7 +305,7 @@ class TestComputeLyricsSaliency:
         # Sehr niedrige Basis-Salienz
         base = np.full((20, N_BARK_BANDS), 0.01, dtype=np.float32)
         tr = _dummy_transcription(n_words=15, phoneme_type="fricative", stressed=True)
-        result = cap.compute_lyrics_saliency(base, tr, SR)
+        result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         # G_floor 0.90 an HF-Bändern ≥ HF_BARK_START
         hf = result[:, HF_BARK_START:HF_BARK_END]
         # Nach clip auf [0.3, 2.0] muss zumindest 0.30 gelten
@@ -315,7 +315,7 @@ class TestComputeLyricsSaliency:
         cap = self._cap()
         base = _dummy_saliency(15)
         tr = _dummy_transcription(fallback=True)
-        result = cap.compute_lyrics_saliency(base, tr, SR)
+        result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         # Fallback → base_saliency geclampt und zurückgegeben (nicht zerbrochen)
         assert result.shape == base.shape
         assert np.all(np.isfinite(result))
@@ -331,7 +331,7 @@ class TestComputeLyricsSaliency:
             duration_s=5.0,
             fallback_used=False,
         )
-        result = cap.compute_lyrics_saliency(base, tr, SR)
+        result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         # Früh-Exit bei leerer words-Liste
         assert np.all(np.isfinite(result))
 
@@ -339,14 +339,14 @@ class TestComputeLyricsSaliency:
         cap = self._cap()
         base = np.full((10, N_BARK_BANDS), np.nan, dtype=np.float32)
         tr = _dummy_transcription(phoneme_type="vowel", stressed=False)
-        result = cap.compute_lyrics_saliency(base, tr, SR)
+        result = cap.compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         assert np.all(np.isfinite(result)), "NaN im Output nach NaN-Eingang"
 
     def test_23_convenience_wrapper_matches_class(self) -> None:
         base = _dummy_saliency(10)
         tr = _dummy_transcription(phoneme_type="vowel", stressed=True)
-        result_wrapper = compute_lyrics_saliency(base, tr, SR)
-        result_class = ContentAwareProcessor().compute_lyrics_saliency(base, tr, SR)
+        result_wrapper = compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
+        result_class = ContentAwareProcessor().compute_lyrics_saliency(base, tr, SR)  # type: ignore[arg-type]
         # Beide sollten gleiche Dimension und ähnliche Werte liefern
         assert result_wrapper.shape == result_class.shape
 
@@ -411,7 +411,7 @@ class TestHelperFunctions:
         ]
         result = _find_word_at(words, 0.5)
         assert result is not None
-        assert result.start_s == 0.0
+        assert result.start_s == 0.0  # type: ignore[attr-defined]
 
     def test_find_word_at_no_match(self) -> None:
         words = [WordTimestamp("[vocal]", 0.0, 1.0, 0.8, True, "vowel")]
@@ -479,6 +479,9 @@ def _make_lge_no_onnx():
     lge._tl = LyricsGuidedTimeline()
     lge._ort_session = None  # kein ONNX → DSP-Fallback aktiv
     lge._aligner_session = None
+    lge._whisper_hf_processor = None  # §v10.303.50: __new__ umgeht __init__
+    lge._whisper_hf_model = None
+    lge._transcriber = None
     return lge
 
 

@@ -353,6 +353,7 @@ _HEAVY_ML_PLUGINS: frozenset[str] = frozenset(
     {
         # --- Stem Separation (>500 MB) ---
         "SGMSE",  # sgmse_plugin — diffusion score-matching (251 MB)
+        "AudioSR",  # audiosr_plugin — diffusion super-resolution (~7 GB, heaviest plugin)
         "FlashSR",  # flashsr_plugin — FlashSR ONNX bandwidth extension (~2 GB)
         "BSRoFormer",  # bs_roformer_plugin — stem separation ONNX (860 MB)
         "MDXNet",  # uvr_mdxnet_plugin — stem separation ONNX (~1.2 GB)
@@ -478,7 +479,7 @@ def get_torch_device(plugin_name: str = "") -> str:
     try:
         return get_ml_device_manager().get_torch_device(plugin_name)
     except Exception as exc:
-        logger.debug("get_torch_device fallback to cpu: %s", exc)
+        logger.debug("get_torch_device Ersatzpfad to cpu: %s", exc)
         return "cpu"
 
 
@@ -490,7 +491,7 @@ def get_ort_providers(plugin_name: str = "") -> list[str]:
     try:
         return get_ml_device_manager().get_ort_providers(plugin_name)
     except Exception as exc:
-        logger.debug("get_ort_providers fallback to CPU: %s", exc)
+        logger.debug("get_ort_providers Ersatzpfad to CPU: %s", exc)
         return ["CPUExecutionProvider"]
 
 
@@ -503,7 +504,7 @@ def get_ort_providers_fp16(plugin_name: str = "") -> list[str]:
     try:
         return get_ml_device_manager().get_ort_providers_fp16(plugin_name)
     except Exception as exc:
-        logger.debug("get_ort_providers_fp16 fallback to CPU: %s", exc)
+        logger.debug("get_ort_providers_fp16 Ersatzpfad to CPU: %s", exc)
         return ["CPUExecutionProvider"]
 
 
@@ -516,7 +517,7 @@ def warmup_rocm_gpu() -> bool:
     try:
         return get_ml_device_manager().warmup_rocm()
     except Exception as exc:
-        logger.debug("warmup_rocm_gpu failed (non-critical): %s", exc)
+        logger.debug("warmup_rocm_gpu fehlgeschlagen (unkritisch): %s", exc)
         return False
 
 
@@ -586,7 +587,7 @@ class MLDeviceManager:
             if sys.platform == "win32":
                 self._detect_directml()
         except Exception as exc:
-            logger.debug("MLDeviceManager: backend detection error (CPU fallback): %s", exc)
+            logger.debug("MLDeviceManager: backend detection error (CPU Ersatzpfad): %s", exc)
             self._gpu_available = False
             self._backend = GPUBackend.NONE
 
@@ -606,7 +607,13 @@ class MLDeviceManager:
                 self._gpu_tier.name,
             )
             # §v10.304.30: Klare, grep-bare Status-Zeile
-            _backend_label = "ROCm" if self._backend == GPUBackend.ROCM else "CUDA" if self._backend == GPUBackend.CUDA else self._backend.value
+            _backend_label = (
+                "ROCm"
+                if self._backend == GPUBackend.ROCM
+                else "CUDA"
+                if self._backend == GPUBackend.CUDA
+                else self._backend.value
+            )
             logger.info("══════════════════════════════════════════════")
             logger.info("GPU STATUS: %s AKTIV — %s (%.1f GB VRAM)", _backend_label, self._gpu_name, self._vram_total_gb)
             logger.info("  PyTorch device:  %s", self._torch_gpu_device)
@@ -614,7 +621,7 @@ class MLDeviceManager:
             logger.info("══════════════════════════════════════════════")
         else:
             logger.info(
-                "MLDeviceManager: no GPU backend — CPU-only mode (CUDA/ROCm/DirectML not found or not installed)"
+                "MLDeviceManager: no GPU backend — CPU-only Betriebsart (CUDA/ROCm/DirectML not found or not installed)"
             )
             logger.info("══════════════════════════════════════════════")
             logger.info("GPU STATUS: DEAKTIVIERT — CPU-only")
@@ -631,7 +638,7 @@ class MLDeviceManager:
             import torch  # type: ignore[import]
 
             if not torch.cuda.is_available():
-                logger.debug("MLDeviceManager: torch.cuda unavailable — checking ONNX fallback")
+                logger.debug("MLDeviceManager: torch.cuda nicht verfuegbar — pruefe ONNX Ersatzpfad")
                 self._detect_rocm_onnx_only()
                 return
 
@@ -647,7 +654,7 @@ class MLDeviceManager:
                 self._backend = GPUBackend.ROCM
                 self._ort_gpu_providers = ["ROCMExecutionProvider", "CPUExecutionProvider"]
                 self._gpu_architecture = _detect_amd_architecture(device_name)
-                logger.info("MLDeviceManager: AMD ROCm detected — HIP %s", torch.version.hip)
+                logger.info("MLDeviceManager: AMD ROCm erkannt — HIP %s", torch.version.hip)
                 # §v10.304.30: ONNX ROCm-Sanity-Probe sofort nach Erkennung.
                 # Prüft ob ROCMExecutionProvider tatsächlich funktioniert.
                 # Defekte ONNX-ROCm-Installationen (hipErrorInvalidDeviceFunction)
@@ -658,13 +665,13 @@ class MLDeviceManager:
                 self._backend = GPUBackend.CUDA
                 self._ort_gpu_providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
                 self._gpu_architecture = AMDArchitecture.UNKNOWN
-                logger.info("MLDeviceManager: NVIDIA CUDA detected — CUDA %s", torch.version.cuda)
+                logger.info("MLDeviceManager: NVIDIA CUDA erkannt — CUDA %s", torch.version.cuda)
             else:
                 # Fallback: assume ROCm (backward compatibility)
                 self._backend = GPUBackend.ROCM
                 self._ort_gpu_providers = ["ROCMExecutionProvider", "CPUExecutionProvider"]
                 self._gpu_architecture = _detect_amd_architecture(device_name)
-                logger.info("MLDeviceManager: GPU erkannt (Fallback ROCm) — %s", device_name)
+                logger.info("MLDeviceManager: GPU erkannt (Ersatzpfad ROCm) — %s", device_name)
 
             self._torch_gpu_device = "cuda"
             self._vram_total_gb = round(total_vram, 2)
@@ -674,7 +681,7 @@ class MLDeviceManager:
             self._gpu_tier = _compute_gpu_tier(self._gpu_architecture, self._vram_total_gb, self._backend)
 
         except Exception as exc:
-            logger.debug("MLDeviceManager: CUDA/ROCm detection failed: %s — trying ONNX-only", exc)
+            logger.debug("MLDeviceManager: CUDA/ROCm detection fehlgeschlagen: %s — trying ONNX-only", exc)
             self._detect_rocm_onnx_only()
 
     def _detect_rocm_onnx_only(self) -> None:
@@ -691,9 +698,9 @@ class MLDeviceManager:
                 self._gpu_name = "AMD GPU (ONNX ROCm, no torch)"
                 self._vram_total_gb = 4.0  # conservative estimate
                 self._vram_free_gb = 4.0
-                logger.info("MLDeviceManager: ONNX ROCm provider detected — ONNX models will use GPU")
+                logger.info("MLDeviceManager: ONNX ROCm provider erkannt — ONNX models will use GPU")
             else:
-                logger.debug("MLDeviceManager: ONNX ROCm provider not available")
+                logger.debug("MLDeviceManager: ONNX ROCm provider not verfuegbar")
         except ImportError:
             logger.debug("MLDeviceManager: onnxruntime not installed")
         except Exception as exc:
@@ -754,7 +761,7 @@ class MLDeviceManager:
             if "ROCMExecutionProvider" not in active:
                 logger.info(
                     "MLDeviceManager: ROCm ONNX Probe — Provider silently fell back to CPU "
-                    "(ROCm libs unavailable or not in LD_LIBRARY_PATH) → ORT CPU-only"
+                    "(ROCm libs nicht verfuegbar or not in LD_LIBRARY_PATH) → ORT CPU-only"
                 )
                 with self._lock:
                     self._ort_gpu_providers = ["CPUExecutionProvider"]
@@ -777,7 +784,7 @@ class MLDeviceManager:
                         ]
                     logger.info(
                         "MLDeviceManager: MIGraphXExecutionProvider verfügbar — "
-                        "als primärer ORT-Provider eingetragen (ROCM als Fallback)"
+                        "als primärer ORT-Provider eingetragen (ROCM als Ersatzpfad)"
                     )
 
         except Exception as exc:
@@ -793,7 +800,7 @@ class MLDeviceManager:
             if any(h in exc_str for h in _hip_hints):
                 logger.warning(
                     "MLDeviceManager: ROCm ONNX Probe FEHLGESCHLAGEN (%s) — "
-                    "ROCMExecutionProvider für alle ONNX-Plugins deaktiviert (CPU-Fallback)",
+                    "ROCMExecutionProvider für alle ONNX-Plugins deaktiviert (CPU-Ersatzpfad)",
                     exc,
                 )
                 with self._lock:
@@ -815,7 +822,7 @@ class MLDeviceManager:
             available = _ort.get_available_providers()
             if "DmlExecutionProvider" not in available:
                 logger.debug(
-                    "MLDeviceManager: DmlExecutionProvider not available "
+                    "MLDeviceManager: DmlExecutionProvider not verfuegbar "
                     "(onnxruntime-directml not installed?). Providers: %s",
                     available,
                 )
@@ -849,7 +856,7 @@ class MLDeviceManager:
                 import torch_directml  # type: ignore[import]  # pylint: disable=unused-import  # Side-Effect-Import: registriert DML-Device in PyTorch
 
                 self._torch_gpu_device = "dml"
-                logger.info("MLDeviceManager: torch-directml available — PyTorch models can use DML device")
+                logger.info("MLDeviceManager: torch-directml verfuegbar — PyTorch models can use DML device")
             except ImportError:
                 self._torch_gpu_device = "cpu"
                 logger.info(
@@ -857,7 +864,7 @@ class MLDeviceManager:
                 )
 
         except Exception as exc:
-            logger.debug("MLDeviceManager: DirectML detection failed: %s", exc)
+            logger.debug("MLDeviceManager: DirectML detection fehlgeschlagen: %s", exc)
 
     # ── VRAM query helpers ────────────────────────────────────────────────
 
@@ -884,7 +891,7 @@ class MLDeviceManager:
                     if name:
                         return name
         except Exception as e:
-            logger.warning("ml_device_manager.py::_query_gpu_name_windows fallback: %s", e)
+            logger.warning("ml_device_manager.py::_query_gpu_name_windows Ersatzpfad: %s", e)
         return ""
 
     def _query_vram_free(self) -> float:
@@ -898,7 +905,7 @@ class MLDeviceManager:
             free_bytes, _ = torch.cuda.mem_get_info(0)
             return round(free_bytes / (1024**3), 2)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("ml_device_manager.py::_query_vram_free fallback: %s", e)
+            logger.warning("ml_device_manager.py::_query_vram_free Ersatzpfad: %s", e)
             return self._vram_total_gb  # assume empty on query failure
 
     def _query_vram_directml(self) -> float:
@@ -919,7 +926,7 @@ class MLDeviceManager:
                     if raw.isdigit():
                         return round(int(raw) / (1024**3), 2)
         except Exception as e:
-            logger.warning("ml_device_manager.py::_query_vram_directml fallback: %s", e)
+            logger.warning("ml_device_manager.py::_query_vram_directml Ersatzpfad: %s", e)
         return 4.0  # conservative default when WMIC is unavailable
 
     # ── Public API ────────────────────────────────────────────────────────
@@ -1070,8 +1077,8 @@ class MLDeviceManager:
 
             if already_used + size_gb > max_usable:
                 logger.warning(
-                    "MLDeviceManager: VRAM budget exceeded for %s (%.2f GB)"
-                    " — used %.2f / %.2f GB (tier=%s) → CPU fallback",
+                    "MLDeviceManager: VRAM Grenze exceeded for %s (%.2f GB)"
+                    " — used %.2f / %.2f GB (tier=%s) → CPU Ersatzpfad",
                     plugin_name,
                     size_gb,
                     already_used,
@@ -1085,7 +1092,7 @@ class MLDeviceManager:
             if effective_free < required_with_floor:
                 logger.warning(
                     "MLDeviceManager: insufficient VRAM for %s — "
-                    "need %.2f GB (incl. %.0f MB floor), have %.2f GB (tier=%s) → CPU fallback",
+                    "need %.2f GB (incl. %.0f MB floor), have %.2f GB (tier=%s) → CPU Ersatzpfad",
                     plugin_name,
                     required_with_floor,
                     min_free_mb,
@@ -1145,7 +1152,7 @@ class MLDeviceManager:
                 self._gpu_disabled_plugins.add(plugin_name)
                 self._ort_gpu_compatible_plugins.discard(plugin_name)
                 logger.info(
-                    "MLDeviceManager: GPU-Inkompatibilität für %s erkannt (%s) — sofort CPU-Fallback",
+                    "MLDeviceManager: GPU-Inkompatibilität für %s erkannt (%s) — sofort CPU-Ersatzpfad",
                     plugin_name,
                     exc,
                 )
@@ -1164,7 +1171,7 @@ class MLDeviceManager:
             if count >= 3:
                 self._gpu_disabled_plugins.add(plugin_name)
                 logger.info(
-                    "MLDeviceManager: GPU f\u00fcr %s nach %d Fehlern deaktiviert (Session)",
+                    "MLDeviceManager: GPU f\u00fcr %s nach %d Fehlern deaktiviert (Sitzung)",
                     plugin_name,
                     count,
                 )
@@ -1225,7 +1232,7 @@ class MLDeviceManager:
                 self._torch_gpu_device = "cpu"
                 self._ort_gpu_providers = ["CPUExecutionProvider"]
                 logger.warning(
-                    "MLDeviceManager: GPU deaktiviert (%s) — CPU-Fallback für alle Plugins",
+                    "MLDeviceManager: GPU deaktiviert (%s) — CPU-Ersatzpfad für alle Plugins",
                     reason or "unknown",
                 )
                 logger.info("══════════════════════════════════════════════")
@@ -1267,10 +1274,10 @@ class MLDeviceManager:
             _ok = _fut.result(timeout=10.0)
             _pool.shutdown(wait=False)
             if _ok:
-                logger.info("MLDeviceManager: ROCm warmup complete — HIP runtime ready (%s)", self._gpu_name)
+                logger.info("MLDeviceManager: ROCm warmup vollstaendig — HIP runtime ready (%s)", self._gpu_name)
                 return True
         except Exception as exc:
-            logger.warning("MLDeviceManager: ROCm warmup failed/timeout — GPU deaktiviert: %s", exc)
+            logger.warning("MLDeviceManager: ROCm warmup fehlgeschlagen/Zeitlimit — GPU deaktiviert: %s", exc)
             self.force_cpu_fallback("warmup_timeout")
         return False
 
@@ -1297,5 +1304,5 @@ class MLDeviceManager:
                 t = t.pin_memory()
             return t
         except Exception as exc:
-            logger.debug("pin_tensor_rocm failed (non-critical, using original): %s", exc)
+            logger.debug("pin_tensor_rocm fehlgeschlagen (unkritisch, using Originalsignal): %s", exc)
             return array

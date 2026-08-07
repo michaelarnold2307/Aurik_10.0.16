@@ -211,7 +211,7 @@ class SelfLearningOptimizer:
             self._total_pulls += 1
 
         logger.debug(
-            "SLO Record | %s × %s | Δ=%.3f | Count=%d | Mean=%.3f",
+            "SLO aufzeichnen | %s × %s | Δ=%.3f | Count=%d | Mean=%.3f",
             mat_str,
             variant,
             quality_delta,

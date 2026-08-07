@@ -61,7 +61,7 @@ def test_audio_mono(sample_rate: int) -> np.ndarray:
     # Normalize
     audio = audio / (np.max(np.abs(audio)) + 1e-10)
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -88,7 +88,7 @@ def low_quality_audio(sample_rate: int) -> np.ndarray:
     # Normalize
     audio = audio / (np.max(np.abs(audio)) + 1e-10)
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.fixture
@@ -112,7 +112,7 @@ def high_quality_audio(sample_rate: int) -> np.ndarray:
     # Normalize
     audio = audio / (np.max(np.abs(audio)) + 1e-10)
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 # ============================================================================

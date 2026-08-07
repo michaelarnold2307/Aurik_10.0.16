@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 """
@@ -36,7 +38,7 @@ class DatasetCreator:
 
     def __init__(self, library_path: str = "test_library"):
         self.library_path = Path(library_path)
-        self.metadata = {}
+        self.metadata: dict[Any, Any] = {}
 
     def create_placeholder_dataset(self, count_per_category: int = 3):
         """

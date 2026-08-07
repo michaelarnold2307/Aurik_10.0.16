@@ -79,7 +79,7 @@ def _test_torchscript_export_audio(src: Path, out_path: Path) -> tuple[bool, str
     x = torch.zeros(1, 1, 44_100, dtype=torch.float32)
     torch.onnx.export(
         model,
-        x,
+        (x,),
         str(out_path),
         input_names=["audio"],
         output_names=["out"],

@@ -178,7 +178,7 @@ def dummy_harmonic_exciter(audio: np.ndarray, sr: int, amount: float = 0.5) -> n
     # Normalize to prevent clipping
     result = result / np.max(np.abs(result)) * 0.98
 
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def dummy_stereo_widener(audio: np.ndarray, sr: int, width: float = 0.5) -> np.ndarray:
@@ -203,7 +203,7 @@ def dummy_stereo_widener(audio: np.ndarray, sr: int, width: float = 0.5) -> np.n
 
     result = np.stack([left_out, right_out], axis=0)
 
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 # ============================================================================

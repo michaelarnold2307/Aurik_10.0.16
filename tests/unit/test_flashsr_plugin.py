@@ -217,7 +217,7 @@ def test_model_loaded_attribute():
 
     p = get_flashsr_plugin()
     # _model_loaded is a property, accessing it should not raise
-    loaded = p._model_loaded
+    loaded = p._model_loaded  # type: ignore[attr-defined]
     assert isinstance(loaded, bool)
 
 

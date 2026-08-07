@@ -415,7 +415,7 @@ def compute_vocal_fingerprint(audio: np.ndarray, sr: int) -> np.ndarray:
         fp[40] = centroid_norm
         return fp  # type: ignore[no-any-return]
     except Exception as exc:
-        logger.debug("compute_vocal_fingerprint failed: %s", exc)
+        logger.debug("berechnen_vocal_fingerprint fehlgeschlagen: %s", exc)
         return np.zeros(_FINGERPRINT_DIM, dtype=np.float32)  # type: ignore[no-any-return]
 
 
@@ -529,7 +529,7 @@ class SingerReferenceLibrary:
         try:
             return match_singer(audio, sr, min_confidence=min_confidence)
         except Exception as exc:
-            logger.debug("§SRL-1 Singer-Match non-blocking: %s", exc)
+            logger.debug("§SRL-1 Singer-Match nicht blockierend: %s", exc)
             return SingerMatchResult(
                 artist_id="",
                 confidence=0.0,

@@ -281,11 +281,12 @@ class RumbleFilterPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "rumble_filter", default_nr=0.4, default_de_ess=0.1, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_05_rumble_filter.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_05_rumble_filter.py::verarbeiten Ersatzpfad: %s", e)
         use_fir: bool = bool(kwargs.get("use_fir", False))
         self.sample_rate = int(sample_rate)
         start_time = time.time()
@@ -682,7 +683,9 @@ class RumbleFilterPhase(PhaseInterface):
             _quiet_sos = signal.butter(2, 80.0 / (self.sample_rate / 2.0), btype="high", output="sos")
             _music_proxy = signal.sosfiltfilt(_quiet_sos, _mono32).astype(np.float32)
         except Exception as e:
-            logger.warning("phase_05_rumble_filter.py::_detect_transients_professional fallback: %s", e)
+            logger.warning(
+                "Verarbeitungsschritt_05_rumble_filter.py::_erkennen_transients_professional Ersatzpfad: %s", e
+            )
         _quiet_frame_len = 4800  # 100 ms @ 48 kHz
         _quiet_n = len(_music_proxy) // _quiet_frame_len
         if _quiet_n >= 1:
@@ -792,7 +795,7 @@ class RumbleFilterPhase(PhaseInterface):
             # Das HPF läuft ohne Sample-genaue Schalter — kein Knacken, kein
             # LF-Bursting. Zero-phase (sosfiltfilt) bleibt erhalten.
             logger.debug(
-                "phase_05 Transient-Bypass deaktiviert: coverage=%.1f%% > 55%% "
+                "Verarbeitungsschritt_05 Transient-Bypass deaktiviert: coverage=%.1f%% > 55%% "
                 "(hohe Transientdichte/Knistern → hard-switch würde Zeitversatz/Pegelexplosion erzeugen)",
                 _coverage * 100,
             )
@@ -868,7 +871,7 @@ if __name__ == "__main__":
     # Test Professional Rumble Filter Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Rumble Filter Phase v2.0 - Test")
+    logger.debug("Professional Rumble Filter Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -903,12 +906,12 @@ if __name__ == "__main__":
         _test_result = phase.process(_test_audio.copy(), material_type=_test_mat)
 
         if _test_result.success and _test_result.modifications.get("rumble_filtered"):
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             _exec_t05 = _test_result.metadata["execution_time_seconds"]
             logger.debug("   Execution Time: %.3fs (%.2f\u00d7 realtime)", _exec_t05, _exec_t05 / duration)
             logger.debug("   Cutoff: %.1f Hz", _test_result.modifications["cutoff_hz"])
             logger.debug("   Filter Order: %s", _test_result.modifications["filter_order"])
-            logger.debug("   Phase Mode: %s", _test_result.modifications["phase_mode"])
+            logger.debug("   Verarbeitungsschritt Betriebsart: %s", _test_result.modifications["phase_mode"])
             logger.debug("   Transient Preserved: %s", _test_result.modifications["transient_preserved"])
             logger.debug("   Rumble Reduction: %.1f dB", _test_result.modifications["rumble_reduction_db"])
             logger.debug("   Rumble Energy Before: %.3f", _test_result.metadata["rumble_energy_before"])
@@ -917,13 +920,13 @@ if __name__ == "__main__":
             logger.debug("   Transient Locations: %s", _test_result.metadata["transient_locations"])
             logger.debug("   Warnings: %s", _test_result.warnings if _test_result.warnings else "None")
         else:
-            logger.debug("⏭️  Rumble Filter Skipped")
+            logger.debug("⏭️  Rumble Filter uebersprungen")
             logger.debug("   Reason: %s", _test_result.modifications.get("reason", "unknown"))
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Rumble Filter v2.0 Test Complete!")
+    logger.debug("✅ Professional Rumble Filter v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _test_result.metadata.get("algorithm", "N/A"))
-    logger.debug("Scientific Reference: %s", _test_result.metadata.get("scientific_ref", "N/A"))
+    logger.debug("Scientific Referenz: %s", _test_result.metadata.get("scientific_ref", "N/A"))
     logger.debug("Benchmark: %s", _test_result.metadata.get("benchmark", "N/A"))
     logger.debug("Quality Impact: 0.93 (Professional-Grade)")

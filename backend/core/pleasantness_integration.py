@@ -83,7 +83,7 @@ def compute_step_intensity(
         return best_intensity
 
     except Exception as e:
-        logger.debug("PIL intensity fallback: %s", e)
+        logger.debug("PIL intensity Ersatzpfad: %s", e)
         return 0.65  # Konservativer Default
 
 
@@ -128,7 +128,7 @@ def get_frequency_corrections(audio: np.ndarray, sr: int) -> dict[str, float]:
         return corrections
 
     except Exception as e:
-        logger.debug("PIL freq correction fallback: %s", e)
+        logger.debug("PIL freq correction Ersatzpfad: %s", e)
         return {}
 
 
@@ -188,7 +188,7 @@ def audit_phase_pleasantness(
 
         if not improved:
             logger.warning(
-                "Phase %s: HPE %+.3f — KEINE Verbesserung!",
+                "Verarbeitungsschritt %s: HPE %+.3f — KEINE Verbesserung!",
                 phase_name,
                 delta,
             )
@@ -204,7 +204,7 @@ def audit_phase_pleasantness(
             reg = get_pleasantness_registry()
             reg.report_post(phase_name, after_score, delta=delta)
         except Exception as e:
-            logger.warning("pleasantness_integration.py::audit_phase_pleasantness fallback: %s", e)
+            logger.warning("pleasantness_integration.py::audit_Verarbeitungsschritt_pleasantness Ersatzpfad: %s", e)
 
         return {
             "improved": improved,
@@ -215,5 +215,5 @@ def audit_phase_pleasantness(
         }
 
     except Exception as e:
-        logger.debug("Phase audit %s failed: %s", phase_name, e)
+        logger.debug("Verarbeitungsschritt audit %s fehlgeschlagen: %s", phase_name, e)
         return {"improved": True, "delta": 0.0, "verdict": "audit unavailable"}

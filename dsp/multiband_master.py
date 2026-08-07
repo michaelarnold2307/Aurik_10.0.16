@@ -59,13 +59,13 @@ class MultibandMasterCompressor:
         nyq = sr / 2.0
         if low is None:
             fc = np.clip(high / nyq, 0.001, 0.49)
-            return butter(4, fc, btype="low", output="sos")
+            return butter(4, fc, btype="low", output="sos")  # type: ignore[no-any-return]
         elif high is None:
             fc = np.clip(low / nyq, 0.001, 0.49)
-            return butter(4, fc, btype="high", output="sos")
+            return butter(4, fc, btype="high", output="sos")  # type: ignore[no-any-return]
         lo = np.clip(low / nyq, 0.001, 0.498)
         hi = np.clip(high / nyq, lo + 0.001, 0.499)
-        return butter(4, [lo, hi], btype="band", output="sos")
+        return butter(4, [lo, hi], btype="band", output="sos")  # type: ignore[no-any-return]
 
     @staticmethod
     def _soft_knee_compress(
@@ -127,7 +127,7 @@ class MultibandMasterCompressor:
                 g += release_coeff * (ga - g)
             smooth[i] = g
 
-        return band_delayed * smooth
+        return band_delayed * smooth  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """4-Band-Mastering-Kompressor with LR4 crossovers.
@@ -161,7 +161,7 @@ class MultibandMasterCompressor:
                 band_sigs.append(c)
             out = np.sum(band_sigs, axis=0)
             out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
-            return np.clip(out, -1.0, 1.0)
+            return np.clip(out, -1.0, 1.0)  # type: ignore[no-any-return]
 
         try:
             if audio.ndim == 1:
@@ -170,5 +170,5 @@ class MultibandMasterCompressor:
                 result = np.stack([_process_ch(ch) for ch in audio], axis=0)
             return result.astype(audio.dtype)
         except Exception:
-            logger.warning("[MultibandMasterCompressor] Processing failed, returning original")
+            logger.warning("[MultibandMasterCompressor] Processing fehlgeschlagen, returning Originalsignal")
             return audio

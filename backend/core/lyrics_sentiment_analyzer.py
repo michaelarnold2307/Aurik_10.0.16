@@ -230,7 +230,7 @@ class LyricsSentimentAnalyzer:
         try:
             return self._analyze_internal(transcription_result, audio_duration_s)
         except Exception as exc:
-            logger.debug("§LSM-1 sentiment analysis non-blocking error: %s", exc)
+            logger.debug("§LSM-1 sentiment Analyse nicht blockierend error: %s", exc)
             return self._neutral_fallback(audio_duration_s)
 
     def _analyze_internal(

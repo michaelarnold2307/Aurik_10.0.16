@@ -203,11 +203,11 @@ def enhance_quality_report_with_objective_metrics(
             Path(before_path).unlink(missing_ok=True)
 
     except ImportError:
-        logger.warning("Quality Metrics Manager nicht verfügbar - objective plugin metrics skipped")
+        logger.warning("Quality Metrics Manager nicht verfügbar - objective plugin metrics uebersprungen")
         # §4.4: Kein SI-SDR-Fallback für Musikmetriken.
 
     except Exception as e:
-        logger.warning("Objective metrics enhancement failed: %s", e)
+        logger.warning("Objective metrics enhancement fehlgeschlagen: %s", e)
 
     return report
 
@@ -393,7 +393,7 @@ class QualityGates:
                 from backend.quality_metrics_manager import QualityMetricsManager
 
                 self._metrics_manager = QualityMetricsManager()
-                logger.info("✓ Quality Metrics Manager initialized")
+                logger.info("✓ Quality Metrics Manager initialisiert")
             except Exception as e:
                 logger.warning("Quality Metrics Manager nicht verfügbar: %s", e)
 
@@ -481,7 +481,7 @@ class QualityGates:
                 results["nisqa_check"] = True  # immer bestanden (Metrik deaktiviert)
 
             except Exception as e:
-                logger.warning("Plugin-based quality checks failed: %s", e)
+                logger.warning("Plugin-based quality checks fehlgeschlagen: %s", e)
                 # Fallback to approximations
                 results["cdpam_score"] = None
                 results["cdpam_check"] = True
@@ -668,17 +668,17 @@ class QualityGates:
         logger.info("QUALITY GATES REPORT - AURIK v8.0")
         logger.info("=" * 80)
 
-        logger.info("\n1. SNR Check: %s", "✅ PASS" if results["snr_check"] else "❌ FAIL")
+        logger.info("\n1. SNR Pruefung: %s", "✅ PASS" if results["snr_check"] else "❌ FAIL")
         logger.info("   Before: %.1f dB", results["snr_before"])
         logger.info("   After:  %.1f dB", results["snr_after"])
         logger.info("   Change: %.1f dB", results["snr_improvement"])
 
-        logger.info("\n2. THD Check: %s", "✅ PASS" if results["thd_check"] else "❌ FAIL")
+        logger.info("\n2. THD Pruefung: %s", "✅ PASS" if results["thd_check"] else "❌ FAIL")
         logger.info("   Before: %.3f", results["thd_before"])
         logger.info("   After:  %.3f", results["thd_after"])
-        logger.info("   Ratio:  %.2fx", results["thd_ratio"])
+        logger.info("   Verhaeltnis:  %.2fx", results["thd_ratio"])
 
-        logger.info("\n3. Clipping Check: %s", "✅ PASS" if results["no_clipping"] else "❌ FAIL")
+        logger.info("\n3. Clipping Pruefung: %s", "✅ PASS" if results["no_clipping"] else "❌ FAIL")
         logger.info("   Peak Amplitude: %.3f", results["peak_amplitude"])
 
         # ML-BASED QUALITY METRICS
@@ -687,22 +687,26 @@ class QualityGates:
         logger.info("-" * 80)
 
         if results.get("cdpam_score") is not None:
-            logger.info("\n4. VERSA Compat-Check (Key: cdpam): %s", "✅ PASS" if results["cdpam_check"] else "❌ FAIL")
-            logger.info("   Score: %.2f/100", results["cdpam_score"])
+            logger.info(
+                "\n4. VERSA Compat-Pruefung (Key: cdpam): %s", "✅ PASS" if results["cdpam_check"] else "❌ FAIL"
+            )
+            logger.info("   Wert: %.2f/100", results["cdpam_score"])
         else:
-            logger.info("\n4. VERSA Compat-Check: ⏭️  SKIPPED")
+            logger.info("\n4. VERSA Compat-Pruefung: ⏭️  uebersprungen")
 
         if results.get("dnsmos_ovrl_p835") is not None:
-            logger.info("\n5. DNSMOS Check (Noise Assessment): %s", "✅ PASS" if results["dnsmos_check"] else "❌ FAIL")
+            logger.info(
+                "\n5. DNSMOS Pruefung (Noise Assessment): %s", "✅ PASS" if results["dnsmos_check"] else "❌ FAIL"
+            )
             logger.info("   OVRL P.835: %.2f/5.0 ⭐ (Musik - Primär)", results["dnsmos_ovrl_p835"])
             logger.info("   SIG P.835:  %.2f/5.0 (Signal distortion)", results.get("dnsmos_sig", 0.0))
             logger.info("   BAK P.835:  %.2f/5.0 (Background noise)", results.get("dnsmos_bak", 0.0))
             logger.info("   MOS P.808:  %.2f/5.0 (Sprache - Referenz)", results.get("dnsmos_p808", 0.0))
         else:
-            logger.info("\n5. DNSMOS Check: ⏭️  SKIPPED (deaktiviert §4.4/§10.2)")
+            logger.info("\n5. DNSMOS Pruefung: ⏭️  uebersprungen (deaktiviert §4.4/§10.2)")
 
         if results.get("nisqa_mos") is not None:
-            logger.info("\n6. NISQA Check (Broadband Audio): %s", "✅ PASS" if results["nisqa_check"] else "❌ FAIL")
+            logger.info("\n6. NISQA Pruefung (Broadband Audio): %s", "✅ PASS" if results["nisqa_check"] else "❌ FAIL")
             logger.info("   MOS:           %.2f/5.0", results["nisqa_mos"])
             if results.get("nisqa_noisiness") is not None:
                 logger.info("   Noisiness:     %.2f/5.0", results["nisqa_noisiness"])
@@ -710,13 +714,13 @@ class QualityGates:
                 logger.info("   Discontinuity: %.2f/5.0", results["nisqa_discontinuity"])
                 logger.info("   Loudness:      %.2f/5.0", results["nisqa_loudness"])
         else:
-            logger.info("\n6. NISQA Check: ⏭️  SKIPPED (deaktiviert §4.4/§10.2)")
+            logger.info("\n6. NISQA Pruefung: ⏭️  uebersprungen (deaktiviert §4.4/§10.2)")
 
         logger.info("\n" + "-" * 80)
         logger.info("TRADITIONAL QUALITY METRICS")
         logger.info("-" * 80)
 
-        logger.info("\n7. CAS Score Check: %s", "✅ PASS" if results["cas_check"] else "❌ FAIL")
+        logger.info("\n7. CAS Wert Pruefung: %s", "✅ PASS" if results["cas_check"] else "❌ FAIL")
         cas = results["cas_details"]
         logger.info("   Overall: %.3f - %s", cas["cas_score"], cas["rating"])
         logger.info("   └─ Brillanz:        %.3f", cas["brillanz"])
@@ -730,9 +734,9 @@ class QualityGates:
 
         logger.info("\n" + "=" * 80)
         if results["all_passed"]:
-            logger.info("RESULT: ✅ ALL QUALITY GATES PASSED")
+            logger.info("Ergebnis: ✅ ALL QUALITY GATES PASSED")
         else:
-            logger.info("RESULT: ❌ QUALITY GATES FAILED")
+            logger.info("Ergebnis: ❌ QUALITY GATES fehlgeschlagen")
         logger.info("=" * 80 + "\n")
 
 
@@ -746,7 +750,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     logger.info(str("\n" + "=" * 80))
-    logger.info("QUALITY GATES & CAS SCORE TEST")
+    logger.info("QUALITY GATES & CAS Wert TEST")
     logger.info("=" * 80 + "\n")
 
     # Generate test signals
@@ -770,12 +774,12 @@ if __name__ == "__main__":
     audio_after = audio_after / _peak_p99 * 0.8 if _peak_p99 > 1e-8 else audio_after
 
     # Test 1: CAS Score Calculator
-    logger.info("TEST 1: CAS Score Calculator")
+    logger.info("TEST 1: CAS Wert Calculator")
     logger.info(str("-" * 80))
     cas_calc = CASScoreCalculator()
     cas_results = cas_calc.compute(audio_after, sr)
 
-    logger.info("CAS Score: %.3f - %s", cas_results["cas_score"], cas_results["rating"])
+    logger.info("CAS Wert: %.3f - %s", cas_results["cas_score"], cas_results["rating"])
     logger.info("  Brillanz:        %.3f", cas_results["brillanz"])
     logger.info("  Transparenz:     %.3f", cas_results["transparenz"])
     logger.info("  Authentizität:   %.3f", cas_results["authentizitaet"])
@@ -784,7 +788,7 @@ if __name__ == "__main__":
 
     # Test 2: Quality Gates
     logger.info(str("\n" + "=" * 80))
-    logger.info("TEST 2: Quality Gates Validation")
+    logger.info("TEST 2: Quality Gates Validierung")
     logger.info(str("-" * 80))
 
     gates = QualityGates()
@@ -794,7 +798,7 @@ if __name__ == "__main__":
 
     # Test 3: Failed case (clipping)
     logger.info(str("\n" + "=" * 80))
-    logger.error("TEST 3: Failed Case (Clipping)")
+    logger.error("TEST 3: fehlgeschlagen Case (Clipping)")
     logger.info(str("-" * 80))
 
     audio_clipped = audio_after * 1.5  # Intentional clipping
@@ -805,5 +809,5 @@ if __name__ == "__main__":
     gates.print_report(results2)
 
     logger.info(str("\n" + "=" * 80))
-    logger.info("✓ All tests completed!")
+    logger.info("✓ All tests abgeschlossen!")
     logger.info("=" * 80 + "\n")

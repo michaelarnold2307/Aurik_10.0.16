@@ -230,7 +230,7 @@ class ConsonantPunchEnhancer:
         # Detect transients
         transient_mask = np.abs(derivative) > threshold
 
-        return transient_mask
+        return transient_mask  # type: ignore[no-any-return]
 
 
 class BreathAwareGate:
@@ -370,7 +370,7 @@ class VocalDynamicsIntelligence:
         """
         # Handle stereo
         if audio.ndim == 2:
-            logger.debug("VocalDynamicsIntelligence: input shape %s", audio.shape)
+            logger.debug("VocalDynamicsIntelligence: Eingabe shape %s", audio.shape)
             # Auto-detect format: (channels, samples) vs (samples, channels)
             # Heuristic: If first dimension is small and < second dimension, likely channels
             if audio.shape[0] < audio.shape[1] and audio.shape[0] <= 32:
@@ -379,7 +379,7 @@ class VocalDynamicsIntelligence:
                 left, left_report = self.process(audio[0], sr)
                 right, right_report = self.process(audio[1], sr)
                 result = np.vstack([left, right])
-                logger.debug("VocalDynamicsIntelligence: output shape %s", result.shape)
+                logger.debug("VocalDynamicsIntelligence: Ausgabe shape %s", result.shape)
                 return result, {**left_report, "stereo": True}
             else:
                 # Format: (samples, channels) - transpose to (channels, samples) for processing
@@ -392,7 +392,7 @@ class VocalDynamicsIntelligence:
                 logger.debug("VocalDynamicsIntelligence: right shape %s", right.shape)
                 # Return in original format: (samples, channels)
                 result = np.column_stack([left, right])
-                logger.debug("VocalDynamicsIntelligence: output shape %s", result.shape)
+                logger.debug("VocalDynamicsIntelligence: Ausgabe shape %s", result.shape)
                 return result, {**left_report, "stereo": True}
 
         # Stage 1: Micro-compression
@@ -436,7 +436,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Process
     dynamics = VocalDynamicsIntelligence(
@@ -454,18 +454,18 @@ if __name__ == "__main__":
     comp = report["micro_compression"]
     logger.info("  Max gain reduction: %.1f dB", comp["max_gain_reduction_db"])
     logger.info("  Avg gain reduction: %.1f dB", comp["avg_gain_reduction_db"])
-    logger.info("  Ratio:              %.1f:1", comp["ratio"])
+    logger.info("  Verhaeltnis:              %.1f:1", comp["ratio"])
 
     logger.info("\n[Consonant Enhancement]")
     cons = report["consonant_enhancement"]
-    logger.info("  Transients detected: %s", cons["transients_detected"])
+    logger.info("  Transients erkannt: %s", cons["transients_detected"])
     logger.info("  Enhancement:         %.1f dB", cons["enhancement_db"])
 
     if report["breath_aware_gating"].get("enabled", True):
         logger.info("\n[Breath-Aware Gating]")
         gate = report["breath_aware_gating"]
         logger.info("  Gate open:    %.1f%%", gate["gate_open_percent"])
-        logger.info("  Threshold:    %.1f dB", gate["threshold_db"])
+        logger.info("  Schwelle:    %.1f dB", gate["threshold_db"])
         logger.info("  Reduction:    %.1f dB", gate["reduction_db"])
 
     logger.info(str("=" * 70))
@@ -473,4 +473,4 @@ if __name__ == "__main__":
     # Save
     if args.output:
         sf.write(args.output, audio_processed, sr)
-        logger.info("\n✅ Saved to: %s", args.output)
+        logger.info("\n✅ gespeichert to: %s", args.output)

@@ -290,13 +290,13 @@ class ReferenceLearner:
         # Try to load existing profile
         if profile_path and Path(profile_path).exists():
             self.profile = self._load_profile(profile_path)
-            logger.info("Loaded existing profile for %s", user_id)
+            logger.info("geladen existing Profil for %s", user_id)
         else:
             # Create new profile
             self.profile = UserPreferenceProfile(
                 user_id=user_id, learned_goals=base_goals.copy(), goal_weights=dict.fromkeys(goal_names, 1.0)
             )
-            logger.info("Created new profile for %s", user_id)
+            logger.info("erstellt new Profil for %s", user_id)
 
         # Learning rate based on strategy
         self.learning_rates = {
@@ -306,7 +306,7 @@ class ReferenceLearner:
         }
 
         logger.info(
-            f"ReferenceLearner initialized: user={user_id}, "
+            f"ReferenceLearner initialisiert: user={user_id}, "
             f"strategy={strategy.value}, "
             f"samples={self.profile.n_references + self.profile.n_ab_tests}"
         )
@@ -349,7 +349,7 @@ class ReferenceLearner:
         # Update profile with reference
         self._update_from_reference(reference)
 
-        logger.info("Analyzed reference track: %s goals, confidence=%.2f", len(analyzed_goals), analysis_confidence)
+        logger.info("Analyzed Referenz track: %s goals, confidence=%.2f", len(analyzed_goals), analysis_confidence)
 
         return reference
 
@@ -460,7 +460,7 @@ class ReferenceLearner:
         logger.info(
             f"Learned from A/B test: choice={ab_result.user_choice}, "
             f"confidence={ab_result.confidence:.2f}, "
-            f"profile_confidence={self.profile.confidence:.2f}"
+            f"Profil_confidence={self.profile.confidence:.2f}"
         )
 
     def adapt_goals_to_preference(
@@ -537,16 +537,16 @@ class ReferenceLearner:
         if self.profile_path:
             self._save_profile(self.profile_path)
 
-        logger.info("Reset profile for %s", self.user_id)
+        logger.info("zurueckgesetzt Profil for %s", self.user_id)
 
     def _save_profile(self, path: str):
         """Speichert profile to file."""
         try:
             with open(path, "w") as f:
                 json.dump(self.profile.to_dict(), f, indent=2)
-            logger.debug("Saved profile to %s", path)
+            logger.debug("gespeichert Profil to %s", path)
         except Exception as e:
-            logger.error("Failed to save profile: %s", e)
+            logger.error("konnte nicht speichern Profil: %s", e)
 
     def _load_profile(self, path: str) -> UserPreferenceProfile:
         """Lädt profile from file."""
@@ -555,7 +555,7 @@ class ReferenceLearner:
                 data = json.load(f)
             return UserPreferenceProfile.from_dict(data)
         except Exception as e:
-            logger.error("Failed to load profile: %s", e)
+            logger.error("konnte nicht laden Profil: %s", e)
             # Return new profile on error
             return UserPreferenceProfile(
                 user_id=self.user_id,

@@ -298,7 +298,7 @@ class ReportExporter:
             return True
 
         except Exception as e:
-            logger.error(f"Markdown export failed: {e}")
+            logger.error(f"Markdown Ausgabe fehlgeschlagen: {e}")
             return False
 
     @staticmethod
@@ -449,7 +449,7 @@ class ReportExporter:
             return True
 
         except Exception as e:
-            logger.error(f"JSON export failed: {e}")
+            logger.error(f"JSON Ausgabe fehlgeschlagen: {e}")
             return False
 
     @staticmethod
@@ -491,7 +491,7 @@ class ReportExporter:
             )
             if result.returncode != 0:
                 logger.error(
-                    "PDF subprocess fallback failed (code=%s): %s",
+                    "PDF subprocess Ersatzpfad fehlgeschlagen (code=%s): %s",
                     result.returncode,
                     (result.stderr or result.stdout).strip(),
                 )
@@ -619,10 +619,10 @@ class ReportExporter:
 
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_bytes(bytes(pdf))
-            logger.info("PDF report exported via plain fallback: %s", output_path)
+            logger.info("PDF report exported via plain Ersatzpfad: %s", output_path)
             return True
         except Exception as e:
-            logger.error("Plain PDF fallback failed: %s", e)
+            logger.error("Plain PDF Ersatzpfad fehlgeschlagen: %s", e)
             return False
 
     @staticmethod
@@ -658,7 +658,7 @@ class ReportExporter:
 
                     warnings.filterwarnings("ignore", category=_PypDW)
                 except ImportError:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 import sys
 
                 import matplotlib
@@ -676,12 +676,12 @@ class ReportExporter:
                 import matplotlib.pyplot as plt
                 from matplotlib.backends.backend_pdf import PdfPages
         except ImportError:
-            logger.error("matplotlib not installed — PDF export unavailable")
+            logger.error("matplotlib not installed — PDF Ausgabe nicht verfuegbar")
             return False
         except Exception as e:
-            logger.error(f"matplotlib import failed for PDF export: {e}")
+            logger.error(f"matplotlib import fehlgeschlagen for PDF Ausgabe: {e}")
             if ReportExporter._export_pdf_via_subprocess(report, output_path):
-                logger.info("PDF report exported via subprocess fallback: %s", output_path)
+                logger.info("PDF report exported via subprocess Ersatzpfad: %s", output_path)
                 return True
             return False
 
@@ -914,7 +914,7 @@ class ReportExporter:
                         color="#8b949e",
                     )
 
-                plt.tight_layout(rect=[0.02, 0.02, 0.98, 0.94])
+                plt.tight_layout(rect=[0.02, 0.02, 0.98, 0.94])  # type: ignore[arg-type]
                 pdf.savefig(fig2, facecolor=fig2.get_facecolor())
                 plt.close(fig2)
 
@@ -922,7 +922,7 @@ class ReportExporter:
             return True
 
         except Exception as e:
-            logger.error("PDF export failed: %s", e)
+            logger.error("PDF Ausgabe fehlgeschlagen: %s", e)
             if ReportExporter._export_pdf_plain_fallback(report, output_path):
                 return True
             return False
@@ -1039,7 +1039,7 @@ class ProcessingReportGenerator:
             musical_goals_section = self._create_musical_goals_section(output_audio, sample_rate)
             report.add_section(musical_goals_section)
         except Exception as e:
-            logger.warning(f"Musical goals evaluation failed: {e}")
+            logger.warning(f"Musical goals evaluation fehlgeschlagen: {e}")
 
         # === 7. Confidence Scores ===
         if processing_history and "confidence_scores" in processing_history:
@@ -1150,7 +1150,7 @@ class ProcessingReportGenerator:
                 summary=f"Average musical goals score: {avg_score:.2f}",
             )
         except Exception:
-            logger.warning("processing_report_generator.py::_create_musical_goals_section fallback", exc_info=True)
+            logger.warning("processing_report_generator.py::_erstellen_musical_goals_section Ersatzpfad", exc_info=True)
             return ReportSection(
                 section_type=ReportSectionType.MUSICAL_GOALS,
                 title="Musical Goals Evaluation",
@@ -1240,7 +1240,7 @@ class ProcessingReportGenerator:
         elif format.lower() == "pdf":
             return ReportExporter.export_pdf(report, output_path)
         else:
-            logger.error(f"Unknown export format: {format}")
+            logger.error(f"Unknown Ausgabe format: {format}")
             return False
 
 

@@ -32,7 +32,7 @@ def _make_loud_quiet_audio(sr: int = SR, duration_s: float = 2.0) -> np.ndarray:
 def _make_uniform_audio(sr: int = SR, duration_s: float = 2.0, amplitude: float = 0.3) -> np.ndarray:
     n = int(duration_s * sr)
     t = np.linspace(0, duration_s, n, endpoint=False)
-    return (amplitude * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+    return (amplitude * np.sin(2 * np.pi * 440 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -238,9 +238,9 @@ class TestGainGradientPhaseCorrection:
         rng = np.random.default_rng(seed)
         mag = np.abs(rng.standard_normal((n_bins, n_t))).astype(np.float32) + 1e-4
         phase = rng.uniform(-np.pi, np.pi, (n_bins, n_t)).astype(np.float32)
-        return (mag * np.exp(1j * phase)).astype(np.complex64)
+        return (mag * np.exp(1j * phase)).astype(np.complex64)  # type: ignore[no-any-return]
 
-    def _make_gain(self, n_bins: int = 513, n_t: int = 80, mode: str = "flat") -> np.ndarray:
+    def _make_gain(self, n_bins: int = 513, n_t: int = 80, mode: str = "flat") -> np.ndarray:  # type: ignore[return]
         if mode == "flat":
             return np.full((n_bins, n_t), 0.6, dtype=np.float32)
         if mode == "ramp":

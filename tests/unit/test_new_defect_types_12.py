@@ -46,7 +46,7 @@ NEW_DEFECT_TYPES = [
 
 def _sine(freq: float = 440.0, secs: float = 1.0) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False, dtype=np.float32)
-    return 0.3 * np.sin(2.0 * np.pi * freq * t)
+    return 0.3 * np.sin(2.0 * np.pi * freq * t)  # type: ignore[no-any-return]
 
 
 def _noise(secs: float = 1.0, amp: float = 0.05) -> np.ndarray:
@@ -63,7 +63,7 @@ def _test_audio(secs: float = 1.2) -> np.ndarray:
     x += 0.01 * np.sin(2.0 * np.pi * 50.0 * t)
     rng = np.random.default_rng(42)
     x += 0.005 * rng.standard_normal(n).astype(np.float32)
-    return np.clip(x.astype(np.float32), -1.0, 1.0)
+    return np.clip(x.astype(np.float32), -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _stereo_audio(secs: float = 1.2) -> np.ndarray:

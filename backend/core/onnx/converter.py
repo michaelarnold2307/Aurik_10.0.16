@@ -102,7 +102,7 @@ class ONNXConverter:
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         logger.info("Converting model to ONNX: %s", output_path.name)
-        logger.info("Sample input shape: %s", sample_input.shape)
+        logger.info("Sample Eingabe shape: %s", sample_input.shape)
 
         # Set model to evaluation mode
         pytorch_model.eval()
@@ -113,7 +113,7 @@ class ONNXConverter:
             assert torch is not None
             with torch.no_grad():
                 pytorch_output = pytorch_model(sample_input)
-            logger.info("PyTorch output shape: %s", pytorch_output.shape)
+            logger.info("PyTorch Ausgabe shape: %s", pytorch_output.shape)
 
         try:
             # Export to ONNX
@@ -137,7 +137,7 @@ class ONNXConverter:
                     verbose=self.config.verbose,
                 )
 
-            logger.info("ONNX export successful: %s", output_path)
+            logger.info("ONNX Ausgabe erfolgreich: %s", output_path)
 
             # Handle external data for large models
             if use_external_data:
@@ -148,17 +148,17 @@ class ONNXConverter:
                 validation_success = self._validate_conversion(output_path, sample_input, pytorch_output)
 
                 if not validation_success:
-                    logger.error("Validation failed! ONNX output differs from PyTorch")
+                    logger.error("Validierung fehlgeschlagen! ONNX Ausgabe differs from PyTorch")
                     self.conversion_stats["failed_conversions"] += 1
                     return False
 
             self.conversion_stats["successful_conversions"] += 1
             self.conversion_stats["total_conversions"] += 1
-            logger.info("✓ Conversion successful and validated")
+            logger.info("✓ Conversion erfolgreich and validated")
             return True
 
         except Exception as e:
-            logger.error("ONNX conversion failed: %s", e)
+            logger.error("ONNX conversion fehlgeschlagen: %s", e)
             self.conversion_stats["failed_conversions"] += 1
             self.conversion_stats["total_conversions"] += 1
             return False
@@ -178,7 +178,7 @@ class ONNXConverter:
         try:
             import onnxruntime as ort
         except ImportError:
-            logger.warning("onnxruntime not available, skipping validation")
+            logger.warning("onnxruntime not verfuegbar, skipping Validierung")
             return True
 
         try:
@@ -195,20 +195,20 @@ class ONNXConverter:
             max_diff = np.abs(pytorch_np - onnx_output).max()
             mean_diff = np.abs(pytorch_np - onnx_output).mean()
 
-            logger.info("Validation - Max diff: %.2e, Mean diff: %.2e", max_diff, mean_diff)
+            logger.info("Validierung - Max diff: %.2e, Mean diff: %.2e", max_diff, mean_diff)
 
             if max_diff > self.validation_tolerance:
                 logger.error(
-                    f"Validation failed! Max difference {max_diff:.2e} "
+                    f"Validierung fehlgeschlagen! Max difference {max_diff:.2e} "
                     f"exceeds tolerance {self.validation_tolerance:.2e}"
                 )
                 return False
 
-            logger.info("✓ Validation passed (tolerance: %.2e)", self.validation_tolerance)
+            logger.info("✓ Validierung passed (tolerance: %.2e)", self.validation_tolerance)
             return True
 
         except Exception as e:
-            logger.error("Validation error: %s", e)
+            logger.error("Validierung error: %s", e)
             return False
 
     def _save_external_data(self, onnx_path: Path) -> None:
@@ -236,10 +236,10 @@ class ONNXConverter:
                 location=external_data_path.name,
             )
 
-            logger.info("Saved external data: %s", external_data_path)
+            logger.info("gespeichert external data: %s", external_data_path)
 
         except Exception as e:
-            logger.warning("Failed to save external data: %s", e)
+            logger.warning("konnte nicht speichern external data: %s", e)
 
     def convert_batch(self, models: dict[str, tuple[Any, Any, Path]], validate: bool = True) -> dict[str, bool]:
         """
@@ -264,7 +264,7 @@ class ONNXConverter:
             )
 
             results[name] = success
-            logger.info("Result: %s", "✓ SUCCESS" if success else "❌ FAILED")
+            logger.info("Ergebnis: %s", "✓ SUCCESS" if success else "❌ FAILED")
 
         # Summary
         logger.info("\n%s", "=" * 60)
@@ -272,8 +272,8 @@ class ONNXConverter:
         logger.info("%s", "=" * 60)
         successful = sum(1 for v in results.values() if v)
         logger.info("Total: %s", len(results))
-        logger.info("Successful: %s", successful)
-        logger.info("Failed: %s", len(results) - successful)
+        logger.info("erfolgreich: %s", successful)
+        logger.info("fehlgeschlagen: %s", len(results) - successful)
 
         return results
 
@@ -321,7 +321,7 @@ class ModelSpecificConverter:
 
         results = {"encoder_erb": False, "encoder_complex": False, "decoder": False}
 
-        logger.info("DeepFilterNet ONNX models already available")
+        logger.info("DeepFilterNet ONNX models already verfuegbar")
         return results
 
     @staticmethod

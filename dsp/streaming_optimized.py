@@ -49,7 +49,7 @@ streaming_limiter_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Limiter-Pumpen",
             "expected_when": "Lookahead zu kurz",
             "severity": 0.1,
@@ -76,7 +76,7 @@ streaming_denoiser_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Artefakte", "expected_when": "Threshold zu niedrig", "severity": 0.2}],
+    side_effects=[{"risk": "Artefakte", "expected_when": "Threshold zu niedrig", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["denoising_accuracy"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -99,7 +99,7 @@ streaming_gate_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Falschabschaltung",
             "expected_when": "Threshold zu hoch",
             "severity": 0.2,
@@ -141,7 +141,7 @@ class StreamingLimiter:
         gain_frames = np.minimum(1.0, ceiling / (env + 1e-9))
         # Sample-genaue Gain-Kurve durch Wiederholen pro Frame
         gain = np.repeat(gain_frames, frame)[: len(audio_f)]
-        return np.clip(audio_f * gain, -1.0, 1.0).astype(audio.dtype)
+        return np.clip(audio_f * gain, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
 
 
 class StreamingDenoiser:
@@ -226,7 +226,7 @@ class StreamingDenoiser:
         # Länge anpassen + NaN/Inf-Schutz
         out = out[: len(audio_f)]
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
-        return np.clip(out, -1.0, 1.0).astype(audio.dtype)
+        return np.clip(out, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
 
 
 class StreamingGate:

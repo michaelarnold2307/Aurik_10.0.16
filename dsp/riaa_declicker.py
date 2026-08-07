@@ -11,7 +11,7 @@ import numpy as np
 
 ort: Any | None = None
 try:
-    import onnxruntime as ort
+    import onnxruntime as ort  # type: ignore[no-redef]
 except ImportError:
     ort = None
 
@@ -45,7 +45,7 @@ class AiRiaaDeclicker:
         if model_path:
             if ort is not None:
                 if not check_budget("riaa_declicker_onnx", 0.1):
-                    logger.warning("Memory budget exceeded for riaa_declicker ONNX — using DSP fallback")
+                    logger.warning("Memory Grenze exceeded for riaa_declicker ONNX — using DSP Ersatzpfad")
                 else:
                     try:
                         self.onnx_session = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
@@ -121,5 +121,5 @@ class AiRiaaDeclicker:
 
         if audit_log:
             declicking_error = float(np.mean(np.abs(audio - audio_out)))
-            logger.info("AiRiaaDeclicker: declicking_error=%.4f, fallback_used=%s", declicking_error, fallback_used)
+            logger.info("AiRiaaDeclicker: declicking_error=%.4f, Ersatzpfad_used=%s", declicking_error, fallback_used)
         return audio_out.astype(audio.dtype)

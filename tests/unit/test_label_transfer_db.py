@@ -13,7 +13,7 @@ import pytest
 
 def _sine(freq: float = 1000.0, sr: int = 48000, duration: float = 1.0) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

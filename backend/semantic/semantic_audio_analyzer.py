@@ -186,7 +186,7 @@ class SemanticAudioAnalyzer:
 
     def __init__(self):
         """Initialisiert semantic analyzer."""
-        logger.info("SemanticAudioAnalyzer initialized")
+        logger.info("SemanticAudioAnalyzer initialisiert")
 
     def analyze(
         self,
@@ -222,7 +222,7 @@ class SemanticAudioAnalyzer:
             audio_mono = audio
 
         duration = len(audio_mono) / sr
-        logger.debug("Analyzing %.2fs audio semantically", duration)
+        logger.debug("analysiere %.2fs audio semantically", duration)
 
         # 1. Detect instruments
         instruments = self._detect_instruments(audio_mono, sr)
@@ -542,7 +542,7 @@ class SemanticAudioAnalyzer:
         threshold = np.mean(onset_env) + 2.0 * np.std(onset_env)
         peaks, _ = signal.find_peaks(onset_env, height=threshold, distance=int(0.05 * sr))
 
-        return peaks.tolist()
+        return peaks.tolist()  # type: ignore[no-any-return]
 
     def _compute_onset_envelope(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """Berechnet onset strength envelope."""
@@ -556,7 +556,7 @@ class SemanticAudioAnalyzer:
         # Sum across frequencies
         onset_env = np.sum(spec_diff, axis=0)
 
-        return onset_env
+        return onset_env  # type: ignore[no-any-return]
 
     def _compute_sustained_percentage(self, audio: np.ndarray, sr: int) -> float:
         """Berechnet percentage of audio that is sustained."""

@@ -179,8 +179,8 @@ class GenericDynamicsSafety(BaseSafetyWrapper):
             if emotionalitaet_change > 0.15:
                 issues.append(f"Emotionalität significantly changed: {emotionalitaet_change:.2f}")
 
-            metrics["musical_goals_original"] = orig_goals
-            metrics["musical_goals_processed"] = proc_goals
+            metrics["musical_goals_original"] = orig_goals  # type: ignore[assignment]
+            metrics["musical_goals_processed"] = proc_goals  # type: ignore[assignment]
         except Exception as e:
             side_effects.append(f"Musical Goals check failed: {e}")
 
@@ -460,8 +460,8 @@ class GenericSpectralSafety(BaseSafetyWrapper):
                     if change > 0.2:
                         side_effects.append(f"{goal.capitalize()} changed significantly: {change:.2f}")
 
-            metrics["musical_goals_original"] = orig_goals
-            metrics["musical_goals_processed"] = proc_goals
+            metrics["musical_goals_original"] = orig_goals  # type: ignore[assignment]
+            metrics["musical_goals_processed"] = proc_goals  # type: ignore[assignment]
         except Exception as e:
             side_effects.append(f"Musical Goals check failed: {e}")
 
@@ -695,7 +695,7 @@ class GenericSpatialSafety(BaseSafetyWrapper):
                     if proc_goals[goal] < threshold:
                         issues.append(f"{goal.capitalize()}: {proc_goals[goal]:.2f} < {threshold:.2f}")
 
-            metrics["musical_goals_processed"] = proc_goals
+            metrics["musical_goals_processed"] = proc_goals  # type: ignore[assignment]
         except Exception as e:
             side_effects.append(f"Musical Goals check failed: {e}")
 

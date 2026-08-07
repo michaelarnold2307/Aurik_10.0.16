@@ -18,7 +18,7 @@ import threading
 from typing import Any
 
 import numpy as np
-from scipy.signal import butter, sosfiltfilt
+from scipy.signal import butter, find_peaks, sosfiltfilt
 
 logger = logging.getLogger(__name__)
 
@@ -355,6 +355,7 @@ def lpc_formant_enhance(
             if len(frms) >= 2:
                 all_formants.append(frms)
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
 
     if len(all_formants) < min_voiced_frames:
@@ -627,7 +628,7 @@ class _LPCFormantTracker:
             autocorr_search = autocorr[min_period:max_period]
             if len(autocorr_search) < 2:
                 continue
-            peaks, props = signal.find_peaks(autocorr_search, height=0.12)
+            peaks, props = find_peaks(autocorr_search, height=0.12)
             if len(peaks) == 0:
                 continue
             best_peak = peaks[np.argmax(autocorr_search[peaks])]
@@ -680,6 +681,7 @@ class _LPCFormantTracker:
                     if collected >= max_frames:
                         break
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
         if not all_formants:
             return []

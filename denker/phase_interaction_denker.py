@@ -443,7 +443,7 @@ class PhaseInteractionDenker:
             Bei Fehler: leerer PhasePlan (UV3 übernimmt Selektion).
         """
         if defect_result is None:
-            logger.debug("PhaseInteractionDenker: kein defect_result — UV3 übernimmt Selektion.")
+            logger.debug("PhaseInteractionDenker: kein defect_Ergebnis — UV3 übernimmt Selektion.")
             return PhasePlan(
                 phases=[], material=material, mode=mode, conflict_notes=["Kein defect_result — UV3-Fallback."]
             )
@@ -553,7 +553,7 @@ class PhaseInteractionDenker:
                     if _post < _pre:
                         logger.info(
                             "§v10.303.4 PID-Confidence-Strip: %d/%d Phasen entfernt "
-                            "(conf=%.3f < threshold=%.3f, rs=%.0f)",
+                            "(conf=%.3f < Schwelle=%.3f, rs=%.0f)",
                             _pre - _post,
                             _pre,
                             _mat_conf,
@@ -565,7 +565,7 @@ class PhaseInteractionDenker:
                             f"(conf={_mat_conf:.3f} < thr={_threshold:.3f})"
                         )
             except Exception:
-                logger.debug("phase_interaction_denker.py:567: Silent exception absorbed", exc_info=True)
+                logger.debug("Verarbeitungsschritt_interaction_denker.py:567: Silent exception absorbed", exc_info=True)
 
         # §v10.303.3 Denker-Feedback-Loop: Familien die UV3 beim letzten Run
         # bei Low-Confidence gestrippt hat, werden gar nicht erst eingeplant.
@@ -590,7 +590,7 @@ class PhaseInteractionDenker:
                         f"aus {len(_stripped_cache)} gelernten Familien"
                     )
             except Exception:
-                logger.debug("phase_interaction_denker.py:592: Silent exception absorbed", exc_info=True)
+                logger.debug("Verarbeitungsschritt_interaction_denker.py:592: Silent exception absorbed", exc_info=True)
 
         # 2. Ketten-Pflicht-Phasen (§2.46 Feature 1: TontraegerketteDenker)
         # Injiziert must_have_phases aus der erkannten Trägerkette,
@@ -747,7 +747,7 @@ class PhaseInteractionDenker:
                 f"laufen auf {material} (Defekte können durch Kette transferiert sein)"
             )
             logger.info(
-                "PhaseInteractionDenker: %d Material-fremde Phase(n) erkannt: %s "
+                "PhaseInteractionDenker: %d Material-fremde Verarbeitungsschritt(n) erkannt: %s "
                 "(Kette kann Defekte übertragen haben — Phasen laufen normal)",
                 len(_foreign_found),
                 _foreign_found,
@@ -806,7 +806,7 @@ class PhaseInteractionDenker:
         logger.info(
             "PhaseInteractionDenker: %d→%d Phasen | "
             "+%d injiziert | %d supprimiert | "
-            "%d Ordnungsänderungen | material=%s mode=%s",
+            "%d Ordnungsänderungen | material=%s Betriebsart=%s",
             len(uv3_phases),
             len(ordered),
             len(injected_notes),
@@ -827,7 +827,7 @@ class PhaseInteractionDenker:
             if _order_result.changes:
                 ordered = _order_result.optimized_order
                 logger.info(
-                    "§U Phase-Ordering: %d Änderungen (score=%.2f)",
+                    "§U Verarbeitungsschritt-Ordering: %d Änderungen (Wert=%.2f)",
                     len(_order_result.changes),
                     _order_result.score,
                 )
@@ -838,7 +838,7 @@ class PhaseInteractionDenker:
                     f"Kopplungen optimiert (score={_order_result.score:.2f})"
                 )
         except Exception as _u_exc:
-            logger.debug("§U Phase-Ordering nicht verfügbar: %s", _u_exc)
+            logger.debug("§U Verarbeitungsschritt-Ordering nicht verfügbar: %s", _u_exc)
 
         # ── §2.60 Denker-Intelligenz: PhaseEffectCatalog → Intensitäten ────
         try:
@@ -846,19 +846,19 @@ class PhaseInteractionDenker:
 
             _catalog = get_phase_effect_catalog()
             _audio_ctx = {
-                "snr_db": signal_signature.get("snr_db"),
-                "panns_singing": signal_signature.get("panns_singing", 0.0),
-                "bandwidth_hz": signal_signature.get("bandwidth_hz"),
+                "snr_db": signal_signature.get("snr_db"),  # type: ignore[union-attr]
+                "panns_singing": signal_signature.get("panns_singing", 0.0),  # type: ignore[union-attr]
+                "bandwidth_hz": signal_signature.get("bandwidth_hz"),  # type: ignore[union-attr]
                 "era_decade": signal_signature.get("era_decade", 1970) if signal_signature else 1970,
                 "material_type": str(material).lower() if material else "unknown",
                 "restorability": restorability_score / 100.0 if restorability_score else 0.5,
-                "defect_severity": signal_signature.get("severity", 0.5),
+                "defect_severity": signal_signature.get("severity", 0.5),  # type: ignore[union-attr]
                 # §2.60 L1-Max: Alle Signal-Signature-Felder
-                "crest_db": signal_signature.get("crest_db", 12.0),
-                "hf_ratio": signal_signature.get("hf_ratio", 0.0),
-                "transient_ratio": signal_signature.get("transient_ratio", 0.0),
-                "micro_dynamic_db": signal_signature.get("micro_dynamic_db", 6.0),
-                "rms_dbfs": signal_signature.get("rms_dbfs", -20.0),
+                "crest_db": signal_signature.get("crest_db", 12.0),  # type: ignore[union-attr]
+                "hf_ratio": signal_signature.get("hf_ratio", 0.0),  # type: ignore[union-attr]
+                "transient_ratio": signal_signature.get("transient_ratio", 0.0),  # type: ignore[union-attr]
+                "micro_dynamic_db": signal_signature.get("micro_dynamic_db", 6.0),  # type: ignore[union-attr]
+                "rms_dbfs": signal_signature.get("rms_dbfs", -20.0),  # type: ignore[union-attr]
                 "chain_has_cassette": "cassette" in str(chain_info.get("chain_str", "")).lower()
                 if chain_info
                 else False,
@@ -894,7 +894,7 @@ class PhaseInteractionDenker:
                     _fahrplan.note,
                 )
             except Exception:
-                logger.warning("phase_interaction_denker.py::unbekannter Fallback", exc_info=True)
+                logger.warning("Verarbeitungsschritt_interaction_denker.py::unbekannter Ersatzpfad", exc_info=True)
             if _n_cal > 0:
                 logger.info(
                     "§2.60 Denker-Kalibrierung: %d/%d Phasen intensitäts-angepasst",
@@ -902,7 +902,7 @@ class PhaseInteractionDenker:
                     len(ordered),
                 )
         except Exception:
-            logger.warning("phase_interaction_denker.py::unbekannter Fallback", exc_info=True)
+            logger.warning("Verarbeitungsschritt_interaction_denker.py::unbekannter Ersatzpfad", exc_info=True)
 
         # ── §ROADMAP-4: Dynamic Phase Ordering (DAG) ──
         # Sortiert Phasen topologisch nach Frequenzbereich-Überlappungen,
@@ -910,10 +910,10 @@ class PhaseInteractionDenker:
         # (Shellac), Denoise vor EQ bei rauschdominiertem Material (Tape).
         try:
             ordered = self._dag_reorder(ordered, material=material)
-            ordering_applied = ["dag_reorder"] + (ordering_applied or [])
+            ordering_applied = ["dag_reorder"] + (ordering_applied or [])  # type: ignore[assignment]
             conflict_notes.append(f"§ROADMAP-4 DAG-Reorder: {len(ordered)} Phasen topologisch sortiert")
         except Exception as _dag_exc:
-            logger.debug("§ROADMAP-4 DAG-Reorder non-blocking: %s", _dag_exc)
+            logger.debug("§ROADMAP-4 DAG-Reorder nicht blockierend: %s", _dag_exc)
 
         return PhasePlan(
             phases=ordered,
@@ -1263,7 +1263,9 @@ class PhaseInteractionDenker:
             material_type_cls = _load_symbol("backend.core.defect_scanner", "MaterialType")
             policy_material = material_type_cls(material_key)
         except Exception:
-            logger.warning("phase_interaction_denker.py::_with_policy_material fallback", exc_info=True)
+            logger.warning(
+                "Verarbeitungsschritt_interaction_denker.py::_with_policy_material Ersatzpfad", exc_info=True
+            )
             return defect_result
         if getattr(defect_result, "material_type", None) == policy_material:
             return defect_result
@@ -1281,7 +1283,9 @@ class PhaseInteractionDenker:
             )
             return planned
         except Exception:
-            logger.warning("phase_interaction_denker.py::_with_policy_material fallback", exc_info=True)
+            logger.warning(
+                "Verarbeitungsschritt_interaction_denker.py::_with_policy_material Ersatzpfad", exc_info=True
+            )
             return defect_result
 
     @staticmethod
@@ -1520,7 +1524,7 @@ class PhaseInteractionDenker:
         remaining = [p for p in phases if p not in result]
         if remaining:
             logger.warning(
-                "DAG cycle detected: %d phases not reachable (material=%s). Breaking by priority.",
+                "DAG cycle erkannt: %d phases not reachable (material=%s). Breaking by priority.",
                 len(remaining),
                 mat,
             )
@@ -1554,7 +1558,11 @@ class PhaseInteractionDenker:
             from denker.cross_phase_coordinator import PHASE_FREQ_PROFILES
         except ImportError:
             return list(phases)
-        subtractive, additive, dynamics, corrective, other = [], [], [], [], []
+        subtractive: list[Any] = []
+        additive: list[Any] = []
+        dynamics: list[Any] = []
+        corrective: list[Any] = []
+        other: list[Any] = []
         for pid in phases:
             cat = PHASE_FREQ_PROFILES.get(pid, {}).get("category", "other")
             {"subtractive": subtractive, "additive": additive, "dynamics": dynamics, "corrective": corrective}.get(
@@ -1617,7 +1625,7 @@ def _categories_conflict_with_material(src_cat: str, dst_cat: str, material: str
         }
     )
 
-    @staticmethod
+    @staticmethod  # type: ignore[misc]
     def resolve_guard_modulation(
         base_strength: float,
         *,

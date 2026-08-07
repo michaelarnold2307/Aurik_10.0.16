@@ -92,7 +92,7 @@ class ModelManager:
         self.audit_log: list[dict[str, Any]] = []
         self.voicehealthnet: Any | None = None  # type: ignore[no-redef]
         self.languagenet: Any | None = None  # type: ignore[no-redef]
-        logger.info("ModelManager initialized")
+        logger.info("ModelManager initialisiert")
 
     def list_models(self) -> dict[str, dict[str, Any]]:
         """Gibt alle registrierten Modelle mit Metadaten zurück."""
@@ -230,7 +230,7 @@ class ModelManager:
                 return False
             return True
         except Exception as e:
-            logger.warning("model_manager.py::authenticity_check fallback: %s", e)
+            logger.warning("model_manager.py::authenticity_Pruefung Ersatzpfad: %s", e)
             return True  # Im Zweifel akzeptieren
 
     def _matches_context(self, _model: dict[str, Any], _context: dict[str, Any]) -> bool:

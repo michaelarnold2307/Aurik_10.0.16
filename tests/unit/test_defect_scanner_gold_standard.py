@@ -45,7 +45,7 @@ N = int(SR * DURATION_S)
 def _clean_sine(freq: float = 440.0, amp: float = 0.3) -> np.ndarray:
     """Reines Sinussignal — kein Defekt."""
     t = np.linspace(0, DURATION_S, N, endpoint=False, dtype=np.float32)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _clean_harmonic(amp: float = 0.25) -> np.ndarray:
@@ -53,7 +53,7 @@ def _clean_harmonic(amp: float = 0.25) -> np.ndarray:
     t = np.linspace(0, DURATION_S, N, endpoint=False, dtype=np.float32)
     sig = sum((1.0 / k) * np.sin(2 * np.pi * k * 220.0 * t) for k in range(1, 9))
     mx = float(np.max(np.abs(sig)) + 1e-9)
-    return (sig / mx * amp).astype(np.float32)
+    return (sig / mx * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _inject_clicks(audio: np.ndarray, n_clicks: int = 30, amp: float = 0.95) -> np.ndarray:
@@ -72,7 +72,7 @@ def _inject_hum(audio: np.ndarray, hum_freq: float = 50.0, hum_amp: float = 0.15
     """Injiziert 50-Hz-Netzbrumm."""
     t = np.linspace(0, DURATION_S, N, endpoint=False, dtype=np.float32)
     hum = (hum_amp * np.sin(2 * np.pi * hum_freq * t)).astype(np.float32)
-    return np.clip(audio + hum, -1.0, 1.0)
+    return np.clip(audio + hum, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _inject_crackle(audio: np.ndarray, density: float = 0.05, amp: float = 0.4) -> np.ndarray:
@@ -113,7 +113,7 @@ def _inject_wow_flutter(audio: np.ndarray, wow_hz: float = 0.8, flutter_hz: floa
     idx_i = np.clip(src_idx.astype(np.int64), 0, N - 2)
     frac = src_idx - idx_i
     out = (audio[idx_i] * (1.0 - frac) + audio[idx_i + 1] * frac).astype(np.float32)
-    return np.clip(out, -1.0, 1.0)
+    return np.clip(out, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

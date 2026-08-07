@@ -56,7 +56,7 @@ adaptive_tsm_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Artefakte", "expected_when": "rate zu extrem", "severity": 0.2}],
+    side_effects=[{"risk": "Artefakte", "expected_when": "rate zu extrem", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["tsm_quality"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -76,7 +76,7 @@ class AdaptiveTimeScaleModification:
         self.auto_optimize = auto_optimize
         self.last_params: dict[str, Any] | None = None
         logger.info(
-            f"AdaptiveTimeScaleModification initialisiert mit method={self.method}, auto_optimize={self.auto_optimize}"
+            f"AdaptiveTimeScaleModification initialisiert mit method={self.method}, auto_optimieren={self.auto_optimize}"
         )
 
     def log_contract(self):
@@ -113,7 +113,7 @@ class AdaptiveTimeScaleModification:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._time_stretch_classic(audio, sr, rate)
                 else:
@@ -121,7 +121,7 @@ class AdaptiveTimeScaleModification:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('tsm.pt')
                     # output = model(torch.from_numpy(audio).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._time_stretch_classic(audio, sr, rate)
             else:
@@ -134,7 +134,7 @@ class AdaptiveTimeScaleModification:
         if audit_log:
             tsm_quality = float(np.std(output)) if output is not None else float("nan")
             logger.info(
-                f"AdaptiveTimeScaleModification: tsm_quality={tsm_quality:.6f}, fallback_used={fallback_used}, method={self.method}, rate={rate}"
+                f"AdaptiveTimeScaleModification: tsm_quality={tsm_quality:.6f}, Ersatzpfad_used={fallback_used}, method={self.method}, rate={rate}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_tsm_contract))
         return output
@@ -153,7 +153,7 @@ class AdaptiveTimeScaleModification:
                 tsm.run(reader, writer)
                 return np.asarray(writer.data[0])
             except ImportError:
-                logger.warning("audiotsm nicht verfügbar – scipy-basiertes WSOLA als Fallback.")
+                logger.warning("audiotsm nicht verfügbar – scipy-basiertes WSOLA als Ersatzpfad.")
                 return self._wsola_scipy(audio, rate)
         elif self.method == "rubberband":
             try:
@@ -161,10 +161,10 @@ class AdaptiveTimeScaleModification:
 
                 return np.asarray(pyrb.time_stretch(audio, sr, rate))
             except ImportError:
-                logger.warning("pyrubberband nicht verfügbar – librosa Phase-Vocoder als Fallback.")
+                logger.warning("pyrubberband nicht verfügbar – librosa Verarbeitungsschritt-Vocoder als Ersatzpfad.")
                 return librosa.effects.time_stretch(audio, rate=rate)
         else:
-            logger.warning("Unbekannte Methode '%s' – Fallback: librosa phase vocoder.", self.method)
+            logger.warning("Unbekannte Methode '%s' – Ersatzpfad: librosa Verarbeitungsschritt vocoder.", self.method)
             return librosa.effects.time_stretch(audio, rate=rate)
 
     @staticmethod
@@ -253,7 +253,7 @@ class AdaptiveTimeScaleModification:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._pitch_shift_classic(audio, sr, n_steps)
                 else:
@@ -261,7 +261,7 @@ class AdaptiveTimeScaleModification:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('pitch_shift.pt')
                     # output = model(torch.from_numpy(audio).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._pitch_shift_classic(audio, sr, n_steps)
             else:
@@ -273,7 +273,7 @@ class AdaptiveTimeScaleModification:
 
         if audit_log:
             logger.info(
-                f"AdaptiveTimeScaleModification: pitch_shift ausgeführt, fallback_used={fallback_used}, n_steps={n_steps}"
+                f"AdaptiveTimeScaleModification: pitch_shift ausgeführt, Ersatzpfad_used={fallback_used}, n_steps={n_steps}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_tsm_contract))
         return output

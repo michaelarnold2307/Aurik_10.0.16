@@ -36,7 +36,7 @@ from backend.semantic.semantic_audio_analyzer import (
     ContentCharacter,
     InstrumentType,
     SemanticAudioAnalyzer,
-    SemanticProfile,
+    SemanticProfile,  # type: ignore[misc]
 )
 
 logger = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class IntegratedVocalProcessor:
         self.content_processor = ContentAwareProcessor()
         self.semantic_analyzer = SemanticAudioAnalyzer()
 
-        logger.info("IntegratedVocalProcessor initialized")
+        logger.info("IntegratedVocalProcessor initialisiert")
 
     def create_integrated_timeline(
         self,
@@ -192,7 +192,7 @@ class IntegratedVocalProcessor:
 
         aurik_mode = _normalize_aurik_mode(aurik_mode)
         logger.info(
-            f"Creating integrated vocal timeline (mode={aurik_mode}, duration={duration:.2f}s, language={language})"
+            f"Creating integrated vocal timeline (Betriebsart={aurik_mode}, duration={duration:.2f}s, language={language})"
         )
 
         # 1. Lyrics alignment (with phonemes)
@@ -200,11 +200,11 @@ class IntegratedVocalProcessor:
         lyrics_alignment = self.lyrics_aligner.align(audio_mono, sr, lyrics=provided_lyrics)
 
         # 2. Content analysis (vocal/instrumental segmentation)
-        logger.info("🎵 Step 2: Content analysis...")
+        logger.info("🎵 Step 2: Content Analyse...")
         content_timeline = self.content_processor.create_processing_timeline(audio_mono, sr, aurik_mode, language)
 
         # 3. Semantic analysis (instrument detection, character)
-        logger.info("🎸 Step 3: Semantic analysis...")
+        logger.info("🎸 Step 3: Semantic Analyse...")
         semantic_profile = self.semantic_analyzer.analyze(audio_mono, sr, aurik_mode)
 
         # 4. Integrate all information
@@ -260,7 +260,7 @@ class IntegratedVocalProcessor:
             studio_strategy=studio_strategy,
         )
 
-        logger.info("✅ Integrated timeline created: %s", timeline)
+        logger.info("✅ Integrated timeline erstellt: %s", timeline)
 
         return timeline
 
@@ -327,7 +327,7 @@ class IntegratedVocalProcessor:
                 )
 
                 if not overlaps:
-                    # Add as non-vocal segment
+                    # Add as non-vocal segment  # type: ignore[misc]
                     segment = IntegratedVocalSegment(
                         start_time=content_seg.start_time,
                         end_time=content_seg.end_time,
@@ -483,7 +483,7 @@ class IntegratedVocalProcessor:
         if len(vocal_segments) > 0:
             avg_deessing = np.mean([s.sibilant_reduction for s in vocal_segments])
         else:
-            avg_deessing = 0.3  # Default
+            avg_deessing = 0.3  # type: ignore[assignment]  # Default
 
         # Compression based on mode and content character
         if aurik_mode == "restoration":
@@ -613,7 +613,7 @@ if __name__ == "__main__":
 
     # Segment 2: 2.0-3.0s (sibilant-rich)
     mask2 = (t >= 2.0) & (t < 3.0)
-    audio[mask2] = 0.2 * np.random.randn(np.sum(mask2)).astype(np.float32)  # Noise (sibilant-like)
+    audio[mask2] = 0.2 * np.random.randn(np.sum(mask2)).astype(np.float32)  # type: ignore[call-overload]  # Noise (sibilant-like)
 
     # Background
     audio += 0.01 * np.random.randn(len(audio)).astype(np.float32)
@@ -623,7 +623,7 @@ if __name__ == "__main__":
     try:
         timeline = create_integrated_vocal_timeline(audio, sr, aurik_mode="restoration", language="en")
 
-        logger.info("\n✅ Timeline created: %s", timeline)
+        logger.info("\n✅ Timeline erstellt: %s", timeline)
         logger.info("\n📊 Statistics:")
         logger.info("   Vocal: %.1f", timeline.vocal_percentage)
         logger.info("   Sibilant: %.1f", timeline.sibilant_percentage)
@@ -636,6 +636,6 @@ if __name__ == "__main__":
         logger.info("   %s", timeline.restoration_strategy)
 
     except Exception as e:
-        logger.error("⚠️ Demo failed (expected if dependencies not installed): %s", e)
+        logger.error("⚠️ Demo fehlgeschlagen (expected if dependencies not installed): %s", e)
 
     logger.info(str("\n" + "=" * 80))

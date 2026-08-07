@@ -7,7 +7,13 @@ Usage:
 
 Fails if any step times out or raises.
 """
-import sys, os, time, logging, unittest
+
+import logging
+import os
+import sys
+import time
+import unittest
+
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -55,8 +61,7 @@ class StartupSmokeTest(unittest.TestCase):
         self.assertIsNotNone(result, "PreAnalysisResult should not be None")
         self.assertIsNotNone(result.medium, "Medium detection failed")
         self.assertLess(dt, 30, f"Pre-analysis took {dt:.0f}s — timeout")
-        logger.info("  Pre-analysis: %.1fs, medium=%s", dt,
-                     getattr(result.medium, "primary_material", "?"))
+        logger.info("  Pre-analysis: %.1fs, medium=%s", dt, getattr(result.medium, "primary_material", "?"))
 
     def test_04_no_torch_zeros_hang(self):
         """warmup_rocm must timeout within 15s, not hang."""
@@ -76,8 +81,7 @@ class StartupSmokeTest(unittest.TestCase):
         mgr = get_ml_device_manager()
         # If ROCm is active, ONNX providers should be configured.
         # The probe sets _ort_gpu_providers based on actual availability.
-        self.assertIsNotNone(mgr._ort_gpu_providers,
-                             "ONNX providers not set — _probe_rocm_onnx_pad may not have run")
+        self.assertIsNotNone(mgr._ort_gpu_providers, "ONNX providers not set — _probe_rocm_onnx_pad may not have run")
         logger.info("  ONNX providers: %s", mgr._ort_gpu_providers)
 
     def test_06_memory_budget_lock_free(self):

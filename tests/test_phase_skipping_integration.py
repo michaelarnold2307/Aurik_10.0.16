@@ -38,7 +38,7 @@ def generate_test_audio(duration: float = 3.0, sr: int = 48000, noise_level: flo
     # Ensure proper range
     signal = np.clip(signal, -1.0, 1.0)
 
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 def print_section(title: str):

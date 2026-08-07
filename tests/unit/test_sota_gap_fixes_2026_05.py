@@ -2420,7 +2420,7 @@ class TestWLPCFormantEnhance:
         audio = np.zeros_like(t)
         for k in range(1, 8):
             audio += (1.0 / k) * np.sin(2 * np.pi * f0 * k * t)
-        return (audio / (np.max(np.abs(audio)) + 1e-8)).astype(np.float32)
+        return (audio / (np.max(np.abs(audio)) + 1e-8)).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_era_none_does_not_crash(self):
         """era_decade=None → normale LPC-Verarbeitung, kein Absturz."""

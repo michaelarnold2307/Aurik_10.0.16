@@ -266,5 +266,5 @@ def _compute_zones_impl(
         return zones
 
     except Exception as exc:
-        logger.debug("ForwardMaskingGuard.compute_zones non-blocking: %s", exc)
+        logger.debug("ForwardMaskingGuard.berechnen_zones nicht blockierend: %s", exc)
         return []

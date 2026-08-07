@@ -32,7 +32,7 @@ SR = 48_000
 
 def _sine(dur: float = 1.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), endpoint=False)
-    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_rekonstruktions_ergebnis():
@@ -40,7 +40,7 @@ def _make_rekonstruktions_ergebnis():
     try:
         from denker.rekonstruktions_denker import RekonstruktionsErgebnis
 
-        return RekonstruktionsErgebnis(
+        return RekonstruktionsErgebnis(  # type: ignore[call-arg]
             audio=_sine(0.5),
             gaps_filled=3,
             reconstruction_quality=0.82,

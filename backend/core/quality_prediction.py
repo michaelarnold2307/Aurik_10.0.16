@@ -806,7 +806,7 @@ class QualityPredictionSystem:
         self.analyzer = QualityAnalyzer()
         self.predictor = QualityPredictor(self.analyzer)
 
-        logger.info("QualityPredictionSystem initialized (v2.0.0 Ferrari Edition)")
+        logger.info("QualityPredictionSystem initialisiert (v2.0.0 Ferrari Edition)")
 
     def estimate_quality(self, audio: np.ndarray, sample_rate: int) -> QualityEstimate:
         """
@@ -882,7 +882,7 @@ class QualityPredictionSystem:
         prediction_score = (snr_score + clarity_score) / 2
 
         logger.info(
-            f"Prediction Validation: {prediction_score:.1f}/100 accuracy "
+            f"Prediction Validierung: {prediction_score:.1f}/100 accuracy "
             f"(SNR: ±{snr_accuracy:.1f} dB, Clarity: ±{clarity_accuracy:.2f})"
         )
 

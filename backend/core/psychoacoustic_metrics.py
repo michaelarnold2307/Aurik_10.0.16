@@ -109,7 +109,7 @@ if __name__ == "__main__":
     for key, val in degraded_scores.items():
         logger.debug("  %s: %.3f", key, val)
 
-    logger.debug("\nImprovement Analysis:")
+    logger.debug("\nImprovement Analyse:")
     improvement = measure_quality_improvement(degraded, clean, sr)
     for key, val in improvement.items():
         logger.debug("  %s: %.3f", key, val)

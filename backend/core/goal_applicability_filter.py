@@ -312,12 +312,12 @@ class GoalApplicabilityFilter:
                             "Studio-2026-Modus: Ziel bleibt aktiv (Enhancement-Phasen)."
                         )
                         logger.debug(
-                            "§2.32 bass_kraft N/A: input_bass_ratio=%.4f < %.3f (Restoration)",
+                            "§2.32 bass_kraft N/A: Eingabe_bass_Verhaeltnis=%.4f < %.3f (Restoration)",
                             _input_bass_ratio,
                             _bass_floor,
                         )
             except Exception as _bk_exc:
-                logger.debug("§2.32 bass_kraft-Ratio-Check fehlgeschlagen: %s", _bk_exc)
+                logger.debug("§2.32 bass_kraft-Verhaeltnis-Pruefung fehlgeschlagen: %s", _bk_exc)
 
         # _ALWAYS_APPLICABLE NIE deaktivieren
         for g in _ALWAYS_APPLICABLE:

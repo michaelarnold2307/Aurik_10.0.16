@@ -123,7 +123,7 @@ class DifferentiableEQ(nn.Module):
         # Convert back to time domain
         audio_filtered = torch.fft.irfft(audio_fft_filtered, n=audio.shape[-1], dim=-1)  # pylint: disable=not-callable
 
-        return audio_filtered
+        return audio_filtered  # type: ignore[no-any-return]
 
     def forward(self, audio: torch.Tensor) -> torch.Tensor:
         """
@@ -383,17 +383,17 @@ class E2EOptimizationFramework:
         # Optimizer (will be set up during training)
         self.optimizer = None
 
-        logger.info("E2EOptimizationFramework initialized on %s", device)
+        logger.info("E2EOptimizationFramework initialisiert on %s", device)
         logger.info("  Sample rate: %s Hz", sr)
         logger.info("  Checkpoint dir: %s", self.checkpoint_dir)
 
     def setup_optimizer(self, learning_rate: float = 1e-4, weight_decay: float = 1e-5):
         """Richtet Optimizer für das Training ein."""
-        self.optimizer = torch.optim.AdamW(
+        self.optimizer = torch.optim.AdamW(  # type: ignore[assignment]
             self.trainable_modules.parameters(), lr=learning_rate, weight_decay=weight_decay
         )
 
-        logger.info("Optimizer configured: AdamW(lr=%s, wd=%s)", learning_rate, weight_decay)
+        logger.info("Optimizer konfiguriert: AdamW(lr=%s, wd=%s)", learning_rate, weight_decay)
 
     def _require_optimizer(self) -> torch.optim.Optimizer:
         """Gibt initialized optimizer or raise a clear error zurück."""
@@ -541,7 +541,7 @@ class E2EOptimizationFramework:
         checkpoint_path = self.checkpoint_dir / f"checkpoint_epoch_{epoch:04d}.pt"
         torch.save(checkpoint, checkpoint_path)
 
-        logger.info("Checkpoint saved: %s", checkpoint_path)
+        logger.info("Checkpoint gespeichert: %s", checkpoint_path)
 
     def load_checkpoint(self, checkpoint_path: Path):
         """Lädt training checkpoint."""
@@ -551,7 +551,7 @@ class E2EOptimizationFramework:
         if self.optimizer is not None:
             self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-        logger.info("Checkpoint loaded: %s", checkpoint_path)
+        logger.info("Checkpoint geladen: %s", checkpoint_path)
         logger.info("  Epoch: %s", checkpoint["epoch"])
         logger.info("  Metrics: %s", checkpoint["metrics"])
 
@@ -591,7 +591,7 @@ class E2EOptimizationFramework:
 
         params = {"eq": eq_params, "compressor": comp_params, "gate": gate_params}
 
-        logger.info("Optimized parameters exported")
+        logger.info("optimiert parameters exported")
 
         return params
 
@@ -613,14 +613,14 @@ if __name__ == "__main__":
     # Training step
     losses = framework.training_step(input_audio, target_audio)
 
-    logger.debug("Training step completed")
+    logger.debug("Training step abgeschlossen")
     logger.debug("Losses:")
     for key, value in losses.items():
         logger.debug("  %s: %.4f", key, value)
 
     # Export parameters
     params = framework.export_optimized_parameters()
-    logger.debug("\nOptimized Parameters:")
+    logger.debug("\noptimiert Parameters:")
     logger.debug("  EQ bands: %s", len(params["eq"]["frequencies"]))
-    logger.debug("  Compressor ratio: %.2f", params["compressor"]["ratio"])
-    logger.debug("  Gate threshold: %.1f dB", params["gate"]["threshold_db"])
+    logger.debug("  Compressor Verhaeltnis: %.2f", params["compressor"]["ratio"])
+    logger.debug("  Gate Schwelle: %.1f dB", params["gate"]["threshold_db"])

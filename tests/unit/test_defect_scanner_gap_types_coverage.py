@@ -17,7 +17,7 @@ def _make_test_audio(seconds: float = 1.2) -> np.ndarray:
     x += 0.01 * np.sin(2.0 * np.pi * 50.0 * t)
     rng = np.random.default_rng(42)
     x += 0.005 * rng.standard_normal(n).astype(np.float32)
-    return np.clip(x.astype(np.float32), -1.0, 1.0)
+    return np.clip(x.astype(np.float32), -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

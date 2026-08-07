@@ -856,7 +856,7 @@ class MediumDetector:
     # Language -> Medium-Era Preference matrix.
     # German: strong shellac/vinyl tradition, late mp3 adoption (GEMA).
     # Japanese: world's fastest CD adoption (1982), Minidisc stronghold.
-    _LANGUAGE_MEDIUM_BONUS: dict[str, dict[str, float]] = {
+    _LANGUAGE_MEDIUM_BONUS: dict[str, dict[str, float]] = {  # type: ignore[no-redef]
         "de": {"shellac": 0.15, "vinyl": 0.10, "cassette": 0.05, "cd_digital": 0.05, "mp3_low": -0.10},
         "en": {"vinyl": 0.05, "cd_digital": 0.05, "mp3_low": 0.05, "streaming": 0.05},
         "ja": {"cd_digital": 0.15, "minidisc": 0.10, "vinyl": 0.05, "dat": 0.05},
@@ -866,7 +866,7 @@ class MediumDetector:
         "pt": {"shellac": 0.05, "vinyl": 0.10, "cd_digital": 0.05},
     }
     # German display names for GUI
-    _MEDIUM_DISPLAY_NAMES: dict[str, str] = {
+    _MEDIUM_DISPLAY_NAMES: dict[str, str] = {  # type: ignore[no-redef]
         "tinfoil_cylinder": "Zinnfolien-Walze (Edison 1877)",
         "wax_cylinder": "Wachswalze (Edison 1888-1929)",
         "lacquer_disc": "Lackplatte / Acetat-Mitschnitt",
@@ -1200,7 +1200,7 @@ class MediumDetector:
         "codec_type_code",
     ]
 
-    def _best_matching_chain(
+    def _best_matching_chain(  # type: ignore[return]
         self, detected: list[str], genre: str | None = None, language: str | None = None
     ) -> list[str] | None:
         """Find the best-matching known chain for a set of detected materials.
@@ -1528,7 +1528,7 @@ class MediumDetector:
                     rolloffs.append(float(freqs[min(idx, len(freqs) - 1)]))
             rolloff_95 = float(np.median(rolloffs)) if rolloffs else 0.0
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: rolloff computation failed: %s", _exc)
+            logger.debug("MediumDetector: rolloff computation fehlgeschlagen: %s", _exc)
             rolloff_95 = 0.0
 
         # ── 2. Wow/Flutter-Index ────────────────────────────────────────
@@ -1544,7 +1544,7 @@ class MediumDetector:
                     pitches.append(mean_e)
             wow_flutter = float(np.std(np.diff(pitches))) if len(pitches) > 2 else 0.0
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
             wow_flutter = 0.0
 
         # ── 3. HF-Energie > 16 kHz ─────────────────────────────────────
@@ -1556,7 +1556,7 @@ class MediumDetector:
             hf_e = float(np.sum(spec_full[mask_hf] ** 2))
             hf_fraction = hf_e / max(total_e, 1e-12)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
             hf_fraction = 0.0
 
         # ── 4. Rauschpegel (5. Perzentil PSD) ──────────────────────────
@@ -1569,7 +1569,7 @@ class MediumDetector:
             noise_floor = float(np.percentile(frame_energies, 5)) if frame_energies else -60.0
             noise_floor = max(-120.0, min(0.0, noise_floor))
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
             noise_floor = -60.0
 
         # ── 5. Effektive Bandbreite (Rolloff −60 dBFS, Multi-Segment) ──────────────
@@ -1632,7 +1632,7 @@ class MediumDetector:
             else:
                 eff_bw = 0.0
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
             eff_bw = 0.0
 
         # ── 6. Erweiterte Features (§6.7.3) ────────────────────────────
@@ -1648,32 +1648,32 @@ class MediumDetector:
         try:
             rotation_hz, rotation_strength = self._rotation_periodicity(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         try:
             infrasonic_rms = self._infrasonic_rms(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         try:
             codec_artifact_score, codec_type_code = self._codec_artifact_score(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         try:
             crackle_density = self._crackle_density(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         try:
             snr_db = self._snr(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         try:
             noise_color = self._noise_color(mono, sr)
         except (ValueError, IndexError, TypeError, ZeroDivisionError) as _exc:
-            logger.debug("MediumDetector: computation failed in spectral fingerprint: %s", _exc)
+            logger.debug("MediumDetector: computation fehlgeschlagen in spectral fingerprint: %s", _exc)
 
         return SpectralFingerprint(
             rolloff_95_hz=float(np.nan_to_num(rolloff_95)),
@@ -1801,7 +1801,7 @@ class MediumDetector:
                 # Score is nonzero above 0.5; saturates around 2.0 (strong codec)
                 spec_disco_score = float(np.clip((spec_disco - 0.5) / 1.5, 0.0, 1.0))
             except (ValueError, TypeError, ImportError) as _exc:
-                logger.debug("MediumDetector: optional feature failed: %s", _exc)
+                logger.debug("MediumDetector: optional feature fehlgeschlagen: %s", _exc)
 
             # Müller & Ewert (2011): spectral discontinuity is the reliable codec
             # indicator — frequency-selective discontinuities at granule boundaries.
@@ -2007,7 +2007,7 @@ class MediumDetector:
         if _short_clip:
             logger.debug(
                 "MediumDetector: short clip (%.1fs < %.1fs) — "
-                "rotation_strength excluded from Bayesian update (unreliable ACF)",
+                "rotation_strength excluded from Bayesian Aktualisierung (unreliable ACF)",
                 duration_s,
                 self._MIN_ROTATION_ANALYSIS_DURATION_S,
             )
@@ -2170,7 +2170,7 @@ class MediumDetector:
                 logger.info(
                     "MediumDetector: NO file_ext — Digital-Prior fehlt (kein ×0.25 Analog-Penalty). "
                     "Top-3 analog candidates: [%s]. Bei .mp3/.aac/.ogg wäre korrekte Material-Erkennung möglich. "
-                    "→ Prüfen, ob input_path korrekt durchgereicht wird.",
+                    "→ Prüfen, ob Eingabe_path korrekt durchgereicht wird.",
                     ", ".join(f"{m}={s:.3f}" for m, s in _analog_top3),
                 )
 
@@ -2287,7 +2287,7 @@ class MediumDetector:
                         else:
                             _detection_method = f"codec-adaptive gate (conf={_cand_conf:.3f}≥{_pa_conf_thresh:.3f})"
                         logger.info(
-                            "MediumDetector: ✅ PHYSICAL ANALOG DETECTED — "
+                            "MediumDetector: ✅ PHYSICAL ANALOG erkannt — "
                             "primary=%s (confidence=%.3f) via %s; "
                             "full chain=%s; "
                             "features [crackle=%.4f infrasonic=%.4f rotation=%.3f wow_flutter=%.3f]",
@@ -2312,7 +2312,7 @@ class MediumDetector:
                     )
                     logger.info(
                         "MediumDetector: ❌ NO physical analog confirmed for digital file_ext=%s — "
-                        "%d candidate(s) [%s] failed gate; "
+                        "%d candidate(s) [%s] fehlgeschlagen gate; "
                         "features [rotation=%.3f wow=%.3f crackle=%.4f infrasonic=%.4f]",
                         _ext_lower,
                         len(_physical_analog_sources),
@@ -2727,13 +2727,13 @@ class MediumDetector:
                         f"HF-Überschuss {_dolby_det.hf_excess_db:.1f} dB)"
                     )
                     logger.info(
-                        "MediumDetector: Dolby NR detected type=%s conf=%.2f hf_excess=%.1f dB",
+                        "MediumDetector: Dolby NR erkannt type=%s conf=%.2f hf_excess=%.1f dB",
                         _dolby_det.nr_type,
                         _dolby_det.confidence,
                         _dolby_det.hf_excess_db,
                     )
             except Exception as exc:
-                logger.debug("MediumDetector: Dolby NR detection skipped (%s)", exc)
+                logger.debug("MediumDetector: Dolby NR detection uebersprungen (%s)", exc)
 
         # §6.6 RIAA-Kurven-Klassifikation für Disc-Materialien (vinyl/shellac/lacquer_disc)
         _disc_types = {"vinyl", "shellac", "lacquer_disc"}
@@ -2764,7 +2764,7 @@ class MediumDetector:
                         _riaa_conf,
                     )
             except Exception as exc:
-                logger.debug("MediumDetector: RIAA curve classification skipped (%s)", exc)
+                logger.debug("MediumDetector: RIAA curve classification uebersprungen (%s)", exc)
 
         return result
 
@@ -2818,7 +2818,7 @@ class MediumDetector:
         normalized = _KEY_MAP.get(key, key)
         if normalized != key:
             logger.debug(
-                "MediumDetector._normalize_material_key: '%s' → '%s'",
+                "MediumDetector._normalisieren_material_key: '%s' → '%s'",
                 key,
                 normalized,
             )

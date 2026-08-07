@@ -108,9 +108,9 @@ class MicrophoneResponseLibrary:
             raw_profiles = data.get("profiles", [])
             converted = [_dict_to_profile(p) for p in raw_profiles]
             self._profiles = [p for p in converted if p is not None]
-            logger.info("MicrophoneResponseLibrary loaded %d profiles", len(self._profiles))
+            logger.info("MicrophoneResponseLibrary geladen %d profiles", len(self._profiles))
         except Exception as exc:
-            logger.warning("MicrophoneResponseLibrary: profiles not loaded (%s)", exc)
+            logger.warning("MicrophoneResponseLibrary: profiles not geladen (%s)", exc)
             self._profiles = []
 
     # ------------------------------------------------------------------
@@ -291,5 +291,5 @@ class MicrophoneResponseLibrary:
             return blended.astype(np.float32)  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.warning("MicrophoneResponseLibrary.apply_eq_curve failed: %s", exc)
+            logger.warning("MicrophoneResponseLibrary.anwenden_eq_curve fehlgeschlagen: %s", exc)
             return audio

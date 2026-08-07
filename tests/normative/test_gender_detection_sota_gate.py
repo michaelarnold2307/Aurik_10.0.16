@@ -43,13 +43,13 @@ def _make_synthetic_voice(
     sig += 0.2 * np.sin(2 * np.pi * f2 * t)
     sig += 0.12 * np.sin(2 * np.pi * f3 * t)
     sig *= 0.5 / max(np.max(np.abs(sig)), 1e-10)
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _add_silence_intro(audio: np.ndarray, silence_s: float = 1.5, sr: int = SR) -> np.ndarray:
     """Fügt eine Stille-Passage vor das Audio (simuliert instrumentales Intro)."""
     silence = np.zeros(int(sr * silence_s), dtype=np.float32)
-    return np.concatenate([silence, audio]).astype(np.float32)
+    return np.concatenate([silence, audio]).astype(np.float32)  # type: ignore[no-any-return]
 
 
 _MALE_VOICE = _make_synthetic_voice(120, 500, 1500, 2500)

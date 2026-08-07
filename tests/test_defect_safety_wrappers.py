@@ -190,7 +190,7 @@ def dummy_denoiser(audio: np.ndarray, sr: int, noise_type: str = "white", streng
     elif len(audio_clean) < len(audio):
         audio_clean = np.pad(audio_clean, (0, len(audio) - len(audio_clean)))
 
-    return audio_clean
+    return audio_clean  # type: ignore[no-any-return]
 
 
 def dummy_dehummer(audio: np.ndarray, sr: int, fundamental_hz: float = 50.0) -> np.ndarray:

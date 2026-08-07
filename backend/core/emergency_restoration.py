@@ -188,7 +188,7 @@ class DamageAnalyzer:
         Returns:
             DamageAssessment
         """
-        logger.info("🔍 Analyzing audio damage...")
+        logger.info("🔍 analysiere audio damage...")
 
         # === 1. Overall Corruption Detection ===
         corruption_percent = self._estimate_overall_corruption(audio)
@@ -399,7 +399,7 @@ class EmergencyRestorationEngine:
     def __init__(self) -> None:
         """Initialisiert EmergencyRestorationEngine."""
         self.damage_analyzer = DamageAnalyzer(n_bands=8)
-        logger.info("EmergencyRestorationEngine initialized")
+        logger.info("EmergencyRestorationEngine initialisiert")
 
     def emergency_restore(
         self, audio: np.ndarray, sample_rate: int, attempt_reconstruction: bool = True
@@ -415,7 +415,7 @@ class EmergencyRestorationEngine:
         Returns:
             EmergencyRestorationResult with dict-compatible accessors.
         """
-        logger.info("🚨 EMERGENCY RESTORATION MODE ACTIVATED")
+        logger.info("🚨 EMERGENCY RESTORATION Betriebsart ACTIVATED")
 
         # === Pre-Processing: Clean up critical issues BEFORE assessment ===
         # This allows damage assessment to work properly
@@ -437,7 +437,7 @@ class EmergencyRestorationEngine:
 
         # === 2. Check if Restoration is Possible ===
         if not assessment.can_attempt_restoration:
-            logger.error("  ❌ Material beyond restoration threshold (>95%% corrupted)")
+            logger.error("  ❌ Material beyond restoration Schwelle (>95%% corrupted)")
 
             report = EmergencyReport(
                 input_corruption_percent=assessment.overall_corruption_percent,
@@ -463,19 +463,19 @@ class EmergencyRestorationEngine:
                 restored_audio = self._frequency_band_restoration(
                     restored_audio, sample_rate, assessment.frequency_bands
                 )
-                logger.info("  ✓ Frequency band restoration applied")
+                logger.info("  ✓ Frequency band restoration angewendet")
 
                 # Partial Reconstruction (simplified - real version would use BSRNN)
                 restored_audio = self._partial_reconstruction(restored_audio, sample_rate)
-                logger.info("  ✓ Partial reconstruction applied")
+                logger.info("  ✓ Partial reconstruction angewendet")
 
             except Exception as e:
-                logger.warning("  ⚠ Reconstruction failed: %s", e)
+                logger.warning("  ⚠ Reconstruction fehlgeschlagen: %s", e)
                 restored_audio = self._fallback_restoration(audio)
-                logger.info("  ✓ Fallback restoration applied")
+                logger.info("  ✓ Ersatzpfad restoration angewendet")
         else:
             restored_audio = self._fallback_restoration(audio)
-            logger.info("  ✓ Fallback restoration applied")
+            logger.info("  ✓ Ersatzpfad restoration angewendet")
 
         # === 4. Generate Report ===
         report = self._generate_report(assessment, restored_audio, sample_rate)
@@ -489,7 +489,7 @@ class EmergencyRestorationEngine:
             report.final_quality_estimate = "acceptable"
 
         logger.info("  Final Quality Estimate: %s", report.final_quality_estimate.upper())
-        logger.info("✅ Emergency restoration complete")
+        logger.info("✅ Emergency restoration vollstaendig")
 
         return EmergencyRestorationResult(
             audio=restored_audio,
@@ -524,7 +524,7 @@ class EmergencyRestorationEngine:
 
                         logger.debug("    Attenuated band %.0f-%.0f Hz", band.low_freq_hz, band.high_freq_hz)
                 except Exception as e:
-                    logger.warning("    Failed to filter band: %s", e)
+                    logger.warning("    konnte nicht filter band: %s", e)
 
         return restored
 
@@ -559,7 +559,7 @@ class EmergencyRestorationEngine:
 
                     logger.debug("    Reconstructed %s samples", np.sum(abnormal_mask))
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         return audio
 
@@ -637,7 +637,7 @@ if __name__ == "__main__":
 
     # Load severely damaged audio
     _res = load_audio_file("test_audio/severely_damaged.wav")
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Run emergency restoration
     engine = EmergencyRestorationEngine()
@@ -652,7 +652,7 @@ if __name__ == "__main__":
 
     logger.debug("\n🚨 EMERGENCY RESTORATION REPORT")
     logger.debug("=" * 60)
-    logger.debug("Input Corruption: %.1f%%", report.input_corruption_percent)
+    logger.debug("Eingabe Corruption: %.1f%%", report.input_corruption_percent)
     logger.debug("Severity: %s", assessment.severity.value.upper())
     logger.debug("Restoration Attempted: %s", report.restoration_attempted)
     logger.debug("Success: %s", report.restoration_successful)

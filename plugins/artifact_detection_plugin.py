@@ -16,7 +16,7 @@ try:
     _TORCH_AVAILABLE = True
 except Exception:
     _TORCH_AVAILABLE = False
-    logger.debug("torch/torchaudio nicht verfügbar, DSP-Fallback aktiv")
+    logger.debug("torch/torchaudio nicht verfügbar, DSP-Ersatzpfad aktiv")
 
 
 class ArtifactDetectionPlugin:
@@ -40,7 +40,7 @@ class ArtifactDetectionPlugin:
                 from backend.core.ml_memory_budget import try_allocate
 
                 if not try_allocate(self._BUDGET_NAME, size_gb=self._BUDGET_SIZE_GB):
-                    logger.info("ArtifactDetection: ML-Budget erschöpft — DSP-Fallback.")
+                    logger.info("ArtifactDetection: ML-Grenze erschöpft — DSP-Ersatzpfad.")
                 else:
                     self.model = self._load_model(model_path)
             except ImportError:
@@ -58,14 +58,14 @@ class ArtifactDetectionPlugin:
                     unload_fn=lambda s=_self: setattr(s, "model", None),  # type: ignore[misc]
                 )
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         elif _TORCH_AVAILABLE:
             try:
                 from backend.core.ml_memory_budget import release as _release
 
                 _release(self._BUDGET_NAME)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _load_model(self, path: str):
         """TorchScript-Modell laden — nur wenn torch verfügbar."""
@@ -75,7 +75,7 @@ class ArtifactDetectionPlugin:
             torch.set_num_threads(_os.cpu_count() or 4)  # §2.37 CPU-Thread-Budget
             return torch.jit.load(path, map_location="cpu")  # CPU-only
         except Exception as exc:
-            logger.warning("Modell konnte nicht geladen werden: %s — DSP-Fallback aktiv", exc)
+            logger.warning("Modell konnte nicht geladen werden: %s — DSP-Ersatzpfad aktiv", exc)
             return None
 
     def _dsp_fallback_detect(self, audio: np.ndarray, sr: int) -> dict[str, Any]:
@@ -128,7 +128,7 @@ class ArtifactDetectionPlugin:
             _plm_ad = _get_plm_ad()
             _plm_ad.set_active(self._BUDGET_NAME, True)
         except Exception:
-            logger.warning("artifact_detection_plugin.py::detect_artifacts fallback", exc_info=True)
+            logger.warning("artifact_detection_plugin.py::erkennen_artifacts Ersatzpfad", exc_info=True)
         try:
             with torch.no_grad():
                 output = self.model(mel)
@@ -137,7 +137,7 @@ class ArtifactDetectionPlugin:
                 try:
                     _plm_ad.set_active(self._BUDGET_NAME, False)
                 except Exception:
-                    logger.warning("artifact_detection_plugin.py::detect_artifacts fallback", exc_info=True)
+                    logger.warning("artifact_detection_plugin.py::erkennen_artifacts Ersatzpfad", exc_info=True)
         raw = np.nan_to_num(output.numpy().tolist(), nan=0.0, posinf=0.0, neginf=0.0)
         return {
             "artifact_scores": list(raw) if not isinstance(raw, list) else raw,
@@ -172,7 +172,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file("audio_examples/example.wav")
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
     plugin = ArtifactDetectionPlugin("models/artifact_detector.pt")
     result = plugin.detect_artifacts(audio, sr)
     logger.debug(result)

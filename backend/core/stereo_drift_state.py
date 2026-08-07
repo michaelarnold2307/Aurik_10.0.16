@@ -91,7 +91,7 @@ class StereoDriftState:
         """
         if abs(self.accumulated_lag_samples) < 0.5:
             logger.debug(
-                "StereoDriftState: accumulated lag=%.1f samples — below threshold, no correction",
+                "StereoDriftState: accumulated lag=%.1f samples — below Schwelle, no correction",
                 self.accumulated_lag_samples,
             )
             self.final_correction_applied = True
@@ -119,7 +119,7 @@ class StereoDriftState:
             self.final_correction_applied = True
             return corrected
         except Exception as exc:
-            logger.warning("StereoDriftState final correction failed: %s", exc)
+            logger.warning("StereoDriftState final correction fehlgeschlagen: %s", exc)
             self.final_correction_applied = True
             return audio
 

@@ -87,12 +87,12 @@ def _compute_formant_score(frame: np.ndarray, sr: int, formant_refs: list[float]
     scores = []
     for f_ref in formant_refs:
         # Finde Energie in 50Hz-Band um Referenz-Formanten
-        idx = np.argmin(np.abs(freqs - f_ref))
+        idx = int(np.argmin(np.abs(freqs - f_ref)))
         bandwidth = max(1, int(25.0 / (sr / n_fft)))
-        lo = max(0, idx - bandwidth)
-        hi = min(len(spec) - 1, idx + bandwidth)
+        lo = int(max(0, idx - bandwidth))
+        hi = int(min(len(spec) - 1, idx + bandwidth))
 
-        peak_energy = float(np.max(spec[lo : hi + 1]))
+        peak_energy = float(np.max(spec[lo : hi + 1]))  # type: ignore[operator]
         mean_energy = float(np.mean(spec[1:]))  # ohne DC
 
         if mean_energy > 0:
@@ -162,14 +162,14 @@ def analyze_whisper_detail(
         frame_formant.append(formant_score)
         frame_times.append(start / sr)
 
-    frame_rms_db = np.array(frame_rms_db)
-    frame_formant = np.array(frame_formant)
+    frame_rms_db = np.array(frame_rms_db)  # type: ignore[assignment]
+    frame_formant = np.array(frame_formant)  # type: ignore[assignment]
 
     # Whisper-Kandidaten: RMS zwischen Floor und Threshold, + Formant-Score > Schwelle
     whisper_candidates = (
-        (frame_rms_db > WHISPER_RMS_FLOOR_DBFS)
-        & (frame_rms_db < WHISPER_RMS_THRESHOLD_DBFS)
-        & (frame_formant > WHISPER_FORMANT_MIN_CORRELATION)
+        (frame_rms_db > WHISPER_RMS_FLOOR_DBFS)  # type: ignore[operator]
+        & (frame_rms_db < WHISPER_RMS_THRESHOLD_DBFS)  # type: ignore[operator]
+        & (frame_formant > WHISPER_FORMANT_MIN_CORRELATION)  # type: ignore[operator]
     )
 
     # Segmente gruppieren (zusammenhangende Frames)

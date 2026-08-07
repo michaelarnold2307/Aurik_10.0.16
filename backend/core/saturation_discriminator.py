@@ -304,9 +304,9 @@ def discriminate_saturation(
         preserve_segments=preserve_zones,
         repair_segments=repair_zones,
         repair_plan=repair_plan,
-        h2_h4_dominant=h2_h4_dominant,
-        h3_h5_dominant=h3_h5_dominant,
-        onset_is_gradual=onset_is_gradual,
+        h2_h4_dominant=h2_h4_dominant,  # type: ignore[arg-type]
+        h3_h5_dominant=h3_h5_dominant,  # type: ignore[arg-type]
+        onset_is_gradual=onset_is_gradual,  # type: ignore[arg-type]
     )
 
     logger.info(
@@ -343,3 +343,64 @@ def get_saturation_strength_cap(result: SaturationDiscriminationResult, segment_
             else:
                 return 0.40  # Ambiguous → 40%
     return 0.50  # Default
+
+
+@dataclass
+class SaturationClassificationSummary:
+    """Aggregierte Zusammenfassung eines SaturationDiscriminationResult für
+    Aufrufer, die nur die Gesamt-Entscheidung (nicht die Segment-Details) benötigen."""
+
+    result: SaturationDiscriminationResult
+    good_ratio: float  # Anteil "preserve"-Segmente
+    bad_ratio: float  # Anteil "repair"-Segmente
+    preservation_ratio: float  # good / (good + bad), 0.0 wenn beide 0
+
+    def as_dict(self) -> dict:
+        return {
+            "global_classification": self.result.global_classification,
+            "good_ratio": self.good_ratio,
+            "bad_ratio": self.bad_ratio,
+            "preservation_ratio": self.preservation_ratio,
+            "h2_h4_dominant": self.result.h2_h4_dominant,
+            "h3_h5_dominant": self.result.h3_h5_dominant,
+            "onset_is_gradual": self.result.onset_is_gradual,
+        }
+
+
+class SaturationDiscriminator:
+    """Zustandsloser Objekt-Wrapper um `discriminate_saturation()` für Aufrufer,
+    die eine Instanz mit `.classify()` erwarten statt der freien Funktion."""
+
+    def classify(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        transfer_chain: list[str] | None = None,
+        era_decade: int | None = None,
+    ) -> SaturationClassificationSummary:
+        _ = era_decade  # discriminate_saturation() nutzt aktuell keine Era-Information
+        result = discriminate_saturation(audio, sr, transfer_chain=transfer_chain)
+        n = len(result.segments)
+        n_preserve = sum(1 for s in result.segments if s.classification == "preserve")
+        n_repair = sum(1 for s in result.segments if s.classification == "repair")
+        good_ratio = n_preserve / n if n else 0.0
+        bad_ratio = n_repair / n if n else 0.0
+        denom = good_ratio + bad_ratio
+        preservation_ratio = good_ratio / denom if denom > 0 else 0.0
+        return SaturationClassificationSummary(
+            result=result,
+            good_ratio=good_ratio,
+            bad_ratio=bad_ratio,
+            preservation_ratio=preservation_ratio,
+        )
+
+
+_discriminator_instance: SaturationDiscriminator | None = None
+
+
+def get_saturation_discriminator() -> SaturationDiscriminator:
+    """Gibt den SaturationDiscriminator-Singleton zurück."""
+    global _discriminator_instance
+    if _discriminator_instance is None:
+        _discriminator_instance = SaturationDiscriminator()
+    return _discriminator_instance

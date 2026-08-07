@@ -261,9 +261,10 @@ class CalibrationContext:
         Nutzt CIG's _compute_gdd_threshold, befüllt den State aus diesem Context.
         """
         from backend.core.cumulative_interaction_guard import (
-            InteractionGuardState,
             CumulativeInteractionGuard,
+            InteractionGuardState,
         )
+
         guard = CumulativeInteractionGuard()
         state = InteractionGuardState()
         self.apply_to_cig_state(state)
@@ -272,9 +273,8 @@ class CalibrationContext:
     def regression_threshold(self) -> float:
         """§2.29/§2.54 Material- und Restorability-adaptiver REGRESSION_THRESHOLD."""
         from backend.core.per_phase_musical_goals_gate import _get_adaptive_threshold
-        return _get_adaptive_threshold(
-            self.restorability_score, str(self.material_type), self._depth
-        )
+
+        return _get_adaptive_threshold(self.restorability_score, str(self.material_type), self._depth)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

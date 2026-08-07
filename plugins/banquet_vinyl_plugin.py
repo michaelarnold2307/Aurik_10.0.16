@@ -86,7 +86,7 @@ class BanquetVinylPlugin:
             if self._model_path.exists():
                 load_path = self._patch_onnx(self._model_path, patched_path)
             else:
-                logger.warning("BANQUET-ONNX nicht gefunden: %s — DSP-Fallback aktiv", self._model_path)
+                logger.warning("BANQUET-ONNX nicht gefunden: %s — DSP-Ersatzpfad aktiv", self._model_path)
                 return
 
         try:
@@ -96,10 +96,10 @@ class BanquetVinylPlugin:
                 from backend.core.ml_memory_budget import try_allocate as _try_alloc
 
                 if not _try_alloc("BanquetVinyl", size_gb=0.80):
-                    logger.warning("BanquetVinyl: ML-Budget erschöpft — DSP-Fallback.")
+                    logger.warning("BanquetVinyl: ML-Grenze erschöpft — DSP-Ersatzpfad.")
                     return
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
             opts = ort.SessionOptions()
             opts.inter_op_num_threads = 1
@@ -136,9 +136,9 @@ class BanquetVinylPlugin:
                     unload_fn=lambda s=self: setattr(s, "_session", None) or setattr(s, "_model_ok", False),  # type: ignore[func-returns-value,misc]
                 )
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.warning("BANQUET ONNX Ladefehler: %s — DSP-Fallback", exc)
+            logger.warning("BANQUET ONNX Ladefehler: %s — DSP-Ersatzpfad", exc)
             self._session = None
             self._model_ok = False
             try:
@@ -146,7 +146,7 @@ class BanquetVinylPlugin:
 
                 _rel("BanquetVinyl")
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     @staticmethod
     def _patch_onnx(src: Path, dst: Path) -> Path:
@@ -179,7 +179,7 @@ class BanquetVinylPlugin:
                 logger.info("BANQUET: %d Slice-Initialisierer gepatcht → %s", patched, dst.name)
                 return dst
         except Exception as exc:
-            logger.warning("BANQUET: ONNX-Patch fehlgeschlagen (%s) — versuche Original", exc)
+            logger.warning("BANQUET: ONNX-Patch fehlgeschlagen (%s) — versuche Originalsignal", exc)
         return src
 
     # ------------------------------------------------------------------
@@ -214,7 +214,7 @@ class BanquetVinylPlugin:
                 _plm_bvq = _get_plm_fn()
                 _plm_bvq.set_active("BanquetVinyl", True)
             except Exception as _exc:
-                logger.debug("BanquetVinyl: PLM set_active failed: %s", _exc)
+                logger.debug("BanquetVinyl: PLM set_active fehlgeschlagen: %s", _exc)
             try:
                 restored = self._process_onnx(resampled, strength)
             finally:
@@ -222,7 +222,7 @@ class BanquetVinylPlugin:
                     try:
                         _plm_bvq.set_active("BanquetVinyl", False)
                     except Exception as _exc:
-                        logger.debug("BanquetVinyl: PLM unset_active failed: %s", _exc)
+                        logger.debug("BanquetVinyl: PLM unset_active fehlgeschlagen: %s", _exc)
         else:
             restored = self._process_dsp(resampled, res_sr, strength)
 
@@ -282,14 +282,14 @@ class BanquetVinylPlugin:
                         self._session = None
                         logger.warning(
                             "BANQUET ONNX zur Laufzeit deaktiviert (wiederholte Chunk-Fehler)."
-                            " Nutze DSP-Fallback fuer Stabilitaet."
+                            " Nutze DSP-Ersatzpfad fuer Stabilitaet."
                         )
                         try:
                             from backend.core.ml_memory_budget import release as _rel
 
                             _rel("BanquetVinyl")
                         except Exception as _exc:
-                            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
                     chunk_out = self._process_dsp(chunk, self.TARGET_SR, strength)
 
             actual = end - pos
@@ -359,7 +359,7 @@ class BanquetVinylPlugin:
                 feat /= std
             return feat, stft_ctx
         except Exception:
-            logger.warning("banquet_vinyl_plugin.py::_prepare_input fallback", exc_info=True)
+            logger.warning("banquet_vinyl_plugin.py::_prepare_Eingabe Ersatzpfad", exc_info=True)
             return np.zeros((1, 128, 128, 128), dtype=np.float32), np.zeros((128, 128), dtype=np.complex64)
 
     @staticmethod
@@ -397,7 +397,7 @@ class BanquetVinylPlugin:
                     audio_out = np.pad(audio_out, (0, chunk_len - len(audio_out)))
                 return np.tile(audio_out[np.newaxis, :], (channels, 1))  # type: ignore[no-any-return]
         except Exception as _exc:
-            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         # Shape fallback — return silence (chunk exception handler will use DSP)
         return np.zeros((channels, chunk_len), dtype=np.float32)  # type: ignore[no-any-return]
 
@@ -424,7 +424,7 @@ class BanquetVinylPlugin:
                 sos = butter(4, max(20.0, 1.0) / (sr / 2), btype="high", output="sos")
                 x = sosfilt(sos, x).astype(np.float32)
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
             # Median-Declicker
             win = max(3, int(sr * 0.001) | 1)  # ~1 ms, odd
@@ -435,7 +435,7 @@ class BanquetVinylPlugin:
                 mask = diff > thresh
                 x[mask] = smooth[mask]
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
             out[c] = strength * x + (1.0 - strength) * audio[c]
 
@@ -470,15 +470,15 @@ class BanquetVinylPlugin:
             from backend.file_import import load_audio_file
 
             _res = load_audio_file(input_wav, do_carrier_analysis=False)
-            audio = np.asarray(_res["audio"], dtype=np.float32)
-            sr = int(_res["sr"])
+            audio = np.asarray(_res["audio"], dtype=np.float32)  # type: ignore[index]
+            sr = int(_res["sr"])  # type: ignore[index]
             audio = audio[np.newaxis, :] if audio.ndim == 1 else audio.T  # [channels, samples]
             restored = self.process(audio, sr, strength)
             Path(output_wav).parent.mkdir(parents=True, exist_ok=True)
             sf.write(output_wav, restored.T, sr)
             logger.info("✅ BANQUET: %s → %s", input_wav, output_wav)
         except Exception as exc:
-            logger.error("BANQUET process_files fehlgeschlagen: %s", exc)
+            logger.error("BANQUET verarbeiten_files fehlgeschlagen: %s", exc)
             raise
 
 
@@ -498,7 +498,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     if len(sys.argv) < 3:
-        logger.debug("Verwendung: banquet_vinyl_plugin.py <input.wav> <output.wav> [strength=1.0]")
+        logger.debug("Verwendung: banquet_vinyl_plugin.py <Eingabe.wav> <Ausgabe.wav> [strength=1.0]")
         sys.exit(1)
     st = float(sys.argv[3]) if len(sys.argv) > 3 else 1.0
     get_banquet_plugin().process_files(sys.argv[1], sys.argv[2], strength=st)

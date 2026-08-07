@@ -612,7 +612,7 @@ class LimitingPhase(PhaseInterface):
 def _run_manual_demo() -> None:
     """Test der LimitingPhase."""
     logger.debug("=" * 80)
-    logger.debug("Phase 11: Professional Multi-Band True Peak Limiter v2.0")
+    logger.debug("Verarbeitungsschritt 11: Professional Multi-Band True Peak Limiter v2.0")
     logger.debug("=" * 80)
 
     demo_sample_rate = 44100

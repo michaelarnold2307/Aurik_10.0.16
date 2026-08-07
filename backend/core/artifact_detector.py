@@ -80,18 +80,18 @@ class ArtifactDetector:
 
         # §G53b: Spectral hole detection
         hole_score = self._detect_spectral_holes(mono)
-        details["spectral_hole_score_raw"] = hole_score
+        details["spectral_hole_score_raw"] = hole_score  # type: ignore[assignment]
 
         # §G53c: Pre-echo detection
         pre_echo_score = self._detect_pre_echo(mono)
-        details["pre_echo_score_raw"] = pre_echo_score
+        details["pre_echo_score_raw"] = pre_echo_score  # type: ignore[assignment]
 
         # §G53d: Stereo anomalies
         if audio.ndim == 2 and audio.shape[1] >= 2:
             stereo_score = self._detect_stereo_anomalies(audio)
         else:
             stereo_score = 1.0
-        details["stereo_anomaly_score_raw"] = stereo_score
+        details["stereo_anomaly_score_raw"] = stereo_score  # type: ignore[assignment]
 
         # §G53e: Aggregate
         overall = 0.30 * click_score + 0.25 * hole_score + 0.25 * pre_echo_score + 0.20 * stereo_score
@@ -325,7 +325,7 @@ class ArtifactDetector:
     def _to_mono(audio: np.ndarray) -> np.ndarray:
         if audio.ndim == 1:
             return audio
-        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]
 
 
 def compute_artifact_freedom_score(audio: np.ndarray, sr: int = 48000) -> float:

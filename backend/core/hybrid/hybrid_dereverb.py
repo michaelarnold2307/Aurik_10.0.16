@@ -136,12 +136,12 @@ class HybridDereverb:
 
             self.dccrn = get_sgmse_plus_plugin()  # type: ignore[assignment]
             self._sgmse_active = True
-            logger.info("✅ SGMSE+ geladen als Dereverb-Primärmodul (§4.4) — ResembleEnhance als Fallback bereit")
+            logger.info("✅ SGMSE+ geladen als Dereverb-Primärmodul (§4.4) — ResembleEnhance als Ersatzpfad bereit")
             return
         except ImportError as e:
-            logger.debug("SGMSE+ import fehlgeschlagen (%s) — versuche ResembleEnhance Fallback 1", e)
+            logger.debug("SGMSE+ import fehlgeschlagen (%s) — versuche ResembleEnhance Ersatzpfad 1", e)
         except Exception as e:
-            logger.warning("SGMSE+ Init-Fehler (%s) — versuche ResembleEnhance Fallback 1", e)
+            logger.warning("SGMSE+ Init-Fehler (%s) — versuche ResembleEnhance Ersatzpfad 1", e)
 
         # Stufe 2: Resemble-Enhance ONNX (§4.4 Fallback 1)
         try:
@@ -149,12 +149,12 @@ class HybridDereverb:
 
             self.dccrn = ResembleEnhancePlugin()  # type: ignore[assignment]
             self._sgmse_active = False
-            logger.info("ResembleEnhance ML-Stufe für Dereverb geladen (§4.4 Fallback 1)")
+            logger.info("ResembleEnhance ML-Stufe für Dereverb geladen (§4.4 Ersatzpfad 1)")
         except ImportError as e:
-            logger.info("ResembleEnhance nicht verfügbar (%s) — WPE-DSP-Fallback 2 aktiv", e)
+            logger.info("ResembleEnhance nicht verfügbar (%s) — WPE-DSP-Ersatzpfad 2 aktiv", e)
             self.dccrn = None
         except Exception as e:
-            logger.warning("ResembleEnhance-Init fehlgeschlagen (%s) — DSP-only Fallback 2", e)
+            logger.warning("ResembleEnhance-Init fehlgeschlagen (%s) — DSP-only Ersatzpfad 2", e)
             self.dccrn = None
 
     def dereverb(self, audio: np.ndarray, sample_rate: int = 48000) -> DereverbResult:
@@ -181,7 +181,7 @@ class HybridDereverb:
 
         # Stage 1: DSP pre-processing (if enabled)
         if strategy in [DereverbStrategy.DSP_ONLY, DereverbStrategy.HYBRID]:
-            logger.info("Stage 1: Applying DSP spectral gating...")
+            logger.info("Stufe 1: Applying DSP spectral gating...")
             audio, dsp_meta = self._apply_dsp_dereverb(audio, sample_rate)
             dsp_applied = True
             metadata["dsp"] = dsp_meta
@@ -190,7 +190,7 @@ class HybridDereverb:
             reverb_after_dsp = self._estimate_reverb_level(audio, sample_rate)
             metadata["reverb_after_dsp"] = reverb_after_dsp  # type: ignore[assignment]
 
-            logger.info("DSP complete: reverb %.3f → %.3f", reverb_estimate, reverb_after_dsp)
+            logger.info("DSP vollstaendig: reverb %.3f → %.3f", reverb_estimate, reverb_after_dsp)
 
             # Skip DCCRN if reverb already low enough
             if reverb_after_dsp < self.config.reverb_threshold and strategy == DereverbStrategy.HYBRID:
@@ -201,7 +201,7 @@ class HybridDereverb:
         if strategy in [DereverbStrategy.DCCRN_ONLY, DereverbStrategy.HYBRID]:
             if self.dccrn is not None:
                 _ml_name = "SGMSE+" if self._sgmse_active else "ResembleEnhance"
-                logger.info("Stage 2: %s ML-Dereverb-Stufe...", _ml_name)
+                logger.info("Stufe 2: %s ML-Dereverb-Stufe...", _ml_name)
 
                 _skip_ml = not self._has_sufficient_ml_headroom(audio)
                 if self._disable_ml_due_deterministic_error:
@@ -224,7 +224,7 @@ class HybridDereverb:
                     reverb_after_dccrn = self._estimate_reverb_level(audio, sample_rate)
                     metadata["reverb_after_dccrn"] = reverb_after_dccrn
 
-                    logger.info("ML dereverb complete: reverb → %.3f", reverb_after_dccrn)
+                    logger.info("ML dereverb vollstaendig: reverb → %.3f", reverb_after_dccrn)
             else:
                 logger.info("ML-Dereverb nicht verfügbar — WPE-DSP-Ergebnis wird verwendet")
 
@@ -255,7 +255,7 @@ class HybridDereverb:
 
             import psutil
         except Exception as e:
-            logger.warning("hybrid_dereverb.py::_has_sufficient_ml_headroom fallback: %s", e)
+            logger.warning("hybrid_dereverb.py::_has_sufficient_ml_headroom Ersatzpfad: %s", e)
             return True
 
         n_samples = int(
@@ -292,7 +292,7 @@ class HybridDereverb:
 
                 evict_stale_plugins(required_mb=int(required_gb * 1024))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             gc.collect()
             # NOTE: malloc_trim(0) removed — kann SIGABRT verursachen wenn sbrk() im
             # Hintergrund-Thread mit numpy-Allokationen im Restaurierungs-Thread kollidiert.
@@ -326,7 +326,7 @@ class HybridDereverb:
             return DereverbStrategy.DSP_ONLY
         elif reverb_level < 0.5:
             # Moderate reverb - Hybrid recommended
-            logger.info("Moderate reverb (%.3f), Hybrid mode", reverb_level)
+            logger.info("Moderate reverb (%.3f), Hybrid Betriebsart", reverb_level)
             return DereverbStrategy.HYBRID
         else:
             # Heavy reverb - Full ML dereverb
@@ -403,7 +403,7 @@ class HybridDereverb:
             _plm_dereverb = _get_plm_drv()
             _plm_dereverb.set_active(_plm_model_name, True)
         except Exception as e:
-            logger.warning("hybrid_dereverb.py::_apply_dccrn fallback: %s", e)
+            logger.warning("hybrid_dereverb.py::_anwenden_dccrn Ersatzpfad: %s", e)
 
         try:
             audio_in = audio.astype(np.float32)
@@ -506,7 +506,7 @@ class HybridDereverb:
                 try:
                     _plm_dereverb.set_active(_plm_model_name, False)
                 except Exception as e:
-                    logger.warning("hybrid_dereverb.py::unbekannter Fallback: %s", e)
+                    logger.warning("hybrid_dereverb.py::unbekannter Ersatzpfad: %s", e)
 
     def _estimate_reverb_level(self, audio: np.ndarray, sample_rate: int) -> float:
         """
@@ -630,7 +630,7 @@ if __name__ == "__main__":
     reverb_tail = sp_signal.lfilter([1], [1, -0.7], dry)
     reverbed = dry + 0.5 * reverb_tail
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, sample_rate)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, sample_rate)
     logger.debug("")
 
     # Test strategies
@@ -650,11 +650,11 @@ if __name__ == "__main__":
         result = dereverb.dereverb(reverbed, sample_rate)
 
         logger.debug("✅ Strategy used: %s", result.strategy_used.value)
-        logger.debug("   DSP applied: %s", result.dsp_applied)
-        logger.debug("   DCCRN applied: %s", result.dccrn_applied)
+        logger.debug("   DSP angewendet: %s", result.dsp_applied)
+        logger.debug("   DCCRN angewendet: %s", result.dccrn_applied)
         logger.debug("   Reverb estimate: %.3f", result.reverb_estimate)
         logger.debug("   Processing time: %.2fs", result.processing_time)
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test complete")
+    logger.debug("Test vollstaendig")

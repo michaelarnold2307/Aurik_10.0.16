@@ -246,7 +246,7 @@ def test_singmos_prefers_batched_input_shape():
         assert x.ndim == 2
         return {"singmos_pro": 4.2}
 
-    plugin._pseudo_mos_metric = _fake_metric
+    plugin._pseudo_mos_metric = _fake_metric  # type: ignore[assignment]
 
     result = plugin._score_singmos_pro(AUDIO_SINE, SR)
     assert math.isfinite(result.mos)

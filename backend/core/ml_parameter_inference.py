@@ -89,12 +89,12 @@ class MLParameterInferenceEngine:
             try:
                 self.model = joblib.load(model_path)
                 self.is_trained = True
-                logger.info("Model loaded from %s", model_path)
+                logger.info("Model geladen from %s", model_path)
             except Exception as e:
-                logger.warning("Failed to load model from %s: %s", model_path, e)
+                logger.warning("konnte nicht laden model from %s: %s", model_path, e)
                 self.model = None
                 self.is_trained = False
-        logger.info("MLParameterInferenceEngine initialized")
+        logger.info("MLParameterInferenceEngine initialisiert")
 
     def train(self, features: list[dict[str, Any]], targets: list[dict[str, Any]]) -> None:
         """
@@ -106,7 +106,7 @@ class MLParameterInferenceEngine:
         X = [self._dict_to_vector(f) for f in features]
         y = [self._dict_to_vector(t) for t in targets]
         # Für Regression: Zielvektor als np.array
-        y = np.array(y)
+        y = np.array(y)  # type: ignore[assignment]
         self.model = RandomForestRegressor(n_estimators=32)
         self.model.fit(X, y)
         self.is_trained = True

@@ -355,7 +355,7 @@ class DefectAnalysisResult:
                             break
                 return _result
         except Exception as _pr_exc:
-            logger.debug("Perceptual defect rerank non-blocking: %s", _pr_exc)
+            logger.debug("Perceptual defect rerank nicht blockierend: %s", _pr_exc)
 
         # Fallback: technische Sortierung
         return self.get_top_defects(n)
@@ -381,6 +381,7 @@ class DefectAnalysisResult:
                 _sev = float(np.clip(float(getattr(_score, "severity", 0.0)), 0.0, 1.0))
                 _conf = float(np.clip(float(getattr(_score, "confidence", 0.0)), 0.0, 1.0))
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
             if _sev <= 0.0:
                 continue
@@ -421,29 +422,309 @@ class DefectScanner:
     # material_factors: Multiplikator - höher = schwerer hörbar (maskiert)
     AUDIBILITY_THRESHOLDS: dict[str, tuple[float, float, dict[str, float]]] = {
         # Impulsive Defekte
-        "clicks":            (-35.0, 0.30, {"shellac": 1.3, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
-        "pops":              (-28.0, 0.20, {"shellac": 1.3, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
-        "crackle":           (-40.0, 0.50, {"shellac": 1.4, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.3, "dat": 0.75}),
-        "dropout":           (-25.0, 0.10, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
-        "transport_bump":    (-30.0, 0.15, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
+        "clicks": (
+            -35.0,
+            0.30,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.2,
+                "dat": 0.75,
+            },
+        ),
+        "pops": (
+            -28.0,
+            0.20,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.2,
+                "dat": 0.75,
+            },
+        ),
+        "crackle": (
+            -40.0,
+            0.50,
+            {
+                "shellac": 1.4,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.3,
+                "dat": 0.75,
+            },
+        ),
+        "dropout": (
+            -25.0,
+            0.10,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.95,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.1,
+                "dat": 0.75,
+            },
+        ),
+        "transport_bump": (
+            -30.0,
+            0.15,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.1,
+                "dat": 0.75,
+            },
+        ),
         # Rausch-Defekte
-        "hum":               (-45.0, 0.60, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
-        "hiss":              (-38.0, 0.40, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
-        "rumble":            (-42.0, 0.70, {"shellac": 1.4, "vinyl": 1.3, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
-        "noise_level":       (-35.0, 0.35, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
-        "surface_noise":     (-40.0, 0.55, {"shellac": 1.5, "vinyl": 1.4, "tape": 1.0, "cassette": 1.0, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.3, "dat": 0.75}),
+        "hum": (
+            -45.0,
+            0.60,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.2,
+                "dat": 0.75,
+            },
+        ),
+        "hiss": (
+            -38.0,
+            0.40,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.1,
+                "dat": 0.75,
+            },
+        ),
+        "rumble": (
+            -42.0,
+            0.70,
+            {
+                "shellac": 1.4,
+                "vinyl": 1.3,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.2,
+                "dat": 0.75,
+            },
+        ),
+        "noise_level": (
+            -35.0,
+            0.35,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.1,
+                "dat": 0.75,
+            },
+        ),
+        "surface_noise": (
+            -40.0,
+            0.55,
+            {
+                "shellac": 1.5,
+                "vinyl": 1.4,
+                "tape": 1.0,
+                "cassette": 1.0,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.3,
+                "dat": 0.75,
+            },
+        ),
         # Chirurgische Defekte - sehr hörbar, niedrige Schwellen
-        "sibilance":         (-30.0, 0.10, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 1.0, "reel_tape": 1.0, "cd": 1.0, "digital": 1.0, "mp3_low": 1.1, "dat": 1.0}),
-        "vocal_harshness":   (-32.0, 0.08, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 1.0, "reel_tape": 1.0, "cd": 1.0, "digital": 1.0, "mp3_low": 1.1, "dat": 1.0}),
-        "stereo_imbalance":  (1.5,   0.05, {"shellac": 1.0, "vinyl": 1.0, "tape": 1.0, "cassette": 1.0, "reel_tape": 0.9, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
-        "phase_issues":      (-25.0, 0.20, {"shellac": 1.1, "vinyl": 1.05, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
-        "dc_offset":         (-50.0, 0.90, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.2, "dat": 0.75}),
+        "sibilance": (
+            -30.0,
+            0.10,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 1.0,
+                "reel_tape": 1.0,
+                "cd": 1.0,
+                "digital": 1.0,
+                "mp3_low": 1.1,
+                "dat": 1.0,
+            },
+        ),
+        "vocal_harshness": (
+            -32.0,
+            0.08,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 1.0,
+                "reel_tape": 1.0,
+                "cd": 1.0,
+                "digital": 1.0,
+                "mp3_low": 1.1,
+                "dat": 1.0,
+            },
+        ),
+        "stereo_imbalance": (
+            1.5,
+            0.05,
+            {
+                "shellac": 1.0,
+                "vinyl": 1.0,
+                "tape": 1.0,
+                "cassette": 1.0,
+                "reel_tape": 0.9,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.0,
+                "dat": 0.75,
+            },
+        ),
+        "phase_issues": (
+            -25.0,
+            0.20,
+            {
+                "shellac": 1.1,
+                "vinyl": 1.05,
+                "tape": 1.0,
+                "cassette": 0.95,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.0,
+                "dat": 0.75,
+            },
+        ),
+        "dc_offset": (
+            -50.0,
+            0.90,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.2,
+                "dat": 0.75,
+            },
+        ),
         # Spektrale Defekte
-        "bandwidth_loss":    (-3.0,  0.25, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.7, "digital": 0.7, "mp3_low": 1.0, "dat": 0.7}),
-        "pre_echo":          (-30.0, 0.10, {"shellac": 1.1, "vinyl": 1.05, "tape": 1.0, "cassette": 0.95, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 0.9, "dat": 0.75}),
-        "aliasing":          (-35.0, 0.30, {"shellac": 1.2, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.0, "dat": 0.75}),
-        "quantization_noise":(-42.0, 0.50, {"shellac": 1.3, "vinyl": 1.2, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 1.1, "dat": 0.75}),
-        "compression_artifacts": (-32.0, 0.25, {"shellac": 1.1, "vinyl": 1.1, "tape": 1.0, "cassette": 0.9, "reel_tape": 0.85, "cd": 0.8, "digital": 0.8, "mp3_low": 0.8, "dat": 0.75}),
+        "bandwidth_loss": (
+            -3.0,
+            0.25,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.7,
+                "digital": 0.7,
+                "mp3_low": 1.0,
+                "dat": 0.7,
+            },
+        ),
+        "pre_echo": (
+            -30.0,
+            0.10,
+            {
+                "shellac": 1.1,
+                "vinyl": 1.05,
+                "tape": 1.0,
+                "cassette": 0.95,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 0.9,
+                "dat": 0.75,
+            },
+        ),
+        "aliasing": (
+            -35.0,
+            0.30,
+            {
+                "shellac": 1.2,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.0,
+                "dat": 0.75,
+            },
+        ),
+        "quantization_noise": (
+            -42.0,
+            0.50,
+            {
+                "shellac": 1.3,
+                "vinyl": 1.2,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 1.1,
+                "dat": 0.75,
+            },
+        ),
+        "compression_artifacts": (
+            -32.0,
+            0.25,
+            {
+                "shellac": 1.1,
+                "vinyl": 1.1,
+                "tape": 1.0,
+                "cassette": 0.9,
+                "reel_tape": 0.85,
+                "cd": 0.8,
+                "digital": 0.8,
+                "mp3_low": 0.8,
+                "dat": 0.75,
+            },
+        ),
     }
 
     # Material-adaptive Sensitivity-Thresholds
@@ -1322,7 +1603,7 @@ class DefectScanner:
         if ast_classifier is None or audio is None:
             return {}
         try:
-            if not hasattr(ast_classifier, 'is_loaded') or not ast_classifier.is_loaded():
+            if not hasattr(ast_classifier, "is_loaded") or not ast_classifier.is_loaded():
                 return {}
             from backend.core.ast_audio_set_classifier import DEFECT_INSTRUMENT_DISCRIMINATOR
 
@@ -1333,9 +1614,7 @@ class DefectScanner:
             _adjustments: dict[str, float] = {}
             for _defect_name, _instrument_indices in DEFECT_INSTRUMENT_DISCRIMINATOR.items():
                 # Beste Instrument-Konfidenz für diesen Defekttyp
-                _best_conf = max(
-                    (_result.get_prob(i) for i in _instrument_indices), default=0.0
-                )
+                _best_conf = max((_result.get_prob(i) for i in _instrument_indices), default=0.0)
                 if _best_conf >= 0.15:
                     # Konfidenz → Schwellwert-Multiplikator: 0.15→1.3, 0.50→2.0, 0.80→3.0
                     _mult = 1.0 + _best_conf * 2.5
@@ -1350,13 +1629,15 @@ class DefectScanner:
                         self.thresholds[_defect_type] = _new_thresh
                         _adjustments[_defect_name] = _new_thresh
                         logger.debug(
-                            "§v10.304 AST-Threshold: %s %.2f→%.2f (inst_conf=%.2f)",
-                            _defect_name, _old_thresh, _new_thresh, _best_conf,
+                            "§v10.304 AST-Schwelle: %s %.2f→%.2f (inst_conf=%.2f)",
+                            _defect_name,
+                            _old_thresh,
+                            _new_thresh,
+                            _best_conf,
                         )
             if _adjustments:
                 logger.info(
-                    "§v10.304 AST Pre-Filter: %d Defekt-Schwellen angehoben "
-                    "(Instrument-Erkennung)",
+                    "§v10.304 AST Pre-Filter: %d Defekt-Schwellen angehoben (Instrument-Erkennung)",
                     len(_adjustments),
                 )
             return _adjustments
@@ -1365,10 +1646,14 @@ class DefectScanner:
             return {}
 
     @classmethod
-    def is_audible(cls, defect_type: str, severity: float,
-                   material: str = "tape",
-                   signal_rms_db: float = -20.0,
-                   peak_frequency_hz: float = 3000.0) -> bool:  # 3 kHz = max Ohr-Sensitivität
+    def is_audible(
+        cls,
+        defect_type: str,
+        severity: float,
+        material: str = "tape",
+        signal_rms_db: float = -20.0,
+        peak_frequency_hz: float = 3000.0,
+    ) -> bool:  # 3 kHz = max Ohr-Sensitivität
         """§v10.306: Prüft ob ein Defekt für das menschliche Ohr hörbar ist.
 
         Berücksichtigt:
@@ -1467,7 +1752,7 @@ class DefectScanner:
         if audio.ndim == 2 and audio.shape[0] <= 2 and audio.shape[1] > audio.shape[0]:
             audio = audio.T
             logger.debug(
-                "DefectScanner.scan(): channel-first input normalized to shape=%s",
+                "DefectScanner.scan(): channel-first Eingabe normalisiert to shape=%s",
                 audio.shape,
             )
 
@@ -1476,7 +1761,7 @@ class DefectScanner:
         _cache_key = _audio_scan_cache_key(audio, _sr_for_key, material_type)
         with _scan_cache_lock:
             if _cache_key in _scan_cache:
-                logger.debug("DefectScanner Cache-Hit: %s", _cache_key)
+                logger.debug("DefectScanner Zwischenspeicher-Hit: %s", _cache_key)
                 return _scan_cache[_cache_key]  # type: ignore[return-value]
 
         start_time = time.time()
@@ -1656,7 +1941,7 @@ class DefectScanner:
                             [m.value for m in _chain_stage_mats],
                         )
             except Exception as _cta_exc:
-                logger.debug("DefectScanner chain-threshold-merge fehlgeschlagen: %s", _cta_exc)
+                logger.debug("DefectScanner chain-Schwelle-merge fehlgeschlagen: %s", _cta_exc)
 
         # Audio normalisieren für konsistente Detection
         # Treat column-vectors (N, 1) as mono to avoid false stereo indexing
@@ -1791,7 +2076,7 @@ class DefectScanner:
             _flutter_intro = self._detect_flutter(_tape_intro_audio)
             if _wow_intro.severity > scores[DefectType.WOW].severity:
                 logger.info(
-                    "WOW intro-supplement: severity %.3f > center-crop %.3f (tape head startup)",
+                    "WOW intro-supplement: severity %.3f > center-crop %.3f (tape head Start)",
                     _wow_intro.severity,
                     scores[DefectType.WOW].severity,
                 )
@@ -1799,7 +2084,7 @@ class DefectScanner:
                 scores[DefectType.WOW].metadata["intro_supplement"] = True
             if _flutter_intro.severity > scores[DefectType.FLUTTER].severity:
                 logger.info(
-                    "FLUTTER intro-supplement: severity %.3f > center-crop %.3f (tape head startup)",
+                    "FLUTTER intro-supplement: severity %.3f > center-crop %.3f (tape head Start)",
                     _flutter_intro.severity,
                     scores[DefectType.FLUTTER].severity,
                 )
@@ -1949,7 +2234,7 @@ class DefectScanner:
         if material_type in _DIGITAL_NO_BUMP:
             scores[DefectType.TRANSPORT_BUMP] = DefectScore(DefectType.TRANSPORT_BUMP, 0.0, 0.95)
             logger.info(
-                "DefectScanner: TRANSPORT_BUMP skipped (digital material=%s, §9.4a)",
+                "DefectScanner: TRANSPORT_BUMP uebersprungen (digital material=%s, §9.4a)",
                 material_type,
             )
         else:
@@ -2128,7 +2413,7 @@ class DefectScanner:
                         _nc_conf = max(_nc_conf, float(_sub.confidence))
                         _abs_locations.extend((t0 + _seg_off, t1 + _seg_off) for t0, t1 in _sub.locations)
                     except Exception:
-                        logger.debug("Fallback in defect_scanner.py", exc_info=True)
+                        logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
                 scores[_edt].severity = float(np.clip(_nc_sev, 0.0, 1.0))
                 scores[_edt].confidence = float(np.clip(_nc_conf, 0.0, 1.0))
                 if _abs_locations:
@@ -2179,7 +2464,7 @@ class DefectScanner:
                         if _sub.locations:
                             scores[_sdt].locations = [(t0 + _seg_off, t1 + _seg_off) for t0, t1 in _sub.locations]
                     except Exception as _exc:
-                        logger.debug("Non-stationary recheck failed for %s: %s", _sdt, _exc)
+                        logger.debug("Non-stationary recheck fehlgeschlagen for %s: %s", _sdt, _exc)
                 scores[_sdt].severity = float(np.clip(_sev_merged, 0.0, 1.0))
                 scores[_sdt].confidence = float(np.clip(_conf_merged, 0.0, 1.0))
                 if _sev_merged > (_prev_sev + 0.02):
@@ -2332,20 +2617,20 @@ class DefectScanner:
                     if _ch_crackle.locations:
                         _per_channel_locs.setdefault("crackle", {})[_ch_label] = list(_ch_crackle.locations)
                 except Exception as _exc:
-                    logger.debug("Per-channel crackle detection failed (%s): %s", _ch_label, _exc)
+                    logger.debug("Per-channel crackle detection fehlgeschlagen (%s): %s", _ch_label, _exc)
                 try:
                     _ch_clip = self._detect_clipping(_ch_audio)
                     if _ch_clip.locations:
                         _per_channel_locs.setdefault("clipping", {})[_ch_label] = list(_ch_clip.locations)
                 except Exception as _exc:
-                    logger.debug("Per-channel clipping detection failed (%s): %s", _ch_label, _exc)
+                    logger.debug("Per-channel clipping detection fehlgeschlagen (%s): %s", _ch_label, _exc)
                 # Sibilance per channel
                 try:
                     _ch_sib = self._detect_sibilance(_ch_audio)
                     if _ch_sib.locations:
                         _per_channel_locs.setdefault("sibilance", {})[_ch_label] = list(_ch_sib.locations)
                 except Exception as _exc:
-                    logger.debug("Per-channel sibilance detection failed (%s): %s", _ch_label, _exc)
+                    logger.debug("Per-channel sibilance detection fehlgeschlagen (%s): %s", _ch_label, _exc)
                 # Transport bumps per channel - skip for pure digital material
                 # (no tape/disc transport mechanism, §9.4a - same guard as main call)
                 if material_type not in _DIGITAL_NO_BUMP:
@@ -2354,14 +2639,14 @@ class DefectScanner:
                         if _ch_bump.locations:
                             _per_channel_locs.setdefault("transport_bump", {})[_ch_label] = list(_ch_bump.locations)
                     except Exception as _exc:
-                        logger.debug("Per-channel transport_bump detection failed (%s): %s", _ch_label, _exc)
+                        logger.debug("Per-channel transport_bump detection fehlgeschlagen (%s): %s", _ch_label, _exc)
                 # Vocal harshness per channel
                 try:
                     _ch_harsh = self._detect_vocal_harshness(_ch_audio)
                     if _ch_harsh.locations:
                         _per_channel_locs.setdefault("vocal_harshness", {})[_ch_label] = list(_ch_harsh.locations)
                 except Exception as _exc:
-                    logger.debug("Per-channel vocal_harshness detection failed (%s): %s", _ch_label, _exc)
+                    logger.debug("Per-channel vocal_harshness detection fehlgeschlagen (%s): %s", _ch_label, _exc)
                 _tail_tick(f"Kanal-Analyse {_ch_label}")
             # Store per-channel info as metadata on the combined scores
             for _dk, _ch_dict in _per_channel_locs.items():
@@ -2427,7 +2712,7 @@ class DefectScanner:
             )
             scores = _pse_result.scores
         except Exception as _pse_err:
-            logger.warning("PerceptualSalienceEstimator failed (non-critical): %s", _pse_err)
+            logger.warning("PerceptualSalienceEstimator fehlgeschlagen (unkritisch): %s", _pse_err)
         _tail_tick("Perceptual Salience")
 
         # Post-calibration: material-aware confidence stabilization and
@@ -2446,7 +2731,7 @@ class DefectScanner:
         duration = len(audio_mono) / sr
 
         logger.info(
-            "DefectScan completed: %.2fs für %.1fs Audio (%.1f%% overhead)",
+            "DefectScan abgeschlossen: %.2fs für %.1fs Audio (%.1f%% overhead)",
             analysis_time,
             duration,
             analysis_time / duration * 100,
@@ -2461,7 +2746,7 @@ class DefectScanner:
         if forensic_medium_result is not None and hasattr(forensic_medium_result, "transfer_chain"):
             _fmd_result = forensic_medium_result
             logger.debug(
-                "[SCAN] ForensicMediumDetector: gecachtes Ergebnis verwendet - kein erneuter Detect-Aufruf "
+                "[SCAN] ForensicMediumDetector: gecachtes Ergebnis verwendet - kein erneuter erkennen-Aufruf "
                 "(primary_material=%s, chain=%s)",
                 getattr(_fmd_result, "primary_material", "?"),
                 getattr(_fmd_result, "transfer_chain", "?"),
@@ -2473,7 +2758,7 @@ class DefectScanner:
                 # Für lange Dateien: nur erste 30 s analysieren (Geschwindigkeit)
                 _max_forensic = sr * 30
                 _audio_forensic = audio_mono[:_max_forensic] if len(audio_mono) > _max_forensic else audio_mono
-                logger.debug("[SCAN] MediumDetector.detect() → %.1fs Audio ...", len(_audio_forensic) / sr)
+                logger.debug("[SCAN] MediumDetector.erkennen() → %.1fs Audio ...", len(_audio_forensic) / sr)
                 _fmd_result = _ForensicMD().detect(_audio_forensic, sr, file_ext=file_ext)
                 # MediumDetectionResult ist ein Dataclass - getattr statt .get()
                 _multi = getattr(_fmd_result, "is_multi_generation", None)
@@ -2498,7 +2783,7 @@ class DefectScanner:
                 _x_bias.metadata["fallback_primary_material"] = str(getattr(material_type, "value", material_type))
                 scores[DefectType.BIAS_ERROR] = _x_bias
                 logger.info(
-                    "DefectScanner: BIAS_ERROR cross-chain fallback: chain=%s → severity=%.3f",
+                    "DefectScanner: BIAS_ERROR cross-chain Ersatzpfad: chain=%s → severity=%.3f",
                     getattr(_fmd_result, "transfer_chain", "?"),
                     _x_bias.severity,
                 )
@@ -2512,7 +2797,7 @@ class DefectScanner:
                 _x_alias.metadata["cross_material_fallback"] = True
                 scores[DefectType.ALIASING] = _x_alias
                 logger.info(
-                    "DefectScanner: ALIASING cross-chain fallback: chain=%s → severity=%.3f",
+                    "DefectScanner: ALIASING cross-chain Ersatzpfad: chain=%s → severity=%.3f",
                     getattr(_fmd_result, "transfer_chain", "?"),
                     _x_alias.severity,
                 )
@@ -2633,7 +2918,7 @@ class DefectScanner:
                     _cto_score.metadata["chain_stage_defect"] = True
                     _cto_score.metadata["chain_threshold_override"] = True
                     logger.debug(
-                        "chain-stage annotation: %s severity %.3f→%.3f scale=%.2f conf=%.2f",
+                        "chain-Stufe annotation: %s severity %.3f→%.3f scale=%.2f conf=%.2f",
                         _cto_dt.value,
                         _cto_score.metadata.get("chain_severity_raw", _cto_score.severity),
                         _cto_score.severity,
@@ -2641,7 +2926,7 @@ class DefectScanner:
                         _cto_score.confidence,
                     )
             except Exception as _cann_exc:
-                logger.debug("Chain-stage annotation fehlgeschlagen: %s", _cann_exc)
+                logger.debug("Chain-Stufe annotation fehlgeschlagen: %s", _cann_exc)
 
         _prog(100)
         _scan_result = DefectAnalysisResult(
@@ -2672,7 +2957,7 @@ class DefectScanner:
             _scan_result.metadata["focus_defect_count"] = int(len(_focus_map))
             _scan_result.metadata["focus_defects_source"] = "severity_confidence_weighted"
         except Exception as _focus_exc:
-            logger.debug("focus_defect_map generation failed: %s", _focus_exc)
+            logger.debug("focus_defect_map generation fehlgeschlagen: %s", _focus_exc)
 
         # §9.7.1 Cache-Write - Ergebnis für künftige identische Aufrufe sichern
         with _scan_cache_lock:
@@ -2945,10 +3230,10 @@ class DefectScanner:
         best_score = scores[best_material]
 
         if best_score > 0.5:
-            logger.info("Detected mono material: %s (score=%.2f)", best_material.value, best_score)
+            logger.info("erkannt mono material: %s (Wert=%.2f)", best_material.value, best_score)
             return best_material
         else:
-            logger.warning("Mono material unclear (best score=%.2f), using UNKNOWN", best_score)
+            logger.warning("Mono material unclear (best Wert=%.2f), using UNKNOWN", best_score)
             return MaterialType.UNKNOWN
 
     def _detect_stereo_material(self, audio: np.ndarray) -> MaterialType:
@@ -3147,7 +3432,7 @@ class DefectScanner:
 
         best_material = max(scores.items(), key=lambda x: x[1])
         logger.debug("Material scores: %s", scores)
-        logger.info("Detected material: %s (score: %.2f)", best_material[0].value, best_material[1])
+        logger.info("erkannt material: %s (Wert: %.2f)", best_material[0].value, best_material[1])
 
         return best_material[0]
 
@@ -3178,6 +3463,13 @@ class DefectScanner:
         2. Transient-width discrimination: only events spanning ≤ MAX_CLICK_WIDTH
            samples are accepted.  Musical transients (drums, plucks) are wider
            than true clicks (≤ 0.15 ms).
+        3. Periodicity guard: a smooth periodic tone's per-cycle derivative maximum
+           is topologically identical to a narrow click (single isolated sample with
+           low diff immediately before/after) — guards 1+2 alone cannot distinguish
+           them. Real clicks occur at irregular, defect-tied intervals; a near-perfectly
+           regular event grid (low coefficient of variation of inter-event spacing) is
+           almost always harmonic/tonal self-triggering, not genuine clicks (periodic
+           mechanical repeats are the domain of GROOVE_ECHO/SCRAPE_FLUTTER, not CLICKS).
         """
         if audio.ndim == 2:
             audio = np.mean(audio, axis=1)
@@ -3260,6 +3552,28 @@ class DefectScanner:
 
         verified_groups.sort(key=lambda group: group[0])
 
+        # --- Anti-FP guard 3: periodicity discount (harmonic/tonal self-triggering) ---
+        # A near-perfectly regular inter-event spacing (low coefficient of variation)
+        # means the "clicks" are almost certainly the recurring per-cycle derivative
+        # peak of a clean tone, not sporadic physical defects. Requires ≥ 8 events for
+        # a statistically meaningful spacing estimate.
+        _periodicity_discount = 1.0
+        if len(verified_groups) >= 8:
+            _starts = np.array([g[0] for g in verified_groups], dtype=np.float64)
+            _intervals = np.diff(_starts)
+            if len(_intervals) >= 6:
+                _mean_interval = float(np.mean(_intervals))
+                _std_interval = float(np.std(_intervals))
+                if _mean_interval > 0 and (_std_interval / _mean_interval) < 0.10:
+                    _periodicity_discount = 0.10
+                    logger.debug(
+                        "§Anti-FP-3 Click-Periodizitäts-Guard: %d Events, CV=%.3f → "
+                        "wahrscheinlich tonales Self-Triggering, severity ×%.2f",
+                        len(verified_groups),
+                        _std_interval / _mean_interval,
+                        _periodicity_discount,
+                    )
+
         if len(verified_groups) == 0:
             return DefectScore(
                 DefectType.CLICKS,
@@ -3291,9 +3605,10 @@ class DefectScanner:
             # AR augments diff-based severity; never reduces (conservative lower-bound)
             click_rate = max(click_rate, ar_rate * 0.80)
         except Exception as _ar_exc:
-            logger.debug("AR click augmentation failed: %s", _ar_exc)
+            logger.debug("AR click augmentation fehlgeschlagen: %s", _ar_exc)
 
         severity = min(1.0, click_rate / 20)  # 20 clicks/sec = severity 1.0
+        severity = float(np.clip(severity * _periodicity_discount, 0.0, 1.0))
 
         # §CODEC-DISKRIMINATOR: MP3 block-boundary artifacts → 26ms-Gitter-Check
         _cd = getattr(self, "_codec_disc", None)
@@ -3316,6 +3631,7 @@ class DefectScanner:
                 "total_clicks": len(verified_groups),
                 "rejected_as_transients": len(click_groups) - len(verified_groups),
                 "strict_impulse_candidates": len(strict_indices),
+                "periodicity_discount": _periodicity_discount,
             },
         )
 
@@ -3590,7 +3906,7 @@ class DefectScanner:
                 if _sub40_e > _hum_band_e * 3.0 and best_sharpness < 3.0:
                     best_ratio *= 0.25  # Sub-40 Hz dominates → likely rumble, not hum
             except Exception as _exc:
-                logger.debug("Hum sub-40 Hz rumble guard failed: %s", _exc)
+                logger.debug("Hum sub-40 Hz rumble guard fehlgeschlagen: %s", _exc)
 
         # --- Anti-FP: Harmonic decay validation ---
         # Real hum has monotonically decaying harmonics. Random bass doesn't.
@@ -4403,7 +4719,7 @@ class DefectScanner:
                 blockiness = float(np.mean(d) / (np.mean(frame_energy) + 1e-12))
                 blockiness_subscore = float(np.clip((blockiness - 0.20) / 0.80, 0.0, 1.0))
         except Exception as e:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
 
         # Konservatives Aggregat: Clipping darf dominieren, sonst gewichteter Mix.
         aggregate = max(
@@ -4973,7 +5289,7 @@ class DefectScanner:
         if len(audio_mono) < self.sample_rate * 0.05:
             return DefectScore(DefectType.MPEG_FRAME_LOSS, 0.0, 0.5)
 
-        locations, confidence = detect_mpeg_frame_loss(audio_mono, self.sample_rate)
+        locations, confidence = detect_mpeg_frame_loss(audio_mono, self.sample_rate)  # type: ignore[misc]
 
         duration = len(audio_mono) / max(self.sample_rate, 1)
         event_rate = len(locations) / max(duration, 1e-6)
@@ -5110,7 +5426,9 @@ class DefectScanner:
                             },
                         )
                     # Tube/tape character - preserve, do NOT repair
-                    logger.debug("§6.3 _detect_clipping: SOFT_SATURATION erkannt (even-harmonic profile) - kein Repair")
+                    logger.debug(
+                        "§6.3 _erkennen_clipping: SOFT_SATURATION erkannt (even-harmonic Profil) - kein Repair"
+                    )
                     return DefectScore(
                         defect_type=DefectType.SOFT_SATURATION,
                         severity=0.0,
@@ -5131,7 +5449,7 @@ class DefectScanner:
                     for g in groups:
                         locations.append((float(g[0]) / self.sample_rate, float(g[-1]) / self.sample_rate))
                 logger.debug(
-                    "§6.3 _detect_clipping: CLIPPING erkannt (odd-harmonic profile) - severity=%.3f flat_tops=%.4f",
+                    "§6.3 _erkennen_clipping: CLIPPING erkannt (odd-harmonic Profil) - severity=%.3f flat_tops=%.4f",
                     severity,
                     hard_clip_ratio,
                 )
@@ -5149,7 +5467,7 @@ class DefectScanner:
                     },
                 )
             except Exception as _thd_exc:
-                logger.debug("§6.3 THD-Diskriminierung fehlgeschlagen, Amplitude-Fallback: %s", _thd_exc)
+                logger.debug("§6.3 THD-Diskriminierung fehlgeschlagen, Amplitude-Ersatzpfad: %s", _thd_exc)
 
         # Amplitude-only fallback (wenn clipping_detection nicht verfügbar)
         audio_norm = audio / peak
@@ -5910,7 +6228,7 @@ class DefectScanner:
                     if_std = float(np.std(inst_freq[valid]))
                     if_variance = float(np.clip(if_std / median_if - 0.05, 0.0, 1.0))
         except (ImportError, ValueError) as _exc:
-            logger.debug("Instantaneous frequency variance failed: %s", _exc)
+            logger.debug("Instantaneous frequency variance fehlgeschlagen: %s", _exc)
 
         # --- 3. HF spectral variance across segments ---
         seg_len = min(8192, n // 4)
@@ -5986,7 +6304,7 @@ class DefectScanner:
                             # Jitter sidebands: ratio typically 0.05-0.30; pure signal < 0.01
                             sev_bitto = float(np.clip((mean_sb_ratio - 0.03) / 0.25, 0.0, 1.0))
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
 
         raw_severity = 0.22 * sev_zc + 0.26 * sev_if + 0.22 * sev_hf + 0.16 * sev_sb + 0.14 * sev_bitto
 
@@ -6242,7 +6560,7 @@ class DefectScanner:
                 metadata={"even_ratio": even_ratio, "flat_top_ratio": flat_tops},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.SOFT_SATURATION, 0.0, 0.3)
 
     def _detect_sibilance(self, audio: np.ndarray) -> DefectScore:
@@ -6379,7 +6697,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.SIBILANCE, 0.0, 0.3)
 
     def _detect_vocal_harshness(self, audio: np.ndarray) -> DefectScore:
@@ -6541,7 +6859,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.VOCAL_HARSHNESS, 0.0, 0.3)
 
     def _detect_bias_error(self, audio: np.ndarray, _bypass_material_gate: bool = False) -> DefectScore:
@@ -6651,7 +6969,7 @@ class DefectScanner:
                 },
             )
         except Exception as e:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.BIAS_ERROR, 0.0, 0.3)
 
     def _detect_dolby_nr_mismatch(self, audio: np.ndarray) -> DefectScore:
@@ -6755,7 +7073,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.DOLBY_NR_MISMATCH, 0.0, 0.3)
 
     def _detect_tape_head_level_dips(self, audio: np.ndarray) -> DefectScore:
@@ -6800,13 +7118,14 @@ class DefectScanner:
             # durch MP3-Smoothing und Kassetten-Rauschboden.
             try:
                 from backend.core.calibration_context import get_calibration_context
+
                 _dctx = get_calibration_context()
                 if _dctx is not None and _dctx.transfer_chain_depth >= 4:
                     env_hop = max(1, int(0.008 * sr))  # 8 ms - feinere Auflösung
                     ref_win_s = 0.350  # 350 ms - reagiert schneller
                     min_dip_frames = 2  # 20 ms minimum - kürzere Dips
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
             n_frames = max(0, (n - env_win) // env_hop)
             if n_frames < 10:
@@ -6832,7 +7151,13 @@ class DefectScanner:
             # Stellen hörbar, in lauten nicht.
             _local_dyn = float(np.percentile(rms_db, 90) - np.percentile(rms_db, 10) + 1.0)
             # §v10.131 Depth-adaptive floor: Kassette braucht sensitiveren Floor
-            _thresh_floor = 1.5 if (locals().get('_dctx') is not None and getattr(locals().get('_dctx'), 'transfer_chain_depth', 1) >= 4) else 2.0
+            _thresh_floor = (
+                1.5
+                if (
+                    locals().get("_dctx") is not None and getattr(locals().get("_dctx"), "transfer_chain_depth", 1) >= 4
+                )
+                else 2.0
+            )
             dip_thresh_db = float(np.clip(_local_dyn / 8.0, _thresh_floor, 5.0))
 
             # Dip mask
@@ -6938,7 +7263,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.TAPE_HEAD_LEVEL_DIP, 0.0, 0.3)
 
     @staticmethod
@@ -7079,7 +7404,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.TAPE_HEAD_CLOG, 0.0, 0.3)
 
     @staticmethod
@@ -7112,7 +7437,7 @@ class DefectScanner:
             chain = str(getattr(fmd_result, "transfer_chain", "") or getattr(fmd_result, "chain", "")).lower()
             return any(t in chain for t in ("tape", "reel_tape", "cassette", "wire_recording"))
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return False
 
     @staticmethod
@@ -7289,7 +7614,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.AMPLITUDE_DRIFT, 0.0, 0.3)
 
     def _detect_riaa_curve_error(self, audio: np.ndarray) -> DefectScore:
@@ -7368,7 +7693,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.RIAA_CURVE_ERROR, 0.0, 0.3)
 
     def _detect_head_wear(self, audio: np.ndarray) -> DefectScore:
@@ -7462,7 +7787,7 @@ class DefectScanner:
                 },
             )
         except Exception as e:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.HEAD_WEAR, 0.0, 0.3)
 
     def _detect_transient_smearing(self, audio: np.ndarray) -> DefectScore:
@@ -7613,7 +7938,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.TRANSIENT_SMEARING, 0.0, 0.3)
 
     def _detect_pre_echo(self, audio: np.ndarray) -> DefectScore:
@@ -7787,7 +8112,7 @@ class DefectScanner:
                             pre_echo_locations.append((start_s, end_s))
             except Exception:
                 # Non-blocking: Heuristikpfad bleibt voll funktionsfähig.
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
             # Event count bonus: many pre-echoes = systematic problem
             n_events = len(short_ratios) + len(long_ratios) + codec_event_count
@@ -7831,7 +8156,7 @@ class DefectScanner:
                         fallback_sev = float(np.clip((fallback_rel_mean - 0.05) / 0.30, 0.0, 0.7))
                         raw_severity = max(raw_severity, fallback_sev)
                 except Exception:
-                    logger.debug("Fallback in defect_scanner.py", exc_info=True)
+                    logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
 
             n_events += fallback_events
             event_bonus = float(np.clip(n_events / 10.0, 0.0, 0.3))
@@ -7872,7 +8197,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.PRE_ECHO, 0.0, 0.3)
 
     def _detect_aliasing(self, audio: np.ndarray, _bypass_material_gate: bool = False) -> DefectScore:
@@ -7952,7 +8277,7 @@ class DefectScanner:
                 metadata={"near_nyquist_ratio": near_nyq_ratio, "nyquist_hz": nyquist},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.ALIASING, 0.0, 0.3)
 
     # ========== v10.0.0: 12 neue SOTA-Detektoren ==========
@@ -8036,7 +8361,7 @@ class DefectScanner:
                 metadata={"correlation": round(corr, 4), "noise_signal_ratio": round(ratio, 6)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.MODULATION_NOISE, 0.0, 0.3)
 
     def _detect_inner_groove_distortion(self, audio: np.ndarray) -> DefectScore:
@@ -8105,7 +8430,7 @@ class DefectScanner:
                 metadata={"thd_per_quarter": [round(v, 6) for v in thd_values], "slope": round(slope, 4)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.INNER_GROOVE_DISTORTION, 0.0, 0.3)
 
     def _detect_groove_echo(self, audio: np.ndarray) -> DefectScore:
@@ -8224,7 +8549,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.GROOVE_ECHO, 0.0, 0.3)
 
     def _detect_crosstalk(self, audio: np.ndarray) -> DefectScore:
@@ -8293,7 +8618,7 @@ class DefectScanner:
                 metadata={"mean_coherence": round(mean_coherence, 4), "delay_ratio": round(delay_ratio, 4)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.CROSSTALK, 0.0, 0.3)
 
     def _detect_intermodulation_distortion(self, audio: np.ndarray) -> DefectScore:
@@ -8384,7 +8709,7 @@ class DefectScanner:
                 metadata={"n_imd_products": len(imd_evidence), "mean_imd_level_db": round(mean_imd, 2)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.INTERMODULATION_DISTORTION, 0.0, 0.3)
 
     def _detect_tape_splice_artifact(self, audio: np.ndarray) -> DefectScore:
@@ -8475,7 +8800,7 @@ class DefectScanner:
                 metadata={"n_splices": len(splice_events), "mean_jump_db": round(mean_jump, 2)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.TAPE_SPLICE_ARTIFACT, 0.0, 0.3)
 
     def _detect_hf_remanence_loss(self, audio: np.ndarray) -> DefectScore:
@@ -8545,7 +8870,7 @@ class DefectScanner:
                 metadata={"slope_db_octave": round(slope_db_per_octave, 2), "n_ghost_harmonics": n_ghost},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.HF_REMANENCE_LOSS, 0.0, 0.3)
 
     def _detect_stylus_damage(self, audio: np.ndarray) -> DefectScore:
@@ -8618,7 +8943,7 @@ class DefectScanner:
                 metadata={"odd_ratio": round(odd_ratio, 4), "waveform_asymmetry": round(asym, 4)},
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.STYLUS_DAMAGE, 0.0, 0.3)
 
     def _detect_sticky_shed_residue(self, audio: np.ndarray) -> DefectScore:
@@ -8724,7 +9049,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.STICKY_SHED_RESIDUE, 0.0, 0.3)
 
     def _detect_multiband_wow_flutter(self, audio: np.ndarray) -> DefectScore:
@@ -8850,7 +9175,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.MULTIBAND_WOW_FLUTTER, 0.0, 0.3)
 
     def _detect_generation_loss(self, audio: np.ndarray) -> DefectScore:
@@ -8918,7 +9243,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.GENERATION_LOSS, 0.0, 0.3)
 
     def _detect_motor_interference(self, audio: np.ndarray) -> DefectScore:
@@ -9032,7 +9357,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.MOTOR_INTERFERENCE, 0.0, 0.3)
 
     # ── v10.0.0: 7 neue Detektionsmethoden ───────────────────────────────────
@@ -9104,7 +9429,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.PROXIMITY_EFFECT_EXCESS, 0.0, 0.3)
 
     def _detect_room_mode_resonance(self, audio: np.ndarray) -> DefectScore:
@@ -9186,7 +9511,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.ROOM_MODE_RESONANCE, 0.0, 0.3)
 
     def _detect_nr_breathing_artifact(self, audio: np.ndarray) -> DefectScore:
@@ -9271,7 +9596,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.NR_BREATHING_ARTIFACT, 0.0, 0.3)
 
     def _detect_flutter_spectral_sidebands(self, audio: np.ndarray) -> DefectScore:
@@ -9353,7 +9678,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.FLUTTER_SPECTRAL_SIDEBANDS, 0.0, 0.3)
 
     def _detect_scrape_flutter(self, audio: np.ndarray) -> DefectScore:
@@ -9440,7 +9765,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.SCRAPE_FLUTTER, 0.0, 0.3)
 
     def _detect_speed_calibration_error(self, audio: np.ndarray) -> DefectScore:
@@ -9516,7 +9841,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.SPEED_CALIBRATION_ERROR, 0.0, 0.3)
 
     def _detect_overload_distortion(self, audio: np.ndarray) -> DefectScore:
@@ -9614,7 +9939,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.OVERLOAD_DISTORTION, 0.0, 0.3)
 
     def scan_parallel(self, audio: np.ndarray, sr: int, max_workers: int = 4) -> DefectAnalysisResult:
@@ -9646,10 +9971,10 @@ class DefectScanner:
                 try:
                     results[name] = future.result(timeout=120)
                 except Exception as e:
-                    logger.warning("Parallel scan group '%s' failed: %s", name, e)
+                    logger.warning("Parallel scan group '%s' fehlgeschlagen: %s", name, e)
 
         # Merge results
-        return self._merge_parallel_results(audio, sr, results)
+        return self._merge_parallel_results(audio, sr, results)  # type: ignore[no-any-return]
 
     def _scan_spectral_defects(self, audio, sr):
         """Gruppe 1: Spektrale Defekte."""
@@ -9700,6 +10025,7 @@ class DefectScanner:
                             corr_sum += corr
                             n_pairs += 1
                     except Exception:
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                         continue
         if n_pairs == 0:
             return False
@@ -9779,7 +10105,7 @@ class DefectScanner:
                 },
             )
         except Exception:
-            logger.debug("Fallback in defect_scanner.py", exc_info=True)
+            logger.debug("Ersatzpfad in defect_scanner.py", exc_info=True)
             return DefectScore(DefectType.LACQUER_DISC_DEGRADATION, 0.0, 0.3)
 
 
@@ -10087,7 +10413,7 @@ if __name__ == "__main__":
     logger.debug("Material: %s", _result.material_type.value)
     logger.debug("Duration: %.1fs", _result.duration_seconds)
     logger.debug(
-        "Analysis Time: %.3fs (%.1f%% overhead)",
+        "Analyse Time: %.3fs (%.1f%% overhead)",
         _result.analysis_time_seconds,
         _result.analysis_time_seconds / _result.duration_seconds * 100,
     )

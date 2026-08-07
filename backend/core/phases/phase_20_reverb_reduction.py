@@ -294,13 +294,13 @@ class ReverbReduction(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity, compute_per_band_nr_mask
 
             _pim = apply_pim_intensity(kwargs, "reverb", default_nr=0.5, default_de_ess=0.3, default_comp=1.0)
-            if "noise_reduction_strength" in kwargs:
-                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             _pim_map = kwargs.get("pim_intensity_map")
+            if _pim_map is not None and "noise_reduction_strength" in kwargs:
+                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             if _pim_map is not None:
                 _per_band_mask = compute_per_band_nr_mask(_pim_map, sample_rate)
         except Exception as e:
-            logger.warning("phase_20_reverb_reduction.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_20_reverb_reduction.py::verarbeiten Ersatzpfad: %s", e)
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         audio, _p20_transposed = to_channels_last(audio)
@@ -313,7 +313,7 @@ class ReverbReduction(PhaseInterface):
 
             _npa_result_20 = get_natural_performance_detector().detect(audio, sample_rate)
         except Exception as _npa_exc_20:
-            logger.debug("§2.46f NPA detection non-blocking: %s", _npa_exc_20)
+            logger.debug("§2.46f NPA detection nicht blockierend: %s", _npa_exc_20)
 
         # §0p Formant-Integrity pre-snapshot — §0p: F1–F4 dürfen durch keine Phase um mehr als ±15% verschoben werden
         _f1_pre_20 = None
@@ -326,11 +326,11 @@ class ReverbReduction(PhaseInterface):
                 _lfc_res_20 = _get_lfc_20().track(_ft_in_20.astype(np.float32), sample_rate)
                 _f1_pre_20 = float(_lfc_res_20.get("f1_mean", 0.0)) or None
             except Exception as e:
-                logger.warning("phase_20_reverb_reduction.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_20_reverb_reduction.py::verarbeiten Ersatzpfad: %s", e)
 
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        strength = self.REDUCTION_STRENGTH.get(_mk, 0.4)
-        damping = self.TAIL_DAMPING.get(_mk, 0.6)
+        strength = self.REDUCTION_STRENGTH.get(_mk, 0.4)  # type: ignore[call-overload]
+        damping = self.TAIL_DAMPING.get(_mk, 0.6)  # type: ignore[call-overload]
 
         # Locality-aware intensity control from UV3.
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
@@ -347,7 +347,7 @@ class ReverbReduction(PhaseInterface):
             _nmr_result_20 = _nmr_fn_20(audio, sample_rate)
             if not _nmr_result_20.ok:
                 logger.warning(
-                    "Phase20 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt20 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -357,12 +357,12 @@ class ReverbReduction(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase20 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt20 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_20.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_20:  # pylint: disable=broad-except
-            logger.debug("Phase20 §V40 NMR non-blocking: %s", _nmr_exc_20)
+            logger.debug("Verarbeitungsschritt20 §V40 NMR nicht blockierend: %s", _nmr_exc_20)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -393,22 +393,22 @@ class ReverbReduction(PhaseInterface):
         genre_label = kwargs.get("genre_label", "Unbekannt")
         if genre_label in ("Klassik", "Oper"):
             strength = min(strength, 0.25)
-            logger.debug("Phase 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
+            logger.debug("Verarbeitungsschritt 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
         elif genre_label == "Jazz":
             strength = min(strength, 0.30)
-            logger.debug("Phase 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
+            logger.debug("Verarbeitungsschritt 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
         elif genre_label == "Reggae":
             # Dub/Echo-Reverb is an iconic genre-defining device — protect aggressively.
             strength = min(strength, 0.20)
-            logger.debug("Phase 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
+            logger.debug("Verarbeitungsschritt 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
         elif genre_label == "Gospel":
             # Church reverb is authenticity, not artifact (§0).
             strength = min(strength, 0.30)
-            logger.debug("Phase 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
+            logger.debug("Verarbeitungsschritt 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
         elif genre_label == "Folk":
             # Small-room naturalness is part of the performance — preserve gently.
             strength = min(strength, 0.40)
-            logger.debug("Phase 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
+            logger.debug("Verarbeitungsschritt 20: Genre=%s → reverb strength capped to %.2f", genre_label, strength)
 
         # Vocal-preservation: avoid over-dereverb on singing-heavy content.
         _vocal_conf_20 = float(kwargs.get("vocal_confidence", kwargs.get("panns_singing_confidence", 0.0)))
@@ -417,7 +417,7 @@ class ReverbReduction(PhaseInterface):
             _vocal_cap_20 = float(np.clip(0.38 - 0.10 * _vocal_conf_20, 0.28, 0.38))
             if strength > _vocal_cap_20:
                 logger.debug(
-                    "Phase 20: vocal guard active (conf=%.2f) → strength %.2f -> %.2f",
+                    "Verarbeitungsschritt 20: vocal guard active (conf=%.2f) → strength %.2f -> %.2f",
                     _vocal_conf_20,
                     strength,
                     _vocal_cap_20,
@@ -438,7 +438,7 @@ class ReverbReduction(PhaseInterface):
             _eb_scale_20 = float(10.0 ** (_ctx_energy_bias_20 / 20.0))  # e.g. -9 dB → 0.355
             strength = float(np.clip(strength * max(_eb_scale_20, 0.20), 0.05, strength))
             logger.debug(
-                "§0j phase_20 vocal_energy_bias_db=%.1f dB → strength scaled to %.3f",
+                "§0j Verarbeitungsschritt_20 vocal_energy_bias_db=%.1f dB → strength scaled to %.3f",
                 _ctx_energy_bias_20,
                 strength,
             )
@@ -448,7 +448,7 @@ class ReverbReduction(PhaseInterface):
         decade = kwargs.get("decade")
         if decade is not None and decade <= 1950:
             strength = min(strength, 0.30)
-            logger.debug("Phase 20: decade=%d → reverb strength capped to %.2f", decade, strength)
+            logger.debug("Verarbeitungsschritt 20: decade=%d → reverb strength capped to %.2f", decade, strength)
 
         # §2.46f Room-Acoustics-Fingerprint guard — authentic room character protection.
         # Injected by UV3 from room_acoustics_fingerprinter into _restoration_context.
@@ -456,7 +456,7 @@ class ReverbReduction(PhaseInterface):
         _raf_cap_20 = float(_raf_20.get("dereverb_strength_cap", 1.0))
         if _raf_cap_20 < 1.0 and strength > _raf_cap_20:
             logger.debug(
-                "Phase 20 §2.46f RoomAcoustics guard: rt60=%.2fs room=%s → strength %.2f → %.2f",
+                "Verarbeitungsschritt 20 §2.46f RoomAcoustics guard: rt60=%.2fs room=%s → strength %.2f → %.2f",
                 float(_raf_20.get("rt60_s", 0.0)),
                 _raf_20.get("room_type", "?"),
                 strength,
@@ -476,7 +476,7 @@ class ReverbReduction(PhaseInterface):
                 use_lightweight = False
             elif use_lightweight:
                 logger.info(
-                    "Phase 20: Resource constraint detected, forcing DSP-only mode (CPU: %.1f%%, Memory: %.1f%%)",
+                    "Verarbeitungsschritt 20: Resource constraint erkannt, forcing DSP-only Betriebsart (CPU: %.1f%%, Memory: %.1f%%)",
                     adaptive_resource_manager.get_cpu_usage(),
                     adaptive_resource_manager.get_memory_usage(),
                 )
@@ -502,7 +502,7 @@ class ReverbReduction(PhaseInterface):
                 # §0 Primum non nocere: near-zero reverb on digital material → passthrough.
                 # Any dereverb processing would only add artifacts.
                 logger.info(
-                    "Phase 20: Fix11C — digital=%s, reverb_severity=%.3f < 0.10 → passthrough (§0 Primum non nocere)",
+                    "Verarbeitungsschritt 20: Fix11C — digital=%s, reverb_severity=%.3f < 0.10 → passthrough (§0 Primum non nocere)",
                     material.value,
                     _reverb_severity_ph20,
                 )
@@ -529,7 +529,7 @@ class ReverbReduction(PhaseInterface):
                 _severity_scale = _reverb_severity_ph20 / self._DIGITAL_ML_REVERB_SEVERITY_MIN
                 strength = float(np.clip(strength * _severity_scale, 0.0, strength))
                 logger.info(
-                    "Phase 20: Fix11C — Skip ML-Hybrid: digital=%s, reverb_severity=%.2f → "
+                    "Verarbeitungsschritt 20: Fix11C — ueberspringen ML-Hybrid: digital=%s, reverb_severity=%.2f → "
                     "DSP-only, scaled strength=%.2f",
                     material.value,
                     _reverb_severity_ph20,
@@ -547,7 +547,9 @@ class ReverbReduction(PhaseInterface):
 
         if use_ml_hybrid:
             try:
-                logger.info("Phase 20 ML-Hybrid: mode=%s, material=%s", quality_mode, material.value)
+                logger.info(
+                    "Verarbeitungsschritt 20 ML-Hybrid: Betriebsart=%s, material=%s", quality_mode, material.value
+                )
 
                 # Configure ML dereverb strategy
                 # 'quality' und 'maximum' → HYBRID (SGMSE+ ML-Primär + WPE-DSP-Fallback, §4.4)
@@ -579,7 +581,7 @@ class ReverbReduction(PhaseInterface):
                 rms_change_db = 20 * np.log10(np.maximum(rms_after / (rms_before + 1e-10), 1e-30))
 
                 logger.info(
-                    "ML-Hybrid complete: DSP=%s, ML=%s, reverb=%.3f, RMS change=%.2f dB, time=%.2f s",
+                    "ML-Hybrid vollstaendig: DSP=%s, ML=%s, reverb=%.3f, RMS change=%.2f dB, time=%.2f s",
                     ml_result.dsp_applied,
                     ml_result.ml_applied,
                     ml_result.reverb_estimate,
@@ -598,7 +600,7 @@ class ReverbReduction(PhaseInterface):
                         f"ML/WPE fallback caused {rms_change_db:.1f} dB drop — disabling ML for retries"
                     )
                     logger.warning(
-                        "Phase 20: Fix11A §2.45a — catastrophic ML/WPE drop %.1f dB > 6 dB → "
+                        "Verarbeitungsschritt 20: Fix11A §2.45a — catastrophic ML/WPE drop %.1f dB > 6 dB → "
                         "disable ML for PMGG retries (reason: %s)",
                         rms_change_db,
                         self._ml_disable_reason,
@@ -608,7 +610,7 @@ class ReverbReduction(PhaseInterface):
                 if _ml_drop_abs > 10.0:
                     _blend_str = min(_effective_strength, 0.10)
                     logger.warning(
-                        "Phase 20: Fix11A — extreme drop %.1f dB → capping blend to %.2f",
+                        "Verarbeitungsschritt 20: Fix11A — extreme drop %.1f dB → capping blend to %.2f",
                         rms_change_db,
                         _blend_str,
                     )
@@ -680,12 +682,12 @@ class ReverbReduction(PhaseInterface):
                     self._force_dsp_only_due_ml_error = True
                     self._ml_disable_reason = _err_text[:220]
                     logger.warning(
-                        "Phase 20: disable ML-hybrid for remaining calls due to deterministic SGMSE error: %s",
+                        "Verarbeitungsschritt 20: disable ML-hybrid for remaining calls due to deterministic SGMSE error: %s",
                         self._ml_disable_reason,
                     )
 
                 logger.warning(
-                    "ML-Hybrid dereverb failed: %s, falling back to DSP. Error type: %s\n%s",
+                    "ML-Hybrid dereverb fehlgeschlagen: %s, falling back to DSP. Error type: %s\n%s",
                     e,
                     type(e).__name__,
                     _tb.format_exc(),
@@ -693,7 +695,7 @@ class ReverbReduction(PhaseInterface):
                 # Fall through to DSP path below
 
         # DSP-Only Path (Fast mode or ML fallback)
-        logger.info("Phase 20 DSP-Only: material=%s, strength=%s", material.value, strength)
+        logger.info("Verarbeitungsschritt 20 DSP-Only: material=%s, strength=%s", material.value, strength)
 
         # ── Tier-1 DSP: WPE (Nakatani 2010) — DSP-Fallback für Dereverb (§4.4; ML-Primär: SGMSE+) ──
         # WPE entfernt Spätreflexionen via iterative gewichtete lineare Prädiktion.
@@ -722,7 +724,7 @@ class ReverbReduction(PhaseInterface):
                 rms_before = np.sqrt(np.mean(audio**2))
                 rms_after = np.sqrt(np.mean(reduced**2))
                 rms_change_db = 20 * np.log10(np.maximum(rms_after / (rms_before + 1e-10), 1e-30))
-                logger.info("Phase 20: WPE-Tier erfolgreich (strength=%.2f)", wpe_strength)
+                logger.info("Verarbeitungsschritt 20: WPE-Tier erfolgreich (strength=%.2f)", wpe_strength)
                 reduced = np.nan_to_num(reduced, nan=0.0, posinf=0.0, neginf=0.0)
                 reduced = np.clip(reduced, -1.0, 1.0)
                 if 0.0 < _effective_strength < 1.0:
@@ -753,7 +755,7 @@ class ReverbReduction(PhaseInterface):
                     },
                 )
             except Exception as wpe_err:
-                logger.warning("Phase 20: WPE fehlgeschlagen (%s) — OMLSA/IMCRA-Fallback", wpe_err)
+                logger.warning("Verarbeitungsschritt 20: WPE fehlgeschlagen (%s) — OMLSA/IMCRA-Ersatzpfad", wpe_err)
         # ── Tier-2 DSP: OMLSA/IMCRA (Cohen 2002/2003) — Fallback ──────────────
         is_stereo = audio.ndim == 2
 
@@ -842,7 +844,7 @@ class ReverbReduction(PhaseInterface):
                 if _delta_c80 < _c80_down_lim:
                     # C80 degraded → rollback to dry
                     logger.warning(
-                        "Phase 20 §4.5c C80-guard: ΔC80=%.2f dB < %.2f dB → rollback",
+                        "Verarbeitungsschritt 20 §4.5c C80-guard: ΔC80=%.2f dB < %.2f dB → rollback",
                         _delta_c80,
                         _c80_down_lim,
                     )
@@ -855,7 +857,7 @@ class ReverbReduction(PhaseInterface):
                     reduced = np.clip(reduced, -1.0, 1.0)
                     _c80_guard_triggered = True
                     logger.info(
-                        "Phase 20 §4.5c C80-guard: ΔC80=%.2f dB > %.2f dB → wet scaled to %.2f",
+                        "Verarbeitungsschritt 20 §4.5c C80-guard: ΔC80=%.2f dB > %.2f dB → wet scaled to %.2f",
                         _delta_c80,
                         _c80_hard_lim,
                         _c80_wet_scale,
@@ -876,7 +878,7 @@ class ReverbReduction(PhaseInterface):
                     reduced = np.clip(_rd.astype(np.float32), -1.0, 1.0)
                     _early_blend_triggered = True
                     logger.info(
-                        "Phase 20 §4.5c C80-guard: ΔC80=%.2f dB — early-reflection blend 35 %% applied",
+                        "Verarbeitungsschritt 20 §4.5c C80-guard: ΔC80=%.2f dB — early-reflection blend 35 %% angewendet",
                         _delta_c80,
                     )
 
@@ -886,13 +888,13 @@ class ReverbReduction(PhaseInterface):
                     reduced = audio + _d50_scale * (reduced - audio)
                     reduced = np.clip(reduced, -1.0, 1.0)
                     logger.info(
-                        "Phase 20 §4.5c D50-guard: ΔD50=%.3f > %.3f → wet scaled to %.2f",
+                        "Verarbeitungsschritt 20 §4.5c D50-guard: ΔD50=%.3f > %.3f → wet scaled to %.2f",
                         _delta_d50,
                         _d50_lim,
                         _d50_scale,
                     )
         except Exception as _c80_exc:
-            logger.debug("Phase 20 C80/D50-guard skipped (non-critical): %s", _c80_exc)
+            logger.debug("Verarbeitungsschritt 20 C80/D50-guard uebersprungen (unkritisch): %s", _c80_exc)
 
         # §4.5 Psychoacoustic Masking Clamp — preserve reverb tails below masking threshold
         try:
@@ -906,7 +908,7 @@ class ReverbReduction(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase20 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt20 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — restore protected breath zones after dereverb
         if _npa_result_20 is not None:
@@ -915,9 +917,12 @@ class ReverbReduction(PhaseInterface):
                 _npa_mask_20 = _npa_result_20.get_protected_mask(_npa_n_20, sample_rate)
                 if np.any(_npa_mask_20):
                     reduced[_npa_mask_20] = audio[_npa_mask_20]
-                    logger.debug("§2.46f NPA phase20: restored %d protected samples", int(np.sum(_npa_mask_20)))
+                    logger.debug(
+                        "§2.46f NPA Verarbeitungsschritt20: wiederhergestellt %d protected samples",
+                        int(np.sum(_npa_mask_20)),
+                    )
             except Exception as _npa_rest_20:
-                logger.debug("§2.46f NPA restoration non-blocking: %s", _npa_rest_20)
+                logger.debug("§2.46f NPA restoration nicht blockierend: %s", _npa_rest_20)
 
         # §2.36 Phonem-Schutz: Nass-Anteil des Dereverb-Prozessors kann Transienten-Energie
         # von Plosiv-Bursts absenken wenn der Hüllkurven-Schätzer sie als Reverb-Einsatz
@@ -948,7 +953,7 @@ class ReverbReduction(PhaseInterface):
                 elif reduced.ndim == 1 and audio.ndim == 1:
                     reduced[_smask_20] = audio[_smask_20]
         except Exception as _pm20_exc:
-            logger.debug("§2.36 phase_20 Phonem-Mask (non-blocking): %s", _pm20_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_20 Phonem-Mask (nicht blockierend): %s", _pm20_exc)
 
         # §0p [RELEASE_MUST] VQI per-Phase Gate — panns_singing >= 0.35: rollback bei VQI < 0.95
         # phase_20 kann Reverb-Tail des Gesangs durch Dereverb-Artefakte beschädigen.
@@ -980,9 +985,9 @@ class ReverbReduction(PhaseInterface):
                         ] * audio.astype(np.float32)
                     else:
                         reduced = (1.0 - _blend_p20) * reduced + _blend_p20 * audio.astype(np.float32)
-                    logger.debug("§0p phase_20 Passaggio blend zones=%d", len(_reg_seq_p20))
+                    logger.debug("§0p Verarbeitungsschritt_20 Passaggio blend zones=%d", len(_reg_seq_p20))
             except Exception as _pvrt20_exc:
-                logger.debug("§0p Passaggio temporal phase_20 (non-blocking): %s", _pvrt20_exc)
+                logger.debug("§0p Passaggio temporal Verarbeitungsschritt_20 (nicht blockierend): %s", _pvrt20_exc)
 
         # §0p HNR-Blend nach ML-Dereverb (RELEASE_MUST §0p): ΔHNR > 3 dB → Dry-Wet-Blend
         if _p20_panns >= 0.25:
@@ -996,7 +1001,7 @@ class ReverbReduction(PhaseInterface):
                     reduced = _hnr_blended_p20
 
             except Exception as _hnr_exc_p20:
-                logger.debug("§0p HNR-Blend phase_20 (non-blocking): %s", _hnr_exc_p20)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_20 (nicht blockierend): %s", _hnr_exc_p20)
 
         # §0p Formant-Integrity post-check — rollback if F1 shifted >±15%
         if _f1_pre_20 is not None:
@@ -1009,14 +1014,14 @@ class ReverbReduction(PhaseInterface):
                 )
                 if _f1_post_20 > 0 and abs(_f1_post_20 - _f1_pre_20) > _f1_pre_20 * 0.15:
                     logger.warning(
-                        "§0p Formant drift phase_20 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
+                        "§0p Formant drift Verarbeitungsschritt_20 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
                         _f1_pre_20,
                         _f1_post_20,
                         abs(_f1_post_20 - _f1_pre_20),
                     )
                     reduced = audio.copy()
             except Exception as e:
-                logger.warning("phase_20_reverb_reduction.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_20_reverb_reduction.py::unbekannter Ersatzpfad: %s", e)
         if _p20_panns >= 0.35:
             try:
                 from backend.core.musical_goals.era_vocal_profile import (
@@ -1035,13 +1040,15 @@ class ReverbReduction(PhaseInterface):
                 _vqi_p20 = float(_vqi_result_p20.get("vqi", 1.0))
                 if _vqi_p20 < 0.95:
                     logger.info(
-                        "phase_20: VQI per-phase rollback (vqi=%.3f < 0.95, panns=%.2f) — pre-dereverb bewahrt",
+                        "Verarbeitungsschritt_20: VQI per-Verarbeitungsschritt rollback (vqi=%.3f < 0.95, panns=%.2f) — pre-dereverb bewahrt",
                         _vqi_p20,
                         _p20_panns,
                     )
                     reduced = audio.copy()
             except Exception as _vqi_exc_p20:
-                logger.debug("VQI per-phase phase_20 (non-blocking): %s", _vqi_exc_p20)
+                logger.debug(
+                    "VQI per-Verarbeitungsschritt Verarbeitungsschritt_20 (nicht blockierend): %s", _vqi_exc_p20
+                )
 
         # §G2 Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
         # mit Original zurückblenden — Dereverb glättet sonst natürliche Atemräume.
@@ -1081,9 +1088,11 @@ class ReverbReduction(PhaseInterface):
                     _blended_any_p20 = True
                 if _blended_any_p20:
                     reduced = np.clip(np.nan_to_num(_result_blend_p20, nan=0.0), -1.0, 1.0).astype(np.float32)
-                    logger.debug("§G2 BreathProtect phase_20: %d tension-segs geschützt", len(_breath_segs_p20))
+                    logger.debug(
+                        "§G2 BreathProtect Verarbeitungsschritt_20: %d tension-segs geschützt", len(_breath_segs_p20)
+                    )
             except Exception as _g2_p20_exc:
-                logger.debug("§G2 BreathProtect phase_20 non-blocking: %s", _g2_p20_exc)
+                logger.debug("§G2 BreathProtect Verarbeitungsschritt_20 nicht blockierend: %s", _g2_p20_exc)
 
         # V19 Noise-Textur-Invariante (§NTI): Residual nach Reverb-Reduction darf kein
         # material-fremdes Spektralprofil (Whitening) aufweisen (VERBOTEN-V19).
@@ -1098,11 +1107,11 @@ class ReverbReduction(PhaseInterface):
             if _nt20_dist > 0.25:
                 reduced = (0.5 * reduced + 0.5 * audio).astype(np.float32)
                 logger.warning(
-                    "Phase20 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
+                    "Verarbeitungsschritt20 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
                     _nt20_dist,
                 )
         except Exception as _nt20_exc:
-            logger.debug("Phase20 V19 Noise-Textur-Guard (non-blocking): %s", _nt20_exc)
+            logger.debug("Verarbeitungsschritt20 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt20_exc)
 
         # V20 Mikrodynamik-Korrelation (§2.75): Frame-Energie auf voiced-Zonen ≥ 0.97
         # nach Reverb-Reduction (VERBOTEN-V20).
@@ -1121,12 +1130,12 @@ class ReverbReduction(PhaseInterface):
                     _wet20 = _recommend_mkk_wet(_corr20, _p20_panns, global_need=_need20)
                     reduced = (_wet20 * reduced + (1.0 - _wet20) * audio).astype(np.float32)
                     logger.warning(
-                        "Phase20 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                        "Verarbeitungsschritt20 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
                         _corr20,
                         _wet20,
                     )
             except Exception as _dyn20_exc:
-                logger.debug("Phase20 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn20_exc)
+                logger.debug("Verarbeitungsschritt20 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn20_exc)
 
         # V21 Mindestrauschboden (§2.76): Analog-Material darf nach Reverb-Reduction keine
         # digitale Stille aufweisen — Rauschboden ist Naturalness-Marker (VERBOTEN-V21).
@@ -1138,7 +1147,7 @@ class ReverbReduction(PhaseInterface):
 
                 reduced = _nfg20(reduced, sample_rate, _mat20_str, original_audio=audio)
             except Exception as _nf20_exc:
-                logger.debug("Phase20 V21 Noise-Floor-Guard (non-blocking): %s", _nf20_exc)
+                logger.debug("Verarbeitungsschritt20 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf20_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -1151,7 +1160,7 @@ class ReverbReduction(PhaseInterface):
                 _sc_wet_20 = 0.70  # Phase-Strength −30 % (§V24)
                 reduced = (_sc_wet_20 * reduced + (1.0 - _sc_wet_20) * audio).astype(np.float32)
         except Exception as _sc_exc_20:  # pylint: disable=broad-except
-            logger.debug("§V24 phase_20 spectral_color non-blocking: %s", _sc_exc_20)
+            logger.debug("§V24 Verarbeitungsschritt_20 spectral_color nicht blockierend: %s", _sc_exc_20)
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # Reverb-Reduction nicht energetisch beeinflusst werden (VERBOTEN-V26).
@@ -1162,7 +1171,7 @@ class ReverbReduction(PhaseInterface):
 
             reduced = _opg20(audio, reduced, None, max_delta_db=1.5)
         except Exception as _on20_exc:
-            logger.debug("Phase20 V26 Onset-Guard (non-blocking): %s", _on20_exc)
+            logger.debug("Verarbeitungsschritt20 V26 Onset-Guard (nicht blockierend): %s", _on20_exc)
 
         # §2.72 Vibrato-Tiefe-Guard (§0p Vocal-Supremacy RELEASE_MUST): F0-Modulationstiefe
         # darf durch Reverb-Reduction nicht mehr als ±10 % reduziert werden → 50 %-Blend.
@@ -1176,11 +1185,11 @@ class ReverbReduction(PhaseInterface):
                 if not _vib20_result.ok:
                     reduced = (0.5 * reduced + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "Phase20 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
+                        "Verarbeitungsschritt20 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
                         _vib20_result.depth_reduction_pct,
                     )
             except Exception as _vib20_exc:
-                logger.debug("Phase20 §2.72 Vibrato-Guard (non-blocking): %s", _vib20_exc)
+                logger.debug("Verarbeitungsschritt20 §2.72 Vibrato-Guard (nicht blockierend): %s", _vib20_exc)
 
         # ── §v10 Per-Band-Maske NACH reverb anwenden ──
         if _per_band_mask is not None:
@@ -1191,7 +1200,7 @@ class ReverbReduction(PhaseInterface):
                 _after = apply_per_band_mask(_before, _per_band_mask, sample_rate, mix=0.55)
                 audio = _after
             except Exception as e:
-                logger.warning("phase_20_reverb_reduction.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_20_reverb_reduction.py::unbekannter Ersatzpfad: %s", e)
 
         # §2.71 Strength-Envelope: Chirurgische Dereverb
         _strength_env = kwargs.get("strength_envelope")
@@ -1209,10 +1218,11 @@ class ReverbReduction(PhaseInterface):
                 )
                 if float(np.mean(np.abs(reduced - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 20: Δ=%.4f RMS", float(np.mean(np.abs(reduced - _env_pre)))
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 20: Δ=%.4f RMS",
+                        float(np.mean(np.abs(reduced - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return PhaseResult(
             success=True,
@@ -1332,7 +1342,7 @@ class ReverbReduction(PhaseInterface):
                 rms_out_db = self._rms_dbfs_gated(processed_audio)
                 rms_change_db = rms_out_db - rms_in_db if rms_in_db > -80.0 else 0.0
                 logger.info(
-                    "Phase 20 loudness-preservation: material=%s rms_change=%.2f dB via makeup %.2f dB",
+                    "Verarbeitungsschritt 20 loudness-preservation: material=%s rms_change=%.2f dB via makeup %.2f dB",
                     material_key,
                     rms_change_db,
                     makeup_gain_db,
@@ -1454,9 +1464,11 @@ class ReverbReduction(PhaseInterface):
             _masking_floor_p20 = np.mean(_mask_ratio_p20, axis=1).astype(np.float32)
             _masking_freqs_p20 = np.linspace(0.0, sample_rate / 2.0, _mask_ratio_p20.shape[0], dtype=np.float32)
             _mf_mean = float(np.mean(_masking_floor_p20))  # type: ignore[arg-type]
-            logger.debug("§2.62 phase_20 Masking-Guard: mean_floor=%.3f", _mf_mean)
+            logger.debug("§2.62 Verarbeitungsschritt_20 Masking-Guard: mean_floor=%.3f", _mf_mean)
         except Exception as _msk20_exc:
-            logger.debug("§2.62 phase_20 Masking-Guard nicht verfügbar (non-blocking): %s", _msk20_exc)
+            logger.debug(
+                "§2.62 Verarbeitungsschritt_20 Masking-Guard nicht verfügbar (nicht blockierend): %s", _msk20_exc
+            )
 
         # Accumulate weighted zone gains
         G_acc = np.zeros((n_bins, n_t), dtype=np.float64)
@@ -1515,7 +1527,7 @@ class ReverbReduction(PhaseInterface):
                         _mfloor_z20 = np.interp(f_z, _masking_freqs_p20, _masking_floor_p20).astype(np.float32)
                         G_z = np.maximum(G_z, _mfloor_z20[:, np.newaxis])
                     except Exception as e:
-                        logger.warning("phase_20_reverb_reduction.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_20_reverb_reduction.py::unbekannter Ersatzpfad: %s", e)
 
                 # §4.8a-ii preserve_mask (§Gap8 v10.0.0): G_eff = mask*0.90 + (1-mask)*G_z
                 # Bewahrt Shellac-H2/H4-Wärme und Vinyl-Charakter während Nachhall-Reduktion.
@@ -1535,7 +1547,7 @@ class ReverbReduction(PhaseInterface):
                         G_z = _pm_col_z20 * 0.90 + (1.0 - _pm_col_z20) * G_z
                         G_z = np.clip(G_z, G_floor, 1.0)
                     except Exception as _pm_exc:
-                        logger.debug("§Gap8 preserve_mask phase_20 non-blocking: %s", _pm_exc)
+                        logger.debug("§Gap8 preserve_mask Verarbeitungsschritt_20 nicht blockierend: %s", _pm_exc)
 
                 # Cappé temporal smoothing via fast IIR lfilter (no Python loop)
                 G_z_sm = _lfilter_p20([1.0 - alpha_g], [1.0, -alpha_g], G_z, axis=1)
@@ -1604,7 +1616,7 @@ class ReverbReduction(PhaseInterface):
                 w_acc[ref_indices] += hann_w
 
             except Exception as zone_exc:
-                logger.warning("MRSA Phase 20 zone '%s' failed: %s", zone_name, zone_exc)
+                logger.warning("MRSA Verarbeitungsschritt 20 zone '%s' fehlgeschlagen: %s", zone_name, zone_exc)
                 continue
 
         # Combine zone gains; unprocessed bins → pass-through (gain=1.0)
@@ -1655,14 +1667,14 @@ class ReverbReduction(PhaseInterface):
                 G_combined = np.clip(G_combined * G_lr[np.newaxis, :], 0.0, 1.0)
 
                 logger.debug(
-                    "MRSA Phase 20 late-reverb suppression: penalty=%.2f, decay_frames=%d/%d, onset_protected=%d",
+                    "MRSA Verarbeitungsschritt 20 late-reverb suppression: penalty=%.2f, decay_frames=%d/%d, onset_protected=%d",
                     _penalty,
                     int(np.sum(decay_mask > 0)),
                     n_t,
                     len(_onset_indices),
                 )
             except Exception as _lr_exc:
-                logger.debug("MRSA Phase 20 late-reverb suppression skipped: %s", _lr_exc)
+                logger.debug("MRSA Verarbeitungsschritt 20 late-reverb suppression uebersprungen: %s", _lr_exc)
 
         # Apply combined gain to reference STFT — Zxx_processed retains original phase.
         # Direct ISTFT is semantically correct and 50-100× faster than PGHI.
@@ -1677,7 +1689,7 @@ class ReverbReduction(PhaseInterface):
                 boundary="even",
             )
         except Exception as _istft_p20_exc:
-            logger.warning("phase_20 istft failed (non-critical): %s", _istft_p20_exc)
+            logger.warning("Verarbeitungsschritt_20 istft fehlgeschlagen (unkritisch): %s", _istft_p20_exc)
             audio_out = np.zeros(n_audio, dtype=np.float32)
 
         audio_out = np.real(audio_out).astype(np.float32)
@@ -1692,7 +1704,7 @@ class ReverbReduction(PhaseInterface):
         audio_out = np.clip(audio_out, -1.0, 1.0)
 
         logger.debug(
-            "MRSA Phase 20: 5 zones processed, valid_bins=%d/%d, G_mean=%.3f",
+            "MRSA Verarbeitungsschritt 20: 5 zones verarbeitet, valid_bins=%d/%d, G_mean=%.3f",
             int(np.sum(valid)),
             n_bins,
             float(np.mean(G_combined)),
@@ -1737,7 +1749,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Phase 20: Professional Reverb Reduction v2.0")
+    logger.debug("Verarbeitungsschritt 20: Professional Reverb Reduction v2.0")
     logger.debug("=" * 80)
     logger.debug("")
 
@@ -1760,7 +1772,7 @@ if __name__ == "__main__":
     reverb_tail = signal.lfilter([1], [1, -0.7], dry_signal)  # Simple comb filter
     reverbed_signal = dry_signal + 0.4 * reverb_tail
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, _test_sr)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, _test_sr)
     logger.debug("Dry signal + synthetic reverb tail")
     logger.debug("")
 
@@ -1792,5 +1804,5 @@ if __name__ == "__main__":
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test completed")
+    logger.debug("Test abgeschlossen")
     logger.debug("=" * 80)

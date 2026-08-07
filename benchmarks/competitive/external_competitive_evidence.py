@@ -198,10 +198,10 @@ def _evaluate_manifest(
         item_results.append(row)
 
         k = _cell_key(it.material, it.defect_class)
-        cell_acc[k]["aurik"].append(row["aurik_oqs"])
-        cell_acc[k]["rx11"].append(row["rx11_oqs"])
+        cell_acc[k]["aurik"].append(row["aurik_oqs"])  # type: ignore[arg-type]
+        cell_acc[k]["rx11"].append(row["rx11_oqs"])  # type: ignore[arg-type]
         if row["cedar_oqs"] is not None:
-            cell_acc[k]["cedar"].append(float(row["cedar_oqs"]))
+            cell_acc[k]["cedar"].append(float(row["cedar_oqs"]))  # type: ignore[arg-type]
 
     required_cells = {_cell_key(m, d) for m in REQUIRED_MATERIALS for d in REQUIRED_DEFECT_CLASSES}
     present_cells = set(cell_acc.keys())
@@ -287,17 +287,17 @@ def _evaluate_manifest(
     }
 
     rx11_ok = (
-        result["gates"]["aurik_vs_rx11_majority_win"] and result["gates"]["aurik_vs_rx11_no_stratified_regressions"]
+        result["gates"]["aurik_vs_rx11_majority_win"] and result["gates"]["aurik_vs_rx11_no_stratified_regressions"]  # type: ignore[index]
     )
     cedar_ok = True
     if require_cedar:
         cedar_ok = bool(
-            result["gates"]["aurik_vs_cedar_majority_win"]
-            and result["gates"]["aurik_vs_cedar_no_stratified_regressions"]
+            result["gates"]["aurik_vs_cedar_majority_win"]  # type: ignore[index]
+            and result["gates"]["aurik_vs_cedar_no_stratified_regressions"]  # type: ignore[index]
         )
 
-    matrix_ok = result["matrix"]["full_matrix_covered"] if require_full_matrix else True
-    result["gates"]["release_competitive_ready"] = bool(rx11_ok and cedar_ok and matrix_ok)
+    matrix_ok = result["matrix"]["full_matrix_covered"] if require_full_matrix else True  # type: ignore[index]
+    result["gates"]["release_competitive_ready"] = bool(rx11_ok and cedar_ok and matrix_ok)  # type: ignore[index]
 
     return result
 

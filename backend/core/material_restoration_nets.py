@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import importlib
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
@@ -173,7 +174,9 @@ def restore_shellac(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialRe
             result_audio = mod.restore(audio, sample_rate, **kwargs)
             return MaterialRestorationResult(result_audio, SourceMedium.SHELLAC, True, ["plugin"], {})
     except ImportError as _mrn_shellac_exc:
-        logger.warning("material_restoration_nets: shellac plugin not available (DSP fallback): %s", _mrn_shellac_exc)
+        logger.warning(
+            "material_restoration_nets: shellac plugin not verfuegbar (DSP Ersatzpfad): %s", _mrn_shellac_exc
+        )
 
     # DSP-Pfad
     out = audio.copy()
@@ -252,7 +255,7 @@ def restore_vinyl(audio: np.ndarray, sample_rate: int, apply_riaa: bool = False,
             result_audio = mod.restore(audio, sample_rate, **kwargs)
             return MaterialRestorationResult(result_audio, SourceMedium.VINYL, True, ["plugin"], {})
     except ImportError as _mrn_vinyl_exc:
-        logger.warning("material_restoration_nets: vinyl plugin not available (DSP fallback): %s", _mrn_vinyl_exc)
+        logger.warning("material_restoration_nets: vinyl plugin not verfuegbar (DSP Ersatzpfad): %s", _mrn_vinyl_exc)
 
     out = audio.copy()
 
@@ -327,6 +330,13 @@ def _tape_noise_reduction(audio: np.ndarray, sample_rate: int) -> np.ndarray:
         Zxx_clean = suppressed_mag * np.exp(1j * phase)
 
         _, ch_clean = sig.istft(Zxx_clean, fs=sample_rate, window=window, nperseg=n_fft, noverlap=_noverlap)
+        # §Fix: istft's reconstruction length depends on n_fft/hop/input-length
+        # alignment and can come out SHORTER than the original (not just longer,
+        # as the naive `[:len(ch)]` truncation assumed) — pad with zeros to
+        # guarantee the shape-preservation invariant all phases rely on.
+        ch_clean = np.asarray(ch_clean, dtype=np.float32)
+        if len(ch_clean) < len(ch):
+            ch_clean = np.pad(ch_clean, (0, len(ch) - len(ch_clean)))
         return ch_clean[: len(ch)]  # type: ignore[no-any-return]
 
     if audio.ndim == 1:
@@ -393,7 +403,7 @@ def restore_tape(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialResto
             result_audio = mod.restore(audio, sample_rate, **kwargs)
             return MaterialRestorationResult(result_audio, SourceMedium.TAPE, True, ["plugin"], {})
     except ImportError as _mrn_tape_exc:
-        logger.warning("material_restoration_nets: tape plugin not available (DSP fallback): %s", _mrn_tape_exc)
+        logger.warning("material_restoration_nets: tape plugin not verfuegbar (DSP Ersatzpfad): %s", _mrn_tape_exc)
 
     out = audio.copy()
 
@@ -429,7 +439,7 @@ def restore_tape(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialResto
 
         xcorr = fft_crosscorr(out[0, :min_len], out[1, :min_len])
         lag = np.argmax(xcorr) - (min_len - 1)
-        lag = int(np.clip(lag, -max_lag, max_lag))
+        lag = int(np.clip(lag, -max_lag, max_lag))  # type: ignore[assignment]
         if abs(lag) > 0:
             if lag > 0:
                 # Shift left with zero-fill (no circular wrap from start to tail)
@@ -468,7 +478,9 @@ def restore_lacquer(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialRe
             result_audio = mod.restore(audio, sample_rate, **kwargs)
             return MaterialRestorationResult(result_audio, SourceMedium.LACQUER, True, ["plugin"], {})
     except ImportError as _mrn_lacquer_exc:
-        logger.warning("material_restoration_nets: lacquer plugin not available (DSP fallback): %s", _mrn_lacquer_exc)
+        logger.warning(
+            "material_restoration_nets: lacquer plugin not verfuegbar (DSP Ersatzpfad): %s", _mrn_lacquer_exc
+        )
 
     out = audio.copy()
 
@@ -511,7 +523,10 @@ def restore_lacquer(audio: np.ndarray, sample_rate: int, **kwargs) -> MaterialRe
 
 # ─── Dispatcher ──────────────────────────────────────────────────────────
 
-_RESTORER_MAP = {
+_RESTORER_MAP: dict[
+    SourceMedium,
+    Callable[..., MaterialRestorationResult],
+] = {
     SourceMedium.SHELLAC: restore_shellac,
     SourceMedium.VINYL: restore_vinyl,
     SourceMedium.TAPE: restore_tape,
@@ -551,4 +566,4 @@ def restore_by_medium(
             metrics={},
         )
 
-    return restorer(audio, sample_rate, **kwargs)  # type: ignore[operator]
+    return restorer(audio, sample_rate, **kwargs)

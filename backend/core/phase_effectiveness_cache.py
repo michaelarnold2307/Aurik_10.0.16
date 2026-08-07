@@ -6,8 +6,8 @@ Nach 3+ Runs mit |Δ| < 0.001 wird die Phase automatisch geskippt.
 
 from __future__ import annotations
 
-import threading
 import logging
+import threading
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +27,9 @@ def record_phase_deltas(material: str, deltas: dict[str, float]) -> None:
             _entry["abs_delta_sum"] += abs(float(_delta))
         _n = len(deltas)
         logger.debug(
-            "Phase-Effectiveness: %d Phase(n) für material=%s aufgezeichnet",
-            _n, material,
+            "Verarbeitungsschritt-Effectiveness: %d Verarbeitungsschritt(n) für material=%s aufgezeichnet",
+            _n,
+            material,
         )
 
 
@@ -45,9 +46,11 @@ def should_skip_phase(material: str, phase_id: str, min_runs: int = 3, max_avg_a
         _avg_abs_delta = _phase_entry["abs_delta_sum"] / _runs
         if _avg_abs_delta < max_avg_abs_delta:
             logger.info(
-                "§v10.303.19 Phase-Effectiveness: %s auf %s → SKIP "
-                "(Ø|Δ|=%.4f nach %d Runs)",
-                phase_id, material, _avg_abs_delta, _runs,
+                "§v10.303.19 Verarbeitungsschritt-Effectiveness: %s auf %s → ueberspringen (Ø|Δ|=%.4f nach %d Runs)",
+                phase_id,
+                material,
+                _avg_abs_delta,
+                _runs,
             )
             return True
         return False

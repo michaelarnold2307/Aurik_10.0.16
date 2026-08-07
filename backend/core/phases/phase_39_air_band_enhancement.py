@@ -220,17 +220,18 @@ class AirBandEnhancement(PhaseInterface):
                     _boost_39 = _zone_frac_39 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_39, 0.0, 1.0))
                     logger.debug(
-                        "Phase39 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt39 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_39,
                         _boost_39,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_39:  # pylint: disable=broad-except
-                logger.debug("Phase39 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_39)
+                logger.debug("Verarbeitungsschritt39 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_39)
 
         if _effective_strength <= 0.0:
             logger.info(
-                "Phase 39: skipped — effective_strength=%.3f (no air band enhancement applied)", _effective_strength
+                "Verarbeitungsschritt 39: uebersprungen — effective_strength=%.3f (no air band enhancement angewendet)",
+                _effective_strength,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
@@ -277,7 +278,7 @@ class AirBandEnhancement(PhaseInterface):
             _skip_audio = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
             _skip_audio = np.clip(_skip_audio, -1.0, 1.0)
             logger.info(
-                "Phase 39 §0a skip: Restoration-Mode + analog material '%s' — "
+                "Verarbeitungsschritt 39 §0a ueberspringen: Restoration-Betriebsart + analog material '%s' — "
                 "Air-Band-Enhancement (Harmonic Exciter) verboten",
                 _mat_name_39,
             )
@@ -299,7 +300,7 @@ class AirBandEnhancement(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.AIR_CONFIG.get(_mk, self.AIR_CONFIG[MaterialType.CD_DIGITAL]))
+        config = dict(self.AIR_CONFIG.get(_mk, self.AIR_CONFIG[MaterialType.CD_DIGITAL]))  # type: ignore[call-overload]
 
         quality_mode = str(kwargs.get("quality_mode", "balanced")).lower()
         if quality_mode in ("quality", "maximum", "studio2026"):
@@ -323,7 +324,7 @@ class AirBandEnhancement(PhaseInterface):
             _b_scale = max(0.65, min(1.20, _b_scale))
             config["shelf_gain_db"] *= _b_scale
             config["exciter_mix"] *= _b_scale
-            logger.debug("Phase 39: brillanz_target=%.2f → air scale=%.2f", float(_brillanz), _b_scale)
+            logger.debug("Verarbeitungsschritt 39: brillanz_target=%.2f → air scale=%.2f", float(_brillanz), _b_scale)
         if _decade is not None:
             _dec = int(_decade)
             if _dec <= 1950:
@@ -371,7 +372,7 @@ class AirBandEnhancement(PhaseInterface):
             if _air_bw_ceil < config["shelf_freq_hz"]:
                 config["shelf_freq_hz"] = _air_bw_ceil
                 logger.debug(
-                    "Phase 39: era bw_target=%.0f → shelf_freq capped at %.0f Hz (conf=%.2f)",
+                    "Verarbeitungsschritt 39: era bw_target=%.0f → shelf_freq capped at %.0f Hz (conf=%.2f)",
                     _sfr_bw_39,
                     _air_bw_ceil,
                     _sfr_conf_39,
@@ -382,7 +383,7 @@ class AirBandEnhancement(PhaseInterface):
                 _loss_scale = float(np.clip(1.0 + _sfr_hf_loss_39 / 18.0 * _sfr_conf_39, 1.0, 1.35))
                 config["exciter_mix"] = float(np.clip(config["exciter_mix"] * _loss_scale, 0.0, 0.55))
                 logger.debug(
-                    "Phase 39: hf_loss=%.1f dB → exciter_mix×%.2f (scale=%.2f)",
+                    "Verarbeitungsschritt 39: hf_loss=%.1f dB → exciter_mix×%.2f (scale=%.2f)",
                     _sfr_hf_loss_39,
                     config["exciter_mix"],
                     _loss_scale,
@@ -403,7 +404,7 @@ class AirBandEnhancement(PhaseInterface):
             config["exciter_mix"] = float(config["exciter_mix"] * _p39_sat_scale)
             config["saturation_drive"] = float(config["saturation_drive"] * max(_p39_sat_scale, 0.5))
             logger.debug(
-                "Phase 39 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (shelf=%.2f dB exciter=%.3f)",
+                "Verarbeitungsschritt 39 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (shelf=%.2f dB exciter=%.3f)",
                 _p39_soft_sat_sev,
                 _p39_soft_sat_preserve,
                 _p39_sat_scale,
@@ -442,7 +443,7 @@ class AirBandEnhancement(PhaseInterface):
                 enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
                 _tilt_capped_p39 = True
                 logger.info(
-                    "phase_39 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
+                    "Verarbeitungsschritt_39 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
                     _tb39,
                     _ta39,
                     _dev39,
@@ -450,7 +451,7 @@ class AirBandEnhancement(PhaseInterface):
                     _cap39,
                 )
         except Exception as _tc39:
-            logger.debug("phase_39 §2.46b tilt-cap skipped (graceful): %s", _tc39)
+            logger.debug("Verarbeitungsschritt_39 §2.46b tilt-cap uebersprungen (graceful): %s", _tc39)
 
         enhanced_audio_pre_guard = enhanced_audio.copy()
 
@@ -467,7 +468,7 @@ class AirBandEnhancement(PhaseInterface):
         MAX_HF_CUMUL_DB = 4.0
         if hf_cumul_db > MAX_HF_CUMUL_DB:
             logger.warning(
-                "Phase 39: HF-Kumulativ-Limit erreicht (%.1f dB > %.1f dB) — "
+                "Verarbeitungsschritt 39: HF-Kumulativ-Limit erreicht (%.1f dB > %.1f dB) — "
                 "Air-Band-Gain reduziert (Listening-Fatigue-Schutz, Spec §8.2)",
                 hf_cumul_db,
                 MAX_HF_CUMUL_DB,
@@ -527,7 +528,7 @@ class AirBandEnhancement(PhaseInterface):
                     enhanced_audio = signal.sosfiltfilt(_sos_lp39, enhanced_audio).astype(np.float32)
                 enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
             except Exception as _bw39_exc:
-                logger.debug("§6.2c phase_39 BW-Ceiling (non-blocking): %s", _bw39_exc)
+                logger.debug("§6.2c Verarbeitungsschritt_39 BW-Ceiling (nicht blockierend): %s", _bw39_exc)
 
         # §2.46e Hallucination-Guard: check_hallucination aus backend.core.dsp.hallucination_guard
         # Pflicht nach letzter additiver Op — unconditional, fuer alle Materialien (§2.46e VERBOTEN).
@@ -547,7 +548,7 @@ class AirBandEnhancement(PhaseInterface):
                 )
                 if _hg_result39.requires_rollback:
                     logger.warning(
-                        "§2.46e Phase-39 Hallucination-Rollback: spectral_novelty=%.3f (Threshold 0.15)",
+                        "§2.46e Verarbeitungsschritt-39 Hallucination-Rollback: spectral_novelty=%.3f (Schwelle 0.15)",
                         _hg_result39.spectral_novelty,
                     )
                     enhanced_audio = audio.copy()
@@ -555,7 +556,7 @@ class AirBandEnhancement(PhaseInterface):
                 if _hg_result39.score_penalty > 0:
                     _hg_score_penalty_39 = float(_hg_result39.score_penalty)
             except Exception as _hg39_exc:
-                logger.debug("Phase 39 HallucinationGuard (non-blocking): %s", _hg39_exc)
+                logger.debug("Verarbeitungsschritt 39 HallucinationGuard (nicht blockierend): %s", _hg39_exc)
 
         # §V22 Pre-Echo-Prevention — Additive Air-Band auf Transient-Shifts prüfen (§2.73, non-blocking)
         try:
@@ -578,12 +579,12 @@ class AirBandEnhancement(PhaseInterface):
                 _wet_ts_39 = max(0.0, 1.0 - _ts_39.blend_reduction)
                 enhanced_audio = (_wet_ts_39 * enhanced_audio + (1.0 - _wet_ts_39) * audio).astype(np.float32)
                 logger.warning(
-                    "§V22 phase_39: onset_shift=%.2f ms → blend_reduction=%.2f",
+                    "§V22 Verarbeitungsschritt_39: onset_shift=%.2f ms → blend_reduction=%.2f",
                     _ts_39.max_shift_ms,
                     _ts_39.blend_reduction,
                 )
         except Exception as _v22_39_exc:
-            logger.debug("§V22 phase_39 transient_guard non-blocking: %s", _v22_39_exc)
+            logger.debug("§V22 Verarbeitungsschritt_39 transient_guard nicht blockierend: %s", _v22_39_exc)
 
         return PhaseResult(
             success=True,
@@ -644,7 +645,9 @@ class AirBandEnhancement(PhaseInterface):
                 bw_scale = min(1.0, hf_fraction / 0.005)
                 config = dict(config)  # don't mutate the outer config
                 config["exciter_mix"] = config["exciter_mix"] * bw_scale
-                logger.debug("Phase 39 BW-guard: hf_frac=%.4f → exciter scale=%.2f", hf_fraction, bw_scale)
+                logger.debug(
+                    "Verarbeitungsschritt 39 BW-guard: hf_frac=%.4f → exciter scale=%.2f", hf_fraction, bw_scale
+                )
 
         # 2. Apply the shelving EQ (primary output)
         shelved = self._apply_high_shelf(audio, sample_rate, config["shelf_freq_hz"], config["shelf_gain_db"])

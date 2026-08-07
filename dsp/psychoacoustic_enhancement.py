@@ -74,7 +74,7 @@ class PsychoacousticEnhancer:
             if use_deep_learning and _TORCH_AVAILABLE:
                 logger.info("Deep-Learning-Inferenz aktiviert für psychoakustische Verbesserung.")
                 # TorchScript-Modell (Platzhalter)
-                logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                 fallback_used = True
                 result = self._process_classic(audio, sr)
             else:
@@ -92,12 +92,12 @@ class PsychoacousticEnhancer:
 
         metrics.update(
             {
-                "bass_energy_before": float(bass_energy_before),
-                "bass_energy_after": float(bass_energy_after),
-                "enhancement_db": float(enhancement_db),
-                "harmonic_gain_db": self.harmonic_gain_db,
+                "bass_energy_before": float(bass_energy_before),  # type: ignore[dict-item]
+                "bass_energy_after": float(bass_energy_after),  # type: ignore[dict-item]
+                "enhancement_db": float(enhancement_db),  # type: ignore[dict-item]
+                "harmonic_gain_db": self.harmonic_gain_db,  # type: ignore[dict-item]
                 "mix": self.mix,
-                "fallback_used": fallback_used,
+                "fallback_used": fallback_used,  # type: ignore[dict-item]
             }
         )
 
@@ -118,7 +118,7 @@ class PsychoacousticEnhancer:
             result = np.stack([left, right], axis=0)
         else:
             result = self._enhance_channel(audio, sr)
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _enhance_channel(self, channel: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -148,7 +148,7 @@ class PsychoacousticEnhancer:
         # Final clip
         result = np.clip(result, -1.0, 1.0)
 
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _extract_bass(self, channel: np.ndarray, sr: int) -> np.ndarray:
         """Extrahiert bass frequencies using bandpass filter."""
@@ -167,7 +167,7 @@ class PsychoacousticEnhancer:
         # NaN/Inf-Guard
         bass_signal = np.nan_to_num(bass_signal, nan=0.0, posinf=0.0, neginf=0.0)
 
-        return bass_signal
+        return bass_signal  # type: ignore[no-any-return]
 
     def _generate_harmonics(self, bass_signal: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -207,7 +207,7 @@ class PsychoacousticEnhancer:
         # NaN/Inf-Guard
         harmonics_filtered = np.nan_to_num(harmonics_filtered, nan=0.0, posinf=0.0, neginf=0.0)
 
-        return harmonics_filtered
+        return harmonics_filtered  # type: ignore[no-any-return]
 
     def _measure_bass_energy(self, audio: np.ndarray, sr: int) -> float:
         """Misst bass energy in 40-240 Hz range."""
@@ -223,7 +223,7 @@ class PsychoacousticEnhancer:
 
         # RMS energy
         energy = np.sqrt(np.mean(bass_band**2))
-        return energy
+        return energy  # type: ignore[no-any-return]
 
 
 def create_psychoacoustic_enhancer(
@@ -244,14 +244,14 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     try:
         _res = load_audio_file("test_audio.wav")
-        audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+        audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
         enhancer = create_psychoacoustic_enhancer(bass_freq_range=(20, 80), harmonic_gain_db=6.0, mix=0.5)
         enhanced, metrics = enhancer.process(audio, sr, use_deep_learning=True, audit_log=True)
-        logger.info("Psychoacoustic Enhancement applied:")
+        logger.info("Psychoacoustic Enhancement angewendet:")
         logger.info("  Bass Energy Gain: %.1f dB", metrics["enhancement_db"])
         logger.info("  Harmonic Gain: %.1f dB", metrics["harmonic_gain_db"])
         if metrics.get("fallback_used"):
-            logger.info("[INFO] Fallback auf klassische Methode oder Originalaudio.")
+            logger.info("[INFO] Ersatzpfad auf klassische Methode oder Originalaudio.")
         sf.write("enhanced_psychoacoustic.wav", enhanced, sr)
     except Exception as e:
         logger.error("Fehler im Beispielskript: %s", e)

@@ -40,13 +40,13 @@ np.random.seed(42)
 def _sibilant_signal(n: int = N, sr: int = SR, freq_hz: float = 7000.0) -> np.ndarray:
     """Reiner Sinus im Sibilantenbereich (steuert De-Esser)."""
     t = np.linspace(0, n / sr, n, endpoint=False)
-    return (0.5 * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)
+    return (0.5 * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _bass_signal(n: int = N) -> np.ndarray:
     """Reiner Sinus im Bass-Bereich — soll vom De-Esser unberührt bleiben."""
     t = np.linspace(0, N / SR, n, endpoint=False)
-    return (0.5 * np.sin(2.0 * np.pi * 200.0 * t)).astype(np.float32)
+    return (0.5 * np.sin(2.0 * np.pi * 200.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.fixture()

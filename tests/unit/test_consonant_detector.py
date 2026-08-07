@@ -39,7 +39,7 @@ def _white_noise(duration_s: float = 0.5, amplitude: float = 0.3) -> np.ndarray:
 def _sine(freq_hz: float = 440.0, duration_s: float = 0.5) -> np.ndarray:
     """Reiner Sinuston: niedrige ZCR, keine HF-Energie → kein Frikativ."""
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return np.sin(2 * np.pi * freq_hz * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq_hz * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(duration_s: float = 0.3) -> np.ndarray:
@@ -57,7 +57,7 @@ def _fricative_like(duration_s: float = 0.5) -> np.ndarray:
     sos = sp.butter(6, [6_000 / nyq, 14_000 / nyq], btype="band", output="sos")
     filtered = sp.sosfilt(sos, noise)
     filtered /= max(np.max(np.abs(filtered)), 1e-8)  # normalisieren
-    return filtered.astype(np.float32) * 0.5
+    return filtered.astype(np.float32) * 0.5  # type: ignore[no-any-return]
 
 
 # ── Tests ────────────────────────────────────────────────────────────────── #

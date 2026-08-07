@@ -129,7 +129,7 @@ class OneTakeExport:
                         )
 
                 logger.info(
-                    "OneTakeExport: PASS (attempt=%d, TP=%.1f, LUFS=%.1f, fatigue=%.2f)",
+                    "OneTakeExport: PASS (Versuch=%d, TP=%.1f, LUFS=%.1f, fatigue=%.2f)",
                     attempt,
                     check.true_peak_dbtp,
                     check.integrated_lufs,
@@ -181,7 +181,7 @@ class OneTakeExport:
                         if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                             _gain_cap_db = 3.0  # Kassette ist fragiler
                     except Exception:
-                        logger.debug("one_take_export.py:183: Silent exception absorbed", exc_info=True)
+                        logger.debug("one_take_Ausgabe.py:183: Silent exception absorbed", exc_info=True)
                     # §v10.303.9 Adaptive-Override: >4dB Abweichung → Caps lockern
                     _deviation = abs(gain_db)
                     if _deviation > 4.0:
@@ -216,7 +216,7 @@ class OneTakeExport:
                         f"hf_cut({_fatigue_db:+d}dB@{_FATIGUE_HF_CUT_FREQ}Hz, fatigue={check.fatigue_score:.2f})"
                     )
                 except Exception as _e:
-                    logger.debug("one_take_export: non-critical exception: %s", _e)
+                    logger.debug("one_take_Ausgabe: unkritisch exception: %s", _e)
 
             current = np.clip(np.nan_to_num(current, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             result.corrections.extend(corrections_this_round)
@@ -237,7 +237,7 @@ class OneTakeExport:
                 )
                 return result
             logger.info(
-                "OneTakeExport: auto-correct (attempt=%d): %s",
+                "OneTakeExport: auto-correct (Versuch=%d): %s",
                 attempt,
                 ", ".join(corrections_this_round),
             )
@@ -353,7 +353,7 @@ def _compensate_denoise_learning_dip(audio: np.ndarray, sr: int) -> np.ndarray:
         _max_gain_db,
         _n_fade / sr,
     )
-    return np.clip(_out.astype(np.float64), -1.0, 1.0)
+    return np.clip(_out.astype(np.float64), -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def one_take_prepare(

@@ -122,7 +122,7 @@ class StereoWidthEnhancer:
 
         correlation = numerator / denominator if denominator > 0 else 0.0
 
-        return np.clip(correlation, -1.0, 1.0)
+        return np.clip(correlation, -1.0, 1.0)  # type: ignore[no-any-return]
 
     def check_mono_compatibility(
         self, left: np.ndarray, right: np.ndarray, threshold_db: float = -40.0

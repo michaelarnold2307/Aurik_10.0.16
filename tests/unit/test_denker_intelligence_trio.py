@@ -113,7 +113,7 @@ class TestLeitePhaseNAb:
         """Fail-safe: None-Eingabe → ChainPhasePlan ohne Exception."""
         from denker.tontraegerkette_denker import ChainPhasePlan, get_tontraegerkette_denker
 
-        plan = get_tontraegerkette_denker().leite_phasen_ab(None)
+        plan = get_tontraegerkette_denker().leite_phasen_ab(None)  # type: ignore[arg-type]
         assert isinstance(plan, ChainPhasePlan)
         assert plan.must_have_phases == []
 
@@ -357,7 +357,7 @@ class TestSchaetzePhasenTier:
         """Fail-safe: None-Plan → leeres Dict."""
         from denker.strategie_denker import get_strategie_denker
 
-        result = get_strategie_denker().schaetze_phasen_tier(None, ["phase_03_denoise"])
+        result = get_strategie_denker().schaetze_phasen_tier(None, ["phase_03_denoise"])  # type: ignore[arg-type]
         assert result == {}
 
     def test_empty_phase_list(self, quality_plan):

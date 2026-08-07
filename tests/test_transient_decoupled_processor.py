@@ -34,7 +34,7 @@ def _sine(freq: float = 440.0, dur: float = 2.0, amp: float = 0.5) -> np.ndarray
     """Reiner Sinuston (harmonischer Anteil)."""
     np.random.seed(42)
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _impulse_train(dur: float = 2.0, rate_hz: float = 4.0, amp: float = 0.8) -> np.ndarray:
@@ -51,7 +51,7 @@ def _mixed(dur: float = 2.0) -> np.ndarray:
     np.random.seed(42)
     s = _sine(440.0, dur) + _impulse_train(dur) * 0.3
     s += np.random.randn(len(s)).astype(np.float32) * 0.02
-    return np.clip(s, -1.0, 1.0)
+    return np.clip(s, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _stereo(dur: float = 2.0) -> np.ndarray:

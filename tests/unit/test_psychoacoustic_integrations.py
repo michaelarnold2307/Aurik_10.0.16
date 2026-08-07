@@ -25,7 +25,7 @@ def _make_vocal(duration_s: float = 1.0, f0: float = 220.0) -> np.ndarray:
         sig += (0.5 / h) * np.sin(2 * np.pi * f0 * h * t)
     rng = np.random.default_rng(42)
     sig += rng.standard_normal(n) * 0.01
-    return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.7).astype(np.float64)
+    return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.7).astype(np.float64)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

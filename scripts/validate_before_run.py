@@ -96,10 +96,10 @@ def test_song_calibration_integrity() -> bool:
     uv3._restoration_context = {"source_fidelity_bandwidth_target_hz": 13006.0}
 
     for material in ["vinyl", "cassette", "reel_tape", "mp3_low", "cd_digital"]:
-        profile = UnifiedRestorerV3._build_song_calibration_profile(
+        profile = UnifiedRestorerV3._build_song_calibration_profile(  # type: ignore[misc]
             uv3,
-            material_type=material,
-            mode="restoration",
+            material_type=material,  # type: ignore[arg-type]
+            mode="restoration",  # type: ignore[arg-type]
             restorability_score=63.5,
             input_snr_db=14.3,
             max_defect_severity=0.6,
@@ -136,7 +136,7 @@ def test_contract_validator() -> bool:
     from backend.core.defect_contract_validator import run_contract_validation
 
     result = run_contract_validation()
-    return result["ok"]
+    return result["ok"]  # type: ignore[no-any-return]
 
 
 def main() -> int:

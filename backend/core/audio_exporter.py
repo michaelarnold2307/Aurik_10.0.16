@@ -109,7 +109,7 @@ def _apply_dither_16bit(audio: np.ndarray) -> np.ndarray:
         )
 
     except Exception as _exc:  # scipy unavailable or unexpected shape
-        logger.debug("POW-r Typ 3 nicht verfügbar (%s) — TPDF-Fallback aktiv.", _exc)
+        logger.debug("POW-r Typ 3 nicht verfügbar (%s) — TPDF-Ersatzpfad aktiv.", _exc)
         # TPDF-Fallback: triangular ±1 LSB, no spectral shaping
         tpdf = np.random.uniform(-LSB, LSB, n) + np.random.uniform(-LSB, LSB, n)
         if audio.ndim == 2:
@@ -136,7 +136,7 @@ def _meta_float(metadata: dict[str, str] | None, key: str, default: float = 0.0)
     try:
         return float(metadata.get(key, default) or default)
     except Exception as e:
-        logger.warning("audio_exporter.py::_meta_float fallback: %s", e)
+        logger.warning("audio_exporter.py::_meta_float Ersatzpfad: %s", e)
         return default
 
 
@@ -146,7 +146,7 @@ def _meta_int(metadata: dict[str, str] | None, key: str, default: int = 0) -> in
     try:
         return int(float(metadata.get(key, default) or default))
     except Exception as e:
-        logger.warning("audio_exporter.py::_meta_int fallback: %s", e)
+        logger.warning("audio_exporter.py::_meta_int Ersatzpfad: %s", e)
         return default
 
 
@@ -180,7 +180,7 @@ def _apply_musiclover_export_optimizations(
         arr[:, 0] = np.clip(mid + side, -1.0, 1.0)
         arr[:, 1] = np.clip(mid - side, -1.0, 1.0)
         logger.info(
-            "§MusicLover Export-MonoGuard: side_scale=%.3f (vqi=%.3f hotspots=%d)",
+            "§MusicLover Ausgabe-MonoGuard: side_scale=%.3f (vqi=%.3f hotspots=%d)",
             side_scale,
             vqi,
             hotspots,
@@ -202,7 +202,7 @@ def _apply_musiclover_export_optimizations(
             mix = float(np.clip(0.04 + risk * 0.18, 0.04, 0.18))
             arr[:n, :] = np.clip((1.0 - mix) * arr[:n, :] + mix * ref[:n, :2], -1.0, 1.0)
             logger.info(
-                "§MusicLover Export-RefBlend: mix=%.3f (risk=%.2f vqi=%.3f hotspots=%d goals=%d)",
+                "§MusicLover Ausgabe-RefBlend: mix=%.3f (risk=%.2f vqi=%.3f hotspots=%d goals=%d)",
                 mix,
                 risk,
                 vqi,
@@ -253,7 +253,7 @@ class AudioExporter:
 
     def __init__(self) -> None:
         self.last_export_path: Path | None = None
-        logger.info("AudioExporter initialized")
+        logger.info("AudioExporter initialisiert")
 
     def export(
         self,
@@ -337,13 +337,17 @@ class AudioExporter:
                         if _pre_gain_peak > 1e-9 and _post_gain_peak <= (_pre_gain_peak * 1.01):
                             logger.warning(
                                 "LUFS-Normalisierung: envelope-aware gate found no musical frames "
-                                "— uniform fallback boost skipped to protect quiet zones "
+                                "— uniform Ersatzpfad boost uebersprungen to protect quiet zones "
                                 "(pre_peak=%.3f, post_peak=%.3f, gain=%.2f×).",
                                 _pre_gain_peak,
                                 _post_gain_peak,
                                 _gain_linear,
                             )
-                        audio_export = _limit_quiet_edge_boost(_normalize_reference, audio_export, sr=sr)
+                        # §0h Music-Death-Shield: 0.5 dB tolerance — tighter than the 2.0 dB
+                        # default, consistent with the reference_audio export path below.
+                        audio_export = _limit_quiet_edge_boost(
+                            _normalize_reference, audio_export, sr=sr, max_edge_boost_db=0.5
+                        )
                     else:
                         # Attenuation is safe to apply uniformly (reduces level, no explosion risk).
                         audio_export = np.clip(audio_export * _gain_linear, -1.0, 1.0)
@@ -366,13 +370,16 @@ class AudioExporter:
                     if _pre_floor_peak > 1e-9 and _post_floor_peak <= (_pre_floor_peak * 1.01):
                         logger.warning(
                             "LUFS-Floor-Boost: envelope-aware gate found no musical frames "
-                            "— uniform fallback floor boost skipped to protect quiet zones "
+                            "— uniform Ersatzpfad floor boost uebersprungen to protect quiet zones "
                             "(pre_peak=%.3f, post_peak=%.3f, gain=%.2f×).",
                             _pre_floor_peak,
                             _post_floor_peak,
                             _floor_gain,
                         )
-                    audio_export = _limit_quiet_edge_boost(_normalize_reference, audio_export, sr=sr)
+                    # §0h Music-Death-Shield: 0.5 dB tolerance — tighter than the 2.0 dB default.
+                    audio_export = _limit_quiet_edge_boost(
+                        _normalize_reference, audio_export, sr=sr, max_edge_boost_db=0.5
+                    )
                 # TruePeak safety: ≤ -0.1 dBTP — percentile 99.9 guards against
                 # crackle/click impulses blocking normalization of the whole signal.
                 _tp_peak = float(np.percentile(np.abs(audio_export), 99.9))
@@ -384,7 +391,7 @@ class AudioExporter:
                     _lufs_target,
                 )
             except Exception as _lufs_exc:
-                logger.debug("LUFS-Normalisierung fehlgeschlagen (%s) — Peak-Fallback.", _lufs_exc)
+                logger.debug("LUFS-Normalisierung fehlgeschlagen (%s) — Peak-Ersatzpfad.", _lufs_exc)
                 # Fallback: Peak-Normalisierung auf -0.1 dBFS
                 # §DSP-Invariante: percentile 99.9 — Impuls-Artefakt darf Normalisierung nicht blockieren.
                 peak = float(np.percentile(np.abs(audio_export), 99.9))
@@ -397,14 +404,14 @@ class AudioExporter:
                 # to guarantee no audible Pegelexplosion at quiet edges in exported file.
                 audio_export = _limit_quiet_edge_boost(reference_export, audio_export, sr=sr, max_edge_boost_db=0.5)
             except Exception as _quiet_edge_exc:
-                logger.debug("Final quiet-edge export clamp skipped: %s", _quiet_edge_exc)
+                logger.debug("Final quiet-edge Ausgabe clamp uebersprungen: %s", _quiet_edge_exc)
 
         # Zentraler musiclover-Finalizer (alle Exportpfade):
         # nutzt Export-Metadaten für konservative Defekt-Minimierung.
         try:
             audio_export = _apply_musiclover_export_optimizations(audio_export, metadata, reference_export)
         except Exception as _ml_exc:
-            logger.debug("MusicLover export optimizations skipped (non-blocking): %s", _ml_exc)
+            logger.debug("MusicLover Ausgabe optimizations uebersprungen (nicht blockierend): %s", _ml_exc)
 
         # §PDV-1 Translation-EQ: sanfte Anpassung an Ziel-Abspielgerät.
         # Non-blocking: Fehler überspringen Translation-EQ, Export läuft weiter.
@@ -432,7 +439,7 @@ class AudioExporter:
                     _post_peak_pdv,
                 )
             except Exception as _pdv_exc:
-                logger.debug("§PDV-1 Translation-EQ non-blocking: %s", _pdv_exc)
+                logger.debug("§PDV-1 Translation-EQ nicht blockierend: %s", _pdv_exc)
 
         # Ensure correct dtype for bit depth
         if not format_info["lossy"]:
@@ -478,7 +485,8 @@ class AudioExporter:
                     _atomic_write_audio(output_path, audio_export, format_name="OPUS", subtype_name=subtype)
                 except RuntimeError as e:
                     logger.warning(
-                        "Opus export failed (%s). Falling back to FLAC. Install libopusenc for Opus support.", e
+                        "Opus Ausgabe fehlgeschlagen (%s). Falling back to FLAC. Install libopusenc for Opus support.",
+                        e,
                     )
                     # Fallback to FLAC
                     fallback_path = output_path.with_suffix(".flac")
@@ -490,7 +498,7 @@ class AudioExporter:
                 try:
                     _atomic_write_audio(output_path, audio_export, format_name="CAF", subtype_name=subtype)
                 except RuntimeError as e:
-                    logger.warning("CAF export failed (%s). Falling back to AIFF.", e)
+                    logger.warning("CAF Ausgabe fehlgeschlagen (%s). Falling back to AIFF.", e)
                     # Fallback to AIFF
                     fallback_path = output_path.with_suffix(".aiff")
                     _atomic_write_audio(fallback_path, audio_export, format_name="AIFF", subtype_name=subtype)
@@ -510,7 +518,7 @@ class AudioExporter:
             try:
                 self._write_export_metrics(output_path, audio, audio_export, sr, metadata)
             except Exception as _metrics_exc:
-                logger.debug("Export-Metriken schreiben fehlgeschlagen (non-blocking): %s", _metrics_exc)
+                logger.debug("Ausgabe-Metriken schreiben fehlgeschlagen (nicht blockierend): %s", _metrics_exc)
             return output_path
 
         except Exception as e:
@@ -564,7 +572,7 @@ class AudioExporter:
                     originator="Aurik v10 BP",
                 )
             except Exception as _bwf_exc:
-                logger.debug("BWF chunk write skipped: %s", _bwf_exc)
+                logger.debug("BWF chunk write uebersprungen: %s", _bwf_exc)
         logger.info("Bit-Perfect: %s (%d Hz, sha256=%s)", output_path, sr, chk[:16])
         return output_path
 
@@ -607,10 +615,10 @@ class AudioExporter:
                             if sf_handle is not None and hasattr(sf_handle, "command"):
                                 sf_handle.command(0x10018, sf_code, value.encode("utf-8"), len(value) + 1)
                         except Exception as _exc:
-                            logger.debug("Operation failed (non-critical): %s", _exc)
+                            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             written_via_sf = True
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         if not written_via_sf:
             # JSON-Sidecar als Fallback
@@ -652,7 +660,7 @@ class AudioExporter:
                 exported_path = self.export(audio, sr, output_path, **export_kwargs)
                 results[fmt] = exported_path
             except Exception as e:
-                logger.warning("Failed to export %s: %s", fmt, e)
+                logger.warning("konnte nicht Ausgabe %s: %s", fmt, e)
 
         return results
 
@@ -804,9 +812,9 @@ def _write_export_metrics_impl(
     try:
         with open(sidecar, "w", encoding="utf-8") as f:
             json.dump(metrics, f, indent=2, ensure_ascii=False)
-        logger.info("Export-Metriken geschrieben: %s", sidecar)
+        logger.info("Ausgabe-Metriken geschrieben: %s", sidecar)
     except Exception as e:
-        logger.debug("Export-Metriken schreiben fehlgeschlagen: %s", e)
+        logger.debug("Ausgabe-Metriken schreiben fehlgeschlagen: %s", e)
         raise
     return sidecar
 
@@ -844,7 +852,7 @@ if __name__ == "__main__":
     # Export to various formats
     demo_exporter = AudioExporter()
 
-    logger.debug("Available formats: %s", demo_exporter.list_supported_formats())
+    logger.debug("verfuegbar formats: %s", demo_exporter.list_supported_formats())
 
     # Single export
     wav_path = demo_exporter.export(demo_audio, demo_sr, Path("test_output.wav"), bit_depth=24)

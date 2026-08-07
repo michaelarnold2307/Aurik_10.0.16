@@ -59,7 +59,7 @@ adaptive_spectral_subtraction_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Musikverlust",
             "expected_when": "oversubtract zu hoch",
             "severity": 0.2,
@@ -135,7 +135,7 @@ class AdaptiveSpectralSubtraction:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._subtract_classic(noisy_mag, noise_mag, oversubtract, floor)
                 else:
@@ -143,7 +143,7 @@ class AdaptiveSpectralSubtraction:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('spectral_subtraction.pt')
                     # output = model(torch.from_numpy(noisy_mag).float().unsqueeze(0), torch.from_numpy(noise_mag).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._subtract_classic(noisy_mag, noise_mag, oversubtract, floor)
             else:
@@ -158,7 +158,7 @@ class AdaptiveSpectralSubtraction:
                 float(np.mean(output) / (np.mean(noise_mag) + 1e-8)) if output is not None else float("nan")
             )
             logger.info(
-                f"AdaptiveSpectralSubtraction: snr_improvement={snr_improvement:.4f}, fallback_used={fallback_used}, oversubtract={oversubtract}, floor={floor}"
+                f"AdaptiveSpectralSubtraction: snr_improvement={snr_improvement:.4f}, Ersatzpfad_used={fallback_used}, oversubtract={oversubtract}, floor={floor}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_spectral_subtraction_contract))
         return output

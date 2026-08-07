@@ -206,7 +206,7 @@ class BinauralEnhancer:
         # Stack channels
         hrtf_audio = np.stack([left_channel, right_channel], axis=1)
 
-        return hrtf_audio
+        return hrtf_audio  # type: ignore[no-any-return]
 
     def _calculate_itd_samples(self, sr: int) -> float:
         """
@@ -231,13 +231,13 @@ class BinauralEnhancer:
         # Convert to samples
         itd_samples = itd_seconds * sr
 
-        return itd_samples
+        return itd_samples  # type: ignore[no-any-return]
 
     def _calculate_itd_microseconds(self) -> float:
         """Returns ITD in microseconds für Report"""
         theta_rad = np.deg2rad(self.azimuth_deg)
         itd_seconds = (self.head_radius_cm / self.speed_of_sound_cm_per_sec) * (theta_rad + np.sin(theta_rad))
-        return itd_seconds * 1e6  # Convert to μs
+        return itd_seconds * 1e6  # type: ignore  # Convert to μs
 
     def _calculate_ild_gain(self) -> float:
         """
@@ -254,13 +254,13 @@ class BinauralEnhancer:
         gain_db = -20.0 * (abs_azimuth / 90.0)
         gain_linear = 10 ** (gain_db / 20.0)
 
-        return gain_linear
+        return gain_linear  # type: ignore[no-any-return]
 
     def _calculate_ild_db(self) -> float:
         """Returns ILD in dB für Report"""
         abs_azimuth = abs(self.azimuth_deg)
         ild_db = 20.0 * (abs_azimuth / 90.0)
-        return ild_db
+        return ild_db  # type: ignore[no-any-return]
 
     def _apply_pinna_filter(self, audio: np.ndarray, sr: int, ear: str) -> np.ndarray:
         """
@@ -384,7 +384,7 @@ class BinauralEnhancer:
         cutoff_norm = min(cutoff_norm, 0.99)
 
         b, a = signal.butter(2, cutoff_norm, btype="low")
-        return signal.filtfilt(b, a, audio)
+        return signal.filtfilt(b, a, audio)  # type: ignore[no-any-return]
 
     def _measure_externalization(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -480,7 +480,7 @@ if __name__ == "__main__":
     audio_right = np.random.randn(samples)
     audio = np.stack([audio_left, audio_right], axis=1) * 0.1
 
-    logger.info("Input: %d samples, %d channels, %d Hz", samples, audio.shape[1], sr)
+    logger.info("Eingabe: %d samples, %d channels, %d Hz", samples, audio.shape[1], sr)
     logger.info("Duration: %.1f seconds", duration)
 
     # Test: Source at 45° right, slightly above, 1.5m distance
@@ -489,14 +489,14 @@ if __name__ == "__main__":
     )
 
     logger.info("")
-    logger.info("✅ Binaural Enhancement Complete!")
-    logger.info("  • HRTF Applied: %s", report.hrtf_applied)
-    logger.info("  • Crossfeed Applied: %s", report.crossfeed_applied)
+    logger.info("✅ Binaural Enhancement vollstaendig!")
+    logger.info("  • HRTF angewendet: %s", report.hrtf_applied)
+    logger.info("  • Crossfeed angewendet: %s", report.crossfeed_applied)
     logger.info("  • Azimuth: %.1f° (Horizontal)", report.azimuth_angle_deg)
     logger.info("  • Elevation: %.1f° (Vertical)", report.elevation_angle_deg)
     logger.info("  • ITD: %.1f µs", report.itd_microseconds)
     logger.info("  • ILD: %.1f dB", report.ild_db)
-    logger.info("  • Externalization Score: %.1f%%", report.externalization_score * 100)
+    logger.info("  • Externalization Wert: %.1f%%", report.externalization_score * 100)
 
     logger.info("")
     logger.info("✨ 3D Audio für Kopfhörer erzeugt!")

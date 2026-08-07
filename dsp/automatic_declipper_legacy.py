@@ -120,7 +120,7 @@ class DSPContract:
 
 
 # Instanz des Contracts (kann für Audit/Orchestrierung genutzt werden)
-automatic_declipper_legacy_contract = DSPContract(
+automatic_declipper_legacy_contract = DSPContract(  # type: ignore[assignment]
     io={
         "channels": "mono|stereo",
         "sample_rates": [44100, 48000],

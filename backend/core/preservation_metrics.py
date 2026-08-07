@@ -109,7 +109,7 @@ def compute_harmonic_preservation_score(
         # No voiced frames found: fall back to spectral flatness
         return _harmonic_fallback_flatness(orig, proc, sr)
 
-    weights = np.array(weights, dtype=np.float64)
+    weights = np.array(weights, dtype=np.float64)  # type: ignore[assignment]
     weights /= np.sum(weights) + 1e-10
     return float(np.dot(hnr_ratios, weights))
 
@@ -384,7 +384,7 @@ def compute_formant_preservation_score(
         # Fallback: spectral energy preservation in formant range
         return _formant_energy_fallback(mono_orig, mono_proc, sr, formant_range)
 
-    weights = np.array(weights, dtype=np.float64)
+    weights = np.array(weights, dtype=np.float64)  # type: ignore[assignment]
     weights /= np.sum(weights) + 1e-10
     return float(np.dot(scores, weights))
 
@@ -646,8 +646,8 @@ def compute_emotional_arc_score(
             rms_vals_p[j] = float(np.sqrt(np.mean(proc[s : s + win_s] ** 2)))
         if len(rms_vals_o) < 3:
             continue
-        dr_o = np.percentile(rms_vals_o, 95) / max(np.percentile(rms_vals_o, 5), 1e-15)
-        dr_p = np.percentile(rms_vals_p, 95) / max(np.percentile(rms_vals_p, 5), 1e-15)
+        dr_o = np.percentile(rms_vals_o, 95) / max(np.percentile(rms_vals_o, 5), 1e-15)  # type: ignore
+        dr_p = np.percentile(rms_vals_p, 95) / max(np.percentile(rms_vals_p, 5), 1e-15)  # type: ignore
         ratio = min(dr_o, dr_p) / max(dr_o, dr_p)
         contrast_ratios.append(ratio)
     contrast_score = float(np.mean(contrast_ratios)) if contrast_ratios else 1.0
@@ -724,4 +724,4 @@ def compute_emotional_arc_score(
 def _to_mono(audio: np.ndarray) -> np.ndarray:
     if audio.ndim == 1:
         return audio
-    return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+    return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]

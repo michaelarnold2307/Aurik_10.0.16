@@ -253,7 +253,7 @@ def test_all_known_lazy_plugins_are_correctly_sized() -> None:
     """FlashSR and MERT lazy model sizes match the values declared in their plugins."""
     # Import actual constants to verify they haven't been silently changed.
     try:
-        from plugins.flashsr_plugin import _FLASHSR_BUDGET_GB  # type: ignore[import]
+        from plugins.flashsr_plugin import _FLASHSR_BUDGET_GB  # type: ignore[attr-defined]
 
         assert _LAZY_MODEL_SIZES["FlashSR"] == _FLASHSR_BUDGET_GB, (
             f"FlashSR budget mismatch: plugin declares {_FLASHSR_BUDGET_GB} GB, "

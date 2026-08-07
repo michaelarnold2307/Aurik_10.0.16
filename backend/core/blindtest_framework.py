@@ -47,9 +47,9 @@ class BlindTestResult:
 
     # PEAQ
     odg: float = -4.0  # Objective Difference Grade, -4 (worst) bis 0 (transparent)
-    di: float = 0.0    # Distortion Index
+    di: float = 0.0  # Distortion Index
     n_before: float = 0.0  # PEAQ-ODG vor Restaurierung
-    n_after: float = 0.0   # PEAQ-ODG nach Restaurierung
+    n_after: float = 0.0  # PEAQ-ODG nach Restaurierung
 
     # PESQ
     pesq_mos: float = 1.0  # 1.0 (worst) bis 4.5 (transparent)
@@ -105,9 +105,9 @@ class BlindTestFramework:
 
     def compare(
         self,
-        degraded: Any,       # np.ndarray
-        restored: Any,       # np.ndarray
-        reference: Any,      # np.ndarray (optional)
+        degraded: Any,  # np.ndarray
+        restored: Any,  # np.ndarray
+        reference: Any,  # np.ndarray (optional)
         sr: int = 48000,
         *,
         chain_depth: int = 1,
@@ -171,6 +171,7 @@ class BlindTestFramework:
     @staticmethod
     def _to_mono_float32(audio: Any) -> Any:
         import numpy as np
+
         arr = np.asarray(audio, dtype=np.float32)
         if arr.ndim == 2:
             arr = np.mean(arr, axis=0)
@@ -204,8 +205,9 @@ class BlindTestFramework:
         # 3. SNR-Proxy (Signal-Peak vs RMS-Floor)
         frame_size = sr // 100  # 10ms
         n_frames = max(1, n // frame_size)
-        frame_rms = np.array([np.sqrt(np.mean(arr[i*frame_size:(i+1)*frame_size]**2))
-                              for i in range(n_frames)])
+        frame_rms = np.array(
+            [np.sqrt(np.mean(arr[i * frame_size : (i + 1) * frame_size] ** 2)) for i in range(n_frames)]
+        )
         noise_floor = float(np.percentile(frame_rms[frame_rms > 1e-9], 10))
         signal_level = float(np.percentile(frame_rms, 90))
         snr_proxy = float(np.clip(20 * np.log10(signal_level / (noise_floor + 1e-9)) / 60.0, 0.0, 1.0))
@@ -232,8 +234,8 @@ class BlindTestFramework:
         n_seg = max(1, min_len // seg_size)
         seg_snr = np.zeros(n_seg)
         for i in range(n_seg):
-            a_seg = arr[i*seg_size:(i+1)*seg_size]
-            r_seg = ref[i*seg_size:(i+1)*seg_size]
+            a_seg = arr[i * seg_size : (i + 1) * seg_size]
+            r_seg = ref[i * seg_size : (i + 1) * seg_size]
             noise = a_seg - r_seg
             ns = np.sum(r_seg**2) + 1e-9
             nd = np.sum(noise**2) + 1e-9
@@ -258,9 +260,7 @@ class BlindTestFramework:
             "tests": len(results),
             "passed": sum(1 for r in results if r.passed),
             "failed": sum(1 for r in results if not r.passed),
-            "mean_improvement": round(
-                float(sum(r.improvement for r in results) / len(results)), 3
-            ),
+            "mean_improvement": round(float(sum(r.improvement for r in results) / len(results)), 3),
             "details": [r.to_dict() for r in results],
         }
 
@@ -280,10 +280,11 @@ def run_blindtest(
 ) -> BlindTestResult:
     """Führt einen Blindtest auf WAV-Dateien aus."""
     import wave
+
     import numpy as np
 
     def _read_wav(path: Path) -> np.ndarray:
-        with wave.open(str(path), 'rb') as w:
+        with wave.open(str(path), "rb") as w:
             n_frames = w.getnframes()
             data = np.frombuffer(w.readframes(n_frames), dtype=np.int16)
             return data.astype(np.float32) / 32768.0
@@ -292,14 +293,19 @@ def run_blindtest(
     restored = _read_wav(restored_path)
     reference = _read_wav(reference_path) if reference_path else None
 
-    with wave.open(str(degraded_path), 'rb') as w:
+    with wave.open(str(degraded_path), "rb") as w:
         sr = w.getframerate()
 
     fw = BlindTestFramework()
-    return fw.compare(degraded, restored, reference, sr,
-                      chain_depth=chain_depth,
-                      material_type=material_type,
-                      test_name=degraded_path.stem)
+    return fw.compare(
+        degraded,
+        restored,
+        reference,
+        sr,
+        chain_depth=chain_depth,
+        material_type=material_type,
+        test_name=degraded_path.stem,
+    )
 
 
 def compare_chain_factors(
@@ -325,7 +331,10 @@ def compare_chain_factors(
     results = {}
     for depth, audio in sorted(restored_by_depth.items()):
         results[depth] = fw.compare(
-            degraded, audio, reference, sr,
+            degraded,
+            audio,
+            reference,
+            sr,
             chain_depth=depth,
             material_type=material_type,
             test_name=f"depth_{depth}",
@@ -359,14 +368,14 @@ if __name__ == "__main__":
     )
 
     if args.json:
-        print(json.dumps(result.to_dict(), indent=2))
+        logger.info("%s", json.dumps(result.to_dict(), indent=2))
     else:
-        print(f"Test: {result.test_name}")
-        print(f"  Depth: {result.chain_depth} (factor: {result.chain_factor:.2f}×)")
-        print(f"  ODG vorher: {result.n_before:.3f}")
-        print(f"  ODG nachher: {result.n_after:.3f}")
-        print(f"  Verbesserung: {result.improvement:+.3f}")
-        print(f"  PESQ-MOS: {result.pesq_mos:.2f}")
-        print(f"  Bestanden: {'✅' if result.passed else '❌'}")
+        logger.info("Test: %s", result.test_name)
+        logger.info("  Tiefe: %d (Faktor: %.2f×)", result.chain_depth, result.chain_factor)
+        logger.info("  ODG vorher: %.3f", result.n_before)
+        logger.info("  ODG nachher: %.3f", result.n_after)
+        logger.info("  Verbesserung: %+.3f", result.improvement)
+        logger.info("  PESQ-MOS: %.2f", result.pesq_mos)
+        logger.info("  Bestanden: %s", "ja" if result.passed else "nein")
         for note in result.notes:
-            print(f"  → {note}")
+            logger.info("  - %s", note)

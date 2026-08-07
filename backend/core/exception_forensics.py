@@ -102,12 +102,14 @@ class ExceptionAggregator:
         import json as _json
         from datetime import datetime, timezone
 
-        _entry = _json.dumps({
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "phase_id": phase_id,
-            "stage": stage,
-            "error": error_msg,
-        })
+        _entry = _json.dumps(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "phase_id": phase_id,
+                "stage": stage,
+                "error": error_msg,
+            }
+        )
         self.log_dir.mkdir(parents=True, exist_ok=True)
         with open(self.ndjson_path, "a", encoding="utf-8") as _f:
             _f.write(_entry + "\n")
@@ -196,8 +198,8 @@ class ExceptionAggregator:
         """Extrahiert den Exception-Typ aus einem NDJSON-Eintrag."""
         error = entry.get("error", "")
         if ":" in error:
-            return error.split(":")[0].strip()
-        return entry.get("stage", "Unknown")
+            return error.split(":")[0].strip()  # type: ignore[no-any-return]
+        return entry.get("stage", "Unknown")  # type: ignore[no-any-return]
 
     def _classify_pattern(self, msg: str, exc_type: str) -> str:
         """Klassifiziert eine Exception nach bekannten Patterns."""
@@ -211,8 +213,8 @@ class ExceptionAggregator:
         """Gibt eine Zusammenfassung des aktuellen NDJSON-Stands."""
         entries = self.aggregate()
         total = sum(e.count for e in entries)
-        by_pattern = Counter()
-        by_phase = Counter()
+        by_pattern: Any = Counter()
+        by_phase: Any = Counter()
         for e in entries:
             by_pattern[e.pattern_class] += e.count
             by_phase[e.phase_id] += e.count

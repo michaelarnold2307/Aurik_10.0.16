@@ -71,7 +71,9 @@ class VocalSeparationSafetyWrapper:
         self.audit_log_path = audit_log_path
 
         logger.info(
-            "VocalSeparationSafetyWrapper initialized: strict_mode=%s, audit_log=%s", strict_mode, audit_log_path
+            "VocalSeparationSafetyWrapper initialisiert: strict_Betriebsart=%s, audit_log=%s",
+            strict_mode,
+            audit_log_path,
         )
 
         self.separation_count = 0
@@ -112,7 +114,7 @@ class VocalSeparationSafetyWrapper:
         try:
             stems = self.separator.separate(audio, sr=sr, **kwargs)
         except Exception as e:
-            logger.error("[%s] Separation failed: %s", separation_id, e)
+            logger.error("[%s] Separation fehlgeschlagen: %s", separation_id, e)
             self._log_failure(separation_id, str(e), audio_shape=audio.shape)
             raise
 
@@ -141,9 +143,9 @@ class VocalSeparationSafetyWrapper:
             stems_info={k: v.shape for k, v in stems.items()},
         )
 
-        logger.info("[%s] HIPS-compliant separation complete", separation_id)
+        logger.info("[%s] HIPS-compliant separation vollstaendig", separation_id)
 
-        return stems
+        return stems  # type: ignore[no-any-return]
 
     def _pre_separation_checks(self, audio: np.ndarray, sr: int) -> dict[str, Any]:
         """
@@ -375,7 +377,7 @@ class VocalSeparationSafetyWrapper:
             with open(self.audit_log_path, "a") as f:
                 f.write(json.dumps(entry) + "\n")
         except Exception as e:
-            logger.error("Failed to write audit log: %s", e)
+            logger.error("konnte nicht write audit log: %s", e)
 
     def get_compliance_report(self) -> dict[str, Any]:
         """

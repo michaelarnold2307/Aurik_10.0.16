@@ -39,7 +39,7 @@ def _white_noise(duration_s: float = 2.0, amplitude: float = 0.05) -> np.ndarray
 def _sine(freq_hz: float = 440.0, duration_s: float = 2.0) -> np.ndarray:
     """Reiner Sinuston."""
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return np.sin(2 * np.pi * freq_hz * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq_hz * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _band_silenced_audio(
@@ -67,7 +67,7 @@ def _band_silenced_audio(
 def _stereo(duration_s: float = 2.0) -> np.ndarray:
     """Stereo-Signal (2 Kanäle)."""
     mono = _white_noise(duration_s)
-    return np.stack([mono, mono * 0.9], axis=1).astype(np.float32)
+    return np.stack([mono, mono * 0.9], axis=1).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

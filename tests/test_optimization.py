@@ -325,7 +325,7 @@ class TestOptimizationIntegration:
 
         quality_score = integration.compute_perceptual_quality(output_audio, reference_audio, return_details=False)
 
-        assert 0.0 <= quality_score <= 1.0
+        assert 0.0 <= quality_score <= 1.0  # type: ignore[operator]
 
     def test_recommend_processing_strategy(self, temp_optimization_dir):
         """Test processing strategy recommendation."""

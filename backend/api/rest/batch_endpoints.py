@@ -95,7 +95,7 @@ def batch_worker(batch_id: str, input_files: list[str]):
                         indent=2,
                     )
 
-                logger.info("[Batch %s] Processed: %s", batch_id, fname)
+                logger.info("[Batch %s] verarbeitet: %s", batch_id, fname)
 
             except Exception as e:
                 logger.exception("[Batch %s] Error processing %s: %s", batch_id, fname, e)
@@ -111,7 +111,7 @@ def batch_worker(batch_id: str, input_files: list[str]):
         with batch_lock:
             batch_jobs[batch_id]["status"] = "completed"
             batch_jobs[batch_id]["current_file"] = None
-            logger.info("[Batch %s] Completed", batch_id)
+            logger.info("[Batch %s] abgeschlossen", batch_id)
 
     except Exception as e:
         logger.exception("[Batch %s] Fatal error: %s", batch_id, e)
@@ -186,7 +186,7 @@ async def start_batch(background_tasks: BackgroundTasks, files: list[UploadFile]
         # Starte Batch-Worker in Background-Task
         background_tasks.add_task(batch_worker, batch_id, input_files)
 
-        logger.info("[Batch %s] Started with %s files", batch_id, len(input_files))
+        logger.info("[Batch %s] gestartet with %s files", batch_id, len(input_files))
 
         return {"batch_id": batch_id, "status": "started", "total_files": len(input_files)}
 

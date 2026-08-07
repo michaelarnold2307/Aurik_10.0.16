@@ -31,7 +31,7 @@ from __future__ import annotations
 import logging
 
 import numpy as np
-from scipy.signal import stft, istft
+from scipy.signal import istft, stft
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +61,7 @@ class PhaseCoherentSTFT:
         Muss VOR der ersten STFT-Phase aufgerufen werden.
         """
         if audio.size == 0:
-            logger.warning("PhaseCoherentSTFT.capture: leeres Audio — übersprungen")
+            logger.warning("PhaseCoherentSTFT.Erfassung: leeres Audio — übersprungen")
             return
 
         a = np.asarray(audio, dtype=np.float64)
@@ -84,18 +84,23 @@ class PhaseCoherentSTFT:
 
         try:
             _f, _t, Z = stft(
-                a, fs=sample_rate, nperseg=self._nperseg,
-                noverlap=self._noverlap, boundary="even",
+                a,
+                fs=sample_rate,
+                nperseg=self._nperseg,
+                noverlap=self._noverlap,
+                boundary="even",
             )
             self._original_phase = np.angle(Z).astype(np.float32)
             self._stft_freqs = _f
             self._captured = True
             logger.debug(
-                "PhaseCoherentSTFT: Phase gespeichert — nperseg=%d noverlap=%d shape=%s",
-                self._nperseg, self._noverlap, Z.shape,
+                "PhaseCoherentSTFT: Verarbeitungsschritt gespeichert — nperseg=%d noverlap=%d shape=%s",
+                self._nperseg,
+                self._noverlap,
+                Z.shape,
             )
         except Exception as exc:
-            logger.warning("PhaseCoherentSTFT.capture fehlgeschlagen: %s", exc)
+            logger.warning("PhaseCoherentSTFT.Erfassung fehlgeschlagen: %s", exc)
             self._original_phase = None
             self._captured = False
 
@@ -115,7 +120,7 @@ class PhaseCoherentSTFT:
             Phasenkohärent rekonstruiertes Audio
         """
         if not self._captured or self._original_phase is None:
-            logger.debug("PhaseCoherentSTFT.restore: keine Phase gespeichert — Passthrough")
+            logger.debug("PhaseCoherentSTFT.wiederherstellen: keine Verarbeitungsschritt gespeichert — Passthrough")
             return np.asarray(audio, dtype=np.float32)
 
         a = np.asarray(audio, dtype=np.float64)
@@ -132,18 +137,18 @@ class PhaseCoherentSTFT:
         # Längen-Matching
         if was_stereo:
             if restored.shape[0] > self._input_shape[0]:
-                restored = restored[:self._input_shape[0], :]
+                restored = restored[: self._input_shape[0], :]
             elif restored.shape[0] < self._input_shape[0]:
                 pad_len = self._input_shape[0] - restored.shape[0]
                 restored = np.pad(restored, ((0, pad_len), (0, 0)), mode="edge")
         else:
             if len(restored) > self._input_shape[0]:
-                restored = restored[:self._input_shape[0]]
+                restored = restored[: self._input_shape[0]]
             elif len(restored) < self._input_shape[0]:
                 pad_len = self._input_shape[0] - len(restored)
                 restored = np.pad(restored, (0, pad_len), mode="edge")
 
-        logger.debug("PhaseCoherentSTFT: Phase wiederhergestellt")
+        logger.debug("PhaseCoherentSTFT: Verarbeitungsschritt wiederhergestellt")
         return np.asarray(restored, dtype=np.float32)
 
     # ── Internals ────────────────────────────────────────────────────────
@@ -152,16 +157,19 @@ class PhaseCoherentSTFT:
         """Restore phase for a single audio channel."""
         try:
             _f, _t, Z_processed = stft(
-                channel, fs=sample_rate, nperseg=self._nperseg,
-                noverlap=self._noverlap, boundary="even",
+                channel,
+                fs=sample_rate,
+                nperseg=self._nperseg,
+                noverlap=self._noverlap,
+                boundary="even",
             )
 
             # Match shapes — processed STFT may have different time frames
-            n_frames = min(Z_processed.shape[1], self._original_phase.shape[1])
-            n_bins = min(Z_processed.shape[0], self._original_phase.shape[0])
+            n_frames = min(Z_processed.shape[1], self._original_phase.shape[1])  # type: ignore[union-attr]
+            n_bins = min(Z_processed.shape[0], self._original_phase.shape[0])  # type: ignore[union-attr]
 
             mag = np.abs(Z_processed[:n_bins, :n_frames])
-            phase = self._original_phase[:n_bins, :n_frames]
+            phase = self._original_phase[:n_bins, :n_frames]  # type: ignore[index]
 
             # Soft-blend: bei sehr kleinen Magnituden (Rauschen wurde entfernt)
             # die Phase graduell Richtung Null drehen — verhindert "Phase-Wobble"
@@ -173,12 +181,31 @@ class PhaseCoherentSTFT:
             Z_coherent = mag * np.exp(1j * phase_blended)
 
             _t_ch, reconstructed = istft(
-                Z_coherent, fs=sample_rate, nperseg=self._nperseg,
-                noverlap=self._noverlap, boundary=True,
+                Z_coherent,
+                fs=sample_rate,
+                nperseg=self._nperseg,
+                noverlap=self._noverlap,
+                boundary=True,
             )
             return np.asarray(reconstructed, dtype=np.float32)
         except Exception as exc:
-            logger.warning(
-                "PhaseCoherentSTFT._restore_channel fehlgeschlagen (%s) — Passthrough", exc
-            )
+            logger.warning("PhaseCoherentSTFT._wiederherstellen_channel fehlgeschlagen (%s) — Passthrough", exc)
             return np.asarray(channel, dtype=np.float32)
+
+
+def restore_phase_coherence(
+    degraded_reference: np.ndarray,
+    processed_audio: np.ndarray,
+    sample_rate: int,
+    mode: str = "hybrid",
+) -> np.ndarray:
+    """One-Shot-Wrapper: Erfasst die Originalphase aus `degraded_reference` und
+    rekombiniert sie mit der Magnitude von `processed_audio`.
+
+    `mode` ist aktuell ohne Verzweigung (nur ein Restaurationspfad implementiert)
+    und wird nur für zukünftige API-Kompatibilität akzeptiert.
+    """
+    _ = mode
+    pcs = PhaseCoherentSTFT()
+    pcs.capture(degraded_reference, sample_rate)
+    return pcs.restore(processed_audio, sample_rate)

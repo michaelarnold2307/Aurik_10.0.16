@@ -497,7 +497,7 @@ def get_era_material_defect_priors(
     mat_fb = _MATERIAL_ONLY_PRIORS.get(mat_key, {})
     result = {k: (v.severity_prior, v.probability) for k, v in mat_fb.items()}
     logger.debug(
-        "era_defect_patterns: material-only fallback mat=%s → %d priors",
+        "era_defect_patterns: material-only Ersatzpfad mat=%s → %d priors",
         mat_key,
         len(result),
     )

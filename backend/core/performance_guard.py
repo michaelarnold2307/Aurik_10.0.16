@@ -250,7 +250,7 @@ class PerformanceGuard:
         self._analytics_overhead_s: float = 0.0
 
         logger.info(
-            f"PerformanceGuard initialized: Mode={mode.value}, "
+            f"PerformanceGuard initialisiert: Betriebsart={mode.value}, "
             f"Target={self.target_rt_factor:.1f}× RT, "
             f"Enforce={enforce_limit}, Adaptive={enable_adaptive_skipping}"
         )
@@ -281,7 +281,7 @@ class PerformanceGuard:
         self._analytics_overhead_s = 0.0
 
         logger.info(
-            f"Started monitoring: {audio_duration_seconds:.1f}s audio, "
+            f"gestartet monitoring: {audio_duration_seconds:.1f}s audio, "
             f"max {self.target_rt_factor * audio_duration_seconds:.1f}s processing"
         )
 
@@ -338,7 +338,7 @@ class PerformanceGuard:
         # Guard: start_monitoring() may not have been called (e.g. short audio < 0.5s)
         if self.start_time is None:
             logger.debug(
-                "end_phase(%s): start_time is None — start_monitoring() was not called. Skipping RT update.",
+                "end_Verarbeitungsschritt(%s): start_time is None — start_monitoring() was not called. Skipping RT Aktualisierung.",
                 phase_id,
             )
             return PhasePerformance(
@@ -381,7 +381,7 @@ class PerformanceGuard:
         status = self._get_status()
 
         logger.debug(
-            f"Phase {phase_id}: {phase_duration:.2f}s ({phase_rt_factor:.2f}× RT), "
+            f"Verarbeitungsschritt {phase_id}: {phase_duration:.2f}s ({phase_rt_factor:.2f}× RT), "
             f"Total: {self.current_rt_factor:.2f}× RT [{status.value}]"
         )
 
@@ -423,7 +423,7 @@ class PerformanceGuard:
         short_id = self._normalize_phase_id(phase_id)
         if phase_id in self._runtime_never_skip_phase_ids or short_id in self._runtime_never_skip_short_ids:
             logger.debug(
-                "§6.2a Runtime-Guard: Phase '%s' als Pflichtphase markiert — Skip verhindert",
+                "§6.2a Runtime-Guard: Verarbeitungsschritt '%s' als Pflichtphase markiert — ueberspringen verhindert",
                 phase_id,
             )
             return False
@@ -433,8 +433,8 @@ class PerformanceGuard:
         # RT×32-Kompatibilität garantiert: alle Excellence-Phasen < 15 ms/s (§9.5).
         if short_id in self.MUSICAL_EXCELLENCE_PHASES:
             logger.debug(
-                f"🎵 Phase '{phase_id}' ist Musikalische-Exzellenz-Phase (§MusEx-P1) "
-                f"— wird niemals übersprungen (RT×32 Budget: {self.RT8_EXCELLENCE_BUDGET:.1f}×)"
+                f"🎵 Verarbeitungsschritt '{phase_id}' ist Musikalische-Exzellenz-Verarbeitungsschritt (§MusEx-P1) "
+                f"— wird niemals übersprungen (RT×32 Grenze: {self.RT8_EXCELLENCE_BUDGET:.1f}×)"
             )
             return False
 
@@ -496,12 +496,12 @@ class PerformanceGuard:
                 logger.warning(
                     f"⏭️ Skipping {phase_id} (priority={phase_priority}): "
                     f"current={current_rt:.2f}× RT, marginal={marginal_rt:.2f}× RT, "
-                    f"threshold={skip_threshold:.1f}× — deferring to KMV Stufe 2"
+                    f"Schwelle={skip_threshold:.1f}× — deferring to KMV Stufe 2"
                 )
                 self._skip_warned_phase_ids.add(phase_id)
             else:
                 logger.debug(
-                    "⏭️ Skipping %s erneut (current=%.2f×, marginal=%.2f×, threshold=%.1f×)",
+                    "⏭️ Skipping %s erneut (current=%.2f×, marginal=%.2f×, Schwelle=%.1f×)",
                     phase_id,
                     current_rt,
                     marginal_rt,
@@ -698,7 +698,7 @@ if __name__ == "__main__":
     audio_duration = 225.0
 
     # Test 1: Balanced Mode (sollte erfolgreich sein)
-    logger.debug("TEST 1: Balanced Mode (Target: 2.4× RT = 540s max)")
+    logger.debug("TEST 1: Balanced Betriebsart (Target: 2.4× RT = 540s max)")
     logger.debug("-" * 60)
 
     guard = PerformanceGuard(mode=QualityMode.BALANCED, enforce_limit=True, enable_adaptive_skipping=True)
@@ -732,7 +732,7 @@ if __name__ == "__main__":
     report1 = guard.get_performance_report()
 
     # Test 2: Fast Mode
-    logger.debug("\n\nTEST 2: Fast Mode (Target: 1.5× RT = 338s max)")
+    logger.debug("\n\nTEST 2: Fast Betriebsart (Target: 1.5× RT = 338s max)")
     logger.debug("-" * 60)
 
     guard2 = PerformanceGuard(mode=QualityMode.FAST, enforce_limit=True, enable_adaptive_skipping=True)
@@ -754,12 +754,12 @@ if __name__ == "__main__":
     logger.debug("SUMMARY")
     logger.debug("%s", "=" * 60)
     logger.debug(
-        f"Balanced Mode: {report1.total_rt_factor:.2f}× RT, "
-        f"{len(report1.skipped_phases)} skipped, "
+        f"Balanced Betriebsart: {report1.total_rt_factor:.2f}× RT, "
+        f"{len(report1.skipped_phases)} uebersprungen, "
         f"{(1 - report1.quality_degradation) * 100:.1f}% quality"
     )
     logger.debug(
-        f"Fast Mode:     {report2.total_rt_factor:.2f}× RT, "
-        f"{len(report2.skipped_phases)} skipped, "
+        f"Fast Betriebsart:     {report2.total_rt_factor:.2f}× RT, "
+        f"{len(report2.skipped_phases)} uebersprungen, "
         f"{(1 - report2.quality_degradation) * 100:.1f}% quality"
     )

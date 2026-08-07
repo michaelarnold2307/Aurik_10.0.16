@@ -122,7 +122,7 @@ class MaterialSpecificOptimizer:
         # Best parameters
         self.best_params = None
 
-        logger.info("MaterialSpecificOptimizer initialized for %s", material_type)
+        logger.info("MaterialSpecificOptimizer initialisiert for %s", material_type)
         logger.info("  Storage: %s", self.storage_path)
         logger.info("  Trials: %s, Jobs: %s", n_trials, n_jobs)
 
@@ -263,7 +263,7 @@ class MaterialSpecificOptimizer:
                     raise optuna_mod.TrialPruned()
 
             except Exception as e:
-                logger.warning("Trial %s failed on sample: %s", trial.number, e)
+                logger.warning("Trial %s fehlgeschlagen on sample: %s", trial.number, e)
                 # Return high penalty for failed trials
                 return 1e6
 
@@ -315,7 +315,7 @@ class MaterialSpecificOptimizer:
             return float(np.clip(quality_score, 0.0, 1.0))
 
         except Exception as e:
-            logger.error("Failed to compute quality score: %s", e)
+            logger.error("konnte nicht berechnen quality Wert: %s", e)
             return 0.0
 
     def optimize(
@@ -375,8 +375,8 @@ class MaterialSpecificOptimizer:
         self.best_params = self.study.best_params  # type: ignore[attr-defined]
         best_value = -self.study.best_value  # type: ignore[attr-defined]  # Negate back to get quality score
 
-        logger.info("Optimization completed!")
-        logger.info("  Best quality score: %.4f", best_value)
+        logger.info("Optimization abgeschlossen!")
+        logger.info("  Best quality Wert: %.4f", best_value)
         logger.info("  Best parameters: %s", self.best_params)
 
         # Save results
@@ -397,12 +397,12 @@ class MaterialSpecificOptimizer:
         with open(output_path, "w") as f:
             yaml.dump(self.best_params, f, default_flow_style=False, sort_keys=True)
 
-        logger.info("Best parameters saved: %s", output_path)
+        logger.info("Best parameters gespeichert: %s", output_path)
 
     def save_optimization_report(self) -> None:
         """Speichert detailed optimization report."""
         if self.study is None:
-            logger.warning("No study available for report generation")
+            logger.warning("No study verfuegbar for report generation")
             return
 
         report = {
@@ -431,7 +431,7 @@ class MaterialSpecificOptimizer:
         with open(output_path, "w") as f:
             json.dump(report, f, indent=2)
 
-        logger.info("Optimization report saved: %s", output_path)
+        logger.info("Optimization report gespeichert: %s", output_path)
 
         # Generate plots (if optuna visualization is available)
         try:
@@ -449,23 +449,23 @@ class MaterialSpecificOptimizer:
             fig = vis.plot_slice(self.study)
             fig.write_html(self.storage_path / f"slice_plot_{self.material_type}.html")
 
-            logger.info("Visualization plots generated")
+            logger.info("Visualization plots erzeugt")
 
         except ImportError:
-            logger.warning("Optuna visualization not available, skipping plots")
+            logger.warning("Optuna visualization not verfuegbar, skipping plots")
 
     def load_best_parameters(self) -> dict[str, Any] | None:
         """Lädt best parameters from file."""
         params_path = self.storage_path / f"best_params_{self.material_type}.yaml"
 
         if not params_path.exists():
-            logger.warning("No saved parameters found: %s", params_path)
+            logger.warning("No gespeichert parameters found: %s", params_path)
             return None
 
         with open(params_path) as f:
             params = yaml.safe_load(f)
 
-        logger.info("Best parameters loaded: %s", params_path)
+        logger.info("Best parameters geladen: %s", params_path)
 
         return params  # type: ignore[no-any-return]
 
@@ -488,7 +488,7 @@ class MultiMaterialOptimizer:
             for material in self.material_types
         }
 
-        logger.info("MultiMaterialOptimizer initialized for %s materials", len(self.material_types))
+        logger.info("MultiMaterialOptimizer initialisiert for %s materials", len(self.material_types))
 
     def optimize_all(
         self, datasets: dict[str, list[tuple[np.ndarray, np.ndarray]]], process_functions: dict[str, Callable]
@@ -515,7 +515,7 @@ class MultiMaterialOptimizer:
             process_func = process_functions.get(material)
 
             if not dataset or process_func is None:
-                logger.warning("Skipping %s: no dataset or process function", material)
+                logger.warning("Skipping %s: no dataset or verarbeiten function", material)
                 continue
 
             result = optimizer.optimize(evaluation_dataset=dataset, process_function=process_func)
@@ -545,8 +545,8 @@ class MultiMaterialOptimizer:
         with open(output_path, "w") as f:
             json.dump(summary, f, indent=2)
 
-        logger.info("\nOptimization summary saved: %s", output_path)
-        logger.info("Average quality score: %.4f", summary["overall_stats"]["avg_quality_score"])  # type: ignore[index]
+        logger.info("\nOptimization summary gespeichert: %s", output_path)
+        logger.info("Average quality Wert: %.4f", summary["overall_stats"]["avg_quality_score"])  # type: ignore[index]
         logger.info("Best material: %s", summary["overall_stats"]["best_material"])  # type: ignore[index]
 
 
@@ -566,6 +566,6 @@ if __name__ == "__main__":
     # Run optimization
     results = optimizer.optimize(evaluation_dataset=dummy_dataset, process_function=dummy_process)
 
-    logger.debug("\nOptimization completed!")
-    logger.debug("Best score: %.4f", results["best_score"])
+    logger.debug("\nOptimization abgeschlossen!")
+    logger.debug("Best Wert: %.4f", results["best_score"])
     logger.debug("Best params: %s", results["best_params"])

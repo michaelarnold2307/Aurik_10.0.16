@@ -44,6 +44,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import psutil
@@ -85,7 +86,7 @@ class AudioQualityMetrics:
             return np.inf
 
         snr = 10 * np.log10(signal_power / noise_power)
-        return snr
+        return snr  # type: ignore[no-any-return]
 
     @staticmethod
     def calculate_si_sdr(reference: np.ndarray, estimate: np.ndarray) -> float | None:
@@ -175,7 +176,7 @@ class CompetitiveBenchmark:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        self.results = {
+        self.results: Any = {
             "aurik": [],
             "izotope_rx11": [],
             "accusonus_era": [],
@@ -207,7 +208,7 @@ class CompetitiveBenchmark:
 
             try:
                 result = process_audio(audio_path, tmp_out_path, verbose=False, mode="Restoration")
-                processed = np.asarray(result.audio, dtype=np.float32)
+                processed = np.asarray(result.audio, dtype=np.float32)  # type: ignore[attr-defined]
             finally:
                 try:
                     Path(tmp_out_path).unlink(missing_ok=True)
@@ -215,7 +216,7 @@ class CompetitiveBenchmark:
                     logger.warning("benchmark_suite.py::benchmark_aurik fallback", exc_info=True)
         except Exception as e:
             logger.error(f"AURIK processing failed: {e}")
-            return None
+            return None  # type: ignore[return-value]
 
         # Stop measurement
         audio_duration = len(audio) / sr
@@ -332,7 +333,7 @@ class CompetitiveBenchmark:
                 if result:
                     self.results["waves_clarity"].append(result)
 
-        return self.results
+        return self.results  # type: ignore[no-any-return]
 
     def save_results(self, filename: str = "benchmark_results.json"):
         """Save results to JSON."""

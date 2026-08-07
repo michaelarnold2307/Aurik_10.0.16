@@ -100,7 +100,7 @@ def check_transparency(audio: np.ndarray, sr: int, reference: np.ndarray | None 
         label = "Künstlich"
         rec = "Deutlich bearbeitet — " + ", ".join(artifacts[:3]) if artifacts else "wirkt unnatürlich."
 
-    return TransparencyResult(score, water, smear, breath, warp, label, rec, artifacts)
+    return TransparencyResult(score, water, smear, breath, warp, label, rec, artifacts)  # type: ignore[arg-type]
 
 
 def _check_spectral_water(mono: np.ndarray, sr: int) -> float:
@@ -156,8 +156,8 @@ def _check_transient_smear(mono: np.ndarray, sr: int) -> float:
     energy = []
     for i in range(0, len(mono) - win, win // 2):
         energy.append(float(np.sum(mono[i : i + win] ** 2)))
-    energy = np.array(energy)
-    energy_db = 10.0 * np.log10(energy + 1e-12)
+    energy = np.array(energy)  # type: ignore[assignment]
+    energy_db = 10.0 * np.log10(energy + 1e-12)  # type: ignore[operator]
     jumps = np.diff(energy_db)
 
     # Zähle scharfe Transienten (>10dB Anstieg)
@@ -206,8 +206,8 @@ def _check_noise_breathing(mono: np.ndarray, sr: int) -> float:
         chunk = mono[i : i + win]
         rms_blocks.append(float(np.sqrt(np.mean(chunk**2))))
 
-    rms_blocks = np.array(rms_blocks)
-    rms_db = 20.0 * np.log10(rms_blocks + 1e-12)
+    rms_blocks = np.array(rms_blocks)  # type: ignore[assignment]
+    rms_db = 20.0 * np.log10(rms_blocks + 1e-12)  # type: ignore[operator]
 
     # Finde leiseste Passagen (Noise Floor)
     noise_floor_percentile = 15

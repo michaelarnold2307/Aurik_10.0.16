@@ -240,7 +240,9 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
         # §0a Guard: Phase_65 ist VERBOTEN in Studio 2026
         quality_mode = str(kwargs.get("quality_mode", "restoration")).strip().lower()
         if quality_mode in ("studio_2026", "studio2026"):
-            logger.debug("§0a Phase65: skipped in studio_2026 mode (use phase_42_vocal_enhancement instead)")
+            logger.debug(
+                "§0a Verarbeitungsschritt65: uebersprungen in studio_2026 Betriebsart (use Verarbeitungsschritt_42_vocal_enhancement instead)"
+            )
             audio_out = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio_out = np.clip(audio_out, -1.0, 1.0)
             if _p65_transposed:
@@ -257,7 +259,11 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
         # Vocal-Gate: nur bei panns_singing >= 0.25
         panns_singing = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
         if panns_singing < _PANNS_SINGING_GATE:
-            logger.debug("Phase65: vocal gate not met (panns_singing=%.3f < %.2f)", panns_singing, _PANNS_SINGING_GATE)
+            logger.debug(
+                "Verarbeitungsschritt65: vocal gate not met (panns_singing=%.3f < %.2f)",
+                panns_singing,
+                _PANNS_SINGING_GATE,
+            )
             audio_out = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio_out = np.clip(audio_out, -1.0, 1.0)
             if _p65_transposed:
@@ -274,7 +280,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
         # Pre-NR-Checkpoint (erforderlich für alle 3 Stufen)
         pre_nr_audio_raw = kwargs.get("pre_nr_audio")
         if pre_nr_audio_raw is None:
-            logger.debug("Phase65: pre_nr_audio nicht in kwargs — skipped")
+            logger.debug("Verarbeitungsschritt65: pre_nr_audio nicht in kwargs — uebersprungen")
             audio_out = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio_out = np.clip(audio_out, -1.0, 1.0)
             if _p65_transposed:
@@ -310,7 +316,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
             hnr_pre = float(_compute_hnr65(pre_mono.astype(np.float32), sample_rate))
             hnr_post = float(_compute_hnr65(post_mono.astype(np.float32), sample_rate))
         except Exception as _hnr_exc:
-            logger.debug("Phase65 compute_hnr non-blocking: %s", _hnr_exc)
+            logger.debug("Verarbeitungsschritt65 berechnen_hnr nicht blockierend: %s", _hnr_exc)
 
         tilt_pre = _estimate_spectral_tilt_db(pre_mono, sample_rate)
         tilt_post = _estimate_spectral_tilt_db(post_mono, sample_rate)
@@ -321,7 +327,11 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
         activation_triggered = (delta_hnr > _HNR_DELTA_THRESHOLD) or (abs(tilt_delta) > _TILT_DELTA_THRESHOLD)
 
         if not activation_triggered:
-            logger.debug("Phase65: activation gate not met (delta_hnr=%.2f, tilt_delta=%.2f)", delta_hnr, tilt_delta)
+            logger.debug(
+                "Verarbeitungsschritt65: activation gate not met (delta_hnr=%.2f, tilt_delta=%.2f)",
+                delta_hnr,
+                tilt_delta,
+            )
             audio_out = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio_out = np.clip(audio_out, -1.0, 1.0)
             if _p65_transposed:
@@ -368,7 +378,9 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                         _p65_vib_cap = min(_p65_vib_cap, 0.20)
                         break
                 except Exception as e:
-                    logger.warning("phase_65_vocal_naturalness_restoration.py::unbekannter Fallback: %s", e)
+                    logger.warning(
+                        "Verarbeitungsschritt_65_vocal_naturalness_restoration.py::unbekannter Ersatzpfad: %s", e
+                    )
             for _pz in _p65_passaggio_zones:
                 try:
                     _pzs = float(getattr(_pz, "start_sample", getattr(_pz, "start_s", 0)) or 0)
@@ -380,13 +392,16 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                         _p65_vib_cap = min(_p65_vib_cap, 0.35)
                         break
                 except Exception as e:
-                    logger.warning("phase_65_vocal_naturalness_restoration.py::unbekannter Fallback: %s", e)
+                    logger.warning(
+                        "Verarbeitungsschritt_65_vocal_naturalness_restoration.py::unbekannter Ersatzpfad: %s", e
+                    )
             if _p65_vib_cap < effective_strength:
                 effective_strength = _p65_vib_cap
                 _p65_meta["vibrato_zone_cap_applied"] = True
                 _p65_meta["effective_strength"] = round(effective_strength, 4)
                 logger.debug(
-                    "Phase65 §M-2 VFA-Cap: effective_strength → %.2f (Vibrato/Passaggio-Schutz)", effective_strength
+                    "Verarbeitungsschritt65 §M-2 VFA-Cap: effective_strength → %.2f (Vibrato/Passaggio-Schutz)",
+                    effective_strength,
                 )
 
         # ── §SVM-1 SingerVoiceModel: Stimm-Modell für natürliche Vokal-Restaurierung ──
@@ -411,7 +426,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 if _svm65_formants and _svm65_tilt != 0:
                     _p65_meta["formant_targets_from_svm"] = True
                 logger.debug(
-                    "Phase65 §SVM-1 SVM: hnr=%.1fdB vibrato=%.1fHz/%.1fcent formants=%d → eff=%.3f",
+                    "Verarbeitungsschritt65 §SVM-1 SVM: hnr=%.1fdB vibrato=%.1fHz/%.1fcent formants=%d → eff=%.3f",
                     _svm65_hnr,
                     _svm65_vr,
                     _svm65_vd,
@@ -419,7 +434,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                     effective_strength,
                 )
             except Exception as _svm_exc_65:
-                logger.debug("Phase65 §SVM-1 non-blocking: %s", _svm_exc_65)
+                logger.debug("Verarbeitungsschritt65 §SVM-1 nicht blockierend: %s", _svm_exc_65)
 
         # ---- Stufe 1: Spektral-Tilt-Korrektur ----
         if abs(tilt_delta) > _TILT_DELTA_THRESHOLD:
@@ -433,9 +448,9 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                     result_tilted = _apply_shelving_eq(result, sample_rate, _TILT_SHELF_HZ, abs(boost_db), shelf_type)
                     result = result_tilted.astype(np.float32)
                     _p65_meta["stages_applied"].append(f"tilt_correction_{shelf_type}_{boost_db:.1f}dB")
-                    logger.debug("Phase65 Stufe1 Tilt: boost=%.2f dB %s-shelf", boost_db, shelf_type)
+                    logger.debug("Verarbeitungsschritt65 Stufe1 Tilt: boost=%.2f dB %s-shelf", boost_db, shelf_type)
             except Exception as _tilt_exc:
-                logger.debug("Phase65 Stufe1 tilt non-blocking: %s", _tilt_exc)
+                logger.debug("Verarbeitungsschritt65 Stufe1 tilt nicht blockierend: %s", _tilt_exc)
 
         # ---- Stufe 2: HNR-Blend ----
         if delta_hnr > _HNR_DELTA_THRESHOLD:
@@ -456,12 +471,12 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                         np.float32
                     )
                     _p65_meta["stages_applied"].append(f"hnr_blend_{manual_blend:.3f}")
-                    logger.debug("Phase65 Stufe2 HNR-Blend: blend=%.3f", manual_blend)
+                    logger.debug("Verarbeitungsschritt65 Stufe2 HNR-Blend: blend=%.3f", manual_blend)
                 elif _hnr_diag65.get("blend_applied"):
                     result = _hnr_blended65
                     _p65_meta["stages_applied"].append("hnr_blend_auto")
             except Exception as _hnr65_exc:
-                logger.debug("Phase65 Stufe2 HNR-Blend non-blocking: %s", _hnr65_exc)
+                logger.debug("Verarbeitungsschritt65 Stufe2 HNR-Blend nicht blockierend: %s", _hnr65_exc)
 
         # ---- Stufe 3: Formant-Tilt-Korrektur ----
         try:
@@ -492,12 +507,12 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 result = result_enhanced.astype(np.float32)
                 _p65_meta["stages_applied"].append(f"formant_tilt_{_formant_boost_db:.2f}dB")
                 logger.debug(
-                    "Phase65 Stufe3 Formant-Tilt: shift=%.2f dB, boost=%.2f dB",
+                    "Verarbeitungsschritt65 Stufe3 Formant-Tilt: shift=%.2f dB, boost=%.2f dB",
                     _max_shift,
                     _formant_boost_db,
                 )
         except Exception as _ft65_exc:
-            logger.debug("Phase65 Stufe3 formant-tilt non-blocking: %s", _ft65_exc)
+            logger.debug("Verarbeitungsschritt65 Stufe3 formant-tilt nicht blockierend: %s", _ft65_exc)
 
         # NaN-Safety + Clip
         result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
@@ -536,12 +551,12 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 _p65_phoneme_frames_protected = int(np.sum(_p65_pmask_frames))
                 _p65_meta["phoneme_frames_protected"] = _p65_phoneme_frames_protected
                 logger.debug(
-                    "§2.36 phase_65 Phonemschutz: %d Frames geschützt (%.1f%%)",
+                    "§2.36 Verarbeitungsschritt_65 Phonemschutz: %d Frames geschützt (%.1f%%)",
                     _p65_phoneme_frames_protected,
                     100.0 * float(np.mean(_p65_pmask_frames)),
                 )
         except Exception as _pmask65_exc:
-            logger.debug("§2.36 phase_65 Phonemschutz non-blocking: %s", _pmask65_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_65 Phonemschutz nicht blockierend: %s", _pmask65_exc)
 
         # ---- VQI-Guard: Rollback wenn VQI schlechter geworden ----
         _vqi_before: float = -1.0
@@ -566,7 +581,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
             _vqi_after = float(_vqi_res_after.get("vqi", -1.0))
             if _vqi_before > 0 and _vqi_after > 0 and _vqi_after < _vqi_before - 0.005:
                 logger.warning(
-                    "Phase65 VQI-Guard: vqi_after=%.3f < vqi_before=%.3f → Rollback",
+                    "Verarbeitungsschritt65 VQI-Guard: vqi_after=%.3f < vqi_before=%.3f → Rollback",
                     _vqi_after,
                     _vqi_before,
                 )
@@ -575,7 +590,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 result = np.clip(result, -1.0, 1.0)
                 _p65_meta["vqi_rollback"] = True
         except Exception as _vqi65_exc:
-            logger.debug("Phase65 VQI-Guard non-blocking: %s", _vqi65_exc)
+            logger.debug("Verarbeitungsschritt65 VQI-Guard nicht blockierend: %s", _vqi65_exc)
 
         _p65_meta["vqi_before"] = round(_vqi_before, 4)
         _p65_meta["vqi_after"] = round(_vqi_after, 4)
@@ -591,7 +606,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
                 _sc_wet_65 = 0.70  # Phase-Strength −30 % (§V24)
                 result = (_sc_wet_65 * result + (1.0 - _sc_wet_65) * audio).astype(np.float32)
         except Exception as _sc_exc_65:
-            logger.debug("§V24 phase_65 spectral_color non-blocking: %s", _sc_exc_65)
+            logger.debug("§V24 Verarbeitungsschritt_65 spectral_color nicht blockierend: %s", _sc_exc_65)
 
         # V26 Onset-Guard (§2.77): Vokal-Onset-Transients schützen (non-blocking)
         try:
@@ -601,7 +616,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
 
             result = _opg65(audio, result, None, max_delta_db=1.5)
         except Exception as _on65_exc:
-            logger.debug("Phase65 V26 Onset-Guard (non-blocking): %s", _on65_exc)
+            logger.debug("Verarbeitungsschritt65 V26 Onset-Guard (nicht blockierend): %s", _on65_exc)
 
         # §2.46e HallucinationGuard: Additive Phase darf kein halluziniertes Material einführen (VERBOTEN)
         try:
@@ -630,9 +645,9 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
             )
             if _hg65.requires_rollback:
                 result = audio.copy().astype(np.float32)
-                logger.warning("§2.46e phase_65 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_65 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg65_exc:
-            logger.debug("§2.46e phase_65 HallucinationGuard (non-blocking): %s", _hg65_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_65 HallucinationGuard (nicht blockierend): %s", _hg65_exc)
 
         # V19 Noise-Textur-Invariante (§NTI): Residual-Rauschen darf Material-Profil nicht ändern (non-blocking)
         try:
@@ -657,12 +672,12 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
             if _nt65_d > _nt65_thr:
                 result = (0.5 * result + 0.5 * audio).astype(np.float32)
                 logger.warning(
-                    "§V19 phase_65 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
+                    "§V19 Verarbeitungsschritt_65 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
                     _nt65_d,
                     _nt65_thr,
                 )
         except Exception as _nt65_exc:
-            logger.debug("§V19 phase_65 noise_texture (non-blocking): %s", _nt65_exc)
+            logger.debug("§V19 Verarbeitungsschritt_65 noise_texture (nicht blockierend): %s", _nt65_exc)
 
         if _p65_transposed:
             result = result.T

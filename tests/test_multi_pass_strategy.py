@@ -240,7 +240,7 @@ class TestObjectiveScorer:
                 return _R()
 
         scorer = ObjectiveScorer(enable_versa=False, enable_dnsmos=False, enable_musical_goals=False)
-        scorer.versa_plugin = _FakeVersa()
+        scorer.versa_plugin = _FakeVersa()  # type: ignore[assignment]
         scorer.enable_versa = True
 
         n = 48000

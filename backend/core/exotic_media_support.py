@@ -34,7 +34,7 @@ class ExoticMediaHandler:
     def __init__(self, templates: dict[str, list[str]], defects: list[str]) -> None:
         self.templates = templates
         self.defects = defects
-        logger.info("ExoticMediaHandler initialized")
+        logger.info("ExoticMediaHandler initialisiert")
 
     def get_chain_for_media(self, media_type: str) -> list[str]:
         """Gibt zurück: processing chain for exotic media type.

@@ -1,14 +1,14 @@
-from __future__ import annotations
-
 """Unit-Tests für core/feedback_chain.py — FeedbackChain.
 
 Spec §2.16: Iterative Qualitätsschleife mit konservativer Konvergenz.
 ≥ 12 Tests: Konvergenz, Max-Iterations, NaN-Guard, Rollback, Mono/Stereo.
 """
 
+from __future__ import annotations
 
 import math
 from types import SimpleNamespace
+from typing import Any
 
 import numpy as np
 import pytest
@@ -28,7 +28,7 @@ SR = 48000
 
 def _sine(freq: float = 440.0, secs: float = 1.0) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(freq: float = 440.0, secs: float = 1.0) -> np.ndarray:
@@ -138,7 +138,7 @@ class TestFeedbackChainConvergence:
 
         def noisy_fn(audio: np.ndarray, sr: int) -> np.ndarray:
             call_count["n"] += 1
-            return np.clip(audio + np.random.randn(*audio.shape).astype(np.float32) * 0.3, -1.0, 1.0)
+            return np.clip(audio + np.random.randn(*audio.shape).astype(np.float32) * 0.3, -1.0, 1.0)  # type: ignore[no-any-return]
 
         fc = FeedbackChain(max_iterations=4, convergence_delta=1e-9)
         result = fc.run(_sine(), noisy_fn)
@@ -220,7 +220,7 @@ class TestFeedbackChainPhasesMode:
     def test_22_phases_list_mode(self):
         """Phasen-Listen-Modus: Liste von (id, fn, kwargs)-Tupeln."""
         audio = _sine()
-        phases = [
+        phases: Any = [
             ("ph01", lambda a, sr: np.clip(a, -1.0, 1.0), {}),
             ("ph02", lambda a, sr: a.copy(), {}),
         ]
@@ -374,7 +374,7 @@ class TestFeedbackChainPerceptualLoopScoring:
 
         assert result.metadata["score_source"] == "pqs_absolute"
         assert result.metadata["score_fallback_used"] is False
-        assert "pqs_absolute" in result.metadata["score_sources_seen"]
+        assert "pqs_absolute" in result.metadata["score_sources_seen"]  # type: ignore[operator]
 
     def test_37_pqs_failure_marks_heuristic_fallback(self):
         fc = FeedbackChain(max_iterations=1, use_pqs_in_loop=True, use_versa_in_loop=False)
@@ -390,7 +390,7 @@ class TestFeedbackChainPerceptualLoopScoring:
 
         assert result.metadata["score_source"] == "heuristic_rms"
         assert result.metadata["score_fallback_used"] is True
-        assert "heuristic_rms" in result.metadata["score_sources_seen"]
+        assert "heuristic_rms" in result.metadata["score_sources_seen"]  # type: ignore[operator]
 
     def test_38_versa_is_preferred_over_pqs_when_both_enabled(self):
         fc = FeedbackChain(max_iterations=1, use_pqs_in_loop=True, use_versa_in_loop=True)

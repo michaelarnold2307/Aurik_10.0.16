@@ -271,7 +271,7 @@ def get_genre_profile(genre_label: str) -> GenreGoalProfile:
             return GenreGoalProfile(genre=profile_key, weights=dict(weights))
 
     # Kein Match → Fallback (gleichmäßig)
-    logger.info("§H: Kein Genre-Profil für '%s', verwende Fallback", genre_label)
+    logger.info("§H: Kein Genre-Profil für '%s', verwende Ersatzpfad", genre_label)
     return GenreGoalProfile(genre="unknown", weights=dict(_FALLBACK_PROFILE))
 
 

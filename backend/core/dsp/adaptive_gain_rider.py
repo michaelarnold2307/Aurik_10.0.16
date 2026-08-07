@@ -79,7 +79,7 @@ def ride_gain_to_performance_profile(
             smooth_freq_hz=smooth_freq_hz,
         )
     except Exception as exc:
-        logger.debug("AdaptiveGainRider non-blocking error: %s", exc)
+        logger.debug("AdaptiveGainRider nicht blockierend error: %s", exc)
         return audio_restored
 
 

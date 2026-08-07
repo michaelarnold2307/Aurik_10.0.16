@@ -329,7 +329,7 @@ def test_restoration_improvement_with_authenticity():
     assert hasattr(result, "room_tone_retention")
 
     # Should show improvement
-    assert result.snr_improvement_db > 0, "SNR should improve"
+    assert result.snr_improvement_db > 0, "SNR should improve"  # type: ignore[operator]
 
 
 def test_sibilance_retention_metric():

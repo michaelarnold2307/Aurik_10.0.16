@@ -162,5 +162,5 @@ def frame_energy_correlation(
         return corr
 
     except Exception as exc:
-        logger.debug("frame_energy_correlation non-blocking: %s", exc)
+        logger.debug("frame_energy_correlation nicht blockierend: %s", exc)
         return 1.0

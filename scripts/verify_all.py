@@ -7,6 +7,7 @@ Führt alle Gates aus und produziert einen Abschlussbericht.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 import subprocess
@@ -14,6 +15,8 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).parent.parent
 VENV = ROOT / ".venv_aurik" / "bin" / "python"
@@ -205,6 +208,7 @@ def main():
         try:
             text = py_file.read_text(encoding="utf-8", errors="replace")
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
         if "np.max(np.abs(audio))" in text:
             lines = text.split("\n")
@@ -223,7 +227,7 @@ def main():
     # ── ABSCHLUSSBERICHT ────────────────────────────────────────────────
     print("\n" + "=" * 70)
     total = len(results)
-    passed = sum(1 for r in results if r.status == "pass")
+    passed = sum(1 for r in results if r.status == "pass")  # type: ignore[assignment]
     failed = sum(1 for r in results if r.status == "fail")
 
     report = {

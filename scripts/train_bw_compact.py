@@ -10,6 +10,7 @@ import argparse
 import math
 import time
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
@@ -71,7 +72,7 @@ def butter_lowpass(y: np.ndarray, cutoff_hz: float, sr: int, order: int = 6) -> 
     if cutoff_hz >= nyq * 0.98:
         return y.copy()
     sos = butter(order, cutoff_hz / nyq, btype="low", output="sos")
-    return sosfiltfilt(sos, y).astype(np.float32)
+    return sosfiltfilt(sos, y).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -102,7 +103,7 @@ def audio_to_log_mel(waveform: torch.Tensor) -> torch.Tensor:
     # per-sample norm
     mean = mel.mean(dim=(1, 2), keepdim=True)
     std = mel.std(dim=(1, 2), keepdim=True) + 1e-8
-    return (mel - mean) / std
+    return cast(torch.Tensor, (mel - mean) / std)
 
 
 def log_mel_to_audio(mel: torch.Tensor) -> torch.Tensor:
@@ -117,7 +118,7 @@ def log_mel_to_audio(mel: torch.Tensor) -> torch.Tensor:
     # (B, n_mels, n_frames) -> (B, n_fft_out, n_frames)
     mag = torch.einsum("om,bmf->bof", mel_basis_pinv, mel)
     mag = torch.clamp(mag, min=0.0)
-    return _istft_t(mag.sqrt())  # Griffin-Lim built into InverseSpectrogram
+    return cast(torch.Tensor, _istft_t(mag.sqrt()))  # Griffin-Lim built into InverseSpectrogram
 
 
 _mel_basis_cache = None
@@ -136,7 +137,7 @@ def _make_mel_basis(sr: int, n_fft: int, n_mels: int) -> torch.Tensor:
     bins = torch.floor((n_fft + 1) * hz_pts / sr).long().clamp(0, n_out - 1)
     basis = torch.zeros(n_mels, n_out)
     for m in range(n_mels):
-        l, c, r = bins[m].item(), bins[m + 1].item(), bins[m + 2].item()
+        l, c, r = int(bins[m].item()), int(bins[m + 1].item()), int(bins[m + 2].item())
         if c > l:
             basis[m, l:c] = torch.linspace(0, 1, c - l)
         if r > c:
@@ -289,7 +290,7 @@ def train(
     print(f"\nExporting ONNX to {onnx_path}...")
     torch.onnx.export(
         model,
-        dummy,
+        (dummy,),
         str(onnx_path),
         input_names=["input"],
         output_names=["output"],

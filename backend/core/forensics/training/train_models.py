@@ -159,7 +159,7 @@ class ForensicsTrainingPipeline:
         if save_model:
             model_path = str(self.config.models_dir / f"medium_detector_v{detector.VERSION}.pkl")
             detector.save(model_path)  # type: ignore[arg-type]
-            logger.info("Model saved: %s", model_path)
+            logger.info("Model gespeichert: %s", model_path)
 
         cv_mean, cv_std = _mean_std(cv_scores)
 
@@ -178,7 +178,7 @@ class ForensicsTrainingPipeline:
 
         self.reports.append(report)
 
-        logger.info("\n✅ Medium Detector Training Complete")
+        logger.info("\n✅ Medium Detector Training vollstaendig")
         logger.info("   Test Accuracy: %.1f", test_accuracy)
         logger.info("   CV Mean: %.1f \u00b1 %.1f", report.cross_val_mean, report.cross_val_std)
         logger.info("   Training Time: %.1fs", training_time)
@@ -235,7 +235,7 @@ class ForensicsTrainingPipeline:
         if save_model:
             model_path = str(self.config.models_dir / f"era_detector_v{detector.VERSION}.pkl")
             detector.save(model_path)  # type: ignore[arg-type]
-            logger.info("Model saved: %s", model_path)
+            logger.info("Model gespeichert: %s", model_path)
 
         cv_mean, cv_std = _mean_std(cv_scores)
 
@@ -254,7 +254,7 @@ class ForensicsTrainingPipeline:
 
         self.reports.append(report)
 
-        logger.info("\n✅ Era Detector Training Complete")
+        logger.info("\n✅ Era Detector Training vollstaendig")
         logger.info("   Test Accuracy: %.1f", test_accuracy)
         logger.info("   CV Mean: %.1f \u00b1 %.1f", report.cross_val_mean, report.cross_val_std)
         logger.info("   Training Time: %.1fs", training_time)
@@ -310,7 +310,7 @@ class ForensicsTrainingPipeline:
         if save_model:
             model_path = str(self.config.models_dir / f"defect_detector_v{detector.VERSION}.pkl")
             detector.save(model_path)
-            logger.info("Model saved: %s", model_path)
+            logger.info("Model gespeichert: %s", model_path)
 
         cv_mean, cv_std = _mean_std(recalls)
 
@@ -329,7 +329,7 @@ class ForensicsTrainingPipeline:
 
         self.reports.append(report)
 
-        logger.info("\n✅ Defect Detector Training Complete")
+        logger.info("\n✅ Defect Detector Training vollstaendig")
         logger.info("   Mean Recall: %.1f", test_recall)
         logger.info("   CV Mean Recall: %.1f \u00b1 %.1f", report.cross_val_mean, report.cross_val_std)
         logger.info("   Training Time: %.1fs", training_time)
@@ -353,7 +353,7 @@ class ForensicsTrainingPipeline:
         """
         logger.info("\n" + "=" * 60)
         logger.info("   AURIK Signal Forensics Training Pipeline")
-        logger.info("   Phase 2: ML Model Training")
+        logger.info("   Verarbeitungsschritt 2: ML Model Training")
         logger.info("=" * 60 + "\n")
 
         start_time = time.time()
@@ -369,11 +369,11 @@ class ForensicsTrainingPipeline:
         self._generate_summary_report(total_time)
 
         logger.info("\n" + "=" * 60)
-        logger.info("   Training Pipeline Complete")
+        logger.info("   Training Pipeline vollstaendig")
         logger.info("=" * 60)
         logger.info("   Total Time: %.1f minutes", total_time / 60)
         logger.info("   Models Trained: 3")
-        logger.info("   Reports Generated: %s", len(self.reports))
+        logger.info("   Reports erzeugt: %s", len(self.reports))
 
         return {
             "medium_detector": medium_detector,
@@ -482,7 +482,7 @@ class ForensicsTrainingPipeline:
         with open(report_path, "w") as f:
             json.dump(summary, f, indent=2)
 
-        logger.info("\nSummary report saved: %s", report_path)
+        logger.info("\nSummary report gespeichert: %s", report_path)
 
 
 def main() -> None:
@@ -495,7 +495,7 @@ def main() -> None:
     # Train all models
     results = pipeline.train_all_models(save_models=True)
 
-    logger.info("\n✅ All models trained successfully!")
+    logger.info("\n✅ All models trained erfolgreich!")
     logger.info("   Medium Detector: %s", format(results["reports"][0].accuracy, ".1%"))
     logger.info("   Era Detector: %s", format(results["reports"][1].accuracy, ".1%"))
     logger.info("   Defect Detector: %s", format(results["reports"][2].accuracy, ".1%"))

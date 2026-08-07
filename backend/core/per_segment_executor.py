@@ -116,7 +116,7 @@ def run_phase_per_segment(
             result = phase_callable(seg_audio, **kwargs_i)
             result_audio = getattr(result, "audio", result) if hasattr(result, "audio") else result
         except Exception as exc:
-            logger.debug("§2.62 per-segment %s seg %d failed: %s", phase_id, i, exc)
+            logger.debug("§2.62 per-segment %s seg %d fehlgeschlagen: %s", phase_id, i, exc)
             result_audio = seg_audio
 
         result_audio = np.asarray(result_audio)

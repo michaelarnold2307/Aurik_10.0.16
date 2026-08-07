@@ -176,7 +176,7 @@ class DialogIntelligibilityEnhancer:
         # Mix back
         result = signal + band_signal_gained
 
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _apply_notch_filter(
         self, signal: np.ndarray, sr: int, center_freq: float, q: float, gain_db: float
@@ -204,7 +204,7 @@ class DialogIntelligibilityEnhancer:
         mix_factor = np.clip(mix_factor, 0.0, 1.0)
         result = signal * (1 - mix_factor) + filtered * mix_factor
 
-        return result
+        return result  # type: ignore[no-any-return]
 
     def _measure_clarity(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -224,7 +224,7 @@ class DialogIntelligibilityEnhancer:
 
         # RMS energy
         clarity = np.sqrt(np.mean(clarity_band**2))
-        return clarity
+        return clarity  # type: ignore[no-any-return]
 
 
 def create_dialog_intelligibility_enhancer(
@@ -252,7 +252,7 @@ if __name__ == "__main__":
 
     # Load test audio
     _res = load_audio_file("dialog_test.wav")
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Create enhancer
     enhancer = create_dialog_intelligibility_enhancer(
@@ -266,7 +266,7 @@ if __name__ == "__main__":
     # Process
     enhanced, metrics = enhancer.process(audio, sr)
 
-    logger.info("Dialog Intelligibility Enhancement applied:")
+    logger.info("Dialog Intelligibility Enhancement angewendet:")
     logger.info("  Clarity Improvement: %.1f dB", metrics["improvement_db"])
     logger.info("  Presence Boost: %.1f dB", metrics["presence_boost_db"])
     logger.info("  Consonant Boost: %.1f dB", metrics["consonant_boost_db"])

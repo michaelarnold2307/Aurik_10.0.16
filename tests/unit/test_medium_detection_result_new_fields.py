@@ -23,7 +23,7 @@ def _make_result(**kwargs) -> MediumDetectionResult:
         ),
     }
     defaults.update(kwargs)
-    return MediumDetectionResult(**defaults)
+    return MediumDetectionResult(**defaults)  # type: ignore[arg-type]
 
 
 @pytest.mark.unit

@@ -24,7 +24,7 @@ _BIN_HZ = SR / _FFT_SIZE  # ≈ 23.4 Hz per STFT bin
 def _sine(freq: float = 440.0, seconds: float = 2.0, amp: float = 0.3) -> np.ndarray:
     """Mono sine wave."""
     t = np.linspace(0.0, seconds, int(SR * seconds), endpoint=False, dtype=np.float32)
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(seconds: float = 2.0) -> np.ndarray:
@@ -56,7 +56,7 @@ class TestRepairChannelHFProtection:
         noise = rng.standard_normal(n).astype(np.float64) * 0.002  # near noise floor
         t = np.linspace(0, seconds, n, endpoint=False)
         harmonic = (0.3 * np.sin(2.0 * np.pi * harmonic_hz * t)).astype(np.float64)
-        return (noise + harmonic).astype(np.float64)
+        return (noise + harmonic).astype(np.float64)  # type: ignore[no-any-return]
 
     def test_isolated_harmonic_preserved_with_hf_guard(self):
         """Isolated HF harmonic must pass through unchanged when HF protection is active."""

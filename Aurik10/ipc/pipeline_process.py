@@ -42,6 +42,8 @@ import numpy as np
 
 from Aurik10.ipc.shared_audio import AudioFrame, SharedAudioRing
 
+logger = logging.getLogger(__name__)
+
 logger = logging.getLogger("aurik.ipc.pipeline")
 
 
@@ -200,11 +202,11 @@ def _pipeline_worker(
             try:
                 job_dict = input_pipe.recv()
             except EOFError:
-                logger.info("Pipeline-Worker: Input-Pipe geschlossen")
+                logger.info("Pipeline-Worker: Eingabe-Pipe geschlossen")
                 break
 
             if job_dict is None or job_dict.get("_command") == "shutdown":
-                logger.info("Pipeline-Worker: Shutdown-Kommando empfangen")
+                logger.info("Pipeline-Worker: Herunterfahren-Kommando empfangen")
                 break
 
             if job_dict.get("_command") == "ping":
@@ -238,6 +240,7 @@ def _pipeline_worker(
                 ).to_json()
             )
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             pass
     finally:
         logger.info("Pipeline-Worker beendet (PID=%d)", mp.current_process().pid)
@@ -390,22 +393,27 @@ def _load_audio_file(path: str) -> tuple[np.ndarray | None, int]:
         logger.error("Audiodatei nicht gefunden: %s", path)
         return None, 0
 
-    try:
-        import soundfile as sf
+    _max_load_retries = 3
+    for _load_attempt in range(_max_load_retries):
+        try:
+            import soundfile as sf
 
-        audio, sr = sf.read(str(p), dtype="float32", always_2d=False)
-        # Normalisieren
-        if audio.ndim == 1 or audio.ndim == 2:
-            audio = audio.astype(np.float32)
-        # §V08: np.percentile(99.9) statt np.max(abs()) — robust gegen
-        # einzelne Ausreißer-Samples (Clicks/Pops).
-        _peak = float(np.percentile(np.abs(audio), 99.9))
-        if _peak > 0:
-            audio = audio / _peak * 0.95
-        return audio, int(sr)
-    except Exception as e:
-        logger.error("soundfile.read fehlgeschlagen: %s", e)
-        return None, 0
+            audio, sr = sf.read(str(p), dtype="float32", always_2d=False)
+            # Normalisieren
+            if audio.ndim == 1 or audio.ndim == 2:
+                audio = audio.astype(np.float32)
+            # §V08: np.percentile(99.9) statt np.max(abs()) — robust gegen
+            # einzelne Ausreißer-Samples (Clicks/Pops).
+            _peak = float(np.percentile(np.abs(audio), 99.9))
+            if _peak > 0:
+                audio = audio / _peak * 0.95
+            return audio, int(sr)
+        except Exception as e:
+            if _load_attempt < _max_load_retries - 1:
+                logger.debug("soundfile.read Wiederholung %d/%d: %s", _load_attempt + 1, _max_load_retries, e)
+                continue
+            logger.error("soundfile.read fehlgeschlagen: %s", e)
+            return None, 0
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -500,7 +508,7 @@ class PipelineProcess:
             # ── Auf Bereitschaft warten (mit Timeout) ──────────────
             logger.info("Warte auf Pipeline-Worker-Bereitschaft...")
             if not self._ready_event.wait(timeout=30.0):
-                logger.error("Pipeline-Worker-Timeout nach 30s")
+                logger.error("Pipeline-Worker-Zeitlimit nach 30s")
                 self.stop()
                 return False
 
@@ -530,7 +538,7 @@ class PipelineProcess:
             return False
 
         try:
-            self._child_pipe.send(
+            self._child_pipe.send(  # type: ignore[union-attr]
                 {
                     "input_file": job.input_file,
                     "output_file": job.output_file,
@@ -575,6 +583,15 @@ class PipelineProcess:
                         mos_estimate=data.get("mos_estimate", 0.0),
                         error=data.get("error", ""),
                         timestamp=data.get("timestamp", 0.0),
+                        # §v10.201 Ergebnis-Felder — ohne diese sieht die GUI nach
+                        # Abschluss nie Qualität/MUSHRA/HPI/Revert-Grund/Warnungen.
+                        result_quality=data.get("result_quality", 0.0),
+                        result_reverted=data.get("result_reverted", False),
+                        result_revert_reason=data.get("result_revert_reason", ""),
+                        result_mushra=data.get("result_mushra", 0.0),
+                        result_hpi=data.get("result_hpi", 0.0),
+                        result_phases_done=data.get("result_phases_done", 0),
+                        result_warnings=data.get("result_warnings", []),
                     )
                     self.latest_status = status
                     self._status_queue.append(status)
@@ -582,7 +599,7 @@ class PipelineProcess:
                 except (json.JSONDecodeError, TypeError) as e:
                     logger.debug("Ungültige Statusmeldung: %s", e)
         except (EOFError, BrokenPipeError):
-            logger.info("PipelineProcess: Output-Pipe geschlossen")
+            logger.info("PipelineProcess: Ausgabe-Pipe geschlossen")
         except Exception as e:
             logger.debug("PipelineProcess.poll() Fehler: %s", e)
 
@@ -610,7 +627,7 @@ class PipelineProcess:
                 try:
                     self._child_pipe.send({"_command": "shutdown"})
                 except (BrokenPipeError, OSError):
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
             # ── Auf Prozess-Ende warten ─────────────────────────────
             if self._process is not None:
@@ -636,7 +653,7 @@ class PipelineProcess:
                 try:
                     pipe.close()
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         self._parent_pipe = None
         self._child_pipe = None
@@ -664,4 +681,4 @@ class PipelineProcess:
             try:
                 self._child_pipe.send({"_command": "cancel"})
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)

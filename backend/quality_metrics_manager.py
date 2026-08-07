@@ -79,12 +79,12 @@ class QualityMetricsManager:
         _versa_loaded = False
         try:
             if _VERSA_IMPORT_OK and _get_versa_plugin_fn is not None:
-                self._versa = _get_versa_plugin_fn()
+                self._versa = _get_versa_plugin_fn()  # type: ignore[assignment]
                 self._cdpam = self._versa
                 _versa_loaded = True
-                logger.info("✓ VERSA Plugin loaded (§4.4 CDPAM-Nachfolger)")
+                logger.info("✓ VERSA Plugin geladen (§4.4 CDPAM-Nachfolger)")
         except Exception as e:
-            logger.warning("VERSA Plugin nicht verfügbar: %s — PQS-DSP Fallback.", e)
+            logger.warning("VERSA Plugin nicht verfügbar: %s — PQS-DSP Ersatzpfad.", e)
 
         if not _versa_loaded:
             # §4.4 [RELEASE_MUST]: VERSA ist primäre Qualitätsmetrik (Spec §4.4).
@@ -92,7 +92,7 @@ class QualityMetricsManager:
             # reduzierte Restaurierungsqualität. Operator muss diesen Zustand kennen.
             logger.error(
                 "§4.4 KRITISCH: VERSA nicht verfügbar (Import: %s, Fn: %s) — "
-                "alle Quality-Gates (HPI, PMGG, AFG) laufen auf PQS-DSP-Proxy-Fallback. "
+                "alle Quality-Gates (HPI, PMGG, AFG) laufen auf PQS-DSP-Proxy-Ersatzpfad. "
                 "Prüfe versa_plugin.py und Abhängigkeiten. Restaurierungsqualität möglicherweise reduziert.",
                 _VERSA_IMPORT_OK,
                 _get_versa_plugin_fn is not None,
@@ -102,21 +102,21 @@ class QualityMetricsManager:
             self._versa_unavailable_logged = False
 
         try:
-            self._visqol = ViSQOLPlugin()
-            logger.info("✓ ViSQOL Plugin loaded")
+            self._visqol = ViSQOLPlugin()  # type: ignore[assignment]
+            logger.info("✓ ViSQOL Plugin geladen")
         except Exception as e:
             logger.warning("ViSQOL Plugin nicht verfügbar: %s", e)
 
         if _PQS_AVAILABLE:
             logger.info("✓ PQS-DSP (Gammatone-NSIM+MCD) verfügbar")
         else:
-            logger.debug("PQS-DSP nicht verfügbar — VERSA als non-reference Metrik aktiv.")
+            logger.debug("PQS-DSP nicht verfügbar — VERSA als non-Referenz Metrik aktiv.")
 
     @property
     def versa(self):
         """Lazy-load VERSA plugin (§4.4 CDPAM-Nachfolger)."""
         if self._versa is None and _VERSA_IMPORT_OK and _get_versa_plugin_fn is not None:
-            self._versa = _get_versa_plugin_fn()
+            self._versa = _get_versa_plugin_fn()  # type: ignore[assignment]
             self._cdpam = self._versa
         return self._versa
 
@@ -130,7 +130,7 @@ class QualityMetricsManager:
     def visqol(self):
         """Lazy-load ViSQOL plugin (--audio mode zwingend, §4.4)."""
         if self._visqol is None:
-            self._visqol = ViSQOLPlugin()
+            self._visqol = ViSQOLPlugin()  # type: ignore[assignment]
         return self._visqol
 
     def assess_quality(
@@ -192,7 +192,7 @@ class QualityMetricsManager:
                 # MOS [1,5] → Score [0,100] für Backward-Kompatibilität
                 score_raw = float(np.clip((mos_raw - 1.0) / 4.0 * 100.0, 0.0, 100.0))
                 score_norm = float(np.clip(score_raw / 100.0, 0.0, 1.0))
-                results["metrics"]["cdpam"] = {
+                results["metrics"]["cdpam"] = {  # type: ignore[index]
                     "score": score_raw,
                     "normalized": score_norm,
                     "mos": mos_raw,
@@ -204,7 +204,7 @@ class QualityMetricsManager:
                 logger.info("✓ VERSA-MOS: %.2f/5 → CDPAM-kompatibel: %.1f/100", mos_raw, score_raw)
             except Exception as e:
                 logger.warning("VERSA assessment fehlgeschlagen: %s", e)
-                results["metrics"]["cdpam"] = {"error": str(e)}
+                results["metrics"]["cdpam"] = {"error": str(e)}  # type: ignore[index]
 
         # 2. PQS-DSP — Gammatone-NSIM+MCD+LUFS (Aurik-eigener Musik-Scorer, §2.6)
         #    score_audio_absolute() benötigt kein Referenzsignal.
@@ -236,7 +236,7 @@ class QualityMetricsManager:
                 mcd_norm = float(np.clip((8.0 - mcd) / 5.0, 0.0, 1.0))
                 pqs_norm = 0.40 * nsim + 0.30 * mcd_norm + 0.15 * coh + 0.15 * ((mos - 1.0) / 4.0)
                 pqs_norm = float(np.clip(pqs_norm, 0.0, 1.0))
-                results["metrics"]["pqs"] = {
+                results["metrics"]["pqs"] = {  # type: ignore[index]
                     "mos": mos,
                     "nsim": nsim,
                     "mcd_db": mcd,
@@ -247,10 +247,10 @@ class QualityMetricsManager:
                 logger.info("✓ PQS-DSP: MOS=%.2f NSIM=%.3f MCD=%.1f dB", mos, nsim, mcd)
             except Exception as e:
                 logger.warning("PQS-DSP assessment fehlgeschlagen: %s", e)
-                results["metrics"]["pqs"] = {"error": str(e)}
+                results["metrics"]["pqs"] = {"error": str(e)}  # type: ignore[index]
 
         # Aggregate Scores
-        results["aggregate"] = self._compute_aggregate(results["metrics"])
+        results["aggregate"] = self._compute_aggregate(results["metrics"])  # type: ignore[arg-type]
 
         return results
 
@@ -317,7 +317,7 @@ class QualityMetricsManager:
             return result
 
         except Exception as e:
-            logger.warning("ViSQOL assessment failed: %s", e)
+            logger.warning("ViSQOL assessment fehlgeschlagen: %s", e)
             return {"error": str(e)}
 
     def assess_comprehensive(
@@ -508,7 +508,7 @@ class QualityMetricsManager:
         if output_file:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(results, f, indent=2)
-            logger.info("✓ Report saved: %s", output_file)
+            logger.info("✓ Report gespeichert: %s", output_file)
 
         return report
 
@@ -563,7 +563,7 @@ def comprehensive_assessment(audio_file: str, reference_file: str | None = None,
     report = manager.generate_report(results)
     logger.info("Quality report:\n%s", report)
 
-    return results
+    return results  # type: ignore[return-value]
 
 
 # ==============================================================================
@@ -586,7 +586,7 @@ if __name__ == "__main__":
 
         comprehensive_assessment(_audio_file, _reference_file)
     else:
-        logger.info("Usage: python quality_metrics_manager.py <audio_file> [reference_file]")
+        logger.info("Usage: python quality_metrics_manager.py <audio_file> [Referenz_file]")
         logger.info("\nExample:")
-        logger.info("  python quality_metrics_manager.py output.wav")
-        logger.info("  python quality_metrics_manager.py output.wav reference.wav")
+        logger.info("  python quality_metrics_manager.py Ausgabe.wav")
+        logger.info("  python quality_metrics_manager.py Ausgabe.wav Referenz.wav")

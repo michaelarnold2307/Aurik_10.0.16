@@ -86,7 +86,7 @@ class TestPreservationMetrics:
             compute_formant_preservation_score,
             compute_micro_dynamics_score,
         ]:
-            s = fn(sig, sig.copy(), SR)
+            s = fn(sig, sig.copy(), SR)  # type: ignore[operator]
             assert 0 <= s <= 1, f"{fn.__name__} returned {s}"
         sig2 = np.random.default_rng(99).standard_normal(int(12 * SR)).astype(np.float32) * 0.1
         s = compute_emotional_arc_score(sig2, sig2.copy(), SR)

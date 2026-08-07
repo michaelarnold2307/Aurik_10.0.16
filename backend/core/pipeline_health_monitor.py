@@ -57,7 +57,7 @@ class PipelineHealthMonitor:
                     {"phase": phase_id, "retries": retries, "error": error_type, "duration_s": round(dur, 2)}
                 )
             if dur > _MAX_PHASE_DURATION_S:
-                logger.warning("HealthMonitor: %s exceeded phase time limit (%.0fs)", phase_id, dur)
+                logger.warning("HealthMonitor: %s exceeded Verarbeitungsschritt time limit (%.0fs)", phase_id, dur)
 
     def check_circuit_breaker(self) -> bool:
         """True = OK to continue. False = abort pipeline."""

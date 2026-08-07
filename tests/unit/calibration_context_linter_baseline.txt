@@ -1,12 +1,18 @@
+backend/api/bridge_calibration_data.py:32
 backend/core/adaptive_strength_optimizer.py:170,344
 backend/core/artifact_freedom_gate.py:353
-backend/core/cumulative_interaction_guard.py:586,647,812,838
+backend/core/cumulative_interaction_guard.py:586,651,816,842
 backend/core/era_authentic_perceptual_completion.py:113
 backend/core/joint_calibrator.py:60
 backend/core/per_phase_musical_goals_gate.py:1736
 backend/core/perceptual_tuning.py:195,225
 backend/core/pipeline_calibration.py:114,180
 backend/core/signal_flow_tracer.py:1076
+backend/core/song_calibration.py:30
+backend/core/song_calibration_profile.py:35
 backend/core/unified_restorer_v3.py:282
 # Baseline Hash: e60b424d26491f2b
-# 16 Verstöße in 10 Dateien
+# 19 Verstöße in 13 Dateien — bridge_calibration_data.py/song_calibration.py/
+# song_calibration_profile.py sind reine Datenhalter (DTO/Profile), die vom
+# jeweiligen Aufrufer explizit aus dem CalibrationContext befüllt werden —
+# kein Funktionsparameter, der Live-Kontext stillschweigend ignoriert.

@@ -74,7 +74,7 @@ class OverDrynessGuard:
             self._audit_log(result, sr)
             return result
         except Exception as e:
-            result["error"] = str(e)
+            result["error"] = str(e)  # type: ignore[assignment]
             logger.error("[OverDrynessGuard][Fehler] %s", e)
             self._audit_log(result, sr if "sr" in locals() else None)
             return result

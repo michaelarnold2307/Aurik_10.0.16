@@ -101,9 +101,9 @@ class HybridNVSR:
             from plugins.flashsr_plugin import FlashSRPlugin
 
             self.flashsr_plugin = FlashSRPlugin(timeout=300)  # type: ignore[assignment]
-            logger.info("FlashSR plugin initialized for NVSR")
+            logger.info("FlashSR plugin initialisiert for NVSR")
         except Exception as e:
-            logger.warning("FlashSR plugin not available: %s", e)
+            logger.warning("FlashSR plugin not verfuegbar: %s", e)
             self.flashsr_plugin = None
 
     def _has_sufficient_ml_headroom(self, audio: np.ndarray, sample_rate: int, phase_id: str) -> bool:
@@ -113,7 +113,7 @@ class HybridNVSR:
 
             import psutil
         except Exception as e:
-            logger.warning("hybrid_nvsr.py::_has_sufficient_ml_headroom fallback: %s", e)
+            logger.warning("hybrid_nvsr.py::_has_sufficient_ml_headroom Ersatzpfad: %s", e)
             return True
 
         n_samples = int(
@@ -139,14 +139,14 @@ class HybridNVSR:
 
                 evict_stale_plugins(required_mb=int(required_gb * 1024))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             gc.collect()
             try:
                 import ctypes as _ct
 
                 _ct.CDLL("libc.so.6").malloc_trim(0)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             available_gb = float(psutil.virtual_memory().available / (1024**3))
 
         if available_gb < required_gb:
@@ -163,7 +163,7 @@ class HybridNVSR:
                 }
             )
             logger.warning(
-                "NVSR RAM guard triggered: %.1f GB available, %.1f GB required (duration=%.1fs channels=%d) - using DSP fallback",
+                "NVSR RAM guard triggered: %.1f GB verfuegbar, %.1f GB required (duration=%.1fs channels=%d) - using DSP Ersatzpfad",
                 available_gb,
                 required_gb,
                 duration_s,
@@ -205,7 +205,7 @@ class HybridNVSR:
 
         # Detect current bandwidth
         detected_bandwidth = self._detect_bandwidth(audio, sample_rate)
-        logger.info("Detected bandwidth: %.0f Hz", detected_bandwidth)
+        logger.info("erkannt bandwidth: %.0f Hz", detected_bandwidth)
 
         # Choose strategy
         strategy = self.config.strategy
@@ -213,7 +213,7 @@ class HybridNVSR:
         # Strategy routing
         if strategy == NVSRStrategy.DSP_ONLY:
             result = self._apply_dsp_only(dsp_restored_audio or audio, sample_rate, detected_bandwidth)
-        elif strategy == NVSRStrategy.AUDIOSR_ONLY:
+        elif strategy == NVSRStrategy.AUDIOSR_ONLY:  # type: ignore[attr-defined]
             result = self._apply_flashsr_only(audio, sample_rate, detected_bandwidth)
         elif strategy == NVSRStrategy.ADAPTIVE:
             result = self._apply_adaptive(audio, sample_rate, dsp_restored_audio, detected_bandwidth, material_type)
@@ -280,7 +280,7 @@ class HybridNVSR:
         """FlashSR-only path."""
         plugin = self._get_flashsr_plugin(audio, sample_rate, "phase_06_frequency_restoration")
         if plugin is None:
-            logger.warning("FlashSR not available, falling back to DSP")
+            logger.warning("FlashSR not verfuegbar, falling back to DSP")
             return self._apply_dsp_only(audio, sample_rate, detected_bandwidth)
 
         try:
@@ -297,7 +297,7 @@ class HybridNVSR:
                 processing_time_sec=0.0,
             )
         except Exception as e:
-            logger.error("FlashSR processing failed: %s", e)
+            logger.error("FlashSR processing fehlgeschlagen: %s", e)
             return self._apply_dsp_only(audio, sample_rate, detected_bandwidth)
 
     def _apply_adaptive(
@@ -337,7 +337,7 @@ class HybridNVSR:
 
         plugin = self._get_flashsr_plugin(audio, sample_rate, "phase_06_frequency_restoration")
         if plugin is None:
-            logger.warning("FlashSR not available, using DSP restoration")
+            logger.warning("FlashSR not verfuegbar, using DSP restoration")
             return NVSRResult(
                 restored_audio=base_audio,
                 strategy_used="adaptive_dsp_fallback",
@@ -363,7 +363,7 @@ class HybridNVSR:
                 processing_time_sec=0.0,
             )
         except Exception as e:
-            logger.error("FlashSR processing failed: %s", e)
+            logger.error("FlashSR processing fehlgeschlagen: %s", e)
             return NVSRResult(
                 restored_audio=base_audio,
                 strategy_used="adaptive_dsp_fallback",
@@ -390,7 +390,7 @@ class HybridNVSR:
 
         plugin = self._get_flashsr_plugin(audio, sample_rate, "phase_06_frequency_restoration")
         if plugin is None:
-            logger.warning("FlashSR not available, falling back to DSP")
+            logger.warning("FlashSR not verfuegbar, falling back to DSP")
             return self._apply_dsp_only(base_audio, sample_rate, detected_bandwidth)
 
         try:
@@ -414,7 +414,7 @@ class HybridNVSR:
                 processing_time_sec=0.0,
             )
         except Exception as e:
-            logger.error("Hybrid processing failed: %s", e)
+            logger.error("Hybrid processing fehlgeschlagen: %s", e)
             return self._apply_dsp_only(base_audio, sample_rate, detected_bandwidth)
 
     def _run_flashsr(self, audio: np.ndarray, sample_rate: int, plugin: Any) -> np.ndarray:
@@ -434,7 +434,7 @@ class HybridNVSR:
             _plm_nvsr = _get_plm_nvsr()
             _plm_nvsr.set_active("FlashSR", True)
         except Exception as e:
-            logger.warning("hybrid_nvsr.py::_run_flashsr fallback: %s", e)
+            logger.warning("hybrid_nvsr.py::_Ausfuehrung_flashsr Ersatzpfad: %s", e)
         try:
             return plugin.process(audio, sample_rate, target_sr=self.config.flashsr_target_sr)  # type: ignore[no-any-return]
         finally:
@@ -442,7 +442,7 @@ class HybridNVSR:
                 try:
                     _plm_nvsr.set_active("FlashSR", False)
                 except Exception as e:
-                    logger.warning("hybrid_nvsr.py::_run_flashsr fallback: %s", e)
+                    logger.warning("hybrid_nvsr.py::_Ausfuehrung_flashsr Ersatzpfad: %s", e)
 
     def _blend_audio(
         self, audio_a: np.ndarray, audio_b: np.ndarray, sample_rate: int, crossover_freq: float, blend_ratio: float

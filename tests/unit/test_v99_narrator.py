@@ -63,7 +63,7 @@ def _base_narrate(**overrides):
         "gp_observations": 5,
     }
     defaults.update(overrides)
-    return narrate_restoration(**defaults)
+    return narrate_restoration(**defaults)  # type: ignore[arg-type]
 
 
 # ===========================================================================
@@ -535,8 +535,8 @@ class TestConsistency:
             "confidence": 0.65,
             "gp_observations": 7,
         }
-        r1 = narrate_restoration(**kwargs)
-        r2 = narrate_restoration(**kwargs)
+        r1 = narrate_restoration(**kwargs)  # type: ignore[arg-type]
+        r2 = narrate_restoration(**kwargs)  # type: ignore[arg-type]
         assert r1.verdict == r2.verdict
         assert r1.quality_stars == r2.quality_stars
 

@@ -448,7 +448,7 @@ def analyze_context(audio: np.ndarray, sample_rate: int) -> ExcellenceContext:
                 thresh = np.percentile(flux, _TRANSIENT_THRESH_PERCENTILE)
                 transient_density = float(np.mean(flux >= thresh))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # Spectral Centroid
     spectral_centroid_mean = 1500.0
@@ -549,7 +549,7 @@ def _enhance_spectral_continuity(
                 return smoothed
             Zxx_new = _pghi_out
         except Exception as e:
-            logger.warning("excellence_optimizer.py::_enhance_spectral_continuity fallback: %s", e)
+            logger.warning("excellence_optimizer.py::_verbessern_spectral_continuity Ersatzpfad: %s", e)
             pass  # fallback: use original-phase reconstruction
     smoothed = _istft(Zxx_new, len(_audio_proc))
 
@@ -707,7 +707,9 @@ def _reinforce_harmonics(
                 return boosted
             Zxx_new = _pghi_out
         except Exception as _pghi_exc:
-            logger.debug("PGHI excellence harmonic boost failed, using unmodified phase: %s", _pghi_exc)
+            logger.debug(
+                "PGHI excellence harmonic boost fehlgeschlagen, using unmodified Verarbeitungsschritt: %s", _pghi_exc
+            )
     boosted = _istft(Zxx_new, len(_audio_proc))
 
     # Wenn nur ein Segment bearbeitet wurde, Original-Audio zusammensetzen
@@ -792,7 +794,7 @@ class ExcellenceOptimizer:
         profile = MATERIAL_PROFILES.get(self.material, MATERIAL_PROFILES["auto"])
         if self.material not in MATERIAL_PROFILES:
             logger.warning(
-                "ExcellenceOptimizer: Unbekanntes Material '%s' → 'auto' verwendet. Gültige Profile: %s",
+                "ExcellenceOptimizer: Unbekanntes Material '%s' → 'auto' verwendet. Gültige Profil: %s",
                 material,
                 list(MATERIAL_PROFILES),
             )
@@ -856,7 +858,7 @@ class ExcellenceOptimizer:
                         np.clip(float(p["noise_reduction_strength"]) * 0.3, 0.0, _MODULATION_STRENGTH)
                     )
                 logger.debug(
-                    "ExcellenceOptimizer: GP-Parameter applied (iter=%d, E[Q]=%.3f)",
+                    "ExcellenceOptimizer: GP-Parameter angewendet (iter=%d, E[Q]=%.3f)",
                     _gp_proposal.iteration,
                     _gp_proposal.expected_quality,
                 )
@@ -918,9 +920,9 @@ class ExcellenceOptimizer:
                         out *= ratio[np.newaxis, :]
                 result.continuity_smoothing_applied = True
                 result.applied_steps.append("spectral_continuity")
-                logger.debug("ExcellenceOptimizer: Spectral continuity applied")
+                logger.debug("ExcellenceOptimizer: Spectral continuity angewendet")
             except Exception as exc:
-                logger.warning("ExcellenceOptimizer: continuity failed: %s", exc)
+                logger.warning("ExcellenceOptimizer: continuity fehlgeschlagen: %s", exc)
 
         # 2. Micro-Dynamic Re-injection
         if self.apply_micro_dynamics and ctx.needs_micro_dynamics:
@@ -930,7 +932,7 @@ class ExcellenceOptimizer:
                 result.applied_steps.append("micro_dynamics")
                 logger.debug("ExcellenceOptimizer: Micro-dynamics injected, CV=%.3f", ctx.dynamic_cv)
             except Exception as exc:
-                logger.warning("ExcellenceOptimizer: micro_dynamics failed: %s", exc)
+                logger.warning("ExcellenceOptimizer: micro_dynamics fehlgeschlagen: %s", exc)
 
         # 3. Harmonic Reinforcement
         if self.apply_harmonic_boost and ctx.needs_harmonic_boost:
@@ -951,7 +953,7 @@ class ExcellenceOptimizer:
                 result.applied_steps.append("harmonic_boost")
                 logger.debug("ExcellenceOptimizer: Harmonic boost %.2f dB", result.harmonic_reinforcement_db)
             except Exception as exc:
-                logger.warning("ExcellenceOptimizer: harmonic_boost failed: %s", exc)
+                logger.warning("ExcellenceOptimizer: harmonic_boost fehlgeschlagen: %s", exc)
 
         # 4. OLA Edge Crossfade
         if self.apply_ola_edges:
@@ -961,7 +963,7 @@ class ExcellenceOptimizer:
                 if n_xfades > 0:
                     result.applied_steps.append("ola_crossfade")
             except Exception as exc:
-                logger.warning("ExcellenceOptimizer: ola_crossfade failed: %s", exc)
+                logger.warning("ExcellenceOptimizer: ola_crossfade fehlgeschlagen: %s", exc)
 
         # §2.34 GoalPriorityProtocol: Pareto-Konflikt-Logging (MOO, §2.5)
         # Natürlichkeit/Authentizität (Stufe 1) dürfen nicht für Brillanz/Raumtiefe (Stufe 5) geopfert werden.

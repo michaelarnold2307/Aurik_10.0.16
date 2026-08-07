@@ -116,7 +116,13 @@ class TemporalQualityCoherenceMetric:
     SIGMA_THRESHOLD: float = SIGMA_THRESHOLD
     MIN_FILE_DURATION_S: float = MIN_FILE_DURATION_S
 
-    def measure(self, audio: np.ndarray, sr: int, material_key: str | None = None) -> TemporalCoherenceResult:
+    def measure(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        material_key: str | None = None,
+        transfer_chain: list[str] | None = None,
+    ) -> TemporalCoherenceResult:
         """Misst temporale Qualitaetskohaerentz.
 
         Args:
@@ -124,6 +130,8 @@ class TemporalQualityCoherenceMetric:
             sr:           Sample-Rate (muss 48000 sein)
             material_key: Optionaler Materialtyp-Key für adaptive Thresholds
                           (z.B. 'mp3_low', 'vinyl', 'cd_digital').
+            transfer_chain: Optionale Tonträgerkette für §v10.303.15 Multi-Carrier
+                          (permissivster Schwellwert aller Carrier in der Kette).
 
         Returns:
             TemporalCoherenceResult
@@ -148,8 +156,12 @@ class TemporalQualityCoherenceMetric:
                 _chain_sigma = max(_chain_sigma, _MATERIAL_SIGMA_THRESHOLD.get(_ck, sigma_threshold))
             if _chain_span > span_threshold:
                 span_threshold, sigma_threshold = _chain_span, _chain_sigma
-                logger.debug("§v10.303.15 Multi-Carrier TQC: span=%.2f sigma=%.2f (chain: %s)",
-                             span_threshold, sigma_threshold, transfer_chain)
+                logger.debug(
+                    "§v10.303.15 Multi-Carrier TQC: span=%.2f sigma=%.2f (chain: %s)",
+                    span_threshold,
+                    sigma_threshold,
+                    transfer_chain,
+                )
 
         duration_s = len(audio) / max(sr, 1)
         if duration_s < self.MIN_FILE_DURATION_S:
@@ -274,7 +286,10 @@ def measure_temporal_coherence(
     NATÜRLICH höher — der strengste Schwellwert würde falsch alarmieren.
     """
     return get_temporal_coherence_metric().measure(
-        audio, sr, material_key=material_key, transfer_chain=transfer_chain,
+        audio,
+        sr,
+        material_key=material_key,
+        transfer_chain=transfer_chain,
     )
 
 

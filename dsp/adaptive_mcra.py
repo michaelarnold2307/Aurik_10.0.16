@@ -65,7 +65,7 @@ class AdaptiveMCRA:
         noise_psd = np.nan_to_num(noise_psd, nan=self.noise_floor, posinf=self.noise_floor, neginf=self.noise_floor)
         return noise_psd
 
-    def auto_optimize(self, power_spectrogram: np.ndarray) -> dict[str, float]:
+    def auto_optimize(self, power_spectrogram: np.ndarray) -> dict[str, float]:  # type: ignore[return]
         """Automatische Anpassung der Parameter je nach Signal."""
         n_frames = power_spectrogram.shape[0]
         if n_frames < 50:

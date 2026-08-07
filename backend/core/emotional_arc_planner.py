@@ -112,7 +112,7 @@ class EmotionalArcPlanner:
             try:
                 return self._plan_impl(audio, sr, dict(restoration_context or {}))
             except Exception as exc:
-                logger.debug("EmotionalArcPlanner non-blocking: %s", exc)
+                logger.debug("EmotionalArcPlanner nicht blockierend: %s", exc)
                 n = max(1, int(len(audio) / max(sr, 1) / _RESOLUTION_S))
                 dur = len(audio) / max(sr, 1)
                 return ArcPlan(weights=np.ones(n, dtype=np.float32), duration_s=dur)
@@ -164,7 +164,7 @@ class EmotionalArcPlanner:
 
                 weights = gaussian_filter1d(weights.astype(np.float64), sigma=sigma_frames).astype(np.float32)
             except Exception as e:
-                logger.warning("emotional_arc_planner.py::_plan_impl fallback: %s", e)
+                logger.warning("emotional_arc_planner.py::_plan_impl Ersatzpfad: %s", e)
                 pass  # smoothing is optional
 
         weights = np.clip(weights, 0.5, 1.5).astype(np.float32)
@@ -200,7 +200,7 @@ class EmotionalArcPlanner:
                 if i_e > i_s:
                     weights[i_s:i_e] = np.maximum(weights[i_s:i_e], zone_weight)
             except Exception as e:
-                logger.warning("emotional_arc_planner.py::_apply_zone_weight fallback: %s", e)
+                logger.warning("emotional_arc_planner.py::_anwenden_zone_weight Ersatzpfad: %s", e)
 
 
 # ---------------------------------------------------------------------------

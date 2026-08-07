@@ -309,10 +309,16 @@ class TransientPreservationPhase(PhaseInterface):
                         if _overlap > 0:
                             _frisson_cap = min(_frisson_cap, 0.30)
             except Exception as _e:
-                logger.debug("phase_phase_08_transient_preservation: non-critical exception: %s", _e)  # Non-blocking
+                logger.debug(
+                    "Verarbeitungsschritt_Verarbeitungsschritt_08_transient_preservation: unkritisch exception: %s", _e
+                )  # Non-blocking
             if _frisson_cap < 1.0:
                 _effective_strength = float(_effective_strength * _frisson_cap)
-                logger.debug("§v10 Phase 08 Frisson-Protect: cap=%.2f strength=%.2f", _frisson_cap, _effective_strength)
+                logger.debug(
+                    "§v10 Verarbeitungsschritt 08 Frisson-Protect: cap=%.2f strength=%.2f",
+                    _frisson_cap,
+                    _effective_strength,
+                )
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -348,13 +354,15 @@ class TransientPreservationPhase(PhaseInterface):
                 np.clip(params.get("detection_sensitivity", 0.65) * _ts["onset_threshold"] / 3.5, 0.35, 0.90)
             )
             logger.debug(
-                "Phase 08 adaptive: sensitivity=%.2f (crest=%.1f onsets=%.1f)",
+                "Verarbeitungsschritt 08 adaptive: sensitivity=%.2f (crest=%.1f onsets=%.1f)",
                 params["detection_sensitivity"],
                 _ts["crest_factor"],
                 _ts["onset_threshold"],
             )
         except Exception as _e:
-            logger.debug("backend.core.phases.phase_08_transient_preservation: non-critical exception: %s", _e)
+            logger.debug(
+                "backend.core.phases.Verarbeitungsschritt_08_transient_preservation: unkritisch exception: %s", _e
+            )
 
         # Override attack boost if specified
         if attack_boost_db is not None:
@@ -459,7 +467,7 @@ class TransientPreservationPhase(PhaseInterface):
                     _adsr_scores.get("meso", 1.0),
                 )
         except Exception as _adsr_exc:
-            logger.debug("§C9 ADSR scoring non-blocking: %s", _adsr_exc)
+            logger.debug("§C9 ADSR scoring nicht blockierend: %s", _adsr_exc)
 
         # §2.47 PMGG-Retry: phase_locality_factor als finaler Wet/Dry-Regler
         if _effective_strength < 1.0:
@@ -477,9 +485,9 @@ class TransientPreservationPhase(PhaseInterface):
             _hg_result_08 = _hg_08(audio, enhanced, sr=sample_rate, mode=_mode_08)
             if getattr(_hg_result_08, "requires_rollback", False):
                 enhanced = audio.copy()
-                logger.warning("Phase08 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
+                logger.warning("Verarbeitungsschritt08 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
         except Exception as _hg_exc_08:
-            logger.debug("Phase08 §2.46e Hallucination-Guard (non-blocking): %s", _hg_exc_08)
+            logger.debug("Verarbeitungsschritt08 §2.46e Hallucination-Guard (nicht blockierend): %s", _hg_exc_08)
 
         # ── §Transport-Bump-Repair: Maximales SOTA ──
         # Ebene 1: Multi-Band-Envelope (200Hz/3kHz Crossover)
@@ -517,11 +525,11 @@ class TransientPreservationPhase(PhaseInterface):
 
                 for _t_start, _t_end in _bump_locs:
                     _s = max(0, int(_t_start * sample_rate))
-                    _e = min(_n_samples, int(_t_end * sample_rate))
-                    if _e <= _s + 2:
+                    _e = min(_n_samples, int(_t_end * sample_rate))  # type: ignore[misc]
+                    if _e <= _s + 2:  # type: ignore[misc]
                         continue
 
-                    _dur_s = (_e - _s) / sample_rate
+                    _dur_s = (_e - _s) / sample_rate  # type: ignore[misc]
                     _segment = _channels[:, _s:_e]
                     _seg_mono = np.mean(_segment, axis=0)
 
@@ -549,11 +557,11 @@ class TransientPreservationPhase(PhaseInterface):
 
                     # Referenz pro Band aus Kontext
                     _ctx_before_s = max(0, _s - int(sample_rate * 0.150))
-                    _ctx_after_e = min(_n_samples, _e + int(sample_rate * 0.150))
+                    _ctx_after_e = min(_n_samples, _e + int(sample_rate * 0.150))  # type: ignore[misc]
                     _ctx_mono = np.concatenate(
                         [
                             np.mean(_channels[:, _ctx_before_s:_s], axis=0) if _s > _ctx_before_s else _channels[0, :1],
-                            np.mean(_channels[:, _e:_ctx_after_e], axis=0) if _ctx_after_e > _e else _channels[0, -1:],
+                            np.mean(_channels[:, _e:_ctx_after_e], axis=0) if _ctx_after_e > _e else _channels[0, -1:],  # type: ignore[misc]
                         ]
                     )
                     _ctx_lo = _sps.sosfiltfilt(_sos_lo, _ctx_mono)
@@ -619,14 +627,14 @@ class TransientPreservationPhase(PhaseInterface):
                     enhanced = _bump_repaired if enhanced.ndim == 2 else _bump_repaired[0]
                     enhanced = np.clip(enhanced, -1.0, 1.0)
                     logger.info(
-                        "Phase08 §SOTA-Bump-Repair: %d Events (3-Band + Onset-Guard + Validation), "
+                        "Verarbeitungsschritt08 §SOTA-Bump-Repair: %d Events (3-Band + Onset-Guard + Validierung), "
                         "%d rolled back, mean=%.1fdB Gain",
                         _bump_count,
                         _bump_rolled_back,
                         _bump_total_db / max(_bump_count, 1),
                     )
         except Exception as _tb_exc:
-            logger.debug("Phase08 §SOTA-Bump-Repair non-blocking: %s", _tb_exc)
+            logger.debug("Verarbeitungsschritt08 §SOTA-Bump-Repair nicht blockierend: %s", _tb_exc)
 
         return create_phase_result(
             audio=enhanced,
@@ -817,6 +825,7 @@ class TransientPreservationPhase(PhaseInterface):
                         if _fz_start <= float(ot) <= _fz_end:
                             _frisson_onset_mask.add(idx)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
 
         # Create gain envelope
@@ -911,7 +920,7 @@ class TransientPreservationPhase(PhaseInterface):
                     env = env / env_max
                 result[name] = env
             except Exception as _exc:
-                logger.debug("§C9 ADSR scale '%s' failed: %s", name, _exc)
+                logger.debug("§C9 ADSR scale '%s' fehlgeschlagen: %s", name, _exc)
                 result[name] = np.ones(len(mono), dtype=np.float32)
 
         return result
@@ -941,7 +950,7 @@ if __name__ == "__main__":
     # Test Professional Transient Preservation Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Transient Preservation Phase v2.0 - Test")
+    logger.debug("Professional Transient Preservation Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio (percussion + sustained tone)
@@ -994,10 +1003,10 @@ if __name__ == "__main__":
         _test_result = phase.process(_test_audio.copy(), material_type=material)
 
         if _test_result.success and _test_result.modifications.get("transient_preserved"):
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             _exec_t08 = _test_result.metadata["execution_time_seconds"]
             logger.debug("   Execution Time: %.3fs (%.2f× realtime)", _exec_t08, _exec_t08 / duration)
-            logger.debug("   Transients Detected: %s", _test_result.modifications["num_transients"])
+            logger.debug("   Transients erkannt: %s", _test_result.modifications["num_transients"])
             logger.debug("   Transient Density: %.1f/sec", _test_result.modifications["transient_density_per_sec"])
             logger.debug("   Peak Enhancement: %.1f dB", _test_result.modifications["peak_enhancement_db"])
             logger.debug("   Num Bands: %s", _test_result.modifications["num_bands"])
@@ -1005,13 +1014,13 @@ if __name__ == "__main__":
             logger.debug("   Attack Gain (per band): %s dB", _test_result.metadata["attack_gain_db_per_band"])
             logger.debug("   Warnings: %s", _test_result.warnings if _test_result.warnings else "None")
         else:
-            logger.debug("⏭️  Transient Preservation Skipped")
+            logger.debug("⏭️  Transient Preservation uebersprungen")
             logger.debug("   Reason: %s", _test_result.modifications.get("reason", "unknown"))
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Transient Preservation v2.0 Test Complete!")
+    logger.debug("✅ Professional Transient Preservation v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _test_result.metadata.get("algorithm", "N/A"))
-    logger.debug("Scientific Reference: %s", _test_result.metadata.get("scientific_ref", "N/A"))
+    logger.debug("Scientific Referenz: %s", _test_result.metadata.get("scientific_ref", "N/A"))
     logger.debug("Benchmark: %s", _test_result.metadata.get("benchmark", "N/A"))
     logger.debug("Quality Impact: 0.92 (Professional-Grade)")

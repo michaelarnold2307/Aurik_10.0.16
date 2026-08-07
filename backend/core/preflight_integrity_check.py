@@ -66,11 +66,11 @@ def run_preflight_checks() -> IntegrityResult:
         try:
             if module_name in _COMPILE_ONLY:
                 # Nur Syntax prüfen, nicht ausführen (spart 9s)
-                spec = importlib.util.find_spec(module_name)
+                spec = importlib.util.find_spec(module_name)  # type: ignore[attr-defined]
                 if spec and spec.origin:
                     compile(open(spec.origin).read(), spec.origin, "exec")
                 result.checks_passed += 1
-                logger.debug("PreFlight ✓ %s (compile-check)", label)
+                logger.debug("PreFlight ✓ %s (compile-Pruefung)", label)
             else:
                 importlib.import_module(module_name)
                 result.checks_passed += 1

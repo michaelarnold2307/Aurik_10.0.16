@@ -260,7 +260,7 @@ class GuardEffectivenessAuditor:
             if is_fp:
                 logger.info(
                     "§v10.5 Auditor: %s false positive bestätigt — "
-                    "original Δ=%.4f (goal=%s), alternativ Δ=%.4f (ratio=%.1f%%)",
+                    "Originalsignal Δ=%.4f (goal=%s), alternativ Δ=%.4f (Verhaeltnis=%.1f%%)",
                     event.phase_id,
                     event.original_regression,
                     goal,
@@ -271,7 +271,7 @@ class GuardEffectivenessAuditor:
             return is_fp, alt_reg
 
         except Exception as e:
-            logger.debug("§v10.5 Auditor: Proxy-Check fehlgeschlagen: %s", e)
+            logger.debug("§v10.5 Auditor: Proxy-Pruefung fehlgeschlagen: %s", e)
             return False, event.original_regression
 
     # ── Recovery ──

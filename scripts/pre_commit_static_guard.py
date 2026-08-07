@@ -19,6 +19,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
@@ -39,7 +40,7 @@ def find_undefined_names(filepath: Path) -> list[tuple[int, str]]:
     except SyntaxError:
         return []
 
-    issues = []
+    issues: list[Any] = []
     _ = set(dir(__builtins__)) if hasattr(__builtins__, "__dict__") else set()
 
     for node in ast.walk(tree):
@@ -196,8 +197,8 @@ def get_target_files(mode: str = "all") -> list[Path]:
                 continue
             if "models/" in str(py_file) or "node_modules/" in str(py_file):
                 continue
-            files.append(py_file)
-        return files
+            files.append(py_file)  # type: ignore[arg-type]
+        return files  # type: ignore[return-value]
 
 
 def main() -> int:

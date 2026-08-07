@@ -22,14 +22,14 @@ np.random.seed(42)
 
 def _sine(dur: float = 1.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), dtype=np.float32)
-    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noisy(dur: float = 1.0) -> np.ndarray:
     np.random.seed(7)
     base = _sine(dur)
     noise = np.random.randn(*base.shape).astype(np.float32) * 0.1
-    return np.clip(base + noise, -1.0, 1.0)
+    return np.clip(base + noise, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ─── DefektErgebnis ───────────────────────────────────────────────────────────

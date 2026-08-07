@@ -280,7 +280,7 @@ class MultimodalDecisionEngine:
                 rule = _GENRE_ERA_CHAINS.get(lookup, {})
                 chain.extend(rule.get("chain", []))
         except Exception as exc:
-            logger.debug("Cover analysis fehlgeschlagen (%s) — heuristic fallback", exc)
+            logger.debug("Cover Analyse fehlgeschlagen (%s) — heuristic Ersatzpfad", exc)
         return chain, meta
 
     def _classify_from_embedding(

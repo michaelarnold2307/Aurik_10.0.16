@@ -339,7 +339,7 @@ def test_adaptive_resource_manager_stop_monitoring_joins_thread(monkeypatch):
     assert manager.running is False
     assert joined["timeout"] == 1.0
     assert manager._monitor_thread is None
-    assert thread is not None and thread.started is False
+    assert thread is not None and thread.started is False  # type: ignore[attr-defined]
 
 
 # ── Auto-detect budget tests ────────────────────────────────────────────

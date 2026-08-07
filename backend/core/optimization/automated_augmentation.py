@@ -67,7 +67,7 @@ class AudioAugmentations:
         else:
             stretched = stretched[..., :length]
 
-        return stretched
+        return stretched  # type: ignore[no-any-return]
 
     @staticmethod
     def pitch_shift(audio: torch.Tensor, n_steps: int, sr: int = 48000) -> torch.Tensor:
@@ -83,7 +83,7 @@ class AudioAugmentations:
             stretched.unsqueeze(1), size=audio.size(-1), mode="linear", align_corners=False
         ).squeeze(1)
 
-        return resampled
+        return resampled  # type: ignore[no-any-return]
 
     @staticmethod
     def add_noise(audio: torch.Tensor, noise_level: float) -> torch.Tensor:
@@ -124,7 +124,7 @@ class AudioAugmentations:
         # IFFT
         filtered = torch.fft.irfft(filtered_spec, n=audio.size(-1), dim=-1)  # pylint: disable=not-callable
 
-        return filtered
+        return filtered  # type: ignore[no-any-return]
 
     @staticmethod
     def time_mask(audio: torch.Tensor, mask_width: int) -> torch.Tensor:
@@ -154,7 +154,7 @@ class AudioAugmentations:
 
         for i in range(audio.size(0)):
             click_positions = np.random.randint(0, audio.size(-1), n_clicks)
-            clicks[i, :, click_positions] = np.random.randn(len(click_positions)) * 0.5
+            clicks[i, :, click_positions] = np.random.randn(len(click_positions)) * 0.5  # type: ignore[assignment]
 
         # Combine
         augmented = audio + pink_noise * intensity * 0.1 + clicks
@@ -205,7 +205,7 @@ class AudioAugmentations:
 
         augmented = torch.fft.irfft(quantized_spec, n=audio.size(-1), dim=-1)  # pylint: disable=not-callable
 
-        return augmented
+        return augmented  # type: ignore[no-any-return]
 
     @staticmethod
     def dynamic_range_compression(audio: torch.Tensor, threshold: float, ratio: float) -> torch.Tensor:
@@ -262,7 +262,7 @@ class AugmentationPolicy:
                 try:
                     augmented = self.op_map[op_name](augmented, magnitude)
                 except Exception as e:
-                    logger.warning("Failed to apply %s: %s", op_name, e)
+                    logger.warning("konnte nicht anwenden %s: %s", op_name, e)
 
         return augmented
 
@@ -298,7 +298,7 @@ class RandAugment:
         elif material_type == "mp3":
             self.operations.append("add_mp3_artifacts")
 
-        logger.info("RandAugment initialized: n_ops=%s, magnitude=%s, material=%s", n_ops, magnitude, material_type)
+        logger.info("RandAugment initialisiert: n_ops=%s, magnitude=%s, material=%s", n_ops, magnitude, material_type)
 
     def __call__(self, audio: torch.Tensor) -> torch.Tensor:
         """Wendet an: random augmentations."""
@@ -335,7 +335,7 @@ class AutoAugment:
         # Initialize random policies
         self.policies: list = self._initialize_policies() or []
 
-        logger.info("AutoAugment initialized: %s policies, %s ops per policy", n_policies, n_ops_per_policy)
+        logger.info("AutoAugment initialisiert: %s policies, %s ops per policy", n_policies, n_ops_per_policy)
 
     def _initialize_policies(self) -> list[AugmentationPolicy]:
         """Initialisiert random policies."""
@@ -365,7 +365,7 @@ class AutoAugment:
     def __call__(self, audio: torch.Tensor) -> torch.Tensor:
         """Wendet an: random policy."""
         policy = random.choice(self.policies)
-        return policy.apply(audio)
+        return policy.apply(audio)  # type: ignore[no-any-return]
 
     def search_policies(
         self, model: nn.Module, train_loader, val_loader, n_iterations: int = 50, device: str = "cpu"
@@ -430,7 +430,7 @@ class AutoAugment:
                 logger.info("Iteration %s: Val Loss = %.4f, Best = %.4f", iteration, avg_val_loss, best_val_loss)
 
         self.policies = best_policies  # type: ignore[assignment]
-        logger.info("Policy search completed! Best val loss: %.4f", best_val_loss)
+        logger.info("Policy search abgeschlossen! Best val loss: %.4f", best_val_loss)
 
     def save_policies(self, path: Path) -> None:
         """Speichert learned policies."""
@@ -442,7 +442,7 @@ class AutoAugment:
         with open(path, "w") as f:
             json.dump(policies_data, f, indent=2)
 
-        logger.info("Policies saved to %s", path)
+        logger.info("Policies gespeichert to %s", path)
 
     def load_policies(self, path: Path) -> None:
         """Lädt policies from file."""
@@ -451,7 +451,7 @@ class AutoAugment:
 
         self.policies = [AugmentationPolicy(p["operations"], p.get("material_type")) for p in policies_data]
 
-        logger.info("Loaded %s policies from %s", len(self.policies), path)
+        logger.info("geladen %s policies from %s", len(self.policies), path)
 
 
 class ConsistencyTraining:
@@ -478,7 +478,7 @@ class ConsistencyTraining:
         self.consistency_weight = consistency_weight
         self.device = device
 
-        logger.info("ConsistencyTraining initialized: consistency_weight=%s", consistency_weight)
+        logger.info("ConsistencyTraining initialisiert: consistency_weight=%s", consistency_weight)
 
     def train_step(
         self, batch_x: torch.Tensor, batch_y: torch.Tensor, optimizer: torch.optim.Optimizer
@@ -532,7 +532,7 @@ if __name__ == "__main__":
     audio = torch.randn(2, 1, 48000)
     augmented = rand_augment(audio)
 
-    logger.debug("Original shape: %s", audio.shape)
+    logger.debug("Originalsignal shape: %s", audio.shape)
     logger.debug("Augmented shape: %s", augmented.shape)
 
     # Test AutoAugment

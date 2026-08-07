@@ -14,14 +14,14 @@ def _generate_clean_audio(duration_s: float = 1.0, sr: int = 48000) -> np.ndarra
     sig = 0.5 * np.sin(2 * np.pi * 440 * t)
     sig += 0.25 * np.sin(2 * np.pi * 880 * t)
     sig += 0.125 * np.sin(2 * np.pi * 1320 * t)
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _add_noise(audio: np.ndarray, snr_db: float = -15.0) -> np.ndarray:
     signal_power = np.mean(audio**2)
     noise_power = signal_power / (10 ** (snr_db / 10))
     noise = np.sqrt(noise_power) * np.random.randn(*audio.shape)
-    return (audio + noise).astype(np.float32)
+    return (audio + noise).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _add_clicks(audio: np.ndarray, clicks_per_sec: int = 10, sr: int = 48000) -> np.ndarray:
@@ -37,7 +37,7 @@ def _lowpass(audio: np.ndarray, cutoff_hz: float = 8000.0, sr: int = 48000) -> n
     from scipy.signal import butter, filtfilt
 
     b, a = butter(4, cutoff_hz / (sr / 2), btype="low")
-    return filtfilt(b, a, audio).astype(np.float32)
+    return filtfilt(b, a, audio).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _snr(clean: np.ndarray, degraded: np.ndarray) -> float:

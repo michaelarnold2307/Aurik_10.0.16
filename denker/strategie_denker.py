@@ -228,10 +228,10 @@ class StrategieDenker:
                     enforce_limit=enforce,
                     enable_adaptive_skipping=True,
                 )
-                logger.info("StrategieDenker: PerformanceGuard (mode=%s) geladen.", mode)
+                logger.info("StrategieDenker: PerformanceGuard (Betriebsart=%s) geladen.", mode)
             except Exception as exc:
                 logger.warning(
-                    "StrategieDenker: PerformanceGuard nicht verfügbar (%s). Einfacher Timer-Fallback wird genutzt.",
+                    "StrategieDenker: PerformanceGuard nicht verfügbar (%s). Einfacher Timer-Ersatzpfad wird genutzt.",
                     exc,
                 )
                 self._guard = None
@@ -256,7 +256,7 @@ class StrategieDenker:
             }
             return mapping.get(_m, _quality_mode_cls.QUALITY)
         except Exception:
-            logger.warning("strategie_denker.py::_parse_mode fallback", exc_info=True)
+            logger.warning("strategie_denker.py::_parse_Betriebsart Ersatzpfad", exc_info=True)
             return mode_str  # PerformanceGuard handles unknown mode gracefully
 
     # ------------------------------------------------------------------
@@ -373,9 +373,9 @@ class StrategieDenker:
                 finally:
                     _pool.shutdown(wait=False)
             except concurrent.futures.TimeoutError:
-                logger.warning("StrategieDenker: HPE Timeout (>%.0fs) — Fallback 0.5", _HPE_GOOSE_TIMEOUT)
+                logger.warning("StrategieDenker: HPE Zeitlimit (>%.0fs) — Ersatzpfad 0.5", _HPE_GOOSE_TIMEOUT)
             except Exception:
-                logger.warning("strategie_denker.py::HPE fallback", exc_info=True)
+                logger.warning("strategie_denker.py::HPE Ersatzpfad", exc_info=True)
             try:
                 from backend.core.goosebumps_factor import compute_goosebumps
 
@@ -389,9 +389,9 @@ class StrategieDenker:
                 finally:
                     _pool.shutdown(wait=False)
             except concurrent.futures.TimeoutError:
-                logger.warning("StrategieDenker: Goosebumps Timeout (>%.0fs) — Fallback 0.5", _HPE_GOOSE_TIMEOUT)
+                logger.warning("StrategieDenker: Goosebumps Zeitlimit (>%.0fs) — Ersatzpfad 0.5", _HPE_GOOSE_TIMEOUT)
             except Exception:
-                logger.warning("strategie_denker.py::Goosebumps fallback", exc_info=True)
+                logger.warning("strategie_denker.py::Goosebumps Ersatzpfad", exc_info=True)
         else:
             logger.info(
                 "StrategieDenker: HPE/Goosebumps übersprungen (%.1fs Audio > 60s) — Baseline 0.5",
@@ -425,7 +425,7 @@ class StrategieDenker:
         )
         self._current_plan = plan
         logger.info(
-            "StrategieDenker: Strategieplan — Dauer=%.1fs, Budget=%.1fs, Chunk=%.1fs, Sev=%.2f (base=%.2f)",
+            "StrategieDenker: Strategieplan — Dauer=%.1fs, Grenze=%.1fs, Chunk=%.1fs, Sev=%.2f (base=%.2f)",
             audio_dur,
             max_proc,
             chunk_s,
@@ -455,7 +455,7 @@ class StrategieDenker:
                 logger.debug("StrategieDenker: start_monitoring() Fehler: %s", exc)
 
         logger.info(
-            "StrategieDenker: Timer gestartet (Audio=%.1fs, Budget=%.1fs).",
+            "StrategieDenker: Timer gestartet (Audio=%.1fs, Grenze=%.1fs).",
             audio_duration_s,
             _budget_s,
         )
@@ -489,7 +489,7 @@ class StrategieDenker:
             try:
                 guard_exit = bool(self._guard.check_early_exit(remaining_phases=phases_remaining))
             except Exception as exc:
-                logger.debug("StrategieDenker: check_early_exit() Fehler: %s", exc)
+                logger.debug("StrategieDenker: Pruefung_early_exit() Fehler: %s", exc)
 
         # Hard limit override
         hard_exit = rt_factor >= _3X_RT_LIMIT
@@ -498,7 +498,7 @@ class StrategieDenker:
 
         if should_exit:
             logger.warning(
-                "StrategieDenker: Budget erschöpft! RT-Faktor=%.2f ≥ 3.0 (elapsed=%.1fs, budget=%.1fs).",
+                "StrategieDenker: Grenze erschöpft! RT-Faktor=%.2f ≥ 3.0 (elapsed=%.1fs, Grenze=%.1fs).",
                 rt_factor,
                 elapsed,
                 max_proc,
@@ -566,7 +566,7 @@ class StrategieDenker:
 
         logger.debug(
             "StrategieDenker.schaetze_phasen_tier(): %d Phasen "
-            "(restorability=%.0f, tight_budget=%s, studio=%s) → %d maximum, %d fast",
+            "(restorability=%.0f, tight_Grenze=%s, studio=%s) → %d maximum, %d fast",
             len(tiers),
             restorability_score,
             _tight_budget,

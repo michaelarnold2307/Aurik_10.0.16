@@ -37,7 +37,7 @@ from backend.core.genre_classifier import (
 
 def _sine(freq: float = 440.0, sr: int = 48000, secs: float = 5.0) -> np.ndarray:
     t = np.linspace(0, secs, int(sr * secs), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white_noise(sr: int = 48000, secs: float = 5.0, amp: float = 0.1) -> np.ndarray:
@@ -59,7 +59,7 @@ def _am_signal(
     t = np.linspace(0, secs, int(sr * secs), endpoint=False)
     carrier = np.sin(2 * np.pi * carrier_hz * t)
     mod = 1.0 + 0.6 * np.sin(2 * np.pi * mod_hz * t)
-    return (carrier * mod).astype(np.float32)
+    return (carrier * mod).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _repetitive_signal(sr: int = 48000, block_secs: float = 8.0, repeats: int = 5) -> np.ndarray:
@@ -475,7 +475,7 @@ def _german_umlaut_signal(sr: int = 22050, secs: float = 5.0) -> np.ndarray:
         + np.sin(2 * np.pi * 1900 * t) * 0.4  # F2 (ü-typisch, hohes F2)
     ).astype(np.float32)
     sig /= np.max(np.abs(sig) + 1e-8)
-    return sig
+    return sig  # type: ignore[no-any-return]
 
 
 def _english_vowel_signal(sr: int = 22050, secs: float = 5.0) -> np.ndarray:
@@ -488,7 +488,7 @@ def _english_vowel_signal(sr: int = 22050, secs: float = 5.0) -> np.ndarray:
         + np.sin(2 * np.pi * 1100 * t) * 0.4  # F2 (englisch-typisch, niedriges F2)
     ).astype(np.float32)
     sig /= np.max(np.abs(sig) + 1e-8)
-    return sig
+    return sig  # type: ignore[no-any-return]
 
 
 class TestVocalLanguageDetection:
@@ -1002,7 +1002,7 @@ class TestClapDspConsistencyGateV10:
             clf._clap_score_is_fallback = False
             return 0.10  # CLAP sagt: kein Schlager
 
-        clf._compute_clap_score = fake_clap
+        clf._compute_clap_score = fake_clap  # type: ignore[method-assign]
 
         try:
             result = clf.classify(audio, sr)
@@ -1013,7 +1013,7 @@ class TestClapDspConsistencyGateV10:
                 f"Confidence should not be dragged down by CLAP, got {result.confidence:.3f}"
             )
         finally:
-            clf._compute_clap_score = original_clap
+            clf._compute_clap_score = original_clap  # type: ignore[method-assign]
 
     def test_clap_high_score_dsp_low_no_gate(self):
         """CLAP ≥ 0.35 → Gate NICHT aktiv, normale Fusion."""
@@ -1029,7 +1029,7 @@ class TestClapDspConsistencyGateV10:
             clf._clap_score_is_fallback = False
             return 0.50  # CLAP moderat
 
-        clf._compute_clap_score = fake_clap
+        clf._compute_clap_score = fake_clap  # type: ignore[method-assign]
 
         try:
             result = clf.classify(audio, sr)
@@ -1037,7 +1037,7 @@ class TestClapDspConsistencyGateV10:
             # Confidence = 0.30*clap + 0.70*dsp (normale Fusion)
             assert result.confidence >= 0.0  # Sanity: kein Crash
         finally:
-            clf._compute_clap_score = original_clap
+            clf._compute_clap_score = original_clap  # type: ignore[method-assign]
 
     def test_clap_fallback_flag_uses_pure_dsp(self):
         """Wenn _clap_score_is_fallback=True → pure-DSP-Konfidenz."""
@@ -1052,14 +1052,14 @@ class TestClapDspConsistencyGateV10:
             clf._clap_score_is_fallback = True
             return 0.35  # neutraler Fallback
 
-        clf._compute_clap_score = fake_clap
+        clf._compute_clap_score = fake_clap  # type: ignore[method-assign]
 
         try:
             result = clf.classify(audio, sr)
             # Fallback-Flag → confidence = pure DSP weighted_mean
             assert result.confidence >= 0.0
         finally:
-            clf._compute_clap_score = original_clap
+            clf._compute_clap_score = original_clap  # type: ignore[method-assign]
 
 
 # ═══════════════════════════════════════════════════════════════

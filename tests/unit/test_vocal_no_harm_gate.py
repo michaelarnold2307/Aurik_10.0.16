@@ -44,7 +44,7 @@ def _synthetic_vocal() -> np.ndarray:
     timeline = np.linspace(0.0, 1.0, SR, endpoint=False)
     audio = 0.2 * np.sin(2.0 * np.pi * 220.0 * timeline)
     audio += 0.08 * np.sin(2.0 * np.pi * 440.0 * timeline)
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _patch_measurements(
@@ -144,7 +144,7 @@ def test_vocal_no_harm_gate_requests_rollback_for_measured_harm(
 ) -> None:
     from backend.core.vocal_no_harm_gate import get_vocal_no_harm_gate
 
-    _patch_measurements(monkeypatch, **measurement_kwargs)
+    _patch_measurements(monkeypatch, **measurement_kwargs)  # type: ignore[arg-type]
     audio = _synthetic_vocal()
 
     result = get_vocal_no_harm_gate().evaluate(

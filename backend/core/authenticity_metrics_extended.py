@@ -736,7 +736,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load audio
-    logger.debug("Loading: %s", args.input)
+    logger.debug("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)

@@ -181,9 +181,7 @@ class ApolloPlugin:
         self._model_loaded: bool = False
         self._fallback_active: bool = False
         self._device: str = "cpu"  # set by _try_load_model
-        self._hallucination_threshold: float = float(
-            os.environ.get("AURIK_APOLLO_HALLUCINATION_THRESHOLD", "0.35")
-        )
+        self._hallucination_threshold: float = float(os.environ.get("AURIK_APOLLO_HALLUCINATION_THRESHOLD", "0.35"))
         self._try_load_model()
 
     _BUDGET_NAME: str = "Apollo"
@@ -203,12 +201,12 @@ class ApolloPlugin:
                 raise ImportError("backend.core.ml_memory_budget nicht verfügbar")
 
             if not _ml_budget_try_allocate(self._BUDGET_NAME, size_gb=self._BUDGET_SIZE_GB):
-                logger.info("Apollo: ML-Budget erschöpft — DSP-Fallback aktiv.")
+                logger.info("Apollo: ML-Grenze erschöpft — DSP-Ersatzpfad aktiv.")
                 self._fallback_active = True
                 return
         except ImportError as _exc:
             logger.debug(
-                "Optional import not available (non-critical): %s", _exc
+                "Optional import not verfuegbar (unkritisch): %s", _exc
             )  # Budget-Modul fehlt → load trotzdem versuchen
         try:
             if torch is None:
@@ -231,10 +229,10 @@ class ApolloPlugin:
                         if not _ml_device_manager.get_ml_device_manager().try_allocate_vram(
                             "ApolloPlugin", self._BUDGET_SIZE_GB
                         ):
-                            logger.info("Apollo: VRAM-Budget erschöpft — CPU-Load")
+                            logger.info("Apollo: VRAM-Grenze erschöpft — CPU-laden")
                             _dev = "cpu"
                     except Exception:
-                        logger.warning("apollo_plugin.py::_try_load_model fallback", exc_info=True)
+                        logger.warning("apollo_plugin.py::_try_laden_model Ersatzpfad", exc_info=True)
                 self._torch_model = torch.jit.load(str(model_path), map_location=_dev)
                 self._torch_model.eval()
                 self._torch_model.to(_dev)
@@ -249,29 +247,29 @@ class ApolloPlugin:
                             unload_fn=_unload_apollo,
                         )
                 except Exception as _exc:
-                    logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                    logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
             else:
                 logger.info(
-                    "Apollo: TorchScript nicht gefunden (%s) — DSP-Fallback",
+                    "Apollo: TorchScript nicht gefunden (%s) — DSP-Ersatzpfad",
                     model_path,
                 )
                 self._fallback_active = True
         except ImportError:
-            logger.debug("torch nicht verfügbar — Apollo DSP-Fallback aktiv")
+            logger.debug("torch nicht verfügbar — Apollo DSP-Ersatzpfad aktiv")
             self._fallback_active = True
             try:
                 if _ml_budget_release is not None:
                     _ml_budget_release(self._BUDGET_NAME)
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.warning("Apollo Modell-Lade-Fehler: %s — DSP-Fallback", exc)
+            logger.warning("Apollo Modell-Lade-Fehler: %s — DSP-Ersatzpfad", exc)
             self._fallback_active = True
             try:
                 if _ml_budget_release is not None:
                     _ml_budget_release(self._BUDGET_NAME)
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # ------------------------------------------------------------------
     # Öffentliche API
@@ -321,7 +319,7 @@ class ApolloPlugin:
                     lifecycle_manager.touch(self._BUDGET_NAME)
                     lifecycle_manager.set_active(self._BUDGET_NAME, True)
             except Exception as exc:
-                logger.debug("Apollo: failed to mark plugin active in PLM: %s", exc)
+                logger.debug("Apollo: konnte nicht mark plugin active in PLM: %s", exc)
 
             try:
                 result_audio = self._repair_apollo(audio_f32, sr, material)
@@ -333,7 +331,7 @@ class ApolloPlugin:
                         lifecycle_manager.touch(self._BUDGET_NAME)
                         lifecycle_manager.set_active(self._BUDGET_NAME, False)
                     except Exception as exc:
-                        logger.debug("Apollo: failed to clear active flag in PLM: %s", exc)
+                        logger.debug("Apollo: konnte nicht leeren active flag in PLM: %s", exc)
         else:
             result_audio = self._repair_dsp_fallback(audio_f32, sr, material)
             model_used = "spectral_repair_dsp_fallback"
@@ -420,8 +418,8 @@ class ApolloPlugin:
                 elapsed = time.monotonic() - wall_start
                 if elapsed > wall_budget:
                     logger.warning(
-                        "Apollo: Wall-time budget %.0f s überschritten (%.1f s) — "
-                        "restliche %d Samples als DSP-Fallback",
+                        "Apollo: Wall-time Grenze %.0f s überschritten (%.1f s) — "
+                        "restliche %d Samples als DSP-Ersatzpfad",
                         wall_budget,
                         elapsed,
                         n_total - pos,
@@ -433,7 +431,7 @@ class ApolloPlugin:
                         result[pos:] = self._repair_dsp_fallback(audio[pos:], sr, material)
                     except Exception as _fb_exc:
                         logger.debug(
-                            "Apollo: DSP-Fallback Restfragment fehlgeschlagen (%s) — Originalsamples behalten (n=%d)",
+                            "Apollo: DSP-Ersatzpfad Restfragment fehlgeschlagen (%s) — Originalsamples behalten (n=%d)",
                             _fb_exc,
                             n_total - pos,
                         )
@@ -481,20 +479,21 @@ class ApolloPlugin:
                 result = result[:_orig_len]
 
             # ── §2.46e Hallucination-Guard (MIIPHER-Prinzip) ──
-            _novelty = _compute_spectral_novelty(audio_f32[:_orig_len], result, sr)
-            _threshold = float(getattr(self, '_hallucination_threshold', 0.15))
+            _novelty = _compute_spectral_novelty(audio[:_orig_len], result, sr)
+            _threshold = float(getattr(self, "_hallucination_threshold", 0.15))
             if _novelty > _threshold:
                 logger.warning(
-                    "§2.46e Apollo Hallucination-Guard: spectral_novelty=%.3f > %.2f → Rollback auf Original",
-                    _novelty, _threshold,
+                    "§2.46e Apollo Hallucination-Guard: spectral_novelty=%.3f > %.2f → Rollback auf Originalsignal",
+                    _novelty,
+                    _threshold,
                 )
-                return audio_f32[:_orig_len].astype(np.float32)
+                return audio[:_orig_len].astype(np.float32)
 
             return result.astype(np.float32)
 
         except Exception as exc:
             if self._device != "cpu":
-                logger.warning("Apollo: GPU-Inferenz fehlgeschlagen (%s) — CPU-Retry", exc)
+                logger.warning("Apollo: GPU-Inferenz fehlgeschlagen (%s) — CPU-Wiederholung", exc)
                 try:
                     if self._torch_model is not None:
                         self._torch_model.cpu()
@@ -503,7 +502,7 @@ class ApolloPlugin:
                         if _ml_device_manager is not None:
                             _ml_device_manager.get_ml_device_manager().report_gpu_error("ApolloPlugin", exc)
                     except Exception:
-                        logger.warning("apollo_plugin.py::unknown fallback", exc_info=True)
+                        logger.warning("apollo_plugin.py::unknown Ersatzpfad", exc_info=True)
                 except Exception as _mv_exc:
                     logger.debug("Apollo GPU→CPU move fehlgeschlagen: %s", _mv_exc)
                     self._device = "cpu"
@@ -511,7 +510,7 @@ class ApolloPlugin:
             _exc_msg = str(exc)
             if "expected np.ndarray (got numpy.ndarray)" in _exc_msg:
                 logger.warning(
-                    "Apollo TorchScript-Inkompatibilitaet erkannt (%s) — schneller no-harm Fallback",
+                    "Apollo TorchScript-Inkompatibilitaet erkannt (%s) — schneller no-harm Ersatzpfad",
                     _exc_msg,
                 )
                 return np.clip(
@@ -519,7 +518,7 @@ class ApolloPlugin:
                     -1.0,
                     1.0,
                 )
-            logger.warning("Apollo TorchScript-Fehler: %s — DSP-Fallback", exc)
+            logger.warning("Apollo TorchScript-Fehler: %s — DSP-Ersatzpfad", exc)
             return self._repair_dsp_fallback(audio, sr, material)
 
     # ------------------------------------------------------------------
@@ -644,7 +643,7 @@ class ApolloPlugin:
         result = np.clip(result, -1.0, 1.0).astype(np.float32)
 
         logger.info(
-            "🟡 Apollo DSP-Fallback-Chunked: Chunks=%d | Wiener+CrestEnh+HF+%.1fdB (%s) | RAM-efficient",
+            "🟡 Apollo DSP-Ersatzpfad-Chunked: Chunks=%d | Wiener+CrestEnh+HF+%.1fdB (%s) | RAM-efficient",
             int(np.ceil(n / chunk_samples)),
             boost_db,
             material,
@@ -738,7 +737,7 @@ def _unload_apollo() -> None:
     try:
         gc.collect()
     except Exception as _exc:
-        logger.debug("Plugin operation failed (non-critical): %s", _exc)
+        logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
 
 def get_apollo() -> ApolloPlugin:

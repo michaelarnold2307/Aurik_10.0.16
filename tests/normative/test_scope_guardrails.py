@@ -37,7 +37,7 @@ def _load_guardrails() -> dict | None:
     if not GUARDRAILS_PATH.exists():
         return None
     with open(GUARDRAILS_PATH, encoding="utf-8") as f:
-        return yaml.safe_load(f)
+        return yaml.safe_load(f)  # type: ignore[no-any-return]
 
 
 def _count_phases_in_code() -> int:
@@ -51,13 +51,7 @@ def _count_phases_in_code() -> int:
 
 def _count_goals_in_code() -> int:
     """Zählt die Musical-Goal-Dateien."""
-    goals_file = (
-        REPO_ROOT
-        / "backend"
-        / "core"
-        / "musical_goals"
-        / "musical_goals_metrics.py"
-    )
+    goals_file = REPO_ROOT / "backend" / "core" / "musical_goals" / "musical_goals_metrics.py"
     if not goals_file.exists():
         return 0
     content = goals_file.read_text(encoding="utf-8")
@@ -92,10 +86,15 @@ def _count_materials_in_code() -> int:
     import re
 
     return len(
-        set(re.findall(r"\"(shellac|vinyl|tape|reel_tape|cassette|dat|"
-                       r"cd_digital|mp3_low|mp3_high|aac|minidisc|streaming|"
-                       r"lacquer_disc|wax_cylinder|wire_recording|unknown|"
-                       r"lp|kassette)\"", content))
+        set(
+            re.findall(
+                r"\"(shellac|vinyl|tape|reel_tape|cassette|dat|"
+                r"cd_digital|mp3_low|mp3_high|aac|minidisc|streaming|"
+                r"lacquer_disc|wax_cylinder|wire_recording|unknown|"
+                r"lp|kassette)\"",
+                content,
+            )
+        )
     )
 
 
@@ -110,16 +109,13 @@ class TestScopeGuardrails:
     def guardrails(self) -> dict:
         data = _load_guardrails()
         if data is None:
-            pytest.skip(
-                "policy/scope_guardrails.yaml nicht gefunden oder nicht parsebar."
-            )
+            pytest.skip("policy/scope_guardrails.yaml nicht gefunden oder nicht parsebar.")
         return data
 
     def test_guardrails_file_exists(self):
         """Guardrails-Policy-Datei muss existieren."""
         assert GUARDRAILS_PATH.exists(), (
-            f"policy/scope_guardrails.yaml fehlt. "
-            f"Diese Datei definiert erzwungene Scope-Grenzen."
+            "policy/scope_guardrails.yaml fehlt. Diese Datei definiert erzwungene Scope-Grenzen."
         )
 
     def test_phase_count_within_limit(self, guardrails: dict):
@@ -167,9 +163,7 @@ class TestScopeGuardrails:
     def test_guardrails_enforced_in_ci(self, guardrails: dict):
         """Guardrails müssen in CI erzwungen sein."""
         enforced = guardrails.get("enforced_in_ci", False)
-        assert enforced, (
-            "scope_guardrails.yaml: enforced_in_ci muss true sein."
-        )
+        assert enforced, "scope_guardrails.yaml: enforced_in_ci muss true sein."
 
     def test_project_status_consistent(self, guardrails: dict):
         """PROJECT_STATUS.md muss konsistent mit Guardrails sein."""
@@ -189,7 +183,7 @@ class TestScopeGuardrails:
                 # Akzeptiere nur wenn innerhalb von 200 Zeichen auch eine
                 # Relativierung oder ein "nur für synthetische Tests" steht
                 idx = content.index("Produktionsbereit")
-                context = content[max(0, idx - 100):idx + 300]
+                context = content[max(0, idx - 100) : idx + 300]
                 if (
                     "synthetisch" not in context.lower()
                     and "real-audio" not in context.lower()

@@ -46,7 +46,7 @@ def run_amrb_gate() -> dict:
     }
 
     for scenario, baseline_oqs in AMRB_BASELINE_OQS.items():
-        result["details"].append(
+        result["details"].append(  # type: ignore[attr-defined]
             {
                 "scenario": scenario,
                 "baseline_oqs": baseline_oqs,
@@ -54,7 +54,7 @@ def run_amrb_gate() -> dict:
                 "note": "Voller AMRB-Test benötigt reale Audiodateien im corpus/",
             }
         )
-        result["skipped"] += 1
+        result["skipped"] += 1  # type: ignore[operator]
 
     # Lightweight mode: Da keine echten AMRB-Dateien im corpus/ sind,
     # wird dieser Test als "best-effort" geführt.

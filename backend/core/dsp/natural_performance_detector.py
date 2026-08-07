@@ -172,7 +172,7 @@ def detect_natural_performance(
     try:
         return _detect_internal(audio, sr, panns_singing_confidence)
     except Exception as exc:
-        logger.debug("§2.46f natural_performance_detector: non-blocking fallback (%s)", exc)
+        logger.debug("§2.46f natural_performance_detector: nicht blockierend Ersatzpfad (%s)", exc)
         return NaturalPerformanceProfile(detection_succeeded=False, error_message=str(exc))
 
 
@@ -277,7 +277,7 @@ def _detect_breath_zones(
         else:
             i += hop
 
-    logger.debug("§2.46f breath_zones: %d detected (audio %.1fs)", len(zones), len(mono) / sr)
+    logger.debug("§2.46f breath_zones: %d erkannt (audio %.1fs)", len(zones), len(mono) / sr)
     return zones
 
 
@@ -307,7 +307,7 @@ def _detect_vibrato_zones(
             fill_na=None,
         )
     except Exception as exc:
-        logger.debug("§2.46f vibrato_zones: pyin failed (%s) — no protection", exc)
+        logger.debug("§2.46f vibrato_zones: pyin fehlgeschlagen (%s) — no protection", exc)
         return []
 
     if f0 is None or len(f0) < 10:
@@ -399,7 +399,7 @@ def _detect_vibrato_zones(
 
     # Merge überlappende Zonen
     zones = _merge_overlapping_zones_vibrato(zones)
-    logger.debug("§2.46f vibrato_zones: %d detected", len(zones))
+    logger.debug("§2.46f vibrato_zones: %d erkannt", len(zones))
     return zones
 
 
@@ -446,7 +446,7 @@ def _detect_early_reflection_zones(
             units="samples",
         )
     except Exception as exc:
-        logger.debug("§2.46f early_reflections: onset_detect failed (%s)", exc)
+        logger.debug("§2.46f early_reflections: onset_erkennen fehlgeschlagen (%s)", exc)
         return []
 
     early_dur_samples = int(_EARLY_REF_MAX_MS / 1000.0 * sr)
@@ -471,7 +471,7 @@ def _detect_internal(
     mono = _to_mono(audio, sr)
 
     if len(mono) / float(sr) < _MIN_AUDIO_S:
-        logger.debug("§2.46f: audio too short (%.3fs) — empty profile", len(mono) / float(sr))
+        logger.debug("§2.46f: audio too short (%.3fs) — empty Profil", len(mono) / float(sr))
         return NaturalPerformanceProfile()
 
     # 1. Atemgeräusche (immer aktiv — auch ohne Gesangs-Konfidenz)
@@ -501,7 +501,7 @@ def detect_breath_zones(audio: npt.NDArray[Any], sr: int) -> list[BreathZone]:
     try:
         return _detect_breath_zones(_to_mono(audio, sr), sr)
     except Exception as exc:
-        logger.debug("§2.46f detect_breath_zones failed: %s", exc)
+        logger.debug("§2.46f erkennen_breath_zones fehlgeschlagen: %s", exc)
         return []
 
 
@@ -516,5 +516,5 @@ def detect_vibrato_zones(
     try:
         return _detect_vibrato_zones(_to_mono(audio, sr), sr)
     except Exception as exc:
-        logger.debug("§2.46f detect_vibrato_zones failed: %s", exc)
+        logger.debug("§2.46f erkennen_vibrato_zones fehlgeschlagen: %s", exc)
         return []

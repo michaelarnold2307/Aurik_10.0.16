@@ -448,7 +448,7 @@ def test_authenticity_report_generation(breath_audio, plosive_audio, transient_a
     # Plosives
     audio, sr = plosive_audio
     processed = audio * 0.95
-    retention, orig, proc = metrics.compute_plosive_retention(audio, processed, sr)
+    retention, orig, proc = metrics.compute_plosive_retention(audio, processed, sr)  # type: ignore[assignment]
     results["plosive_retention"] = retention
     results["plosives_detected"] = len(orig)
     results["plosives_preserved"] = len(proc)
@@ -456,7 +456,7 @@ def test_authenticity_report_generation(breath_audio, plosive_audio, transient_a
     # Transients
     audio, sr = transient_audio
     processed = audio * 0.95
-    preservation, orig, proc = metrics.compute_transient_preservation(audio, processed, sr)
+    preservation, orig, proc = metrics.compute_transient_preservation(audio, processed, sr)  # type: ignore[assignment]
     results["transient_preservation"] = preservation
     results["transients_detected"] = len(orig)
     results["transients_preserved"] = len(proc)

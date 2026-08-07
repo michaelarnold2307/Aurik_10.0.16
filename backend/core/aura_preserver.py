@@ -198,7 +198,7 @@ class AuraPreserver:
                 elif isinstance(emotional_arc, (int, float)):
                     report.emotional_arc_correlation = float(emotional_arc)
             except Exception as e:
-                logger.warning("aura_preserver.py::measure_drift fallback: %s", e)
+                logger.warning("aura_preserver.py::measure_drift Ersatzpfad: %s", e)
 
         # Character
         report.character_drift = 1.0 - character_score

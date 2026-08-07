@@ -22,7 +22,7 @@ def _rms_dbfs_gated(audio: np.ndarray, gate_dbfs: float = -50.0) -> float:
     frame_len = int(0.02 * SR)  # 20 ms frames
     if len(audio) < frame_len:
         rms = float(np.sqrt(np.mean(audio**2)))
-        return 20.0 * np.log10(rms + 1e-12)
+        return 20.0 * np.log10(rms + 1e-12)  # type: ignore[no-any-return]
     n_frames = len(audio) // frame_len
     frames = audio[: n_frames * frame_len].reshape(n_frames, frame_len)
     rms_per_frame = np.sqrt(np.mean(frames**2, axis=1))
@@ -30,9 +30,9 @@ def _rms_dbfs_gated(audio: np.ndarray, gate_dbfs: float = -50.0) -> float:
     mask = dbfs_per_frame > gate_dbfs
     if not np.any(mask):
         rms = float(np.sqrt(np.mean(audio**2)))
-        return 20.0 * np.log10(rms + 1e-12)
+        return 20.0 * np.log10(rms + 1e-12)  # type: ignore[no-any-return]
     gated_rms = float(np.sqrt(np.mean(rms_per_frame[mask] ** 2)))
-    return 20.0 * np.log10(gated_rms + 1e-12)
+    return 20.0 * np.log10(gated_rms + 1e-12)  # type: ignore[no-any-return]
 
 
 def _musical_gain_envelope(
@@ -76,7 +76,7 @@ def _musical_gain_envelope(
                 break
 
     if audio.ndim == 2:
-        return audio * envelope[np.newaxis, :]
+        return audio * envelope[np.newaxis, :]  # type: ignore[no-any-return]
     return audio * envelope
 
 

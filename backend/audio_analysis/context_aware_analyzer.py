@@ -135,7 +135,7 @@ class ContextAwareAnalyzer:
 
     def __init__(self):
         """Initialisiert context analyzer."""
-        logger.info("ContextAwareAnalyzer initialized (genre-agnostic)")
+        logger.info("ContextAwareAnalyzer initialisiert (genre-agnostic)")
 
     def analyze(
         self,
@@ -155,7 +155,7 @@ class ContextAwareAnalyzer:
         # Convert to mono for analysis
         audio_mono = np.mean(audio, axis=0) if audio.ndim > 1 else audio
 
-        logger.debug("Analyzing %.2fs audio context", len(audio_mono) / sr)
+        logger.debug("analysiere %.2fs audio context", len(audio_mono) / sr)
 
         # 1. Vocal density analysis
         vocal_density, vocal_percentage = self._analyze_vocal_density(audio_mono, sr)
@@ -349,7 +349,7 @@ class ContextAwareAnalyzer:
             energy = np.sqrt(np.mean(frame**2))
             energy_contour.append(energy)
 
-        energy_contour = np.array(energy_contour)
+        energy_contour = np.array(energy_contour)  # type: ignore[assignment]
 
         # Energy variance (how much dynamics)
         energy_std = np.std(energy_contour) if len(energy_contour) > 0 else 0.0

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import random
 import sys
 from pathlib import Path
@@ -18,6 +19,8 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 import yaml
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CORPUS_ROOT = REPO_ROOT / "corpus"
@@ -33,7 +36,7 @@ def _note_freq(midi: int) -> float:
 def _make_tone(freq: float, duration_s: float) -> np.ndarray:
     t = np.arange(int(duration_s * SAMPLE_RATE)) / SAMPLE_RATE
     envelope = np.sin(np.pi * t / duration_s) ** 0.5
-    return np.sin(2 * np.pi * freq * t) * envelope * 0.7
+    return np.sin(2 * np.pi * freq * t) * envelope * 0.7  # type: ignore[no-any-return]
 
 
 def _make_chord(notes: list[int], duration_s: float) -> np.ndarray:
@@ -100,12 +103,12 @@ def _make_stereo(mono: np.ndarray, width: float = 0.6) -> np.ndarray:
     stereo[:, 1] = mono * (1.0 + width * 0.3)
     delay = int(0.008 * SAMPLE_RATE)
     stereo[delay:, 1] += stereo[:-delay, 1] * 0.1
-    return stereo / np.abs(stereo).max() * 0.9
+    return stereo / np.abs(stereo).max() * 0.9  # type: ignore[no-any-return]
 
 
 # ── Defect generators (all handle mono and stereo) ──────────────────────
 def _add_hiss(audio: np.ndarray, level: float = 0.02) -> np.ndarray:
-    return audio + np.random.randn(*audio.shape) * level
+    return audio + np.random.randn(*audio.shape) * level  # type: ignore[no-any-return]
 
 
 def _add_hum(audio: np.ndarray, freq: float = 50.0, level: float = 0.03) -> np.ndarray:
@@ -115,7 +118,7 @@ def _add_hum(audio: np.ndarray, freq: float = 50.0, level: float = 0.03) -> np.n
     hum += np.sin(2 * np.pi * freq * 3 * t) * level * 0.3
     if audio.ndim > 1:
         hum = hum[:, np.newaxis]
-    return audio + hum
+    return audio + hum  # type: ignore[no-any-return]
 
 
 def _add_wow_flutter(audio: np.ndarray, depth: float = 0.003, rate: float = 0.5) -> np.ndarray:
@@ -140,9 +143,9 @@ def _add_dropouts(audio: np.ndarray, count: int = 8) -> np.ndarray:
         length = random.randint(int(0.01 * SAMPLE_RATE), int(0.08 * SAMPLE_RATE))
         fade = np.hanning(length * 2)[:length]
         if audio.ndim > 1:
-            result[pos : pos + length, :] *= (1 - fade[:, np.newaxis])
+            result[pos : pos + length, :] *= 1 - fade[:, np.newaxis]
         else:
-            result[pos : pos + length] *= (1 - fade)
+            result[pos : pos + length] *= 1 - fade
     return result
 
 
@@ -181,7 +184,7 @@ def _add_surface_noise(audio: np.ndarray, level: float = 0.015) -> np.ndarray:
             result[pos : pos + 50, :] += pop[:, np.newaxis]
         else:
             result[pos : pos + 50] += pop
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 # ── Recording definitions ───────────────────────────────────────────────
@@ -189,70 +192,197 @@ def _add_surface_noise(audio: np.ndarray, level: float = 0.015) -> np.ndarray:
 # defect_fns: list of (suffix_label, fn(audio)->damaged_audio)
 RECORDINGS = [
     # ── Vinyl (5) ──
-    ("vinyl_blues_1950s", "vinyl", 1954, "blues", 40,
-     [("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.015), 50, 0.025)),
-      ("crackle", lambda a: _add_surface_noise(a, 0.02))], True),
-    ("vinyl_jazz_1960s", "vinyl", 1963, "jazz", 48,
-     [("hiss_crackle", lambda a: _add_crackle(_add_hiss(a, 0.018), 0.04)),
-      ("surface_noise", lambda a: _add_surface_noise(a, 0.025))], False),
-    ("vinyl_rock_1970s", "vinyl", 1972, "rock", 45,
-     [("clicks", lambda a: _add_crackle(a, 0.06)),
-      ("hiss", lambda a: _add_hiss(a, 0.02))], True),
-    ("vinyl_classical_1960s", "vinyl", 1961, "classical", 55,
-     [("hiss_hum_wow", lambda a: _add_hum(_add_hiss(_add_wow_flutter(a, 0.002, 0.4), 0.012), 60, 0.02)),
-      ("surface_noise", lambda a: _add_surface_noise(a, 0.018))], False),
-    ("vinyl_soul_1970s", "vinyl", 1975, "soul", 42,
-     [("crackle_hiss", lambda a: _add_hiss(_add_crackle(a, 0.05), 0.016)),
-      ("wow_flutter", lambda a: _add_wow_flutter(a, 0.004, 0.6))], True),
-
+    (
+        "vinyl_blues_1950s",
+        "vinyl",
+        1954,
+        "blues",
+        40,
+        [
+            ("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.015), 50, 0.025)),
+            ("crackle", lambda a: _add_surface_noise(a, 0.02)),
+        ],
+        True,
+    ),
+    (
+        "vinyl_jazz_1960s",
+        "vinyl",
+        1963,
+        "jazz",
+        48,
+        [
+            ("hiss_crackle", lambda a: _add_crackle(_add_hiss(a, 0.018), 0.04)),
+            ("surface_noise", lambda a: _add_surface_noise(a, 0.025)),
+        ],
+        False,
+    ),
+    (
+        "vinyl_rock_1970s",
+        "vinyl",
+        1972,
+        "rock",
+        45,
+        [("clicks", lambda a: _add_crackle(a, 0.06)), ("hiss", lambda a: _add_hiss(a, 0.02))],
+        True,
+    ),
+    (
+        "vinyl_classical_1960s",
+        "vinyl",
+        1961,
+        "classical",
+        55,
+        [
+            ("hiss_hum_wow", lambda a: _add_hum(_add_hiss(_add_wow_flutter(a, 0.002, 0.4), 0.012), 60, 0.02)),
+            ("surface_noise", lambda a: _add_surface_noise(a, 0.018)),
+        ],
+        False,
+    ),
+    (
+        "vinyl_soul_1970s",
+        "vinyl",
+        1975,
+        "soul",
+        42,
+        [
+            ("crackle_hiss", lambda a: _add_hiss(_add_crackle(a, 0.05), 0.016)),
+            ("wow_flutter", lambda a: _add_wow_flutter(a, 0.004, 0.6)),
+        ],
+        True,
+    ),
     # ── Tape (5) ──
-    ("tape_country_1960s", "tape", 1965, "country", 43,
-     [("hiss", lambda a: _add_hiss(a, 0.025)),
-      ("dropouts", lambda a: _add_dropouts(a, 10))], True),
-    ("tape_folk_1970s", "tape", 1973, "folk", 50,
-     [("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.02), 50, 0.03)),
-      ("wow_flutter", lambda a: _add_wow_flutter(a, 0.003, 0.5))], True),
-    ("tape_rock_1980s", "tape", 1982, "rock", 47,
-     [("hiss", lambda a: _add_hiss(a, 0.022)),
-      ("dropouts_hiss", lambda a: _add_dropouts(_add_hiss(a, 0.018), 6))], False),
-    ("tape_jazz_1950s", "tape", 1958, "jazz", 52,
-     [("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.028), 60, 0.035)),
-      ("wow_flutter", lambda a: _add_wow_flutter(a, 0.005, 0.7))], False),
-    ("tape_classical_1970s", "tape", 1976, "classical", 56,
-     [("hiss", lambda a: _add_hiss(a, 0.019)),
-      ("dropouts_hum", lambda a: _add_hum(_add_dropouts(a, 5), 50, 0.025))], False),
-
+    (
+        "tape_country_1960s",
+        "tape",
+        1965,
+        "country",
+        43,
+        [("hiss", lambda a: _add_hiss(a, 0.025)), ("dropouts", lambda a: _add_dropouts(a, 10))],
+        True,
+    ),
+    (
+        "tape_folk_1970s",
+        "tape",
+        1973,
+        "folk",
+        50,
+        [
+            ("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.02), 50, 0.03)),
+            ("wow_flutter", lambda a: _add_wow_flutter(a, 0.003, 0.5)),
+        ],
+        True,
+    ),
+    (
+        "tape_rock_1980s",
+        "tape",
+        1982,
+        "rock",
+        47,
+        [("hiss", lambda a: _add_hiss(a, 0.022)), ("dropouts_hiss", lambda a: _add_dropouts(_add_hiss(a, 0.018), 6))],
+        False,
+    ),
+    (
+        "tape_jazz_1950s",
+        "tape",
+        1958,
+        "jazz",
+        52,
+        [
+            ("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.028), 60, 0.035)),
+            ("wow_flutter", lambda a: _add_wow_flutter(a, 0.005, 0.7)),
+        ],
+        False,
+    ),
+    (
+        "tape_classical_1970s",
+        "tape",
+        1976,
+        "classical",
+        56,
+        [("hiss", lambda a: _add_hiss(a, 0.019)), ("dropouts_hum", lambda a: _add_hum(_add_dropouts(a, 5), 50, 0.025))],
+        False,
+    ),
     # ── Reel tape (2 more, 1 exists) ──
-    ("reel_jazz_1950s", "reel_tape", 1955, "jazz", 49,
-     [("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.02), 60, 0.028)),
-      ("dropouts", lambda a: _add_dropouts(a, 7))], False),
-    ("reel_classical_1960s", "reel_tape", 1964, "classical", 54,
-     [("hiss", lambda a: _add_hiss(a, 0.015)),
-      ("wow_flutter", lambda a: _add_wow_flutter(a, 0.002, 0.35))], False),
-
+    (
+        "reel_jazz_1950s",
+        "reel_tape",
+        1955,
+        "jazz",
+        49,
+        [("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.02), 60, 0.028)), ("dropouts", lambda a: _add_dropouts(a, 7))],
+        False,
+    ),
+    (
+        "reel_classical_1960s",
+        "reel_tape",
+        1964,
+        "classical",
+        54,
+        [("hiss", lambda a: _add_hiss(a, 0.015)), ("wow_flutter", lambda a: _add_wow_flutter(a, 0.002, 0.35))],
+        False,
+    ),
     # ── Shellac (2 more, 1 exists) ──
-    ("shellac_blues_1930s", "shellac", 1932, "blues", 38,
-     [("hiss_crackle_hum", lambda a: _add_hum(_add_crackle(_add_hiss(a, 0.03), 0.08), 50, 0.04)),
-      ("surface_noise", lambda a: _add_surface_noise(a, 0.035))], True),
-    ("shellac_classical_1940s", "shellac", 1945, "classical", 53,
-     [("crackle", lambda a: _add_crackle(a, 0.09)),
-      ("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.025), 50, 0.03))], False),
-
+    (
+        "shellac_blues_1930s",
+        "shellac",
+        1932,
+        "blues",
+        38,
+        [
+            ("hiss_crackle_hum", lambda a: _add_hum(_add_crackle(_add_hiss(a, 0.03), 0.08), 50, 0.04)),
+            ("surface_noise", lambda a: _add_surface_noise(a, 0.035)),
+        ],
+        True,
+    ),
+    (
+        "shellac_classical_1940s",
+        "shellac",
+        1945,
+        "classical",
+        53,
+        [("crackle", lambda a: _add_crackle(a, 0.09)), ("hiss_hum", lambda a: _add_hum(_add_hiss(a, 0.025), 50, 0.03))],
+        False,
+    ),
     # ── Cassette (2 more, 1 exists) ──
-    ("cassette_rock_1990s", "cassette", 1992, "rock", 46,
-     [("hiss_wow", lambda a: _add_wow_flutter(_add_hiss(a, 0.025), 0.004, 0.55)),
-      ("dropouts", lambda a: _add_dropouts(a, 6))], True),
-    ("cassette_hiphop_1980s", "cassette", 1987, "hiphop", 36,
-     [("hiss", lambda a: _add_hiss(a, 0.022)),
-      ("wow_flutter", lambda a: _add_wow_flutter(a, 0.003, 0.45))], True),
-
+    (
+        "cassette_rock_1990s",
+        "cassette",
+        1992,
+        "rock",
+        46,
+        [
+            ("hiss_wow", lambda a: _add_wow_flutter(_add_hiss(a, 0.025), 0.004, 0.55)),
+            ("dropouts", lambda a: _add_dropouts(a, 6)),
+        ],
+        True,
+    ),
+    (
+        "cassette_hiphop_1980s",
+        "cassette",
+        1987,
+        "hiphop",
+        36,
+        [("hiss", lambda a: _add_hiss(a, 0.022)), ("wow_flutter", lambda a: _add_wow_flutter(a, 0.003, 0.45))],
+        True,
+    ),
     # ── Digital (2 more, 1 exists) ──
-    ("digital_pop_2000s", "digital", 2003, "pop", 42,
-     [("clicks", lambda a: _add_crackle(a, 0.03)),
-      ("mp3_artifacts", lambda a: _add_hiss(a, 0.005))], True),
-    ("digital_jazz_2010s", "digital", 2014, "jazz", 51,
-     [("clicks", lambda a: _add_crackle(a, 0.02)),
-      ("mp3_artifacts", lambda a: _add_hiss(a, 0.004))], False),
+    (
+        "digital_pop_2000s",
+        "digital",
+        2003,
+        "pop",
+        42,
+        [("clicks", lambda a: _add_crackle(a, 0.03)), ("mp3_artifacts", lambda a: _add_hiss(a, 0.005))],
+        True,
+    ),
+    (
+        "digital_jazz_2010s",
+        "digital",
+        2014,
+        "jazz",
+        51,
+        [("clicks", lambda a: _add_crackle(a, 0.02)), ("mp3_artifacts", lambda a: _add_hiss(a, 0.004))],
+        False,
+    ),
 ]
 
 
@@ -349,7 +479,7 @@ def main() -> int:
             try:
                 existing = yaml.safe_load(mpath.read_text()).get("entries", [])
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         all_entries = existing + entries
         manifest = {
             "corpus_version": "1.0.0",

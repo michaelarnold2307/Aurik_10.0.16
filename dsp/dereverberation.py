@@ -61,7 +61,7 @@ class AiDereverberation:
             _, y_out = istft(Z_out, fs=sr, window="hann", nperseg=nperseg, noverlap=noverlap)
             n = len(y)
             if len(y_out) >= n:
-                return y_out[:n]
+                return y_out[:n]  # type: ignore[no-any-return]
             return np.pad(y_out, (0, n - len(y_out)))
 
         if audio.ndim == 1:

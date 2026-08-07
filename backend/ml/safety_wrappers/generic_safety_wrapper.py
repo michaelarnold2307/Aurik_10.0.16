@@ -229,8 +229,8 @@ class GenericNoiseReductionSafety(BaseSafetyWrapper):
             if violations:
                 issues.append(f"Musical Goals violations: {', '.join(violations)}")
 
-            metrics["musical_goals_original"] = orig_goals
-            metrics["musical_goals_processed"] = proc_goals
+            metrics["musical_goals_original"] = orig_goals  # type: ignore[assignment]
+            metrics["musical_goals_processed"] = proc_goals  # type: ignore[assignment]
         except Exception as e:
             side_effects.append(f"Musical Goals check failed: {e}")
 
@@ -275,7 +275,7 @@ class GenericNoiseReductionSafety(BaseSafetyWrapper):
         if len(energies) == 0:
             return 0.0
 
-        energies = np.array(energies)
+        energies = np.array(energies)  # type: ignore[assignment]
 
         # Noise floor ≈ 10th percentile of frame energies
         noise_floor = np.percentile(energies, 10)
@@ -320,7 +320,7 @@ class GenericNoiseReductionSafety(BaseSafetyWrapper):
         if len(spectral_flux) == 0:
             return 0.0
 
-        spectral_flux = np.array(spectral_flux)
+        spectral_flux = np.array(spectral_flux)  # type: ignore[assignment]
 
         # High variance in spectral flux = musical noise
         flux_std = np.std(spectral_flux)
@@ -517,7 +517,7 @@ class GenericRestorationSafety(BaseSafetyWrapper):
             if violations:
                 issues.append(f"Musical Goals violations: {', '.join(violations)}")
 
-            metrics["musical_goals"] = proc_goals
+            metrics["musical_goals"] = proc_goals  # type: ignore[assignment]
         except Exception as e:
             side_effects.append(f"Musical Goals check failed: {e}")
 

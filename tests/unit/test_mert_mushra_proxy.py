@@ -56,7 +56,7 @@ DURATION = 2.0  # seconds
 def _make_tone(freq: float = 440.0, duration: float = DURATION, sr: int = SR) -> np.ndarray:
     """Generate a pure sine tone."""
     t = np.linspace(0, duration, int(sr * duration), dtype=np.float32)
-    return 0.5 * np.sin(2 * np.pi * freq * t)
+    return 0.5 * np.sin(2 * np.pi * freq * t)  # type: ignore[no-any-return]
 
 
 def _make_harmonic(f0: float = 220.0, n_harmonics: int = 5, duration: float = DURATION) -> np.ndarray:
@@ -74,7 +74,7 @@ def _add_noise(audio: np.ndarray, snr_db: float = 20.0) -> np.ndarray:
     rms_signal = np.sqrt(np.mean(audio**2) + 1e-12)
     rms_noise = rms_signal / (10 ** (snr_db / 20))
     noise = rng.standard_normal(len(audio)).astype(np.float32) * rms_noise
-    return np.clip(audio + noise, -1.0, 1.0).astype(np.float32)
+    return np.clip(audio + noise, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

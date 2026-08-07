@@ -58,51 +58,51 @@ ERA_PROFILES: dict[str, dict[str, tuple[float, float]]] = {
     "acoustic_78rpm": {  # 1900-1925
         "freq_range": (300, 5000),
         "spectral_tilt": (-4.0, -8.0),  # dB/Oktave — starker Höhenabfall
-        "noise_character": "broadband_crackle",
+        "noise_character": "broadband_crackle",  # type: ignore[dict-item]
         "dynamic_expectation": (15, 25),  # dB dynamic range
-        "spatial_expectation": "mono_intimate",
+        "spatial_expectation": "mono_intimate",  # type: ignore[dict-item]
     },
     "electric_78rpm": {  # 1925-1948
         "freq_range": (200, 7000),
         "spectral_tilt": (-2.5, -5.0),
-        "noise_character": "surface_hiss",
+        "noise_character": "surface_hiss",  # type: ignore[dict-item]
         "dynamic_expectation": (20, 35),
-        "spatial_expectation": "mono_present",
+        "spatial_expectation": "mono_present",  # type: ignore[dict-item]
     },
     "early_vinyl": {  # 1948-1960
         "freq_range": (150, 12000),
         "spectral_tilt": (-1.5, -3.0),
-        "noise_character": "warm_hiss",
+        "noise_character": "warm_hiss",  # type: ignore[dict-item]
         "dynamic_expectation": (25, 45),
-        "spatial_expectation": "mono_early_stereo",
+        "spatial_expectation": "mono_early_stereo",  # type: ignore[dict-item]
     },
     "vinyl_golden": {  # 1960-1980
         "freq_range": (80, 16000),
         "spectral_tilt": (-0.5, -2.0),
-        "noise_character": "vinyl_surface",
+        "noise_character": "vinyl_surface",  # type: ignore[dict-item]
         "dynamic_expectation": (30, 55),
-        "spatial_expectation": "stereo_natural",
+        "spatial_expectation": "stereo_natural",  # type: ignore[dict-item]
     },
     "tape_analog": {  # 1950-1990
         "freq_range": (60, 18000),
         "spectral_tilt": (-0.5, -1.5),
-        "noise_character": "tape_hiss_warm",
+        "noise_character": "tape_hiss_warm",  # type: ignore[dict-item]
         "dynamic_expectation": (35, 60),
-        "spatial_expectation": "stereo_warm",
+        "spatial_expectation": "stereo_warm",  # type: ignore[dict-item]
     },
     "digital_early": {  # 1980-2000
         "freq_range": (40, 20000),
         "spectral_tilt": (0.0, -1.0),
-        "noise_character": "digital_clean",
+        "noise_character": "digital_clean",  # type: ignore[dict-item]
         "dynamic_expectation": (40, 70),
-        "spatial_expectation": "stereo_precise",
+        "spatial_expectation": "stereo_precise",  # type: ignore[dict-item]
     },
     "digital_modern": {  # 2000+
         "freq_range": (30, 20000),
         "spectral_tilt": (0.0, -0.5),
-        "noise_character": "near_silent",
+        "noise_character": "near_silent",  # type: ignore[dict-item]
         "dynamic_expectation": (30, 90),  # Kann auch loudness-war sein
-        "spatial_expectation": "stereo_wide",
+        "spatial_expectation": "stereo_wide",  # type: ignore[dict-item]
     },
 }
 
@@ -308,8 +308,8 @@ def _measure_spatial_signature(mono: np.ndarray, sr: int, arr: np.ndarray) -> tu
     for i in range(0, len(mono) - n_fft, hop):
         chunk = mono[i : i + n_fft] * np.hanning(n_fft)
         energy.append(float(np.sum(chunk**2)))
-    energy = np.array(energy)
-    energy_db = 10.0 * np.log10(energy + 1e-12)
+    energy = np.array(energy)  # type: ignore[assignment]
+    energy_db = 10.0 * np.log10(energy + 1e-12)  # type: ignore[operator]
 
     # Abklingzeit: wie lange bis Energie um 60dB fällt
     peak_idx = np.argmax(energy_db)
@@ -320,7 +320,7 @@ def _measure_spatial_signature(mono: np.ndarray, sr: int, arr: np.ndarray) -> tu
     if np.any(below_60):
         rt60_ms = (np.argmax(below_60) * hop / sr) * 1000
     else:
-        rt60_ms = 200  # Default
+        rt60_ms = 200  # type: ignore  # Default
 
     if rt60_ms < 100:
         return 0.60, "sehr trocken (Nahaufnahme)"

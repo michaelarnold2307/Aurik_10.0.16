@@ -24,7 +24,7 @@ def _make_vinyl_audio(sr: int = 48000, duration: float = 5.0, seed: int = 42) ->
         + 0.04 * rng.standard_normal(len(t)).astype(np.float32)
     )
     stereo = np.stack([signal, signal * 0.98], axis=1)  # (N, 2)
-    return np.clip(stereo, -1.0, 1.0)
+    return np.clip(stereo, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _edge_rms(audio: np.ndarray, sr: int, zone_s: float = 0.5) -> tuple[float, float]:
@@ -284,8 +284,10 @@ class TestPhase23StereoMSInvariant:
         audio_cf = audio.T.astype(np.float32, copy=False)  # (2, N)
 
         phase = SpectralRepair()
-        phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
-        phase._current_material = "unknown"  # skip BW hard-cap branch for deterministic side check
+        phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
+        phase._current_material = (
+            "unknown"  # skip BW hard-cap branch for deterministic side check  # type: ignore[assignment]
+        )
 
         out_cf = phase._repair_with_flashsr(
             audio=audio_cf,
@@ -312,8 +314,8 @@ class TestPhase23StereoMSInvariant:
         audio = _make_vinyl_audio(sr=sr, duration=3.0).astype(np.float32, copy=False)  # (N, 2)
 
         phase = SpectralRepair()
-        phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
-        phase._current_material = "unknown"
+        phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
+        phase._current_material = "unknown"  # type: ignore[assignment]
 
         out = phase._repair_with_flashsr(
             audio=audio,

@@ -29,7 +29,7 @@ SR = 44100
 
 def _sine(n: int = SR, freq: float = 440.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(n: int = SR) -> np.ndarray:
@@ -38,7 +38,7 @@ def _silence(n: int = SR) -> np.ndarray:
 
 def _loud(n: int = SR, amp: float = 3.0) -> np.ndarray:
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * 440.0 * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * 440.0 * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

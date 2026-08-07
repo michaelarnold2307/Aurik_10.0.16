@@ -587,7 +587,7 @@ class EQCorrectionPhase(PhaseInterface):
         if riaa_curve_type and riaa_curve_type in self.RIAA_ERROR_TO_CURVE:
             detected_variant = self.RIAA_ERROR_TO_CURVE[riaa_curve_type]
             logger.info(
-                "phase_04: riaa_curve_type=%r from RIAA_CURVE_ERROR → variant '%s'",
+                "Verarbeitungsschritt_04: riaa_curve_type=%r from RIAA_CURVE_ERROR → variant '%s'",
                 riaa_curve_type,
                 detected_variant,
             )
@@ -604,7 +604,7 @@ class EQCorrectionPhase(PhaseInterface):
             params = dict(params)  # shallow copy to avoid mutating class-level dict
             params["eq_curve"] = self.HISTORICAL_CURVES[detected_variant]
             logger.info(
-                "phase_04: historical RIAA variant '%s' selected for decade=%s material=%s",
+                "Verarbeitungsschritt_04: historical RIAA variant '%s' selected for decade=%s material=%s",
                 detected_variant,
                 decade,
                 material_type,
@@ -665,7 +665,7 @@ class EQCorrectionPhase(PhaseInterface):
                     _prot_priority_p04,
                 )
             except Exception as _mic_exc_p04:
-                logger.debug("MicChar Protection-EQ non-blocking: %s", _mic_exc_p04)
+                logger.debug("MicChar Protection-EQ nicht blockierend: %s", _mic_exc_p04)
 
         # Step 2: Apply Multi-Band Parametric EQ
         eq_audio = self._apply_parametric_eq_professional(audio, adjusted_curve, params)
@@ -686,7 +686,7 @@ class EQCorrectionPhase(PhaseInterface):
         if tape_speed_ips is not None and _has_tape_in_chain:
             result_audio = self._apply_head_bump_compensation(result_audio, tape_speed_ips)
             head_bump_applied = True
-            logger.info("phase_04: head-bump compensation applied at %.3f ips", tape_speed_ips)
+            logger.info("Verarbeitungsschritt_04: head-bump compensation angewendet at %.3f ips", tape_speed_ips)
 
         # ── Dolby / DBX NR approximate inverse ──────────────────────────────
         dolby_nr_type: str = kwargs.get("dolby_nr_type", "none")
@@ -705,9 +705,13 @@ class EQCorrectionPhase(PhaseInterface):
                     confidence=dolby_nr_conf,  # type: ignore[arg-type]
                 )
                 dolby_nr_applied = True
-                logger.info("phase_04: Dolby/DBX NR inverse applied type=%s conf=%.2f", dolby_nr_type, dolby_nr_conf)
+                logger.info(
+                    "Verarbeitungsschritt_04: Dolby/DBX NR inverse angewendet type=%s conf=%.2f",
+                    dolby_nr_type,
+                    dolby_nr_conf,
+                )
             except Exception as exc:
-                logger.warning("phase_04: Dolby NR inverse failed (%s) — bypassed", exc)
+                logger.warning("Verarbeitungsschritt_04: Dolby NR inverse fehlgeschlagen (%s) — bypassed", exc)
 
         execution_time = time.time() - start_time
 
@@ -739,7 +743,7 @@ class EQCorrectionPhase(PhaseInterface):
                 mode="additive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase04 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt04 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §C7 Spectral Optimal Transport — optional post-EQ spectral alignment.
         # Applies a minimal 1D Wasserstein transport (exact in 1D: cumsum-inverse) to
@@ -760,7 +764,7 @@ class EQCorrectionPhase(PhaseInterface):
                 )
                 _sot_applied = True
         except Exception as _sot_exc:
-            logger.debug("§C7 Spectral-OT non-blocking: %s", _sot_exc)
+            logger.debug("§C7 Spectral-OT nicht blockierend: %s", _sot_exc)
 
         # §V24 Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
         try:
@@ -773,7 +777,7 @@ class EQCorrectionPhase(PhaseInterface):
                 _sc_wet_p04 = 0.70  # Phase-Strength −30 % (§V24)
                 result_audio = (_sc_wet_p04 * result_audio + (1.0 - _sc_wet_p04) * audio).astype(np.float32)
         except Exception as _sc_exc_p04:
-            logger.debug("§V24 phase_04 spectral_color non-blocking: %s", _sc_exc_p04)
+            logger.debug("§V24 Verarbeitungsschritt_04 spectral_color nicht blockierend: %s", _sc_exc_p04)
 
         # §V26 Onset-Schutz nach EQ (§2.77, non-blocking)
         try:
@@ -783,7 +787,7 @@ class EQCorrectionPhase(PhaseInterface):
 
             result_audio = _opm_p04(audio, result_audio, None, max_delta_db=1.5)
         except Exception as _opm_exc_p04:
-            logger.debug("§V26 phase_04 onset_guard non-blocking: %s", _opm_exc_p04)
+            logger.debug("§V26 Verarbeitungsschritt_04 onset_guard nicht blockierend: %s", _opm_exc_p04)
 
         # §2.71 Strength-Envelope: Chirurgische EQ nur in Defekt-Regionen
         _strength_env = kwargs.get("strength_envelope")
@@ -801,10 +805,11 @@ class EQCorrectionPhase(PhaseInterface):
                 )
                 if float(np.mean(np.abs(result_audio - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 04: Δ=%.4f RMS", float(np.mean(np.abs(result_audio - _env_pre)))
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 04: Δ=%.4f RMS",
+                        float(np.mean(np.abs(result_audio - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return create_phase_result(
             audio=result_audio,
@@ -968,7 +973,7 @@ class EQCorrectionPhase(PhaseInterface):
                         lp = sosfiltfilt(sos, result[ch])
                         result[ch] = lp * gain_lin + (result[ch] - lp)
         except Exception as _filter_exc:
-            logger.debug("§C7 Spectral-OT filter non-blocking: %s", _filter_exc)
+            logger.debug("§C7 Spectral-OT filter nicht blockierend: %s", _filter_exc)
             return audio
 
         result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
@@ -1092,7 +1097,7 @@ class EQCorrectionPhase(PhaseInterface):
             # Mean-center (only shape matters, not absolute level)
             measured -= measured.mean()
         except Exception as e:
-            logger.warning("phase_04_eq_correction.py::_auto_detect_riaa_variant fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_04_eq_correction.py::_auto_erkennen_riaa_variant Ersatzpfad: %s", e)
             return candidates[0]
 
         # Build expected curves for each candidate at probe frequencies
@@ -1116,7 +1121,7 @@ class EQCorrectionPhase(PhaseInterface):
                 best_variant = variant
 
         logger.debug(
-            "phase_04: _auto_detect_riaa_variant decade=%d → '%s' (pearson=%.3f, candidates=%s)",
+            "Verarbeitungsschritt_04: _auto_erkennen_riaa_variant decade=%d → '%s' (pearson=%.3f, candidates=%s)",
             decade,
             best_variant,
             best_corr,
@@ -1223,7 +1228,9 @@ class EQCorrectionPhase(PhaseInterface):
         # For very short audio, return passthrough
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_04: audio too short (%d < %d), skipping EQ", len(audio), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_04: audio too short (%d < %d), skipping EQ", len(audio), MIN_AUDIO_SAMPLES
+            )
             return np.asarray(audio, dtype=np.float32).copy()  # type: ignore[no-any-return]
 
         result = audio.copy()
@@ -1318,7 +1325,7 @@ if __name__ == "__main__":
     # Test Professional EQ Correction Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional EQ Correction Phase v2.0 - Test")
+    logger.debug("Professional EQ Correction Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -1350,7 +1357,7 @@ if __name__ == "__main__":
         _result = phase.process(_audio.copy(), material_type=material)
 
         if _result.success and _result.modifications.get("eq_applied"):
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             _exec_s = _result.metadata["execution_time_seconds"]
             logger.debug("   Execution Time: %.3fs (%.2f\u00d7 realtime)", _exec_s, _exec_s / duration)
             logger.debug("   Bands: %s", _result.modifications["num_bands"])
@@ -1358,18 +1365,18 @@ if __name__ == "__main__":
             logger.debug("   Max Boost: %.1f dB", _result.modifications["max_boost_db"])
             logger.debug("   Max Cut: %.1f dB", _result.modifications["max_cut_db"])
             logger.debug("   Blend: %.2f", _result.modifications["blend_ratio"])
-            logger.debug("   Phase Mode: %s", _result.modifications["phase_mode"])
+            logger.debug("   Verarbeitungsschritt Betriebsart: %s", _result.modifications["phase_mode"])
             logger.debug("   RIAA Standard: %s", _result.metadata.get("riaa_standard", False))
             logger.debug("   NAB Standard: %s", _result.metadata.get("nab_standard", False))
             logger.debug("   Warnings: %s", _result.warnings if _result.warnings else "None")
         else:
-            logger.debug("\u23ed\ufe0f  EQ Skipped")
+            logger.debug("\u23ed\ufe0f  EQ uebersprungen")
             logger.debug("   Reason: %s", _result.modifications.get("reason", "unknown"))
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional EQ Correction v2.0 Test Complete!")
+    logger.debug("✅ Professional EQ Correction v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _result.metadata.get("algorithm", "N/A"))
-    logger.debug("Scientific Reference: %s", _result.metadata.get("scientific_ref", "N/A"))
+    logger.debug("Scientific Referenz: %s", _result.metadata.get("scientific_ref", "N/A"))
     logger.debug("Benchmark: %s", _result.metadata.get("benchmark", "N/A"))
     logger.debug("Quality Impact: 0.96 (Professional-Grade)")

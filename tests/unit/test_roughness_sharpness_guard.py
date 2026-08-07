@@ -28,7 +28,7 @@ _GATE = ArtifactFreedomGate()
 
 def _sine(freq: float, duration_s: float = 3.0, amplitude: float = 0.3) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False, dtype=np.float32)
-    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(duration_s: float = 3.0, amplitude: float = 0.1) -> np.ndarray:

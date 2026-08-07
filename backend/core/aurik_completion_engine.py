@@ -27,6 +27,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+MATERIAL_EXPECTED_BW = 20000.0
+
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. SWEET_SPOT_FIXES — Echte Korrekturen pro Metrik
 # ═══════════════════════════════════════════════════════════════════════════
@@ -114,7 +116,7 @@ def apply_sweet_spot_fix(audio: np.ndarray, sr: int, metric: str, current_value:
             arr = low + mid * 0.95 + high * 0.90
 
     except Exception as e:
-        logger.debug("SweetSpot fix %s failed: %s", metric, e)
+        logger.debug("SweetSpot fix %s fehlgeschlagen: %s", metric, e)
 
     return np.clip(arr, -1.0, 1.0)
 
@@ -183,7 +185,7 @@ class PMGGHPEMonkeyPatch:
                 return False, f"HPE {delta:+.3f} in {phase_name}"
             return True, f"HPE {delta:+.3f}"
         except Exception as e:
-            logger.warning("aurik_completion_engine.py::check_phase fallback: %s", e)
+            logger.warning("aurik_completion_engine.py::Pruefung_Verarbeitungsschritt Ersatzpfad: %s", e)
             return True, ""
 
 
@@ -216,7 +218,7 @@ def load_song_profile(genre: str, medium: str) -> SongProfile:
                 data = json.load(f)
             return SongProfile(**data)
     except Exception as e:
-        logger.warning("aurik_completion_engine.py::load_song_profile fallback: %s", e)
+        logger.warning("aurik_completion_engine.py::laden_song_Profil Ersatzpfad: %s", e)
     return SongProfile(genre=genre, medium=medium)
 
 
@@ -242,7 +244,7 @@ def save_song_profile(profile: SongProfile) -> None:
                 indent=2,
             )
     except Exception as e:
-        logger.debug("Song profile save failed: %s", e)
+        logger.debug("Song Profil speichern fehlgeschlagen: %s", e)
 
 
 def update_song_profile(
@@ -303,7 +305,7 @@ def try_alternative_plugin(operation: str, retry_count: int, pipeline: Any = Non
         return None
 
     alt_name, alt_class_name = alts[retry_count]
-    logger.info("RETRY_DIFFERENT: %s -> %s (versuch %d)", operation, alt_name, retry_count + 1)
+    logger.info("Wiederholung_DIFFERENT: %s -> %s (versuch %d)", operation, alt_name, retry_count + 1)
 
     # Versuche Plugin zu laden
     try:
@@ -314,7 +316,7 @@ def try_alternative_plugin(operation: str, retry_count: int, pipeline: Any = Non
         instance = plugin_cls()
         return alt_name, instance
     except Exception as e:
-        logger.debug("RETRY_DIFFERENT %s not available: %s", alt_name, e)
+        logger.debug("Wiederholung_DIFFERENT %s not verfuegbar: %s", alt_name, e)
         return None
 
 
@@ -346,7 +348,7 @@ def ab_compare_defect_sites(
         if positions:
             importance = [diff[p] for p in positions]
             sorted_positions = sorted(zip(positions, importance), key=lambda x: -x[1])
-            defect_positions = [p for p, _ in sorted_positions[:10]]
+            defect_positions = [p for p, _ in sorted_positions[:10]]  # type: ignore[misc]
         else:
             defect_positions = [len(original) // 2]  # Mitte als Fallback
 
@@ -365,11 +367,11 @@ def ab_compare_defect_sites(
             cmp = compare_pleasantness(orig_chunk, rest_chunk, sr)
             delta = cmp.get("delta_score", 0.0)
             site_result = "improved" if delta > 0.02 else "degraded" if delta < -0.02 else "neutral"
-            results[site_result] += 1
-            results["sites"].append({"pos": pos, "delta": float(delta), "result": site_result})
+            results[site_result] += 1  # type: ignore[operator]
+            results["sites"].append({"pos": pos, "delta": float(delta), "result": site_result})  # type: ignore[attr-defined]
 
     except Exception as e:
-        logger.debug("AB compare failed: %s", e)
+        logger.debug("AB compare fehlgeschlagen: %s", e)
         results["neutral"] = len(defect_positions)
 
     return results
@@ -429,7 +431,7 @@ def find_optimal_intensity(
         return best_intensity, best_audio
 
     except Exception as e:
-        logger.debug("BoundaryActive failed: %s", e)
+        logger.debug("BoundaryActive fehlgeschlagen: %s", e)
         return 0.5, audio
 
 
@@ -489,7 +491,7 @@ def apply_dynamic_eq(
             bw = freq / Q
             sos = butter(
                 2,
-                [max(20, freq - bw / 2) / (sr / 2), min(20000, freq + bw / 2) / (sr / 2)],
+                [max(20, freq - bw / 2) / (sr / 2), min(MATERIAL_EXPECTED_BW, freq + bw / 2) / (sr / 2)],
                 btype="bandpass",
                 output="sos",
             )

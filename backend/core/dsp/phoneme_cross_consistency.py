@@ -303,7 +303,7 @@ class PhonemeConsistencyMonitor:
             return report
 
         except Exception as exc:
-            logger.debug("PhonemeConsistencyMonitor.compute_consistency: fallback — %s", exc)
+            logger.debug("PhonemeConsistencyMonitor.berechnen_consistency: Ersatzpfad — %s", exc)
             return PhonemeConsistencyReport()
 
     def get_correction_eq(
@@ -355,7 +355,7 @@ class PhonemeConsistencyMonitor:
             )
 
         except Exception as exc:
-            logger.debug("PhonemeConsistencyMonitor.get_correction_eq: fallback — %s", exc)
+            logger.debug("PhonemeConsistencyMonitor.get_correction_eq: Ersatzpfad — %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -377,7 +377,7 @@ class PhonemeConsistencyMonitor:
                 if segs:
                     return segs
         except Exception as e:
-            logger.warning("phoneme_cross_consistency.py::_get_segments fallback: %s", e)
+            logger.warning("phoneme_cross_consistency.py::_get_segments Ersatzpfad: %s", e)
 
         # DSP-Fallback
         raw = _segment_by_energy(self._orig, self._sr)

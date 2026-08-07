@@ -112,11 +112,11 @@ class BandwidthExtension:
 
         # Only extend if bandwidth is limited (< 90% of Nyquist)
         if cutoff_hz > nyquist * 0.90:
-            logger.debug("[BandwidthExtension] Full bandwidth detected (%.0f Hz), no extension needed.", cutoff_hz)
+            logger.debug("[BandwidthExtension] Full bandwidth erkannt (%.0f Hz), no extension needed.", cutoff_hz)
             return audio
 
         logger.info(
-            "[BandwidthExtension] Detected bandwidth cutoff at %.0f Hz, extending to %.0f Hz.", cutoff_hz, nyquist
+            "[BandwidthExtension] erkannt bandwidth cutoff at %.0f Hz, extending to %.0f Hz.", cutoff_hz, nyquist
         )
 
         # SBR: mirror spectrum from [cutoff/2, cutoff] to [cutoff, 2*cutoff]
@@ -176,4 +176,4 @@ class BandwidthExtension:
 
         audio_out = np.nan_to_num(audio_out, nan=0.0, posinf=0.0, neginf=0.0)
         audio_out = np.clip(audio_out, -1.0, 1.0)
-        return audio_out
+        return audio_out  # type: ignore[no-any-return]

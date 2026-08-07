@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import subprocess
+import sys
 from pathlib import Path
 
 
@@ -45,7 +46,7 @@ def main() -> None:
     args = parser.parse_args()
 
     repo_root = Path(args.repo_root).resolve()
-    py = sys.executable
+    py = sys.executable  # type: ignore[name-defined]
     if not Path(py).exists():
         raise SystemExit(f"Python-Interpreter fehlt: {py}")
 

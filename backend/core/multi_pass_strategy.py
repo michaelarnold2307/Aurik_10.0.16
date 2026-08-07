@@ -427,7 +427,7 @@ class IntrinsicAudioQualityScorer:
         else:
             spec_score = 25.0
 
-        return rms_score + peak_score + snr_score + spec_score
+        return rms_score + peak_score + snr_score + spec_score  # type: ignore[no-any-return]
 
 
 class ObjectiveScorer:
@@ -482,9 +482,9 @@ class ObjectiveScorer:
                 self.versa_plugin = get_loaded_versa_plugin()
                 if self.versa_plugin is None:
                     self.versa_plugin = get_versa_plugin()
-                logger.info("✓ VERSA Plugin loaded (§4.4, non-reference MOS)")
+                logger.info("✓ VERSA Plugin geladen (§4.4, non-Referenz MOS)")
             except Exception as e:
-                logger.warning("⚠ VERSA Plugin not available: %s", e)
+                logger.warning("⚠ VERSA Plugin not verfuegbar: %s", e)
 
         # §10.2: DNSMOS-Plugin wird nicht geladen — DNSMOS P.835 ist auf Sprachkorpus
         # trainiert (16 kHz DNS-Challenge) und ist VERBOTEN als Musik-Qualitätsmetrik.
@@ -533,7 +533,7 @@ class ObjectiveScorer:
                 score.versa_active = True
 
             except Exception as e:
-                logger.warning("VERSA scoring failed: %s", e)
+                logger.warning("VERSA scoring fehlgeschlagen: %s", e)
                 score.versa_score = 0.5  # Neutral default, versa_active bleibt False
 
         # §10.2: DNSMOS-Berechnung deaktiviert — Sprach-Metrik verboten für Musikrestaurierung.
@@ -557,7 +557,7 @@ class ObjectiveScorer:
                     _mg_loaded = True
 
             except Exception as e:
-                logger.debug("MusicalGoalsChecker nicht verfügbar (%s) — IAQS-Fallback", e)
+                logger.debug("MusicalGoalsChecker nicht verfügbar (%s) — IAQS-Ersatzpfad", e)
 
             if not _mg_loaded:
                 # Intrinsischer Fallback: IAQS liefert psychoakustisch fundierte Scores
@@ -567,9 +567,9 @@ class ObjectiveScorer:
                     mg_approx = (iaqs.harmonicity + iaqs.bark_balance + iaqs.spectral_regularity) / 3.0
                     score.musical_goals_avg = float(np.clip(mg_approx, 0.0, 1.0))
                     score.musical_goals_min = float(min(iaqs.harmonicity, iaqs.bark_balance, iaqs.spectral_regularity))
-                    logger.debug("IAQS Musical-Goals-Fallback: avg=%.3f", score.musical_goals_avg)
+                    logger.debug("IAQS Musical-Goals-Ersatzpfad: avg=%.3f", score.musical_goals_avg)
                 except Exception as e2:
-                    logger.warning("IAQS-Fallback fehlgeschlagen: %s", e2)
+                    logger.warning("IAQS-Ersatzpfad fehlgeschlagen: %s", e2)
                     score.musical_goals_avg = 0.5
                     score.musical_goals_min = 0.5
 
@@ -583,7 +583,7 @@ class ObjectiveScorer:
             score.iaqs_active = True
             logger.debug("IAQS: SNR=%.1f dB, THD=%.2f%%, Total=%.3f", score.snr_db, score.thd_percent, score.iaqs_total)
         except Exception as e:
-            logger.warning("IAQS Signal statistics failed: %s", e)
+            logger.warning("IAQS Signal statistics fehlgeschlagen: %s", e)
             # Letzter Fallback: EnhancedMetrics Backend
             try:
                 from backend.core.enhanced_metrics import EnhancedMetrics  # pylint: disable=import-outside-toplevel
@@ -614,7 +614,7 @@ class ObjectiveScorer:
             score.pleasantness_label = hpe_result.label
             # Wenn Referenz-Audio verfügbar, berechne Delta
             # (reference_audio wird als Parameter durchgereicht, kann None sein)
-            logger.debug("HPE: Score=%.3f Label=%s", score.pleasantness_score, score.pleasantness_label)
+            logger.debug("HPE: Wert=%.3f Label=%s", score.pleasantness_score, score.pleasantness_label)
         except Exception as e:
             logger.debug("HPE nicht verfügbar: %s", e)
             score.pleasantness_score = 0.5
@@ -845,7 +845,7 @@ class MultiPassEngine:
                             0.0,
                         )
                     except Exception as _exc:
-                        logger.debug("Operation failed (non-critical): %s", _exc)
+                        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
                 # Sub-progress: map UV3's 0–100 into this variant's slice of the outer bar
                 def _make_sub_cb(_base: int, _span: int):
@@ -854,7 +854,7 @@ class MultiPassEngine:
                             try:
                                 progress_callback(_base + int(pct * _span / 100), phase, elapsed)
                             except Exception as _exc:
-                                logger.debug("Operation failed (non-critical): %s", _exc)
+                                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
                     return _sub_progress
 
@@ -894,13 +894,13 @@ class MultiPassEngine:
                             proc_time,
                         )
                     except Exception as _exc:
-                        logger.debug("Operation failed (non-critical): %s", _exc)
+                        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
                 logger.info("    → %s", score)
 
             except Exception as e:
                 logger.error(
-                    "  ❌ Variant '%s' failed: %s",
+                    "  ❌ Variant '%s' fehlgeschlagen: %s",
                     variant.name,
                     e,
                     exc_info=True,
@@ -924,7 +924,7 @@ class MultiPassEngine:
         best_score.confidence = confidence  # type: ignore[union-attr]
 
         logger.info(
-            "✅ Best variant: '%s' (score=%.3f, confidence=%.2f)",
+            "✅ Best variant: '%s' (Wert=%.3f, confidence=%.2f)",
             best_variant.name,  # type: ignore[union-attr]
             best_score.composite_score,  # type: ignore[union-attr]
             confidence,
@@ -1003,7 +1003,7 @@ class MultiPassEngine:
 
             _restore_mode = self._derive_restore_mode(config)
             logger.debug(
-                "[MPASS] restore(mode=%s) auf voller Programmlänge (%.0fs) …",
+                "[MPASS] wiederherstellen(Betriebsart=%s) auf voller Programmlänge (%.0fs) …",
                 _restore_mode,
                 len(audio) / sample_rate,
             )
@@ -1021,7 +1021,7 @@ class MultiPassEngine:
             raise RuntimeError("UnifiedRestorerV3 returned no audio payload for variant evaluation")
 
         except Exception as e:
-            logger.error("Default processing failed: %s\n%s", e, _tb.format_exc())
+            logger.error("Default processing fehlgeschlagen: %s\n%s", e, _tb.format_exc())
             raise RuntimeError("MultiPass default processing failed") from e
 
 
@@ -1081,7 +1081,7 @@ def _run_demo() -> None:
     sf.write("test_output/multipass_best.wav", demo_result["audio"], demo_sr)
 
     logger.debug("\n✅ Best Variant: %s", demo_result["variant_name"])
-    logger.debug("   Composite Score: %.3f", demo_result["composite_score"])
+    logger.debug("   Composite Wert: %.3f", demo_result["composite_score"])
     logger.debug("   Confidence: %.2f", demo_result["confidence"])
     logger.debug("\n📊 All Scores:")
     for variant_score in demo_result["all_scores"]:

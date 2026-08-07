@@ -14,6 +14,8 @@ Scientific basis:
     Terhardt (1982). "Zur Tonhoehenwahrnehmung von Klaengen." Acustica 26.
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -34,7 +36,7 @@ def phase():
 
 def _sine(freq: float, dur: float = 0.5, amp: float = 0.4) -> np.ndarray:
     t = np.arange(int(dur * SR)) / SR
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _harmonic_tone(f0: float, harmonics: list[int], dur: float = 0.5) -> np.ndarray:
@@ -241,7 +243,7 @@ class TestSynthesizeMissingOvertones:
     def test_empty_missing_list_returns_zeros(self, phase):
         """If all harmonics are present (missing=[]), additive must be zero."""
         mono = _sine(440.0).astype(np.float64)
-        f0_info = [(440.0, 1.0, [])]
+        f0_info: Any = [(440.0, 1.0, [])]
         out = phase._synthesize_missing_overtones(mono, f0_info, self._params())
         np.testing.assert_array_equal(out, 0.0)
 

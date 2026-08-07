@@ -49,7 +49,7 @@ def _sine(freq_hz: float = 440.0, duration_s: float = 3.0, sr: int = SR) -> np.n
     np.random.seed(42)
     t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
     sig = 0.8 * np.sin(2 * np.pi * freq_hz * t)
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noisy(freq_hz: float = 440.0, duration_s: float = 3.0, sr: int = SR, noise_level: float = 0.05) -> np.ndarray:
@@ -57,7 +57,7 @@ def _noisy(freq_hz: float = 440.0, duration_s: float = 3.0, sr: int = SR, noise_
     np.random.seed(42)
     sig = _sine(freq_hz, duration_s, sr)
     noise = noise_level * np.random.randn(len(sig)).astype(np.float32)
-    return np.clip(sig + noise, -1.0, 1.0)
+    return np.clip(sig + noise, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _silence(duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
@@ -587,10 +587,10 @@ class TestStereoAuthenticitiyInvariant:
             pass
 
         era = EraResult()
-        era.decade = decade
-        era.confidence = confidence
-        era.era_label = f"{decade}s"
-        era.material_prior = "unknown"
+        era.decade = decade  # type: ignore[attr-defined]
+        era.confidence = confidence  # type: ignore[attr-defined]
+        era.era_label = f"{decade}s"  # type: ignore[attr-defined]
+        era.material_prior = "unknown"  # type: ignore[attr-defined]
         return era
 
     def test_01_import(self):
@@ -779,7 +779,7 @@ class TestPipelineUncertaintyEstimator:
             pass
 
         p = RestorationPlan()
-        p.confidence = confidence
+        p.confidence = confidence  # type: ignore[attr-defined]
         return p
 
     def test_01_import(self):

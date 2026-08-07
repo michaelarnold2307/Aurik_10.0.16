@@ -93,7 +93,7 @@ class SpectrogramSnapshotter:
 
         # Resize auf 256×256
         _img = Image.fromarray(_mag_norm.T, mode="L")
-        _img = _img.resize((_SNAPSHOT_SIZE, _SNAPSHOT_SIZE), Image.LANCZOS)
+        _img = _img.resize((_SNAPSHOT_SIZE, _SNAPSHOT_SIZE), Image.LANCZOS)  # type: ignore[attr-defined]
         return _img
 
 

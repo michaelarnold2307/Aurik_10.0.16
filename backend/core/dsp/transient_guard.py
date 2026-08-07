@@ -82,7 +82,7 @@ def _detect_onsets_simple(audio_mono: np.ndarray, sr: int, hop: int = 256) -> np
         onsets = librosa.onset.onset_detect(y=audio_mono, sr=sr, hop_length=hop, units="samples", backtrack=True)  # type: ignore[attr-defined]
         return np.asarray(onsets, dtype=np.int64)  # type: ignore[no-any-return]
     except Exception as e:
-        logger.warning("transient_guard.py::_detect_onsets_simple fallback: %s", e)
+        logger.warning("transient_guard.py::_erkennen_onsets_simple Ersatzpfad: %s", e)
 
     # Fallback: Differenz der Frame-Energie
     frame_len = hop
@@ -90,7 +90,7 @@ def _detect_onsets_simple(audio_mono: np.ndarray, sr: int, hop: int = 256) -> np
     energies = []
     for i in range(0, n - frame_len, frame_len):
         energies.append(float(np.sum(audio_mono[i : i + frame_len] ** 2)))
-    energies = np.array(energies, dtype=np.float32)
+    energies = np.array(energies, dtype=np.float32)  # type: ignore[assignment]
     diff = np.diff(energies, prepend=energies[:1])
     threshold = float(np.mean(diff) + 1.5 * np.std(diff))
     onset_frames = np.where(diff > threshold)[0]
@@ -218,7 +218,7 @@ def detect_transient_shifts(
         )
 
     except Exception as exc:
-        logger.debug("detect_transient_shifts non-blocking: %s", exc)
+        logger.debug("erkennen_transient_shifts nicht blockierend: %s", exc)
         return _fallback
 
 
@@ -244,14 +244,11 @@ def compute_transient_mask(audio: np.ndarray, sample_rate: int) -> np.ndarray:
         return np.zeros(max(1, _n_frames), dtype=np.float32)
 
     # Energie pro Frame
-    _energy = np.array([
-        float(np.mean(_mono[i * _hop : i * _hop + _n_fft] ** 2))
-        for i in range(_n_frames)
-    ])
+    _energy = np.array([float(np.mean(_mono[i * _hop : i * _hop + _n_fft] ** 2)) for i in range(_n_frames)])
     _energy_db = 10.0 * np.log10(_energy + 1e-12)
     # Energie-Delta: +3dB Anstieg = Onset
     _delta = np.diff(_energy_db, prepend=_energy_db[0])
     _mask = (_delta > 3.0).astype(np.float32)
     # Smooth über 3 Frames (32ms) für natürliche Übergänge
-    _mask = np.convolve(_mask, np.ones(3) / 3, mode='same')
+    _mask = np.convolve(_mask, np.ones(3) / 3, mode="same")
     return np.clip(_mask, 0.0, 1.0).astype(np.float32)

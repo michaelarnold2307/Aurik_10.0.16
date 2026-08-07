@@ -92,7 +92,7 @@ from backend.core.ml_model_readiness import check_ml_model_ready
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult, create_phase_result
 
 try:
-    from backend.core.quality_mode import QualityMode, should_use_ml  # type: ignore[attr-defined]
+    from backend.core.quality_mode import QualityMode
 
     QUALITY_MODE_AVAILABLE = True
 except ImportError:
@@ -388,7 +388,7 @@ class DropoutRepairPhase(PhaseInterface):
                     if start_s < _ze and end_s > _zs:
                         local_strength = min(local_strength, _cap)
                 except Exception:
-                    logger.debug("_compute_dropout_local_strength: silent except suppressed", exc_info=True)
+                    logger.debug("_berechnen_dropout_local_strength: silent except suppressed", exc_info=True)
 
         return float(np.clip(local_strength, 0.0, 1.0))
 
@@ -410,7 +410,7 @@ class DropoutRepairPhase(PhaseInterface):
 
             import psutil  # pylint: disable=import-outside-toplevel
         except Exception as e:
-            logger.warning("phase_24_dropout_repair.py::_has_sufficient_ml_headroom fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_24_dropout_repair.py::_has_sufficient_ml_headroom Ersatzpfad: %s", e)
             return True
 
         # Guard 1: FlashSR nur für bekannte Analog-Quellen erlaubt (Allowlist-Prinzip).
@@ -443,7 +443,7 @@ class DropoutRepairPhase(PhaseInterface):
                 }
             )
             logger.info(
-                "DropoutRepair: FlashSR skipped — material '%s' not in analog allowlist — DSP preferred",
+                "DropoutRepair: FlashSR uebersprungen — material '%s' not in analog allowlist — DSP preferred",
                 _mat,
             )
             return False
@@ -472,14 +472,14 @@ class DropoutRepairPhase(PhaseInterface):
 
                 evict_stale_plugins(required_mb=int(required_gb * 1024))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             gc.collect()
             try:
                 import ctypes as _ct  # pylint: disable=import-outside-toplevel
 
                 _ct.CDLL("libc.so.6").malloc_trim(0)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             available_gb = float(psutil.virtual_memory().available / (1024**3))
 
         if available_gb < required_gb:
@@ -496,8 +496,8 @@ class DropoutRepairPhase(PhaseInterface):
                 }
             )
             logger.warning(
-                "DropoutRepair RAM guard triggered: %.1f GB available, %.1f GB required "
-                "(duration=%.1fs, ch=%d) — using DSP fallback",
+                "DropoutRepair RAM guard triggered: %.1f GB verfuegbar, %.1f GB required "
+                "(duration=%.1fs, ch=%d) — using DSP Ersatzpfad",
                 available_gb,
                 required_gb,
                 duration_s,
@@ -520,10 +520,10 @@ class DropoutRepairPhase(PhaseInterface):
             from plugins.flashsr_plugin import FlashSRPlugin  # pylint: disable=import-outside-toplevel
 
             self._flashsr_plugin = FlashSRPlugin()
-            logger.info("✅ FlashSR Plugin loaded for Dropout Repair")
+            logger.info("✅ FlashSR Plugin geladen for Dropout Repair")
             return self._flashsr_plugin
         except Exception as e:
-            logger.warning("⚠️  FlashSR Plugin not available: %s", e)
+            logger.warning("⚠️  FlashSR Plugin not verfuegbar: %s", e)
             logger.info("    Falling back to DSP-only dropout repair")
             return None
 
@@ -541,12 +541,12 @@ class DropoutRepairPhase(PhaseInterface):
             plugin = get_gacela_plugin()
             self._gacela_plugin = plugin
             if plugin._model_ready:  # pylint: disable=protected-access
-                logger.info("GACELA plugin loaded for musical inpainting (50–750 ms).")
+                logger.info("GACELA plugin geladen for musical inpainting (50–750 ms).")
             else:
-                logger.debug("GACELA: model not ready, DSP fallback will be used.")
+                logger.debug("GACELA: model not ready, DSP Ersatzpfad will be used.")
             return plugin if plugin._model_ready else None  # pylint: disable=protected-access
         except Exception as exc:
-            logger.debug("GACELA plugin unavailable: %s", exc)
+            logger.debug("GACELA plugin nicht verfuegbar: %s", exc)
             return None
 
     def _get_audioldm2_plugin(self):
@@ -563,12 +563,12 @@ class DropoutRepairPhase(PhaseInterface):
             plugin = get_audioldm2_plugin()
             self._audioldm2_plugin = plugin
             if plugin._ok:  # pylint: disable=protected-access
-                logger.info("AudioLDM2 plugin loaded for very-long dropout synthesis (> 3 s).")
+                logger.info("AudioLDM2 plugin geladen for very-long dropout synthesis (> 3 s).")
             else:
-                logger.debug("AudioLDM2: model not ready, FlashSR/DSP fallback will be used.")
+                logger.debug("AudioLDM2: model not ready, FlashSR/DSP Ersatzpfad will be used.")
             return plugin if plugin._ok else None  # pylint: disable=protected-access
         except Exception as exc:
-            logger.debug("AudioLDM2 plugin unavailable: %s", exc)
+            logger.debug("AudioLDM2 plugin nicht verfuegbar: %s", exc)
             return None
 
     @staticmethod
@@ -754,7 +754,7 @@ class DropoutRepairPhase(PhaseInterface):
 
             except Exception as exc:
                 logger.warning(
-                    "AudioLDM2: repair failed for dropout [%d, %d]: %s — routing to FlashSR fallback.",
+                    "AudioLDM2: repair fehlgeschlagen for dropout [%d, %d]: %s — routing to FlashSR Ersatzpfad.",
                     start,
                     end,
                     exc,
@@ -841,7 +841,7 @@ class DropoutRepairPhase(PhaseInterface):
                 )
 
             except Exception as exc:
-                logger.debug("GACELA inpaint failed at %.2fs: %s", start / self.sample_rate, exc)
+                logger.debug("GACELA inpaint fehlgeschlagen at %.2fs: %s", start / self.sample_rate, exc)
                 failed.append((start, end))
 
         repaired_n = len(dropouts) - len(failed)
@@ -921,9 +921,9 @@ class DropoutRepairPhase(PhaseInterface):
         if QUALITY_MODE_AVAILABLE and quality_mode:
             try:
                 qm = QualityMode[quality_mode.upper()]
-                use_ml = should_use_ml(24, qm)  # Phase 24
+                use_ml = qm.is_ml_enabled  # Phase 24
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Get material-specific parameters
         params = dict(self.MATERIAL_PARAMS.get(material_type, self.MATERIAL_PARAMS["unknown"]))
@@ -950,7 +950,7 @@ class DropoutRepairPhase(PhaseInterface):
                     _zone_frac_24 = float(np.clip(_zone_s_24 / max(1, _n_s_24), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_24 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_24:
-                logger.debug("Phase24 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_24)
+                logger.debug("Verarbeitungsschritt24 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_24)
 
         # §v10.96 Defekt-basiertes Skip-Gate: Dropout-Dichte vor Ausführung.
         # Wenn der DefectScanner keine Dropouts gefunden hat (density < 0.001),
@@ -961,7 +961,9 @@ class DropoutRepairPhase(PhaseInterface):
         if _dropout_density <= 0.0:
             _rctx_fb24 = kwargs.get("_restoration_context", {}) or {}
             _defect_scores_fb24 = _rctx_fb24.get("defect_scores", _rctx_fb24.get("defect_focus_scores", {})) or {}
-            _dropout_density = float(_defect_scores_fb24.get("dropout_oxide", _defect_scores_fb24.get("dropout", 0.0)) or 0.0)
+            _dropout_density = float(
+                _defect_scores_fb24.get("dropout_oxide", _defect_scores_fb24.get("dropout", 0.0)) or 0.0
+            )
         if _dropout_density < 0.001 and _effective_strength > 0.0:
             # §v10.303: Erste Meldung als INFO, Wiederholungen als DEBUG (Log-Spam-Prävention)
             _log_fn = logger.info if not getattr(self, "_dropout_skip_logged", False) else logger.debug
@@ -1017,11 +1019,11 @@ class DropoutRepairPhase(PhaseInterface):
             if _ssip_zones_p24:
                 _repaired_gaps = list(_repaired_gaps) + _ssip_zones_p24
                 logger.debug(
-                    "§2.68 SSIP phase_24: %d strukturelle Stille-Zone(n) als pre-repaired markiert",
+                    "§2.68 SSIP Verarbeitungsschritt_24: %d strukturelle Stille-Zone(n) als pre-repaired markiert",
                     len(_ssip_zones_p24),
                 )
         except Exception as _ssip_exc_p24:
-            logger.debug("SSIP phase_24 non-blocking: %s", _ssip_exc_p24)
+            logger.debug("SSIP Verarbeitungsschritt_24 nicht blockierend: %s", _ssip_exc_p24)
 
         # §silence-guarantee: gewollte Stille sind KEINE Dropouts — Stille-Zonen zur
         # pre-repaired-Liste hinzufügen, damit die Dropout-Erkennung sie überspringt.
@@ -1044,12 +1046,12 @@ class DropoutRepairPhase(PhaseInterface):
                     _silence_zones_p24 = list(zip(_sil_zone_starts, _sil_zone_ends))
                     _repaired_gaps = list(_repaired_gaps) + _silence_zones_p24
                     logger.debug(
-                        "§silence-guarantee phase_24: %d Stille-Zone(n) als pre-repaired markiert"
+                        "§silence-guarantee Verarbeitungsschritt_24: %d Stille-Zone(n) als pre-repaired markiert"
                         " — Dropout-Reparatur überspringt sie",
                         len(_silence_zones_p24),
                     )
             except Exception as _sil_exc_p24:
-                logger.debug("§silence-guarantee phase_24: non-blocking error: %s", _sil_exc_p24)
+                logger.debug("§silence-guarantee Verarbeitungsschritt_24: nicht blockierend error: %s", _sil_exc_p24)
 
         # §V38 VFA-Schutzzonen für per-Event-Strength-Oracle sammeln (§0p Vocal-Supremacy)
         _p24_protected_zones: list[tuple[float, float, float]] = []
@@ -1057,27 +1059,27 @@ class DropoutRepairPhase(PhaseInterface):
             try:
                 _p24_protected_zones.append((float(_z[0]), float(_z[1]), 0.20))  # §0p Vibrato-Schutz
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("frisson_zones") or []:
             try:
                 _fz_s = float(getattr(_z, "start_s", None) or _z[0])
                 _fz_e = float(getattr(_z, "end_s", None) or _z[1])
                 _p24_protected_zones.append((_fz_s, _fz_e, 0.30))  # Frisson sakrosankt
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("whisper_zones") or []:
             try:
                 _p24_protected_zones.append((float(_z[0]), float(_z[1]), 0.25))  # Flüsterpassagen
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("passaggio_zones") or []:
             try:
                 _p24_protected_zones.append((float(_z[0]), float(_z[1]), 0.35))  # Passaggio-Übergänge
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         if _p24_protected_zones:
             logger.debug(
-                "§V38 phase_24: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
+                "§V38 Verarbeitungsschritt_24: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
                 len(_p24_protected_zones),
             )
 
@@ -1249,7 +1251,7 @@ class DropoutRepairPhase(PhaseInterface):
                 _alpha = float(np.clip(0.06 + (_residual / 8.0), 0.06, 0.24))
                 repaired_audio = np.clip((1.0 - _alpha) * repaired_audio + _alpha * audio, -1.0, 1.0)
                 logger.warning(
-                    "Phase 24 hard loudness rescue: material=%s rms_drop=%.2f dB > %.2f dB, dry_blend=%.3f",
+                    "Verarbeitungsschritt 24 hard loudness rescue: material=%s rms_drop=%.2f dB > %.2f dB, dry_blend=%.3f",
                     self._current_material,
                     _drop_db,
                     _max_drop_db,
@@ -1274,7 +1276,10 @@ class DropoutRepairPhase(PhaseInterface):
                     sr=sample_rate,
                 )
             except Exception as _ssip_audit_p24_exc:
-                logger.debug("SSIP post_inpainting_silence_audit phase_24 (non-blocking): %s", _ssip_audit_p24_exc)
+                logger.debug(
+                    "SSIP post_inpainting_silence_audit Verarbeitungsschritt_24 (nicht blockierend): %s",
+                    _ssip_audit_p24_exc,
+                )
 
         # §2.46e Hallucination-Guard: Dropout-Reparatur darf keine nicht-originären
         # Spektralanteile einführen (VERBOTEN-§2.46e).
@@ -1287,9 +1292,9 @@ class DropoutRepairPhase(PhaseInterface):
             _hg_result_24 = _hg_24(audio, repaired_audio, sr=sample_rate, mode=_mode_24)
             if getattr(_hg_result_24, "requires_rollback", False):
                 repaired_audio = audio.copy()
-                logger.warning("Phase24 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
+                logger.warning("Verarbeitungsschritt24 §2.46e Hallucination-Guard Rollback (spectral_novelty > 0.15)")
         except Exception as _hg_exc_24:
-            logger.debug("Phase24 §2.46e Hallucination-Guard (non-blocking): %s", _hg_exc_24)
+            logger.debug("Verarbeitungsschritt24 §2.46e Hallucination-Guard (nicht blockierend): %s", _hg_exc_24)
 
         # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Dropout-Reparatur darf Spektralfarbe nicht verändern
         try:
@@ -1301,9 +1306,9 @@ class DropoutRepairPhase(PhaseInterface):
             if not _sc24.ok:
                 _sc24_wet = 0.70
                 repaired_audio = (_sc24_wet * repaired_audio + (1.0 - _sc24_wet) * audio).astype(np.float32)
-                logger.warning("§V24 phase_24 spectral_color non-ok → strength −30%%")
+                logger.warning("§V24 Verarbeitungsschritt_24 spectral_color non-ok → strength −30%%")
         except Exception as _sc24_exc:
-            logger.debug("§V24 phase_24 spectral_color (non-blocking): %s", _sc24_exc)
+            logger.debug("§V24 Verarbeitungsschritt_24 spectral_color (nicht blockierend): %s", _sc24_exc)
 
         return create_phase_result(
             audio=repaired_audio,
@@ -1445,7 +1450,7 @@ class DropoutRepairPhase(PhaseInterface):
         stats["lag_corrected"] = True
         stats["lag_output_corrected_samples"] = int(lag_delta)
         logger.info(
-            "Phase 24 stereo-lag safety (STCG): corrected delta=%.1f samples (in=%d out=%d)",
+            "Verarbeitungsschritt 24 stereo-lag safety (STCG): corrected delta=%.1f samples (in=%d out=%d)",
             lag_delta,
             int(lag_in),
             int(lag_out),
@@ -1492,7 +1497,9 @@ class DropoutRepairPhase(PhaseInterface):
         # **GUARD: Short-Audio-Buffer (§2.47, §0 Primum non nocere)**
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_24: audio too short (%d < %d), no dropouts detected", len(audio), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_24: audio too short (%d < %d), no dropouts erkannt", len(audio), MIN_AUDIO_SAMPLES
+            )
             return []  # No dropouts in ultra-short audio
 
         # RMS envelope
@@ -1566,7 +1573,7 @@ class DropoutRepairPhase(PhaseInterface):
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
             logger.debug(
-                "phase_24: audio too short (%d < %d) for spectral gap detection",
+                "Verarbeitungsschritt_24: audio too short (%d < %d) for spectral gap detection",
                 len(audio),
                 MIN_AUDIO_SAMPLES,
             )
@@ -1796,7 +1803,7 @@ class DropoutRepairPhase(PhaseInterface):
                 ml_repaired_count += len(long_dropouts)
                 logger.info("%d long dropout(s) repaired via FlashSR.", len(long_dropouts))
             else:
-                logger.warning("FlashSR dropout repair failed, falling back to DSP")
+                logger.warning("FlashSR dropout repair fehlgeschlagen, falling back to DSP")
                 normal_dropouts.extend(long_dropouts)
         else:
             normal_dropouts.extend(long_dropouts)
@@ -1810,7 +1817,7 @@ class DropoutRepairPhase(PhaseInterface):
                 sr_success = self._repair_with_flashsr(repaired, ldm2_failed)
                 if sr_success:
                     ml_repaired_count += len(ldm2_failed)
-                    logger.info("%d AudioLDM2-failed dropout(s) recovered via FlashSR.", len(ldm2_failed))
+                    logger.info("%d AudioLDM2-fehlgeschlagen dropout(s) recovered via FlashSR.", len(ldm2_failed))
                 else:
                     normal_dropouts.extend(ldm2_failed)
         else:
@@ -1845,7 +1852,7 @@ class DropoutRepairPhase(PhaseInterface):
                         elif _pclass in ("vowel_stressed", "vowel_unstressed"):
                             content_type = "tonal"  # harmonic, sinusoidal repair preferred
                 except Exception as _ptl_exc:
-                    logger.debug("Phoneme-guided content typing failed for dropout segment: %s", _ptl_exc)
+                    logger.debug("Phoneme-guided content typing fehlgeschlagen for dropout segment: %s", _ptl_exc)
 
             # Repair based on content type
             if content_type == "tonal":
@@ -1937,7 +1944,7 @@ class DropoutRepairPhase(PhaseInterface):
             gap_len = end - start
             if not self._has_sufficient_ml_headroom(audio, self.sample_rate):
                 logger.warning(
-                    "FlashSR: insufficient headroom after dropout %d/%d — stopping", drop_idx + 1, len(dropouts)
+                    "FlashSR: insufficient headroom after dropout %d/%d — stoppe", drop_idx + 1, len(dropouts)
                 )
                 break
 
@@ -1949,7 +1956,7 @@ class DropoutRepairPhase(PhaseInterface):
             if window_len > _max_samps:
                 # Window is too long for responsive processing — fall back to DSP
                 logger.debug(
-                    "FlashSR: dropout %d/%d window %.1f s > %.1f s cap — skip to DSP fallback",
+                    "FlashSR: dropout %d/%d window %.1f s > %.1f s cap — ueberspringen to DSP Ersatzpfad",
                     drop_idx + 1,
                     len(dropouts),
                     window_len / self.sample_rate,
@@ -1962,12 +1969,14 @@ class DropoutRepairPhase(PhaseInterface):
             try:
                 repaired_window = plugin.process(window_orig, self.sample_rate, target_sr=self.sample_rate)
             except Exception as _exc:
-                logger.warning("FlashSR: window repair failed for dropout %d/%d: %s", drop_idx + 1, len(dropouts), _exc)
+                logger.warning(
+                    "FlashSR: window repair fehlgeschlagen for dropout %d/%d: %s", drop_idx + 1, len(dropouts), _exc
+                )
                 continue
 
             if len(repaired_window) != window_len:
                 logger.warning(
-                    "FlashSR: output length mismatch for dropout %d/%d (%d vs %d)",
+                    "FlashSR: Ausgabe length mismatch for dropout %d/%d (%d vs %d)",
                     drop_idx + 1,
                     len(dropouts),
                     len(repaired_window),
@@ -2283,7 +2292,7 @@ class DropoutRepairPhase(PhaseInterface):
             return np.clip(np.nan_to_num(audio_fill), -1.0, 1.0)  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.debug("Sinusoidal repair fehlgeschlagen: %s, Fallback Spline", exc)
+            logger.debug("Sinusoidal repair fehlgeschlagen: %s, Ersatzpfad Spline", exc)
             # Fallback: kubische Spline-Interpolation
             x = np.array([0, gap_length + 1], dtype=np.float64)
             y = np.array([before[-1], after[0]], dtype=np.float64)
@@ -2390,7 +2399,7 @@ class DropoutRepairPhase(PhaseInterface):
             return np.clip(np.nan_to_num(audio_fill), -1.0, 1.0)  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.debug("NMF-β repair fehlgeschlagen: %s, Fallback Rausch-Synthese", exc)
+            logger.debug("NMF-β repair fehlgeschlagen: %s, Ersatzpfad Rausch-Synthese", exc)
             context = np.concatenate([before, after])
             noise_std = float(np.std(context)) + 1e-10
             # §2.40 Determinismus: content-derived seed for reproducible noise synthesis
@@ -2417,7 +2426,7 @@ if __name__ == "__main__":
     # Test Professional Dropout Repair Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Dropout Repair Phase v2.0 - Test")
+    logger.debug("Professional Dropout Repair Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -2457,7 +2466,7 @@ if __name__ == "__main__":
         _test_result = phase.process(_test_audio.copy(), sample_rate=_test_sr, material_type=_test_material)
 
         if _test_result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f× realtime)",
                 _test_result.metadata["execution_time_seconds"],
@@ -2467,15 +2476,15 @@ if __name__ == "__main__":
             logger.debug("   Avg Duration: %.1fms", _test_result.modifications["avg_dropout_duration_ms"])
             logger.debug("   Max Duration: %.1fms", _test_result.modifications["max_dropout_duration_ms"])
             logger.debug("   Repair Strength: %.2f", _test_result.modifications["repair_strength"])
-            logger.debug("   Phase Continuity: %.2f", _test_result.metadata["phase_continuity"])
+            logger.debug("   Verarbeitungsschritt Continuity: %.2f", _test_result.metadata["phase_continuity"])
             logger.debug("   Warnings: %s", _test_result.warnings if _test_result.warnings else "None")
         else:
-            logger.debug("❌ Processing Failed!")
+            logger.debug("❌ Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Dropout Repair v2.0 Test Complete!")
+    logger.debug("✅ Professional Dropout Repair v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _test_result.metadata["algorithm"])
-    logger.debug("Scientific Reference: %s", _test_result.metadata["scientific_ref"])
+    logger.debug("Scientific Referenz: %s", _test_result.metadata["scientific_ref"])
     logger.debug("Benchmark: %s", _test_result.metadata["benchmark"])
     logger.debug("Quality Imp: 0.94 (Professional-Grade)")

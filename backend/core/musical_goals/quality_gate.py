@@ -162,7 +162,7 @@ class MusicalGoalsQualityGate:
         self._score_cache_max_entries: int = 64
 
         logger.info(
-            "MusicalGoalsQualityGate initialized (strict_mode=%s, critical_threshold=%s)",
+            "MusicalGoalsQualityGate initialisiert (strict_Betriebsart=%s, critical_Schwelle=%s)",
             strict_mode,
             critical_threshold,
         )
@@ -237,13 +237,13 @@ class MusicalGoalsQualityGate:
         edge_cases = []
 
         mode_str = mode.value if hasattr(mode, "value") else str(mode)
-        logger.info("Pre-Check started (mode=%s)", mode_str)
+        logger.info("Pre-Pruefung gestartet (Betriebsart=%s)", mode_str)
 
         # Measure baseline Musical Goals
         try:
             baseline = self._measure_scores(audio, sr)
         except Exception as e:
-            logger.error("Pre-Check failed: %s", e)
+            logger.error("Pre-Pruefung fehlgeschlagen: %s", e)
             return PreCheckResult(
                 passed=False,
                 measurable=False,
@@ -263,7 +263,7 @@ class MusicalGoalsQualityGate:
         edge_cases_detected = self._detect_edge_cases(audio, sr, baseline, context)
         if edge_cases_detected:
             edge_cases.extend(edge_cases_detected)
-            logger.warning("Edge cases detected: %s", edge_cases_detected)
+            logger.warning("Edge cases erkannt: %s", edge_cases_detected)
 
         # Check for extreme degradation
         if self._is_extremely_degraded(audio, sr, baseline):
@@ -297,7 +297,9 @@ class MusicalGoalsQualityGate:
             recommendation=recommendation,
         )
 
-        logger.info("Pre-Check complete: passed=%s, warnings=%s, edge_cases=%s", passed, len(warnings), len(edge_cases))
+        logger.info(
+            "Pre-Pruefung vollstaendig: passed=%s, warnings=%s, edge_cases=%s", passed, len(warnings), len(edge_cases)
+        )
 
         return result
 
@@ -343,21 +345,21 @@ class MusicalGoalsQualityGate:
         context = context or {}
 
         mode_str = mode.value if hasattr(mode, "value") else str(mode)
-        logger.info("Post-Check started (mode=%s)", mode_str)
+        logger.info("Post-Pruefung gestartet (Betriebsart=%s)", mode_str)
 
         # Measure baseline if not provided
         if baseline_scores is None:
             try:
                 baseline_scores = self._measure_scores(original, sr)
             except Exception as e:
-                logger.error("Baseline measurement failed: %s", e)
+                logger.error("Baseline measurement fehlgeschlagen: %s", e)
                 baseline_scores = {}
 
         # Measure achieved goals
         try:
             achieved_scores = self._measure_scores(processed, sr)
         except Exception as e:
-            logger.error("Post-Check measurement failed: %s", e)
+            logger.error("Post-Pruefung measurement fehlgeschlagen: %s", e)
             return PostCheckResult(
                 passed=False,
                 decision=QualityGateDecision.FAILED,
@@ -378,7 +380,7 @@ class MusicalGoalsQualityGate:
             mode_config = PROCESSING_MODE_CONFIGS[mode]
             thresholds = mode_config.musical_goals
             mode_str = mode.value if hasattr(mode, "value") else str(mode)
-            logger.info("Using DEFAULT thresholds (mode: %s)", mode_str)
+            logger.info("Using DEFAULT thresholds (Betriebsart: %s)", mode_str)
 
         # Check for violations
         violations = {}
@@ -425,7 +427,7 @@ class MusicalGoalsQualityGate:
                 if achieved < _goal_critical:
                     critical_violations.append(goal_name)
                     logger.error(
-                        "CRITICAL VIOLATION: %s = %.3f < %.2f (threshold: %.3f)",
+                        "CRITICAL VIOLATION: %s = %.3f < %.2f (Schwelle: %.3f)",
                         goal_name,
                         achieved,
                         _goal_critical,
@@ -491,7 +493,7 @@ class MusicalGoalsQualityGate:
 
         decision_str = decision.value if hasattr(decision, "value") else str(decision)
         logger.info(
-            "Post-Check complete: passed=%s, violations=%d, critical=%d, improvements=%d, decision=%s",
+            "Post-Pruefung vollstaendig: passed=%s, violations=%d, critical=%d, improvements=%d, decision=%s",
             passed,
             len(violations),
             len(critical_violations),
@@ -558,7 +560,7 @@ class MusicalGoalsQualityGate:
         processing_steps = processing_steps or []
 
         mode_str = mode.value if hasattr(mode, "value") else str(mode)
-        logger.info("Full validation started (session=%s, mode=%s)", session_id, mode_str)
+        logger.info("Full Validierung gestartet (Sitzung=%s, Betriebsart=%s)", session_id, mode_str)
 
         # Pre-Check
         pre_check = self.pre_check(original, sr, mode)
@@ -600,7 +602,7 @@ class MusicalGoalsQualityGate:
             report.final_decision.value if hasattr(report.final_decision, "value") else str(report.final_decision)
         )
         logger.info(
-            "Full validation complete: pre_passed=%s, post_passed=%s, final_decision=%s",
+            "Full Validierung vollstaendig: pre_passed=%s, post_passed=%s, final_decision=%s",
             pre_check.passed,
             post_check.passed,
             final_decision_str,
@@ -755,7 +757,7 @@ class MusicalGoalsQualityGate:
     def clear_reports(self) -> None:
         """Löscht report history."""
         self.reports.clear()
-        logger.info("Report history cleared")
+        logger.info("Report history geleert")
 
 
 # =============================================================================
@@ -904,7 +906,7 @@ class EnhancedQualityGate:
         self._reprocessing_engine = None
 
         logger.info(
-            "EnhancedQualityGate initialized: perceptual=%s, auto_reprocessing=%s, weights=%s",
+            "EnhancedQualityGate initialisiert: perceptual=%s, auto_reprocessing=%s, weights=%s",
             enable_perceptual_metrics,
             enable_auto_reprocessing,
             metric_weights,
@@ -929,9 +931,9 @@ class EnhancedQualityGate:
                 from plugins.visqol_plugin import ViSQOLPlugin
 
                 self._visqol_plugin = ViSQOLPlugin()  # type: ignore[assignment]
-                logger.info("ViSQOL plugin loaded")
+                logger.info("ViSQOL plugin geladen")
             except Exception as e:
-                logger.warning("ViSQOL plugin unavailable: %s", e)
+                logger.warning("ViSQOL plugin nicht verfuegbar: %s", e)
         return self._visqol_plugin
 
     def _get_versa_plugin(self):
@@ -941,9 +943,9 @@ class EnhancedQualityGate:
                 from plugins.versa_plugin import get_versa_plugin
 
                 self._versa_plugin = get_versa_plugin()  # type: ignore[assignment]
-                logger.info("VERSA plugin loaded (§4.4)")
+                logger.info("VERSA plugin geladen (§4.4)")
             except Exception as e:
-                logger.warning("VERSA plugin unavailable: %s", e)
+                logger.warning("VERSA plugin nicht verfuegbar: %s", e)
         return self._versa_plugin
 
     def _get_reprocessing_engine(self):
@@ -954,7 +956,7 @@ class EnhancedQualityGate:
             self._reprocessing_engine = AutoReprocessingEngine(  # type: ignore[assignment]
                 max_attempts=5, min_improvement=0.02, enable_hybrid_fallback=True, enable_forensic_guidance=True
             )
-            logger.info("Auto-reprocessing engine loaded")
+            logger.info("Auto-reprocessing engine geladen")
         return self._reprocessing_engine
 
     def _measure_perceptual_metrics(
@@ -1010,7 +1012,7 @@ class EnhancedQualityGate:
 
                         ref_path.unlink(missing_ok=True)
                     except Exception as e:
-                        logger.warning("ViSQOL failed: %s", e)
+                        logger.warning("ViSQOL fehlgeschlagen: %s", e)
 
             # VERSA (non-reference MOS, §4.4 CDPAM-Nachfolger)
             versa_score = 0.0
@@ -1031,7 +1033,7 @@ class EnhancedQualityGate:
                     # MOS [1,5] → [0,100] für PerceptualMetrics.versa_score
                     versa_score = float(np.clip((versa_result.mos - 1.0) / 4.0 * 100.0, 0.0, 100.0))
                 except Exception as e:
-                    logger.warning("VERSA failed: %s", e)
+                    logger.warning("VERSA fehlgeschlagen: %s", e)
 
             return PerceptualMetrics(
                 nisqa_mos=nisqa_mos,
@@ -1135,7 +1137,7 @@ class EnhancedQualityGate:
         perceptual_degradations = {}
 
         if self.enable_perceptual_metrics:
-            logger.info("Measuring perceptual metrics on processed...")
+            logger.info("Measuring perceptual metrics on verarbeitet...")
             perceptual_achieved = self._measure_perceptual_metrics(processed, sr, reference=original)
 
             # Calculate improvements/degradations
@@ -1309,7 +1311,7 @@ class EnhancedQualityGate:
         session_id = session_id or f"eqg_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
         logger.info(
-            "Enhanced validation started (session=%s, mode=%s, auto_reprocessing=%s)",
+            "verbessert Validierung gestartet (Sitzung=%s, Betriebsart=%s, auto_reprocessing=%s)",
             session_id,
             mode.value,
             self.enable_auto_reprocessing,
@@ -1335,7 +1337,9 @@ class EnhancedQualityGate:
             and self.enable_auto_reprocessing
             and post_check.decision in [QualityGateDecision.ROLLBACK_REQUIRED, QualityGateDecision.WARNING]
         ):
-            logger.info("Quality gates failed (%s), triggering automatic reprocessing...", post_check.decision.value)
+            logger.info(
+                "Quality gates fehlgeschlagen (%s), triggering automatic reprocessing...", post_check.decision.value
+            )
 
             # Define quality validator for reprocessing engine
             def quality_validator(orig, proc, sample_rate):
@@ -1379,7 +1383,7 @@ class EnhancedQualityGate:
             )
 
             logger.info(
-                "Auto-reprocessing complete: success=%s, attempts=%d, strategy=%s",
+                "Auto-reprocessing vollstaendig: success=%s, attempts=%d, strategy=%s",
                 reprocessing_result.success,
                 reprocessing_result.total_attempts,
                 reprocessing_result.strategy_used.value,
@@ -1411,13 +1415,13 @@ class EnhancedQualityGate:
                 return processed, post_check
             else:
                 logger.warning(
-                    "Quality gates failed but auto-reprocessing disabled. Decision: %s",
+                    "Quality gates fehlgeschlagen but auto-reprocessing deaktiviert. Decision: %s",
                     post_check.decision.value,
                 )
 
                 # Rollback to original if critical
                 if post_check.decision == QualityGateDecision.ROLLBACK_REQUIRED:
-                    logger.warning("Rolling back to original audio")
+                    logger.warning("Rolling back to Originalsignal audio")
                     return original, post_check
                 else:
                     return processed, post_check

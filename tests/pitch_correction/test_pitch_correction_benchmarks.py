@@ -9,6 +9,7 @@ Benchmarks:
 """
 
 import time
+from typing import Any
 
 import numpy as np
 import pytest
@@ -32,7 +33,7 @@ MODEL_CAPACITIES = ["tiny", "small", "medium", "large", "full"]
 @pytest.fixture(scope="module")
 def benchmark_audio():
     """Generate benchmark audio samples"""
-    samples = {}
+    samples: dict[Any, Any] = {}
 
     for sr in SAMPLE_RATES:
         samples[sr] = {}

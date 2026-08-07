@@ -61,7 +61,11 @@ class MergeStemsSOTA:
         self.spectral_weight = spectral_weight
         self.phase_align = phase_align
         self.loudness_match = loudness_match
-        logger.info("MergeStemsSOTA initialized: spectral_weight=%s, phase_align=%s", spectral_weight, phase_align)
+        logger.info(
+            "MergeStemsSOTA initialisiert: spectral_weight=%s, Verarbeitungsschritt_align=%s",
+            spectral_weight,
+            phase_align,
+        )
 
     def merge(
         self,

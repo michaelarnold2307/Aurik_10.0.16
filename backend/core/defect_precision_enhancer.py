@@ -254,7 +254,7 @@ class DefectPrecisionEnhancer:
                 else:
                     result[s0:s1] = repaired_segment
             except Exception:
-                logger.debug("Precision repair %d at sample %d failed, skipping", i, d.start_sample)
+                logger.debug("Precision repair %d at sample %d fehlgeschlagen, skipping", i, d.start_sample)
 
         return result
 
@@ -297,10 +297,10 @@ class DefectPrecisionEnhancer:
             # §AF: DynamicsGuard continuity check at repair boundaries
             boundary_ok = True
             try:
-                continuity = self._dynamics.verify_continuity(mono_after, sr, s0, s1)
-                boundary_ok = continuity.get("ok", True)
+                continuity = self._dynamics.verify_continuity(mono_after, sr, [s0, s1])
+                boundary_ok = continuity.continuity_ok
             except Exception as e:
-                logger.warning("defect_precision_enhancer.py::verify_repair fallback: %s", e)
+                logger.warning("defect_precision_enhancer.py::pruefen_repair Ersatzpfad: %s", e)
 
             if after_rms < before_rms * 0.1:
                 # Over-repair: signal removed entirely
@@ -384,8 +384,9 @@ class _SimpleMaskingModel:
             smr = 10.0 * np.log10(mask_energy / total_energy + 1e-12)
 
             # Audibility: defect must stand out from background
-            return smr > -25  # audible if SMR > -25 dB
+            # audible if SMR > -25 dB
+            return bool(smr > -25)
 
         except Exception as e:
-            logger.warning("defect_precision_enhancer.py::is_audible fallback: %s", e)
+            logger.warning("defect_precision_enhancer.py::is_audible Ersatzpfad: %s", e)
             return True  # assume audible on error

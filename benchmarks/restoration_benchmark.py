@@ -247,7 +247,7 @@ class RestorationBenchmark:
             degraded, clean_ref = _generate_test_signal(category, self.SAMPLE_RATE, self.DURATION_S)
 
             t0 = time.perf_counter()
-            restored = self.restoration_fn(degraded, self.SAMPLE_RATE, category)
+            restored = self.restoration_fn(degraded, self.SAMPLE_RATE, category)  # type: ignore[operator]
             elapsed = time.perf_counter() - t0
 
             # Metriken
@@ -311,11 +311,11 @@ class RestorationBenchmark:
         valid = [r for r in report.test_results if r.error is None]
         if valid:
             report.summary = {
-                "MUSIC_OVR_mean": round(np.mean([r.MUSIC_OVR for r in valid]), 3),
-                "MUSIC_NAT_mean": round(np.mean([r.MUSIC_NAT for r in valid]), 3),
-                "NOISE_FLOOR_mean": round(np.mean([r.NOISE_FLOOR_dBFS for r in valid]), 1),
-                "CLICK_DENSITY_mean": round(np.mean([r.CLICK_DENSITY_ppm for r in valid]), 2),
-                "RT_FACTOR_mean": round(np.mean([r.RT_FACTOR for r in valid]), 3),
+                "MUSIC_OVR_mean": round(np.mean([r.MUSIC_OVR for r in valid]), 3),  # type: ignore[dict-item]
+                "MUSIC_NAT_mean": round(np.mean([r.MUSIC_NAT for r in valid]), 3),  # type: ignore[dict-item]
+                "NOISE_FLOOR_mean": round(np.mean([r.NOISE_FLOOR_dBFS for r in valid]), 1),  # type: ignore[dict-item]
+                "CLICK_DENSITY_mean": round(np.mean([r.CLICK_DENSITY_ppm for r in valid]), 2),  # type: ignore[dict-item]
+                "RT_FACTOR_mean": round(np.mean([r.RT_FACTOR for r in valid]), 3),  # type: ignore[dict-item]
                 "n_test_cases": len(valid),
             }
 

@@ -40,7 +40,9 @@ def _text_center(
     draw: ImageDraw.ImageDraw, cx: int, cy: int, text: str, fill: tuple = (255, 255, 255, 230), size: int = 14
 ):
     try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
+        font: ImageFont.FreeTypeFont | ImageFont.ImageFont = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size
+        )
     except OSError:
         font = ImageFont.load_default()
     bb = draw.textbbox((0, 0), text, font=font)
@@ -359,7 +361,7 @@ def gen_unknown() -> Image.Image:
 
 # ── Main ───────────────────────────────────────────────────────────────────
 
-GENERATORS: dict[str, callable] = {
+GENERATORS: dict[str, callable] = {  # type: ignore[valid-type]
     "vinyl": gen_vinyl,
     "shellac": gen_shellac,
     "lacquer_disc": gen_lacquer_disc,
@@ -383,6 +385,6 @@ GENERATORS: dict[str, callable] = {
 if __name__ == "__main__":
     print(f"Generating {len(GENERATORS)} premium carrier icons → {OUT}")
     for name, gen_fn in GENERATORS.items():
-        icon = gen_fn()
+        icon = gen_fn()  # type: ignore[misc]
         _save(icon, name)
     print("Done.")

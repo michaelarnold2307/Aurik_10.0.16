@@ -49,7 +49,7 @@ adaptive_pyint_pitch_tracking_contract = DSPContract(
         "temporal_change_budget": 0.0,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Pitch-Fehlschätzung", "expected_when": "Dummy", "severity": 0.2}],
+    side_effects=[{"risk": "Pitch-Fehlschätzung", "expected_when": "Dummy", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["pitch_accuracy"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )

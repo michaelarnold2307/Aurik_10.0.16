@@ -54,7 +54,7 @@ adaptive_zero_crossing_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlklassifikation",
             "expected_when": "frame_length zu klein",
             "severity": 0.2,

@@ -129,8 +129,8 @@ def _get_banquet_onnx_session():
                     _BANQUET_SIZE_GB = 0.05  # banquet_vinyl_final.onnx ~ 50 MB
                     if not _try_allocate("BanquetVinyl", size_gb=_BANQUET_SIZE_GB):
                         logger.warning(
-                            "ML budget exhausted — BANQUET ONNX cannot be loaded. "
-                            "Activating DSP fallback (SpectralDecrackler)."
+                            "ML Grenze exhausted — BANQUET ONNX cannot be geladen. "
+                            "Activating DSP Ersatzpfad (SpectralDecrackler)."
                         )
                         _BANQUET_ONNX_STATE["session"] = False
                         return None
@@ -146,7 +146,7 @@ def _get_banquet_onnx_session():
                             )
                         except Exception as _load_exc:
                             _ml_release("BanquetVinyl")
-                            logger.warning("BANQUET ONNX-Session load error: %s — DSP fallback active.", _load_exc)
+                            logger.warning("BANQUET ONNX-Sitzung laden error: %s — DSP Ersatzpfad active.", _load_exc)
                             _BANQUET_ONNX_STATE["session"] = False
                             return None
 
@@ -160,20 +160,20 @@ def _get_banquet_onnx_session():
                                 "BanquetVinyl", size_gb=_BANQUET_SIZE_GB, unload_fn=lambda: None
                             )
                         except Exception as _exc:
-                            logger.debug("Operation failed (non-critical): %s", _exc)
+                            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
                         logger.info(
-                            "BANQUET ONNX-Session loaded (direct access, no Docker): %s",
+                            "BANQUET ONNX-Sitzung geladen (direct access, no Docker): %s",
                             _model_path,
                         )
                     else:
                         _ml_release("BanquetVinyl")
                         logger.warning(
-                            "BANQUET ONNX model not found: %s — DSP fallback active",
+                            "BANQUET ONNX model not found: %s — DSP Ersatzpfad active",
                             _model_path,
                         )
                         _BANQUET_ONNX_STATE["session"] = False
                 except Exception as exc:
-                    logger.warning("BANQUET ONNX-Session could not be initialized: %s", exc)
+                    logger.warning("BANQUET ONNX-Sitzung could not be initialisiert: %s", exc)
                     _BANQUET_ONNX_STATE["session"] = False
     return _BANQUET_ONNX_STATE["session"] if _BANQUET_ONNX_STATE["session"] is not False else None
 
@@ -344,7 +344,7 @@ class CrackleRemovalPhase(PhaseInterface):
             try:
                 return float(goal_weights.get(name, default))
             except Exception as e:
-                logger.warning("phase_09_crackle_removal.py::_w fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_09_crackle_removal.py::_w Ersatzpfad: %s", e)
                 return default
 
         naturalness = float(np.clip(_w("natuerlichkeit"), 0.3, 2.0))
@@ -426,7 +426,7 @@ class CrackleRemovalPhase(PhaseInterface):
                         local_strength = min(local_strength, _cap)
                         break
                 except Exception:
-                    logger.debug("_compute_crackle_local_strength: silent except suppressed", exc_info=True)
+                    logger.debug("_berechnen_crackle_local_strength: silent except suppressed", exc_info=True)
         return float(np.clip(local_strength, 0.10, 1.0))
 
     @staticmethod
@@ -532,12 +532,12 @@ class CrackleRemovalPhase(PhaseInterface):
                 _before_09 = len(crackle_regions)
                 crackle_regions = [(s, e) for s, e in crackle_regions if not np.any(_smask_09[s:e])]
                 logger.debug(
-                    "§2.36 phase_09 Phonem-Schutz: %d → %d crackle_regions (Plosiv-Bursts entfernt)",
+                    "§2.36 Verarbeitungsschritt_09 Phonem-Schutz: %d → %d crackle_regions (Plosiv-Bursts entfernt)",
                     _before_09,
                     len(crackle_regions),
                 )
         except Exception as _pmask09_exc:
-            logger.debug("§2.36 phase_09 Phonem-Mask (non-blocking): %s", _pmask09_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_09 Phonem-Mask (nicht blockierend): %s", _pmask09_exc)
 
         return crackle_regions
 
@@ -565,9 +565,9 @@ class CrackleRemovalPhase(PhaseInterface):
                 from plugins.banquet_vinyl_plugin import BanquetVinylPlugin
 
                 self._banquet_plugin = BanquetVinylPlugin()  # type: ignore[assignment]
-                logger.info("BANQUET Docker plugin loaded (fallback path)")
+                logger.info("BANQUET Docker plugin geladen (Ersatzpfad path)")
             except Exception as e:
-                logger.warning("BANQUET Docker plugin not available: %s", e)
+                logger.warning("BANQUET Docker plugin not verfuegbar: %s", e)
                 self._banquet_plugin = False  # type: ignore[assignment]  # Mark as unavailable
 
         return self._banquet_plugin if self._banquet_plugin is not False else None
@@ -821,7 +821,7 @@ class CrackleRemovalPhase(PhaseInterface):
                     os.unlink(tmp_out_path)
 
         except Exception as e:
-            logger.warning("BANQUET ML processing failed (DSP fallback aktiv): %s", e)
+            logger.warning("BANQUET ML processing fehlgeschlagen (DSP Ersatzpfad aktiv): %s", e)
             raise  # Re-raise to trigger DSP fallback in process()
 
     def process(
@@ -851,13 +851,13 @@ class CrackleRemovalPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity, compute_per_band_nr_mask
 
             _pim = apply_pim_intensity(kwargs, "crackle", default_nr=0.4, default_de_ess=0.3, default_comp=1.0)
-            if "noise_reduction_strength" in kwargs:
-                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             _pim_map = kwargs.get("pim_intensity_map")
+            if _pim_map is not None and "noise_reduction_strength" in kwargs:
+                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             if _pim_map is not None:
                 _per_band_mask = compute_per_band_nr_mask(_pim_map, sample_rate)
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         assert sample_rate == 48000, f"SR must be 48000 Hz, got: {sample_rate}"
         audio, _p09_transposed = to_channels_last(audio)
         start_time = time.time()
@@ -872,7 +872,7 @@ class CrackleRemovalPhase(PhaseInterface):
 
             _get_plm_evict09().evict_for_phase("phase_09_crackle_removal")
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
 
         # Get material-specific parameters
         params = dict(self.MATERIAL_PARAMS.get(material_type, self.MATERIAL_PARAMS["unknown"]))
@@ -884,19 +884,19 @@ class CrackleRemovalPhase(PhaseInterface):
             from backend.core.adaptive_parameter_infrastructure import derive_transient_sensitivity
 
             _ts09 = derive_transient_sensitivity(audio, sample_rate)
-            _base_threshold = float(params.get("transient_threshold", 0.10))
+            _base_threshold = float(params.get("transient_threshold", 0.10))  # type: ignore[arg-type]
             # Adaptiv: onset_threshold (2–6) skaliert die Empfindlichkeit
             # Hoher Wert = viele natürliche Transienten → Schwelle anheben
             params["transient_threshold"] = float(
                 np.clip(_base_threshold * (_ts09["onset_threshold"] / 3.5), 0.01, 0.50)
             )
             logger.debug(
-                "Phase 09 adaptive: crackle_threshold=%.3f (crest=%.1f)",
+                "Verarbeitungsschritt 09 adaptive: crackle_Schwelle=%.3f (crest=%.1f)",
                 params["transient_threshold"],
                 _ts09["crest_factor"],
             )
         except Exception as _e:
-            logger.debug("backend.core.phases.phase_09_crackle_removal: non-critical exception: %s", _e)
+            logger.debug("backend.core.phases.Verarbeitungsschritt_09_crackle_removal: unkritisch exception: %s", _e)
 
         # Locality-aware modulation from UV3.
         # Sparse crackle regions should be treated conservatively to preserve texture.
@@ -915,7 +915,7 @@ class CrackleRemovalPhase(PhaseInterface):
         _goal_hint_scalar = self._goal_hint_strength_scalar(kwargs)
         _effective_strength = float(np.clip(_effective_strength * _goal_hint_scalar, 0.0, 1.0))
         if abs(_goal_hint_scalar - 1.0) > 1e-6:
-            logger.debug("Phase 09 goal-hint scalar applied: %.3f", _goal_hint_scalar)
+            logger.debug("Verarbeitungsschritt 09 goal-hint scalar angewendet: %.3f", _goal_hint_scalar)
 
         # §0p Vocal conservatism: when active singing (panns_singing ≥ 0.35)
         # crackle removal is capped at 0.70.
@@ -925,7 +925,7 @@ class CrackleRemovalPhase(PhaseInterface):
         if _panns_singing_p09 >= 0.35 and _effective_strength > 0.70:
             _effective_strength = 0.70
             logger.debug(
-                "Phase09 §0p vocal-cap: panns_singing=%.2f → effective_strength capped at 0.70",
+                "Verarbeitungsschritt09 §0p vocal-cap: panns_singing=%.2f → effective_strength capped at 0.70",
                 _panns_singing_p09,
             )
 
@@ -939,7 +939,7 @@ class CrackleRemovalPhase(PhaseInterface):
             if _ds_cr is not None:
                 _crackle_sev_p09 = float(getattr(_ds_cr, "severity", 0.0))
         except Exception as _sev_exc:
-            logger.debug("Crackle severity lookup failed, using default 0.0: %s", _sev_exc)
+            logger.debug("Crackle severity lookup fehlgeschlagen, using default 0.0: %s", _sev_exc)
         if _crackle_sev_p09 >= 0.60:  # heavy crackle → +35 % more ML output, min preserve 0.30
             params["texture_preserve"] = float(np.clip(float(params["texture_preserve"]) - 0.35, 0.30, 1.0))  # type: ignore[arg-type]
         elif _crackle_sev_p09 >= 0.35:  # moderate crackle → +15 % more ML output, min preserve 0.40
@@ -951,27 +951,27 @@ class CrackleRemovalPhase(PhaseInterface):
             try:
                 _p09_protected_zones.append((float(_z[0]), float(_z[1]), 0.20))  # §0p Vibrato-Schutz
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("frisson_zones") or []:
             try:
                 _fz_s = float(getattr(_z, "start_s", None) or _z[0])
                 _fz_e = float(getattr(_z, "end_s", None) or _z[1])
                 _p09_protected_zones.append((_fz_s, _fz_e, 0.30))  # Frisson sakrosankt
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("whisper_zones") or []:
             try:
                 _p09_protected_zones.append((float(_z[0]), float(_z[1]), 0.25))  # Flüsterpassagen
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         for _z in kwargs.get("passaggio_zones") or []:
             try:
                 _p09_protected_zones.append((float(_z[0]), float(_z[1]), 0.35))  # Passaggio-Übergänge
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         if _p09_protected_zones:
             logger.debug(
-                "§V38 phase_09: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
+                "§V38 Verarbeitungsschritt_09: %d VFA-Schutzzone(n) aktiv (Vibrato/Frisson/Flüster/Passaggio)",
                 len(_p09_protected_zones),
             )
         _p09_pz = _p09_protected_zones or None
@@ -1004,7 +1004,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 _after = apply_per_band_mask(_before, _per_band_mask, sample_rate, mix=0.55)
                 audio = _after
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
 
         # ML-Hybrid Decision: BANQUET for Vinyl (auch via Transferkette)
         # §2.45a-I: Gated-RMS — only musical frames (> −50 dBFS) contribute
@@ -1069,7 +1069,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 )
             except Exception as exc:
                 logger.warning(
-                    "BANQUET ONNX direct inference failed: %s — attempting Docker plugin",
+                    "BANQUET ONNX direct inference fehlgeschlagen: %s — attempting Docker plugin",
                     exc,
                 )
 
@@ -1114,7 +1114,7 @@ class CrackleRemovalPhase(PhaseInterface):
                             },
                         )
                     except Exception as exc2:
-                        logger.warning("BANQUET Docker plugin failed: %s — DSP fallback", exc2)
+                        logger.warning("BANQUET Docker plugin fehlgeschlagen: %s — DSP Ersatzpfad", exc2)
                 else:
                     if QUALITY_MODE_AVAILABLE:
                         log_mode_decision("phase_09", False, "BANQUET not available (ONNX+Docker)")
@@ -1217,7 +1217,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 _rms_out_09_db = _gated_rms_dbfs_09(np.asarray(restored, dtype=np.float32))
                 _rms_drop_09 = (_rms_out_09_db - _rms_in_09_db) if _rms_in_09_db > -80.0 else 0.0
                 logger.info(
-                    "Phase 09 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (frame-gated)",
+                    "Verarbeitungsschritt 09 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (frame-gated)",
                     material_type,
                     _rms_drop_09,
                     _makeup_09,
@@ -1255,9 +1255,9 @@ class CrackleRemovalPhase(PhaseInterface):
                 # Wenn die Rauschtextur nach Crackle-Entfernung zu stark vom
                 # Original abweicht (>0.25), wird per 50%-Blend zurückgeregelt —
                 # "do no harm" für den natürlichen Noise-Charakter.
-                logger.info("§V19 phase_09 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt09_d)
+                logger.info("§V19 Verarbeitungsschritt_09 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt09_d)
         except Exception as _nt09_exc:
-            logger.debug("§V19 phase_09 noise_texture_guard (non-blocking): %s", _nt09_exc)
+            logger.debug("§V19 Verarbeitungsschritt_09 noise_texture_guard (nicht blockierend): %s", _nt09_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -1284,7 +1284,7 @@ class CrackleRemovalPhase(PhaseInterface):
             if not _sc09.ok:
                 restored = (0.70 * restored + 0.30 * audio).astype(np.float32)
         except Exception as _sc09_exc:
-            logger.debug("§V24 phase_09 spectral_color_guard (non-blocking): %s", _sc09_exc)
+            logger.debug("§V24 Verarbeitungsschritt_09 spectral_color_guard (nicht blockierend): %s", _sc09_exc)
 
         # §2.71 Strength-Envelope: Chirurgische Crackle-Entfernung
         _strength_env = kwargs.get("strength_envelope")
@@ -1302,10 +1302,11 @@ class CrackleRemovalPhase(PhaseInterface):
                 )
                 if float(np.mean(np.abs(restored - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 09: Δ=%.4f RMS", float(np.mean(np.abs(restored - _env_pre)))
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 09: Δ=%.4f RMS",
+                        float(np.mean(np.abs(restored - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return create_phase_result(
             audio=restored,
@@ -1750,7 +1751,7 @@ class CrackleRemovalPhase(PhaseInterface):
             return np.asarray(audio_fill, dtype=np.float32)  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.debug("Spectral interpolation failed (%s), using linear.", exc)
+            logger.debug("Spectral interpolation fehlgeschlagen (%s), using linear.", exc)
             return self._interpolate_linear(audio, gap_start, gap_end)
 
     def _interpolate_hybrid(
@@ -1778,7 +1779,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 return result  # type: ignore[no-any-return]
             return self._ar_fill_channel(audio, gap_start, gap_end, before_start, after_end)
         except Exception as exc:
-            logger.debug("AR interpolation failed (%s), falling back to linear.", exc)
+            logger.debug("AR interpolation fehlgeschlagen (%s), falling back to linear.", exc)
             return self._interpolate_linear(audio, gap_start, gap_end)
 
     def _ar_fill_channel(
@@ -1871,7 +1872,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 return np.zeros(n_samples, dtype=np.float32)  # type: ignore[no-any-return]
             return result  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("AR prediction failed (%s), returning zeros.", exc)
+            logger.debug("AR prediction fehlgeschlagen (%s), returning zeros.", exc)
             return np.zeros(n_samples, dtype=np.float32)  # type: ignore[no-any-return]
 
     def _burg_predictor_coeffs(self, context: np.ndarray, order: int) -> np.ndarray | None:
@@ -1933,7 +1934,9 @@ class CrackleRemovalPhase(PhaseInterface):
                 return None
             return np.asarray(a_coeffs, dtype=np.float64)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("phase_09_crackle_removal.py::_yule_walker_predictor_coeffs fallback: %s", e)
+            logger.warning(
+                "Verarbeitungsschritt_09_crackle_removal.py::_yule_walker_predictor_coeffs Ersatzpfad: %s", e
+            )
             return None
 
     def _interpolate_linear(self, audio: np.ndarray, gap_start: int, gap_end: int) -> np.ndarray:
@@ -1975,7 +1978,7 @@ class CrackleRemovalPhase(PhaseInterface):
             hf_before = signal.sosfilt(sos, before)
             hf_after = signal.sosfilt(sos, after)
         except Exception as e:
-            logger.warning("phase_09_crackle_removal.py::_measure_crackle_reduction fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_09_crackle_removal.py::_measure_crackle_reduction Ersatzpfad: %s", e)
             return 0.0
 
         # Measure impulsive energy (peak detection)
@@ -1998,7 +2001,7 @@ if __name__ == "__main__":
     # Test Professional Crackle Removal Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Crackle Removal Phase v2.0 - Test")
+    logger.debug("Professional Crackle Removal Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -2046,7 +2049,7 @@ if __name__ == "__main__":
         _result = phase.process(_audio.copy(), material_type=_material)
 
         if _result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f\u00d7 realtime)",
                 _result.metadata["execution_time_seconds"],
@@ -2060,12 +2063,12 @@ if __name__ == "__main__":
             logger.debug("   Interpolation: %s", _result.metadata["interpolation_method"])
             logger.debug("   Warnings: %s", _result.warnings if _result.warnings else "None")
         else:
-            logger.debug("❌ Processing Failed!")
+            logger.debug("❌ Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Crackle Removal v2.0 Test Complete!")
+    logger.debug("✅ Professional Crackle Removal v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _result.metadata["algorithm"])
-    logger.debug("Scientific Reference: %s", _result.metadata["scientific_ref"])
+    logger.debug("Scientific Referenz: %s", _result.metadata["scientific_ref"])
     logger.debug("Benchmark: %s", _result.metadata["benchmark"])
     logger.debug("Quality Impact: 0.91 (Professional-Grade)")

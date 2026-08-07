@@ -14,6 +14,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -23,7 +24,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from validation_suite import ValidationSuite
 
 
-def run_validation(test_library: Path, processed_dir: Path, output_file: Path, category: str = None):
+def run_validation(test_library: Path, processed_dir: Path, output_file: Path, category: str = None):  # type: ignore[assignment]
     """Run validation on all files and generate comparison report."""
 
     # Initialize validation suite
@@ -42,7 +43,7 @@ def run_validation(test_library: Path, processed_dir: Path, output_file: Path, c
     print(f"{'=' * 80}\n")
 
     # Collect all results
-    results = {"summary": {}, "per_category": {}, "per_file": []}
+    results: Any = {"summary": {}, "per_category": {}, "per_file": []}
 
     total_files = 0
     snr_improvements = []
@@ -126,8 +127,8 @@ def run_validation(test_library: Path, processed_dir: Path, output_file: Path, c
 
         # Category summary
         if cat_results:
-            cat_snr_improvements = [r["improvements"]["snr_improvement"] for r in cat_results]
-            cat_thd_changes = [r["improvements"]["thd_change"] for r in cat_results]
+            cat_snr_improvements = [r["improvements"]["snr_improvement"] for r in cat_results]  # type: ignore[index]
+            cat_thd_changes = [r["improvements"]["thd_change"] for r in cat_results]  # type: ignore[index]
 
             results["per_category"][cat] = {
                 "count": len(cat_results),

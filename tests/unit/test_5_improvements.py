@@ -323,42 +323,42 @@ class TestDenoiseProfiles:
             assert "strength" in params, f"{mat}: missing strength"
             assert "bands" in params, f"{mat}: missing bands"
             assert "transient_preserve" in params, f"{mat}: missing transient_preserve"
-            assert 0.0 < params["strength"] <= 1.0, f"{mat}: strength out of range"
+            assert 0.0 < params["strength"] <= 1.0, f"{mat}: strength out of range"  # type: ignore[operator]
 
     def test_shellac_g_floor_reduced(self):
         """Shellac g_floor should be lower than old 0.30 but still protective."""
         phase = DenoisePhase()
         g_floor = phase.MATERIAL_PARAMS["shellac"].get("g_floor", 0.1)
-        assert 0.15 <= g_floor <= 0.28, f"shellac g_floor={g_floor}"
+        assert 0.15 <= g_floor <= 0.28, f"shellac g_floor={g_floor}"  # type: ignore[operator]
 
     def test_vinyl_g_floor_raised(self):
         """Vinyl should have explicit g_floor > 0.10 for groove protection."""
         phase = DenoisePhase()
         g_floor = phase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.1)
-        assert g_floor > 0.10, f"vinyl g_floor={g_floor}"
+        assert g_floor > 0.10, f"vinyl g_floor={g_floor}"  # type: ignore[operator]
 
     def test_dat_very_conservative(self):
         """DAT (very clean medium) should have low strength."""
         phase = DenoisePhase()
-        assert phase.MATERIAL_PARAMS["dat"]["strength"] <= 0.25
+        assert phase.MATERIAL_PARAMS["dat"]["strength"] <= 0.25  # type: ignore[operator]
 
     def test_mp3_low_protects_codec_artifacts(self):
         """MP3 low bitrate should have higher g_floor to protect codec noise."""
         phase = DenoisePhase()
         g_floor = phase.MATERIAL_PARAMS["mp3_low"].get("g_floor", 0.1)
-        assert g_floor >= 0.12, f"mp3_low g_floor={g_floor}"
+        assert g_floor >= 0.12, f"mp3_low g_floor={g_floor}"  # type: ignore[operator]
 
     def test_wax_cylinder_most_conservative(self):
         """Wax cylinder should have highest g_floor and lowest strength."""
         phase = DenoisePhase()
         wax = phase.MATERIAL_PARAMS["wax_cylinder"]
-        assert wax["strength"] <= 0.30
-        assert wax.get("g_floor", 0.1) >= 0.30
+        assert wax["strength"] <= 0.30  # type: ignore[operator]
+        assert wax.get("g_floor", 0.1) >= 0.30  # type: ignore[operator]
 
     def test_reel_tape_gentler_than_cassette(self):
         """Reel tape (higher quality) should have lower strength than cassette."""
         phase = DenoisePhase()
-        assert phase.MATERIAL_PARAMS["reel_tape"]["strength"] < phase.MATERIAL_PARAMS["cassette"]["strength"]
+        assert phase.MATERIAL_PARAMS["reel_tape"]["strength"] < phase.MATERIAL_PARAMS["cassette"]["strength"]  # type: ignore[operator]
 
     def test_decade_interpolation_1960_is_neutral(self):
         """Decade 1960 should give multiplier ≈ 1.0 (neutral baseline)."""

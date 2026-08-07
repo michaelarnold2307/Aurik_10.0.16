@@ -131,7 +131,7 @@ def boost_existing_glows(content: str, factor: float = 1.65, cap: float = 4.0, f
             new_val = min(cap, max(floor, val * factor))
             return f'stdDeviation="{new_val:.2f}"'
         except ValueError:
-            return m.group(0)
+            return m.group(0)  # type: ignore[no-any-return]
 
     return re.sub(r'stdDeviation="([0-9.]+)"', replace_std, content)
 

@@ -18,7 +18,7 @@ np.random.seed(42)
 
 def _audio(dur: float = 3.0, amp: float = 0.3, freq: float = 440.0) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(dur: float = 3.0) -> np.ndarray:

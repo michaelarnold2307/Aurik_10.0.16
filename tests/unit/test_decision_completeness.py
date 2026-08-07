@@ -9,9 +9,9 @@ Struktureller Beweis:
     gezielt ausgewählte Phase (außer Tier-0-Pflichtphasen und Tier-6-Export) zurückgeben.
 
     Tier-0 (immer): phase_30_dc_offset_removal, phase_05_rumble_filter
-    Tier-6 (immer): phase_16_final_eq, phase_17_mastering_polish,
-                    phase_47_truepeak_limiter, phase_40_loudness_normalization,
-                    phase_41_output_format_optimization
+    Tier-6 (immer): phase_16_final_eq, phase_47_truepeak_limiter,
+                    phase_40_loudness_normalization, phase_41_output_format_optimization
+    Tier-6 (nur Studio 2026, §v10.70): phase_17_mastering_polish
 """
 
 from unittest.mock import MagicMock
@@ -32,11 +32,13 @@ TIER_0_PHASES = {
 
 TIER_6_PHASES = {
     "phase_16_final_eq",
-    "phase_17_mastering_polish",
     "phase_47_truepeak_limiter",
     "phase_40_loudness_normalization",
     "phase_41_output_format_optimization",
 }
+
+# §v10.70: phase_17_mastering_polish ist bewusst STUDIO_ONLY, kein Tier-6-Immer-Fall.
+STUDIO_ONLY_PHASES = {"phase_17_mastering_polish"}
 
 STRUCTURAL_PHASES = TIER_0_PHASES | TIER_6_PHASES
 
@@ -60,15 +62,17 @@ def _make_defect_result(
     )
 
 
-def _select_phases_for(material: MaterialType, defect_type: DefectType, mode: QualityMode) -> list[str]:
+def _select_phases_for(
+    material: MaterialType, defect_type: DefectType, mode: QualityMode, *, studio_2026: bool = False
+) -> list[str]:
     """Ruft _select_phases() über RestorationConfig auf, ohne echte ML-Modelle."""
     # Lazy import damit der Singleton nicht im Modulscope instanziiert wird
     from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3
 
-    config = RestorationConfig(mode=mode)
+    config = RestorationConfig(mode=mode, studio_2026=studio_2026)
     restorer = UnifiedRestorerV3.__new__(UnifiedRestorerV3)
     restorer.config = config
-    restorer.logger = MagicMock()
+    restorer.logger = MagicMock()  # type: ignore[attr-defined]
 
     dr = _make_defect_result(material, defect_type, severity=0.80)
     return restorer._select_phases(dr)
@@ -346,6 +350,18 @@ class TestRobustness:
             phase_set = set(phases)
             for p in TIER_6_PHASES:
                 assert p in phase_set, f"Tier-6 Phase {p} fehlt bei {mat.name}"
+
+    def test_studio_only_phase_present_only_in_studio_mode(self):
+        """§v10.70: phase_17_mastering_polish nur in Studio 2026, nie in Restoration."""
+        for mat in list(MaterialType)[:5]:  # Stichprobe
+            restoration_phases = set(_select_phases_for(mat, DefectType.CLICKS, QualityMode.BALANCED))
+            assert "phase_17_mastering_polish" not in restoration_phases, (
+                f"phase_17_mastering_polish sollte in Restoration (BALANCED) fehlen bei {mat.name}"
+            )
+            studio_phases = set(_select_phases_for(mat, DefectType.CLICKS, QualityMode.MAXIMUM, studio_2026=True))
+            assert "phase_17_mastering_polish" in studio_phases, (
+                f"phase_17_mastering_polish sollte in Studio 2026 (MAXIMUM) vorhanden sein bei {mat.name}"
+            )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

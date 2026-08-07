@@ -229,7 +229,9 @@ class NarrativeEngine:
         self._title = song_title
 
         # Deterministic seed based on song — keeps persona consistent per song
-        seed_int = int(hashlib.md5(f"{material}{era}{genre}{song_title}".encode()).hexdigest()[:8], 16)
+        seed_int = int(
+            hashlib.md5(f"{material}{era}{genre}{song_title}".encode(), usedforsecurity=False).hexdigest()[:8], 16
+        )
         self._rng = random.Random(seed_int)
 
         # Pick persona

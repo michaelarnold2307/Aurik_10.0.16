@@ -198,17 +198,18 @@ class BassEnhancement(PhaseInterface):
                     _boost_37 = _zone_frac_37 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_37, 0.0, 1.0))
                     logger.debug(
-                        "Phase37 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt37 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_37,
                         _boost_37,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_37:  # pylint: disable=broad-except
-                logger.debug("Phase37 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_37)
+                logger.debug("Verarbeitungsschritt37 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_37)
 
         if _effective_strength < 0.01:  # §v10.0.5: < 1% = keine sinnvolle Wirkung
             logger.info(
-                "Phase 37: skipped — effective_strength=%.3f (no bass enhancement applied)", _effective_strength
+                "Verarbeitungsschritt 37: uebersprungen — effective_strength=%.3f (no bass enhancement angewendet)",
+                _effective_strength,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
@@ -231,7 +232,7 @@ class BassEnhancement(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
+        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))  # type: ignore[call-overload]
         config["harmonic_2_gain"] = float(config["harmonic_2_gain"] * _effective_strength)
         config["harmonic_3_gain"] = float(config["harmonic_3_gain"] * _effective_strength)
 
@@ -268,7 +269,7 @@ class BassEnhancement(PhaseInterface):
             config["harmonic_3_gain"] *= _w_scale
             config["sub_harmonic_gain"] *= _w_scale
             config["mix"] *= _w_scale
-            logger.debug("Phase 37: waerme_target=%.2f → bass scale=%.2f", float(_waerme), _w_scale)
+            logger.debug("Verarbeitungsschritt 37: waerme_target=%.2f → bass scale=%.2f", float(_waerme), _w_scale)
         if _decade is not None:
             _dec = int(_decade)
             if _dec <= 1940:
@@ -296,7 +297,7 @@ class BassEnhancement(PhaseInterface):
             config["sub_harmonic_gain"] = float(config["sub_harmonic_gain"] * _p37_sat_scale)
             config["saturation_drive"] = float(np.clip(config["saturation_drive"] * max(_p37_sat_scale, 0.4), 0.0, 1.0))
             logger.debug(
-                "Phase 37 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f",
+                "Verarbeitungsschritt 37 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f",
                 _p37_soft_sat_sev,
                 _p37_soft_sat_preserve,
                 _p37_sat_scale,
@@ -313,7 +314,7 @@ class BassEnhancement(PhaseInterface):
             config["sub_harmonic_gain"] = float(config["sub_harmonic_gain"] * _depth_bass_boost)
             config["mix"] = float(np.clip(config["mix"] * _depth_bass_boost * 0.9, 0.0, 1.0))
             logger.debug(
-                "Phase 37 depth=%d → bass boost ×%.2f",
+                "Verarbeitungsschritt 37 depth=%d → bass boost ×%.2f",
                 _td_p37,
                 _depth_bass_boost,
             )
@@ -351,17 +352,20 @@ class BassEnhancement(PhaseInterface):
             _hg_37 = _check_hg_37_fn(audio, enhanced_audio, sr=sample_rate, mode=_mode_37, bw_extension_context=True)  # type: ignore[misc]
             if _hg_37.requires_rollback:
                 logger.warning(
-                    "phase_37: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_37.spectral_novelty
+                    "Verarbeitungsschritt_37: hallucination_guard rollback (spectral_novelty=%.3f)",
+                    _hg_37.spectral_novelty,
                 )
                 enhanced_audio = np.clip(np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             elif _hg_37.score_penalty > 0.0:
                 logger.info(
-                    "phase_37: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
+                    "Verarbeitungsschritt_37: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_37.score_penalty,
                     _hg_37.spectral_novelty,
                 )
         except Exception as _hg37_exc:
-            logger.debug("phase_37: hallucination_guard failed (non-blocking): %s", _hg37_exc)
+            logger.debug(
+                "Verarbeitungsschritt_37: hallucination_guard fehlgeschlagen (nicht blockierend): %s", _hg37_exc
+            )
 
         # §V22 Pre-Echo-Prevention — Additive Bass-Enhancement auf Transient-Shifts prüfen (§2.73, non-blocking)
         try:
@@ -390,7 +394,7 @@ class BassEnhancement(PhaseInterface):
                     _ts_37.blend_reduction,
                 )
         except Exception as _v22_37_exc:
-            logger.debug("§V22 phase_37 transient_guard non-blocking: %s", _v22_37_exc)
+            logger.debug("§V22 Verarbeitungsschritt_37 transient_guard nicht blockierend: %s", _v22_37_exc)
         return PhaseResult(
             success=True,
             audio=enhanced_audio,
@@ -484,7 +488,7 @@ class BassEnhancement(PhaseInterface):
             sos_vp = signal.butter(4, [120.0 / (sr / 2), min(500.0 / (sr / 2), 0.99)], btype="band", output="sos")
             vp_band = signal.sosfiltfilt(sos_vp, bass)
         except Exception as e:
-            logger.warning("phase_37_bass_enhancement.py::_virtual_pitch_bass fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_37_bass_enhancement.py::_virtual_pitch_bass Ersatzpfad: %s", e)
             return self._generate_sub_harmonic(bass) * 0.25  # type: ignore[no-any-return]
 
         _rms = float(np.sqrt(np.mean(vp_band.astype(np.float64) ** 2) + 1e-12))

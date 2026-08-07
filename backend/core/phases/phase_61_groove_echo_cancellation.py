@@ -169,7 +169,9 @@ def apply(
     if defect_scores is not None:
         ge_score = float(defect_scores.get("groove_echo", 0.0))
         if ge_score < min_groove_echo_score:
-            logger.debug("Phase 61: groove_echo score %.3f < %.3f — skipped", ge_score, min_groove_echo_score)
+            logger.debug(
+                "Verarbeitungsschritt 61: groove_echo Wert %.3f < %.3f — uebersprungen", ge_score, min_groove_echo_score
+            )
             return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     stereo = audio.ndim == 2
@@ -299,6 +301,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
                     start_s = max(0.0, float(loc[0]))
                     end_s = max(start_s, float(loc[1]))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end_s <= start_s:
                     continue
@@ -352,6 +355,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -440,11 +444,11 @@ class GrooveEchoCancellationPhase(PhaseInterface):
             if _nt61_dist > 0.25:
                 result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
                 logger.warning(
-                    "Phase61 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
+                    "Verarbeitungsschritt61 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
                     _nt61_dist,
                 )
         except Exception as _nt61_exc:
-            logger.debug("Phase61 V19 Noise-Textur-Guard (non-blocking): %s", _nt61_exc)
+            logger.debug("Verarbeitungsschritt61 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt61_exc)
 
         # V20 Mikrodynamik-Korrelation (§2.75): voiced Frames dürfen durch Spektral-
         # Subtraktion nicht in ihrer Frame-Energie degradiert werden.
@@ -462,12 +466,12 @@ class GrooveEchoCancellationPhase(PhaseInterface):
                     _wet61 = recommend_mikrodynamik_wet(_corr61, _panns61, global_need=_need61)
                     result_audio = (_wet61 * result_audio + (1.0 - _wet61) * audio).astype(np.float32)
                     logger.warning(
-                        "Phase61 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                        "Verarbeitungsschritt61 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
                         _corr61,
                         _wet61,
                     )
             except Exception as _dyn61_exc:
-                logger.debug("Phase61 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn61_exc)
+                logger.debug("Verarbeitungsschritt61 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn61_exc)
 
         # V21 Mindestrauschboden (§2.76): Analog-Material darf nach Subtraktion keine
         # digitale Stille (-∞ dBFS) aufweisen — Rauschboden ist Naturalness-Marker.
@@ -480,7 +484,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
 
                 result_audio = apply_noise_floor_minimum(result_audio, sample_rate, _mat61_str)
             except Exception as _nf61_exc:
-                logger.debug("Phase61 V21 Noise-Floor-Guard (non-blocking): %s", _nf61_exc)
+                logger.debug("Verarbeitungsschritt61 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf61_exc)
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen
         # durch Groove-Echo-Subtraktion nicht energetisch beeinflusst werden.
@@ -491,7 +495,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
 
             result_audio = apply_onset_protection_mask(audio, result_audio, None, max_delta_db=1.5)
         except Exception as _on61_exc:
-            logger.debug("Phase61 V26 Onset-Guard (non-blocking): %s", _on61_exc)
+            logger.debug("Verarbeitungsschritt61 V26 Onset-Guard (nicht blockierend): %s", _on61_exc)
 
         # §2.46f NPA-Guard: Early-Reflections (0-50 ms nach Onset) sind Recording-Chain-Signatur
         # und dürfen nicht durch Groove-Echo-Subtraktion entfernt werden (§2.46f Kategorie 3).
@@ -512,7 +516,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
                 else:
                     result_audio[_npa_mask61] = audio[_npa_mask61]
         except Exception as _npa61_exc:
-            logger.debug("§2.46f Phase61 NPA-Guard (non-blocking): %s", _npa61_exc)
+            logger.debug("§2.46f Verarbeitungsschritt61 NPA-Guard (nicht blockierend): %s", _npa61_exc)
 
         # §2.62 Psychoakustischer Masking-Guard: Spektral-Subtraktion entfernt
         # keine Komponenten die vom Musiksignal maskiert werden (G_floor ≥ 0.10).
@@ -523,7 +527,7 @@ class GrooveEchoCancellationPhase(PhaseInterface):
 
             result_audio = apply_psychoacoustic_masking_clamp(audio, result_audio, sample_rate, mode="restoration")
         except Exception as _pmask61_exc:
-            logger.debug("§2.62 Phase61 Masking-Guard (non-blocking): %s", _pmask61_exc)
+            logger.debug("§2.62 Verarbeitungsschritt61 Masking-Guard (nicht blockierend): %s", _pmask61_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

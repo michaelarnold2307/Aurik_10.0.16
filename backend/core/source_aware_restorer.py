@@ -40,6 +40,7 @@ def _get_ort_session(model_path: str) -> Any:
             _ort_session_cache[model_path] = sess
             return sess
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
 
     sess = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
@@ -80,7 +81,7 @@ def restore_per_source(
     try:
         stems = _separate_sources(audio, sample_rate)
     except Exception as exc:
-        logger.warning("§3.0 Demucs failed: %s — Fallback auf Vollmix-UV3", exc)
+        logger.warning("§3.0 Demucs fehlgeschlagen: %s — Ersatzpfad auf Vollmix-UV3", exc)
         _emit_progress(progress_callback, 10.0, "§3.0: Demucs failed, using full-mix")
         return _restore_fullmix(audio, sample_rate, restore_fn, restore_kwargs)
 
@@ -146,10 +147,10 @@ def restore_per_source(
             gain = STEM_REMIX_GAINS.get(stem_name, 1.0)
             restored_stems[stem_name] = restored_audio.astype(np.float32) * gain
 
-            logger.debug("§3.0 %s restored in %.1fs", stem_name, time.perf_counter() - t0)
+            logger.debug("§3.0 %s wiederhergestellt in %.1fs", stem_name, time.perf_counter() - t0)
 
         except Exception as exc:
-            logger.warning("§3.0 %s restore failed: %s — keeping original", stem_name, exc)
+            logger.warning("§3.0 %s wiederherstellen fehlgeschlagen: %s — keeping Originalsignal", stem_name, exc)
             restored_stems[stem_name] = stem_audio.astype(np.float32)
 
     _emit_progress(progress_callback, 92.0, "§3.0: remixing stems...")
@@ -159,7 +160,7 @@ def restore_per_source(
     _emit_progress(progress_callback, 96.0, "§3.0: complete")
 
     elapsed = time.perf_counter() - t0
-    logger.info("§3.0 Source-aware restoration complete in %.1fs (%d stems)", elapsed, len(restored_stems))
+    logger.info("§3.0 Source-aware restoration vollstaendig in %.1fs (%d stems)", elapsed, len(restored_stems))
     return result.astype(np.float32)
 
 
@@ -305,4 +306,4 @@ def _emit_progress(cb: Any, pct: float, msg: str) -> None:
         try:
             cb(pct, msg, 0.0)
         except Exception as e:
-            logger.warning("source_aware_restorer.py::_emit_progress fallback: %s", e)
+            logger.warning("source_aware_restorer.py::_emit_progress Ersatzpfad: %s", e)

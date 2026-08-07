@@ -165,7 +165,7 @@ class StemBasedProcessor:
         else:
             out = np.pad(out, (0, n - len(out)))
 
-        return np.clip(np.nan_to_num(out, nan=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(out, nan=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     def _intelligent_click_removal(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """Zweite-Differenz-basierter Click-Detektor mit linearer Interpolation.
@@ -259,7 +259,7 @@ class StemBasedProcessor:
 
         # §VERBOTEN: Peak-Normalisierung würde LUFS-Verhältnis zum Original verzerren.
         # TruePeak-Schutz ausschließlich via hartem Clip (letzter Schritt nach NaN-Bereinigung).
-        return np.clip(np.nan_to_num(out.astype(np.float32), nan=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(out.astype(np.float32), nan=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     def _gentle_noise_reduction(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """OLA-STFT Rauschunterdrückung: Minimum-Statistics + Wiener-Gain.
@@ -332,7 +332,7 @@ class StemBasedProcessor:
         else:
             out = np.pad(out, (0, n - len(out)))
 
-        return np.clip(np.nan_to_num(out, nan=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(out, nan=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     def _compute_quality(self, audio: np.ndarray, sr: int) -> float:
         """SNR-basierte MOS-Qualitätsschätzung im Bereich ``[1.0, 5.0]``.

@@ -37,7 +37,7 @@ def _import_with_recovery(module_name: str):
 
 def _audio(dur: float = 2.0) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * SR), endpoint=False, dtype=np.float32)
-    return 0.3 * np.sin(2 * np.pi * 440 * t)
+    return 0.3 * np.sin(2 * np.pi * 440 * t)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -169,7 +169,7 @@ class TestCREPEFallback:
         ]:
             try:
                 mod = __import__(mod_name, fromlist=[""])
-                src = Path(mod.__file__).read_text(encoding="utf-8", errors="replace")
+                src = Path(mod.__file__).read_text(encoding="utf-8", errors="replace")  # type: ignore[arg-type]
                 if "pyin" in src.lower():
                     found_pyin = True
                     break

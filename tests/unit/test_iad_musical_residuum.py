@@ -16,7 +16,7 @@ def _harmonic_signal(dur: float = 6.0, amp: float = 0.1, f0: float = 220.0) -> n
     """Synthethisches Sinus-Fundamental + 4 Obertöne (harmonisches Vokal-Proxy)."""
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
     sig = sum((amp / k) * np.sin(2 * np.pi * f0 * k * t) for k in range(1, 5))
-    return np.clip(sig, -1.0, 1.0).astype(np.float32)
+    return np.clip(sig, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(dur: float = 6.0, amp: float = 0.03) -> np.ndarray:

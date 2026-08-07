@@ -32,14 +32,14 @@ def phase():
 def _sine(freq: float, dur: float, amp: float = 0.5) -> np.ndarray:
     """Pure sine, mono, SR=48000."""
     t = np.arange(int(dur * SR)) / SR
-    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _vibrato_sine(freq: float, dur: float, vib_rate: float = 6.0, vib_depth: float = 0.04) -> np.ndarray:
     """Sine with vibrato (±4 % pitch), 6 Hz rate — triggers false onsets with naive flux."""
     t = np.arange(int(dur * SR)) / SR
     phase = 2.0 * np.pi * (freq * t + (vib_depth * freq / vib_rate) * np.sin(2.0 * np.pi * vib_rate * t))
-    return (0.5 * np.sin(phase)).astype(np.float32)
+    return (0.5 * np.sin(phase)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _impulse_train(n_impulses: int, dur: float, amp: float = 0.8) -> np.ndarray:

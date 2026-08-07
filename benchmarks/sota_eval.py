@@ -41,7 +41,7 @@ except Exception:  # pragma: no cover - scipy optional in minimal envs
 try:
     from backend.file_import import load_audio_file
 except Exception:  # pragma: no cover - backend import may fail in isolated runs
-    load_audio_file = None
+    load_audio_file = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 

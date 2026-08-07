@@ -12,7 +12,7 @@ from backend.core.defect_scanner import DefectScanner
 def test_phase_issues():
     """Test upgraded _detect_phase_issues."""
     print("\n=== Testing _detect_phase_issues ===")
-    scanner = DefectScanner(sample_rate=48000, material_type="unknown")
+    scanner = DefectScanner(sample_rate=48000, material_type="unknown")  # type: ignore[arg-type]
 
     # Test 1: Normal stereo audio
     duration = 2.0
@@ -50,7 +50,7 @@ def test_bias_error():
     print("\n=== Testing _detect_bias_error ===")
 
     # Test 1: Tape material (should analyze)
-    scanner = DefectScanner(sample_rate=48000, material_type="tape")
+    scanner = DefectScanner(sample_rate=48000, material_type="tape")  # type: ignore[arg-type]
     duration = 2.0
     t = np.linspace(0, duration, int(48000 * duration))
     audio_normal = np.sin(2 * np.pi * 440 * t) * 0.1
@@ -76,7 +76,7 @@ def test_bias_error():
     # Over-bias should be detected (but may not always trigger depending on threshold)
 
     # Test 3: Vinyl material (should skip analysis)
-    scanner_vinyl = DefectScanner(sample_rate=48000, material_type="vinyl")
+    scanner_vinyl = DefectScanner(sample_rate=48000, material_type="vinyl")  # type: ignore[arg-type]
     result_vinyl = scanner_vinyl._detect_bias_error(audio_normal)
     print(f"Vinyl material: severity={result_vinyl.severity:.3f}")
     print(f"  Medium gated: {result_vinyl.metadata.get('medium_gated')}")
@@ -91,7 +91,7 @@ def test_riaa_curve_error():
     print("\n=== Testing _detect_riaa_curve_error ===")
 
     # Test 1: Vinyl material (should analyze)
-    scanner = DefectScanner(sample_rate=48000, material_type="vinyl")
+    scanner = DefectScanner(sample_rate=48000, material_type="vinyl")  # type: ignore[arg-type]
     duration = 2.0
     t = np.linspace(0, duration, int(48000 * duration))
 
@@ -117,7 +117,7 @@ def test_riaa_curve_error():
     # Should detect excessive bass
 
     # Test 3: Tape material (should skip)
-    scanner_tape = DefectScanner(sample_rate=48000, material_type="tape")
+    scanner_tape = DefectScanner(sample_rate=48000, material_type="tape")  # type: ignore[arg-type]
     result_tape = scanner_tape._detect_riaa_curve_error(audio_normal)
     print(f"Tape material: severity={result_tape.severity:.3f}")
     print(f"  Medium gated: {result_tape.metadata.get('medium_gated')}")
@@ -132,7 +132,7 @@ def test_aliasing():
     print("\n=== Testing _detect_aliasing ===")
 
     # Test 1: Analog source (should analyze)
-    scanner = DefectScanner(sample_rate=48000, material_type="vinyl")
+    scanner = DefectScanner(sample_rate=48000, material_type="vinyl")  # type: ignore[arg-type]
     duration = 2.0
     t = np.linspace(0, duration, int(48000 * duration))
 
@@ -164,14 +164,14 @@ def test_aliasing():
     # May detect elevated near-Nyquist energy
 
     # Test 3: Digital source (should skip)
-    scanner_digital = DefectScanner(sample_rate=48000, material_type="cd_digital")
+    scanner_digital = DefectScanner(sample_rate=48000, material_type="cd_digital")  # type: ignore[arg-type]
     result_digital = scanner_digital._detect_aliasing(audio_normal)
     print(f"CD digital: severity={result_digital.severity:.3f}")
     print(f"  Medium gated: {result_digital.metadata.get('medium_gated')}")
     assert result_digital.severity == 0.0, "Digital should skip aliasing analysis"
     assert result_digital.metadata.get("medium_gated") == True
     # Test 4: High sample rate (96 kHz) - should have discount
-    scanner_96k = DefectScanner(sample_rate=96000, material_type="vinyl")
+    scanner_96k = DefectScanner(sample_rate=96000, material_type="vinyl")  # type: ignore[arg-type]
     t_96k = np.linspace(0, duration, int(96000 * duration))
     audio_96k = np.sin(2 * np.pi * 440 * t_96k) * 0.1
     result_96k = scanner_96k._detect_aliasing(audio_96k)

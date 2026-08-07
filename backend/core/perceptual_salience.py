@@ -183,7 +183,7 @@ class PerceptualSalienceEstimator:
                         _binaural_factor,
                     )
             except Exception as e:
-                logger.warning("perceptual_salience.py::unbekannter Fallback: %s", e)
+                logger.warning("perceptual_salience.py::unbekannter Ersatzpfad: %s", e)
 
         return result
 
@@ -266,7 +266,7 @@ class PerceptualSalienceEstimator:
                     _selected.extend(_remaining[: max(0, _ERB_MAX_ANNOTATIONS - len(_selected))])
                     erb_anns = _selected
                     logger.debug(
-                        "ERB masking: capped %d → %d annotations (budget=%d, duration=%.1fs, mode=%s)",
+                        "ERB masking: capped %d → %d annotations (Grenze=%d, duration=%.1fs, Betriebsart=%s)",
                         len(all_anns),
                         len(erb_anns),
                         _ERB_MAX_ANNOTATIONS,
@@ -289,11 +289,11 @@ class PerceptualSalienceEstimator:
                     erb_saliences[(ann.defect_type, ann.location)] = erb_result.salience
 
                 logger.info(
-                    "ERB masking model enhanced %d salience annotations",
+                    "ERB masking model verbessert %d salience annotations",
                     len(erb_saliences),
                 )
             except ImportError:
-                logger.debug("ERB masking model not available, using broadband only")
+                logger.debug("ERB masking model not verfuegbar, using broadband only")
 
         # Group annotations by defect type
         by_type: dict[DefectType, list[SalienceAnnotation]] = {}

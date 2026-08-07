@@ -53,13 +53,14 @@ def _shadow(img: Image.Image, radius: int = 4, offset: int = 3) -> Image.Image:
     shadow = Image.new("RGBA", img.size, (0, 0, 0, 0))
     for x in range(img.width):
         for y in range(img.height):
-            r, g, b, a = img.getpixel((x, y))
+            pixel = img.getpixel((x, y))
+            r, g, b, a = pixel  # type: ignore[misc]  # RGBA image: getpixel() always returns a 4-tuple
             if a > 30:
                 shadow.putpixel((x, y), (0, 0, 0, min(120, a)))
     shadow = shadow.filter(ImageFilter.GaussianBlur(radius))
     canvas.paste(shadow, (offset + 4, offset + 4), shadow)
     canvas.paste(img, (4, 4), img)
-    return canvas.resize((SIZE, SIZE), Image.LANCZOS)
+    return canvas.resize((SIZE, SIZE), Image.Resampling.LANCZOS)
 
 
 def _bg(draw: ImageDraw.ImageDraw, color: tuple[int, int, int], alpha: int = 200) -> None:
@@ -828,7 +829,7 @@ def gen_severity_low():
 
 # ─── registry ─────────────────────────────────────────────────────────
 
-DEFECT_GENERATORS: dict[str, callable] = {
+DEFECT_GENERATORS: dict[str, callable] = {  # type: ignore[valid-type]
     "clicks": gen_clicks,
     "crackle": gen_crackle,
     "pops": gen_pops,
@@ -864,13 +865,13 @@ DEFECT_GENERATORS: dict[str, callable] = {
     "azimuth_error": gen_azimuth_error,
 }
 
-STAR_GENERATORS: dict[str, callable] = {
+STAR_GENERATORS: dict[str, callable] = {  # type: ignore[valid-type]
     "star_full": gen_star_full,
     "star_half": gen_star_half,
     "star_empty": gen_star_empty,
 }
 
-SEVERITY_GENERATORS: dict[str, callable] = {
+SEVERITY_GENERATORS: dict[str, callable] = {  # type: ignore[valid-type]
     "severity_high": gen_severity_high,
     "severity_medium": gen_severity_medium,
     "severity_low": gen_severity_low,
@@ -880,15 +881,15 @@ SEVERITY_GENERATORS: dict[str, callable] = {
 def main() -> None:
     print("=== Generating defect icons ===")
     for name, fn in DEFECT_GENERATORS.items():
-        _save(fn(), OUT_DEFECT / f"{name}.png")
+        _save(fn(), OUT_DEFECT / f"{name}.png")  # type: ignore[misc]
 
     print("\n=== Generating star icons ===")
     for name, fn in STAR_GENERATORS.items():
-        _save(fn(), OUT_STAR / f"{name}.png")
+        _save(fn(), OUT_STAR / f"{name}.png")  # type: ignore[misc]
 
     print("\n=== Generating severity icons ===")
     for name, fn in SEVERITY_GENERATORS.items():
-        _save(fn(), OUT_DEFECT / f"{name}.png")
+        _save(fn(), OUT_DEFECT / f"{name}.png")  # type: ignore[misc]
 
     print(
         f"\nDone.  {len(DEFECT_GENERATORS)} defect + {len(STAR_GENERATORS)} star + {len(SEVERITY_GENERATORS)} severity icons generated."

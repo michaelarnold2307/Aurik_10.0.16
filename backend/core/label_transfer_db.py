@@ -550,7 +550,7 @@ class LabelTransferDB:
             return _out  # type: ignore[no-any-return]
 
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§LTD-1 apply_label_eq non-blocking: %s", exc)
+            logger.debug("§LTD-1 anwenden_label_eq nicht blockierend: %s", exc)
             return audio
 
 
@@ -561,5 +561,5 @@ def get_label_transfer_db() -> LabelTransferDB:
         with _lock:
             if _instance is None:
                 _instance = LabelTransferDB()
-                logger.debug("§LTD-1 LabelTransferDB singleton created (%d profiles).", len(_LABEL_DB))
+                logger.debug("§LTD-1 LabelTransferDB singleton erstellt (%d profiles).", len(_LABEL_DB))
     return _instance

@@ -388,13 +388,13 @@ class AutoMusicalGoalSetter:
         # Schritt 1: Material-Korrekturen
         # ----------------------------------------------------------------
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        adjustments = _MATERIAL_ADJUSTMENTS.get(_mk, {})
+        adjustments = _MATERIAL_ADJUSTMENTS.get(_mk, {})  # type: ignore[call-overload]
         for key, delta in adjustments.items():
             if key in params and isinstance(params[key], float):
                 params[key] = params[key] + delta
         if adjustments:
             rationale_parts.append(f"Material-Korrekturen: {list(adjustments.keys())}")
-        target_mos = _MATERIAL_PQS_TARGETS.get(_mk, _MATERIAL_PQS_TARGETS[MaterialType.UNKNOWN])
+        target_mos = _MATERIAL_PQS_TARGETS.get(_mk, _MATERIAL_PQS_TARGETS[MaterialType.UNKNOWN])  # type: ignore[call-overload]
         rationale_parts.append(f"PQS-Ziel(material)≥{target_mos:.1f}")
 
         # ----------------------------------------------------------------

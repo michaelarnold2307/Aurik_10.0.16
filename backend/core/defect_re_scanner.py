@@ -116,7 +116,7 @@ class DefectReScanner:
                 if severity > 0.05:
                     revealed[defect_type] = severity
                     logger.debug(
-                        "§v10.28 Re-Scan: %s enthüllt nach %s — Band [%d–%d Hz] ratio=%.4f → severity=%.3f",
+                        "§v10.28 Re-Scan: %s enthüllt nach %s — Band [%d–%d Hz] Verhaeltnis=%.4f → severity=%.3f",
                         defect_type,
                         phase_id,
                         int(low_hz),

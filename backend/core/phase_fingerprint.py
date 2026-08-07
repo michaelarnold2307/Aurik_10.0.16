@@ -120,7 +120,7 @@ class PhaseFingerprinter:
             _path = _dir / "fingerprints.json"
             _path.write_text(json.dumps(self._fingerprints, indent=2), encoding="utf-8")
         except Exception as exc:
-            logger.debug("Fingerprint save failed: %s", exc)
+            logger.debug("Fingerprint speichern fehlgeschlagen: %s", exc)
 
     def _load(self) -> None:
         """Lädt Fingerprints von Disk."""

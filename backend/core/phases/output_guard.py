@@ -98,7 +98,7 @@ def evaluate_output_guard(
                 pleasantness_delta,
             )
     except Exception as e:
-        logger.warning("output_guard.py::_is_stereo_2d fallback: %s", e)
+        logger.warning("Ausgabe_guard.py::_is_stereo_2d Ersatzpfad: %s", e)
         pass  # HPE nicht verfügbar → nur technische Prüfung
 
     # Prüfung 2: RMS

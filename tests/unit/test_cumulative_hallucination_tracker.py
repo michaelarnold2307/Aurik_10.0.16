@@ -10,7 +10,7 @@ import pytest
 
 def _sine(freq: float = 440.0, sr: int = 48000, duration_s: float = 1.0) -> np.ndarray:
     t = np.arange(int(sr * duration_s), dtype=np.float32) / sr
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

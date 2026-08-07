@@ -52,7 +52,7 @@ from plugins.flow_audio_sota import (
 def _make_audio(dur_s: float = 1.0, sr: int = _SR, freq: float = 440.0) -> np.ndarray:
     """Generate a sine wave audio signal."""
     t = np.arange(int(dur_s * sr)) / sr
-    return (0.5 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_audio_with_gap(

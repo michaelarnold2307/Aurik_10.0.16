@@ -57,7 +57,7 @@ adaptive_spline_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Interpolationfehler",
             "expected_when": "zu viele Lücken",
             "severity": 0.2,
@@ -125,7 +125,7 @@ class AdaptiveSplineInterpolation:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._interpolate_classic(x, mask)
                 else:
@@ -133,7 +133,7 @@ class AdaptiveSplineInterpolation:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('spline_interpolation.pt')
                     # output = model(torch.from_numpy(x).float().unsqueeze(0), torch.from_numpy(mask).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._interpolate_classic(x, mask)
             else:
@@ -146,7 +146,7 @@ class AdaptiveSplineInterpolation:
         if audit_log:
             interpolation_error = float(np.mean(np.abs(x - output))) if output is not None else float("nan")
             logger.info(
-                f"AdaptiveSplineInterpolation: interpolation_error={interpolation_error:.6f}, fallback_used={fallback_used}, kind={self.kind}"
+                f"AdaptiveSplineInterpolation: interpolation_error={interpolation_error:.6f}, Ersatzpfad_used={fallback_used}, kind={self.kind}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_spline_contract))
         return output

@@ -176,7 +176,7 @@ def _estimate_delay_subsample(ref: np.ndarray, target: np.ndarray, sr: int) -> f
     _peak = float(np.max(np.abs(_search)))
     if _peak < 0.1:
         logger.debug(
-            "STCG: normalized-XCorr peak=%.4f < 0.1 — no correction",
+            "STCG: normalisiert-XCorr peak=%.4f < 0.1 — no correction",
             _peak,
         )
         return 0.0
@@ -383,7 +383,7 @@ class StereoTemporalCoherenceGuard:
                     _mp_spread = 0
                     logger.info(
                         "STCG [%s]: multi-point got %d point(s) — single-full-length "
-                        "fallback: lag=%d samples (%.1f ms), corr=%.3f",
+                        "Ersatzpfad: lag=%d samples (%.1f ms), corr=%.3f",
                         phase_id,
                         _num_pts,
                         int(delay),
@@ -397,7 +397,7 @@ class StereoTemporalCoherenceGuard:
                     # Lag-Limit. Audio wird unverändert zurückgegeben —
                     # "do no harm" vor blinder Korrektur.
                     logger.info(
-                        "STCG [%s]: multi-point got %d point(s), single-fallback "
+                        "STCG [%s]: multi-point got %d point(s), single-Ersatzpfad "
                         "rejected (corr=%.3f < 0.60 or lag=%.1f ms > 10 ms) — skipping",
                         phase_id,
                         _num_pts,
@@ -409,7 +409,7 @@ class StereoTemporalCoherenceGuard:
                 delay = 0.0
                 _mp_spread = -1
                 logger.warning(
-                    "STCG [%s]: only %d measurement point(s) and single-fallback failed — skipping correction",
+                    "STCG [%s]: only %d measurement point(s) and single-Ersatzpfad fehlgeschlagen — skipping correction",
                     phase_id,
                     _num_pts,
                 )
@@ -419,7 +419,7 @@ class StereoTemporalCoherenceGuard:
 
         if abs(delay) < _CORRECTION_THRESHOLD_SAMPLES:
             logger.debug(
-                "STCG [%s]: delay=%.4f samples (%.3f ms) — within threshold, no correction",
+                "STCG [%s]: delay=%.4f samples (%.3f ms) — within Schwelle, no correction",
                 phase_id,
                 delay,
                 delay_ms,
@@ -548,7 +548,7 @@ class StereoTemporalCoherenceGuard:
                 lags.append(int(round(lag)))
             except Exception as _stcg_lag_exc:
                 logger.debug(
-                    "stereo_temporal_coherence_guard: multi-point lag measurement failed (non-critical): %s",
+                    "stereo_temporal_coherence_guard: multi-point lag measurement fehlgeschlagen (unkritisch): %s",
                     _stcg_lag_exc,
                 )
 
@@ -617,7 +617,7 @@ class StereoTemporalCoherenceGuard:
 
         if abs(delay) < _CORRECTION_THRESHOLD_SAMPLES:
             logger.debug(
-                "STCG stem [%s]: delay=%.4f samples (%.3f ms) — within threshold, no correction",
+                "STCG stem [%s]: delay=%.4f samples (%.3f ms) — within Schwelle, no correction",
                 stem_label,
                 delay,
                 delay_ms,

@@ -12,6 +12,6 @@ def test_hybrid_restoration_basic():
     audio = np.zeros(44100)  # Dummy-Audio, 1 Sekunde
     sr = 44100
     plugin = HybridRestorationPlugin()
-    restored = plugin.process(audio, sr)
+    restored = plugin.process(audio, sr)  # type: ignore[arg-type]
     assert restored is not None
     assert restored.shape == audio.shape

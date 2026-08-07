@@ -11,6 +11,7 @@ import ast
 import json
 from collections import Counter
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "reports" / "skip_causes_report.json"
@@ -66,7 +67,7 @@ def main() -> int:
     files = sorted(ROOT.glob("tests/**/*.py"))
     files += [ROOT / "conftest.py", ROOT / "tests" / "conftest.py"]
 
-    totals = Counter()
+    totals: Any = Counter()
     per_file: dict[str, dict[str, int]] = {}
 
     for path in files:

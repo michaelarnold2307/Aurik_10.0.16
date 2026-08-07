@@ -142,7 +142,7 @@ class TestPerSegmentExecutor:
                 pass
 
             r = R()
-            r.audio = a * float(kw.get("strength", 1.0))
+            r.audio = a * float(kw.get("strength", 1.0))  # type: ignore[attr-defined]
             return r
 
         result = run_phase_per_segment(
@@ -168,7 +168,7 @@ class TestPerSegmentExecutor:
                 pass
 
             r = R()
-            r.audio = a * float(kw.get("strength", 1.0))
+            r.audio = a * float(kw.get("strength", 1.0))  # type: ignore[attr-defined]
             return r
 
         result = run_phase_per_segment(
@@ -227,7 +227,7 @@ class TestPerSegmentExecutor:
                 pass
 
             r = R()
-            r.audio = a
+            r.audio = a  # type: ignore[attr-defined]
             return r
 
         result = run_phase_per_segment(

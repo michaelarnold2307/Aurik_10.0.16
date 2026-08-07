@@ -111,7 +111,7 @@ class TruePeakLimiter:
                     audio_upsampled[ch, :], up=1, down=self.oversample_factor, window=("kaiser", 5.0)
                 )
 
-        return downsampled
+        return downsampled  # type: ignore[no-any-return]
 
     def _compute_gain_reduction(self, audio_upsampled: np.ndarray, sr_up: int) -> np.ndarray:
         """
@@ -187,7 +187,7 @@ class TruePeakLimiter:
 
             smoothed_gain[i] = current_gain
 
-        return smoothed_gain
+        return smoothed_gain  # type: ignore[no-any-return]
 
     def measure_true_peak(self, audio: np.ndarray, sr: int) -> float:
         """

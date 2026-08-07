@@ -282,7 +282,7 @@ class SoundstageDepthEnhancer:
             for ch in range(x.shape[1]):
                 y[:, ch] = signal.lfilter(b, a, x[:, ch])
             return y
-        return signal.lfilter(b, a, x)
+        return signal.lfilter(b, a, x)  # type: ignore[no-any-return]
 
     def _comb_filter(self, audio: np.ndarray, delay_samples: int, feedback_gain: float) -> np.ndarray:
         """
@@ -305,7 +305,7 @@ class SoundstageDepthEnhancer:
             for ch in range(x.shape[1]):
                 y[:, ch] = signal.lfilter(b, a, x[:, ch])
             return y
-        return signal.lfilter(b, a, x)
+        return signal.lfilter(b, a, x)  # type: ignore[no-any-return]
 
     def _apply_lowpass(self, audio: np.ndarray, cutoff_hz: float, sr: int) -> np.ndarray:
         """
@@ -324,7 +324,7 @@ class SoundstageDepthEnhancer:
                 filtered[:, ch] = signal.sosfiltfilt(sos, audio[:, ch])
             return filtered
         else:
-            return signal.sosfiltfilt(sos, audio)
+            return signal.sosfiltfilt(sos, audio)  # type: ignore[no-any-return]
 
     def _measure_depth_score(self, audio: np.ndarray, sr: int) -> float:
         """
@@ -411,19 +411,19 @@ if __name__ == "__main__":
     # Stereo white noise (Mono-like: same L/R)
     audio = np.random.randn(samples, 2) * 0.1
 
-    logger.info("Input: %s samples, %s channels, %s Hz", samples, audio.shape[1], sr)
+    logger.info("Eingabe: %s samples, %s channels, %s Hz", samples, audio.shape[1], sr)
     logger.info("Duration: %.1f seconds", duration)
 
     # Apply enhancement
     enhanced, report = enhance_soundstage_depth(audio, sr, depth_amount=0.6, room_size=0.5)
 
-    logger.info("\n✅ Soundstage Depth Enhancement Complete!")
+    logger.info("\n✅ Soundstage Depth Enhancement vollstaendig!")
     logger.info("  • Foreground Level: %.1%", report.foreground_level)
     logger.info("  • Midground Level: %.1%", report.midground_level)
     logger.info("  • Background Level: %.1%", report.background_level)
     logger.info("  • Early Reflections Delay: %.1f ms", report.early_reflections_delay_ms)
     logger.info("  • Reverb RT60: %.2f seconds", report.reverb_rt60_seconds)
     logger.info("  • HF Damping Cutoff: %.0f Hz", report.hf_damping_hz)
-    logger.info("  • Depth Score Improvement: %+.2f (0-1 scale)", report.depth_score)
+    logger.info("  • Depth Wert Improvement: %+.2f (0-1 scale)", report.depth_score)
 
     logger.info("\n✨ 3D Soundstage mit räumlicher Tiefe erzeugt!")

@@ -1656,17 +1656,17 @@ class BatchProcessingThread(QThread):
                     f"  exception={traceback.format_exc()}\n"
                 )
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def run(self):
         """Verarbeitet all items in queue with visualization updates."""
-        logger.info("BatchProcessingThread.run() START")
+        logger.info("BatchProcessingThread.Ausfuehrung() START")
         self._start_ts = time.monotonic()  # §v10.15 Watchdog-Dialog
         try:
             # P1: Core-Imports AUSSCHLIEßLICH über Bridge (§11 Spec 08)
             # Singleton-Accessor: sichert Single-Orchestrator Ownership pro Prozess
             # (No-Competing-Instances-Protokoll — RELEASE_MUST).
-            logger.info("BatchThread: importing AurikDenker via bridge...")
+            logger.info("BatchThread: importiere AurikDenker via bridge...")
             _denker_singleton = _bridge_get_aurik_denker_instance()
             logger.info("BatchThread: AurikDenker imported")
             if _denker_singleton is None:
@@ -1785,7 +1785,7 @@ class BatchProcessingThread(QThread):
                     if get_cached_defect_result(item.input_file) is not None:
                         break
                     if not _scan_waited:
-                        logger.info("BatchDiag: waiting for DefectScan to finish before audio load …")
+                        logger.info("BatchDiag: waiting for DefectScan to finish before audio laden …")
                         self.item_progress.emit(item.id, 210)  # 2.1 %
                         self.phase_update.emit("⏳ Warte auf Abschluss der Schadensanalyse …")
                         _scan_waited = True
@@ -1797,7 +1797,7 @@ class BatchProcessingThread(QThread):
                         )
                     time.sleep(0.5)
                 _scan_present = get_cached_defect_result(item.input_file) is not None
-                logger.info("BatchDiag: DefectScan ready=%s — now GC+malloc_trim before audio load", _scan_present)
+                logger.info("BatchDiag: DefectScan ready=%s — now GC+malloc_trim before audio laden", _scan_present)
 
                 # GC: release DefectScanner STFT arrays before audio load.
                 # malloc_trim(0) wurde hier entfernt: nach malloc_trim nutzt pydubs
@@ -1805,7 +1805,7 @@ class BatchProcessingThread(QThread):
                 # → SIGABRT (faulthandler: file_import.py:186). GC allein ist sicher.
                 gc.collect()
                 logger.info(
-                    "BatchDiag: pre-load GC done — RSS %.1f GB",
+                    "BatchDiag: pre-laden GC done — RSS %.1f GB",
                     (_psutil.Process().memory_info().rss / 1024**3) if _psutil is not None else 0.0,
                 )
 
@@ -1814,7 +1814,7 @@ class BatchProcessingThread(QThread):
                 audio, sr = _load_audio_robust(item.input_file)
                 _t_load_1 = time.perf_counter()
                 logger.info(
-                    "BatchDiag: audio loaded in %.2fs (sr=%d, shape=%s)", _t_load_1 - _t_load_0, sr, audio.shape
+                    "BatchDiag: audio geladen in %.2fs (sr=%d, shape=%s)", _t_load_1 - _t_load_0, sr, audio.shape
                 )
                 if sr != 48_000:
                     # soxr: pure-C resampler, ~3s for 225s stereo, fully thread-safe (no numba).
@@ -1901,7 +1901,7 @@ class BatchProcessingThread(QThread):
                 # Audio-Load) abgewartet. Hier noch max 20 s auf Medium+Era warten.
                 _t_cg_0 = time.monotonic()
                 logger.info(
-                    "BatchDiag: cache guard start (caches: defect=%s medium=%s era=%s)",
+                    "BatchDiag: Zwischenspeicher guard start (caches: defect=%s medium=%s era=%s)",
                     get_cached_defect_result(item.input_file) is not None,
                     get_cached_medium_result(item.input_file) is not None,
                     get_cached_era_genre_result(item.input_file) is not None,
@@ -1925,11 +1925,11 @@ class BatchProcessingThread(QThread):
                     time.sleep(0.3)
                 else:
                     logger.info(
-                        "BatchProcessingThread: Import-Cache-Timeout überschritten — "
+                        "BatchProcessingThread: Import-Zwischenspeicher-Zeitlimit überschritten — "
                         "setze mit verfügbaren Analysedaten fort (%s)",
                         item.input_file,
                     )
-                logger.info("BatchDiag: cache guard done in %.2fs", time.monotonic() - _t_cg_0)
+                logger.info("BatchDiag: Zwischenspeicher guard done in %.2fs", time.monotonic() - _t_cg_0)
 
                 # Defect analysis phase: Cache-First (kein Doppelscan, §9.4)
                 self.phase_step_update.emit(2, 0, "Schadensbewertung (Voranalyse)")
@@ -1945,7 +1945,7 @@ class BatchProcessingThread(QThread):
                     # Scan-Ergebnis aus dem Import-Cache übernehmen
                     _scan = _cached_scan
                     _scan_source = "cache"
-                    logger.debug("BatchProcessingThread: DefectScan aus Cache (%s)", item.input_file)
+                    logger.debug("BatchProcessingThread: DefectScan aus Zwischenspeicher (%s)", item.input_file)
                 else:
                     _scan_source = "missing"
                     # No-redundancy: first wait for original pre-analysis result.
@@ -1956,7 +1956,7 @@ class BatchProcessingThread(QThread):
                             _scan = _late_scan
                             _scan_source = "cache_late"
                             logger.info(
-                                "BatchProcessingThread: DefectScan verspätet eingetroffen (%s) — kein Retry nötig.",
+                                "BatchProcessingThread: DefectScan verspätet eingetroffen (%s) — kein Wiederholung nötig.",
                                 item.input_file,
                             )
                             break
@@ -1971,7 +1971,7 @@ class BatchProcessingThread(QThread):
                                 "bitte Datei neu importieren."
                             )
                         logger.warning(
-                            "BatchProcessingThread: DefectScan fehlt nach Wartefenster (%s) — starte Einmal-Retry.",
+                            "BatchProcessingThread: DefectScan fehlt nach Wartefenster (%s) — starte Einmal-Wiederholung.",
                             item.input_file,
                         )
                         if _bridge_run_pre_analysis is None:
@@ -1999,7 +1999,7 @@ class BatchProcessingThread(QThread):
                 defects = _defect_analysis_to_display(_scan.scores, status="detected")
                 _emit_defect_update(defects)
                 logger.info(
-                    "BatchDiag: defect analysis done (source=%s)",
+                    "BatchDiag: defect Analyse done (source=%s)",
                     _scan_source,
                 )
 
@@ -2387,7 +2387,7 @@ class BatchProcessingThread(QThread):
                                 self.scan_progress.emit(_scan_frac)
 
                         except RuntimeError:
-                            logger.debug("aurik-smooth-progress: Qt deleted, stopping")
+                            logger.debug("aurik-smooth-progress: Qt deleted, stoppe")
                             break
                         except Exception as _sp_exc:
                             logger.warning(
@@ -2440,6 +2440,7 @@ class BatchProcessingThread(QThread):
                 # ihn ggf. neu. Max. 2 Neustarts pro Lauf.
                 _sp["_liveness"] = time.perf_counter()
                 _sp["_restart_count"] = 0
+
                 def _smooth_emitter_watchdog():
                     with _sp_lock:
                         _last_live = _sp.get("_liveness", 0.0)
@@ -2448,21 +2449,24 @@ class BatchProcessingThread(QThread):
                         _rc = _sp.get("_restart_count", 0)
                         if _rc < 2:
                             logger.warning(
-                                "§v10.702 G3: Smooth-Emitter %.0fs stale → restart (%d/2)",
-                                _stale_s, _rc + 1,
+                                "§v10.702 G3: Smooth-Emitter %.0fs stale → Neustart (%d/2)",
+                                _stale_s,
+                                _rc + 1,
                             )
                             with _sp_lock:
                                 _sp["_restart_count"] = _rc + 1
                                 _sp["_liveness"] = time.perf_counter()
                             _new_thread = threading.Thread(
-                                target=_smooth_progress_emitter, daemon=True,
+                                target=_smooth_progress_emitter,
+                                daemon=True,
                                 name="aurik-smooth-progress-r",
                             )
                             _new_thread.start()
                         else:
-                            logger.error("§v10.702 G3: Smooth-Emitter 2× restart fehlgeschlagen")
+                            logger.error("§v10.702 G3: Smooth-Emitter 2× Neustart fehlgeschlagen")
                     if _sp.get("alive", False):
                         QTimer.singleShot(5000, _smooth_emitter_watchdog)
+
                 QTimer.singleShot(5000, _smooth_emitter_watchdog)
                 # Reset dynamic step names for this run
                 self._dynamic_step_names: dict[int, str] = {}
@@ -2859,13 +2863,13 @@ class BatchProcessingThread(QThread):
                                     )
                                     self.chirurgie_label.setVisible(True)
                                 except Exception:
-                                    pass
+                                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                                 # §v10.702 G12: Per-Defekt-Countdown aus Chirurgie-Fortschritt
                                 # Verteile globale Resolution proportional auf alle Defekt-Typen
                                 try:
                                     _ratio = self._chirurgie_done / max(1, self._chirurgie_total)
-                                    _init_counts = getattr(self, '_defect_initial_event_counts', {}) or {}
-                                    _rem_counts = getattr(self, '_defect_remaining_event_counts', {}) or {}
+                                    _init_counts = getattr(self, "_defect_initial_event_counts", {}) or {}
+                                    _rem_counts = getattr(self, "_defect_remaining_event_counts", {}) or {}
                                     _updated = False
                                     for _dk, _dt in _init_counts.items():
                                         _rem = max(0, int(_dt * (1.0 - _ratio)))
@@ -2875,7 +2879,7 @@ class BatchProcessingThread(QThread):
                                     if _updated:
                                         self._defect_remaining_event_counts = _rem_counts
                                 except Exception:
-                                    pass
+                                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                         return
                     if msg.startswith("__pid_live_hint__:"):
                         _payload = msg.split(":", 1)[1]
@@ -2978,11 +2982,11 @@ class BatchProcessingThread(QThread):
                             try:
                                 self.phase_progress.emit(0)  # Reset für neue Phase
                             except Exception:
-                                pass
+                                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                         # §v10.702 G11: Quality-Update Fallback — direkt aus Batch-Thread.
                         # Wenn der Smooth-Emitter-Daemon stirbt (G3), verhindert dies
                         # dass das Qualitäts-Meter komplett einfriert.
-                        if _target_advanced and len(executed) % 5 == 0:
+                        if _target_advanced and _uv3_count[0] > 0 and _uv3_count[0] % 5 == 0:
                             try:
                                 _live_mos_fb = self._estimate_live_quality_mos(
                                     progress_pct=_new_tgt,
@@ -2992,7 +2996,7 @@ class BatchProcessingThread(QThread):
                                 )
                                 self.quality_update.emit(round(_live_mos_fb, 1))
                             except Exception:
-                                pass
+                                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     if _new_tgt > 2.0 and _new_tgt < 98.0:
                         self.set_buttons_enabled(False)
                     elif _new_tgt >= 98.0:
@@ -3036,7 +3040,7 @@ class BatchProcessingThread(QThread):
                                 _f = min(5, max(1, round(_v)))
                                 return "★" * _f + "☆" * (5 - _f)
                             except Exception:
-                                logger.debug("fallback in modern_window.py", exc_info=True)
+                                logger.debug("Ersatzpfad in modern_window.py", exc_info=True)
                                 return "★★★"
 
                         _vranking = "  ›  ".join(
@@ -3438,7 +3442,7 @@ class BatchProcessingThread(QThread):
                         _phase_norm = _normalize_audio(phase_audio)
                         self.waveform_phase_update.emit(_phase_norm, int(phase_sr), str(phase_id_str))
                     except Exception as _e:
-                        logger.debug("audio_update_cb failed for %s: %s", phase_id_str, _e)
+                        logger.debug("audio_Aktualisierung_cb fehlgeschlagen for %s: %s", phase_id_str, _e)
 
                 _denke_kwargs: dict = {
                     "mode": _aurik_mode,
@@ -3459,7 +3463,7 @@ class BatchProcessingThread(QThread):
                 if _recovery_cp is not None:
                     _denke_kwargs["recovery_checkpoint"] = _recovery_cp
                     logger.info(
-                        "BatchProcessingThread: OOM-Recovery aktiv für %s (remaining_phases=%d)",
+                        "BatchProcessingThread: OOM-Wiederherstellung aktiv für %s (remaining_phases=%d)",
                         Path(item.input_file).name,
                         len(getattr(_recovery_cp, "phases_remaining", []) or []),
                     )
@@ -3508,7 +3512,7 @@ class BatchProcessingThread(QThread):
                     except Exception as _pa_exc:
                         logger.warning(
                             "BatchProcessingThread: PreAnalysisResult-Aufbau fehlgeschlagen (%s) "
-                            "— Fallback auf Einzel-kwargs",
+                            "— Ersatzpfad auf Einzel-kwargs",
                             _pa_exc,
                         )
                         # Fallback: individual kwargs as before
@@ -3531,7 +3535,7 @@ class BatchProcessingThread(QThread):
                 # Quality-first policy: never reduce restoration quality due to
                 # RT budget in the main pass.
                 _denke_kwargs["no_rt_limit"] = True
-                logger.info("BatchDiag: calling denke() at %.2fs after item_started", time.perf_counter() - _t_load_0)
+                logger.info("BatchDiag: calling denke() at %.2fs after item_gestartet", time.perf_counter() - _t_load_0)
 
                 # §3.9.2: Expose state for emergency checkpoint on SIGTERM
                 self._emergency_input_path = item.input_file
@@ -3689,7 +3693,7 @@ class BatchProcessingThread(QThread):
                 # um zusätzliche Resampling-Artefakte in sensiblen Passagen zu vermeiden.
                 if target_export_sr < write_sr and (_ml_vqi < 0.85 or _ml_hotspots > 0):
                     logger.info(
-                        "Export-SR-Guard: Downsampling %d->%d übersprungen (vqi=%.3f hotspots=%d item=%s)",
+                        "Ausgabe-SR-Guard: Downsampling %d->%d übersprungen (vqi=%.3f hotspots=%d item=%s)",
                         write_sr,
                         target_export_sr,
                         _ml_vqi,
@@ -3708,14 +3712,14 @@ class BatchProcessingThread(QThread):
                         write_audio = _normalize_audio(write_audio)
                         write_sr = target_export_sr
                         logger.info(
-                            "Export resampled: %d Hz -> %d Hz (item=%s)",
+                            "Ausgabe resampled: %d Hz -> %d Hz (item=%s)",
                             sr,
                             write_sr,
                             item.id,
                         )
                     except Exception as _rs_exc:
                         logger.warning(
-                            "Export resample to %d Hz failed (%s) — fallback to %d Hz",
+                            "Ausgabe resample to %d Hz fehlgeschlagen (%s) — Ersatzpfad to %d Hz",
                             target_export_sr,
                             _rs_exc,
                             write_sr,
@@ -3737,17 +3741,17 @@ class BatchProcessingThread(QThread):
                     write_audio[:, 0] = np.clip(_mid + _side, -1.0, 1.0)
                     write_audio[:, 1] = np.clip(_mid - _side, -1.0, 1.0)
                     _ml_mono_softened = True
-                    logger.info("Export-MonoGuard: leichte Stereo-Softening-Korrektur aktiv (item=%s)", item.id)
+                    logger.info("Ausgabe-MonoGuard: leichte Stereo-Softening-Korrektur aktiv (item=%s)", item.id)
 
                 # §G2: Export-Quality-Gate — prüft Chroma/LUFS/Goals/quality_estimate vor Export
                 if _eq_warnings:
                     for _eqw in _eq_warnings:
-                        logger.warning("Export-Quality: %s", _eqw)
+                        logger.warning("Ausgabe-Quality: %s", _eqw)
                 if not _eq_passed:
                     # §8.1 Hard-Gate: P1/P2-Verletzung oder quality_estimate < 0.55
                     # Fail-closed: Kein Dateiexport bei fehlgeschlagenem Gate.
                     logger.error(
-                        "Export-Quality-Gate FAILED für %s — Export wird blockiert (fail-closed). Ursachen: %s",
+                        "Ausgabe-Quality-Gate fehlgeschlagen für %s — Ausgabe wird blockiert (fail-closed). Ursachen: %s",
                         item.id,
                         "; ".join(_eq_warnings),
                     )
@@ -3798,7 +3802,7 @@ class BatchProcessingThread(QThread):
                                 axis=0 if _reference_audio.ndim > 1 else -1,
                             )
                     except Exception as _ref_exc:
-                        logger.debug("Export reference load skipped for %s: %s", item.input_file, _ref_exc)
+                        logger.debug("Ausgabe Referenz laden uebersprungen for %s: %s", item.input_file, _ref_exc)
                     _wcs_payload = (
                         _eq_payload.get("worldclass_composite_gate", {})
                         if isinstance(_eq_payload.get("worldclass_composite_gate", {}), dict)
@@ -3925,7 +3929,7 @@ class BatchProcessingThread(QThread):
                                 _fb_ref_audio, _fallback_audio, write_sr, max_edge_boost_db=0.5
                             )
                     except Exception as _fb_edge_exc:
-                        logger.debug("Fallback quiet-edge guard skipped: %s", _fb_edge_exc)
+                        logger.debug("Ersatzpfad quiet-edge guard uebersprungen: %s", _fb_edge_exc)
                         _fallback_audio = write_audio  # sicher: Originalzustand
                     try:
                         _fallback_audio = _export_guard(_fallback_audio)
@@ -3999,7 +4003,7 @@ class BatchProcessingThread(QThread):
                 try:
                     _load_ticker_active[0] = False
                 except Exception:
-                    logger.debug("BatchProcessingThread: Load-Ticker konnte nicht gestoppt werden", exc_info=True)
+                    logger.debug("BatchProcessingThread: laden-Ticker konnte nicht gestoppt werden", exc_info=True)
                 # Inter-file RAM cleanup — release plugin memory between files
                 try:
                     _cleanup_fn = _bridge_get_cleanup_after_file_fn()
@@ -6867,7 +6871,9 @@ class WaveformWidget(QWidget):
                     painter.setBrush(QBrush(QColor(80, 140, 255, _loop_active_alpha)))
                     painter.drawRect(_lx_px, plot_y, _lw_px, plot_height)
                     # Randlinien
-                    painter.setPen(QPen(QColor(80, 160, 255, 160 if self._loop_active else 80), 1.5, Qt.PenStyle.SolidLine))
+                    painter.setPen(
+                        QPen(QColor(80, 160, 255, 160 if self._loop_active else 80), 1.5, Qt.PenStyle.SolidLine)
+                    )
                     painter.drawLine(_lx_px, plot_y, _lx_px, plot_y + plot_height)
                     painter.drawLine(_lx_px + _lw_px, plot_y, _lx_px + _lw_px, plot_y + plot_height)
                     # "LOOP" Label wenn aktiv
@@ -11704,7 +11710,7 @@ class ExportConfigDialog(QDialog):
                     if proc.returncode == 0 and proc.stdout.strip():
                         d = proc.stdout.strip()
                 except Exception:
-                    logger.debug("Export-Zielauswahl: zenity-Aufruf fehlgeschlagen", exc_info=True)
+                    logger.debug("Ausgabe-Zielauswahl: zenity-Aufruf fehlgeschlagen", exc_info=True)
             if not d and shutil.which("kdialog"):
                 try:
                     proc = subprocess.run(
@@ -11716,7 +11722,7 @@ class ExportConfigDialog(QDialog):
                     if proc.returncode == 0 and proc.stdout.strip():
                         d = proc.stdout.strip()
                 except Exception:
-                    logger.debug("Export-Zielauswahl: kdialog-Aufruf fehlgeschlagen", exc_info=True)
+                    logger.debug("Ausgabe-Zielauswahl: kdialog-Aufruf fehlgeschlagen", exc_info=True)
 
         # 2. Tkinter native (Windows only).
         # Mixing Tk + Qt on Linux can trigger hard GUI crashes in some desktop setups.
@@ -11741,7 +11747,7 @@ class ExportConfigDialog(QDialog):
                     with contextlib.suppress(Exception):
                         _root.destroy()
             except Exception:
-                logger.debug("Export-Zielauswahl: Tkinter-Fallback fehlgeschlagen", exc_info=True)
+                logger.debug("Ausgabe-Zielauswahl: Tkinter-Ersatzpfad fehlgeschlagen", exc_info=True)
 
         # 3. Qt-Fallback (static API to avoid nested custom dialog issues)
         if not d:
@@ -12643,7 +12649,7 @@ class ModernMainWindow(QMainWindow):
                 if _avail_gb < 6.0:
                     _skip_warmup = True
                     logger.warning(
-                        "Startup warmup skipped due to low available RAM: %.2f GB (< 6.0 GB)",
+                        "Start warmup uebersprungen due to low verfuegbar RAM: %.2f GB (< 6.0 GB)",
                         _avail_gb,
                     )
             except Exception:
@@ -12651,7 +12657,7 @@ class ModernMainWindow(QMainWindow):
                 pass
 
         if _skip_warmup:
-            logger.info("Startup warmup disabled (AURIK_DISABLE_STARTUP_WARMUP=1 or low-RAM guard).")
+            logger.info("Start warmup deaktiviert (AURIK_DISABLE_Start_WARMUP=1 or low-RAM guard).")
         else:
             QTimer.singleShot(
                 2000,
@@ -12674,7 +12680,7 @@ class ModernMainWindow(QMainWindow):
             if should_show_onboarding():
                 QTimer.singleShot(800, lambda: OnboardingWizard(self).exec_())
         except Exception:
-            logger.debug("fallback in modern_window.py", exc_info=True)
+            logger.debug("Ersatzpfad in modern_window.py", exc_info=True)
 
         # Runtime-adaptive UI: reacts to resize and monitor DPI/screen changes.
         self._responsive_sig: tuple[float, int, int] | None = None
@@ -12737,7 +12743,7 @@ class ModernMainWindow(QMainWindow):
             w = int(geo.width())
             h = int(geo.height())
         except Exception:
-            logger.debug("fallback in modern_window.py", exc_info=True)
+            logger.debug("Ersatzpfad in modern_window.py", exc_info=True)
             return 1.0
 
         scale = max(1.0, min(1.28, dpi / 96.0))
@@ -12920,7 +12926,7 @@ class ModernMainWindow(QMainWindow):
                     sig = getattr(old, sig_name)
                     sig.disconnect(self._on_screen_metrics_changed)
                 except Exception:
-                    logger.debug("Screen-Awareness: Signal-Disconnect fehlgeschlagen (%s)", sig_name, exc_info=True)
+                    logger.debug("Screen-Awareness: Signal-trennen fehlgeschlagen (%s)", sig_name, exc_info=True)
 
         self._watched_screen = screen
         if screen is None:
@@ -13179,7 +13185,7 @@ class ModernMainWindow(QMainWindow):
             # nichts zu wiederaufnehmen — still löschen, kein Dialog, kein Auto-Start.
             if n_done == 0 and n_rem == 0:
                 logger.info(
-                    "OOM-Recovery: Checkpoint ohne ausgeführte Phasen (failure=%s) verworfen "
+                    "OOM-Wiederherstellung: Checkpoint ohne ausgeführte Phasen (Fehlschlag=%s) verworfen "
                     "— kein Wiederaufnahme-Dialog.",
                     cp.failure_phase,
                 )
@@ -13187,7 +13193,9 @@ class ModernMainWindow(QMainWindow):
                     _, _, _del_cp = _bridge_get_recovery_checkpoint_fns()
                     _del_cp(cp.input_path)
                 except Exception:
-                    logger.debug("OOM-Recovery: Leeren Checkpoint konnte nicht geloescht werden", exc_info=True)
+                    logger.debug(
+                        "OOM-Wiederherstellung: Leeren Checkpoint konnte nicht geloescht werden", exc_info=True
+                    )
                 return
 
             msg = QMessageBox(self)
@@ -13222,10 +13230,10 @@ class ModernMainWindow(QMainWindow):
                     _, _, _del_cp = _bridge_get_recovery_checkpoint_fns()
                     _del_cp(cp.input_path)
                 except Exception:
-                    logger.debug("OOM-Recovery: Checkpoint-Verwerfen fehlgeschlagen", exc_info=True)
+                    logger.debug("OOM-Wiederherstellung: Checkpoint-Verwerfen fehlgeschlagen", exc_info=True)
 
         except Exception as _exc:
-            logger.debug("OOM-Recovery-Check fehlgeschlagen: %s", _exc)
+            logger.debug("OOM-Wiederherstellung-Pruefung fehlgeschlagen: %s", _exc)
 
     def _resume_from_checkpoint(self, checkpoint) -> None:
         """§2.39 OOM-Recovery: Starte die Restaurierung ab dem Checkpoint fort."""
@@ -13248,9 +13256,9 @@ class ModernMainWindow(QMainWindow):
                 else:
                     self._process_with_mode("RESTORATION")
             else:
-                logger.warning("OOM-Recovery: _process_with_mode nicht verfügbar.")
+                logger.warning("OOM-Wiederherstellung: _verarbeiten_with_Betriebsart nicht verfügbar.")
         except Exception as _exc:
-            logger.error("OOM-Recovery: Wiederaufnahme fehlgeschlagen: %s", _exc)
+            logger.error("OOM-Wiederherstellung: Wiederaufnahme fehlgeschlagen: %s", _exc)
 
     def _toggle_lyrics_overlay(self) -> None:
         """L-Shortcut: Lyrics-Timeline-Overlay ein-/ausblenden (§11.4 / §2.36 Spec 08).
@@ -14158,7 +14166,7 @@ class ModernMainWindow(QMainWindow):
             toast.move(self.width() - toast.width() - 16, _y_offset)
             toast.show()
         except Exception as _te:
-            logger.debug("Toast failed: %s", _te)
+            logger.debug("Toast fehlgeschlagen: %s", _te)
 
     def _next_progress_hint(self, pct: int) -> str:
         """Gibt one concise next-step hint for the live progress status zurück."""
@@ -14884,7 +14892,7 @@ class ModernMainWindow(QMainWindow):
             try:
                 self.prognose_widget.set_recommended_mode(recommended_mode)  # type: ignore[union-attr]
             except Exception as _prw_exc:
-                logger.debug("prognose_widget.set_recommended_mode failed: %s", _prw_exc)
+                logger.debug("prognose_widget.set_recommended_Betriebsart fehlgeschlagen: %s", _prw_exc)
 
         if hasattr(self, "btn_magic_restoration"):
             restoration_tip = t("tooltip.btn_restoration")
@@ -15575,7 +15583,7 @@ class ModernMainWindow(QMainWindow):
                 with self._sd_lock:
                     self._stop_sd_playback_locked()
             except Exception as exc:
-                logger.warning("A/B playback toggle stop failed: %s", exc)
+                logger.warning("A/B playback toggle stop fehlgeschlagen: %s", exc)
                 if hasattr(self, "status_text"):
                     self._apply_status_text_style("error")
                     self.status_text.setText(t("status.playback_stop_failed"))
@@ -15653,7 +15661,7 @@ class ModernMainWindow(QMainWindow):
                 else:
                     _open_with_system_default(str(_base))
             except Exception as exc:
-                logger.warning("Failed to open doc %s: %s", filename, exc)
+                logger.warning("konnte nicht open doc %s: %s", filename, exc)
                 self.status_text.setText(t("status.help_open_failed", file=filename))
         else:
             self.status_text.setText(t("status.help_not_found", file=filename))
@@ -16350,7 +16358,7 @@ class ModernMainWindow(QMainWindow):
         try:
             _open_with_system_default(url)
         except Exception as exc:
-            logger.warning("Failed to open update URL: %s", exc)
+            logger.warning("konnte nicht open Aktualisierung URL: %s", exc)
 
     def _show_shortcut_help(self) -> None:
         """F1 / ?: Zeigt Tastenkürzel-Übersicht als modalen Dialog."""
@@ -16449,7 +16457,7 @@ class ModernMainWindow(QMainWindow):
 
             HelpSearchDialog(self).exec_()
         except Exception:
-            logger.debug("Help system unavailable", exc_info=True)
+            logger.debug("Help system nicht verfuegbar", exc_info=True)
 
     def _request_processing_stop(self, reason: str, timeout_s: float = 5.0) -> bool:
         """Request async stop of active worker threads without blocking UI thread."""
@@ -16840,7 +16848,7 @@ class ModernMainWindow(QMainWindow):
             # Laden vollständig — Balken auf 100 % (letzte Iteration ist bereits 100 %,
             # explizites Setzen als Sicherheitsnetz für Bridge-/Fallback-Pfade)
             _set_progress(100)
-            logger.debug("_bg_load: progress 100 emitted, dispatching _on_file_loaded")
+            logger.debug("_bg_laden: progress 100 emitted, dispatching _on_file_geladen")
 
             audio = _normalize_audio(audio)
 
@@ -16928,7 +16936,9 @@ class ModernMainWindow(QMainWindow):
                 if cached is not None:
                     return float(np.clip(float(getattr(cached, "predicted_mos", 2.5) or 2.5), 1.0, 5.0))
         except Exception:
-            logger.debug("Live-Qualitätsstartwert konnte nicht aus Restorability-Cache gelesen werden", exc_info=True)
+            logger.debug(
+                "Live-Qualitätsstartwert konnte nicht aus Restorability-Zwischenspeicher gelesen werden", exc_info=True
+            )
         score = float(getattr(self, "_restorability_score", 50.0) or 50.0)
         return float(np.clip(1.0 + np.clip(score, 0.0, 100.0) / 100.0 * 4.0, 1.0, 5.0))
 
@@ -17089,7 +17099,7 @@ class ModernMainWindow(QMainWindow):
             return False
         if not isinstance(chain_keys, list) or len(chain_keys) < 2:
             logger.debug(
-                "_apply_authoritative_chain_display: übersprungen – len=%d < 2 (chain=%s)",
+                "_anwenden_authoritative_chain_display: übersprungen – len=%d < 2 (chain=%s)",
                 len(chain_keys) if isinstance(chain_keys, list) else -1,
                 chain_keys,
             )
@@ -17161,7 +17171,7 @@ class ModernMainWindow(QMainWindow):
         if str(getattr(self, "current_file_path", "") or "") != str(file_path):
             return
 
-        logger.debug("_on_file_loaded called: audio.shape=%s sr=%d", audio.shape, sr)
+        logger.debug("_on_file_geladen called: audio.shape=%s sr=%d", audio.shape, sr)
         self._is_file_loading = False  # Datei vollständig geladen — Bar zeigt ab jetzt Scan-%
         # Lade-Zustand des WaveformWidgets aufheben
         if hasattr(self, "waveform_widget"):
@@ -17188,7 +17198,7 @@ class ModernMainWindow(QMainWindow):
         self._update_ab_player_state()
 
         # Export-Dialog jetzt MODAL und BLOCKIEREND vor jeglicher Verarbeitung
-        logger.debug("_on_file_loaded: opening ExportConfigDialog (modal)")
+        logger.debug("_on_file_geladen: opening ExportConfigDialog (modal)")
 
         # v10.0.15: Export-Presets (WhatsApp/Handy/Email) entfernt —
         # Aurik exportiert standardmäßig in professioneller CD-Qualität.
@@ -17248,7 +17258,7 @@ class ModernMainWindow(QMainWindow):
                         self._main_area_layout.addWidget(self._ab_preview_widget)
                 self._ab_preview_widget.setVisible(True)
             except Exception:
-                logger.debug("fallback in modern_window.py", exc_info=True)
+                logger.debug("Ersatzpfad in modern_window.py", exc_info=True)
 
             # Playback pre-warmup: resample to device SR in background so the
             # first play-click is stutter-free.  Invalidate any previous cache.
@@ -17260,7 +17270,9 @@ class ModernMainWindow(QMainWindow):
                 try:
                     _sp.invalidate_cache()
                 except Exception:
-                    logger.debug("Datei-Laden: Streaming-Player-Cache konnte nicht invalidiert werden", exc_info=True)
+                    logger.debug(
+                        "Datei-Laden: Streaming-Player-Zwischenspeicher konnte nicht invalidiert werden", exc_info=True
+                    )
             _warmup_token = self._playback_warmup_token
             _warmup_audio = _audio
             _warmup_sr = _sr
@@ -17303,7 +17315,7 @@ class ModernMainWindow(QMainWindow):
                         data.shape,
                     )
                 except Exception as _exc:
-                    logger.debug("Playback warmup cache failed (non-blocking): %s", _exc)
+                    logger.debug("Playback warmup Zwischenspeicher fehlgeschlagen (nicht blockierend): %s", _exc)
 
             threading.Thread(target=_warmup_device_cache, daemon=True).start()
 
@@ -17338,12 +17350,12 @@ class ModernMainWindow(QMainWindow):
                     _pa_errors = getattr(_pa_result, "errors", {}) or {}
                     if _pa_errors:
                         logger.warning(
-                            "Watchdog: Pre-Analysis degradiert — %d Schritt(e) fehlgeschlagen: %s",
+                            "Watchdog: Pre-Analyse degradiert — %d Schritt(e) fehlgeschlagen: %s",
                             len(_pa_errors),
                             ", ".join(f"{k}={v}" for k, v in _pa_errors.items()),
                         )
                     else:
-                        logger.info("Watchdog: Pre-Analysis vollständig — alle Schritte OK")
+                        logger.info("Watchdog: Pre-Analyse vollständig — alle Schritte OK")
                 self._apply_mode_recommendation_visuals()
                 # Self-healing sync: if background UI update arrived late, refresh
                 # cards from cached analysis state before announcing completion.
@@ -17370,7 +17382,7 @@ class ModernMainWindow(QMainWindow):
                             if _lbl and _lbl != t("status.analyzing_wait"):
                                 self._update_carrier_display(_lbl, _sc, _cfk, load_token=_snap_token)
                 except Exception as _sync_exc:
-                    logger.debug("Pre-analysis finalize: UI sync fallback failed: %s", _sync_exc)
+                    logger.debug("Pre-Analyse abschliessen: UI sync Ersatzpfad fehlgeschlagen: %s", _sync_exc)
                 if hasattr(self, "progress_bar"):
                     self.progress_bar.setRange(0, 10000)
                     self.progress_bar.setValue(10000)
@@ -17634,7 +17646,7 @@ class ModernMainWindow(QMainWindow):
                 _normalized_file = os.path.normpath(os.path.realpath(str(_file_key)))
                 self._latest_pre_analysis_file = _normalized_file
                 logger.debug(
-                    "_pre_analysis_bg: Speichern PreAnalysisResult für normalisiertes Path: %s",
+                    "_pre_Analyse_bg: Speichern PreAnalysisResult für normalisiertes Path: %s",
                     _normalized_file,
                 )
 
@@ -18129,7 +18141,7 @@ class ModernMainWindow(QMainWindow):
                     # Keep waiting for defect scan to avoid "analysis completed"
                     # while detail cards still show analyzing placeholders.
                     logger.info(
-                        "Pre-analysis hard-timeout reached, waiting for defect_scan before finalization: file=%s",
+                        "Pre-Analyse hard-Zeitlimit reached, waiting for defect_scan before finalization: file=%s",
                         _cfk,
                     )
 
@@ -18311,7 +18323,7 @@ class ModernMainWindow(QMainWindow):
             with self._sd_lock:
                 self._stop_sd_playback_locked()
         except Exception as exc:
-            logger.warning("A/B playback stop failed: %s", exc)
+            logger.warning("A/B playback stop fehlgeschlagen: %s", exc)
 
         def _play():
             try:
@@ -18346,7 +18358,7 @@ class ModernMainWindow(QMainWindow):
                             if getattr(self, "_playback_warmup_token", -1) >= 0:
                                 self._playback_device_cache = (id(prepared_audio), sr, play_sr, data)
                     except Exception as exc:
-                        logger.debug("A/B playback device-rate adaption skipped: %s", exc)
+                        logger.debug("A/B playback device-rate adaption uebersprungen: %s", exc)
 
                 if data.ndim == 1:
                     data2 = data.reshape(-1, 1)
@@ -18383,7 +18395,7 @@ class ModernMainWindow(QMainWindow):
                 )
                 if _stopped_intentionally:
                     return
-                logger.warning("A/B playback failed: %s", exc)
+                logger.warning("A/B playback fehlgeschlagen: %s", exc)
 
                 def _notify_playback_error(_exc: Exception = exc) -> None:
                     err = str(_exc)[:140]
@@ -18790,10 +18802,7 @@ class ModernMainWindow(QMainWindow):
         # Auflösen
         a_label = "Original" if self._blindtest_a_is_original else "Restauriert"
         b_label = "Restauriert" if self._blindtest_a_is_original else "Original"
-        result_text = (
-            f"Blindtest: A={a_label} ({self._blindtest_score_a}★) | "
-            f"B={b_label} ({self._blindtest_score_b}★)"
-        )
+        result_text = f"Blindtest: A={a_label} ({self._blindtest_score_a}★) | B={b_label} ({self._blindtest_score_b}★)"
         if self._blindtest_score_a > self._blindtest_score_b:
             winner = "A" if self._blindtest_a_is_original else "B"
             result_text += f" → Bevorzugt: {winner}"
@@ -18803,20 +18812,22 @@ class ModernMainWindow(QMainWindow):
         else:
             result_text += " → Gleichstand"
         # Speichern in History
-        self._blindtest_history.append({
-            "a_is_original": self._blindtest_a_is_original,
-            "score_a": self._blindtest_score_a,
-            "score_b": self._blindtest_score_b,
-            "preferred": "original" if (
-                (self._blindtest_a_is_original and self._blindtest_score_a >= self._blindtest_score_b)
-                or (not self._blindtest_a_is_original and self._blindtest_score_b > self._blindtest_score_a)
-            ) else "restored",
-        })
+        self._blindtest_history.append(
+            {
+                "a_is_original": self._blindtest_a_is_original,
+                "score_a": self._blindtest_score_a,
+                "score_b": self._blindtest_score_b,
+                "preferred": "original"
+                if (
+                    (self._blindtest_a_is_original and self._blindtest_score_a >= self._blindtest_score_b)
+                    or (not self._blindtest_a_is_original and self._blindtest_score_b > self._blindtest_score_a)
+                )
+                else "restored",
+            }
+        )
         # Anzeigen
         self._ab_source_label.setText(result_text)
-        self._ab_source_label.setStyleSheet(
-            "color: #e8d8ff; font-size: 9pt; font-weight: bold; padding: 0 4px;"
-        )
+        self._ab_source_label.setStyleSheet("color: #e8d8ff; font-size: 9pt; font-weight: bold; padding: 0 4px;")
         self._ab_source_label.setVisible(True)
         # Button reset
         self.btn_blindtest.setText("🎲  Blindtest")
@@ -18953,7 +18964,7 @@ class ModernMainWindow(QMainWindow):
                     with contextlib.suppress(Exception):
                         _root.destroy()
             except Exception:
-                logger.debug("Dateidialog (native): Tkinter-Fallback fehlgeschlagen", exc_info=True)
+                logger.debug("Dateidialog (native): Tkinter-Ersatzpfad fehlgeschlagen", exc_info=True)
 
         return []
 
@@ -19342,12 +19353,12 @@ class ModernMainWindow(QMainWindow):
             if _pre_defects is not None:
                 settings["cached_defect_result"] = _pre_defects
             logger.debug(
-                "_add_to_queue_with_mode: PreAnalysisResult übernommen ✓ (normalized: %s)",
+                "_add_to_queue_with_Betriebsart: PreAnalysisResult übernommen ✓ (normalisiert: %s)",
                 _pre_file_norm,
             )
         else:
             logger.debug(
-                "_add_to_queue_with_mode: PreAnalysisResult NICHT übernommen (result=%s, pre_file=%s, current=%s)",
+                "_add_to_queue_with_Betriebsart: PreAnalysisResult NICHT übernommen (Ergebnis=%s, pre_file=%s, current=%s)",
                 "present" if _pre_result else "None",
                 _pre_file_norm,
                 _current_file_norm,
@@ -19361,7 +19372,7 @@ class ModernMainWindow(QMainWindow):
                 settings["recovery_checkpoint"] = _pending_cp
                 self._pending_recovery_checkpoint = None
                 logger.info(
-                    "OOM-Recovery: Checkpoint an Queue-Item angehängt (%s, remaining_phases=%d)",
+                    "OOM-Wiederherstellung: Checkpoint an Queue-Item angehängt (%s, remaining_phases=%d)",
                     Path(file_path).name,
                     len(getattr(_pending_cp, "phases_remaining", []) or []),
                 )
@@ -19466,11 +19477,13 @@ class ModernMainWindow(QMainWindow):
             # nicht auf 0 initialisieren. Die Chips zeigen dann sofort den
             # korrekten Stand (z.B. "985/985") statt "0/0".
             "total": sum(1 for v in getattr(self, "_defect_initial_event_counts", {}).values() if v > 0)
-                     or sum(1 for v in getattr(self, "_defect_scan_scores", {}).values()
-                            if isinstance(v, (int, float)) and v > 0.1),
+            or sum(
+                1 for v in getattr(self, "_defect_scan_scores", {}).values() if isinstance(v, (int, float)) and v > 0.1
+            ),
             "remaining": sum(1 for v in getattr(self, "_defect_initial_event_counts", {}).values() if v > 0)
-                         or sum(1 for v in getattr(self, "_defect_scan_scores", {}).values()
-                                if isinstance(v, (int, float)) and v > 0.1),
+            or sum(
+                1 for v in getattr(self, "_defect_scan_scores", {}).values() if isinstance(v, (int, float)) and v > 0.1
+            ),
             "resolved": 0,
             "resolved_pct": 0,
             "reduced_pct": 0,
@@ -19515,7 +19528,7 @@ class ModernMainWindow(QMainWindow):
             try:
                 _old_bt.disconnect()
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         self.batch_thread = BatchProcessingThread(self.batch_queue)
         # §Fix Live-Preview: _audio_ring muss für Batch-Thread sichtbar sein
         # (_audio_update_cb läuft im BatchProcessingThread, nicht in ModernWindow)
@@ -19570,9 +19583,9 @@ class ModernMainWindow(QMainWindow):
                 self.batch_thread = None
                 self._processing_transition = False
                 return
-            logger.info("RAM-Check vor Restaurierung: %.1f GB verfügbar → OK", _avail_gb)
+            logger.info("RAM-Pruefung vor Restaurierung: %.1f GB verfügbar → OK", _avail_gb)
         except Exception:
-            logger.debug("RAM-Check: psutil nicht verfuegbar oder RAM-Abfrage fehlgeschlagen", exc_info=True)
+            logger.debug("RAM-Pruefung: psutil nicht verfuegbar oder RAM-Abfrage fehlgeschlagen", exc_info=True)
             # psutil nicht verfügbar -> kein Check, weiterfahren
 
         self.progress_bar.setRange(0, 10000)
@@ -19613,10 +19626,10 @@ class ModernMainWindow(QMainWindow):
         _per_file_ms = max(1_800_000, int(_audio_dur_s * 36_000) + 600_000)  # 36×RT + 10min overhead
         _watchdog_ms = max(5_400_000, stats["pending"] * _per_file_ms)
         # ── §WATCHDOG-STARTUP-CHECK ──────────────────────────────────
-        logger.info("Watchdog: W-PREANALYSIS-LIVENESS ✅ — 60s ohne _cb() → Force-Finalize")
+        logger.info("Watchdog: W-PREANALYSIS-LIVENESS ✅ — 60s ohne _cb() → Force-abschliessen")
         logger.info("Watchdog: W-PROGRESS-STALE ✅ — Bar-Step-Abweichung >15% → WARNING")
-        logger.info("Watchdog: W-GATE-STUCK ✅ — 1-Flag >120s → Force-Finalize")
-        logger.info("Watchdog: W-WALL-CLOCK ✅ — Timeout: %.0fs (Dialog bei 75%%)", _watchdog_ms / 1000)
+        logger.info("Watchdog: W-GATE-STUCK ✅ — 1-Flag >120s → Force-abschliessen")
+        logger.info("Watchdog: W-WALL-CLOCK ✅ — Zeitlimit: %.0fs (Dialog bei 75%%)", _watchdog_ms / 1000)
         if self._watchdog_timer is None:
             self._watchdog_timer = QTimer(self)
             self._watchdog_timer.setSingleShot(True)
@@ -19681,7 +19694,7 @@ class ModernMainWindow(QMainWindow):
         if hasattr(self.batch_thread, "_start_ts"):
             _elapsed = int((time.monotonic() - self.batch_thread._start_ts) / 60)
         logger.info(
-            "§v10.15 Budget-Warnung #%d: Pipeline laeuft seit %d min",
+            "§v10.15 Grenze-Warnung #%d: Pipeline laeuft seit %d min",
             self._watchdog_dialog_count,
             _elapsed,
         )
@@ -19724,7 +19737,7 @@ class ModernMainWindow(QMainWindow):
                 if _uv3 is not None:
                     _uv3.request_graceful_stop()
             except Exception as _exc:
-                logger.debug("UV3 signal failed: %s", _exc)
+                logger.debug("UV3 signal fehlgeschlagen: %s", _exc)
             return
         if _clicked is _btn_later:
             _extend_ms = 15 * 60_000
@@ -19756,7 +19769,7 @@ class ModernMainWindow(QMainWindow):
             if _uv3 is not None:
                 _uv3.request_graceful_stop()
         except Exception as _gs_exc:
-            logger.debug("UV3 graceful stop Signalisierung fehlgeschlagen (non-critical): %s", _gs_exc)
+            logger.debug("UV3 graceful stop Signalisierung fehlgeschlagen (unkritisch): %s", _gs_exc)
 
         # 2. Status-Anzeige: Recovery läuft, kein Fehler
         self.title_bar.set_status("⏳ Zeitlimit — bestes Ergebnis wird gesichert …", "#B8A068")
@@ -19972,7 +19985,7 @@ class ModernMainWindow(QMainWindow):
         # ── 3. Status-Text: Narrativ statt technischer Anzeige ─────
         # §v10.500: Innovatives Kommunikationssystem — Aurik erzählt
         # die Geschichte des Songs in ganzen Sätzen, nicht als Log.
-        _elapsed_narr = max(0.0, _now - getattr(self, '_processing_start_time', _now))
+        _elapsed_narr = max(0.0, _now - getattr(self, "_processing_start_time", _now))
         _narrative = self._narrate_status(
             pct=_overall_pct,
             phase=_clean,
@@ -20082,9 +20095,9 @@ class ModernMainWindow(QMainWindow):
             _el_m, _el_s = divmod(int(_phase_elapsed), 60)
             # §v10.500: Narrativ statt technischer Anzeige
             _narr = self._narrate_status(
-                pct=float(getattr(self, '_last_phase_state', {}).get('pct', _ph_cur/max(1,_ph_tot)*100)),
+                pct=float(getattr(self, "_last_phase_state", {}).get("pct", _ph_cur / max(1, _ph_tot) * 100)),
                 phase=_clean,
-                defect_state=getattr(self, '_defect_progress_state', None) or {},
+                defect_state=getattr(self, "_defect_progress_state", None) or {},
                 elapsed_s=_phase_elapsed,
             )
             self.status_text.setText(_narr)
@@ -20260,6 +20273,8 @@ class ModernMainWindow(QMainWindow):
                         # Restzeit aus geglättetem Deadline-Zeitstempel
                         _rem = max(0.0, _eta_deadline - time.perf_counter()) if _eta_deadline > 0 else -1.0
                         if _rem is not None and _rem >= 0:
+                            _rem_s = float(_rem)
+                            _expected_processing_s = float(getattr(self, "_expected_processing_s", 0.0) or 0.0)
                             _eta_str = f"noch {self._format_eta_short(_rem)}"
                             _def_suffix = ""
                             _live_intel_hint = ""
@@ -20732,9 +20747,11 @@ class ModernMainWindow(QMainWindow):
                         data = np.ascontiguousarray(data, dtype=np.float32)
                         if getattr(self, "_playback_warmup_token", 0) == _w_token:
                             self._playback_device_cache = (id(_w_audio), _w_sr, cached_sr, data)
-                            logger.debug("Playback warmup (restored): device_sr=%d, shape=%s", cached_sr, data.shape)
+                            logger.debug(
+                                "Playback warmup (wiederhergestellt): device_sr=%d, shape=%s", cached_sr, data.shape
+                            )
                     except Exception as _exc:
-                        logger.debug("Playback warmup (restored) failed: %s", _exc)
+                        logger.debug("Playback warmup (wiederhergestellt) fehlgeschlagen: %s", _exc)
 
                 threading.Thread(target=_warmup_rest, daemon=True).start()
                 # Vorschau-Button im Ergebnis-Banner aktivieren (kein Autoplay)
@@ -20807,7 +20824,7 @@ class ModernMainWindow(QMainWindow):
                 if hasattr(self, "_btn_thumbs_down"):
                     self._btn_thumbs_down.setEnabled(True)
             except Exception as _xp_exc:
-                logger.debug("Experience-Insights-Update fehlgeschlagen: %s", _xp_exc)
+                logger.debug("Experience-Insights-Aktualisierung fehlgeschlagen: %s", _xp_exc)
 
             _goals = getattr(restoration_result, "musical_goals", None)
             # Fallback: Scores aus metadata["musical_goals"]["scores"] wenn .musical_goals None
@@ -20833,7 +20850,7 @@ class ModernMainWindow(QMainWindow):
                                 adaptive_thresholds=_ath if _ath else None,
                             )
                         except Exception as _rw_exc:
-                            logger.debug("radar_widget.update_scores fehlgeschlagen: %s", _rw_exc)
+                            logger.debug("radar_widget.Aktualisierung_scores fehlgeschlagen: %s", _rw_exc)
 
                 QTimer.singleShot(0, _show_goals)
         # ── Tonträgerkette aus TontraegerketteDenker im Label anzeigen ────────
@@ -20881,12 +20898,12 @@ class ModernMainWindow(QMainWindow):
                         if _chain_html:
                             self.detected_medium_label.setText(_chain_html)
                             self._carrier_bg_label = _chain_html  # ← CRITICAL State sync
-                            logger.debug("detected_medium_label: Kettenanalyse ersetzt — %s", _chain_string)
+                            logger.debug("erkannt_medium_label: Kettenanalyse ersetzt — %s", _chain_string)
                     except Exception as _html_exc:
                         logger.debug("Kettenanalyse HTML-Bildung fehlgeschlagen: %s", _html_exc)
                 else:
                     logger.debug(
-                        "_on_item_finished_with_result: Kettenanzeige übersprungen – len=%d < 2 (chain=%s)",
+                        "_on_item_beendet_with_Ergebnis: Kettenanzeige übersprungen – len=%d < 2 (chain=%s)",
                         len(_chain_keys) if isinstance(_chain_keys, (list, tuple)) else -1,
                         _chain_keys,
                     )
@@ -20907,7 +20924,7 @@ class ModernMainWindow(QMainWindow):
                     except Exception as _tooltip_exc:
                         logger.debug("Kettenanalyse Tooltip fehlgeschlagen: %s", _tooltip_exc)
         except Exception as _chain_upd_exc:
-            logger.debug("Kettenanzeige-Update kritisch fehlgeschlagen: %s", _chain_upd_exc)
+            logger.debug("Kettenanzeige-Aktualisierung kritisch fehlgeschlagen: %s", _chain_upd_exc)
         # ── Ära-Badge aus UV3-Ergebnis aktualisieren (autoritativ) ────────────
         # Die Voranalyse (_detect_era_genre_bg) kann abweichende Dekaden liefern,
         # da sie nur DSP-Heuristiken nutzt. UV3 hat GlobalPlan-Prior + vollständige
@@ -20979,7 +20996,7 @@ class ModernMainWindow(QMainWindow):
                         _genre_part or "—",
                     )
         except Exception as _era_upd_exc:
-            logger.debug("Era-Badge-Update aus Ergebnis fehlgeschlagen: %s", _era_upd_exc)
+            logger.debug("Era-Badge-Aktualisierung aus Ergebnis fehlgeschlagen: %s", _era_upd_exc)
         # ──────────────────────────────────────────────────────────────────────
         item = self.batch_queue.get_item(item_id)
         if item and item.output_file and Path(item.output_file).exists():
@@ -21004,7 +21021,7 @@ class ModernMainWindow(QMainWindow):
             dlg.open_folder_requested.connect(lambda p: _open_with_system_default(p) if p else None)
             QTimer.singleShot(400, dlg.exec_)
         except Exception:
-            logger.debug("fallback in modern_window.py", exc_info=True)
+            logger.debug("Ersatzpfad in modern_window.py", exc_info=True)
 
     def _on_item_error(self, item_id, error_msg):
         """Verarbeitet item error — zeigt deutsche Fehlermeldung im UI (Spec §11.4)."""
@@ -21251,15 +21268,9 @@ class ModernMainWindow(QMainWindow):
         # §GRATITUDE: Spenden-Erinnerung nach erfolgreicher Restaurierung
         if n_ok > 0:
             try:
-                from backend.core.donation_reminder import (
-                    PAYPAL_EMAIL,
-                    PAYPAL_URL,
-                    mark_reminder_shown,
-                    open_donation_link,
-                    should_show_reminder,
-                )
+                from backend.api.bridge import should_show_donation_reminder
 
-                if should_show_reminder():
+                if should_show_donation_reminder():
                     QTimer.singleShot(1500, lambda: self._show_donation_dialog())
             except Exception:
                 pass  # non-blocking
@@ -21274,13 +21285,13 @@ class ModernMainWindow(QMainWindow):
         4. Ausweg: "Später"-Button immer sichtbar (kein Druck)
         """
         try:
-            from backend.core.donation_reminder import (
-                get_donation_info,
-                mark_reminder_shown,
-                open_donation_link,
+            from backend.api.bridge import (
+                get_donation_reminder_info,
+                mark_donation_reminder_shown,
+                open_donation_reminder_link,
             )
 
-            _info = get_donation_info()
+            _info = get_donation_reminder_info()
 
             # Personalisierter Qualitäts-Hinweis aus dem letzten Run
             _stats = self.batch_queue.get_stats() if hasattr(self, "batch_queue") else {}
@@ -21312,19 +21323,19 @@ class ModernMainWindow(QMainWindow):
             _btn5.setStyleSheet(
                 _btn_style + "background-color: #0070ba; color: white;QPushButton:hover { background-color: #005ea6; }"
             )
-            _btn5.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+            _btn5.clicked.connect(lambda: (open_donation_reminder_link(), _dlg.accept()))
 
             _btn10 = QPushButton("🎵 10 €")
             _btn10.setStyleSheet(
                 _btn_style + "background-color: #1a8a4a; color: white;QPushButton:hover { background-color: #146b38; }"
             )
-            _btn10.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+            _btn10.clicked.connect(lambda: (open_donation_reminder_link(), _dlg.accept()))
 
             _btn_custom = QPushButton("💛 Freier Betrag")
             _btn_custom.setStyleSheet(
                 _btn_style + "background-color: #e8a838; color: #333;QPushButton:hover { background-color: #c98e20; }"
             )
-            _btn_custom.clicked.connect(lambda: (open_donation_link(), _dlg.accept()))
+            _btn_custom.clicked.connect(lambda: (open_donation_reminder_link(), _dlg.accept()))
 
             _btn_later = QPushButton("Später")
             _btn_later.setStyleSheet(
@@ -21338,7 +21349,7 @@ class ModernMainWindow(QMainWindow):
             _dlg.addButton(_btn_custom, QMessageBox.ButtonRole.AcceptRole)
             _dlg.addButton(_btn_later, QMessageBox.ButtonRole.RejectRole)
 
-            mark_reminder_shown()  # §v10.306: Stamp NACH dem Dialog schreiben
+            mark_donation_reminder_shown()  # §v10.306: Stamp NACH dem Dialog schreiben
             _dlg.exec()
         except Exception:
             pass  # non-blocking
@@ -21357,7 +21368,7 @@ class ModernMainWindow(QMainWindow):
             _n_ok = _stats.get("completed", 0)
             self._show_toast(f"{_n_ok} Datei(en) vollständig restauriert ✓", severity="success", duration_ms=5000)
         except Exception as _ce:
-            logger.debug("Celebration trigger failed: %s", _ce)
+            logger.debug("Celebration trigger fehlgeschlagen: %s", _ce)
 
     # ── Batch-Retry für fehlgeschlagene Items ────────────────────────────────
 
@@ -21387,7 +21398,7 @@ class ModernMainWindow(QMainWindow):
         if n_retried == 0:
             return
 
-        logger.info("Batch-Retry: %d fehlgeschlagene Items zurückgesetzt", n_retried)
+        logger.info("Batch-Wiederholung: %d fehlgeschlagene Items zurückgesetzt", n_retried)
         # Banner + Retry-Button ausblenden
         if hasattr(self, "_result_banner"):
             self._result_banner.setVisible(False)
@@ -21551,7 +21562,7 @@ class ModernMainWindow(QMainWindow):
                 orig_audio = _arr
             except Exception as _kmv_load_exc:
                 logger.warning(
-                    "KMV Stufe 2: Original-Audio für %s konnte nicht geladen werden: %s",
+                    "KMV Stufe 2: Originalsignal-Audio für %s konnte nicht geladen werden: %s",
                     input_path,
                     _kmv_load_exc,
                 )
@@ -21685,7 +21696,7 @@ class ModernMainWindow(QMainWindow):
                 "Die optionale KI-Nachbearbeitung wurde übersprungen "
                 "(z.\u202fB. zu wenig Arbeitsspeicher oder kein messbarer Unterschied)."
             )
-        logger.info("KMV Stufe 2 abgebrochen: Stufe-1-Export behalten für %s", output_path)
+        logger.info("KMV Stufe 2 abgebrochen: Stufe-1-Ausgabe behalten für %s", output_path)
         # Nächsten queued KMV-Job starten (Batch-Items 2..N) — §2.38
         self._start_next_kmv_job()
 
@@ -21717,7 +21728,7 @@ class ModernMainWindow(QMainWindow):
             if _player is not None and hasattr(_player, "seek"):
                 _player.seek(sample_pos)
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ── §v10.207: Tastatursteuerung ──────────────────────────────────
     def keyPressEvent(self, event):
@@ -21770,7 +21781,7 @@ class ModernMainWindow(QMainWindow):
             if _player is not None and hasattr(_player, "set_speed"):
                 _player.set_speed(factor)
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def _stop_playback(self):
         """Laufende Wiedergabe anhalten (mit Fade-Out bei StreamingPlayer)."""
@@ -23382,7 +23393,7 @@ class ModernMainWindow(QMainWindow):
                         try:
                             self.prognose_widget.set_preventive_actions(preventive_actions)  # type: ignore[union-attr]
                         except Exception as _pp_exc:
-                            logger.debug("prognose_widget.set_preventive_actions failed: %s", _pp_exc)
+                            logger.debug("prognose_widget.set_preventive_actions fehlgeschlagen: %s", _pp_exc)
                     if getattr(self, "quality_meter_widget", None) is not None:
                         try:
                             _band = str((_xp_quality_scale or {}).get("band", "") or "").strip()
@@ -23394,7 +23405,7 @@ class ModernMainWindow(QMainWindow):
                                 _detail += f" Hinweis: {_headline}"
                             self.quality_meter_widget.set_measurement_state("Final gemessen", _detail)
                         except Exception as _qm_exc:
-                            logger.debug("quality meter tooltip update failed: %s", _qm_exc)
+                            logger.debug("quality meter tooltip Aktualisierung fehlgeschlagen: %s", _qm_exc)
                     self._apply_quality_header_and_banner(
                         musical_goals=musical_goals,
                         adaptive_thresholds=adaptive_thresholds,
@@ -23513,7 +23524,7 @@ class ModernMainWindow(QMainWindow):
                     daemon=True,
                 ).start()
         except Exception as _exc:
-            logger.debug("Waveform-Update fehlgeschlagen: %s", _exc)
+            logger.debug("Waveform-Aktualisierung fehlgeschlagen: %s", _exc)
 
     def _poll_audio_ring(self) -> None:
         """Pollt den SharedAudioRing mit 30 Hz für Live-Audio-Preview.
@@ -23692,7 +23703,7 @@ class ModernMainWindow(QMainWindow):
                 self._phase_step_label.setVisible(True)
                 self._pending_step_info = None
         except Exception as _exc:
-            logger.debug("Live-Waveform-Update fehlgeschlagen (%s): %s", phase_id, _exc)
+            logger.debug("Live-Waveform-Aktualisierung fehlgeschlagen (%s): %s", phase_id, _exc)
 
     def _on_waveform_resolved_defects_changed(self) -> None:
         """Aktualisiert Defektstatus sofort, wenn die Wellenform einen Marker als behoben meldet."""
@@ -23712,7 +23723,7 @@ class ModernMainWindow(QMainWindow):
             try:
                 self.prognose_widget.update_defects(defects)  # type: ignore[union-attr]
             except Exception as _pe:
-                logger.debug("prognose_widget.update_defects failed: %s", _pe)
+                logger.debug("prognose_widget.Aktualisierung_defects fehlgeschlagen: %s", _pe)
         # Count-up animation when scan first completes (status=="detected")
         _status = defects.get("status", "")
         if _status == "detected":
@@ -23749,7 +23760,7 @@ class ModernMainWindow(QMainWindow):
             if hasattr(self, "defect_counter_widget"):
                 self.defect_counter_widget.update_defects(defects)
         except Exception as _exc:
-            logger.debug("Defekt-Update fehlgeschlagen: %s", _exc)
+            logger.debug("Defekt-Aktualisierung fehlgeschlagen: %s", _exc)
         # Update user-friendly summary for defect_summary_label
         if hasattr(self, "defect_summary_label"):
             # Mapping: interne Schlüssel → (Laienname, Schwellwerte [leicht, mittel, schwer])
@@ -24594,16 +24605,13 @@ class ModernMainWindow(QMainWindow):
                 # §v10.204 #3: Zeige nennenswerte Defekttypen im Tooltip
                 _init_evt = getattr(self, "_defect_initial_event_counts", {}) or {}
                 _top_types = sorted(
-                    [(k, v) for k, v in _init_evt.items() if isinstance(v, (int, float)) and v > 0],
-                    key=lambda x: -x[1]
+                    [(k, v) for k, v in _init_evt.items() if isinstance(v, (int, float)) and v > 0], key=lambda x: -x[1]
                 )[:4]
                 _type_hint = ", ".join(f"{k}: {int(v)}" for k, v in _top_types) if _top_types else ""
                 _tooltip = f"{_total_def} akustische Störungen erkannt"
                 if _type_hint:
                     _tooltip += f" ({_type_hint})"
-                self.defect_count_live_label.setText(
-                    f"🔍 {_total_def} Störungen gefunden"
-                )
+                self.defect_count_live_label.setText(f"🔍 {_total_def} Störungen gefunden")
                 self.defect_count_live_label.setToolTip(_tooltip)
                 self.defect_count_live_label.setStyleSheet("color: #8894A8; font-size: 10pt;")
                 self.defect_count_live_label.setVisible(True)
@@ -24658,7 +24666,7 @@ class ModernMainWindow(QMainWindow):
             if hasattr(self, "defect_counter_widget"):
                 self.defect_counter_widget.update_defects(_partial)
         except Exception:
-            logger.debug("Defect-Reveal-Animation: update_defects fehlgeschlagen", exc_info=True)
+            logger.debug("Defect-Reveal-Animation: Aktualisierung_defects fehlgeschlagen", exc_info=True)
         if _frac >= 1.0 and hasattr(self, "_defect_anim_timer"):
             self._defect_anim_timer.stop()
 
@@ -25075,7 +25083,7 @@ class ModernMainWindow(QMainWindow):
                 try:
                     _sp.shutdown()
                 except Exception:
-                    logger.debug("CloseEvent: Streaming-Player shutdown fehlgeschlagen", exc_info=True)
+                    logger.debug("CloseEvent: Streaming-Player Herunterfahren fehlgeschlagen", exc_info=True)
             if _SD_AVAILABLE:
                 try:
                     if not hasattr(self, "_sd_lock"):
@@ -25801,7 +25809,7 @@ class ModernMainWindow(QMainWindow):
             }}
         """
         self.setStyleSheet(_qss)
-        logger.debug("theme stylesheet applied: %s", _Theme.active_name())
+        logger.debug("theme stylesheet angewendet: %s", _Theme.active_name())
 
     def _apply_i18n_texts(self) -> None:
         """Refresh visible UI texts after language changes."""
@@ -25935,10 +25943,18 @@ class ModernMainWindow(QMainWindow):
         _genre = str(getattr(self, "_era_genre_cached", "") or "")
         _era_decade = getattr(self, "_era_genre_badge", "")
         _medium_friendly = {
-            "vinyl": "Schallplatte", "cassette": "Kassette", "reel_tape": "Tonband",
-            "shellac": "Schellackplatte", "lacquer_disc": "Lackfolie", "wire_recording": "Drahtaufnahme",
-            "mp3_low": "MP3-Datei", "cd_digital": "CD", "tape": "Band", "dat": "DAT-Band",
-            "minidisc": "Minidisc", "wax_cylinder": "Wachszylinder",
+            "vinyl": "Schallplatte",
+            "cassette": "Kassette",
+            "reel_tape": "Tonband",
+            "shellac": "Schellackplatte",
+            "lacquer_disc": "Lackfolie",
+            "wire_recording": "Drahtaufnahme",
+            "mp3_low": "MP3-Datei",
+            "cd_digital": "CD",
+            "tape": "Band",
+            "dat": "DAT-Band",
+            "minidisc": "Minidisc",
+            "wax_cylinder": "Wachszylinder",
         }.get(_medium_raw, _medium_raw or "Aufnahme")
 
         _xp = getattr(self, "_latest_experience_insights", {}) or {}
@@ -25960,7 +25976,7 @@ class ModernMainWindow(QMainWindow):
         if eta_remaining_s > 120:
             _eta_str = f" — Aurik braucht voraussichtlich noch etwa {int(eta_remaining_s / 60)} Minuten"
         elif eta_remaining_s > 60:
-            _eta_str = f" — nur noch etwa eine Minute"
+            _eta_str = " — nur noch etwa eine Minute"
         elif eta_remaining_s > 0:
             _eta_str = " — nur noch ein kurzer Augenblick"
 
@@ -25971,8 +25987,11 @@ class ModernMainWindow(QMainWindow):
         for _keyword, _template in self._NARRATIVE_PHASE_MAP.items():
             if _keyword in _phase_lower:
                 _phase_narrative = _template.format(
-                    total=_total, done=_done, remaining=_remaining,
-                    medium=_medium_friendly, era=_era_decade,
+                    total=_total,
+                    done=_done,
+                    remaining=_remaining,
+                    medium=_medium_friendly,
+                    era=_era_decade,
                 )
                 break
 
@@ -26003,10 +26022,14 @@ class ModernMainWindow(QMainWindow):
         if isinstance(_top_rec, dict) and _top_rec.get("focus"):
             _focus = _top_rec.get("focus", "")
             _reason = _top_rec.get("reason", "")
-            _focus_de = {"transparenz": "Transparenz", "brillanz": "Brillanz",
-                         "waerme": "Wärme", "bass_kraft": "Basskraft",
-                         "artikulation": "Artikulation", "authentizitaet": "Authentizität",
-                        }.get(_focus, _focus)
+            _focus_de = {
+                "transparenz": "Transparenz",
+                "brillanz": "Brillanz",
+                "waerme": "Wärme",
+                "bass_kraft": "Basskraft",
+                "artikulation": "Artikulation",
+                "authentizitaet": "Authentizität",
+            }.get(_focus, _focus)
             if _reason:
                 _rec_note = f" Auriks Analyse empfiehlt, besonders die {_focus_de} zu verbessern — {_reason}."
 
@@ -26070,7 +26093,7 @@ class ModernMainWindow(QMainWindow):
         if not _era_plain:
             # Fallback: aus _era_genre_badge extrahieren (Format "80er Deutscher Schlager")
             _badge = getattr(self, "_era_genre_badge", "") or ""
-            _era_match = re.match(r'(\d{2,4})er', str(_badge))
+            _era_match = re.match(r"(\d{2,4})er", str(_badge))
             if _era_match:
                 _era_plain = f"{_era_match.group(1)}ern"
         _era_text = f" aus den {_era_plain}" if _era_plain else ""

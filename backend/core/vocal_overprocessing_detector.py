@@ -65,10 +65,10 @@ def _to_mono(audio: np.ndarray) -> np.ndarray:
         return arr
     if arr.ndim == 2:
         if arr.shape[0] <= 2 and arr.shape[1] > 2:
-            return arr.mean(axis=0)
+            return arr.mean(axis=0)  # type: ignore[no-any-return]
         if arr.shape[1] <= 2 and arr.shape[0] > 2:
-            return arr.mean(axis=1)
-        return arr.mean(axis=-1)
+            return arr.mean(axis=1)  # type: ignore[no-any-return]
+        return arr.mean(axis=-1)  # type: ignore[no-any-return]
     return arr.ravel()
 
 
@@ -178,13 +178,13 @@ def _extract_f1_f2(audio: np.ndarray, sr: int, lpc_order: int = 14) -> tuple[flo
                 if len(formants) >= 2:
                     f2_vals.append(formants[1])
             except Exception as e:
-                logger.warning("vocal_overprocessing_detector.py::_extract_f1_f2 fallback: %s", e)
+                logger.warning("vocal_overprocessing_detector.py::_extrahieren_f1_f2 Ersatzpfad: %s", e)
 
         f1 = float(np.median(f1_vals)) if f1_vals else 0.0
         f2 = float(np.median(f2_vals)) if f2_vals else 0.0
         return f1, f2
     except Exception as e:
-        logger.warning("vocal_overprocessing_detector.py::_extract_f1_f2 fallback: %s", e)
+        logger.warning("vocal_overprocessing_detector.py::_extrahieren_f1_f2 Ersatzpfad: %s", e)
         return 0.0, 0.0
 
 

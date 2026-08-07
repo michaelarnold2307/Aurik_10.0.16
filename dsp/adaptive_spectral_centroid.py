@@ -47,13 +47,13 @@ class AdaptiveSpectralCentroid:
                 if center:
                     pad = n_fft // 2
                     y = np.pad(y, (pad, pad), mode="reflect")
-                centroids = []
+                centroids = []  # type: ignore[assignment]
                 for i in range(0, len(y) - n_fft + 1, hop_length):
                     frame = y[i : i + n_fft]
                     magnitude = np.abs(np.fft.rfft(frame))
                     freqs = np.fft.rfftfreq(n_fft, 1.0 / sr)
                     centroid = np.sum(freqs * magnitude) / np.sum(magnitude) if np.sum(magnitude) > 0 else 0.0
-                    centroids.append(centroid)
+                    centroids.append(centroid)  # type: ignore[attr-defined]
                 centroids = np.array(centroids)
             self._audit_log("success", "Spektralzentrum-Berechnung erfolgreich")
             return centroids

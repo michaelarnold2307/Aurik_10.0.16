@@ -20,7 +20,7 @@ def check_compliance():
         ok = all(r.get("audits_ok", False) for r in report)
         return ok
     except Exception:
-        logger.warning("monitoring.py::check_compliance fallback", exc_info=True)
+        logger.warning("monitoring.py::Pruefung_compliance Ersatzpfad", exc_info=True)
         return False
 
 

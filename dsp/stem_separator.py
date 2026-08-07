@@ -18,6 +18,7 @@ Date: 9. Februar 2026
 
 import logging
 import warnings
+from typing import Any
 
 import numpy as np
 from scipy.signal import istft, stft
@@ -39,7 +40,7 @@ try:
     # from demucs.apply import apply_model
     # DEMUCS_AVAILABLE = True
 except ImportError:
-    pass
+    _logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 try:
     from banquet import Banquet  # type: ignore[import-untyped]
@@ -81,7 +82,7 @@ class SpectralStemSeparator:
         self.vocal_freq_range = vocal_freq_range
         self.bass_freq_range = bass_freq_range
         self.drums_freq_range = drums_freq_range
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def separate(self, audio: np.ndarray, sample_rate: int) -> dict[str, np.ndarray]:
         """
@@ -197,7 +198,7 @@ class SpectralStemSeparator:
         # Combine frequency and transient masks
         combined_mask = freq_mask[:, None] * transient_mask
 
-        return combined_mask
+        return combined_mask  # type: ignore[no-any-return]
 
     def _match_length(self, audio: np.ndarray, target_length: int, is_mono: bool) -> np.ndarray:
         """Match audio length to target"""
@@ -239,7 +240,7 @@ class BanquetStemSeparator:
             raise RuntimeError("Banquet not available. Install with: pip install banquet")
 
         self.model = Banquet(model_path) if model_path else Banquet()
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
     def separate(self, audio: np.ndarray, sample_rate: int) -> dict[str, np.ndarray]:
         """
@@ -388,7 +389,7 @@ class MLStemSeparator:
             ht = get_htdemucs_plugin()
             if ht is None:
                 raise RuntimeError("HTDemucs plugin nicht verfügbar")
-            ht_stems = ht.separate(audio, sample_rate)
+            ht_stems = ht.separate(audio, sample_rate)  # type: ignore[attr-defined]
             if ht_stems and "vocals" in ht_stems:
                 self.metrics = {"backend": "HTDemucs", "quality": "high", "tier": 3}
                 _logger.info("MLStemSeparator: Tier-3 HTDemucs OK")
@@ -595,15 +596,15 @@ class StemSeparator:
                 self.backend = BanquetStemSeparator(**backend_kwargs)
 
         if backend == "spectral":
-            self.backend = SpectralStemSeparator(**backend_kwargs)
+            self.backend = SpectralStemSeparator(**backend_kwargs)  # type: ignore[assignment]
 
         if backend == "demucs":
             try:
-                self.backend = MLStemSeparator(**backend_kwargs)
+                self.backend = MLStemSeparator(**backend_kwargs)  # type: ignore[assignment]
             except Exception as _exc:
                 _logger.warning("MLStemSeparator nicht verfügbar (%s), Fallback auf spectral", _exc)
                 backend = "spectral"
-                self.backend = SpectralStemSeparator(**backend_kwargs)
+                self.backend = SpectralStemSeparator(**backend_kwargs)  # type: ignore[assignment]
 
         # Persistente Zuweisung — unabhängig vom Backend-Pfad immer gesetzt
         self.backend_name = backend

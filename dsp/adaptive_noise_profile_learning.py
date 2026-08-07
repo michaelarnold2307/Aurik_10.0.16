@@ -53,7 +53,7 @@ adaptive_noise_profile_learning_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlerhaftes Profil bei zu wenig Frames",
             "expected_when": "min_frames zu klein",
             "severity": 0.2,

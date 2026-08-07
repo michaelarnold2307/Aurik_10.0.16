@@ -45,7 +45,7 @@ def _case(**overrides):
         "metadata": {},
     }
     base.update(overrides)
-    return ExecutionCaseResult(**base)
+    return ExecutionCaseResult(**base)  # type: ignore[arg-type]
 
 
 @pytest.mark.unit

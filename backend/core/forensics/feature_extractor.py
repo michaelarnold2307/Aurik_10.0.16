@@ -161,7 +161,7 @@ class FeatureExtractor:
             is_stereo = False
 
         if verbose:
-            logger.debug("🔬 Extracting features...")
+            logger.debug("🔬 extrahiere features...")
 
         # 1. Spectral Features
         features = self._extract_spectral_features(audio_mono, sr, features)

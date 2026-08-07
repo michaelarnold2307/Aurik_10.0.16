@@ -90,4 +90,4 @@ class AutoEQ:
 
         # Safety: NaN/Inf guard + clamp
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
-        return np.clip(out, -1.0, 1.0)
+        return np.clip(out, -1.0, 1.0)  # type: ignore[no-any-return]

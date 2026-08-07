@@ -44,7 +44,7 @@ class TestVocalChainInvariants:
             + 0.08 * np.sin(2 * np.pi * 4 * f0 * t)
             + 0.02 * rng.standard_normal(len(t))
         ).astype(np.float32)
-        return np.clip(audio, -1.0, 1.0)
+        return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Test 01 — Formant-Korrelation

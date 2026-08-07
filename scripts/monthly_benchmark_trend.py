@@ -17,6 +17,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -26,7 +27,7 @@ RESULTS_ROOT = REPO_ROOT / "benchmarks" / "competitive" / "results"
 
 def collect_results() -> list[dict]:
     """Sammelt alle oss_summary.json Dateien chronologisch."""
-    entries = []
+    entries: list[Any] = []
     if not RESULTS_ROOT.exists():
         return entries
     for d in sorted(RESULTS_ROOT.iterdir()):
@@ -62,7 +63,7 @@ def detect_regressions(entries: list[dict]) -> list[str]:
         drop = prev_delta - curr_delta
         if drop > 2.0:
             warnings.append(
-                f"REGRESSION {entries[i-1]['date']} → {entries[i]['date']}: "
+                f"REGRESSION {entries[i - 1]['date']} → {entries[i]['date']}: "
                 f"PQS-Δ von {prev_delta:+.2f} auf {curr_delta:+.2f} "
                 f"(Verschlechterung um {drop:+.2f} Punkte)"
             )
@@ -72,7 +73,7 @@ def detect_regressions(entries: list[dict]) -> list[str]:
         wr_drop = prev_wr - curr_wr
         if wr_drop > 0.15:
             warnings.append(
-                f"WIN-RATE-REGRESSION {entries[i-1]['date']} → {entries[i]['date']}: "
+                f"WIN-RATE-REGRESSION {entries[i - 1]['date']} → {entries[i]['date']}: "
                 f"Win-Rate von {prev_wr:.1%} auf {curr_wr:.1%} "
                 f"(−{wr_drop:.1%})"
             )
@@ -114,21 +115,23 @@ def generate_markdown(entries: list[dict], warnings: list[str]) -> str:
             f"| {e.get('mean_rt_t', 0):.2f}s |"
         )
 
-    lines.extend([
-        "",
-        "## Metriken",
-        "",
-        "- **PQS**: Perceptual Quality Score (0-100, höher = besser)",
-        "- **PQS-Δ**: Aurik PQS minus Tool PQS (positiv = Aurik gewinnt)",
-        "- **RT**: Real-Time-Faktor (Sekunden Verarbeitung pro Sekunde Audio)",
-        "- **Best Δ**: Bestes Aurik-Ergebnis im Vergleich",
-        "",
-        "## Interpretation",
-        "",
-        "- PQS-Δ > 0: Aurik übertrifft das Vergleichs-Tool",
-        "- PQS-Δ ≈ 0: Gleichauf (Tie-Bereich: |Δ| < 0.5)",
-        "- PQS-Δ < 0: Tool übertrifft Aurik — Analyse erforderlich",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Metriken",
+            "",
+            "- **PQS**: Perceptual Quality Score (0-100, höher = besser)",
+            "- **PQS-Δ**: Aurik PQS minus Tool PQS (positiv = Aurik gewinnt)",
+            "- **RT**: Real-Time-Faktor (Sekunden Verarbeitung pro Sekunde Audio)",
+            "- **Best Δ**: Bestes Aurik-Ergebnis im Vergleich",
+            "",
+            "## Interpretation",
+            "",
+            "- PQS-Δ > 0: Aurik übertrifft das Vergleichs-Tool",
+            "- PQS-Δ ≈ 0: Gleichauf (Tie-Bereich: |Δ| < 0.5)",
+            "- PQS-Δ < 0: Tool übertrifft Aurik — Analyse erforderlich",
+        ]
+    )
     return "\n".join(lines)
 
 

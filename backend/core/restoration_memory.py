@@ -84,7 +84,7 @@ def _make_audio_fingerprint(audio: np.ndarray, sr: int) -> str:
         fp_str = f"{zcr:.4f}_{centroid:.1f}_{rms_str}"
         return hashlib.sha256(fp_str.encode()).hexdigest()[:16]
     except Exception as e:
-        logger.warning("restoration_memory.py::_make_audio_fingerprint fallback: %s", e)
+        logger.warning("restoration_memory.py::_make_audio_fingerprint Ersatzpfad: %s", e)
         return "fingerprint_error"
 
 
@@ -272,7 +272,7 @@ class RestorationMemory:
                     with self._internal_lock:
                         self._fingerprint_index[_fp] = key_str
             except Exception as e:
-                logger.warning("restoration_memory.py::_save_result_internal fallback: %s", e)
+                logger.warning("restoration_memory.py::_speichern_Ergebnis_internal Ersatzpfad: %s", e)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -293,7 +293,7 @@ class RestorationMemory:
                 self._data = loaded
                 logger.debug("RestorationMemory: %d Einträge geladen aus %s", len(self._data), self._path)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("RestorationMemory: Ladevorgang fehlgeschlagen (non-blocking): %s", exc)
+            logger.warning("RestorationMemory: Ladevorgang fehlgeschlagen (nicht blockierend): %s", exc)
             self._data = {}
             self._fingerprint_index = {}
 
@@ -325,7 +325,7 @@ class RestorationMemory:
             self._dirty = False
             logger.debug("RestorationMemory: %d Einträge geschrieben nach %s", len(data_copy), self._path)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("RestorationMemory: Schreibvorgang fehlgeschlagen (non-blocking): %s", exc)
+            logger.warning("RestorationMemory: Schreibvorgang fehlgeschlagen (nicht blockierend): %s", exc)
 
     @staticmethod
     def _evict_lru(data: dict[str, Any]) -> dict[str, Any]:

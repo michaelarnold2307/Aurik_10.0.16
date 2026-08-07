@@ -248,7 +248,7 @@ class BarkScaleProcessor:
         """
         self.num_bands = num_bands
         self.bands = get_bark_bands(num_bands)
-        logger.debug("BarkScaleProcessor initialized with %s bands", num_bands)
+        logger.debug("BarkScaleProcessor initialisiert with %s bands", num_bands)
 
     def analyze(self, audio: np.ndarray, sr: int, window: str = "hamming", normalize: bool = True) -> BarkSpectrum:
         """
@@ -450,7 +450,7 @@ if __name__ == "__main__":
     processor = BarkScaleProcessor()
     spectrum = processor.analyze(audio, sr)
 
-    logger.debug("Bark Spectrum Analysis:")
+    logger.debug("Bark Spectrum Analyse:")
     logger.debug("  Sample Rate: %s Hz", spectrum.sample_rate)
     logger.debug("  Total Energy: %.2e", spectrum.total_energy)
     logger.debug("  Spectral Centroid: %.2f Bark", spectrum.get_spectral_centroid_bark())
@@ -477,5 +477,5 @@ if __name__ == "__main__":
     logger.debug("    Band 21 (8 kHz): RMS = %.4f", np.sqrt(np.mean(filtered_band_21**2)))
 
     logger.debug("\n" + "=" * 70)
-    logger.debug("Demo complete!")
+    logger.debug("Demo vollstaendig!")
     logger.debug("=" * 70 + "\n")

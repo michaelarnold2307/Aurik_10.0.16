@@ -27,7 +27,7 @@ def test_surgical_dispatch_single_zone():
     sr = 48000
     audio = np.random.randn(2, sr * 2).astype(np.float32) * 0.1
     orig = audio.copy()
-    result = PhaseInterface.surgical_dispatch(_MockPhase(), audio, sr, "vinyl", time_ranges=[(1.0, 1.1)])
+    result = PhaseInterface.surgical_dispatch(_MockPhase(), audio, sr, "vinyl", time_ranges=[(1.0, 1.1)])  # type: ignore[arg-type]
     assert result.shape == orig.shape
     assert np.allclose(result[:, : int(0.9 * sr)], orig[:, : int(0.9 * sr)], atol=1e-7)
 
@@ -37,7 +37,12 @@ def test_surgical_dispatch_skip_tiny():
     audio = np.random.randn(sr).astype(np.float32) * 0.1
     orig = audio.copy()
     result = PhaseInterface.surgical_dispatch(
-        _MockPhase(), audio, sr, "vinyl", time_ranges=[(0.5, 0.50001)], context_ms=0
+        _MockPhase(),
+        audio,
+        sr,
+        "vinyl",
+        time_ranges=[(0.5, 0.50001)],
+        context_ms=0,  # type: ignore[arg-type]
     )
     assert np.allclose(result, orig, atol=1e-7)
 
@@ -45,7 +50,7 @@ def test_surgical_dispatch_skip_tiny():
 def test_surgical_dispatch_mono():
     sr = 48000
     audio = np.random.randn(sr).astype(np.float32) * 0.1
-    result = PhaseInterface.surgical_dispatch(_MockPhase(), audio, sr, "vinyl", time_ranges=[(0.5, 0.55)])
+    result = PhaseInterface.surgical_dispatch(_MockPhase(), audio, sr, "vinyl", time_ranges=[(0.5, 0.55)])  # type: ignore[arg-type]
     assert result.ndim == 1
 
 
@@ -63,5 +68,5 @@ class _SpikePhase:
 def test_surgical_dispatch_clamp():
     sr = 48000
     audio = np.random.randn(sr).astype(np.float32) * 0.01
-    result = PhaseInterface.surgical_dispatch(_SpikePhase(), audio, sr, "vinyl", time_ranges=[(0.4, 0.5)])
+    result = PhaseInterface.surgical_dispatch(_SpikePhase(), audio, sr, "vinyl", time_ranges=[(0.4, 0.5)])  # type: ignore[arg-type]
     assert np.abs(result).max() / (np.abs(audio).max() + 1e-10) <= 2.1

@@ -11,14 +11,14 @@ from dsp.adaptive_deconvolution import AdaptiveDeconvolution
 def _make_signal(n: int = 1024, sr: int = 22050, freq: float = 440.0) -> np.ndarray:
     """Einfaches Sinus-Testsignal."""
     t = np.linspace(0, n / sr, n, endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_ir(n: int = 32) -> np.ndarray:
     """Einfache Impulsantwort: exponentieller Abfall."""
     ir = np.exp(-np.linspace(0, 5, n)).astype(np.float32)
     ir /= ir.sum() + 1e-12
-    return ir
+    return ir  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

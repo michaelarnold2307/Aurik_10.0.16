@@ -363,7 +363,7 @@ class EdgeCaseHandler:
             frame = audio[start:end]
             frame_rms.append(np.sqrt(np.mean(frame**2)))
 
-        frame_rms = np.array(frame_rms)
+        frame_rms = np.array(frame_rms)  # type: ignore[assignment]
 
         # Check if this is a synthetic clean signal (very stable RMS)
         rms_std = np.std(frame_rms)
@@ -515,7 +515,7 @@ class EdgeCaseHandler:
         rumble_energy = np.mean(rumble**2)
         total_energy = np.mean(audio**2)
 
-        return (rumble_energy / (total_energy + 1e-10)) > 0.15  # type: ignore[return-value]
+        return (rumble_energy / (total_energy + 1e-10)) > 0.15  # type: ignore[no-any-return]
 
     def _detect_hiss(self, audio: np.ndarray, sr: int) -> bool:
         """Erkennt high-frequency hiss (> 6 kHz)."""
@@ -530,7 +530,7 @@ class EdgeCaseHandler:
         total_energy = np.mean(audio**2)
 
         # Lower threshold to 5% for better sensitivity
-        return (hiss_energy / (total_energy + 1e-10)) > 0.05  # type: ignore[return-value]
+        return (hiss_energy / (total_energy + 1e-10)) > 0.05  # type: ignore[no-any-return]
 
     def _detect_crackles(self, audio: np.ndarray, sr: int) -> bool:
         """Erkennt crackles (rapid impulses)."""
@@ -543,12 +543,12 @@ class EdgeCaseHandler:
 
         # Zero crossing rate
         if not _LIBROSA_AVAILABLE:
-            logger.debug("librosa not available — crackle detection skipped")
+            logger.debug("librosa not verfuegbar — crackle detection uebersprungen")
             return False
         zcr = librosa.feature.zero_crossing_rate(filtered)[0]
         mean_zcr = np.mean(zcr)
 
-        return mean_zcr > 0.15  # type: ignore[return-value]
+        return mean_zcr > 0.15  # type: ignore[no-any-return]
 
     def _detect_dropouts(self, audio: np.ndarray, sr: int) -> bool:
         """Erkennt dropouts (sudden energy drops)."""
@@ -557,7 +557,7 @@ class EdgeCaseHandler:
         hop_length = frame_length // 2
 
         if not _LIBROSA_AVAILABLE:
-            logger.debug("librosa not available — dropout detection skipped")
+            logger.debug("librosa not verfuegbar — dropout detection uebersprungen")
             return False
         energy = librosa.feature.rms(y=audio, frame_length=frame_length, hop_length=hop_length)[0]
 
@@ -739,8 +739,8 @@ class EdgeCaseHandler:
 
         # Compute power spectrum
         if not _LIBROSA_AVAILABLE:
-            logger.debug("librosa not available — spectrum profile skipped")
-            return SpectrumProfile()
+            logger.debug("librosa not verfuegbar — spectrum Profil uebersprungen")
+            return SpectrumProfile()  # type: ignore[call-arg]
         stft = librosa.stft(audio, n_fft=_n_fft_ech, hop_length=_hop_ech)
         magnitude = np.abs(stft)
         power = magnitude**2
@@ -1011,7 +1011,7 @@ if __name__ == "__main__":
     logger.debug("\nUnreachable Goals (%s):", len(assessment.unreachable_goals))
     for goal in assessment.unreachable_goals:
         logger.debug("  ❌ %s", goal)
-    logger.debug("\nRecommended Mode: %s", assessment.recommended_mode.value)
-    logger.debug("Fallback Strategy: %s", assessment.fallback_strategy)
+    logger.debug("\nRecommended Betriebsart: %s", assessment.recommended_mode.value)
+    logger.debug("Ersatzpfad Strategy: %s", assessment.fallback_strategy)
 
-    logger.debug("\n=== Test Complete ===")
+    logger.debug("\n=== Test vollstaendig ===")

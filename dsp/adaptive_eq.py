@@ -23,6 +23,7 @@ Safeguards:
 
 # v10.101 SOTA: Adaptiver EQ mit Bark-Band-Frequenzkorrektur.
 import logging
+from typing import Any
 
 import numpy as np
 import scipy.signal as signal
@@ -39,7 +40,7 @@ class GenreAdaptiveEQ:
         self.name = "Genre-Adaptive EQ"
 
         # Genre-Specific EQ Profiles
-        self.eq_profiles = {
+        self.eq_profiles: dict[str, dict[str, Any]] = {
             "classical": {
                 "philosophy": "transparency_above_all",
                 "bands": [
@@ -179,9 +180,9 @@ class GenreAdaptiveEQ:
             audio_eq = self._apply_peaking_eq(
                 audio_eq,
                 sr,
-                freq=band["freq"],
-                gain=band["gain"] * strength,  # Scale by strength
-                q=band["q"],
+                freq=band["freq"],  # type: ignore[index]
+                gain=band["gain"] * strength,  # type: ignore[index]  # Scale by strength
+                q=band["q"],  # type: ignore[index]
             )
 
         # Spectral Balance Check (Safeguard #4)

@@ -19,6 +19,7 @@ SR = 48000
 # Fixture: CalibrationContext für depth=4 (Kassette)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 @pytest.fixture(autouse=True)
 def _set_depth4_context():
     """Setzt CalibrationContext auf depth=4 Kassette vor jedem Test."""
@@ -26,6 +27,7 @@ def _set_depth4_context():
         CalibrationContext,
         set_calibration_context,
     )
+
     ctx = CalibrationContext(
         restorability_score=64.0,
         transfer_chain_depth=4,
@@ -41,6 +43,7 @@ def _set_depth4_context():
 # ═══════════════════════════════════════════════════════════════════════════════
 # Test 1: CalibrationContext ist erreichbar
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 def test_calibration_context_is_set(_set_depth4_context):
     """§G122: CalibrationContext muss nach set_ erreichbar sein."""
@@ -59,12 +62,13 @@ def test_calibration_context_is_set(_set_depth4_context):
 # Test 2: CIG GDD — kein False-Rollback bei depth=4
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_cig_no_false_rollback_depth4():
     """CIG GDD-Schwelle muss hoch genug sein, dass typischer Kassetten-Drift
     keinen Rollback auslöst."""
     from backend.core.cumulative_interaction_guard import (
-        InteractionGuardState,
         CumulativeInteractionGuard,
+        InteractionGuardState,
     )
 
     guard = CumulativeInteractionGuard()
@@ -80,8 +84,7 @@ def test_cig_no_false_rollback_depth4():
     typical_drift = 39.86
 
     assert abs(gdd_threshold) > typical_drift, (
-        f"GDD-Schwelle {abs(gdd_threshold):.1f}ms zu niedrig "
-        f"für typischen Drift {typical_drift:.1f}ms → False-Rollback"
+        f"GDD-Schwelle {abs(gdd_threshold):.1f}ms zu niedrig für typischen Drift {typical_drift:.1f}ms → False-Rollback"
     )
 
     # Auch Phase_03 (denoise) prüfen
@@ -93,6 +96,7 @@ def test_cig_no_false_rollback_depth4():
 # Test 3: Constitution — kein False-Veto bei depth=4
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_constitution_no_false_veto_depth4():
     """Constitution darf bei depth=4 und af=0.75 kein Veto auslösen."""
     from backend.core.spec_constitution import get_constitution
@@ -101,7 +105,8 @@ def test_constitution_no_false_veto_depth4():
 
     # af=0.75 ist realistisch nach Kassetten-Restaurierung
     result = const.check_paragraph_zero(
-        None, 48000,
+        None,
+        48000,  # type: ignore[arg-type]
         artifact_freedom=0.75,
         hpi=0.6,
         chain_depth=4,
@@ -116,7 +121,8 @@ def test_constitution_correctly_vetoes_below_threshold():
 
     const = get_constitution()
     result = const.check_paragraph_zero(
-        None, 48000,
+        None,
+        48000,  # type: ignore[arg-type]
         artifact_freedom=0.65,
         hpi=0.6,
         chain_depth=4,
@@ -129,16 +135,19 @@ def test_constitution_correctly_vetoes_below_threshold():
 # Test 4: Phase_19 — minimum-phase Filter bei depth=4
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_phase19_uses_minimum_phase_at_depth4():
     """safe_sosfiltfilt muss bei depth=4 sosfilt (nicht sosfiltfilt) aufrufen."""
-    from backend.core.audio_utils import safe_sosfiltfilt
     from scipy.signal import butter
+
+    from backend.core.audio_utils import safe_sosfiltfilt
 
     sos = butter(4, [2000 / 24000, 8000 / 24000], btype="band", output="sos")
     sig = np.random.RandomState(123).randn(48000).astype(np.float32)
 
     # Monkey-patch zum Prüfen, welche Funktion aufgerufen wird
     import scipy.signal as signal
+
     calls = []
 
     orig_sosfilt = signal.sosfilt
@@ -174,6 +183,7 @@ def test_phase19_uses_minimum_phase_at_depth4():
 # Test 5: PMGG — depth=4 korrekt propagiert
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_pmgg_receives_correct_depth():
     """PMGG _get_adaptive_threshold muss mit depth=4 skalieren."""
     from backend.core.per_phase_musical_goals_gate import _get_adaptive_threshold
@@ -189,11 +199,12 @@ def test_pmgg_receives_correct_depth():
 # Test 6: Alle depth-Stufen monoton
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_all_thresholds_monotonic_with_depth():
     """Jeder depth-abhängige Schwellwert muss mit depth steigen (oder gleich bleiben)."""
     from backend.core.cumulative_interaction_guard import (
-        InteractionGuardState,
         CumulativeInteractionGuard,
+        InteractionGuardState,
     )
     from backend.core.per_phase_musical_goals_gate import _get_adaptive_threshold
     from backend.core.spec_constitution import get_constitution
@@ -225,6 +236,7 @@ def test_all_thresholds_monotonic_with_depth():
 # Test 7: UNset-Sentinel schützt vor stillschweigenden Defaults
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_unset_sentinel_raises_on_int():
     """UNSET darf nicht als int verwendbar sein."""
     from backend.core.calibration_context import UNSET
@@ -243,7 +255,7 @@ def test_unset_sentinel_raises_on_float():
 
 def test_calibration_context_rejects_unset_depth():
     """CalibrationContext darf nicht mit UNSET transfer_chain_depth erstellt werden."""
-    from backend.core.calibration_context import CalibrationContext, UNSET
+    from backend.core.calibration_context import UNSET, CalibrationContext
 
     with pytest.raises(ValueError, match="UNSET"):
         CalibrationContext(

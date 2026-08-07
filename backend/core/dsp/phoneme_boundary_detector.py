@@ -138,7 +138,7 @@ def detect_phoneme_boundaries_dsp(
         return boundaries
 
     except Exception as exc:
-        logger.debug("phoneme_boundaries_dsp: Fehler (non-blocking): %s", exc)
+        logger.debug("phoneme_boundaries_dsp: Fehler (nicht blockierend): %s", exc)
         hop_length = _valid_hop_length(hop_length)
         n_frames = max(1, len(np.asarray(audio).flatten()) // hop_length)
         return np.zeros(n_frames, dtype=bool)  # type: ignore[no-any-return]
@@ -186,7 +186,7 @@ def detect_phoneme_protection_mask_dsp(
             mask[start:end] = True
         return mask  # type: ignore[no-any-return]
     except Exception as exc:  # pylint: disable=broad-except
-        logger.debug("phoneme_protection_mask_dsp: Fehler (non-blocking): %s", exc)
+        logger.debug("phoneme_protection_mask_dsp: Fehler (nicht blockierend): %s", exc)
         return np.zeros(len(np.asarray(audio).flatten()), dtype=bool)  # type: ignore[no-any-return]
 
 

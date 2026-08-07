@@ -74,7 +74,7 @@ def _k_weight_channel(channel: np.ndarray, sr: int) -> np.ndarray:
         high = sosfiltfilt(sos_hi, weighted)
         return weighted + high * 0.18  # type: ignore[no-any-return]
     except Exception as e:
-        logger.warning("analysis_and_modules.py::_k_weight_channel fallback: %s", e)
+        logger.warning("Analyse_and_modules.py::_k_weight_channel Ersatzpfad: %s", e)
         return channel
 
 
@@ -201,7 +201,7 @@ class FeatureExtractor:
                     "f0_std": float(np.std(f0_vals)),
                 }
             except Exception as e:
-                logger.warning("analysis_and_modules.py::crepe_features fallback: %s", e)
+                logger.warning("Analyse_and_modules.py::crepe_features Ersatzpfad: %s", e)
                 return {"f0_median": -1.0, "f0_mean": -1.0, "f0_std": -1.0}
 
         def librosa_features() -> dict[str, Any]:
@@ -233,7 +233,7 @@ class FeatureExtractor:
                     "mfcc_std": -1.0,
                 }
             except Exception as e:
-                logger.warning("analysis_and_modules.py::librosa_features fallback: %s", e)
+                logger.warning("Analyse_and_modules.py::librosa_features Ersatzpfad: %s", e)
                 return {
                     "chroma_mean": -1.0,
                     "chroma_std": -1.0,
@@ -269,7 +269,7 @@ class FeatureExtractor:
                         if os.path.exists(tmp_out.name):
                             os.remove(tmp_out.name)
             except Exception as e:
-                logger.warning("analysis_and_modules.py::panns_features fallback: %s", e)
+                logger.warning("Analyse_and_modules.py::panns_features Ersatzpfad: %s", e)
                 return {}
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
@@ -517,7 +517,7 @@ class FeatureExtractor:
             return float(click_density)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_clicks fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_clicks Ersatzpfad: %s", e)
             return 0.0
 
     def _detect_crackle(self, audio: np.ndarray, sr: int) -> float:
@@ -555,7 +555,7 @@ class FeatureExtractor:
             return float(mean_density)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_crackle fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_crackle Ersatzpfad: %s", e)
             return 0.0
 
     def _detect_clipping_percentage(self, audio: np.ndarray) -> float:
@@ -572,7 +572,7 @@ class FeatureExtractor:
             return float(clipping_percentage)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_clipping_percentage fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_clipping_percentage Ersatzpfad: %s", e)
             return 0.0
 
     def _detect_dropouts(self, audio: np.ndarray, sr: int) -> tuple:
@@ -624,7 +624,7 @@ class FeatureExtractor:
             return dropout_regions, len(dropout_regions)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_dropouts fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_dropouts Ersatzpfad: %s", e)
             return [], 0
 
     def _detect_wow_flutter(self, audio: np.ndarray, sr: int) -> tuple:
@@ -683,7 +683,7 @@ class FeatureExtractor:
             return float(wow_score), float(flutter_score)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_wow_flutter fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_wow_flutter Ersatzpfad: %s", e)
             return 0.0, 0.0
 
     def _detect_hum(self, audio: np.ndarray, sr: int) -> float:
@@ -723,7 +723,7 @@ class FeatureExtractor:
             return float(hum_score)
 
         except Exception as e:
-            logger.warning("analysis_and_modules.py::_detect_hum fallback: %s", e)
+            logger.warning("Analyse_and_modules.py::_erkennen_hum Ersatzpfad: %s", e)
             return 0.0
 
 
@@ -886,7 +886,7 @@ class AnalysisEngineAdapter:
 
         except Exception as e:
             # PANNS failed - use fallback values
-            logger.warning("PANNS tagging failed: %s. Using placeholder values.", e)
+            logger.warning("PANNS tagging fehlgeschlagen: %s. Using placeholder values.", e)
             # Keep default values set above
 
         # Prepare audio for stereo analysis

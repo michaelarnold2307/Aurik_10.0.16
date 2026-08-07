@@ -49,7 +49,7 @@ sys.path.insert(0, str(FCPE_DIR / "torchfcpe"))
 import types as _types
 
 _mock_la = _types.ModuleType("local_attention")
-_mock_la.LocalAttention = type("LocalAttention", (object,), {"__init__": lambda *a, **kw: None})
+_mock_la.LocalAttention = type("LocalAttention", (object,), {"__init__": lambda *a, **kw: None})  # type: ignore[attr-defined]
 sys.modules.setdefault("local_attention", _mock_la)
 
 
@@ -97,7 +97,7 @@ def main() -> None:
     n_heads: int = n_chans // 64
 
     logger.info(
-        "Architektur: input_channels=%d  hidden=%d  layers=%d  heads=%d  out_dims=%d",
+        "Architektur: Eingabe_channels=%d  hidden=%d  layers=%d  heads=%d  out_dims=%d",
         input_channel,
         n_chans,
         n_layers,
@@ -111,9 +111,9 @@ def main() -> None:
 
     def _load_mod(name: str, path: Path):
         spec = _ilu.spec_from_file_location(name, path)
-        mod = _ilu.module_from_spec(spec)
+        mod = _ilu.module_from_spec(spec)  # type: ignore[arg-type]
         sys.modules[name] = mod
-        spec.loader.exec_module(mod)
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
         return mod
 
     _torchfcpe_pkg = _types.ModuleType("torchfcpe")
@@ -161,7 +161,7 @@ def main() -> None:
         out = model(dummy_mel)
     assert out.shape == (1, 64, out_dims), f"Unexpected output shape: {out.shape}"
     assert out.min() >= 0.0 and out.max() <= 1.0, "Output not in [0,1] (sigmoid fehlt?)"
-    logger.info("Smoke-Test OK: input %s → output %s", dummy_mel.shape, out.shape)
+    logger.info("Smoke-Test OK: Eingabe %s → Ausgabe %s", dummy_mel.shape, out.shape)
 
     # ONNX-Export
     OUTPUT_ONNX.parent.mkdir(parents=True, exist_ok=True)
@@ -183,7 +183,7 @@ def main() -> None:
         do_constant_folding=True,
         verbose=False,
     )
-    logger.info("ONNX-Export abgeschlossen.")
+    logger.info("ONNX-Ausgabe abgeschlossen.")
 
     # Validierung
     onnx_model = onnx.load(str(OUTPUT_ONNX))
@@ -217,7 +217,7 @@ def main() -> None:
         [ort_out] = sess.run(["salience"], {"mel": dummy_np})
         assert ort_out.shape == (1, 64, out_dims), f"ORT shape: {ort_out.shape}"
         logger.info(
-            "OnnxRuntime-Test OK: output shape %s, min=%.4f max=%.4f",
+            "OnnxRuntime-Test OK: Ausgabe shape %s, min=%.4f max=%.4f",
             ort_out.shape,
             float(ort_out.min()),
             float(ort_out.max()),
@@ -225,7 +225,7 @@ def main() -> None:
     except Exception as exc:
         logger.warning("OnnxRuntime-Test fehlgeschlagen (nicht kritisch): %s", exc)
 
-    logger.info("✅ FCPE ONNX Export erfolgreich → %s", OUTPUT_ONNX)
+    logger.info("✅ FCPE ONNX Ausgabe erfolgreich → %s", OUTPUT_ONNX)
 
 
 if __name__ == "__main__":

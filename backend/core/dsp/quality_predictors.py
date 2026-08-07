@@ -248,7 +248,7 @@ class DNSMOSPredictor:
             return {"sig": sig, "bak": bak, "ovr": ovr}
 
         except Exception as exc:
-            logger.debug("DNSMOSPredictor.predict fallback (non-blocking): %s", exc)
+            logger.debug("DNSMOSPredictor.predict Ersatzpfad (nicht blockierend): %s", exc)
             return {"sig": 3.0, "bak": 3.0, "ovr": 3.0}
 
 
@@ -316,7 +316,7 @@ class SingMOSPredictor:
             return mos
 
         except Exception as exc:
-            logger.debug("SingMOSPredictor.predict fallback (non-blocking): %s", exc)
+            logger.debug("SingMOSPredictor.predict Ersatzpfad (nicht blockierend): %s", exc)
             return 3.0
 
 

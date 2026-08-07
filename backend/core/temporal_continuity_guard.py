@@ -115,26 +115,26 @@ def check_temporal_continuity(
         gain_step_db = float(np.nan_to_num(gain_step_db, nan=0.0, posinf=0.0, neginf=0.0))
         if gain_step_db > 1.5:
             logger.warning(
-                "TemporalContinuityGuard §2.69 gain_step_db=%.2f dB > 1.5 dB phase=%s — Mikro-Klick-Risiko",
+                "TemporalContinuityGuard §2.69 gain_step_db=%.2f dB > 1.5 dB Verarbeitungsschritt=%s — Mikro-Klick-Risiko",
                 gain_step_db,
                 phase_id,
             )
 
         if critical:
             logger.warning(
-                "TemporalContinuityGuard CRITICAL phase=%s variance_ratio=%.2f",
+                "TemporalContinuityGuard CRITICAL Verarbeitungsschritt=%s variance_Verhaeltnis=%.2f",
                 phase_id,
                 ratio,
             )
         elif not ok:
             logger.warning(
-                "TemporalContinuityGuard WARNING phase=%s variance_ratio=%.2f",
+                "TemporalContinuityGuard WARNING Verarbeitungsschritt=%s variance_Verhaeltnis=%.2f",
                 phase_id,
                 ratio,
             )
         else:
             logger.debug(
-                "TemporalContinuityGuard OK phase=%s variance_ratio=%.2f",
+                "TemporalContinuityGuard OK Verarbeitungsschritt=%s variance_Verhaeltnis=%.2f",
                 phase_id,
                 ratio,
             )
@@ -148,5 +148,5 @@ def check_temporal_continuity(
         )
 
     except Exception as exc:  # pylint: disable=broad-except
-        logger.debug("TemporalContinuityGuard non-blocking: phase=%s err=%s", phase_id, exc)
+        logger.debug("TemporalContinuityGuard nicht blockierend: Verarbeitungsschritt=%s err=%s", phase_id, exc)
         return TemporalContinuityResult(ok=True, variance_ratio=1.0, phase_id=phase_id, gain_step_db=0.0)

@@ -185,7 +185,7 @@ def compute_before_after_spectrograms(
             downsample_factor=downsample_factor,
         )
     except ValueError as e:
-        logger.warning("Original-Spektrogramm konnte nicht berechnet werden: %s", e)
+        logger.warning("Originalsignal-Spektrogramm konnte nicht berechnet werden: %s", e)
         spec_orig = None
 
     try:

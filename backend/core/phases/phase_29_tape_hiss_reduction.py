@@ -86,7 +86,7 @@ except ImportError:
     SOUNDFILE_AVAILABLE = False
 
 try:
-    from backend.core.quality_mode import QualityMode, should_use_ml  # type: ignore[attr-defined]
+    from backend.core.quality_mode import QualityMode
 
     QUALITY_MODE_AVAILABLE = True
 except ImportError:
@@ -371,7 +371,7 @@ class TapeHissReductionPhase(PhaseInterface):
             try:
                 return float(goal_weights.get(name, default))
             except Exception as e:
-                logger.warning("phase_29_tape_hiss_reduction.py::_w fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::_w Ersatzpfad: %s", e)
                 return default
 
         naturalness = float(np.clip(_w("natuerlichkeit"), 0.3, 2.0))
@@ -402,10 +402,10 @@ class TapeHissReductionPhase(PhaseInterface):
             from plugins.deepfilternet_v3_ii_plugin import get_deepfilternet_plugin
 
             self._deepfilternet_plugin = get_deepfilternet_plugin()  # type: ignore[assignment]
-            logger.info("✅ DeepFilterNet v3 II Plugin loaded for Tape Hiss Reduction")
+            logger.info("✅ DeepFilterNet v3 II Plugin geladen for Tape Hiss Reduction")
             return self._deepfilternet_plugin
         except Exception as e:
-            logger.warning("⚠️  DeepFilterNet Plugin not available: %s", e)
+            logger.warning("⚠️  DeepFilterNet Plugin not verfuegbar: %s", e)
             logger.info("    Falling back to DSP-only hiss reduction")
             return None
 
@@ -473,13 +473,13 @@ class TapeHissReductionPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity, compute_per_band_nr_mask
 
             _pim = apply_pim_intensity(kwargs, "tape_hiss", default_nr=0.6, default_de_ess=0.3, default_comp=1.0)
-            if "noise_reduction_strength" in kwargs:
-                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             _pim_map = kwargs.get("pim_intensity_map")
+            if _pim_map is not None and "noise_reduction_strength" in kwargs:
+                kwargs["noise_reduction_strength"] = _pim["nr_strength"]
             if _pim_map is not None:
                 _per_band_mask = compute_per_band_nr_mask(_pim_map, sample_rate)
         except Exception as e:
-            logger.warning("phase_29_tape_hiss_reduction.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         start_time = time.time()
         self.sample_rate = sample_rate
@@ -507,7 +507,7 @@ class TapeHissReductionPhase(PhaseInterface):
         try:
             _npa_result_29 = _get_phase29_npd().detect(audio, sample_rate)
         except Exception as _npa_exc_29:
-            logger.debug("§2.46f NPA detection non-blocking: %s", _npa_exc_29)
+            logger.debug("§2.46f NPA detection nicht blockierend: %s", _npa_exc_29)
 
         # §4.6b: Pre-phase eviction — free previous phase models to prevent OOM
         try:
@@ -515,16 +515,16 @@ class TapeHissReductionPhase(PhaseInterface):
 
             _get_plm_evict29().evict_for_phase("phase_29_tape_hiss_reduction")
         except Exception as e:
-            logger.warning("phase_29_tape_hiss_reduction.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::verarbeiten Ersatzpfad: %s", e)
 
         # Determine if ML should be used
         use_ml = False
         if QUALITY_MODE_AVAILABLE and quality_mode:
             try:
                 qm = QualityMode[quality_mode.upper()]
-                use_ml = should_use_ml(29, qm)  # Phase 29
+                use_ml = qm.is_ml_enabled  # Phase 29
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         restorability_score = kwargs.get("restorability_score", 50.0)
         material_key = str(getattr(material, "value", material) or "unknown")
@@ -581,7 +581,7 @@ class TapeHissReductionPhase(PhaseInterface):
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             logger.info(
-                "Phase 29: Digital-Material '%s' — No-Op (no tape hiss expected, §0 Primum non nocere)",
+                "Verarbeitungsschritt 29: Digital-Material '%s' — No-Op (no tape hiss expected, §0 Primum non nocere)",
                 material_key,
             )
             return PhaseResult(
@@ -600,7 +600,7 @@ class TapeHissReductionPhase(PhaseInterface):
             )
         if _mat_key_norm in _DIGITAL_KEYS and _chain_has_tape:
             logger.info(
-                "Phase 29: Digital-Material '%s' aber transfer_chain=%s enthält Tape-Stufe "
+                "Verarbeitungsschritt 29: Digital-Material '%s' aber transfer_chain=%s enthält Tape-Stufe "
                 "— OMLSA läuft (§6.2a Carrier-Chain-Invariante, §2.46a)",
                 material_key,
                 _transfer_chain,
@@ -661,13 +661,15 @@ class TapeHissReductionPhase(PhaseInterface):
                         if _p29_est_snr > _p29_snr_threshold:
                             _p29_snr_bypass = True
                             logger.info(
-                                "§2.47 Phase 29: spectral HF-SNR=%.1f dB > %.1f dB → "
-                                "Dry-Signal bypass (hiss band negligible, OMLSA skipped)",
+                                "§2.47 Verarbeitungsschritt 29: spectral HF-SNR=%.1f dB > %.1f dB → "
+                                "Dry-Signal bypass (hiss band negligible, OMLSA uebersprungen)",
                                 _p29_est_snr,
                                 _p29_snr_threshold,
                             )
         except Exception as _p29_snr_exc:
-            logger.debug("Phase 29 SNR bypass estimation failed (non-blocking): %s", _p29_snr_exc)
+            logger.debug(
+                "Verarbeitungsschritt 29 SNR bypass estimation fehlgeschlagen (nicht blockierend): %s", _p29_snr_exc
+            )
 
         if _p29_snr_bypass:
             _pass = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -693,15 +695,15 @@ class TapeHissReductionPhase(PhaseInterface):
         # verschiedene Enum-Klassen-Objekte, obwohl der Wert identisch ist)
         _mat_val = getattr(material, "value", str(material))
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        gate_threshold_db = self.GATE_THRESHOLD_DB.get(_mk) or next(
+        gate_threshold_db = self.GATE_THRESHOLD_DB.get(_mk) or next(  # type: ignore[call-overload]
             (v for k, v in self.GATE_THRESHOLD_DB.items() if getattr(k, "value", None) == _mat_val),
             -10,
         )
-        reduction_depth_db = self.REDUCTION_DEPTH_DB.get(_mk) or next(
+        reduction_depth_db = self.REDUCTION_DEPTH_DB.get(_mk) or next(  # type: ignore[call-overload]
             (v for k, v in self.REDUCTION_DEPTH_DB.items() if getattr(k, "value", None) == _mat_val),
             8,
         )
-        _hf = self.HF_FOCUS_RANGE.get(_mk) or next(
+        _hf = self.HF_FOCUS_RANGE.get(_mk) or next(  # type: ignore[call-overload]
             (v for k, v in self.HF_FOCUS_RANGE.items() if getattr(k, "value", None) == _mat_val),
             (8000, 18000),
         )
@@ -761,13 +763,13 @@ class TapeHissReductionPhase(PhaseInterface):
                 if _p29_acf_cap_f < 1.0:
                     _effective_strength = float(np.clip(_effective_strength * _p29_acf_cap_f, 0.0, 1.0))
                     logger.info(
-                        "Phase29 §2.45b ACF-Pre-Cap: auth_proxy=%.3f → cap=%.2f → eff_str=%.3f",
+                        "Verarbeitungsschritt29 §2.45b ACF-Pre-Cap: auth_proxy=%.3f → cap=%.2f → eff_str=%.3f",
                         _p29_auth_proxy,
                         _p29_acf_cap_f,
                         _effective_strength,
                     )
         except Exception as _p29_cap_exc:
-            logger.debug("Phase29 ACF-Pre-Cap (non-blocking): %s", _p29_cap_exc)
+            logger.debug("Verarbeitungsschritt29 ACF-Pre-Cap (nicht blockierend): %s", _p29_cap_exc)
 
         # §V40 NMR-Feedback: NR-Stärke adaptiv anpassen (FeedbackChain-aware).
         try:
@@ -778,7 +780,7 @@ class TapeHissReductionPhase(PhaseInterface):
             _nmr_result_29 = _nmr_fn_29(audio, sample_rate)
             if not _nmr_result_29.ok:
                 logger.warning(
-                    "Phase29 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt29 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -788,12 +790,12 @@ class TapeHissReductionPhase(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase29 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt29 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_29.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_29:
-            logger.debug("Phase29 §V40 NMR non-blocking: %s", _nmr_exc_29)
+            logger.debug("Verarbeitungsschritt29 §V40 NMR nicht blockierend: %s", _nmr_exc_29)
 
         if _effective_strength < 0.01:  # §v10.0.5: < 1% = keine sinnvolle Wirkung
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -830,18 +832,18 @@ class TapeHissReductionPhase(PhaseInterface):
             _smp = get_medium_profile(_mat_p29)
             _smp_cap_p29 = float(getattr(_smp, "hiss_reduction_max_strength", 1.0))
         except Exception:
-            logger.debug("Phase_29: SourceMediumProfile nicht verfügbar — verwende Default hiss_cap=1.0")
+            logger.debug("Verarbeitungsschritt_29: SourceMediumProfile nicht verfügbar — verwende Default hiss_cap=1.0")
         if _transfer_depth_p29 >= 5:
             _effective_strength = float(np.clip(_effective_strength, 0.0, min(0.30, _smp_cap_p29)))
             logger.info(
-                "§v10.58 Phase 29 depth=%d → max strength %.2f + DSP-only (degradiertes Signal, §v10.705 B41/B12)",
+                "§v10.58 Verarbeitungsschritt 29 depth=%d → max strength %.2f + DSP-only (degradiertes Signal, §v10.705 B41/B12)",
                 _transfer_depth_p29,
                 min(0.30, _smp_cap_p29),
             )
         elif _transfer_depth_p29 >= 4:
             _effective_strength = float(np.clip(_effective_strength, 0.0, min(0.42, _smp_cap_p29)))
             logger.info(
-                "§v10.58 Phase 29 depth=%d → max strength 0.42 + DSP-only (§v10.705 B41)",
+                "§v10.58 Verarbeitungsschritt 29 depth=%d → max strength 0.42 + DSP-only (§v10.705 B41)",
                 _transfer_depth_p29,
             )
 
@@ -967,7 +969,7 @@ class TapeHissReductionPhase(PhaseInterface):
             ml_success = self._refine_hf_with_ml(audio_processed, sample_rate, panns_singing=_p29_panns)
             if ml_success:
                 ml_refined = True
-                logger.info("✅ ML HF refinement applied (DeepFilterNet): residual hiss removal >2kHz")
+                logger.info("✅ ML HF refinement angewendet (DeepFilterNet): residual hiss removal >2kHz")
 
         # Preserve PMGG strength control via wet/dry blending.
         if 0.0 < _effective_strength < 1.0:
@@ -999,9 +1001,12 @@ class TapeHissReductionPhase(PhaseInterface):
                 _npa_mask_29 = _npa_result_29.get_protected_mask(_npa_n_29, sample_rate)
                 if np.any(_npa_mask_29):
                     audio_processed[_npa_mask_29] = audio[_npa_mask_29]
-                    logger.debug("§2.46f NPA phase29: restored %d protected samples", int(np.sum(_npa_mask_29)))
+                    logger.debug(
+                        "§2.46f NPA Verarbeitungsschritt29: wiederhergestellt %d protected samples",
+                        int(np.sum(_npa_mask_29)),
+                    )
             except Exception as _npa_rest_29:
-                logger.debug("§2.46f NPA restoration non-blocking: %s", _npa_rest_29)
+                logger.debug("§2.46f NPA restoration nicht blockierend: %s", _npa_rest_29)
 
         # §TimbralCoherence: Carrier-Rauchtextur nach Over-NR wiederherstellen.
         # Wenn OMLSA/DFN den Rauschboden zu stark abgetragen hat (deviation > 3 dB),
@@ -1020,7 +1025,9 @@ class TapeHissReductionPhase(PhaseInterface):
             )
             audio_processed = np.clip(np.nan_to_num(audio_processed, nan=0.0), -1.0, 1.0)
         except Exception as _ntr_exc_p29:
-            logger.debug("§TimbralCoherence noise_texture_resynth phase29 (non-blocking): %s", _ntr_exc_p29)
+            logger.debug(
+                "§TimbralCoherence noise_texture_resynth Verarbeitungsschritt29 (nicht blockierend): %s", _ntr_exc_p29
+            )
 
         # §0p HNR-Blend nach OMLSA-NR (RELEASE_MUST §0p): ΔHNR > 3 dB → Dry-Wet-Blend
         if _p29_panns >= 0.25:
@@ -1033,7 +1040,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 if _hnr_diag_p29.get("over_cleaned"):
                     audio_processed = _hnr_blended_p29
             except Exception as _hnr_exc_p29:
-                logger.debug("§0p HNR-Blend phase_29 (non-blocking): %s", _hnr_exc_p29)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_29 (nicht blockierend): %s", _hnr_exc_p29)
 
         # §0p VQI per-Phase Gate: Stimmqualität nach Tape-NR messen.
         # Over-aggressive OMLSA kann Formanten beschädigen → Rollback auf Original.
@@ -1071,7 +1078,7 @@ class TapeHissReductionPhase(PhaseInterface):
                         np.float32
                     )
                     logger.info(
-                        "phase_29: VQI-Blend vqi=%.3f < thr=%.2f (floor=%.2f) blend=%.2f panns=%.2f",
+                        "Verarbeitungsschritt_29: VQI-Blend vqi=%.3f < thr=%.2f (floor=%.2f) blend=%.2f panns=%.2f",
                         _vqi_p29,
                         _vqi_thr_p29,
                         _vqi_floor_p29,
@@ -1079,7 +1086,9 @@ class TapeHissReductionPhase(PhaseInterface):
                         _p29_panns,
                     )
             except Exception as _vqi_exc_p29:
-                logger.debug("VQI per-phase phase29 (non-blocking): %s", _vqi_exc_p29)
+                logger.debug(
+                    "VQI per-Verarbeitungsschritt Verarbeitungsschritt29 (nicht blockierend): %s", _vqi_exc_p29
+                )
 
         # §G5 Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-Tape-NR.
         # Tape-NR (OMLSA) kann bei starker Glättung Formant-Regionen beschädigen;
@@ -1108,14 +1117,14 @@ class TapeHissReductionPhase(PhaseInterface):
                 if _fg_rollback_p29:
                     audio_processed = audio.copy()
                     logger.warning(
-                        "§G5 FormantGuard phase_29: max F-shift %.2f dB > %.1f dB → Rollback",
+                        "§G5 FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB > %.1f dB → Rollback",
                         _fg_shift_p29,
                         _fg_tol_p29,
                     )
                 else:
-                    logger.debug("§G5 FormantGuard phase_29: max F-shift %.2f dB — OK", _fg_shift_p29)
+                    logger.debug("§G5 FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB — OK", _fg_shift_p29)
             except Exception as _fg_p29_exc:
-                logger.debug("§G5 FormantGuard phase_29 non-blocking: %s", _fg_p29_exc)
+                logger.debug("§G5 FormantGuard Verarbeitungsschritt_29 nicht blockierend: %s", _fg_p29_exc)
 
         # §G2 Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
         # mit Original zurückblenden — Tape-NR glättet sonst Natur-Artefakte weg.
@@ -1156,9 +1165,11 @@ class TapeHissReductionPhase(PhaseInterface):
                     _blended_any_p29 = True
                 if _blended_any_p29:
                     audio_processed = np.clip(np.nan_to_num(_result_blend_p29, nan=0.0), -1.0, 1.0).astype(np.float32)
-                    logger.debug("§G2 BreathProtect phase_29: %d tension-segs geschützt", len(_breath_segs_p29))
+                    logger.debug(
+                        "§G2 BreathProtect Verarbeitungsschritt_29: %d tension-segs geschützt", len(_breath_segs_p29)
+                    )
             except Exception as _g2_p29_exc:
-                logger.debug("§G2 BreathProtect phase_29 non-blocking: %s", _g2_p29_exc)
+                logger.debug("§G2 BreathProtect Verarbeitungsschritt_29 nicht blockierend: %s", _g2_p29_exc)
 
         # §Gap3 PhraseBoundaryGuard — taper artifacts at phrase transitions (§0p Vocal-Supremacy)
         try:
@@ -1178,9 +1189,9 @@ class TapeHissReductionPhase(PhaseInterface):
                 else:
                     audio_processed = _pbg_aud_29 + (audio_processed - _pbg_aud_29) * _pbg_env_29[:, np.newaxis]
                 audio_processed = np.clip(np.nan_to_num(audio_processed, nan=0.0), -1.0, 1.0).astype(np.float32)
-                logger.debug("§Gap3 PhraseBoundaryGuard phase_29: %d boundaries", len(_pbg_bounds_29))
+                logger.debug("§Gap3 PhraseBoundaryGuard Verarbeitungsschritt_29: %d boundaries", len(_pbg_bounds_29))
         except Exception as _pbg_exc_29:
-            logger.debug("PhraseBoundaryGuard phase_29 (non-blocking): %s", _pbg_exc_29)
+            logger.debug("PhraseBoundaryGuard Verarbeitungsschritt_29 (nicht blockierend): %s", _pbg_exc_29)
 
         # V19 Noise-Textur-Invariante (§NTI): Residual nach Tape-Hiss-NR darf kein
         # material-fremdes Spektralprofil (Whitening) aufweisen (VERBOTEN-V19).
@@ -1194,11 +1205,11 @@ class TapeHissReductionPhase(PhaseInterface):
             if _nt29_dist > 0.25:
                 audio_processed = (0.5 * audio_processed + 0.5 * audio).astype(np.float32)
                 logger.warning(
-                    "Phase29 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
+                    "Verarbeitungsschritt29 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
                     _nt29_dist,
                 )
         except Exception as _nt29_exc:
-            logger.debug("Phase29 V19 Noise-Textur-Guard (non-blocking): %s", _nt29_exc)
+            logger.debug("Verarbeitungsschritt29 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt29_exc)
 
         # V20 Mikrodynamik-Korrelation (§2.75): Frame-Energie auf voiced-Zonen ≥ 0.97
         # nach Tape-Hiss-NR (VERBOTEN-V20).
@@ -1218,12 +1229,12 @@ class TapeHissReductionPhase(PhaseInterface):
                     _wet29 = _recommend_mkk_wet(_corr29, _p29_panns, global_need=_need29, material=material_key)
                     audio_processed = (_wet29 * audio_processed + (1.0 - _wet29) * audio).astype(np.float32)
                     logger.warning(
-                        "Phase29 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                        "Verarbeitungsschritt29 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
                         _corr29,
                         _wet29,
                     )
             except Exception as _dyn29_exc:
-                logger.debug("Phase29 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn29_exc)
+                logger.debug("Verarbeitungsschritt29 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn29_exc)
 
         # V21 Mindestrauschboden (§2.76): Analog-Material darf nach Tape-Hiss-NR keine
         # digitale Stille aufweisen — Rauschboden ist Naturalness-Marker (VERBOTEN-V21).
@@ -1236,7 +1247,7 @@ class TapeHissReductionPhase(PhaseInterface):
 
                 audio_processed = _nfg29(audio_processed, sample_rate, _mat29_str, original_audio=audio)
             except Exception as _nf29_exc:
-                logger.debug("Phase29 V21 Noise-Floor-Guard (non-blocking): %s", _nf29_exc)
+                logger.debug("Verarbeitungsschritt29 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf29_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -1249,7 +1260,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 _sc_wet_29 = 0.70  # Phase-Strength −30 % (§V24)
                 audio_processed = (_sc_wet_29 * audio_processed + (1.0 - _sc_wet_29) * audio).astype(np.float32)
         except Exception as _sc_exc_29:
-            logger.debug("§V24 phase_29 spectral_color non-blocking: %s", _sc_exc_29)
+            logger.debug("§V24 Verarbeitungsschritt_29 spectral_color nicht blockierend: %s", _sc_exc_29)
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # Tape-Hiss-NR nicht energetisch beeinflusst werden (VERBOTEN-V26).
@@ -1260,7 +1271,7 @@ class TapeHissReductionPhase(PhaseInterface):
 
             audio_processed = _opg29(audio, audio_processed, None, max_delta_db=1.5)
         except Exception as _on29_exc:
-            logger.debug("Phase29 V26 Onset-Guard (non-blocking): %s", _on29_exc)
+            logger.debug("Verarbeitungsschritt29 V26 Onset-Guard (nicht blockierend): %s", _on29_exc)
 
         # §2.72 Vibrato-Tiefe-Guard (§0p Vocal-Supremacy RELEASE_MUST): F0-Modulationstiefe
         # darf durch Tape-Hiss-NR nicht mehr als ±10 % reduziert werden → 50 %-Blend.
@@ -1274,11 +1285,11 @@ class TapeHissReductionPhase(PhaseInterface):
                 if not _vib29_result.ok:
                     audio_processed = (0.5 * audio_processed + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "Phase29 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
+                        "Verarbeitungsschritt29 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
                         _vib29_result.depth_reduction_pct,
                     )
             except Exception as _vib29_exc:
-                logger.debug("Phase29 §2.72 Vibrato-Guard (non-blocking): %s", _vib29_exc)
+                logger.debug("Verarbeitungsschritt29 §2.72 Vibrato-Guard (nicht blockierend): %s", _vib29_exc)
 
         # §K-2 Post-Processing ACF-Delta-Guard (§Primum-non-nocere):
         # Vergleicht Authentizitaet-Proxy vor und nach Verarbeitung. Wenn die
@@ -1307,14 +1318,14 @@ class TapeHissReductionPhase(PhaseInterface):
                         np.float32
                     )
                     logger.warning(
-                        "Phase29 §K-2 ACF-Delta-Guard: auth_delta=%.3f (%.3f→%.3f) → blend=%.2f",
+                        "Verarbeitungsschritt29 §K-2 ACF-Delta-Guard: auth_delta=%.3f (%.3f→%.3f) → blend=%.2f",
                         _p29_auth_delta,
                         _p29_auth_proxy,
                         _p29_auth_out,
                         _p29_post_blend,
                     )
         except Exception as _p29_delta_exc:
-            logger.debug("Phase29 ACF-Delta-Guard (non-blocking): %s", _p29_delta_exc)
+            logger.debug("Verarbeitungsschritt29 ACF-Delta-Guard (nicht blockierend): %s", _p29_delta_exc)
 
         audio_processed, _quiet_zone_stats_p29 = self._limit_quiet_zone_boost(
             audio,
@@ -1324,7 +1335,7 @@ class TapeHissReductionPhase(PhaseInterface):
         )
         if _quiet_zone_stats_p29["quiet_zone_limited_frames"] > 0:
             logger.warning(
-                "§0h phase_29 Quiet-Zone-Guard: limited %.0f frame(s), maxΔ=%.2f dB",
+                "§0h Verarbeitungsschritt_29 Quiet-Zone-Guard: limited %.0f frame(s), maxΔ=%.2f dB",
                 _quiet_zone_stats_p29["quiet_zone_limited_frames"],
                 _quiet_zone_stats_p29["quiet_zone_max_delta_db"],
             )
@@ -1338,12 +1349,12 @@ class TapeHissReductionPhase(PhaseInterface):
             _zr29 = _crr29(audio, audio_processed, sample_rate)
             if _zr29.roughness_regression:
                 audio_processed = (0.90 * audio_processed + 0.10 * audio).astype(np.float32)
-                logger.warning("Phase29 §V42 Rauigkeits-Regression → Blend ×0.90")
+                logger.warning("Verarbeitungsschritt29 §V42 Rauigkeits-Regression → Blend ×0.90")
             if _zr29.pumping_detected:
                 audio_processed = (0.80 * audio_processed + 0.20 * audio).astype(np.float32)
-                logger.warning("Phase29 §V42 NR-Pumpen → Blend ×0.80")
+                logger.warning("Verarbeitungsschritt29 §V42 NR-Pumpen → Blend ×0.80")
         except Exception as _zr29_exc:
-            logger.debug("Phase29 §V42 Roughness-Check non-blocking: %s", _zr29_exc)
+            logger.debug("Verarbeitungsschritt29 §V42 Roughness-Pruefung nicht blockierend: %s", _zr29_exc)
 
         # §BandAnchor: spektrale Grundbalance bei zu heller/zu dünner Ausgabe
         # sanft zurück auf den Originalträger ziehen, ohne den Hiss-Fix zu verlieren.
@@ -1406,14 +1417,14 @@ class TapeHissReductionPhase(PhaseInterface):
                         np.float32
                     )
                     logger.warning(
-                        "Phase29 BandAnchor: lowmid=%.2f presence=%.2f air=%.2f → original-blend=%.2f",
+                        "Verarbeitungsschritt29 BandAnchor: lowmid=%.2f presence=%.2f air=%.2f → Originalsignal-blend=%.2f",
                         _lowmid_ratio_29,
                         _presence_ratio_29,
                         _air_ratio_29,
                         _anchor_mix_29,
                     )
         except Exception as _band_anchor_exc_29:
-            logger.debug("Phase29 BandAnchor (non-blocking): %s", _band_anchor_exc_29)
+            logger.debug("Verarbeitungsschritt29 BandAnchor (nicht blockierend): %s", _band_anchor_exc_29)
 
         # ── §v10 Per-Band-Maske NACH tape_hiss anwenden ──
         if _per_band_mask is not None:
@@ -1424,7 +1435,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 _after = apply_per_band_mask(_before, _per_band_mask, sample_rate, mix=0.55)
                 audio = _after
             except Exception as e:
-                logger.warning("phase_29_tape_hiss_reduction.py::_band_energy_29 fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::_band_energy_29 Ersatzpfad: %s", e)
 
         # §2.71 Strength-Envelope: Chirurgische Tape-Hiss-Reduktion
         _strength_env = kwargs.get("strength_envelope")
@@ -1442,11 +1453,11 @@ class TapeHissReductionPhase(PhaseInterface):
                 )
                 if float(np.mean(np.abs(audio_processed - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 29: Δ=%.4f RMS",
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 29: Δ=%.4f RMS",
                         float(np.mean(np.abs(audio_processed - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return PhaseResult(
             success=True,
@@ -1512,7 +1523,9 @@ class TapeHissReductionPhase(PhaseInterface):
                 else (_proc_arr.mean(axis=1) if _proc_arr.ndim == 2 else _proc_arr)
             )
             _rms_out_db = float(20.0 * np.log10(np.sqrt(np.mean(_proc_mono.astype(np.float64) ** 2)) + 1e-12))
-            logger.debug("Phase 29: gated-RMS kein aktiver Frame → globaler RMS Fallback %.1f dBFS", _rms_out_db)
+            logger.debug(
+                "Verarbeitungsschritt 29: gated-RMS kein aktiver Frame → globaler RMS Ersatzpfad %.1f dBFS", _rms_out_db
+            )
         else:
             _rms_out_db = _rms_out_gated
 
@@ -1565,7 +1578,7 @@ class TapeHissReductionPhase(PhaseInterface):
                     _rms_out_db = float(20.0 * np.log10(np.sqrt(np.mean(_pm.astype(np.float64) ** 2)) + 1e-12))
                 rms_drop_db = (_rms_out_db - _rms_in_db) if _rms_in_db > -90.0 else 0.0
                 logger.info(
-                    "Phase 29 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-aware)",
+                    "Verarbeitungsschritt 29 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-aware)",
                     material_key,
                     rms_drop_db,
                     makeup_gain_db,
@@ -1661,7 +1674,7 @@ class TapeHissReductionPhase(PhaseInterface):
         stats["lag_corrected"] = True
         stats["lag_output_corrected_samples"] = int(lag_corr)
         logger.warning(
-            "Phase 29 stereo-lag safety: corrected introduced lag delta=%d samples (in=%d out=%d corrected=%d)",
+            "Verarbeitungsschritt 29 stereo-lag safety: corrected introduced lag delta=%d samples (in=%d out=%d corrected=%d)",
             lag_delta,
             lag_in,
             lag_out,
@@ -1777,7 +1790,7 @@ class TapeHissReductionPhase(PhaseInterface):
             _gain_samples_scaled = (1.0 + intensity_scale * (_gain_samples - 1.0)).astype(np.float32)
             processed = np.clip((processed * _gain_samples_scaled).astype(np.float32), -1.0, 1.0)
             logger.debug(
-                "🎭 PsychoacousticMasking [phase29]: mean_floor=%.3f mean_gain=%.3f scaled_mean=%.3f (scale=%.2f)",
+                "🎭 PsychoacousticMasking [Verarbeitungsschritt29]: mean_floor=%.3f mean_gain=%.3f scaled_mean=%.3f (scale=%.2f)",
                 float(np.mean(_pmm_arr)),
                 float(np.mean(_pmm_gain_t)),
                 float(np.mean(_gain_samples_scaled)),
@@ -1800,7 +1813,7 @@ class TapeHissReductionPhase(PhaseInterface):
                         _fe_29o = min(_n_29o, _fs_29o + _hop_29o)
                         processed[_fs_29o:_fe_29o] = channel[_fs_29o:_fe_29o]
         except Exception as _pm_29o_exc:
-            logger.debug("§2.36 phase_29 _omlsa Phonem-Mask (non-blocking): %s", _pm_29o_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_29 _omlsa Phonem-Mask (nicht blockierend): %s", _pm_29o_exc)
 
         processed_result: np.ndarray = processed
         # §v10.304: STFT/ISTFT produces frame-boundary length drift — normalize to input.
@@ -1847,7 +1860,9 @@ class TapeHissReductionPhase(PhaseInterface):
         # **GUARD: Short-Audio-Buffer (§2.47, §0 Primum non nocere)**
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(channel) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_29: audio too short (%d < %d), passthrough", len(channel), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_29: audio too short (%d < %d), passthrough", len(channel), MIN_AUDIO_SAMPLES
+            )
             passthrough_result: np.ndarray = np.asarray(channel, dtype=np.float32).copy()
             return passthrough_result
 
@@ -1916,9 +1931,13 @@ class TapeHissReductionPhase(PhaseInterface):
             _masking_floor_arr_p29 = _mask_arr_p29.mean(axis=1).astype(np.float32)  # (n_freq_2048,)
             _masking_floor_p29 = _masking_floor_arr_p29
             _masking_freqs_p29 = np.linspace(0.0, sample_rate / 2.0, _mask_arr_p29.shape[0], dtype=np.float32)
-            logger.debug("§2.62 phase_29 Masking-Guard: mean_floor=%.3f", float(_masking_floor_arr_p29.mean()))
+            logger.debug(
+                "§2.62 Verarbeitungsschritt_29 Masking-Guard: mean_floor=%.3f", float(_masking_floor_arr_p29.mean())
+            )
         except Exception as _msk_exc_p29:
-            logger.debug("§2.62 phase_29 Masking-Guard nicht verfügbar (non-blocking): %s", _msk_exc_p29)
+            logger.debug(
+                "§2.62 Verarbeitungsschritt_29 Masking-Guard nicht verfügbar (nicht blockierend): %s", _msk_exc_p29
+            )
 
         for zone_name, zone_win, zone_hop, f_low, f_high in self._MRSA_ZONES:
             try:
@@ -2010,7 +2029,7 @@ class TapeHissReductionPhase(PhaseInterface):
                         G_z = G_z + _protect_z[np.newaxis, :] * (1.0 - G_z)
                         G_z = np.clip(G_z, G_floor, 1.0)
                     except Exception as _arc_z_exc:
-                        logger.debug("§Gap5 Arc-Schutz phase_29 non-blocking: %s", _arc_z_exc)
+                        logger.debug("§Gap5 Arc-Schutz Verarbeitungsschritt_29 nicht blockierend: %s", _arc_z_exc)
 
                 # §2.62: Per-Frequenz-Masking-Floor — Signal-konditioniert (non-blocking).
                 # Schützt signalpräsente Bins vor Überunterdrückung (§2.62).
@@ -2030,7 +2049,7 @@ class TapeHissReductionPhase(PhaseInterface):
                             G_z,
                         )
                     except Exception as e:
-                        logger.warning("phase_29_tape_hiss_reduction.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::unbekannter Ersatzpfad: %s", e)
                         pass  # nie pipeline-blockierend
 
                 # §v10.0.0: Stronger HF suppression in presence/air zones when DeepFilterNet absent.
@@ -2133,7 +2152,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 w_acc[ref_indices] += hann_w
 
             except Exception as zone_exc:
-                logger.warning("MRSA Phase 29 zone '%s' failed: %s", zone_name, zone_exc)
+                logger.warning("MRSA Verarbeitungsschritt 29 zone '%s' fehlgeschlagen: %s", zone_name, zone_exc)
                 continue
 
         # Combine zone gains; unprocessed bins → pass-through
@@ -2186,12 +2205,12 @@ class TapeHissReductionPhase(PhaseInterface):
                 if len(_pidx_29) > 0:
                     G_combined[:, _pidx_29] = 1.0
                     logger.debug(
-                        "§2.36 phase_29 Phonem-Bypass: %d/%d Frames auf G=1.0",
+                        "§2.36 Verarbeitungsschritt_29 Phonem-Bypass: %d/%d Frames auf G=1.0",
                         len(_pidx_29),
                         _n_t_29,
                     )
         except Exception as _pm29_exc:
-            logger.debug("§2.36 phase_29 Phonem-Mask (non-blocking): %s", _pm29_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_29 Phonem-Mask (nicht blockierend): %s", _pm29_exc)
 
         # §v10.303.13 Transient-Guard: Schützt Onsets vor Überdämpfung
         try:
@@ -2208,11 +2227,11 @@ class TapeHissReductionPhase(PhaseInterface):
                     _tm2 = np.clip(_tm29, 0.0, 1.0)[np.newaxis, :]
                     G_combined = G_combined * (1.0 - _tm2 * 0.5) + _tm2 * 0.5
                     logger.info(
-                        "§v10.303.13 Transient-Guard Phase29: %d Frames vor Hiss-Reduktion geschützt",
+                        "§v10.303.13 Transient-Guard Verarbeitungsschritt29: %d Frames vor Hiss-Reduktion geschützt",
                         _n_tm29,
                     )
         except Exception as _tm29_exc:
-            logger.debug("§v10.303.13 Phase29 Transient-Guard (non-blocking): %s", _tm29_exc)
+            logger.debug("§v10.303.13 Verarbeitungsschritt29 Transient-Guard (nicht blockierend): %s", _tm29_exc)
 
         # Apply gain + iSTFT reconstruction.
         # NOTE: Zxx_proc preserves the original phase from Zxx_ref (G_combined is real positive,
@@ -2233,7 +2252,7 @@ class TapeHissReductionPhase(PhaseInterface):
         audio_out = np.clip(audio_out, -1.0, 1.0).astype(np.float32)
 
         logger.debug(
-            "MRSA Phase 29: 5 zones processed, valid_bins=%d/%d, G_mean=%.3f, linked_sidechain=%s",
+            "MRSA Verarbeitungsschritt 29: 5 zones verarbeitet, valid_bins=%d/%d, G_mean=%.3f, linked_sidechain=%s",
             int(np.sum(valid)),
             n_bins,
             float(np.mean(G_combined)),
@@ -2293,7 +2312,7 @@ class TapeHissReductionPhase(PhaseInterface):
             True if successful, False otherwise
         """
         if not SOUNDFILE_AVAILABLE:
-            logger.warning("soundfile not available for ML HF refinement")
+            logger.warning("soundfile not verfuegbar for ML HF refinement")
             return False
 
         plugin = self._get_deepfilternet_plugin()
@@ -2307,7 +2326,7 @@ class TapeHissReductionPhase(PhaseInterface):
             from backend.core.ml_memory_budget import try_allocate as _try_alloc_29
 
             if not _try_alloc_29("DeepFilterNet_phase29", 0.40):
-                logger.debug("DeepFilterNet_phase29: ml_memory_budget insufficient — DSP-Fallback")
+                logger.debug("DeepFilterNet_Verarbeitungsschritt29: ml_memory_Grenze insufficient — DSP-Ersatzpfad")
                 return False
             _dfn_release = _rel_29
         except ImportError:
@@ -2321,7 +2340,7 @@ class TapeHissReductionPhase(PhaseInterface):
             _plm29_dfn = _get_plm29()
             _plm29_dfn.set_active("DeepFilterNetV3", True)
         except Exception as e:
-            logger.warning("phase_29_tape_hiss_reduction.py::_refine_hf_with_ml fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::_refine_hf_with_ml Ersatzpfad: %s", e)
 
         try:
             # Create temporary files
@@ -2352,16 +2371,16 @@ class TapeHissReductionPhase(PhaseInterface):
                     _energy_bias_equiv_db = max(_zone_biases_p29) if _zone_biases_p29 else -6.0
                     _has_passaggio_p29 = len({_r for _, _, _r, _ in _reg_seq_p29}) > 1
                     logger.debug(
-                        "§0p phase_29 Passaggio=%s energy_bias=%.1f dB zones=%d",
+                        "§0p Verarbeitungsschritt_29 Passaggio=%s energy_bias=%.1f dB zones=%d",
                         _has_passaggio_p29,
                         _energy_bias_equiv_db,
                         len(_reg_seq_p29),
                     )
                 except Exception as _reg29_exc:
-                    logger.debug("§0p Passaggio temporal phase_29 (non-blocking): %s", _reg29_exc)
+                    logger.debug("§0p Passaggio temporal Verarbeitungsschritt_29 (nicht blockierend): %s", _reg29_exc)
             _post_filter_p29 = not _is_vocal_content_p29  # True für Instrumental
             logger.debug(
-                "§0j phase_29 energy_bias_equiv=%.1f dB (panns_singing=%.2f vocal=%s post_filter=%s)",
+                "§0j Verarbeitungsschritt_29 energy_bias_equiv=%.1f dB (panns_singing=%.2f vocal=%s post_filter=%s)",
                 _energy_bias_equiv_db,
                 float(panns_singing),
                 _is_vocal_content_p29,
@@ -2372,7 +2391,7 @@ class TapeHissReductionPhase(PhaseInterface):
             _ctx_energy_bias_29 = float(self._restoration_context_p29.get("vocal_energy_bias_db", 0.0))
             if _ctx_energy_bias_29 < -6.0 and _is_vocal_content_p29:
                 _energy_bias_equiv_db = _ctx_energy_bias_29
-                logger.debug("§0j phase_29 energy_bias from context=%.1f dB", _ctx_energy_bias_29)
+                logger.debug("§0j Verarbeitungsschritt_29 energy_bias from context=%.1f dB", _ctx_energy_bias_29)
 
             # Process with DeepFilterNet
             returncode, _stdout, _stderr = plugin.process(
@@ -2412,13 +2431,13 @@ class TapeHissReductionPhase(PhaseInterface):
                         hf_refined = signal.sosfiltfilt(sos_hp, refined)
                         audio[:] = lf_original + hf_refined
 
-                    logger.info("✅ ML HF refinement successful (>2kHz band)")
+                    logger.info("✅ ML HF refinement erfolgreich (>2kHz band)")
                     return True
                 else:
                     logger.warning("Shape mismatch: %s vs %s", refined.shape, audio.shape)
                     return False
             else:
-                logger.warning("DeepFilterNet failed (returncode=%s)", returncode)
+                logger.warning("DeepFilterNet fehlgeschlagen (returncode=%s)", returncode)
                 return False
 
         except Exception as e:
@@ -2433,7 +2452,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 if os.path.exists(output_path):
                     os.unlink(output_path)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             if _dfn_release is not None:
                 _dfn_release("DeepFilterNet_phase29")
             # §4.6b: release PLM active-guard
@@ -2441,7 +2460,7 @@ class TapeHissReductionPhase(PhaseInterface):
                 try:
                     _plm29_dfn.set_active("DeepFilterNetV3", False)
                 except Exception as e:
-                    logger.warning("phase_29_tape_hiss_reduction.py::unbekannter Fallback: %s", e)
+                    logger.warning("Verarbeitungsschritt_29_tape_hiss_reduction.py::unbekannter Ersatzpfad: %s", e)
 
     def _apply_adaptive_gate(
         self, band_signal: np.ndarray, noise_floor_db: float, threshold_db: float, reduction_db: float, sample_rate: int
@@ -2523,7 +2542,7 @@ class TapeHissReductionPhase(PhaseInterface):
 
 # Test harness
 if __name__ == "__main__":
-    logger.debug("=== Phase 29: Tape Hiss Reduction v2 Test ===\n")
+    logger.debug("=== Verarbeitungsschritt 29: Tape Hiss Reduction v2 Test ===\n")
 
     processor = TapeHissReductionPhase(sample_rate=44100)
 
@@ -2573,7 +2592,7 @@ if __name__ == "__main__":
         hf_reduction = 20 * np.log10(np.std(hf_orig) / (np.std(hf_proc) + 1e-10))
 
         # Display results
-        logger.debug("  Gate threshold: %.1f dB", meta.get("gate_threshold_db", 0))
+        logger.debug("  Gate Schwelle: %.1f dB", meta.get("gate_threshold_db", 0))
         logger.debug("  Reduction depth: %.1f dB", meta.get("reduction_depth_db", 0))
         logger.debug("  HF focus range: %s Hz", meta.get("hf_focus_range_hz", []))
         logger.debug("  Num bands: %s", meta.get("num_bands", 0))

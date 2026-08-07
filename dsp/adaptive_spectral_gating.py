@@ -52,7 +52,7 @@ adaptive_spectral_gating_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Verlust von Details",
             "expected_when": "reduction_db zu hoch",
             "severity": 0.2,
@@ -105,7 +105,7 @@ class AdaptiveSpectralGating:
             n_bins = mag.shape[0]
             freq_offset = np.linspace(-6.0, 3.0, n_bins)
         else:
-            freq_offset = 0.0
+            freq_offset = 0.0  # type: ignore[assignment]
 
         if noise_floor is not None:
             nf = np.asarray(noise_floor, dtype=np.float64)

@@ -256,7 +256,7 @@ class AdaptiveChainBuilder:
         )
 
         if verbose:
-            logger.info("\n   Chain created: %s modules", len(chain.modules))
+            logger.info("\n   Chain erstellt: %s modules", len(chain.modules))
             logger.info("   Confidence: %.1f", chain.confidence)
             logger.info("=" * 60)
 
@@ -521,5 +521,5 @@ class AdaptiveChainBuilder:
             description=data["description"],
         )
 
-        logger.info("Chain loaded from %s", filepath)
+        logger.info("Chain geladen from %s", filepath)
         return chain

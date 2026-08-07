@@ -29,7 +29,7 @@ def _make_tonal_audio(n: int = _SR * 4, sr: int = _SR) -> np.ndarray:
         + 0.15 * np.sin(2 * np.pi * 880.0 * t)
         + 0.05 * np.sin(2 * np.pi * 1760.0 * t)
     ).astype(np.float32)
-    return sig / (np.max(np.abs(sig)) + 1e-8)
+    return sig / (np.max(np.abs(sig)) + 1e-8)  # type: ignore[no-any-return]
 
 
 def _make_noisy_audio(n: int = _SR * 4, sr: int = _SR) -> np.ndarray:
@@ -63,7 +63,7 @@ def _make_compressed_pop(n: int = _SR * 4, sr: int = _SR) -> np.ndarray:
     sig = np.array(sig, dtype=np.float32)
     # Harte Begrenzung simuliert Mastering-Kompression (hohe 5th-Perzentile ≈ 0.3)
     sig = np.clip(sig, -0.8, 0.8)
-    return (sig / (np.max(np.abs(sig)) + 1e-8)).astype(np.float32)
+    return (sig / (np.max(np.abs(sig)) + 1e-8)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

@@ -56,7 +56,7 @@ class CodecDiscriminator:
             regions = [(int(s * 44100), int(e * 44100)) for s, e in locations_s if e > s]
             return self.crackle_onset_correlation(regions, onsets)
         except Exception as e:
-            logger.warning("codec_discriminator.py::onset_correlation fallback: %s", e)
+            logger.warning("codec_discriminator.py::onset_correlation Ersatzpfad: %s", e)
             return 0.0
 
     def mp3_boundary_fraction(self, locations_s: list[tuple[float, float]]) -> float:
@@ -81,7 +81,7 @@ class CodecDiscriminator:
                     onsets.append(i * 256)
             return onsets[:500]  # Max 500 onsets
         except Exception as e:
-            logger.warning("codec_discriminator.py::_detect_transients fallback: %s", e)
+            logger.warning("codec_discriminator.py::_erkennen_transients Ersatzpfad: %s", e)
             return []
 
     # ── Clicks: MP3-Block-Boundary vs. Vinyl-Click ─────────

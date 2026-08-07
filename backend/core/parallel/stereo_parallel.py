@@ -119,7 +119,7 @@ class StereoParallelProcessor:
             raise ValueError(f"Channel length mismatch: left={left.shape[0]}, right={right.shape[0]}")
 
         if not self.enable_parallel:
-            logger.debug("Parallel processing disabled, using sequential processing")
+            logger.debug("Parallel processing deaktiviert, using sequential processing")
             return self._process_sequential(left, right, sr, process_func)
 
         # Process channels in parallel
@@ -137,7 +137,7 @@ class StereoParallelProcessor:
                 result_left = future_left.result(timeout=self.timeout)
                 result_right = future_right.result(timeout=self.timeout)
             except TimeoutError as e:
-                logger.error("Processing timeout: %s", e)
+                logger.error("Processing Zeitlimit: %s", e)
                 raise RuntimeError("Stereo processing timeout") from e
 
         processing_time = time.time() - start_time
@@ -151,14 +151,14 @@ class StereoParallelProcessor:
                 errors.append(f"Right channel: {result_right.error}")
 
             error_msg = "; ".join(errors)
-            logger.error("Stereo processing failed: %s", error_msg)
+            logger.error("Stereo processing fehlgeschlagen: %s", error_msg)
             raise RuntimeError(f"Stereo processing failed: {error_msg}")
 
         # Update statistics
         self._update_stats(processing_time, result_left, result_right)
 
         logger.debug(
-            f"Stereo processing complete: {processing_time:.3f}s "
+            f"Stereo processing vollstaendig: {processing_time:.3f}s "
             f"(L: {result_left.processing_time:.3f}s, R: {result_right.processing_time:.3f}s)"
         )
 
@@ -203,7 +203,7 @@ class StereoParallelProcessor:
 
         except Exception as e:
             processing_time = time.time() - start_time
-            logger.error("Channel %s processing failed: %s", channel.value, e)
+            logger.error("Channel %s processing fehlgeschlagen: %s", channel.value, e)
 
             return ProcessingResult(
                 channel=channel,

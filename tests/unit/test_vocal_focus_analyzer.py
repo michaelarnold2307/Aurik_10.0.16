@@ -13,7 +13,7 @@ SR = 48000
 
 def _make_sine(freq_hz: float, duration_s: float = 3.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, duration_s, int(SR * duration_s), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_vocal_signal(duration_s: float = 3.0) -> np.ndarray:
@@ -25,7 +25,7 @@ def _make_vocal_signal(duration_s: float = 3.0) -> np.ndarray:
         + 0.15 * np.sin(2 * np.pi * 660 * t)  # H3
         + 0.08 * np.sin(2 * np.pi * 880 * t)  # H4
     ).astype(np.float32)
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

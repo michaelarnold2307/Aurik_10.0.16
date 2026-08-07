@@ -90,4 +90,4 @@ class StereoImageCorrection:
         # Pegelkompensation: Energie erhalten
         gain = 1.0 / max(1e-9, np.sqrt(0.5 * (1.0 + float(self.target_width) ** 2)))
         out = np.stack([L_out * gain, R_out * gain], axis=0)
-        return out.astype(audio.dtype)
+        return out.astype(audio.dtype)  # type: ignore[no-any-return]

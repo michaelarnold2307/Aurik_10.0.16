@@ -56,7 +56,7 @@ adaptive_transient_detection_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlerkennung",
             "expected_when": "threshold zu niedrig",
             "severity": 0.2,
@@ -74,10 +74,10 @@ class AdaptiveTransientDetection:
 
     def __init__(self, threshold=2.0):
         if not (0.5 <= threshold <= 10.0):
-            logger.error("Ungültiger threshold: %s. Muss zwischen 0.5 und 10.0 liegen.", threshold)
+            logger.error("Ungültiger Schwelle: %s. Muss zwischen 0.5 und 10.0 liegen.", threshold)
             raise ValueError("threshold muss zwischen 0.5 und 10.0 liegen.")
         self.threshold = threshold
-        logger.info("AdaptiveTransientDetection initialisiert mit threshold=%s", self.threshold)
+        logger.info("AdaptiveTransientDetection initialisiert mit Schwelle=%s", self.threshold)
 
     def log_contract(self):
         contract_dict = asdict(adaptive_transient_detection_contract)
@@ -118,7 +118,7 @@ class AdaptiveTransientDetection:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._detect_classic(signal, envelope, threshold)
                 else:
@@ -126,7 +126,7 @@ class AdaptiveTransientDetection:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('transient_detection.pt')
                     # output = model(torch.from_numpy(signal).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._detect_classic(signal, envelope, threshold)
             else:
@@ -139,7 +139,7 @@ class AdaptiveTransientDetection:
         if audit_log:
             transient_count = int(np.sum(output)) if output is not None else 0
             logger.info(
-                f"AdaptiveTransientDetection: transient_count={transient_count}, fallback_used={fallback_used}, threshold={threshold}"
+                f"AdaptiveTransientDetection: transient_count={transient_count}, Ersatzpfad_used={fallback_used}, Schwelle={threshold}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_transient_detection_contract))
         return output
@@ -161,4 +161,4 @@ class AdaptiveTransientDetection:
             self.threshold = 2.0
         else:
             self.threshold = 3.0
-        logger.info("Threshold auto-optimiert auf %s", self.threshold)
+        logger.info("Schwelle auto-optimiert auf %s", self.threshold)

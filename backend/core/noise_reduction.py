@@ -25,7 +25,7 @@ try:
     _AVAILABLE = True
 except ImportError:
     _AVAILABLE = False
-    logger.debug("noise_reduction: DeepFilterNet plugin not available — DSP fallback only")
+    logger.debug("noise_reduction: DeepFilterNet plugin not verfuegbar — DSP Ersatzpfad only")
 
 
 def get_noise_reducer() -> DeepFilterNetV3Plugin | None:

@@ -6,6 +6,7 @@ Tests all 6 Phase 2.3 components on real audio files
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import soundfile as sf
@@ -24,7 +25,7 @@ print("=" * 60)
 
 # Find audio files
 audio_dirs = [Path("input"), Path("test_audio"), Path("audio_examples")]
-audio_files = []
+audio_files: list[Any] = []
 for d in audio_dirs:
     if d.exists():
         audio_files.extend(d.glob("*.wav"))
@@ -59,7 +60,7 @@ for i, file in enumerate(audio_files[:5], 1):  # Test first 5 files
         # Test each system
         for name, system in systems.items():
             try:
-                processed, report = system.process(audio, sr)
+                processed, report = system.process(audio, sr)  # type: ignore[attr-defined]
                 rms_orig = np.sqrt(np.mean(audio**2))
                 rms_proc = np.sqrt(np.mean(processed**2))
                 gain_db = 20 * np.log10(rms_proc / (rms_orig + 1e-10))

@@ -34,7 +34,7 @@ SR = 48000
 
 def _sine(dur: float = 4.0, freq: float = 440.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), endpoint=False, dtype=np.float32)
-    return (0.25 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.25 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_mock_defect_score(severity: float, confidence: float, metadata: dict | None = None):
@@ -158,13 +158,13 @@ class TestRestorabilityceiling:
     def test_cap_floor_enforced(self):
         """Cap kann nicht unter 0.45 fallen (auch bei Extrapolation)."""
         cap = self._rest_cap(100.0)
-        assert cap >= 0.45
+        assert cap >= 0.45  # type: ignore[operator]
 
     def test_cap_monotonic_decreasing_with_restorability(self):
         """Höheres Restorability → niedrigerer Cap (mehr Pristine = sanftere Eingriffe)."""
         caps = [self._rest_cap(r) for r in [70.0, 80.0, 90.0, 100.0]]
         for i in range(len(caps) - 1):
-            assert caps[i] >= caps[i + 1], (
+            assert caps[i] >= caps[i + 1], (  # type: ignore[operator]
                 f"Nicht monoton: cap({70 + i * 10})={caps[i]:.4f} < cap({80 + i * 10})={caps[i + 1]:.4f}"
             )
 

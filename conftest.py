@@ -128,7 +128,7 @@ def pytest_configure(config) -> None:
         _ = _librosa.util.MAX_MEM_BLOCK
         _ = _librosa.util.frame
     except Exception:
-        logger.warning("conftest.py::pytest_configure fallback", exc_info=True)
+        logger.warning("conftest.py::pytest_konfigurieren Ersatzpfad", exc_info=True)
         pass  # Kein Absturz — ist nur ein Warm-up
 
 
@@ -170,7 +170,7 @@ def _release_heavy_singletons() -> None:
             try:
                 mod._instance = None  # type: ignore[attr-defined]
             except Exception:
-                logger.warning("conftest.py::_release_heavy_singletons fallback", exc_info=True)
+                logger.warning("conftest.py::_release_heavy_singletons Ersatzpfad", exc_info=True)
 
 
 def _is_vscode_run() -> bool:
@@ -254,7 +254,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
 
         _arm.stop_monitoring()
     except Exception:
-        logger.warning("conftest.py::pytest_sessionfinish fallback", exc_info=True)
+        logger.warning("conftest.py::pytest_sessionfinish Ersatzpfad", exc_info=True)
 
     # 2) PLM-Monitor sicher stoppen + Pipeline-Refcount defensiv entspannen.
     try:
@@ -272,7 +272,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
                 break
         _get_plm().shutdown()
     except Exception:
-        logger.warning("conftest.py::pytest_sessionfinish fallback", exc_info=True)
+        logger.warning("conftest.py::pytest_sessionfinish Ersatzpfad", exc_info=True)
 
     # 3) Schwere Modulsingletons freigeben + finales GC.
     _release_heavy_singletons()
@@ -294,6 +294,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
                 if _th.name.endswith("(_run_rest)"):
                     _rest_threads.append(_th)
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
 
         if not _rest_threads:
@@ -308,7 +309,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
             try:
                 _th.join(timeout=_slice)
             except Exception:
-                logger.warning("conftest.py::pytest_sessionfinish fallback", exc_info=True)
+                logger.warning("conftest.py::pytest_sessionfinish Ersatzpfad", exc_info=True)
 
     if os.environ.get("AURIK_PYTEST_THREAD_DUMP", "0") == "1":
         try:
@@ -323,7 +324,7 @@ def pytest_sessionfinish(session, exitstatus) -> None:
                 )
             print(f"AURIK_THREAD_DUMP sessionfinish exitstatus={exitstatus} threads={_alive}", file=_sys.stderr)
         except Exception:
-            logger.warning("conftest.py::unknown fallback", exc_info=True)
+            logger.warning("conftest.py::unknown Ersatzpfad", exc_info=True)
 
 
 # ── Legacy-Testdateien ausschließen ────────────────────────────────────────
@@ -425,7 +426,7 @@ def _is_heavy_test_item(item) -> bool:
             if timeout_s >= 300.0:
                 return True
         except (TypeError, ValueError):
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     return item.get_closest_marker("e2e") is not None
 

@@ -64,7 +64,7 @@ adaptive_stft_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Aliasing", "expected_when": "n_fft zu klein", "severity": 0.2}],
+    side_effects=[{"risk": "Aliasing", "expected_when": "n_fft zu klein", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["spectral_resolution"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -102,7 +102,7 @@ adaptive_mel_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Verlust von Details",
             "expected_when": "n_mels zu klein",
             "severity": 0.2,
@@ -145,7 +145,7 @@ class AdaptiveSTFT:
             "pad_mode": self.pad_mode,
         }
         logger.info(
-            f"AdaptiveSTFT initialisiert mit n_fft={self.n_fft}, hop_length={self.hop_length}, win_length={self.win_length}, window={self.window}, center={self.center}, pad_mode={self.pad_mode}"
+            f"AdaptiveSTFT initialisiert mit n_fft={self.n_fft}, hop_length={self.hop_length}, win_length={self.win_length}, window={self.window}, center={self.center}, pad_Betriebsart={self.pad_mode}"
         )
 
     def log_contract(self):
@@ -192,7 +192,7 @@ class AdaptiveSTFT:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._stft_classic(y, n_fft, hop_length, win_length, window, center, pad_mode)
                 else:
@@ -200,7 +200,7 @@ class AdaptiveSTFT:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('stft.pt')
                     # output = model(torch.from_numpy(y).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._stft_classic(y, n_fft, hop_length, win_length, window, center, pad_mode)
             else:
@@ -213,7 +213,7 @@ class AdaptiveSTFT:
         if audit_log:
             spectral_resolution = float(n_fft) / float(sr if sr is not None else 48000)
             logger.info(
-                f"AdaptiveSTFT: spectral_resolution={spectral_resolution:.4f}, fallback_used={fallback_used}, n_fft={n_fft}"
+                f"AdaptiveSTFT: spectral_resolution={spectral_resolution:.4f}, Ersatzpfad_used={fallback_used}, n_fft={n_fft}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_stft_contract))
         return output
@@ -342,7 +342,7 @@ class AdaptiveMelSpectrogram:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._mel_spectrogram_classic(y, sr, n_fft, n_mels, **kwargs)
                 else:
@@ -350,7 +350,7 @@ class AdaptiveMelSpectrogram:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('mel_spectrogram.pt')
                     # output = model(torch.from_numpy(y).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._mel_spectrogram_classic(y, sr, n_fft, n_mels, **kwargs)
             else:
@@ -363,7 +363,7 @@ class AdaptiveMelSpectrogram:
         if audit_log:
             mel_resolution = float(n_mels)
             logger.info(
-                f"AdaptiveMelSpectrogram: mel_resolution={mel_resolution:.2f}, fallback_used={fallback_used}, n_fft={n_fft}, n_mels={n_mels}"
+                f"AdaptiveMelSpectrogram: mel_resolution={mel_resolution:.2f}, Ersatzpfad_used={fallback_used}, n_fft={n_fft}, n_mels={n_mels}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_mel_contract))
         return output

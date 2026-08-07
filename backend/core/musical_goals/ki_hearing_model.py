@@ -469,7 +469,7 @@ def compute_vocal_proximity_score(
             "early_reflection_preservation": float(c80_ratio),
         }
     except Exception as exc:
-        logger.warning("compute_vocal_proximity_score failed: %s", exc)
+        logger.warning("berechnen_vocal_proximity_Wert fehlgeschlagen: %s", exc)
         return _fallback_result()
 
 

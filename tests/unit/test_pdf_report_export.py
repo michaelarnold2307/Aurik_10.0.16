@@ -37,7 +37,7 @@ def _make_report(**overrides) -> ProcessingReport:
         "processing_time_sec": 42.5,
     }
     defaults.update(overrides)
-    return ProcessingReport(**defaults)
+    return ProcessingReport(**defaults)  # type: ignore[arg-type]
 
 
 def _make_full_report() -> ProcessingReport:

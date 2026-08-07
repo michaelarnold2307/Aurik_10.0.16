@@ -53,7 +53,7 @@ def _noise(duration_s: float = 1.0, amplitude: float = 0.05) -> np.ndarray:
 
 def _sine(freq_hz: float = 440.0, duration_s: float = 1.0) -> np.ndarray:
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return (np.sin(2 * np.pi * freq_hz * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * freq_hz * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _clipped(duration_s: float = 1.0) -> np.ndarray:

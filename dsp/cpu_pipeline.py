@@ -87,10 +87,10 @@ def _istft(
     )
     if n_samples > 0:
         if len(reconstructed) >= n_samples:
-            return reconstructed[:n_samples]
+            return reconstructed[:n_samples]  # type: ignore[no-any-return]
         else:
             return np.pad(reconstructed, (0, n_samples - len(reconstructed)))
-    return reconstructed
+    return reconstructed  # type: ignore[no-any-return]
 
 
 # ─── DSP-Operationen ─────────────────────────────────────────────────────

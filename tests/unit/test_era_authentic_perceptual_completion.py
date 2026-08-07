@@ -29,7 +29,7 @@ RNG = np.random.default_rng(42)
 
 def _sine(freq: float = 440.0, dur: float = 2.0, sr: int = SR) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * sr), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _bandlimited_signal(cutoff_hz: float, dur: float = 2.0, sr: int = SR) -> np.ndarray:

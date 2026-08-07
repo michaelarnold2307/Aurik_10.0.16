@@ -322,7 +322,7 @@ def check_musical_coherence(
         return result, report
 
     except Exception as exc:
-        logger.debug("MusicalCoherenceGuard (non-blocking): %s", exc)
+        logger.debug("MusicalCoherenceGuard (nicht blockierend): %s", exc)
         return restored_audio, report
 
 

@@ -162,7 +162,7 @@ class CrowdNoiseIsolator:
         else:
             audio_cleaned = audio_cleaned[: len(audio)]
 
-        return audio_cleaned.astype(input_dtype)
+        return audio_cleaned.astype(input_dtype)  # type: ignore[no-any-return]
 
 
 class RoomDeverberator:
@@ -282,7 +282,7 @@ class RoomDeverberator:
         else:
             audio_deverb = audio_deverb[: len(audio)]
 
-        return audio_deverb.astype(input_dtype)
+        return audio_deverb.astype(input_dtype)  # type: ignore[no-any-return]
 
 
 class StageBleedReducer:
@@ -365,7 +365,7 @@ class StageBleedReducer:
         else:
             audio_reduced = audio_reduced[: len(audio)]
 
-        return audio_reduced.astype(input_dtype)
+        return audio_reduced.astype(input_dtype)  # type: ignore[no-any-return]
 
 
 class FeedbackCanceller:
@@ -426,7 +426,7 @@ class FeedbackCanceller:
         # Extract feedback frequencies
         feedback_freqs = freqs_feedback[peaks].tolist()
 
-        return feedback_freqs
+        return feedback_freqs  # type: ignore[no-any-return]
 
     def remove_feedback(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -716,7 +716,7 @@ class DeWindTool:
         sos = butter(4, cutoff_hz, btype="highpass", fs=sr, output="sos")
         audio_dewind = sosfilt(sos, audio)
 
-        return audio_dewind.astype(input_dtype)
+        return audio_dewind.astype(input_dtype)  # type: ignore[no-any-return]
 
 
 class RoomModeCorrector:
@@ -1023,7 +1023,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
     import logging
 
     logging.info(f"Loaded: {args.input} ({audio.shape}, {sr} Hz)")

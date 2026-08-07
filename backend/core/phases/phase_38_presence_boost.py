@@ -184,13 +184,13 @@ class PresenceBoost(PhaseInterface):
                     _boost_38 = _zone_frac_38 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_38, 0.0, 1.0))
                     logger.debug(
-                        "Phase38 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt38 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_38,
                         _boost_38,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_38:
-                logger.debug("Phase38 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_38)
+                logger.debug("Verarbeitungsschritt38 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_38)
 
         # §2.17 SectionStrengthEnvelope: Kontinuierliche per-Segment-Modulation.
         # Passt Presence-Boost dynamisch an: mehr Präsenz in Refrains (wo der Mix
@@ -206,15 +206,18 @@ class PresenceBoost(PhaseInterface):
                 _env_val = get_section_strength_at(_envelope, 0, _n_total)
                 _effective_strength = float(np.clip(_effective_strength * _env_val, 0.0, 1.0))
                 logger.debug(
-                    "Phase38 §2.17 SectionStrengthEnvelope: env=%.3f → eff_str=%.3f",
+                    "Verarbeitungsschritt38 §2.17 SectionStrengthEnvelope: env=%.3f → eff_str=%.3f",
                     _env_val,
                     _effective_strength,
                 )
             except Exception as _env_exc_38:
-                logger.debug("Phase38 §2.17 SectionStrengthEnvelope non-blocking: %s", _env_exc_38)
+                logger.debug("Verarbeitungsschritt38 §2.17 SectionStrengthEnvelope nicht blockierend: %s", _env_exc_38)
 
         if _effective_strength <= 0.0:
-            logger.info("Phase 38: skipped — effective_strength=%.3f (no presence boost applied)", _effective_strength)
+            logger.info(
+                "Verarbeitungsschritt 38: uebersprungen — effective_strength=%.3f (no presence boost angewendet)",
+                _effective_strength,
+            )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             # §5/5: Echte Peak-Messung auch bei Skip
@@ -236,7 +239,7 @@ class PresenceBoost(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.BOOST_CONFIG.get(_mk, self.BOOST_CONFIG[MaterialType.CD_DIGITAL]))
+        config = dict(self.BOOST_CONFIG.get(_mk, self.BOOST_CONFIG[MaterialType.CD_DIGITAL]))  # type: ignore[call-overload]
         config["lower_gain_db"] = float(config["lower_gain_db"] * _effective_strength)
         config["upper_gain_db"] = float(config["upper_gain_db"] * _effective_strength)
         # §v10.70 Modus-Trennung: Restoration → max +2 dB Presence-Boost.
@@ -258,7 +261,9 @@ class PresenceBoost(PhaseInterface):
             _b_scale = max(0.70, min(1.20, _b_scale))
             config["lower_gain_db"] *= _b_scale
             config["upper_gain_db"] *= _b_scale
-            logger.debug("Phase 38: brillanz_target=%.2f → presence scale=%.2f", float(_brillanz), _b_scale)
+            logger.debug(
+                "Verarbeitungsschritt 38: brillanz_target=%.2f → presence scale=%.2f", float(_brillanz), _b_scale
+            )
         if _decade is not None:
             _dec = int(_decade)
             if _dec <= 1950:
@@ -298,7 +303,7 @@ class PresenceBoost(PhaseInterface):
             config["lower_gain_db"] *= _vp_scale_38
             config["upper_gain_db"] *= _vp_scale_38
             logger.debug(
-                "Phase 38: vocal_presence_active → presence_scale=%.2f (vp_strength=%.2f)",
+                "Verarbeitungsschritt 38: vocal_presence_active → presence_scale=%.2f (vp_strength=%.2f)",
                 _vp_scale_38,
                 _vp_strength_38,
             )
@@ -316,7 +321,7 @@ class PresenceBoost(PhaseInterface):
             config["lower_center_hz"] = _sfr_presence_lower
             config["upper_center_hz"] = _sfr_presence_upper
             logger.debug(
-                "Phase 38: era-aware presence center lower=%.0f upper=%.0f Hz (mic=%s)",
+                "Verarbeitungsschritt 38: era-aware presence center lower=%.0f upper=%.0f Hz (mic=%s)",
                 _sfr_presence_lower,
                 _sfr_presence_upper,
                 str(_sfr_cal.get("source_fidelity_era_mic_type", "?")),
@@ -327,7 +332,7 @@ class PresenceBoost(PhaseInterface):
             _hd_boost = float(np.clip(0.85 / _harm_density, 1.0, 1.25))
             config["lower_gain_db"] = float(np.clip(config["lower_gain_db"] * _hd_boost, 0.0, 10.0))
             config["upper_gain_db"] = float(np.clip(config["upper_gain_db"] * _hd_boost, 0.0, 10.0))
-            logger.debug("Phase 38: harm_density=%.2f → presence_boost×%.2f", _harm_density, _hd_boost)
+            logger.debug("Verarbeitungsschritt 38: harm_density=%.2f → presence_boost×%.2f", _harm_density, _hd_boost)
 
         # §soft_saturation-Guard: Presence-Boost bei gesättigtem Material begrenzen.
         # Soft_saturation erzeugt bereits geradzahlige Obertöne im Presence-Band (2–6 kHz).
@@ -346,7 +351,7 @@ class PresenceBoost(PhaseInterface):
             config["lower_gain_db"] = float(config["lower_gain_db"] * _sat_scale)
             config["upper_gain_db"] = float(config["upper_gain_db"] * _sat_scale)
             logger.debug(
-                "Phase 38 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (lower=%.2f dB upper=%.2f dB)",
+                "Verarbeitungsschritt 38 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (lower=%.2f dB upper=%.2f dB)",
                 _soft_sat_sev,
                 _soft_sat_preserve,
                 _sat_scale,
@@ -391,17 +396,20 @@ class PresenceBoost(PhaseInterface):
             )  # type: ignore[misc]
             if _hg_38.requires_rollback:
                 logger.warning(
-                    "phase_38: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_38.spectral_novelty
+                    "Verarbeitungsschritt_38: hallucination_guard rollback (spectral_novelty=%.3f)",
+                    _hg_38.spectral_novelty,
                 )
                 enhanced_audio = np.clip(np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             elif _hg_38.score_penalty > 0.0:
                 logger.info(
-                    "phase_38: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
+                    "Verarbeitungsschritt_38: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_38.score_penalty,
                     _hg_38.spectral_novelty,
                 )
         except Exception as _hg38_exc:
-            logger.debug("phase_38: hallucination_guard failed (non-blocking): %s", _hg38_exc)
+            logger.debug(
+                "Verarbeitungsschritt_38: hallucination_guard fehlgeschlagen (nicht blockierend): %s", _hg38_exc
+            )
 
         # §V22 Pre-Echo-Prevention — Additive Presence-Boost auf Transient-Shifts prüfen (§2.73, non-blocking)
         try:
@@ -424,12 +432,12 @@ class PresenceBoost(PhaseInterface):
                 _wet_ts_38 = max(0.0, 1.0 - _ts_38.blend_reduction)
                 enhanced_audio = (_wet_ts_38 * enhanced_audio + (1.0 - _wet_ts_38) * audio).astype(np.float32)
                 logger.warning(
-                    "§V22 phase_38: onset_shift=%.2f ms → blend_reduction=%.2f",
+                    "§V22 Verarbeitungsschritt_38: onset_shift=%.2f ms → blend_reduction=%.2f",
                     _ts_38.max_shift_ms,
                     _ts_38.blend_reduction,
                 )
         except Exception as _v22_38_exc:
-            logger.debug("§V22 phase_38 transient_guard non-blocking: %s", _v22_38_exc)
+            logger.debug("§V22 Verarbeitungsschritt_38 transient_guard nicht blockierend: %s", _v22_38_exc)
         return PhaseResult(
             success=True,
             audio=enhanced_audio,
@@ -489,7 +497,11 @@ class PresenceBoost(PhaseInterface):
             if sib_ratio > 0.70:
                 sib_scale = max(0.3, 1.0 - (sib_ratio - 0.70) * 1.5)
                 upper_gain *= sib_scale
-                logger.debug("Phase 38 sibilance guard: sib_ratio=%.2f → upper_gain×%.2f", sib_ratio, sib_scale)
+                logger.debug(
+                    "Verarbeitungsschritt 38 sibilance guard: sib_Verhaeltnis=%.2f → upper_gain×%.2f",
+                    sib_ratio,
+                    sib_scale,
+                )
 
         # ── 3. Apply bell filters ──
         # §v10.65: Frequenz-Jitter ±3% pro Aufruf verhindert "plastic wrap"-
@@ -502,7 +514,7 @@ class PresenceBoost(PhaseInterface):
         upper_center = float(config.get("upper_center_hz", 4750.0)) * _jitter_factor
 
         logger.debug(
-            "Phase 38: presence EQ jitter=%.1f%% → lower=%.0fHz upper=%.0fHz",
+            "Verarbeitungsschritt 38: presence EQ jitter=%.1f%% → lower=%.0fHz upper=%.0fHz",
             (_jitter_factor - 1.0) * 100,
             lower_center,
             upper_center,

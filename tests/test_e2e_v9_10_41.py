@@ -180,7 +180,7 @@ class TestE2ERestorationQuality:
 
     def test_01_audio_geladen_und_valide(self) -> None:
         """Testdatei muss korrekt ladbar und nicht leer sein."""
-        audio, sr = _load_audio(_AUDIO_FILE)
+        audio, sr = _load_audio(_AUDIO_FILE)  # type: ignore[arg-type]
         assert audio.ndim == 1, "Audio muss mono sein"
         assert sr > 0, f"Sample-Rate ungültig: {sr}"
         assert len(audio) > sr, "Audio kürzer als 1 Sekunde"
@@ -202,7 +202,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
 
         config = RestorationConfig(
             mode=QualityMode.QUALITY,
@@ -268,7 +268,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -282,7 +282,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -296,7 +296,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -315,7 +315,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -337,7 +337,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(
             mode=QualityMode.QUALITY,
             enable_performance_guard=True,
@@ -359,7 +359,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -378,7 +378,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         rng = np.random.default_rng(42)
         degraded = audio + rng.normal(0, 0.005, audio.shape).astype(np.float32)
         config = RestorationConfig(mode=QualityMode.QUALITY)
@@ -400,7 +400,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -428,7 +428,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -456,7 +456,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -474,7 +474,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -496,7 +496,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -516,7 +516,7 @@ class TestE2ERestorationQuality:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)
@@ -539,7 +539,7 @@ class TestE2EStudio2026Balanced:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
 
         config = RestorationConfig(
             mode=QualityMode.BALANCED,
@@ -603,7 +603,7 @@ class TestE2EStudio2026Balanced:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
 
         config = RestorationConfig(mode=QualityMode.BALANCED, enable_performance_guard=False)
         result = UnifiedRestorerV3(config=config).restore(audio, sample_rate=sr)
@@ -624,7 +624,7 @@ class TestE2EMusicalGoals:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         result = UnifiedRestorerV3(config=config).restore(audio, sample_rate=sr)
 
@@ -659,7 +659,7 @@ class TestE2EMusicalGoals:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # 15 s-Clip: CI-Timeout vermeiden  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         result = UnifiedRestorerV3(config=config).restore(audio, sample_rate=sr)
 
@@ -674,7 +674,7 @@ class TestE2EMusicalGoals:
         from backend.core.performance_guard import QualityMode  # type: ignore
         from backend.core.unified_restorer_v3 import RestorationConfig, UnifiedRestorerV3  # type: ignore
 
-        audio, sr = _load_audio_clip(_AUDIO_FILE)
+        audio, sr = _load_audio_clip(_AUDIO_FILE)  # type: ignore[arg-type]
         config = RestorationConfig(mode=QualityMode.QUALITY)
         restorer = UnifiedRestorerV3(config=config)
         result = restorer.restore(audio, sample_rate=sr)

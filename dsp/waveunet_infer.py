@@ -45,8 +45,8 @@ def main():
 
     # Audio laden
     _res = load_audio_file(args.input)
-    audio = np.asarray(_res["audio"], dtype=np.float32)
-    sr = int(_res["sr"])
+    audio = np.asarray(_res["audio"], dtype=np.float32)  # type: ignore[index]
+    sr = int(_res["sr"])  # type: ignore[index]
 
     # Für Evaluate.predict wird ein Track-Objekt mit .audio und .rate benötigt
     class SimpleTrack:
@@ -56,8 +56,8 @@ def main():
     # load_audio_file gibt mono als (samples,) und stereo als (samples, channels)
     if audio.ndim == 1:
         audio = np.expand_dims(audio, axis=1)
-    track.audio = audio  # (samples, channels)
-    track.rate = sr
+    track.audio = audio  # type: ignore[attr-defined]  # (samples, channels)
+    track.rate = sr  # type: ignore[attr-defined]
 
     # Inferenz
     # Achtung: Evaluate.predict erwartet weitere Parameter, ggf. anpassen

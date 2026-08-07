@@ -137,10 +137,10 @@ def _restore_stereo_width(
                 ref_ratio,
                 side_gain,
             )
-            return np.stack([left, right], axis=0).astype(np.float64)
+            return np.stack([left, right], axis=0).astype(np.float64)  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("§2.72 Stereo-Width non-blocking: %s", exc)
+        logger.debug("§2.72 Stereo-Width nicht blockierend: %s", exc)
 
     return restored
 
@@ -220,10 +220,10 @@ def _restore_microdynamics(
         else:
             gain_bc = gain_smooth
 
-        return np.clip(restored * gain_bc, -1.0, 1.0).astype(np.float64)
+        return np.clip(restored * gain_bc, -1.0, 1.0).astype(np.float64)  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("§2.72 Mikrodynamik non-blocking: %s", exc)
+        logger.debug("§2.72 Mikrodynamik nicht blockierend: %s", exc)
         return restored
 
 
@@ -283,12 +283,12 @@ def _restore_transient_punch(
         n_punched = int(np.sum(transients))
         logger.info("§2.72 Transient-Punch: %d Transienten mit Dry-Boost", n_punched)
 
-        return np.clip(
+        return np.clip(  # type: ignore[no-any-return]
             blend_bc * restored + (1.0 - blend_bc) * reference,
             -1.0,
             1.0,
         ).astype(np.float64)
 
     except Exception as exc:
-        logger.debug("§2.72 Transient-Punch non-blocking: %s", exc)
+        logger.debug("§2.72 Transient-Punch nicht blockierend: %s", exc)
         return restored

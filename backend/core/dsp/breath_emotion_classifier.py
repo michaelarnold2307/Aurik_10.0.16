@@ -205,7 +205,7 @@ def classify_breath_emotions(
         return segments
 
     except Exception as exc:
-        logger.debug("BreathEmotionClassifier non-blocking failure: %s", exc)
+        logger.debug("BreathEmotionClassifier nicht blockierend Fehlschlag: %s", exc)
         return []
 
 

@@ -395,7 +395,7 @@ class AestheticProxyCalculator:
                 details["foundation_genre_match"] = _genre_match
                 details["foundation_semantic_alignment"] = _semantic_alignment
         except Exception as exc:
-            logger.debug("Naturalness CLAP foundation deviation fallback active: %s", exc)
+            logger.debug("Naturalness CLAP foundation deviation Ersatzpfad active: %s", exc)
 
         # Foundation Model Deviation Score: MERT-Cosine-Similarity als Proxy
         # Berechne Ähnlichkeit zwischen Original und Restauriert im MERT-Embedding-Raum.
@@ -1057,7 +1057,7 @@ class AestheticJudgmentModel:
             errors=errors,
         )
 
-        logger.info("Quality evaluation complete: CAS %.3f → %.3f (Δ%+.3f)", cas_before, cas_after, cas_improvement)
+        logger.info("Quality evaluation vollstaendig: CAS %.3f → %.3f (Δ%+.3f)", cas_before, cas_after, cas_improvement)
 
         return report
 

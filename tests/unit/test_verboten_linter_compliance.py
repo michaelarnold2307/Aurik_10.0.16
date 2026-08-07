@@ -123,7 +123,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V27" for v in violations)
 
     def test_v28_flags_nr_breathing_with_denoise_in_mapper(self, tmp_path: Path) -> None:
@@ -148,7 +148,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V28" for v in violations)
 
     def test_v29_flags_overload_with_phase63_in_mapper(self, tmp_path: Path) -> None:
@@ -173,7 +173,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V29" for v in violations)
 
     def test_v30_flags_aliasing_with_phase03_in_reasoner(self, tmp_path: Path) -> None:
@@ -192,7 +192,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V30" for v in violations)
 
     def test_v30_does_not_cross_into_next_mapper_block(self, tmp_path: Path) -> None:
@@ -222,7 +222,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert not any(v.rule == "V30" for v in violations)
 
     def test_v31_warns_when_room_mode_lacks_phase04(self, tmp_path: Path) -> None:
@@ -241,7 +241,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V31" for v in violations)
 
     def test_v32_flags_missing_transparenz_exclusion(self, tmp_path: Path) -> None:
@@ -264,7 +264,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V32" for v in violations)
 
     def test_v32_detects_annassign_exclusions_dict(self, tmp_path: Path) -> None:
@@ -287,7 +287,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V32" for v in violations)
 
     def test_v32_detects_tuple_exclusions_without_transparenz(self, tmp_path: Path) -> None:
@@ -310,7 +310,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V32" for v in violations)
 
     def test_v33_flags_phase_material_dict_missing_cassette(self, tmp_path: Path) -> None:
@@ -340,7 +340,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V33" for v in violations)
 
     def test_v33_flags_annassign_material_dict_missing_cassette(self, tmp_path: Path) -> None:
@@ -365,7 +365,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert any(v.rule == "V33" for v in violations)
 
     def test_v33_ignores_non_tracked_material_dict_names(self, tmp_path: Path) -> None:
@@ -390,7 +390,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert not any(v.rule == "V33" for v in violations)
 
     def test_v33_ignores_non_carrier_material_dicts(self, tmp_path: Path) -> None:
@@ -414,7 +414,7 @@ class TestVerbotenLinterExtendedRules:
 
         import scripts.aurik_verboten_linter as _linter
 
-        violations = _linter.scan_file(file_path)
+        violations = _linter.scan(file_path)  # type: ignore[attr-defined]
         assert not any(v.rule == "V33" for v in violations)
 
 

@@ -97,7 +97,7 @@ def probe_python_runtime(python_path: Path) -> RuntimeProbe | None:
         logger.debug("GPU-Probe: Python-Pfad nicht gefunden: %s", python_path)
         return None
     except subprocess.TimeoutExpired:
-        logger.warning("GPU-Probe: Timeout (12s) für %s — Python hängt oder Umgebung korrupt", python_path)
+        logger.warning("GPU-Probe: Zeitlimit (12s) für %s — Python hängt oder Umgebung korrupt", python_path)
         return None
     except Exception:
         logger.warning("GPU-Probe fehlgeschlagen für %s", python_path, exc_info=True)

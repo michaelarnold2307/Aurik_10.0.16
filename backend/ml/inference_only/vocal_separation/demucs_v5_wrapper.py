@@ -77,7 +77,7 @@ class DemucsV5Separator:
         except Exception:
             self.device = "cpu"
 
-        logger.info("DemucsV5Separator (%s) initialized on %s", model_name, self.device)
+        logger.info("DemucsV5Separator (%s) initialisiert on %s", model_name, self.device)
 
         # Model loading
         self.model_path = model_path or self._get_default_model_path()
@@ -114,14 +114,14 @@ class DemucsV5Separator:
             model = pretrained.get_model(self.model_name)
             model.eval()
             model.to(self.device)
-            logger.info("Demucs %s loaded successfully (device=%s)", self.model_name, self.device)
+            logger.info("Demucs %s geladen erfolgreich (device=%s)", self.model_name, self.device)
             return model
 
         except ImportError:
             logger.warning("Demucs package not installed. Install with: pip install demucs")
             return None
         except Exception as e:
-            logger.error("Failed to load Demucs model: %s", e)
+            logger.error("konnte nicht laden Demucs model: %s", e)
             return None
 
     def separate(
@@ -174,7 +174,7 @@ class DemucsV5Separator:
 
         # Actual separation
         if self.model is None:
-            logger.warning("Demucs model unavailable. Using fallback.")
+            logger.warning("Demucs model nicht verfuegbar. Using Ersatzpfad.")
             separated_stems = self._fallback_separation(audio, stems)
         else:
             separated_stems = self._demucs_inference(audio, stems)
@@ -190,9 +190,9 @@ class DemucsV5Separator:
 
         if nebenwirkungen["severity"] > 0.3:
             logger.warning(
-                "Separation nebenwirkungen detected: "
+                "Separation nebenwirkungen erkannt: "
                 f"transient_smearing={nebenwirkungen['transient_smearing']:.2f}, "
-                f"phase_loss={nebenwirkungen['phase_loss']:.2f}"
+                f"Verarbeitungsschritt_loss={nebenwirkungen['phase_loss']:.2f}"
             )
 
         return separated_stems
@@ -222,7 +222,7 @@ class DemucsV5Separator:
                 try:
                     model.segment = float(self.segment_duration)
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             # Apply model
             with torch.no_grad():
@@ -246,7 +246,7 @@ class DemucsV5Separator:
             return separated
 
         except Exception as e:
-            logger.error("Demucs inference failed: %s. Using fallback.", e)
+            logger.error("Demucs inference fehlgeschlagen: %s. Using Ersatzpfad.", e)
             return self._fallback_separation(audio, stems)
 
     def _fallback_separation(self, audio: np.ndarray, stems: list[str]) -> dict[str, np.ndarray]:
@@ -255,7 +255,7 @@ class DemucsV5Separator:
 
         Uses simple spectral methods.
         """
-        logger.info("Using fallback spectral separation")
+        logger.info("Using Ersatzpfad spectral separation")
 
         separated = {}
 
@@ -333,7 +333,7 @@ class DemucsV5Separator:
         def transient_score(audio: np.ndarray) -> float:
             """Misst transient density."""
             onset_env = librosa.onset.onset_strength(y=audio[0], sr=self.sample_rate)
-            return np.std(onset_env)
+            return np.std(onset_env)  # type: ignore[no-any-return]
 
         transient_original = transient_score(original)
         transient_recombined = transient_score(recombined)
@@ -350,7 +350,7 @@ class DemucsV5Separator:
             xcorr = np.correlate(a[0], b[0], mode="valid")
             max_corr = np.max(np.abs(xcorr))
             norm = np.linalg.norm(a[0]) * np.linalg.norm(b[0]) + 1e-10
-            return max_corr / norm
+            return max_corr / norm  # type: ignore[no-any-return]
 
         # NaN/Inf-Guard
         phase_score = phase_coherence(original, recombined)

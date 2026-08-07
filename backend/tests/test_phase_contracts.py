@@ -140,7 +140,7 @@ class TestPhaseContractGuard:
         from backend.core.phase_contract_guard import guard_phase_input
 
         # Should convert tuple to ndarray (not crash)
-        result = guard_phase_input((np.zeros(100, dtype=np.float32),), 48000, "test")
+        result = guard_phase_input((np.zeros(100, dtype=np.float32),), 48000, "test")  # type: ignore[arg-type]
         assert isinstance(result, np.ndarray)
         assert result.ndim == 1
 
@@ -393,7 +393,7 @@ class TestGenrePropagationContract:
             def get_metadata(self):
                 return DummyPhaseMeta()
 
-        _, _, _, _, _, _, _ = ur._prepare_profiled_phase_context(DummyPhase(), kwargs := {})
+        _, _, _, _, _, _, _ = ur._prepare_profiled_phase_context(DummyPhase(), kwargs := {})  # type: ignore[var-annotated]
         # Nach der Normalisierung müssen beide Keys existieren
         assert kwargs.get("genre_label") == "Klassik", f"genre_label missing: {kwargs}"
         assert kwargs.get("genre") == "Klassik", f"genre missing: {kwargs}"

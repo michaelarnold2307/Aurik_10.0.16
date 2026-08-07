@@ -54,6 +54,8 @@ from typing import Any
 
 import psutil
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class ResourceSnapshot:
@@ -98,7 +100,7 @@ class PerformanceProfiler:
         sample_interval: float = 0.5,  # Sample every 0.5s
         memory_threshold: float = 75.0,  # Warn at 75% memory
         cpu_threshold: float = 75.0,  # Warn at 75% CPU
-        enabled: bool = None,  # Auto-detect from env
+        enabled: bool | None = None,  # Auto-detect from env  # type: ignore[assignment]
     ):
         """
         Initialize profiler.
@@ -204,7 +206,7 @@ class PerformanceProfiler:
 
         except Exception:
             # Ignore sampling errors (process might have exited)
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     @contextmanager
     def profile_block(self, name: str):
@@ -443,10 +445,10 @@ def profile_function(func):
     def wrapper(*args, **kwargs):
         # Get or create global profiler
         if not hasattr(wrapper, "_profiler"):
-            wrapper._profiler = PerformanceProfiler()
-            wrapper._profiler.start()
+            wrapper._profiler = PerformanceProfiler()  # type: ignore[attr-defined]
+            wrapper._profiler.start()  # type: ignore[attr-defined]
 
-        profiler = wrapper._profiler
+        profiler = wrapper._profiler  # type: ignore[attr-defined]
 
         with profiler.profile_block(func.__name__):
             return func(*args, **kwargs)

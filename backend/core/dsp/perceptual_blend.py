@@ -62,7 +62,7 @@ _BARK_EDGES_HZ = np.array(
 
 def _hz_to_bark(hz: np.ndarray) -> np.ndarray:
     """Konvertiert Hz → Bark (Zwicker-Formel)."""
-    return 13.0 * np.arctan(0.00076 * hz) + 3.5 * np.arctan((hz / 7500.0) ** 2)
+    return 13.0 * np.arctan(0.00076 * hz) + 3.5 * np.arctan((hz / 7500.0) ** 2)  # type: ignore[no-any-return]
 
 
 def perceptual_blend(
@@ -273,4 +273,4 @@ def perceptual_blend(
         ).astype(np.float32)
         blended = dry + gain_samples * (wet - dry)
 
-    return np.clip(blended.astype(np.float32), -1.0, 1.0)
+    return np.clip(blended.astype(np.float32), -1.0, 1.0)  # type: ignore[union-attr, no-any-return]

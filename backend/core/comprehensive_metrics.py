@@ -56,7 +56,7 @@ try:
     ENHANCED_METRICS_AVAILABLE = True
 except ImportError:
     ENHANCED_METRICS_AVAILABLE = False
-    logger.warning("EnhancedMetrics not available")
+    logger.warning("EnhancedMetrics not verfuegbar")
 
 try:
     from dsp.professional_meters import LUFSMeter
@@ -64,7 +64,7 @@ try:
     PROFESSIONAL_METERS_AVAILABLE = True
 except ImportError:
     PROFESSIONAL_METERS_AVAILABLE = False
-    logger.warning("Professional meters not available")
+    logger.warning("Professional meters not verfuegbar")
 
 
 # ============================================================
@@ -135,7 +135,7 @@ class PsychoAcousticMetrics:
 
     def calculate_naturalness_score(self, audio: np.ndarray, reference: np.ndarray | None = None) -> dict[str, float]:
         result = self._get_calculator().compute_all(audio, reference)
-        return result.to_dict()
+        return result.to_dict()  # type: ignore[no-any-return]
 
 
 @dataclass
@@ -447,7 +447,7 @@ class ComprehensiveMetricsCalculator:
                     lra_lu = 0.0
                 return (integrated_lufs, float(lra_lu), float(peak))
             except Exception as e:
-                logger.warning("LUFS meter failed: %s", e)
+                logger.warning("LUFS meter fehlgeschlagen: %s", e)
 
         # Fallback: Simple RMS-based estimation
         rms = np.sqrt(np.mean(audio**2))
@@ -1478,7 +1478,7 @@ if __name__ == "__main__":
     audio = audio + noise
 
     # Compute metrics
-    logger.debug("Computing comprehensive metrics...")
+    logger.debug("berechne comprehensive metrics...")
     calculator = ComprehensiveMetricsCalculator(sample_rate=sr)
     result = calculator.compute_all(audio)
 
@@ -1491,4 +1491,4 @@ if __name__ == "__main__":
     logger.debug("Exporting to dictionary...")
     metrics_dict = result.to_dict()
     logger.debug("Total metrics computed: %s values", len(str(metrics_dict).split(",")))
-    logger.debug("✅ Comprehensive Metrics System Test Complete!")
+    logger.debug("✅ Comprehensive Metrics System Test vollstaendig!")

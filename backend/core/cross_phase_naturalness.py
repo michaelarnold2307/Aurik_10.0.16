@@ -152,7 +152,7 @@ def estimate_band_effects(
         effects = {}
         for band, (low, high, _) in BANDS.items():
             if high > nyq * 0.95:
-                high = nyq * 0.95
+                high = nyq * 0.95  # type: ignore[assignment]
             if low >= high:
                 continue
             sos = butter(2, [low / nyq, high / nyq], btype="band", output="sos")
@@ -165,7 +165,7 @@ def estimate_band_effects(
             effects[band] = float(np.clip(gain_db, -6.0, 6.0))
         return effects
     except Exception as e:
-        logger.warning("cross_phase_naturalness.py::estimate_band_effects fallback: %s", e)
+        logger.warning("cross_Verarbeitungsschritt_naturalness.py::estimate_band_effects Ersatzpfad: %s", e)
         return dict.fromkeys(BANDS, 0.0)
 
 

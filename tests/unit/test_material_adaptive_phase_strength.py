@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Tests for material-adaptive phase initial strengths (§2.29 / §2.31).
 
@@ -10,8 +8,10 @@ Covers:
 - PMGG PerPhaseMusicalGoalsGate.wrap_phase() with initial_strength
 """
 
+from __future__ import annotations
 
 import types
+from typing import Any
 
 import numpy as np
 import pytest
@@ -209,7 +209,7 @@ class TestBuildSpecialistConfigMaterial:
             _FakeConfig(), DefectType.HIGH_FREQ_NOISE, severity=0.8, material="shellac"
         )
         # shellac has factor < 1.0 for phase_03_denoise → should result in lower denoise_strength
-        assert cfg_shellac.denoise_strength <= cfg_no_mat.denoise_strength
+        assert cfg_shellac.denoise_strength <= cfg_no_mat.denoise_strength  # type: ignore[attr-defined]
 
     def test_cd_digital_lowers_click_sensitivity(self):
         from backend.core.defect_phase_mapper import DefectPhaseMapper, DefectType
@@ -219,7 +219,7 @@ class TestBuildSpecialistConfigMaterial:
         cfg_cd, _ = mapper.build_specialist_config(
             _FakeConfig(), DefectType.CLICKS, severity=0.8, material="cd_digital"
         )
-        assert cfg_cd.click_removal_sensitivity <= cfg_no_mat.click_removal_sensitivity
+        assert cfg_cd.click_removal_sensitivity <= cfg_no_mat.click_removal_sensitivity  # type: ignore[attr-defined]
 
     def test_material_none_same_as_before(self):
         """material=None must behave identically to not passing material."""
@@ -228,7 +228,7 @@ class TestBuildSpecialistConfigMaterial:
         mapper = DefectPhaseMapper()
         cfg_none, v1 = mapper.build_specialist_config(_FakeConfig(), DefectType.CRACKLE, severity=0.7)
         cfg_none2, v2 = mapper.build_specialist_config(_FakeConfig(), DefectType.CRACKLE, severity=0.7, material=None)
-        assert cfg_none.denoise_strength == pytest.approx(cfg_none2.denoise_strength, abs=1e-6)
+        assert cfg_none.denoise_strength == pytest.approx(cfg_none2.denoise_strength, abs=1e-6)  # type: ignore[attr-defined]
 
     def test_returns_tuple_of_two(self):
         from backend.core.defect_phase_mapper import DefectPhaseMapper, DefectType
@@ -274,7 +274,7 @@ class TestPMGGInitialStrength:
         gate = get_phase_gate()
         gate.reset()
 
-        recorded = []
+        recorded: list[Any] = []
         phase = _make_fake_phase(recorded)
         audio = self._make_quick_audio()
 
@@ -298,7 +298,7 @@ class TestPMGGInitialStrength:
         gate = get_phase_gate()
         gate.reset()
 
-        recorded = []
+        recorded: list[Any] = []
         phase = _make_fake_phase(recorded)
         audio = self._make_quick_audio()
 
@@ -317,7 +317,7 @@ class TestPMGGInitialStrength:
         gate = get_phase_gate()
         gate.reset()
 
-        recorded = []
+        recorded: list[Any] = []
         phase = _make_fake_phase(recorded)
         audio = self._make_quick_audio()
 
@@ -337,7 +337,7 @@ class TestPMGGInitialStrength:
         gate = get_phase_gate()
         gate.reset()
 
-        recorded = []
+        recorded: list[Any] = []
         phase = _make_fake_phase(recorded)
         audio = self._make_quick_audio()
 
@@ -356,7 +356,7 @@ class TestPMGGInitialStrength:
         gate = get_phase_gate()
         gate.reset()
 
-        recorded = []
+        recorded: list[Any] = []
         phase = _make_fake_phase(recorded)
         audio = self._make_quick_audio()
 

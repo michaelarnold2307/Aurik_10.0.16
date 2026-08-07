@@ -22,7 +22,7 @@ SR = 44100
 # ---------------------------------------------------------------------------
 def _sine(freq: float = 440.0, n: int = SR, amplitude: float = 0.5) -> np.ndarray:
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white_noise(n: int = SR, seed: int = 0, amplitude: float = 0.3) -> np.ndarray:

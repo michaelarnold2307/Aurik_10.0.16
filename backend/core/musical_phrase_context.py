@@ -83,7 +83,7 @@ def _get_madmom_module():
     try:
         return importlib.import_module("madmom")
     except Exception:
-        logger.warning("⚠️ SOTA musical_phrase_context: madmom nicht verfügbar — DSP-Fallback aktiv")
+        logger.warning("⚠️ SOTA musical_phrase_context: madmom nicht verfügbar — DSP-Ersatzpfad aktiv")
         return None
 
 
@@ -210,7 +210,7 @@ class MusicalPhraseContextExtractor:
 
         # Kein Phrase-Context für kurze Dateien
         if duration_s < MIN_FILE_DURATION_S:
-            logger.debug("PhraseContext: Datei < %.1f s → lokaler Fallback", MIN_FILE_DURATION_S)
+            logger.debug("PhraseContext: Datei < %.1f s → lokaler Ersatzpfad", MIN_FILE_DURATION_S)
             return self._local_fallback(audio, sr, gap_start, gap_end)
 
         # Tempo schätzen
@@ -225,7 +225,7 @@ class MusicalPhraseContextExtractor:
         # Phrase lokalisieren, die den Gap enthält
         phrase = self._find_phrase_for_gap(boundaries, gap_start, gap_end, len(audio))
         if phrase is None:
-            logger.debug("PhraseContext: Keine Phrase gefunden → lokaler Fallback")
+            logger.debug("PhraseContext: Keine Phrase gefunden → lokaler Ersatzpfad")
             return self._local_fallback(audio, sr, gap_start, gap_end)
 
         p_start, p_end = phrase
@@ -355,7 +355,7 @@ class MusicalPhraseContextExtractor:
                 if 40.0 <= bpm <= 240.0:
                     return bpm
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # DSP-Fallback: Onset-Autokorrelation
         frame_len = 512
@@ -403,7 +403,7 @@ class MusicalPhraseContextExtractor:
             beat_secs = proc(act)
             return [int(b * sr) for b in beat_secs if 0 <= int(b * sr) < len(audio)]
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Fallback: Gleichabstand
         beat_period = 60.0 / max(tempo_bpm, 1.0) * sr

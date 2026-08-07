@@ -193,7 +193,7 @@ class ABXListener:
         with self._lock:
             self._sessions[session_id] = session
 
-        logger.info("ABX-Session erstellt: %s (%d Trials)", session_id, n_trials)
+        logger.info("ABX-Sitzung erstellt: %s (%d Trials)", session_id, n_trials)
         return session
 
     def get_session(self, session_id: str) -> ABXSession | None:

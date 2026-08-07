@@ -24,7 +24,7 @@ import pytest
 def _get_uv3_source() -> str:
     spec = importlib.util.find_spec("backend.core.unified_restorer_v3")
     assert spec is not None, "backend.core.unified_restorer_v3 nicht gefunden"
-    with open(spec.origin, encoding="utf-8") as f:
+    with open(spec.origin, encoding="utf-8") as f:  # type: ignore[arg-type]
         return f.read()
 
 
@@ -40,7 +40,7 @@ def _get_modern_window_source() -> str:
         if p.exists():
             return p.read_text(encoding="utf-8")
         pytest.skip("modern_window.py nicht gefunden")
-    with open(spec.origin, encoding="utf-8") as f:
+    with open(spec.origin, encoding="utf-8") as f:  # type: ignore[arg-type]
         return f.read()
 
 

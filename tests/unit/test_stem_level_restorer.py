@@ -15,7 +15,7 @@ import pytest
 
 def _sine(freq: float = 440.0, sr: int = 48000, duration: float = 3.0) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (0.4 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.4 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(sr: int = 48000, duration: float = 3.0) -> np.ndarray:

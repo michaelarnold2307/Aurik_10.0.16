@@ -187,6 +187,6 @@ def compute_room_acoustics_fingerprint(
         )
 
     except Exception as _exc:
-        logger.debug("RoomAcousticsFingerprinter non-blocking: %s", _exc)
+        logger.debug("RoomAcousticsFingerprinter nicht blockierend: %s", _exc)
 
     return result

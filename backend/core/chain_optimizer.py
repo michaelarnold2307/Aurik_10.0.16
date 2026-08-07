@@ -91,7 +91,7 @@ class ChainOptimizer:
                          1.0 = unbegrenzt (keine Module entfernen).
         """
         self.compute_budget = compute_budget
-        logger.info("ChainOptimizer initialized with budget=%s", compute_budget)
+        logger.info("ChainOptimizer initialisiert with Grenze=%s", compute_budget)
 
     def optimize_chain(
         self,

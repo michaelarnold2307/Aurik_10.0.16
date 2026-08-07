@@ -15,6 +15,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import onnx
@@ -37,7 +38,7 @@ class _ClapAudioWrapper(torch.nn.Module):
         audio_dict = {"waveform": waveform}
         emb = self.clap(audio=audio_dict, text=None, device=waveform.device)
         emb = F.normalize(emb, dim=-1)
-        return emb
+        return cast(torch.Tensor, emb)
 
 
 def main() -> int:
@@ -74,7 +75,7 @@ def main() -> int:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.onnx.export(
         wrapper,
-        dummy,
+        (dummy,),
         str(OUT_PATH),
         input_names=["waveform"],
         output_names=["audio_embedding"],

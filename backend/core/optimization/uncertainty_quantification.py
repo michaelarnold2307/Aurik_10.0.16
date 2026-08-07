@@ -61,7 +61,7 @@ class MCDropoutModel(nn.Module):
         # Add dropout layers if not already present
         self._add_dropout_layers()
 
-        logger.info("MCDropoutModel initialized: dropout=%s, n_samples=%s", dropout_rate, n_samples)
+        logger.info("MCDropoutModel initialisiert: dropout=%s, n_samples=%s", dropout_rate, n_samples)
 
     def _add_dropout_layers(self):
         """Recursively add dropout layers after each activation."""
@@ -79,7 +79,7 @@ class MCDropoutModel(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Standard forward pass."""
-        return self.base_model(x)
+        return self.base_model(x)  # type: ignore[no-any-return]
 
     def predict_with_uncertainty(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
@@ -102,15 +102,15 @@ class MCDropoutModel(nn.Module):
                 prediction = self.base_model(x)
                 samples.append(prediction)
 
-        samples = torch.stack(samples, dim=0)  # [n_samples, batch, ...]
+        samples = torch.stack(samples, dim=0)  # type: ignore[assignment]  # [n_samples, batch, ...]
 
-        mean = samples.mean(dim=0)
-        std = samples.std(dim=0)
+        mean = samples.mean(dim=0)  # type: ignore[attr-defined]
+        std = samples.std(dim=0)  # type: ignore[attr-defined]
 
         # Switch back to eval mode
         self.eval()
 
-        return mean, std, samples
+        return mean, std, samples  # type: ignore[return-value]
 
 
 # ============================================================================
@@ -200,14 +200,14 @@ class BayesianNN(nn.Module):
 
         for hidden_dim in hidden_dims:
             layers.append(BayesianLinear(prev_dim, hidden_dim, prior_std))
-            layers.append(nn.ReLU())
+            layers.append(nn.ReLU())  # type: ignore[arg-type]
             prev_dim = hidden_dim
 
         layers.append(BayesianLinear(prev_dim, output_dim, prior_std))
 
         self.layers = nn.ModuleList(layers)
 
-        logger.info("BayesianNN initialized: %s -> %s -> %s", input_dim, hidden_dims, output_dim)
+        logger.info("BayesianNN initialisiert: %s -> %s -> %s", input_dim, hidden_dims, output_dim)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass."""
@@ -220,8 +220,8 @@ class BayesianNN(nn.Module):
         kl = 0.0
         for layer in self.layers:
             if isinstance(layer, BayesianLinear):
-                kl += layer.kl_divergence()
-        return kl
+                kl += layer.kl_divergence()  # type: ignore[assignment]
+        return kl  # type: ignore[return-value]
 
     def predict_with_uncertainty(self, x: torch.Tensor, n_samples: int = 20) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -241,9 +241,9 @@ class BayesianNN(nn.Module):
             prediction = self.forward(x)
             samples.append(prediction)
 
-        samples = torch.stack(samples, dim=0)
-        mean = samples.mean(dim=0)
-        std = samples.std(dim=0)
+        samples = torch.stack(samples, dim=0)  # type: ignore[assignment]
+        mean = samples.mean(dim=0)  # type: ignore[attr-defined]
+        std = samples.std(dim=0)  # type: ignore[attr-defined]
 
         return mean, std
 
@@ -272,7 +272,7 @@ class EnsembleUncertainty:
         self.device = device
         self.n_models = len(models)
 
-        logger.info("EnsembleUncertainty initialized: %s models", self.n_models)
+        logger.info("EnsembleUncertainty initialisiert: %s models", self.n_models)
 
     def predict_with_uncertainty(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, dict[str, torch.Tensor]]:
         """
@@ -296,18 +296,18 @@ class EnsembleUncertainty:
                 pred = model(x)
             predictions.append(pred)
 
-        predictions = torch.stack(predictions, dim=0)  # [n_models, batch, ...]
+        predictions = torch.stack(predictions, dim=0)  # type: ignore[assignment]  # [n_models, batch, ...]
 
-        mean = predictions.mean(dim=0)
-        std = predictions.std(dim=0)
+        mean = predictions.mean(dim=0)  # type: ignore[attr-defined]
+        std = predictions.std(dim=0)  # type: ignore[attr-defined]
 
         # Additional metrics
-        entropy = self._calculate_entropy(predictions)
-        mutual_info = self._calculate_mutual_information(predictions)
+        entropy = self._calculate_entropy(predictions)  # type: ignore[arg-type]
+        mutual_info = self._calculate_mutual_information(predictions)  # type: ignore[arg-type]
 
         details = {"entropy": entropy, "mutual_information": mutual_info, "predictions": predictions}
 
-        return mean, std, details
+        return mean, std, details  # type: ignore[return-value]
 
     def _calculate_entropy(self, predictions: torch.Tensor) -> torch.Tensor:
         """Calculate predictive entropy."""
@@ -346,7 +346,7 @@ class TemperatureScaling(nn.Module):
 
     def forward(self, logits: torch.Tensor) -> torch.Tensor:
         """Skaliert logits by temperature."""
-        return logits / self.temperature
+        return logits / self.temperature  # type: ignore[no-any-return]
 
     def calibrate(
         self,
@@ -378,22 +378,22 @@ class TemperatureScaling(nn.Module):
                 all_logits.append(logits)
                 all_labels.append(labels.to(device))
 
-        all_logits = torch.cat(all_logits, dim=0)
-        all_labels = torch.cat(all_labels, dim=0)
+        all_logits = torch.cat(all_logits, dim=0)  # type: ignore[assignment]
+        all_labels = torch.cat(all_labels, dim=0)  # type: ignore[assignment]
 
         # Optimize temperature
         optimizer = torch.optim.LBFGS([self.temperature], lr=0.01, max_iter=max_iter)
 
         def eval_loss() -> float:
             optimizer.zero_grad()
-            scaled_logits = self.forward(all_logits)
-            loss = F.cross_entropy(scaled_logits, all_labels)
+            scaled_logits = self.forward(all_logits)  # type: ignore[arg-type]
+            loss = F.cross_entropy(scaled_logits, all_labels)  # type: ignore[arg-type]
             loss.backward()
             return float(loss.item())
 
         optimizer.step(closure=eval_loss)
 
-        logger.info("Calibration completed: temperature = %.4f", self.temperature.item())
+        logger.info("Kalibrierung abgeschlossen: temperature = %.4f", self.temperature.item())
 
 
 @dataclass
@@ -467,7 +467,7 @@ class UncertaintyQuantifier:
         else:
             raise ValueError(f"Unknown method: {method}")
 
-        logger.info("UncertaintyQuantifier initialized: method=%s", method)
+        logger.info("UncertaintyQuantifier initialisiert: method=%s", method)
 
     def predict(self, x: torch.Tensor, return_samples: bool = False) -> UncertaintyMetrics:
         """
@@ -534,7 +534,7 @@ class UncertaintyQuantifier:
             # Use inverse std as confidence proxy
             confidence = 1.0 / (1.0 + metrics.std)
             confidence = confidence.squeeze(-1) if confidence.dim() > 1 else confidence
-            return confidence > threshold
+            return confidence > threshold  # type: ignore[no-any-return]
 
 
 # Example usage

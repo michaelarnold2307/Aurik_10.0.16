@@ -33,17 +33,17 @@ class ResembleEnhancePlugin:
 
     def _try_load(self, path: str) -> None:
         if not os.path.exists(path):
-            logger.warning("Resemble-Enhance Modell fehlt: %s — DSP-Fallback.", path)
+            logger.warning("Resemble-verbessern Modell fehlt: %s — DSP-Ersatzpfad.", path)
             return
         # ML-Budget-Guard: Resemble-Enhance model.onnx ~722 MB
         try:
             from backend.core.ml_memory_budget import try_allocate as _try_alloc
 
             if not _try_alloc("ResembleEnhance", size_gb=0.72):
-                logger.warning("Resemble-Enhance: ML-Budget erschöpft — DSP-Fallback.")
+                logger.warning("Resemble-verbessern: ML-Grenze erschöpft — DSP-Ersatzpfad.")
                 return
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         try:
             import onnxruntime as ort
 
@@ -56,7 +56,7 @@ class ResembleEnhancePlugin:
             except Exception:
                 _providers = ["CPUExecutionProvider"]
             self._session = ort.InferenceSession(path, sess_options=opts, providers=_providers)
-            logger.info("Resemble-Enhance ONNX geladen: %s", path)
+            logger.info("Resemble-verbessern ONNX geladen: %s", path)
             try:
                 from backend.core.plugin_lifecycle_manager import register_plugin as _reg_plm
 
@@ -65,15 +65,15 @@ class ResembleEnhancePlugin:
 
                 _reg_plm("ResembleEnhance", size_gb=0.72, unload_fn=_unload_session)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
-            logger.warning("Resemble-Enhance Ladefehler: %s — DSP-Fallback.", exc)
+            logger.warning("Resemble-verbessern Ladefehler: %s — DSP-Ersatzpfad.", exc)
             try:
                 from backend.core.ml_memory_budget import release as _release
 
                 _release("ResembleEnhance")
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def enhance(self, audio: np.ndarray, sr: int) -> np.ndarray:
         assert sr == 48000, f"SR muss 48000 Hz sein, erhalten: {sr}"
@@ -89,7 +89,7 @@ class ResembleEnhancePlugin:
             _avail_gb = psutil.virtual_memory().available / (1024**3)
             if _avail_gb < 4.0:
                 logger.warning(
-                    "Resemble-Enhance: Nur %.1f GB RAM verfügbar (< 4.0 GB) — Wiener-DSP-Fallback.",
+                    "Resemble-verbessern: Nur %.1f GB RAM verfügbar (< 4.0 GB) — Wiener-DSP-Ersatzpfad.",
                     _avail_gb,
                 )
                 m44 = _resamp(mono, sr, _SR)
@@ -101,7 +101,7 @@ class ResembleEnhancePlugin:
                     result = np.stack([result, result], axis=0 if _was_channels_first else 1)
                 return np.asarray(np.clip(result, -1.0, 1.0).astype(np.float32))  # type: ignore[no-any-return]
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         m44 = _resamp(mono, sr, _SR)
         out = self._onnx(m44) if self._session else _wiener(m44, _SR)
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
@@ -190,7 +190,7 @@ class ResembleEnhancePlugin:
                 del chunk, processed
             return out_full  # type: ignore[no-any-return]
         except Exception as _onnx_exc:
-            logger.error("Resemble-Enhance ONNX-Pipeline fehlgeschlagen: %s — DSP-Wiener-Fallback", _onnx_exc)
+            logger.error("Resemble-verbessern ONNX-Pipeline fehlgeschlagen: %s — DSP-Wiener-Ersatzpfad", _onnx_exc)
             # Fallback: Wiener-Filterung statt ONNX
             return _wiener(mono, _SR)
 
@@ -215,7 +215,7 @@ class ResembleEnhancePlugin:
             _plm = get_plugin_lifecycle_manager()
             _plm.set_active("ResembleEnhance", True)
         except Exception:
-            logger.warning("resemble_enhance_plugin.py::_onnx_single fallback", exc_info=True)
+            logger.warning("resemble_verbessern_plugin.py::_onnx_single Ersatzpfad", exc_info=True)
         try:
             outs = session.run(None, {"mag": inp(mag), "cos": inp(cos), "sin": inp(sin_v)})
             om, oc, os_ = outs[0][0], outs[1][0], outs[2][0]
@@ -224,14 +224,14 @@ class ResembleEnhancePlugin:
             os_ = np.nan_to_num(os_, nan=0.0, posinf=0.0, neginf=0.0)
             out_spec = om * (oc + 1j * os_)
         except Exception as exc:
-            logger.debug("Resemble-Enhance run Fehler: %s", exc)
+            logger.debug("Resemble-verbessern Ausfuehrung Fehler: %s", exc)
             out_spec = spec
         finally:
             if _plm is not None:
                 try:
                     _plm.set_active("ResembleEnhance", False)
                 except Exception:
-                    logger.warning("resemble_enhance_plugin.py::_onnx_single fallback", exc_info=True)
+                    logger.warning("resemble_verbessern_plugin.py::_onnx_single Ersatzpfad", exc_info=True)
         n_out = nf * _HOP + _N
         res = np.zeros(n_out, np.float32)
         ws = np.zeros(n_out, np.float32)

@@ -29,7 +29,7 @@ def load_report(report_path: Path | None = None) -> dict:
     if not path.exists():
         print(f"Fehler: Report nicht gefunden: {path}", file=sys.stderr)
         sys.exit(1)
-    return json.loads(path.read_text(encoding="utf-8"))
+    return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
 
 def analyze_case(case: dict) -> dict:
@@ -128,8 +128,8 @@ def generate_markdown(report: dict) -> str:
         "",
         "## Zusammenfassung",
         "",
-        f"| Metrik | Wert | Ziel | Status |",
-        f"|--------|------|------|--------|",
+        "| Metrik | Wert | Ziel | Status |",
+        "|--------|------|------|--------|",
         f"| HPI Ø | {gate.get('hpi_average', '?'):.3f} | ≥ 0.78 | {'✅' if (gate.get('hpi_average') or 0) >= 0.78 else '❌'} |",
         f"| Quality Ø | {gate.get('quality_estimate_average', '?'):.3f} | ≥ 0.84 | {'✅' if (gate.get('quality_estimate_average') or 0) >= 0.84 else '❌'} |",
         f"| Musical Goals | {gate.get('musical_goal_case_pass_rate', 0):.1%} | ≥ 90% | {'✅' if gate.get('musical_goal_case_pass_rate', 0) >= 0.90 else '❌'} |",
@@ -146,14 +146,22 @@ def generate_markdown(report: dict) -> str:
     ]
 
     for case in cases:
-        severity_icon = "🔴" if case["failure_severity"].get("critical") else \
-                       "🟠" if case["failure_severity"].get("high") else \
-                       "🟡" if case["failure_severity"].get("medium") else "🟢"
+        severity_icon = (
+            "🔴"
+            if case["failure_severity"].get("critical")
+            else "🟠"
+            if case["failure_severity"].get("high")
+            else "🟡"
+            if case["failure_severity"].get("medium")
+            else "🟢"
+        )
         lines.append(f"### {severity_icon} {case['case_id']}")
         lines.append("")
         lines.append(f"- **Material:** {case['material']}")
         lines.append(f"- **HPI:** {case['hpi']:.4f}" if case["hpi"] else "- **HPI:** —")
-        lines.append(f"- **Quality:** {case['quality_estimate']:.4f}" if case["quality_estimate"] else "- **Quality:** —")
+        lines.append(
+            f"- **Quality:** {case['quality_estimate']:.4f}" if case["quality_estimate"] else "- **Quality:** —"
+        )
         lines.append(f"- **VQI:** {case['vqi']:.4f}" if case["vqi"] else "- **VQI:** —")
 
         all_reasons = []
@@ -203,10 +211,16 @@ def main():
         return 0
 
     if args.json:
-        print(json.dumps({
-            "analyzed_cases": analyze_all(report),
-            "gate": report.get("gate"),
-        }, indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "analyzed_cases": analyze_all(report),
+                    "gate": report.get("gate"),
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
     else:
         md = generate_markdown(report)
         print(md)

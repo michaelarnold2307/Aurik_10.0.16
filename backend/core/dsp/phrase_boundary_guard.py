@@ -105,11 +105,11 @@ def detect_phrase_boundaries(audio: np.ndarray, sr: int) -> list[int]:
 
         # Convert to sample indices (center of frame)
         boundaries = [int(f * _HOP_N + _FRAME_N // 2) for f in merged_frames]
-        logger.debug("PhraseBoundaryGuard: detected %d boundaries", len(boundaries))
+        logger.debug("PhraseBoundaryGuard: erkannt %d boundaries", len(boundaries))
         return boundaries
 
     except Exception as exc:
-        logger.debug("detect_phrase_boundaries non-blocking: %s", exc)
+        logger.debug("erkennen_phrase_boundaries nicht blockierend: %s", exc)
         return []
 
 
@@ -165,7 +165,7 @@ def apply_phrase_boundary_taper(
         return np.nan_to_num(env, nan=1.0, posinf=1.0, neginf=0.0)  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("apply_phrase_boundary_taper non-blocking: %s", exc)
+        logger.debug("anwenden_phrase_boundary_taper nicht blockierend: %s", exc)
         n = audio.shape[-1] if audio.ndim > 1 else len(audio)
         return np.ones(n, dtype=np.float32)  # type: ignore[no-any-return]
 

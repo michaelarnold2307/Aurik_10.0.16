@@ -263,7 +263,7 @@ def _make_vintage_signal(cutoff_hz: float, noise_amp: float = 0.02, sr: int = 48
     sos = butter(6, cutoff_hz, btype="lowpass", fs=sr, output="sos")
     sig = sosfilt(sos, np.random.randn(sr * n_sec).astype(np.float32)) * 0.1
     nse = sosfilt(sos, np.random.randn(sr * n_sec).astype(np.float32)) * noise_amp
-    return (sig + nse).astype(np.float32)
+    return (sig + nse).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.parametrize(

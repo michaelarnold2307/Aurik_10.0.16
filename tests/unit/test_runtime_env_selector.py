@@ -13,6 +13,7 @@ def _probe(path: Path, *, has_rocm: bool) -> RuntimeProbe:
         torch_import=True,
         torch_cuda_available=has_rocm,
         torch_hip="6.2.0" if has_rocm else None,
+        torch_cuda_version=None,
         onnxruntime_import=True,
         ort_providers=("ROCMExecutionProvider", "CPUExecutionProvider") if has_rocm else ("CPUExecutionProvider",),
     )

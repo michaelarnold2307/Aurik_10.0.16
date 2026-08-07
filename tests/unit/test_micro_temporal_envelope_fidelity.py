@@ -32,7 +32,7 @@ SR = 48000
 def _make_tone(freq: float = 440.0, dur_s: float = 1.0, sr: int = SR) -> np.ndarray:
     """Generate a pure sine tone."""
     t = np.arange(int(sr * dur_s), dtype=np.float32) / sr
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_am_signal(dur_s: float = 1.0, carrier: float = 440.0, mod_rate: float = 8.0) -> np.ndarray:
@@ -40,7 +40,7 @@ def _make_am_signal(dur_s: float = 1.0, carrier: float = 440.0, mod_rate: float 
     t = np.arange(int(SR * dur_s), dtype=np.float32) / SR
     carrier_sig = np.sin(2 * np.pi * carrier * t)
     modulator = 0.5 + 0.5 * np.sin(2 * np.pi * mod_rate * t)
-    return (0.4 * carrier_sig * modulator).astype(np.float32)
+    return (0.4 * carrier_sig * modulator).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ── MTEFResult dataclass ─────────────────────────────────────────────────────

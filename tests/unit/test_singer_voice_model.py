@@ -50,8 +50,8 @@ class TestSingerVoiceModelResult:
             confidence=1.0,
         )
         d = svm.to_dict()
-        assert isinstance(d["formant_targets"]["F1"], float)
-        assert isinstance(d["formant_targets"]["F2"], float)
+        assert isinstance(d["formant_targets"]["F1"], float)  # type: ignore[index]
+        assert isinstance(d["formant_targets"]["F2"], float)  # type: ignore[index]
 
     def test_to_dict_spectral_envelope_is_list(self):
         env = np.random.randn(_N_MELS).astype(np.float32)

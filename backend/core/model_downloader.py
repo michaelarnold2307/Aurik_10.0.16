@@ -288,7 +288,7 @@ class ModelDownloader:
                 sota_sha = self._read_sota_sha256(me.name)
                 if sota_sha:
                     if verify_model(sota_path, sota_sha):
-                        logger.debug("SOTA-Cache verwendet: %s", sota_path)
+                        logger.debug("SOTA-Zwischenspeicher verwendet: %s", sota_path)
                         return sota_path
                 else:
                     return sota_path
@@ -343,7 +343,7 @@ class ModelDownloader:
         """
         if OFFLINE_MODE:
             model_name = entry.get("name", "") if isinstance(entry, dict) else entry.name
-            logger.debug("SOTA-Upgrade für '%s' übersprungen — OFFLINE_MODE aktiv.", model_name)
+            logger.debug("SOTA-Upgrade für '%s' übersprungen — OFFLINE_Betriebsart aktiv.", model_name)
             return
 
         # ── Online-Pfad (nur wenn OFFLINE_MODE = False) ───────────────────────
@@ -426,7 +426,7 @@ class ModelDownloader:
                 with open(_SOTA_MANIFEST, encoding="utf-8") as fh:
                     data = json.load(fh)
             except (json.JSONDecodeError, OSError) as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         data.setdefault(model_name, {})["sha256"] = sha256
         try:
             with open(_SOTA_MANIFEST, "w", encoding="utf-8") as fh:

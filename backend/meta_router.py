@@ -29,7 +29,7 @@ import numpy as np
 try:
     import yaml  # type: ignore
 except Exception:
-    yaml = None
+    yaml = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
 
@@ -68,9 +68,9 @@ def _load_audio(path: str) -> tuple[np.ndarray, int]:
             if audio.ndim > 1:
                 audio = audio.mean(axis=1)
             return np.ascontiguousarray(audio, dtype=np.float32), int(sr)
-        logger.warning("_load_audio: file_import returned error for %s: %s", path, (_res or {}).get("error"))
+        logger.warning("_laden_audio: file_import returned error for %s: %s", path, (_res or {}).get("error"))
     except Exception as exc:
-        logger.warning("_load_audio: file_import failed for %s: %s — trying soundfile", path, exc)
+        logger.warning("_laden_audio: file_import fehlgeschlagen for %s: %s — trying soundfile", path, exc)
 
     # Stufe 2: scipy fallback (WAV only)
     try:
@@ -89,9 +89,9 @@ def _load_audio(path: str) -> tuple[np.ndarray, int]:
             audio /= float(np.iinfo(data.dtype).max)
         return audio, int(sr)
     except Exception as exc:
-        logger.error("scipy wavfile failed for %s: %s", path, exc)
+        logger.error("scipy wavfile fehlgeschlagen for %s: %s", path, exc)
 
-    logger.error("_load_audio: all loaders failed for %s — returning silence", path)
+    logger.error("_laden_audio: all loaders fehlgeschlagen for %s — returning silence", path)
     return np.zeros(4800, dtype=np.float32), 48_000
 
 
@@ -202,7 +202,7 @@ def _load_meta_config(path: str | None) -> dict:
                 data = yaml.safe_load(fh)
             return data if isinstance(data, dict) else {}
         except Exception as exc:
-            logger.warning("YAML load failed for %s: %s — trying JSON", path, exc)
+            logger.warning("YAML laden fehlgeschlagen for %s: %s — trying JSON", path, exc)
 
     # JSON fallback
     try:
@@ -210,7 +210,7 @@ def _load_meta_config(path: str | None) -> dict:
             data = json.load(fh)
         return data if isinstance(data, dict) else {}
     except Exception as exc:
-        logger.error("JSON load also failed for %s: %s", path, exc)
+        logger.error("JSON laden also fehlgeschlagen for %s: %s", path, exc)
         return {}
 
 
@@ -256,13 +256,13 @@ def route_media(audio_path: str, meta_path: str | None = None) -> dict:
         ``meta``      — loaded meta-config dict
         ``audio_path`` — echoed back for audit purposes
     """
-    logger.info("route_media: loading %s", audio_path)
+    logger.info("route_media: lade %s", audio_path)
     audio, sr = _load_audio(audio_path)
     features = _extract_features(audio, sr)
     meta = _load_meta_config(meta_path)
     profile = _match_profile(features, meta)
     logger.info(
-        "route_media: profile=%s  centroid=%.0f Hz  tempo=%.1f BPM",
+        "route_media: Profil=%s  centroid=%.0f Hz  tempo=%.1f BPM",
         profile,
         features.get("spectral_centroid", 0.0),
         features.get("tempo", 0.0),

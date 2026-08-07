@@ -625,7 +625,7 @@ def detect_production_signature(audio: np.ndarray, sr: int) -> ProductionSignatu
             sig.mic_type = _mic_sig.detected_mic
             sig.mic_signature = _mic_sig
         except Exception as _mc_exc:
-            logger.debug("RecordingProductionKB §Lücke6 MicChar: fallback — %s", _mc_exc)
+            logger.debug("RecordingProductionKB §Lücke6 MicChar: Ersatzpfad — %s", _mc_exc)
 
         logger.info(
             "RecordingProductionKB: room=%s (RT60=%.2fs) compression=%s mic=%s",
@@ -635,7 +635,7 @@ def detect_production_signature(audio: np.ndarray, sr: int) -> ProductionSignatu
             sig.mic_warmth,
         )
     except Exception as exc:
-        logger.debug("detect_production_signature fallback: %s", exc)
+        logger.debug("erkennen_production_signature Ersatzpfad: %s", exc)
     return sig
 
 
@@ -843,7 +843,7 @@ def get_production_profile(
         return ProductionProfile(profile_name="generic")
 
     logger.info(
-        "RecordingProductionKB: Profil '%s' (era=%s genre=%s room=%s comp=%s score=%d) — %s",
+        "RecordingProductionKB: Profil '%s' (era=%s genre=%s room=%s comp=%s Wert=%d) — %s",
         best_profile.profile_name,
         era_bucket,
         genre_key,

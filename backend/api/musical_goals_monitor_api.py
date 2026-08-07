@@ -19,11 +19,11 @@ try:
     from fastapi.responses import HTMLResponse
 except ImportError:
     # FastAPI optional - keep module importable in test/offline environments.
-    FastAPI = Any
-    HTTPException = Exception
-    WebSocket = Any
-    WebSocketDisconnect = Exception
-    HTMLResponse = Any
+    FastAPI = Any  # type: ignore[assignment,misc]
+    HTTPException = Exception  # type: ignore[assignment,misc]
+    WebSocket = Any  # type: ignore[assignment,misc]
+    WebSocketDisconnect = Exception  # type: ignore[assignment,misc]
+    HTMLResponse = Any  # type: ignore[assignment,misc]
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class ConnectionManager:
                 self.session_connections[session_id] = []
             self.session_connections[session_id].append(websocket)
 
-        logger.info("New WebSocket connection (session=%s)", session_id)
+        logger.info("New WebSocket Verbindung (Sitzung=%s)", session_id)
 
     def disconnect(self, websocket: WebSocket, session_id: str | None = None):
         """
@@ -130,7 +130,7 @@ class ConnectionManager:
             if not self.session_connections[session_id]:
                 del self.session_connections[session_id]
 
-        logger.info("WebSocket disconnected (session=%s)", session_id)
+        logger.info("WebSocket disconnected (Sitzung=%s)", session_id)
 
     async def broadcast(self, message: dict[str, Any]):
         """
@@ -144,7 +144,7 @@ class ConnectionManager:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                logger.warning("Failed to send to connection: %s", e)
+                logger.warning("konnte nicht senden to Verbindung: %s", e)
                 disconnected.append(connection)
 
         # Clean up disconnected
@@ -168,7 +168,7 @@ class ConnectionManager:
             try:
                 await connection.send_json(message)
             except Exception as e:
-                logger.warning("Failed to send to session %s: %s", session_id, e)
+                logger.warning("konnte nicht senden to Sitzung %s: %s", session_id, e)
                 disconnected.append(connection)
 
         # Clean up disconnected
@@ -302,11 +302,11 @@ class MusicalGoalsMonitorAPI:
                         content="<h1>Dashboard not found</h1><p>Place dashboard at frontend/musical_goals_dashboard.html</p>"
                     )
 
-            logger.info("Musical Goals Monitor API created")
+            logger.info("Musical Goals Monitor API erstellt")
             return app
 
         except ImportError:
-            logger.error("FastAPI not installed - API creation failed")
+            logger.error("FastAPI not installed - API creation fehlgeschlagen")
             return None
 
     async def update_goals(
@@ -364,7 +364,7 @@ class MusicalGoalsMonitorAPI:
 
         # Log violations
         if violations:
-            logger.warning("Session %s step %s: Violations: %s", session_id, step_name, ", ".join(violations))
+            logger.warning("Sitzung %s step %s: Violations: %s", session_id, step_name, ", ".join(violations))
 
     def save_history(self, session_id: str):
         """
@@ -381,7 +381,7 @@ class MusicalGoalsMonitorAPI:
         with open(history_file, "w") as f:
             json.dump([snapshot.to_dict() for snapshot in self.history[session_id]], f, indent=2)
 
-        logger.info("Saved history for session %s", session_id)
+        logger.info("gespeichert history for Sitzung %s", session_id)
 
     def load_history(self, session_id: str) -> bool:
         """
@@ -403,7 +403,7 @@ class MusicalGoalsMonitorAPI:
 
         self.history[session_id] = [GoalsSnapshot(**snapshot) for snapshot in data]
 
-        logger.info("Loaded history for session %s", session_id)
+        logger.info("geladen history for Sitzung %s", session_id)
         return True
 
     def get_statistics(self) -> dict[str, Any]:

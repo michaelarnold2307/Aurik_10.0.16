@@ -180,7 +180,7 @@ class GuitarEnhancementPhase(PhaseInterface):
                     _zone_frac_44 = float(np.clip(_zone_s_44 / max(1, _n_s_44), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_44 * 0.15, 0.0, 1.0))  # type: ignore[no-redef]
             except Exception as _fmg_exc_44:
-                logger.debug("Phase44 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_44)
+                logger.debug("Verarbeitungsschritt44 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_44)
 
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -211,7 +211,7 @@ class GuitarEnhancementPhase(PhaseInterface):
                 _p44_sat_scale = 0.35
             _effective_strength = float(_effective_strength * _p44_sat_scale)
             logger.debug(
-                "Phase 44 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
+                "Verarbeitungsschritt 44 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
                 _p44_soft_sat_sev,
                 _p44_soft_sat_preserve,
                 _p44_sat_scale,
@@ -346,7 +346,7 @@ class GuitarEnhancementPhase(PhaseInterface):
         processed = np.clip(x, -1.0, 1.0).astype(audio.dtype)
 
         logger.info(
-            "Phase 44 GuitarEnhancement: genre=%s, centroid=%.3f, transient_gain=%.2f",
+            "Verarbeitungsschritt 44 GuitarEnhancement: genre=%s, centroid=%.3f, transient_gain=%.2f",
             genre,
             centroid,
             transient_gain,
@@ -364,9 +364,9 @@ class GuitarEnhancementPhase(PhaseInterface):
                     processed, sample_rate, instrument="guitar", correction_strength=0.20
                 )
                 igt_frames = igt_report.get("frames_processed", 0)
-                logger.debug("Phase 44 InstrumentFormant: guitar frames=%d", igt_frames)
+                logger.debug("Verarbeitungsschritt 44 InstrumentFormant: guitar frames=%d", igt_frames)
         except Exception as _igt_exc:
-            logger.debug("Phase 44 instrument_guided_enhance skipped: %s", _igt_exc)
+            logger.debug("Verarbeitungsschritt 44 instrument_guided_verbessern uebersprungen: %s", _igt_exc)
 
         # Formant-Drift-Korrektur via DTW (Schritt 3)
         try:
@@ -375,14 +375,14 @@ class GuitarEnhancementPhase(PhaseInterface):
                 drift_result = _drift_corrector(processed, sample_rate, instrument="guitar")
                 processed = drift_result.audio
                 logger.debug(
-                    "Phase 44 drift correction: detected=%s frames=%d/%d drift=%.1fHz",
+                    "Verarbeitungsschritt 44 drift correction: erkannt=%s frames=%d/%d drift=%.1fHz",
                     drift_result.drift_detected,
                     drift_result.n_frames_corrected,
                     drift_result.total_frames,
                     drift_result.mean_drift_hz,
                 )
         except Exception as _drift_exc:
-            logger.debug("Phase 44 drift correction skipped: %s", _drift_exc)
+            logger.debug("Verarbeitungsschritt 44 drift correction uebersprungen: %s", _drift_exc)
 
         # Sub-Stem-Verarbeitung (Schritt 4)
         try:
@@ -397,12 +397,12 @@ class GuitarEnhancementPhase(PhaseInterface):
                 )
                 processed = ss_result.audio
                 logger.debug(
-                    "Phase 44 sub-stem: bands=%d strength=%.2f",
+                    "Verarbeitungsschritt 44 sub-stem: bands=%d strength=%.2f",
                     ss_result.n_bands,
                     ss_result.processing_strength,
                 )
         except Exception as _ss_exc:
-            logger.debug("Phase 44 sub-stem skipped: %s", _ss_exc)
+            logger.debug("Verarbeitungsschritt 44 sub-stem uebersprungen: %s", _ss_exc)
 
         # Physics-Resonanz (Schritt 5 — Biquad Body Resonance)
         try:
@@ -414,12 +414,12 @@ class GuitarEnhancementPhase(PhaseInterface):
                 )
                 processed = pr_result.audio
                 logger.debug(
-                    "Phase 44 physics resonance: peaks=%d strength=%.2f",
+                    "Verarbeitungsschritt 44 physics resonance: peaks=%d strength=%.2f",
                     pr_result.n_peaks,
                     pr_result.enhancement_strength,
                 )
         except Exception as _pr_exc:
-            logger.debug("Phase 44 physics resonance skipped: %s", _pr_exc)
+            logger.debug("Verarbeitungsschritt 44 physics resonance uebersprungen: %s", _pr_exc)
 
         if 0.0 < _effective_strength < 1.0 and processed.shape == audio.shape:
             processed = audio + _effective_strength * (processed - audio)
@@ -450,9 +450,9 @@ class GuitarEnhancementPhase(PhaseInterface):
             )
             if _hg44.requires_rollback:
                 processed = audio.copy()
-                logger.warning("§2.46e phase_44 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_44 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg44_exc:
-            logger.debug("§2.46e phase_44 HallucinationGuard (non-blocking): %s", _hg44_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_44 HallucinationGuard (nicht blockierend): %s", _hg44_exc)
 
         return PhaseResult(
             success=True,

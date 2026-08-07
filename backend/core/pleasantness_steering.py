@@ -198,14 +198,14 @@ class PleasantnessSteering:
             if self._retries_this_step <= self.MAX_RETRIES_PER_STEP:
                 reduction = self.INTENSITY_REDUCTION_PER_RETRY * self._retries_this_step
                 logger.info(
-                    "HPE 🔄 ΔP=%+.3f — Leichte Verschlechterung. Retry %d/%d mit %d%% weniger Intensität. (%s)",
+                    "HPE 🔄 ΔP=%+.3f — Leichte Verschlechterung. Wiederholung %d/%d mit %d%% weniger Intensität. (%s)",
                     delta,
                     self._retries_this_step,
                     self.MAX_RETRIES_PER_STEP,
                     int(reduction * 100),
                     step_info,
                 )
-                return SteerDecision(
+                return SteerDecision(  # type: ignore[call-arg]
                     action=SteerAction.RETRY_LIGHTER,
                     reason=f"Angenehmheit gesunken (ΔP={delta:+.3f}) — leichter wiederholen",
                     delta_pleasantness=delta,
@@ -220,7 +220,7 @@ class PleasantnessSteering:
                 self.MAX_RETRIES_PER_STEP,
                 step_info,
             )
-            return SteerDecision(
+            return SteerDecision(  # type: ignore[call-arg]
                 action=SteerAction.SKIP_AND_REVERT,
                 reason=f"Nach {self.MAX_RETRIES_PER_STEP} Retries keine Verbesserung — Schritt übersprungen",
                 delta_pleasantness=delta,
@@ -245,7 +245,7 @@ class PleasantnessSteering:
                     best.step_id,
                     best.pleasantness,
                 )
-                return SteerDecision(
+                return SteerDecision(  # type: ignore[call-arg]
                     action=SteerAction.ROLLBACK_TO_BEST,
                     reason=(
                         f"{self._consecutive_drops} Schritte in Folge verschlechtert. "
@@ -255,7 +255,7 @@ class PleasantnessSteering:
                     fallback_audio=best.audio.copy(),
                 )
 
-        return SteerDecision(
+        return SteerDecision(  # type: ignore[call-arg]
             action=SteerAction.SKIP_AND_REVERT,
             reason=f"Deutliche Verschlechterung (ΔP={delta:+.3f}) — Schritt übersprungen",
             delta_pleasantness=delta,
@@ -285,7 +285,7 @@ class PleasantnessSteering:
                 best.pleasantness,
                 best.step_id,
             )
-            return SteerDecision(
+            return SteerDecision(  # type: ignore[call-arg]
                 action=SteerAction.ROLLBACK_TO_BEST,
                 reason=(
                     f"Endergebnis (P={final_p:.3f}) schlechter als "

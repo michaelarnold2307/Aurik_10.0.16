@@ -214,7 +214,7 @@ class EraCarrierTargetModel:
             )
             return target
         except Exception as exc:
-            logger.debug("EraCarrierTargetModel.get_target non-blocking: %s", exc)
+            logger.debug("EraCarrierTargetModel.get_target nicht blockierend: %s", exc)
             return _FALLBACK_TARGET
 
 

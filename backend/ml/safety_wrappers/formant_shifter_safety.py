@@ -288,7 +288,7 @@ class FormantShifterSafety(BaseSafetyWrapper):
         # Check for voice presence
         is_voice, voice_conf = detect_voice_presence(audio, sr)
         metadata["voice_detected"] = is_voice
-        metadata["voice_confidence"] = voice_conf
+        metadata["voice_confidence"] = voice_conf  # type: ignore[assignment]
 
         if not is_voice:
             return PreCheckResult(passed=False, confidence=voice_conf, reasons=["No voice detected in audio"])
@@ -315,7 +315,7 @@ class FormantShifterSafety(BaseSafetyWrapper):
         metadata["formants_hz"] = formants.tolist()
 
         dispersion = compute_formant_dispersion(formants)
-        metadata["formant_dispersion"] = dispersion
+        metadata["formant_dispersion"] = dispersion  # type: ignore[assignment]
 
         if dispersion < 0.3:
             warnings.append("Weak formant structure detected - proceed with caution")
@@ -323,7 +323,7 @@ class FormantShifterSafety(BaseSafetyWrapper):
         # Check for Singer's Formant
         has_sf, sf_strength = detect_singers_formant(audio_mono, sr)
         metadata["has_singers_formant"] = has_sf
-        metadata["singers_formant_strength"] = sf_strength
+        metadata["singers_formant_strength"] = sf_strength  # type: ignore[assignment]
 
         if has_sf:
             warnings.append(

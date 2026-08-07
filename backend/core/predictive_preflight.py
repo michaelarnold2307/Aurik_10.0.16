@@ -238,7 +238,7 @@ def compute_preflight(
         if should_skip:
             result.skipped_phases.append(phase_id)
             logger.debug(
-                "PredictivePreflight SKIP %s (family=%s, max_delta=%.3f)",
+                "PredictivePreflight ueberspringen %s (family=%s, max_delta=%.3f)",
                 phase_id,
                 family,
                 max_delta,

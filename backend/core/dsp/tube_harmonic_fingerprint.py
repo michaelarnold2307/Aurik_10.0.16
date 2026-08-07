@@ -119,7 +119,7 @@ def _estimate_f0_median(audio_mono: np.ndarray, sr: int) -> float:
             return 0.0
         return float(np.median(f0_candidates))
     except Exception as e:
-        logger.warning("tube_harmonic_fingerprint.py::_estimate_f0_median fallback: %s", e)
+        logger.warning("tube_harmonic_fingerprint.py::_estimate_f0_median Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -316,5 +316,5 @@ def detect_tube_harmonic_fingerprint(
         return profile
 
     except Exception as exc:
-        logger.debug("TubeHarmonicFingerprint non-blocking failure: %s", exc)
+        logger.debug("TubeHarmonicFingerprint nicht blockierend Fehlschlag: %s", exc)
         return _default

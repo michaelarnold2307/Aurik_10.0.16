@@ -55,7 +55,7 @@ def _white(n: int = SR, amp: float = 0.3) -> np.ndarray:
 def _sine(freq: float = 440.0, n: int = SR) -> np.ndarray:
     """Sinussignal als float32."""
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _fresh_manager() -> ABCompareManager:

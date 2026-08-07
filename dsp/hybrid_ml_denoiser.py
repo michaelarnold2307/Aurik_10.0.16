@@ -212,7 +212,7 @@ class HybridMLDenoiser:
                 return
             from plugins.resemble_enhance_plugin import ResembleEnhancePlugin  # type: ignore[import]
 
-            self._resemble_plugin = ResembleEnhancePlugin()
+            self._resemble_plugin = ResembleEnhancePlugin()  # type: ignore[assignment]
         except Exception:
             self._resemble_plugin = None
 
@@ -294,12 +294,12 @@ class HybridMLDenoiser:
                 processed_channels = refined
                 resemble_applied = True
                 logger.info(
-                    "HybridMLDenoiser: Resemble stage applied (quality_omlsa=%.3f < %.3f)",
+                    "HybridMLDenoiser: Resemble Stufe angewendet (quality_omlsa=%.3f < %.3f)",
                     quality_after_omlsa,
                     self.config.quality_threshold,
                 )
             except Exception as exc:
-                logger.warning("HybridMLDenoiser: Resemble stage failed: %s", exc)
+                logger.warning("HybridMLDenoiser: Resemble Stufe fehlgeschlagen: %s", exc)
 
         # ------------------------------------------------------------------
         # Rebuild output array

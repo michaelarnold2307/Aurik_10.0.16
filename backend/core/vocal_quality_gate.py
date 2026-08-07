@@ -116,12 +116,12 @@ class VocalDetector:
             confidence = self._spectral_vocal_proxy(mono, sr)
         except Exception:
             # §5/5: Verbesserte Fallback-Kette: spectral → MFCC → energy
-            logger.warning("VocalDetector: spectral_vocal_proxy failed — trying MFCC-based fallback")
+            logger.warning("VocalDetector: spectral_vocal_proxy fehlgeschlagen — trying MFCC-based Ersatzpfad")
             try:
                 confidence = self._mfcc_vocal_proxy(mono, sr)
                 detection_method = "mfcc"
             except Exception:
-                logger.warning("VocalDetector: MFCC fallback failed — falling back to energy heuristic")
+                logger.warning("VocalDetector: MFCC Ersatzpfad fehlgeschlagen — falling back to energy heuristic")
                 confidence = self._energy_vocal_proxy(mono, sr)
                 detection_method = "energy"
         logger.debug("VocalDetector: detection_method=%s confidence=%.3f", detection_method, confidence)

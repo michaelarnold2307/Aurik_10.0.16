@@ -4,12 +4,16 @@ Spec-Compliance-Scan für alle 64 Phasen.
 Prüft die 10 kritischen Anti-Patterns aus copilot-instructions.md
 """
 
+import logging
 import os
 import re
 from collections import defaultdict
 from pathlib import Path
+from typing import Any
 
 from tabulate import tabulate
+
+logger = logging.getLogger(__name__)
 
 # Anti-Pattern-Definitionen
 PATTERNS = {
@@ -68,7 +72,7 @@ PATTERNS = {
 
 def scan_file(filepath):
     """Scannt eine Phase-Datei auf alle Anti-Patterns."""
-    violations = defaultdict(int)
+    violations: Any = defaultdict(int)
 
     try:
         with open(filepath, encoding="utf-8") as f:
@@ -83,11 +87,11 @@ def scan_file(filepath):
             # Special: Prüfe ob Phase in per_phase_musical_goals_gate.py existiert
             continue
 
-        if pattern_info["pattern"] is None:
+        if pattern_info["pattern"] is None:  # type: ignore[index]
             continue
 
         try:
-            matches = re.finditer(pattern_info["pattern"], content, re.IGNORECASE | re.MULTILINE)
+            matches = re.finditer(pattern_info["pattern"], content, re.IGNORECASE | re.MULTILINE)  # type: ignore[index]
             count = len(list(matches))
             if count > 0:
                 violations[pattern_key] = count
@@ -114,7 +118,7 @@ def check_goal_exclusions(phase_id):
             if f'"{phase_id}"' in content or f"'{phase_id}'" in content:
                 return True
     except OSError:
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     return False
 
 
@@ -123,7 +127,7 @@ def main():
     phase_files = sorted(phases_dir.glob("phase_*.py"))
 
     results = []
-    violation_counts = defaultdict(int)
+    violation_counts: Any = defaultdict(int)
 
     print(f"\n🔍 Spec-Compliance-Scan über {len(phase_files)} Phasen...\n")
 
@@ -214,7 +218,7 @@ def main():
         count = violation_counts.get(pattern_key, 0)
         if count > 0:
             pattern_data.append(
-                [pattern_key, PATTERNS[pattern_key]["description"], count, PATTERNS[pattern_key]["severity"]]
+                [pattern_key, PATTERNS[pattern_key]["description"], count, PATTERNS[pattern_key]["severity"]]  # type: ignore[index]
             )
 
     print(tabulate(pattern_data, headers=["Pattern", "Description", "Count", "Severity"], tablefmt="grid"))

@@ -229,7 +229,7 @@ def test_uv3_runtime_context_uses_vocal_guard_metrics_for_no_harm_damping():
         song_goal_weights={"artikulation": 1.6, "vocal_quality": 1.4},
         rest_ctx=35.0,
     )
-    strength_without = float(kwargs_without.get("strength", 0.0))
+    strength_without = float(kwargs_without.get("strength", 0.0))  # type: ignore[arg-type]
 
     kwargs_with = {
         "strength": 0.65,
@@ -258,9 +258,9 @@ def test_uv3_runtime_context_uses_vocal_guard_metrics_for_no_harm_damping():
     profile_with = kwargs_with.get("phase_strength_oracle_profile", {})
 
     assert kwargs_with.get("phase_strength_oracle_class") == "O7_vocal_articulation"
-    assert float(profile_with.get("hard_caps", {}).get("voice_guard_risk", 0.0)) > 0.0
-    assert float(kwargs_with.get("strength", 0.0)) < strength_without
-    assert float(kwargs_with.get("phase_voice_guard_risk", 0.0)) > 0.0
+    assert float(profile_with.get("hard_caps", {}).get("voice_guard_risk", 0.0)) > 0.0  # type: ignore[attr-defined]
+    assert float(kwargs_with.get("strength", 0.0)) < strength_without  # type: ignore[arg-type]
+    assert float(kwargs_with.get("phase_voice_guard_risk", 0.0)) > 0.0  # type: ignore[arg-type]
     assert kwargs_with.get("phase_voice_guard_damped") is True
 
     events = uv3._restoration_context.get("voice_guard_events", [])
@@ -529,10 +529,10 @@ def test_uv3_runtime_context_injects_oracle_profile_for_pilot_phase():
             return 1.0
 
         def _resolve_phase_strength_oracle_rollout_mode(self, kwargs):
-            return UnifiedRestorerV3._resolve_phase_strength_oracle_rollout_mode(self, kwargs)
+            return UnifiedRestorerV3._resolve_phase_strength_oracle_rollout_mode(self, kwargs)  # type: ignore[arg-type]
 
         def _canonical_phase_context_kwargs(self):
-            return UnifiedRestorerV3._canonical_phase_context_kwargs(self)
+            return UnifiedRestorerV3._canonical_phase_context_kwargs(self)  # type: ignore[arg-type]
 
     uv3 = _DummyUV3()
     phase_meta = SimpleNamespace(phase_id="phase_19_de_esser", name="De-Esser")
@@ -545,7 +545,7 @@ def test_uv3_runtime_context_injects_oracle_profile_for_pilot_phase():
     }
 
     wet_dry = UnifiedRestorerV3._prepare_profiled_phase_runtime_context(
-        uv3,
+        uv3,  # type: ignore[arg-type]
         phase_meta,
         audio,
         kwargs,
@@ -558,7 +558,7 @@ def test_uv3_runtime_context_injects_oracle_profile_for_pilot_phase():
 
     assert "phase_strength_oracle_profile" in kwargs
     assert kwargs.get("phase_strength_oracle_class") == "O7_vocal_articulation"
-    assert 0.0 <= float(kwargs.get("strength", 0.0)) <= 1.0
+    assert 0.0 <= float(kwargs.get("strength", 0.0)) <= 1.0  # type: ignore[arg-type]
     assert 0.0 < float(wet_dry) <= 1.0
 
 
@@ -604,7 +604,7 @@ def test_uv3_runtime_context_injects_oracle_telemetry_for_every_pilot_phase(phas
     assert isinstance(profile, dict)
     assert kwargs.get("phase_strength_oracle_class") == profile.get("oracle_class")
     assert isinstance(profile.get("hard_caps"), dict)
-    assert 0.0 <= float(kwargs.get("strength", 0.0)) <= 1.0
+    assert 0.0 <= float(kwargs.get("strength", 0.0)) <= 1.0  # type: ignore[arg-type]
 
 
 def _make_dummy_uv3_for_runtime_hook():
@@ -633,10 +633,10 @@ def _make_dummy_uv3_for_runtime_hook():
             return 1.0
 
         def _resolve_phase_strength_oracle_rollout_mode(self, kwargs):
-            return UnifiedRestorerV3._resolve_phase_strength_oracle_rollout_mode(self, kwargs)
+            return UnifiedRestorerV3._resolve_phase_strength_oracle_rollout_mode(self, kwargs)  # type: ignore[arg-type]
 
         def _canonical_phase_context_kwargs(self):
-            return UnifiedRestorerV3._canonical_phase_context_kwargs(self)
+            return UnifiedRestorerV3._canonical_phase_context_kwargs(self)  # type: ignore[arg-type]
 
     return _DummyUV3()
 
@@ -668,11 +668,11 @@ def test_uv3_runtime_context_applies_o8_cap_for_spectral_family():
     )
 
     profile = kwargs.get("phase_strength_oracle_profile", {})
-    chain_factor = float(profile.get("hard_caps", {}).get("chain_factor", 1.0))
+    chain_factor = float(profile.get("hard_caps", {}).get("chain_factor", 1.0))  # type: ignore[attr-defined]
     assert kwargs.get("phase_strength_oracle_class") == "O8_generative_repair"
-    assert float(kwargs.get("strength", 0.0)) <= 0.78 + 1e-9
-    assert profile.get("hard_caps", {}).get("max_strength") == pytest.approx(0.78 * (0.75 + 0.25 * chain_factor))
-    assert float(profile.get("hard_caps", {}).get("chain_factor", 1.0)) < 0.9
+    assert float(kwargs.get("strength", 0.0)) <= 0.78 + 1e-9  # type: ignore[arg-type]
+    assert profile.get("hard_caps", {}).get("max_strength") == pytest.approx(0.78 * (0.75 + 0.25 * chain_factor))  # type: ignore[attr-defined]
+    assert float(profile.get("hard_caps", {}).get("chain_factor", 1.0)) < 0.9  # type: ignore[attr-defined]
 
 
 def test_uv3_runtime_context_applies_o10_cap_for_output_family():
@@ -702,11 +702,11 @@ def test_uv3_runtime_context_applies_o10_cap_for_output_family():
     )
 
     profile = kwargs.get("phase_strength_oracle_profile", {})
-    chain_factor = float(profile.get("hard_caps", {}).get("chain_factor", 1.0))
+    chain_factor = float(profile.get("hard_caps", {}).get("chain_factor", 1.0))  # type: ignore[attr-defined]
     assert kwargs.get("phase_strength_oracle_class") == "O10_output"
-    assert float(kwargs.get("strength", 0.0)) <= 0.72 + 1e-9
-    assert profile.get("hard_caps", {}).get("max_strength") == pytest.approx(0.72 * (0.75 + 0.25 * chain_factor))
-    assert float(profile.get("hard_caps", {}).get("chain_factor", 1.0)) < 0.9
+    assert float(kwargs.get("strength", 0.0)) <= 0.72 + 1e-9  # type: ignore[arg-type]
+    assert profile.get("hard_caps", {}).get("max_strength") == pytest.approx(0.72 * (0.75 + 0.25 * chain_factor))  # type: ignore[attr-defined]
+    assert float(profile.get("hard_caps", {}).get("chain_factor", 1.0)) < 0.9  # type: ignore[attr-defined]
 
 
 def test_uv3_runtime_context_keeps_explicit_strength_but_sets_oracle_telemetry():
@@ -733,7 +733,7 @@ def test_uv3_runtime_context_keeps_explicit_strength_but_sets_oracle_telemetry()
         rest_ctx=20.0,
     )
 
-    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.33)
+    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.33)  # type: ignore[arg-type]
     assert kwargs.get("phase_strength_oracle_class") == "O7_vocal_articulation"
     assert "phase_strength_oracle_profile" in kwargs
 
@@ -762,7 +762,7 @@ def test_uv3_runtime_context_keeps_explicit_strength_for_o10_output_phase():
         rest_ctx=20.0,
     )
 
-    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.41)
+    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.41)  # type: ignore[arg-type]
     assert kwargs.get("phase_strength_oracle_class") == "O10_output"
     assert "phase_strength_oracle_profile" in kwargs
 
@@ -812,8 +812,8 @@ def test_uv3_runtime_context_uq_scalar_damps_non_explicit_strength_for_low_confi
         rest_ctx=35.0,
     )
 
-    assert float(kwargs_low.get("uq_confidence_scalar", 1.0)) < float(kwargs_high.get("uq_confidence_scalar", 1.0))
-    assert float(kwargs_low.get("strength", 0.0)) < float(kwargs_high.get("strength", 0.0))
+    assert float(kwargs_low.get("uq_confidence_scalar", 1.0)) < float(kwargs_high.get("uq_confidence_scalar", 1.0))  # type: ignore[arg-type]
+    assert float(kwargs_low.get("strength", 0.0)) < float(kwargs_high.get("strength", 0.0))  # type: ignore[arg-type]
     assert float(wet_low) < float(wet_high)
 
 
@@ -842,8 +842,8 @@ def test_uv3_runtime_context_uq_scalar_keeps_explicit_strength_but_reduces_wetdr
         rest_ctx=25.0,
     )
 
-    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.52)
-    assert float(kwargs.get("uq_confidence_scalar", 1.0)) < 1.0
+    assert float(kwargs.get("strength", 0.0)) == pytest.approx(0.52)  # type: ignore[arg-type]
+    assert float(kwargs.get("uq_confidence_scalar", 1.0)) < 1.0  # type: ignore[arg-type]
     assert float(wet_dry) < 1.0
 
 
@@ -874,8 +874,8 @@ def test_uv3_runtime_context_phase23_pre_hallucination_cap_for_tape_chain():
     )
 
     assert kwargs.get("phase23_pre_hallucination_cap") == pytest.approx(0.74)
-    assert float(kwargs.get("strength", 1.0)) <= 0.74 + 1e-9
-    assert float(kwargs.get("uq_confidence_value", 0.0)) == pytest.approx(0.85)
+    assert float(kwargs.get("strength", 1.0)) <= 0.74 + 1e-9  # type: ignore[arg-type]
+    assert float(kwargs.get("uq_confidence_value", 0.0)) == pytest.approx(0.85)  # type: ignore[arg-type]
     assert 0.0 < float(wet_dry) <= 1.0
 
 
@@ -906,8 +906,8 @@ def test_uv3_runtime_context_phase23_pre_hallucination_cap_stricter_when_low_con
     )
 
     assert kwargs.get("phase23_pre_hallucination_cap") == pytest.approx(0.66)
-    assert float(kwargs.get("strength", 1.0)) <= 0.66 + 1e-9
-    assert float(kwargs.get("uq_confidence_value", 0.0)) == pytest.approx(0.55)
+    assert float(kwargs.get("strength", 1.0)) <= 0.66 + 1e-9  # type: ignore[arg-type]
+    assert float(kwargs.get("uq_confidence_value", 0.0)) == pytest.approx(0.55)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

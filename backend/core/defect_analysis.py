@@ -280,7 +280,7 @@ class DefectAnalyzer:
 
         if total_energy > 0:
             ratio = high_freq_energy / total_energy
-            return ratio > 0.1  # type: ignore[return-value]  # More than 10% high-freq energy
+            return ratio > 0.1  # type: ignore[no-any-return]  # More than 10% high-freq energy
 
         return False
 
@@ -354,9 +354,9 @@ class DefectAnalyzer:
 
 if __name__ == "__main__":
     # Demo
-    logger.debug("AURIK Defect Analysis")
+    logger.debug("AURIK Defect Analyse")
     logger.debug("=" * 60)
-    logger.debug("\nDefect Types Detected:")
+    logger.debug("\nDefect Types erkannt:")
     logger.debug("  • Clipping (>0.99 amplitude)")
     logger.debug("  • Clicks/Pops (sharp transients)")
     logger.debug("  • Dropouts (amplitude drops)")

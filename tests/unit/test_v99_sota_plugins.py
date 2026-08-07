@@ -52,7 +52,7 @@ def _noise(duration_s: float = 1.0, amplitude: float = 0.1) -> np.ndarray:
 
 def _sine(freq: float = 440.0, duration_s: float = 1.0, amplitude: float = 0.5) -> np.ndarray:
     t = np.linspace(0, duration_s, int(SR * duration_s), endpoint=False)
-    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amplitude * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _dirac(duration_s: float = 1.0) -> np.ndarray:

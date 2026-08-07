@@ -410,8 +410,8 @@ class MidSideProcessing(PhaseInterface):
         )
         if _should_bypass:
             logger.debug(
-                "phase_34: §2.45 bypass — digital codec material=%s, "
-                "pmgg_strength=%.2f < 0.55 (PMGG regression detected) — returning original audio",
+                "Verarbeitungsschritt_34: §2.45 bypass — digital codec material=%s, "
+                "pmgg_strength=%.2f < 0.55 (PMGG regression erkannt) — returning Originalsignal audio",
                 material_key,
                 _pmgg_strength,
             )
@@ -468,7 +468,7 @@ class MidSideProcessing(PhaseInterface):
         bands = self._split_bands(audio, sample_rate)
 
         # Get material-specific parameters
-        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        _mk = material
         _mid_source = self.MID_DYNAMICS.get(_mk, self.MID_DYNAMICS[MaterialType.SHELLAC])
         _side_source = self.SIDE_DYNAMICS.get(_mk, self.SIDE_DYNAMICS[MaterialType.SHELLAC])
         _cross_source = self.CROSSFEED.get(_mk, self.CROSSFEED[MaterialType.SHELLAC])
@@ -580,7 +580,7 @@ class MidSideProcessing(PhaseInterface):
 
             audio_processed = _opm34(audio, audio_processed, None, max_delta_db=1.5)
         except Exception as _v26_exc34:
-            logger.debug("Phase34 V26 Onset-Schutz (non-blocking): %s", _v26_exc34)
+            logger.debug("Verarbeitungsschritt34 V26 Onset-Schutz (nicht blockierend): %s", _v26_exc34)
 
         audio_processed = np.nan_to_num(audio_processed, nan=0.0, posinf=0.0, neginf=0.0)
         audio_processed = np.clip(audio_processed, -1.0, 1.0)
@@ -744,7 +744,7 @@ class MidSideProcessing(PhaseInterface):
 # Test harness
 if __name__ == "__main__":
     logger.debug("=" * 70)
-    logger.debug("Phase 34: Professional Multi-Band M/S Dynamics v2.0 - Test")
+    logger.debug("Verarbeitungsschritt 34: Professional Multi-Band M/S Dynamics v2.0 - Test")
     logger.debug("=" * 70)
     logger.debug("")
 

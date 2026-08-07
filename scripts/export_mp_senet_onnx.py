@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn as nn
@@ -37,6 +38,9 @@ class AttrDict(dict):  # type: ignore[misc]
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.__dict__ = self
+
+    def __getattr__(self, item: str) -> Any:
+        return self[item]
 
 
 def load_config(path: Path) -> AttrDict:
@@ -84,7 +88,7 @@ except ImportError:
 def build_model(h: AttrDict) -> nn.Module:
     from models.model import MPNet
 
-    return MPNet(h)
+    return MPNet(h)  # type: ignore[no-any-return]
 
 
 def export():

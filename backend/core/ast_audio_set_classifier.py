@@ -33,9 +33,7 @@ logger = logging.getLogger(__name__)
 # Pfade
 # ---------------------------------------------------------------------------
 
-_AST_ONNX_PATH: Path = (
-    Path(__file__).resolve().parent.parent.parent / "models" / "ast" / "ast_model.onnx"
-)
+_AST_ONNX_PATH: Path = Path(__file__).resolve().parent.parent.parent / "models" / "ast" / "ast_model.onnx"
 
 # ---------------------------------------------------------------------------
 # AudioSet-527 Label-Map (gekürzt auf die für Aurik relevanten Klassen)
@@ -127,25 +125,25 @@ CORRECTED_GOAL_MAPPINGS: dict[str, list[int]] = {
 # Jeder DefectScanner-Defekttyp bekommt eine Liste von AudioSet-Instrumenten.
 # Wenn ein Defekt auf einem dieser Instrumente liegt → PRESERVE (kein Defekt).
 DEFECT_INSTRUMENT_DISCRIMINATOR: dict[str, list[int]] = {
-    "crackle": [121, 141, 137, 143],    # snare, piano, cello, e-guitar
-    "click": [121, 141, 104, 143],       # snare, piano, bass, e-guitar
-    "hiss": [310, 311, 196],             # hi-hat, cymbal, flute
-    "rumble": [10, 104, 299],            # bass drum, bass guitar, synth
-    "buzz": [143, 299],                  # e-guitar, synth
-    "pop": [121, 141],                   # snare, piano
-    "wow": [105, 196, 299],              # violin, flute, synth (vibrato)
-    "flutter": [105, 196, 299],          # violin, flute, synth (vibrato)
+    "crackle": [121, 141, 137, 143],  # snare, piano, cello, e-guitar
+    "click": [121, 141, 104, 143],  # snare, piano, bass, e-guitar
+    "hiss": [310, 311, 196],  # hi-hat, cymbal, flute
+    "rumble": [10, 104, 299],  # bass drum, bass guitar, synth
+    "buzz": [143, 299],  # e-guitar, synth
+    "pop": [121, 141],  # snare, piano
+    "wow": [105, 196, 299],  # violin, flute, synth (vibrato)
+    "flutter": [105, 196, 299],  # violin, flute, synth (vibrato)
 }
 
 # ── Emotion-Guided-Mastering-Mappings ───────────────────────────────────
 
 # DSP-Parameter: {dynamics_scale, presence_db, space_scale, groove_ms}
 EMOTION_DSP_PARAMS: dict[str, dict[str, float]] = {
-    "happy_music":    {"dyn": 1.10, "pres_db": 1.0,  "space": 1.00, "groove": -2.0},
-    "sad_music":      {"dyn": 0.65, "pres_db": -0.5, "space": 1.20, "groove": 5.0},
-    "scary_music":    {"dyn": 0.50, "pres_db": -2.0, "space": 1.30, "groove": 10.0},
-    "tender_music":   {"dyn": 0.60, "pres_db": -1.0, "space": 1.20, "groove": 3.0},
-    "exciting_music": {"dyn": 1.20, "pres_db": 1.5,  "space": 0.90, "groove": -3.0},
+    "happy_music": {"dyn": 1.10, "pres_db": 1.0, "space": 1.00, "groove": -2.0},
+    "sad_music": {"dyn": 0.65, "pres_db": -0.5, "space": 1.20, "groove": 5.0},
+    "scary_music": {"dyn": 0.50, "pres_db": -2.0, "space": 1.30, "groove": 10.0},
+    "tender_music": {"dyn": 0.60, "pres_db": -1.0, "space": 1.20, "groove": 3.0},
+    "exciting_music": {"dyn": 1.20, "pres_db": 1.5, "space": 0.90, "groove": -3.0},
 }
 
 # ── Era-Indikatoren via Instrumente ─────────────────────────────────────
@@ -165,10 +163,10 @@ ERA_INSTRUMENT_INDICATORS: dict[str, tuple[int, int]] = {
 # Wir verwenden die nächstbesten: electric_guitar (143) für 1950+,
 # synthesizer (299) für 1970+, drum_machine fehlt → bass_drum+hi_hat (10+310) als Proxy.
 ERA_AUDIOSET_PROXIES: dict[int, tuple[int, int]] = {
-    141: (1700, 2100),   # piano: immer präsent
-    143: (1950, 2100),   # electric guitar: ≥1950
-    299: (1970, 2100),   # synthesizer: ≥1970
-    357: (1980, 2100),   # hip_hop: ≥1980
+    141: (1700, 2100),  # piano: immer präsent
+    143: (1950, 2100),  # electric guitar: ≥1950
+    299: (1970, 2100),  # synthesizer: ≥1970
+    357: (1980, 2100),  # hip_hop: ≥1980
 }
 
 
@@ -177,7 +175,7 @@ class AstResult:
     """Ergebnis einer AST AudioSet-527 Inferenz."""
 
     logits: np.ndarray  # [527,] raw logits
-    probs: np.ndarray   # [527,] softmax probabilities
+    probs: np.ndarray  # [527,] softmax probabilities
     top_k: list[tuple[int, str, float]]  # (index, label, probability)
     model_used: str  # "ast_onnx" | "fallback"
     inference_time_ms: float
@@ -237,13 +235,13 @@ class AstAudioSetClassifier:
     def _load_onnx(self) -> None:
         """Lädt AST ONNX-Modell mit CPUExecutionProvider."""
         if not _AST_ONNX_PATH.is_file():
-            logger.info("AST ONNX nicht gefunden: %s — DSP-Fallback aktiv", _AST_ONNX_PATH)
+            logger.info("AST ONNX nicht gefunden: %s — DSP-Ersatzpfad aktiv", _AST_ONNX_PATH)
             return
         try:
             from backend.core.ml_memory_budget import release, try_allocate
 
             if not try_allocate("ASTAudioSetClassifier", 0.35):
-                logger.warning("AST: ML-Budget erschöpft — DSP-Fallback aktiv")
+                logger.warning("AST: ML-Grenze erschöpft — DSP-Ersatzpfad aktiv")
                 return
 
             try:
@@ -268,7 +266,7 @@ class AstAudioSetClassifier:
                     try:
                         release("ASTAudioSetClassifier")
                     except Exception:
-                        pass
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
                 from backend.core.plugin_lifecycle_manager import register_plugin
 
@@ -278,7 +276,7 @@ class AstAudioSetClassifier:
                 release("ASTAudioSetClassifier")
                 raise
         except Exception as exc:
-            logger.debug("AST ONNX load failed: %s — DSP-Fallback aktiv", exc)
+            logger.debug("AST ONNX laden fehlgeschlagen: %s — DSP-Ersatzpfad aktiv", exc)
             self._session = None
 
     def is_loaded(self) -> bool:
@@ -328,9 +326,7 @@ class AstAudioSetClassifier:
 
             # Run ONNX inference
             input_tensor = mel_spec[np.newaxis, :, :].astype(np.float32)  # (1, 128, 1024)
-            logits_raw = self._session.run(
-                [self._output_name], {self._input_name: input_tensor}
-            )[0]  # (1, 527)
+            logits_raw = self._session.run([self._output_name], {self._input_name: input_tensor})[0]  # (1, 527)
             logits = np.asarray(logits_raw[0], dtype=np.float32)
 
             # Softmax
@@ -341,8 +337,7 @@ class AstAudioSetClassifier:
             # Top-K
             top_indices = np.argsort(probs)[::-1][:top_k]
             top_k_list: list[tuple[int, str, float]] = [
-                (int(i), AUDIOSET_LABELS.get(int(i), f"class_{i}"), float(probs[i]))
-                for i in top_indices
+                (int(i), AUDIOSET_LABELS.get(int(i), f"class_{i}"), float(probs[i])) for i in top_indices
             ]
 
             dt_ms = (time.perf_counter() - t0) * 1000.0
@@ -354,14 +349,14 @@ class AstAudioSetClassifier:
                 inference_time_ms=dt_ms,
             )
         except Exception as exc:
-            logger.debug("AST classify failed: %s", exc)
+            logger.debug("AST classify fehlgeschlagen: %s", exc)
             return self._fallback_result()
         finally:
             if _plm is not None:
                 try:
                     _plm.set_active("ASTAudioSetClassifier", False)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def classify_segment(
         self,
@@ -456,9 +451,7 @@ class AstAudioSetClassifier:
 
         # Dominante Emotion finden
         emotion_probs = {
-            label: result.get_prob(idx)
-            for idx, label in AUDIOSET_LABELS.items()
-            if idx in range(400, 405)
+            label: result.get_prob(idx) for idx, label in AUDIOSET_LABELS.items() if idx in range(400, 405)
         }
         if not emotion_probs:
             return None
@@ -470,7 +463,7 @@ class AstAudioSetClassifier:
             return None
 
         params = EMOTION_DSP_PARAMS.get(best_emotion, {})
-        params["emotion_label"] = best_emotion
+        params["emotion_label"] = best_emotion  # type: ignore[assignment]
         params["emotion_confidence"] = best_conf
         return params
 
@@ -511,7 +504,7 @@ class AstAudioSetClassifier:
             import scipy.signal
 
             num = int(len(audio) * target_sr / orig_sr)
-            return scipy.signal.resample(audio, num).astype(np.float32)
+            return scipy.signal.resample(audio, num).astype(np.float32)  # type: ignore[no-any-return]
         except Exception:
             # Linear interpolation fallback
             n = len(audio)
@@ -549,7 +542,7 @@ class AstAudioSetClassifier:
             mel_db = librosa.power_to_db(mel, ref=np.max, top_db=80.0)
             # Normalize to [0, 1]
             mel_norm = (mel_db - mel_db.min()) / (mel_db.max() - mel_db.min() + 1e-12)
-            return mel_norm.astype(np.float32)[:, : self._TARGET_FRAMES]
+            return mel_norm.astype(np.float32)[:, : self._TARGET_FRAMES]  # type: ignore[no-any-return]
         except Exception:
             # Minimal fallback: STFT-based mel approximation
             return self._compute_mel_fallback(audio_16k)
@@ -611,5 +604,18 @@ def get_ast_classifier() -> AstAudioSetClassifier:
 
 
 def is_ast_loaded() -> bool:
-    """True wenn AST ONNX geladen und bereit."""
-    return get_ast_classifier().is_loaded()
+    """True wenn AST ONNX geladen und bereit (non-invasiver Peek, KEIN Lazy-Load).
+
+    KRITISCH: Ruft NICHT get_ast_classifier() auf — das würde den Singleton
+    konstruieren (ONNX-Load + try_allocate()) als Nebeneffekt eines reinen
+    Readiness-Checks. Da ml_model_readiness._validate_all_checks() diesen
+    Check beim ERSTEN Import von ml_model_readiness ausführt, und dieser
+    Import selbst aus try_allocate() heraus ausgelöst wird (siehe
+    ast_audio_set_classifier._load_onnx() → ml_memory_budget.try_allocate()),
+    führte ein Aufruf von get_ast_classifier() hier zu einem Re-Entrant-
+    Deadlock auf demselben, bereits vom konstruierenden Thread gehaltenen
+    `_lock` (self-deadlock, futex_do_wait — reproduziert 2026-08-06).
+    Analog zu _probe_plugin() in ml_model_readiness.py: nur den bereits
+    existierenden Zustand abfragen, niemals konstruieren.
+    """
+    return _instance is not None and _instance.is_loaded()

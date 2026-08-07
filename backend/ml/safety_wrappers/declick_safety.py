@@ -305,8 +305,8 @@ class DeClickSafety(BaseSafetyWrapper):
         # Detect clicks
         has_clicks, click_count, click_positions = detect_clicks(audio, sr)
         metadata["has_clicks"] = has_clicks
-        metadata["click_count"] = click_count
-        metadata["click_positions"] = click_positions[:10]  # Limit log size
+        metadata["click_count"] = click_count  # type: ignore[assignment]
+        metadata["click_positions"] = click_positions[:10]  # type: ignore  # Limit log size
 
         if not has_clicks:
             return PreCheckResult(passed=False, confidence=0.0, reasons=["No clicks detected in audio"])
@@ -329,9 +329,9 @@ class DeClickSafety(BaseSafetyWrapper):
         n_musical = click_classifications.count("musical")
         n_uncertain = click_classifications.count("uncertain")
 
-        metadata["true_clicks"] = n_true_clicks
-        metadata["musical_transients_detected"] = n_musical
-        metadata["uncertain_transients"] = n_uncertain
+        metadata["true_clicks"] = n_true_clicks  # type: ignore[assignment]
+        metadata["musical_transients_detected"] = n_musical  # type: ignore[assignment]
+        metadata["uncertain_transients"] = n_uncertain  # type: ignore[assignment]
 
         if n_musical > n_true_clicks:
             warnings.append(
@@ -341,7 +341,7 @@ class DeClickSafety(BaseSafetyWrapper):
 
         # Measure transient density
         transient_density = compute_transient_density(audio, sr)
-        metadata["transient_density_per_sec"] = transient_density
+        metadata["transient_density_per_sec"] = transient_density  # type: ignore[assignment]
 
         if transient_density > 20:
             warnings.append(
@@ -351,7 +351,7 @@ class DeClickSafety(BaseSafetyWrapper):
 
         # Measure attack time
         avg_attack_ms = measure_attack_time(audio, sr)
-        metadata["avg_attack_time_ms"] = avg_attack_ms
+        metadata["avg_attack_time_ms"] = avg_attack_ms  # type: ignore[assignment]
 
         if avg_attack_ms < 5:
             warnings.append(
@@ -407,7 +407,7 @@ class DeClickSafety(BaseSafetyWrapper):
 
         reduction = count_before - count_after
         metrics["click_reduction"] = reduction
-        metrics["click_reduction_percent"] = float(reduction / max(1, count_before) * 100)
+        metrics["click_reduction_percent"] = float(reduction / max(1, count_before) * 100)  # type: ignore[assignment]
 
         # 2. Check transient preservation
         # Extract transient energy
@@ -428,7 +428,7 @@ class DeClickSafety(BaseSafetyWrapper):
         else:
             transient_preservation = 1.0
 
-        metrics["transient_preservation_ratio"] = float(transient_preservation)
+        metrics["transient_preservation_ratio"] = float(transient_preservation)  # type: ignore[assignment]
 
         transient_loss = 1.0 - transient_preservation
         if transient_loss > self.max_transient_loss:
@@ -436,14 +436,14 @@ class DeClickSafety(BaseSafetyWrapper):
 
         # 3. Energy preservation
         energy_ratio = compute_energy_ratio(original, processed)
-        metrics["energy_ratio"] = energy_ratio
+        metrics["energy_ratio"] = energy_ratio  # type: ignore[assignment]
 
         if energy_ratio < 0.85 or energy_ratio > 1.05:
             side_effects.append(f"Unexpected energy change: {energy_ratio:.2%}")
 
         # 4. Correlation (signal similarity)
         correlation = compute_correlation(original.flatten(), processed.flatten())
-        metrics["correlation"] = correlation
+        metrics["correlation"] = correlation  # type: ignore[assignment]
 
         if correlation < 0.9:
             side_effects.append(f"Low correlation: {correlation:.3f}. Significant signal change.")
@@ -460,7 +460,7 @@ class DeClickSafety(BaseSafetyWrapper):
 
         if hf_before > 0:
             hf_preservation = hf_after / hf_before
-            metrics["high_freq_preservation"] = float(hf_preservation)
+            metrics["high_freq_preservation"] = float(hf_preservation)  # type: ignore[assignment]
 
             if hf_preservation < 0.7:
                 issues.append(f"Over-smoothing detected: {hf_preservation:.1%} HF content remaining")
@@ -472,7 +472,7 @@ class DeClickSafety(BaseSafetyWrapper):
             quality_score=0.0,  # Will be computed separately
             issues=issues,
             side_effects=side_effects,
-            metrics=metrics,
+            metrics=metrics,  # type: ignore[arg-type]
         )
 
     def _compute_quality_score(

@@ -309,7 +309,7 @@ class PianoRestorationV1(PhaseInterface):
 
         if panns_tags and piano_confidence < 0.50:
             logger.info(
-                "Phase 52: Piano-Confidence %.2f < 0.50 — Phase skipped (Spec §2.9)",
+                "Verarbeitungsschritt 52: Piano-Confidence %.2f < 0.50 — Verarbeitungsschritt uebersprungen (Spec §2.9)",
                 piano_confidence,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -329,7 +329,9 @@ class PianoRestorationV1(PhaseInterface):
             )
 
         if piano_confidence > 0.0:
-            logger.info("Phase 52: PANNs Piano-Confidence=%.2f >= 0.50 — processing active", piano_confidence)
+            logger.info(
+                "Verarbeitungsschritt 52: PANNs Piano-Confidence=%.2f >= 0.50 — processing active", piano_confidence
+            )
 
         # Get material-specific config
         config = self.RESTORATION_CONFIG.get(material_type, self.DEFAULT_CONFIG).copy()
@@ -420,9 +422,9 @@ class PianoRestorationV1(PhaseInterface):
                     correction_strength=formant_strength,
                 )
                 igt_frames = igt_report.get("frames_processed", 0)
-                logger.debug("Phase 52 InstrumentFormant: piano frames=%d", igt_frames)
+                logger.debug("Verarbeitungsschritt 52 InstrumentFormant: piano frames=%d", igt_frames)
         except Exception as _igt_exc:
-            logger.debug("Phase 52 instrument_guided_enhance skipped: %s", _igt_exc)
+            logger.debug("Verarbeitungsschritt 52 instrument_guided_verbessern uebersprungen: %s", _igt_exc)
 
         # Formant-Drift-Korrektur via DTW (Schritt 3)
         try:
@@ -433,14 +435,14 @@ class PianoRestorationV1(PhaseInterface):
             drift_result = correct_instrument_formant_drift(audio_out, self.sample_rate, instrument="keys")
             audio_out = drift_result.audio
             logger.debug(
-                "Phase 52 drift correction: detected=%s frames=%d/%d drift=%.1fHz",
+                "Verarbeitungsschritt 52 drift correction: erkannt=%s frames=%d/%d drift=%.1fHz",
                 drift_result.drift_detected,
                 drift_result.n_frames_corrected,
                 drift_result.total_frames,
                 drift_result.mean_drift_hz,
             )
         except Exception as _drift_exc:
-            logger.debug("Phase 52 drift correction skipped: %s", _drift_exc)
+            logger.debug("Verarbeitungsschritt 52 drift correction uebersprungen: %s", _drift_exc)
 
         # Sub-Stem-Verarbeitung (Schritt 4)
         try:
@@ -451,9 +453,13 @@ class PianoRestorationV1(PhaseInterface):
                 audio_out, self.sample_rate, instrument="keys", processing_strength=sub_stem_strength
             )
             audio_out = ss_result.audio
-            logger.debug("Phase 52 sub-stem: bands=%d strength=%.2f", ss_result.n_bands, ss_result.processing_strength)
+            logger.debug(
+                "Verarbeitungsschritt 52 sub-stem: bands=%d strength=%.2f",
+                ss_result.n_bands,
+                ss_result.processing_strength,
+            )
         except Exception as _ss_exc:
-            logger.debug("Phase 52 sub-stem skipped: %s", _ss_exc)
+            logger.debug("Verarbeitungsschritt 52 sub-stem uebersprungen: %s", _ss_exc)
 
         # Physics-Resonanz (Schritt 5 — Biquad Body Resonance)
         try:
@@ -467,10 +473,12 @@ class PianoRestorationV1(PhaseInterface):
             )
             audio_out = pr_result.audio
             logger.debug(
-                "Phase 52 physics resonance: peaks=%d strength=%.2f", pr_result.n_peaks, pr_result.enhancement_strength
+                "Verarbeitungsschritt 52 physics resonance: peaks=%d strength=%.2f",
+                pr_result.n_peaks,
+                pr_result.enhancement_strength,
             )
         except Exception as _pr_exc:
-            logger.debug("Phase 52 physics resonance skipped: %s", _pr_exc)
+            logger.debug("Verarbeitungsschritt 52 physics resonance uebersprungen: %s", _pr_exc)
 
         if 0.0 < effective_strength < 1.0:
             audio_out = audio + effective_strength * (audio_out - audio)
@@ -522,9 +530,9 @@ class PianoRestorationV1(PhaseInterface):
             )
             if _hg52.requires_rollback:
                 audio_out = audio.copy()
-                logger.warning("§2.46e phase_52 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_52 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg52_exc:
-            logger.debug("§2.46e phase_52 HallucinationGuard (non-blocking): %s", _hg52_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_52 HallucinationGuard (nicht blockierend): %s", _hg52_exc)
 
         return PhaseResult(
             success=True,
@@ -658,7 +666,7 @@ class PianoRestorationV1(PhaseInterface):
                         lift = 1.0 + 0.12 * float(intensity) * partial_mask[:, None]
                         Zxx *= lift
         except Exception as _inh_exc:
-            logger.debug("Phase 52 inharmonic partial shaping skipped: %s", _inh_exc)
+            logger.debug("Verarbeitungsschritt 52 inharmonic partial shaping uebersprungen: %s", _inh_exc)
 
         # Inverse STFT
         _, audio_enhanced = signal.istft(Zxx, fs=self.sample_rate, nperseg=nperseg, noverlap=noverlap, boundary=True)
@@ -813,7 +821,7 @@ if __name__ == "__main__":
     phase = PianoRestorationV1(sample_rate=48000)
     metadata = phase.get_metadata()
 
-    logger.debug("\n📋 Phase Metadata:")
+    logger.debug("\n📋 Verarbeitungsschritt Metadata:")
     logger.debug("   ID: %s", metadata.phase_id)
     logger.debug("   Name: %s", metadata.name)
     logger.debug("   Category: %s", metadata.category.value)
@@ -872,10 +880,10 @@ if __name__ == "__main__":
         )
 
     logger.debug("\n%s", "=" * 70)
-    logger.debug("✅ PIANO RESTORATION TEST COMPLETE")
+    logger.debug("✅ PIANO RESTORATION TEST vollstaendig")
     logger.debug("=" * 70)
     logger.debug("\n🎯 Next Steps:")
     logger.debug("   1. Add to __init__.py exports")
     logger.debug("   2. Integrate into UnifiedRestorerV3 _select_phases()")
-    logger.debug("   3. Create integration tests")
+    logger.debug("   3. erstellen integration tests")
     logger.debug("   4. Test with real piano recordings")

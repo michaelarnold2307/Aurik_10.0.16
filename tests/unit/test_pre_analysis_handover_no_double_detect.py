@@ -45,7 +45,7 @@ def test_pre_analysis_result_cached_then_passed_to_denker(audio_48k_mono):
             class FakeMediumResult:
                 primary_material: str = "vinyl"
                 confidence: float = 0.9
-                transfer_chain: list = None
+                transfer_chain: list = None  # type: ignore[assignment]
                 chain_label: str = "vinyl"
 
             if call_count["detect"] == 1:
@@ -70,8 +70,8 @@ def test_pre_analysis_result_cached_then_passed_to_denker(audio_48k_mono):
     # Verify call count after pre-analysis
     assert call_count["detect"] == 1, f"Expected 1 detect call during pre-analysis, got {call_count['detect']}"
     assert result.medium is not None, "PreAnalysisResult.medium should not be None"
-    assert result.medium.primary_material == "vinyl", (
-        f"Material should be 'vinyl', got {result.medium.primary_material}"
+    assert result.medium.primary_material == "vinyl", (  # type: ignore[attr-defined]
+        f"Material should be 'vinyl', got {result.medium.primary_material}"  # type: ignore[attr-defined]
     )
 
     # Phase 2: Simulate denker receiving the pre-analysis result as kwarg
@@ -115,7 +115,7 @@ def test_cache_first_then_direct_handover_flow():
             class Result:
                 primary_material: str = "tape"
                 confidence: float = 0.95
-                transfer_chain: list = None
+                transfer_chain: list = None  # type: ignore[assignment]
                 chain_label: str = "tape"
 
             return Result(transfer_chain=["tape", "mp3_high"])
@@ -130,7 +130,7 @@ def test_cache_first_then_direct_handover_flow():
         )
 
     assert call_count["detect"] == 1
-    assert result.medium.primary_material == "tape"
+    assert result.medium.primary_material == "tape"  # type: ignore[attr-defined]
 
     # Step 2: Simulate queue item with direct handover
     queue_settings = {
@@ -141,7 +141,7 @@ def test_cache_first_then_direct_handover_flow():
     # Step 3: Batch thread retrieves from queue settings
     queued_pre = queue_settings.get("pre_analysis_result")
     assert queued_pre is not None
-    assert queued_pre.medium.primary_material == "tape"
+    assert queued_pre.medium.primary_material == "tape"  # type: ignore[attr-defined]
 
     # Step 4: This is what gets passed to denke()
     denke_kwargs = {

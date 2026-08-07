@@ -32,6 +32,7 @@ import gc
 import os
 import sys
 import tempfile
+from unittest import mock
 
 import numpy as np
 import pytest
@@ -766,7 +767,7 @@ class TestApolloPlugin:
         fake_plm = _FakePLM()
         plugin = ApolloPlugin.__new__(ApolloPlugin)
         plugin._model_loaded = True
-        monkeypatch.setattr(plugin, "_torch_model", object())
+        plugin._torch_model = mock.Mock()
         plugin._device = "cpu"
         plugin._fallback_active = False
 

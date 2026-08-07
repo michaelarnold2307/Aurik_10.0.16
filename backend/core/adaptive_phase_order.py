@@ -99,7 +99,7 @@ def reorder_phases_for_material(
     _moved = [p for p in phases if _priority.get(p, 0) != 0]
     if _moved:
         logger.info(
-            "🔄 Adaptive Phase-Order (%s): %d Phasen umgeordnet — %s",
+            "🔄 Adaptive Verarbeitungsschritt-Order (%s): %d Phasen umgeordnet — %s",
             material,
             len(_moved),
             ", ".join(_moved[:5]),

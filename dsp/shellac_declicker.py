@@ -13,7 +13,7 @@ try:
     import onnxruntime as ort
     import torch
 except ImportError:
-    torch = None
+    torch = None  # type: ignore[assignment]
     ort = None
 
 from dsp._memory_budget_guard import check_budget
@@ -37,7 +37,7 @@ class ShellacDeclicker:
         if model_path:
             if ort is not None:
                 if not check_budget("shellac_declicker_onnx", 0.1):
-                    logger.warning("Memory budget exceeded for shellac_declicker ONNX — using DSP fallback")
+                    logger.warning("Memory Grenze exceeded for shellac_declicker ONNX — using DSP Ersatzpfad")
                 else:
                     try:
                         self.model = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
@@ -87,7 +87,7 @@ class ShellacDeclicker:
             elif self.model is not None and self.backend == "torch" and torch is not None:
                 try:
                     model_torch: Any = self.model
-                    inp = torch.from_numpy(audio.astype(np.float32)).unsqueeze(0).unsqueeze(0)
+                    inp = torch.from_numpy(audio.astype(np.float32)).unsqueeze(0).unsqueeze(0)  # type: ignore[assignment]
                     out = model_torch(inp).detach().cpu().numpy().squeeze()
                     audio_out = out.astype(audio.dtype)
                 except Exception as e:
@@ -114,5 +114,5 @@ class ShellacDeclicker:
 
         if audit_log:
             declicking_error = float(np.mean(np.abs(audio - audio_out)))
-            logger.info("ShellacDeclicker: declicking_error=%.4f, fallback_used=%s", declicking_error, fallback_used)
+            logger.info("ShellacDeclicker: declicking_error=%.4f, Ersatzpfad_used=%s", declicking_error, fallback_used)
         return audio_out.astype(audio.dtype)

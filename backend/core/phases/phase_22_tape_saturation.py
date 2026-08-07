@@ -261,13 +261,13 @@ class TapeSaturation(PhaseInterface):
                     _boost_22 = _zone_frac_22 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_22, 0.0, 1.0))
                     logger.debug(
-                        "Phase22 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt22 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_22,
                         _boost_22,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_22:
-                logger.debug("Phase22 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_22)
+                logger.debug("Verarbeitungsschritt22 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_22)
 
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -300,11 +300,11 @@ class TapeSaturation(PhaseInterface):
         )
 
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        drive = self.SATURATION_DRIVE.get(_mk, 0.25)
+        drive = self.SATURATION_DRIVE.get(_mk, 0.25)  # type: ignore[arg-type]
         drive *= tape_saturation_profile["drive_gain_scalar"] / 10.0
-        mix_amount = self.SATURATION_MIX.get(_mk, 0.30)
-        tape_speed = self.TAPE_SPEED.get(_mk, "7.5_ips")
-        hysteresis = self.HYSTERESIS_AMOUNT.get(_mk, 0.10)
+        mix_amount = self.SATURATION_MIX.get(_mk, 0.30)  # type: ignore[arg-type]
+        tape_speed = self.TAPE_SPEED.get(_mk, "7.5_ips")  # type: ignore[arg-type]
+        hysteresis = self.HYSTERESIS_AMOUNT.get(_mk, 0.10)  # type: ignore[arg-type]
 
         # §2.54 tape_speed_ips kwarg override (from UV3 _restoration_context → _infer_tape_speed_ips)
         _injected_ips = kwargs.get("tape_speed_ips")
@@ -452,9 +452,9 @@ class TapeSaturation(PhaseInterface):
             if not _sc22.ok:
                 _sc22_wet = 0.70
                 mixed = (_sc22_wet * mixed + (1.0 - _sc22_wet) * audio).astype(np.float32)
-                logger.warning("§V24 phase_22 spectral_color non-ok → strength −30%%")
+                logger.warning("§V24 Verarbeitungsschritt_22 spectral_color non-ok → strength −30%%")
         except Exception as _sc22_exc:
-            logger.debug("§V24 phase_22 spectral_color (non-blocking): %s", _sc22_exc)
+            logger.debug("§V24 Verarbeitungsschritt_22 spectral_color (nicht blockierend): %s", _sc22_exc)
 
         return PhaseResult(
             success=True,
@@ -737,7 +737,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Phase 22: Professional Tape Saturation v2.0")
+    logger.debug("Verarbeitungsschritt 22: Professional Tape Saturation v2.0")
     logger.debug("=" * 80)
     logger.debug("")
 
@@ -750,7 +750,7 @@ if __name__ == "__main__":
     # Pure 440 Hz sine (A4) at moderate level
     test_signal = 0.5 * np.sin(2 * np.pi * 440 * t)
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, _sr)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, _sr)
     logger.debug("Signal: Pure 440 Hz sine (A4)")
     logger.debug("Purpose: Measure THD and harmonic addition")
     logger.debug("")
@@ -786,5 +786,5 @@ if __name__ == "__main__":
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test completed")
+    logger.debug("Test abgeschlossen")
     logger.debug("=" * 80)

@@ -113,7 +113,7 @@ def _get_compute_iacc_callable() -> Any:
 
         return getattr(_stereo_guard, "compute_iacc", _COMPUTE_IACC)
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_get_compute_iacc_callable fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_get_berechnen_iacc_callable Ersatzpfad: %s", e)
         return _COMPUTE_IACC
 
 
@@ -194,7 +194,7 @@ def _get_mert_plugin_loader() -> Any:
         if callable(_loader):
             return _loader
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_get_mert_plugin_loader fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_get_mert_plugin_loader Ersatzpfad: %s", e)
     return _GET_MERT_PLUGIN
 
 
@@ -207,7 +207,7 @@ def _get_loaded_mert_plugin_loader() -> Any:
         if callable(_loader):
             return _loader
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_get_loaded_mert_plugin_loader fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_get_geladen_mert_plugin_loader Ersatzpfad: %s", e)
     return _GET_LOADED_MERT_PLUGIN
 
 
@@ -248,7 +248,7 @@ def _compute_mert_similarity(original: np.ndarray, restored: np.ndarray, sr: int
         flux_sim = 1.0 - abs(f1 - f2)
         return float(np.clip(0.40 * harm_sim + 0.40 * tonal_sim + 0.20 * flux_sim, 0.0, 1.0))
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_compute_mert_similarity fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_berechnen_mert_similarity Ersatzpfad: %s", e)
 
     # Spektral-Korrelations-Proxy (Fallback ohne ML-Modell)
     cap = min(min_len, 65536)
@@ -380,7 +380,7 @@ def _warm_up_librosa() -> None:
     except Exception as exc:
         _msg = str(exc)
         if "get_call_template" in _msg:
-            logger.debug("librosa warm-up beat_track: kompatibilitaets-fallback aktiv")
+            logger.debug("librosa warm-up beat_track: kompatibilitaets-Ersatzpfad aktiv")
         elif "uebersprungen" not in _msg:
             logger.debug("librosa warm-up beat_track: %s", exc)
 
@@ -418,7 +418,7 @@ def _get_crepe():
             return None
         return _GET_CREPE_PLUGIN()
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_get_crepe fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_get_crepe Ersatzpfad: %s", e)
         return None
 
 
@@ -431,7 +431,7 @@ def _get_versa():
             return None
         return _GET_VERSA_PLUGIN()
     except Exception as e:
-        logger.warning("musical_goals_metrics.py::_get_versa fallback: %s", e)
+        logger.warning("musical_goals_metrics.py::_get_versa Ersatzpfad: %s", e)
         return None
 
 
@@ -951,12 +951,14 @@ class WaermeMetric:
                 mert_warmth = float(np.clip(analysis.harmonicity, 0.0, 1.0))
                 score = 0.90 * score + 0.10 * mert_warmth
                 logger.debug(
-                    "WaermeMetric MERT-hybrid: harmonicity=%.3f, blended_score=%.3f",
+                    "WaermeMetric MERT-hybrid: harmonicity=%.3f, blended_Wert=%.3f",
                     analysis.harmonicity,
                     score,
                 )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)  # MERT not loaded or unavailable — DSP-only path
+            logger.debug(
+                "Operation fehlgeschlagen (unkritisch): %s", _exc
+            )  # MERT not loaded or unavailable — DSP-only path
 
         return float(np.clip(score, 0.0, 1.0))
 
@@ -1313,19 +1315,19 @@ class NatuerlichkeitMetric:
                 else:
                     # Instrumental/polyphonic: ambiguous voicing → keep DSP prior
                     logger.debug(
-                        "Natürlichkeit-CREPE [%s]: Instrumental (voiced=%.2f unvoiced=%.2f) → DSP-fallback",
+                        "Natürlichkeit-CREPE [%s]: Instrumental (voiced=%.2f unvoiced=%.2f) → DSP-Ersatzpfad",
                         cr.model_used,
                         voiced_clear,
                         unvoiced_clear,
                     )
             elif len(proc_audio) > _MAX_CREPE_NAT_SAMPLES:
                 logger.debug(
-                    "Natürlichkeit-CREPE: skipped for long clip (%.2fs > %.2fs budget)",
+                    "Natürlichkeit-CREPE: uebersprungen for long clip (%.2fs > %.2fs Grenze)",
                     len(proc_audio) / float(proc_sr),
                     _MAX_CREPE_NAT_SAMPLES / float(proc_sr),
                 )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # Final score — always same 5-component formula, same weights (FIXED v10.0.0 stateless)
         # §9.12.8 [BUG-FIX] Monophonic material-adaptive contrast floor: mirrors polyphonic
@@ -1396,7 +1398,7 @@ class NatuerlichkeitMetric:
                     )
                 score = float(np.clip(blended, 0.0, 1.0))
             except Exception as _mos_exc:
-                logger.debug("Natürlichkeit MOS-Blend non-blocking: %s", _mos_exc)
+                logger.debug("Natürlichkeit MOS-Blend nicht blockierend: %s", _mos_exc)
                 score = dsp_score
         else:
             score = dsp_score
@@ -1534,7 +1536,7 @@ class AuthentizitaetMetric:
                         versa_similarity,
                     )
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             # §9.12.4 Chroma-Catastrophe Guard:
             # If fingerprint_match < 0.15, the chroma CQT comparison against the original
@@ -1687,7 +1689,7 @@ class _VATEmotionEstimator:
                 "tension": float(np.clip(tension, 0.0, 1.0)),
             }
         except Exception as exc:
-            logger.debug("VAT-Schätzung fehlgeschlagen (non-critical): %s", exc)
+            logger.debug("VAT-Schätzung fehlgeschlagen (unkritisch): %s", exc)
             return _neutral
 
     def _compute_valence(self, audio: np.ndarray, sr: int) -> float:
@@ -1718,7 +1720,7 @@ class _VATEmotionEstimator:
             valence = float((best_major + 1e-8) / total)
             return float(np.clip(valence, 0.0, 1.0))
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::_compute_valence fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::_berechnen_valence Ersatzpfad: %s", e)
             return 0.5
 
     def _compute_arousal(self, audio: np.ndarray, sr: int) -> float:
@@ -1737,7 +1739,7 @@ class _VATEmotionEstimator:
                 raw_tempo = float(tempo_arr[0]) if hasattr(tempo_arr, "__len__") else float(tempo_arr)
                 tempo_val = float(np.clip((raw_tempo - 40.0) / 160.0, 0.0, 1.0))
             except Exception as e:
-                logger.warning("musical_goals_metrics.py::_compute_arousal fallback: %s", e)
+                logger.warning("musical_goals_metrics.py::_berechnen_arousal Ersatzpfad: %s", e)
 
             # Attack-Time: durchschnittliche Anstiegszeit von Onset-Peaks
             onset_frames = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sr)
@@ -1751,7 +1753,7 @@ class _VATEmotionEstimator:
 
             return float(0.60 * tempo_val + 0.40 * attack_score)
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::_compute_arousal fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::_berechnen_arousal Ersatzpfad: %s", e)
             return 0.5
 
     def _compute_tension(self, audio: np.ndarray, sr: int) -> float:
@@ -1780,7 +1782,7 @@ class _VATEmotionEstimator:
 
             return float(np.clip(0.60 * tension_irr + 0.40 * rms_score, 0.0, 1.0))
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::_compute_tension fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::_berechnen_tension Ersatzpfad: %s", e)
             return 0.5
 
 
@@ -1903,12 +1905,12 @@ class EmotionalitaetMetric:
                 blended = 0.85 * score + 0.15 * mert_emotion
                 score = max(score, blended)
                 logger.debug(
-                    "EmotionalitaetMetric MERT-hybrid: naturalness=%.3f, blended_score=%.3f",
+                    "EmotionalitaetMetric MERT-hybrid: naturalness=%.3f, blended_Wert=%.3f",
                     analysis.naturalness_score,
                     score,
                 )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)  # MERT not loaded — DSP-only path
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)  # MERT not loaded — DSP-only path
 
         # --- VAT emotion model (Valence-Arousal-Tension, Russell 1980 + Thayer 1990) ---
         # Ergänzt den MERT-Blend mit einer musik-theoretisch fundierten Emotionalitäts-Schätzung.
@@ -1924,7 +1926,7 @@ class EmotionalitaetMetric:
             _blended_vat = 0.85 * score + 0.15 * _vat_score
             score = max(score, _blended_vat)
             logger.debug(
-                "EmotionalitaetMetric VAT: valence=%.3f arousal=%.3f tension=%.3f vat_score=%.3f final=%.3f",
+                "EmotionalitaetMetric VAT: valence=%.3f arousal=%.3f tension=%.3f vat_Wert=%.3f final=%.3f",
                 _vat_dims["valence"],
                 _vat_dims["arousal"],
                 _vat_dims["tension"],
@@ -1932,7 +1934,7 @@ class EmotionalitaetMetric:
                 score,
             )
         except Exception as _vat_exc:
-            logger.debug("VAT-Schätzung fehlgeschlagen (non-critical): %s", _vat_exc)
+            logger.debug("VAT-Schätzung fehlgeschlagen (unkritisch): %s", _vat_exc)
 
         # Short-form reliability blend (v10.0.0):
         # Ultra-short excerpts (< 8 s) contain too little phrase-level context.
@@ -2047,7 +2049,7 @@ class TransparenzMetric:
                 fft_mag = np.abs(np.fft.rfft(audio.astype(np.float32), n=_N_FFT_TR)).astype(np.float32)
             freqs_t = np.fft.rfftfreq(_N_FFT_TR, d=1.0 / sr).astype(np.float32)
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::measure fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::measure Ersatzpfad: %s", e)
             return 0.5
 
         # §6.2c BW-adaptive Bänder: Wenn kaum HF vorhanden (sehr_schmale_bandbreite),
@@ -2152,11 +2154,12 @@ class GrooveMetric:
             _onset_kwargs: dict[str, Any] = dict(hop_length=512, backtrack=False, units="time")
             try:
                 from backend.core.calibration_context import get_calibration_context
+
                 _ctx = get_calibration_context()
                 if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                     _onset_kwargs.update(delta=0.05, wait=int(sr * 0.01))
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             onset_times = librosa.onset.onset_detect(y=audio, sr=sr, **_onset_kwargs)
             if len(onset_times) < 4:
                 # Zu wenige Onsets → kein Rhythmusmuster erkennbar.
@@ -2212,10 +2215,10 @@ class GrooveMetric:
                     _sub_score = float(np.clip(_sub_peak * 1.5, 0.0, 0.10))
                     score = min(1.0, score + _sub_score)
             except Exception as e:
-                logger.warning("musical_goals_metrics.py::unbekannter Fallback: %s", e)
+                logger.warning("musical_goals_metrics.py::unbekannter Ersatzpfad: %s", e)
 
         except Exception as exc:
-            logger.debug("GrooveMetric Fallback (Fehler: %s)", exc)
+            logger.debug("GrooveMetric Ersatzpfad (Fehler: %s)", exc)
             score = 0.75
 
         return float(
@@ -2250,7 +2253,7 @@ class GrooveMetric:
             measurer = _GET_GROOVE_MEASURER(sr=sr)
             result = measurer.measure(reference, audio, sr=sr)
             logger.info(
-                "GrooveMetric DTW-hybrid: rms=%.2f ms, score=%.3f, onsets_orig=%d onsets_rest=%d",
+                "GrooveMetric DTW-hybrid: rms=%.2f ms, Wert=%.3f, onsets_orig=%d onsets_rest=%d",
                 result.dtw_rms_ms,
                 result.groove_score,
                 result.n_onsets_original,
@@ -2259,6 +2262,7 @@ class GrooveMetric:
             # §v10.131 DTW-Latency-Awareness: Bei Pipeline-Latenz (typ. 106.7ms)
             # ist das DTW-Alignment systematisch verschoben. Große RMS-Werte
             # (>1000ms) deuten auf Latenzprobleme hin, nicht auf echten Groove-Verlust.
+            _dtw_score = float(np.clip(result.groove_score, 0.0, 1.0))
             _onset_ratio = result.n_onsets_restored / max(result.n_onsets_original, 1)
             _onset_ratio_ok = 0.9 < _onset_ratio < 1.1
             if _dtw_score < 0.10 and not _onset_ratio_ok:
@@ -2266,13 +2270,13 @@ class GrooveMetric:
                 # RMS-Fallback mit sanfterem Clipping für tiefe Ketten.
                 _rms_score = float(np.clip(1.0 - result.dtw_rms_ms / 500.0, 0.20, 1.0))
                 logger.debug(
-                    "GrooveMetric DTW-Latency-Fallback (dtw=%.3f, rms=%.0fms, ratio=%.2f) → RMS: %.3f",
-                    _dtw_score, result.dtw_rms_ms,
+                    "GrooveMetric DTW-Latency-Ersatzpfad (dtw=%.3f, rms=%.0fms, Verhaeltnis=%.2f) → RMS: %.3f",
+                    _dtw_score,
+                    result.dtw_rms_ms,
                     result.n_onsets_restored / max(result.n_onsets_original, 1),
                     _rms_score,
                 )
                 return _rms_score
-            _dtw_score = float(np.clip(result.groove_score, 0.0, 1.0))
 
             # §v10.60 DTW-Score-Kollaps-Schutz: Wenn DTW score=0.000 trotz ähnlicher
             # Onset-Zahl (within 10%), ist das DTW-Alignment durch Rausch-Artefakte
@@ -2282,7 +2286,7 @@ class GrooveMetric:
             if _dtw_score < 0.05 and _onset_ratio_ok:
                 _rms_score = float(np.clip(1.0 - result.dtw_rms_ms / 200.0, 0.30, 1.0))
                 logger.debug(
-                    "GrooveMetric DTW-Kollaps (dtw=%.3f, rms=%.0fms, onsets %d≈%d) → RMS-Fallback: %.3f",
+                    "GrooveMetric DTW-Kollaps (dtw=%.3f, rms=%.0fms, onsets %d≈%d) → RMS-Ersatzpfad: %.3f",
                     _dtw_score,
                     result.dtw_rms_ms,
                     result.n_onsets_original,
@@ -2299,7 +2303,7 @@ class GrooveMetric:
             _restore_onset_ratio = result.n_onsets_restored / max(result.n_onsets_original, 1)
             if _dtw_score < 0.3 and _noise_onset_ratio > 2.0:
                 logger.debug(
-                    "GrooveMetric IOI-Fallback (DTW=%.3f, orig_ratio=%.1f — original noise-driven)",
+                    "GrooveMetric IOI-Ersatzpfad (DTW=%.3f, orig_Verhaeltnis=%.1f — Originalsignal noise-driven)",
                     _dtw_score,
                     _noise_onset_ratio,
                 )
@@ -2309,7 +2313,7 @@ class GrooveMetric:
                 # (phase_09 AR-Interpolation, phase_31 Pitch-Correction-Boundary,
                 #  phase_55 Inpainting-Transients) → IOI-Proxy ist robuster.
                 logger.debug(
-                    "GrooveMetric IOI-Fallback (DTW=%.3f, restore_ratio=%.1f — pipeline-artifact-driven)",
+                    "GrooveMetric IOI-Ersatzpfad (DTW=%.3f, wiederherstellen_Verhaeltnis=%.1f — pipeline-artifact-driven)",
                     _dtw_score,
                     _restore_onset_ratio,
                 )
@@ -2331,18 +2335,25 @@ class GrooveMetric:
                 _onset_preservation_min = 0.95
                 try:
                     from backend.core.calibration_context import get_calibration_context
+
                     _ctx = get_calibration_context()
                     if _ctx is not None and _ctx.transfer_chain_depth >= 4:
                         _onset_preservation_min = 0.65  # 65% statt 95% für depth≥4
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 if _onset_preservation >= _onset_preservation_min and _dtw_rms_ok:
-                    _onset_score = float(np.clip(
-                        0.60 + 0.15 * (_onset_preservation - _onset_preservation_min) / max(1.0 - _onset_preservation_min, 0.01),
-                        0.60, 0.75
-                    ))
+                    _onset_score = float(
+                        np.clip(
+                            0.60
+                            + 0.15
+                            * (_onset_preservation - _onset_preservation_min)
+                            / max(1.0 - _onset_preservation_min, 0.01),
+                            0.60,
+                            0.75,
+                        )
+                    )
                     logger.info(
-                        "GrooveMetric Onset-Guard: %d/%d onsets (%.0f%%), dtw_rms=%.1fms → score %.3f→%.3f",
+                        "GrooveMetric Onset-Guard: %d/%d onsets (%.0f%%), dtw_rms=%.1fms → Wert %.3f→%.3f",
                         result.n_onsets_restored,
                         result.n_onsets_original,
                         _onset_preservation * 100,
@@ -2355,7 +2366,7 @@ class GrooveMetric:
                 # Score < 0.05 ist immer durch Rausch-/Artefakt-Onsets getrieben,
                 # nicht durch echten Rhythmus-Verlust → IOI-Proxy.
                 logger.debug(
-                    "GrooveMetric IOI-Fallback (DTW=%.3f — catastrophic, onset_orig=%d restored=%d)",
+                    "GrooveMetric IOI-Ersatzpfad (DTW=%.3f — catastrophic, onset_orig=%d wiederhergestellt=%d)",
                     _dtw_score,
                     result.n_onsets_original,
                     result.n_onsets_restored,
@@ -2403,7 +2414,7 @@ class GrooveMetric:
 
             return _dtw_score
         except Exception as exc:
-            logger.debug("GrooveMetric DTW-hybrid fallback to IOI-proxy: %s", exc)
+            logger.debug("GrooveMetric DTW-hybrid Ersatzpfad to IOI-proxy: %s", exc)
             return self.measure(audio, sr, reference=None)
 
     @staticmethod
@@ -2427,7 +2438,7 @@ class GrooveMetric:
             _corr = float(np.dot(_o, _p) / (np.linalg.norm(_o) * np.linalg.norm(_p) + 1e-8))
             return float(np.clip(0.5 * (_corr + 1.0), 0.0, 1.0))
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::_onset_env_similarity fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::_onset_env_similarity Ersatzpfad: %s", e)
             return 0.5
 
     def compare(self, original: np.ndarray, processed: np.ndarray, sr: int) -> tuple[float, float]:
@@ -2450,13 +2461,14 @@ class GrooveMetric:
         _max_lag = int(sr * 0.2)  # 200ms
         if _min_len > _max_lag * 4:
             from scipy.signal import correlate
-            _corr = correlate(processed[:_max_lag*4], original[:_max_lag*4], mode='same')
-            _lag = np.argmax(_corr) - len(_corr)//2
+
+            _corr = correlate(processed[: _max_lag * 4], original[: _max_lag * 4], mode="same")
+            _lag = np.argmax(_corr) - len(_corr) // 2
             if abs(_lag) > sr // 100:  # >10ms Verschiebung
                 if _lag > 0:
                     processed = processed[_lag:]
                 else:
-                    processed = np.pad(processed, (-_lag, 0))[:len(original)]
+                    processed = np.pad(processed, (-_lag, 0))[: len(original)]
 
         # DTW comparison
         original = np.nan_to_num(original, nan=0.0)
@@ -2471,7 +2483,7 @@ class GrooveMetric:
             if result.n_onsets_original < 2 or result.n_onsets_restored < 2:
                 return self.measure(processed, sr), 0.0
         except Exception as exc:
-            logger.debug("GrooveMetric.compare DTW fallback: %s", exc)
+            logger.debug("GrooveMetric.compare DTW Ersatzpfad: %s", exc)
             # Legacy naive alignment fallback
             try:
                 o_t = librosa.onset.onset_detect(y=original, sr=sr, hop_length=512, backtrack=False, units="time")
@@ -2645,7 +2657,7 @@ class SpatialDepthMetric:
             _sg_sf_res_v44 = _compute_iacc_fn(_sg_sf_arr_v44, sr=sr)
             iacc = _sg_sf_res_v44.iacc
         except Exception as _sf_v44_exc:
-            logger.debug("SpatialDepthMetric._spatial_features §V44 non-blocking: %s", _sf_v44_exc)
+            logger.debug("SpatialDepthMetric._spatial_features §V44 nicht blockierend: %s", _sf_v44_exc)
             iacc = self._compute_iacc(left, right, max_lag_ms=1.0, sr=sr)
         # Guarded Pearson correlation — np.clip does NOT protect against NaN (§VERBOTEN: np.corrcoef)
         _lc = left.astype(float) - float(np.mean(left))
@@ -2697,7 +2709,7 @@ class SpatialDepthMetric:
                         logger.debug("SpatialDepthMetric §V44: weitere Mono-Kompatibilitätswarnungen unterdrückt")
                         self._mono_warn_count += 1
         except Exception as _v44_exc:
-            logger.debug("SpatialDepthMetric §V44 stereo_guard.compute_iacc non-blocking: %s", _v44_exc)
+            logger.debug("SpatialDepthMetric §V44 stereo_guard.berechnen_iacc nicht blockierend: %s", _v44_exc)
             iacc = self._compute_iacc(left, right, max_lag_ms=1.0, sr=sr)
         if _sds_v44 is None:
             _sds_v44 = float(np.clip(1.0 - iacc, 0.0, 1.0))
@@ -2952,7 +2964,7 @@ class TimbralAuthenticityMetric:
                 norm = float(np.linalg.norm(emb) + 1e-12)
                 return np.asarray(emb / norm, dtype=np.float32)
             except Exception as e:
-                logger.warning("musical_goals_metrics.py::_compute_ecapa_embedding fallback: %s", e)
+                logger.warning("musical_goals_metrics.py::_berechnen_ecapa_embedding Ersatzpfad: %s", e)
                 return None
 
         try:
@@ -2969,7 +2981,7 @@ class TimbralAuthenticityMetric:
                     norm = float(np.linalg.norm(emb) + 1e-12)
                     return np.asarray(emb / norm, dtype=np.float32)
         except Exception:  # plugin absent → DSP fallback
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         try:
             mono = np.asarray(audio if audio.ndim == 1 else np.mean(audio, axis=0), dtype=np.float32)
@@ -3027,7 +3039,7 @@ class TimbralAuthenticityMetric:
             norm = float(np.linalg.norm(emb) + 1e-12)
             return np.asarray(emb / norm, dtype=np.float32)
         except Exception as e:
-            logger.warning("musical_goals_metrics.py::_delta fallback: %s", e)
+            logger.warning("musical_goals_metrics.py::_delta Ersatzpfad: %s", e)
             return None
 
     def _compare(self, ref: np.ndarray, deg: np.ndarray, sr: int) -> float:
@@ -3294,7 +3306,7 @@ class TonalCenterMetric:
                 _sos_lp = _SCIPY_BUTTER(4, 4000.0 / _nyq, btype="low", output="sos")
                 audio_mono = _SCIPY_SOSFILTFILT(_sos_lp, audio_mono).astype(np.float32)
             except Exception as e:
-                logger.warning("musical_goals_metrics.py::_chroma fallback: %s", e)
+                logger.warning("musical_goals_metrics.py::_chroma Ersatzpfad: %s", e)
                 pass  # Filter unavailable — continue with full-bandwidth chroma (conservative)
         try:
             n_fft = _safe_fft_size(len(audio_mono), target=2048, minimum=64)
@@ -3308,7 +3320,7 @@ class TonalCenterMetric:
                 tuning=0.0,
             ).astype(np.float32)
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         # DSP-Fallback — cap at 4 kHz (consistent with librosa path above)
         n_fft = min(4096, len(audio_mono))
         hop = 2048
@@ -4227,7 +4239,7 @@ class MusicalGoalsChecker:
         _audio_hash = hash(audio.tobytes()) if hasattr(audio, "tobytes") else id(audio)
         _cache = getattr(self, "_measure_all_cache", {})
         if _cache.get("hash") == _audio_hash and _cache.get("sr") == sr:
-            logger.debug("measure_all: cache hit (hash=%d, saved 6s)", _audio_hash % 10000)
+            logger.debug("measure_all: Zwischenspeicher hit (hash=%d, gespeichert 6s)", _audio_hash % 10000)
             return dict(_cache["result"])
         if _is_fast_validation_context():
             result = self._measure_all_fast_validation(
@@ -4310,19 +4322,19 @@ class MusicalGoalsChecker:
                     )
                     scores[goal_name] = 0.5
                 else:
-                    logger.warning("measure_all: goal=%s failed: %s — using 0.0", goal_name, _metric_exc)
+                    logger.warning("measure_all: goal=%s fehlgeschlagen: %s — using 0.0", goal_name, _metric_exc)
                     scores[goal_name] = 0.0
             _dt = time.perf_counter() - _t0
             # §v10.17: Per-Goal-Timeout (15s). Ein Goal (z.B. authentizitaet mit MERT, 114s)
             # darf nicht ALLE anderen Goals killen. Bei Timeout → neutral 0.5 statt Gesamtausfall.
             if _dt > 15.0:
-                logger.error("measure_all: goal=%s TIMEOUT after %.1fs — using neutral 0.5", goal_name, _dt)
+                logger.error("measure_all: goal=%s Zeitlimit after %.1fs — using neutral 0.5", goal_name, _dt)
                 scores[goal_name] = 0.5
             elif _dt > 8.0:  # §v10.0.4: 5.0→8.0 — waerme-Spektralanalyse auf 225s dauert 6.1s
                 logger.warning("measure_all: goal=%s took %.1f s", goal_name, _dt)
             else:
                 logger.debug("measure_all: goal=%s %.3f s", goal_name, _dt)
-        logger.info("measure_all: 15 goals completed in %.1f s", time.perf_counter() - _t_all_start)
+        logger.info("measure_all: 15 goals abgeschlossen in %.1f s", time.perf_counter() - _t_all_start)
 
         # §1.4.6 [RELEASE_MUST] Transient-Energie (15. Goal) — nur wenn reference vorhanden
         # PHASE_GOAL_EXCLUSIONS: phase_18 + phase_26 sind ausgenommen (see transient_energy_metric.py)
@@ -4345,7 +4357,7 @@ class MusicalGoalsChecker:
                     _tem_result.get("is_valid", False),
                 )
             except Exception as _tem_exc:
-                logger.debug("measure_all transient_energie non-blocking: %s", _tem_exc)
+                logger.debug("measure_all transient_energie nicht blockierend: %s", _tem_exc)
                 scores.setdefault("transient_energie", 1.0)
         else:
             scores.setdefault("transient_energie", 1.0)
@@ -4412,7 +4424,7 @@ class MusicalGoalsChecker:
             scores["natuerlichkeit"] = float(np.clip(scores["natuerlichkeit"] + 0.01, 0.0, 1.0))
 
         logger.info(
-            "measure_all: fast-validation path aktiv (material=%s, ref=%s, rms=%.4f)",
+            "measure_all: fast-Validierung path aktiv (material=%s, ref=%s, rms=%.4f)",
             material_type,
             reference is not None,
             rms,
@@ -4720,6 +4732,6 @@ if __name__ == "__main__":
     for _goal, _score in _scores.items():
         _threshold = _checker.thresholds[_goal]
         _passed = "✅" if _score >= _threshold else "❌"
-        logger.debug("  %s %s: %.3f (thresh: %.2f)", _passed, _goal, _score, _threshold)
+        logger.debug("  %s %s: %.3f (Schwelle: %.2f)", _passed, _goal, _score, _threshold)
 
     logger.debug("\n=== Test abgeschlossen ===")

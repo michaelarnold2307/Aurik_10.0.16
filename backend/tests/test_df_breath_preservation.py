@@ -61,7 +61,7 @@ def test_breath_preservation():
     sr = 48000
 
     guard = DeepFilterNetGuard()
-    guard._hallucination_threshold = 0.99  # Deaktiviere Guard für Test
+    guard._hallucination_threshold = 0.99  # type: ignore[attr-defined]  # Deaktiviere Guard für Test
 
     if not guard._ensure_loaded():
         logger.warning("⚠ DeepFilterNet nicht verfügbar — Test übersprungen")
@@ -92,7 +92,7 @@ def test_breath_preservation():
     logger.info("=" * 60)
     logger.info("DeepFilterNet Breath-Preservation Test")
     logger.info("=" * 60)
-    logger.info(f"  Atemsegmente:  {np.sum(breath_mask)} samples ({np.sum(breath_mask)/len(audio)*100:.1f}%)")
+    logger.info(f"  Atemsegmente:  {np.sum(breath_mask)} samples ({np.sum(breath_mask) / len(audio) * 100:.1f}%)")
     logger.info(f"  RMS Atem Δ:    {rms_delta_db:+.2f} dB (< 3 dB = preservation)")
     logger.info(f"  Korrelation:   {corr:.4f} (> 0.95 = preservation)")
     logger.info(f"  RMS Nicht-Atem Δ: {non_breath_delta_db:+.2f} dB (≠ 0 = denoising aktiv)")

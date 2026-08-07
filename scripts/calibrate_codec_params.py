@@ -53,15 +53,15 @@ def run_amrb_scenario(params: dict[str, float]) -> dict[str, float]:
             n_items_per_scenario=1,
             enable_mushra_proxy=False,
         )
-        report = run_benchmark(config, scenario_filter=["AMRB-06-VOCAL"])
+        report = run_benchmark(config, scenario_filter=["AMRB-06-VOCAL"])  # type: ignore[call-arg]
 
         return {
             "overall_score": report.overall_score,
             "n_passed": report.n_passed,
-            "vocal_score": report.scenario_scores.get("AMRB-06-VOCAL", 0.0),
+            "vocal_score": report.scenario_scores.get("AMRB-06-VOCAL", 0.0),  # type: ignore[attr-defined]
         }
     except Exception as exc:
-        logger.warning("AMRB run failed: %s", exc)
+        logger.warning("AMRB Ausfuehrung fehlgeschlagen: %s", exc)
         return {"overall_score": 0.0, "n_passed": 0, "vocal_score": 0.0}
 
 

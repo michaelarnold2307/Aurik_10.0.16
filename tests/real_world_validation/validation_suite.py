@@ -17,6 +17,7 @@ import argparse
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import librosa
 import numpy as np
@@ -32,7 +33,7 @@ class ValidationSuite:
 
     def __init__(self, reference_dir: Path | None = None):
         self.reference_dir = reference_dir
-        self.results = {}
+        self.results: dict[Any, Any] = {}
 
     def analyze_file(self, audio_path: Path, reference_path: Path | None = None) -> dict:
         """
@@ -64,16 +65,16 @@ class ValidationSuite:
         }
 
         # Compute metrics
-        metrics["snr"] = self._compute_snr(audio_mono, sr)
-        metrics["thd"] = self._compute_thd(audio_mono, sr)
-        metrics["spectral"] = self._compute_spectral_metrics(audio_mono, sr)
-        metrics["dynamics"] = self._compute_dynamics(audio_mono, sr)
-        metrics["frequency_response"] = self._compute_frequency_response(audio_mono, sr)
+        metrics["snr"] = self._compute_snr(audio_mono, sr)  # type: ignore[arg-type]
+        metrics["thd"] = self._compute_thd(audio_mono, sr)  # type: ignore[arg-type]
+        metrics["spectral"] = self._compute_spectral_metrics(audio_mono, sr)  # type: ignore[arg-type]
+        metrics["dynamics"] = self._compute_dynamics(audio_mono, sr)  # type: ignore[arg-type]
+        metrics["frequency_response"] = self._compute_frequency_response(audio_mono, sr)  # type: ignore[arg-type]
 
         # Reference-based metrics (if reference available)
         if reference_path and reference_path.exists():
             ref_audio, ref_sr = librosa.load(reference_path, sr=sr, mono=True)
-            metrics["reference_based"] = self._compute_reference_metrics(audio_mono, ref_audio, sr)
+            metrics["reference_based"] = self._compute_reference_metrics(audio_mono, ref_audio, sr)  # type: ignore[arg-type]
 
         return metrics
 
@@ -206,7 +207,7 @@ class ValidationSuite:
             frame = audio[i : i + frame_length]
             frames_rms.append(np.sqrt(np.mean(frame**2)))
 
-        frames_rms = np.array(frames_rms)
+        frames_rms = np.array(frames_rms)  # type: ignore[assignment]
         loud_level = np.percentile(frames_rms, 90)
         quiet_level = np.percentile(frames_rms, 10)
 
@@ -321,14 +322,14 @@ class ValidationSuite:
                 except Exception as e:
                     logger.error(f"Failed to analyze {wav_file}: {e}")
 
-            results["categories"][category] = {"file_count": len(category_results), "files": category_results}
+            results["categories"][category] = {"file_count": len(category_results), "files": category_results}  # type: ignore[index]
 
             # Compute category statistics
             if category_results:
                 avg_snr = np.mean([f["snr"] for f in category_results])
                 avg_thd = np.mean([f["thd"] for f in category_results])
 
-                results["categories"][category]["statistics"] = {
+                results["categories"][category]["statistics"] = {  # type: ignore[index]
                     "avg_snr_db": float(avg_snr),
                     "avg_thd_percent": float(avg_thd),
                 }
@@ -352,7 +353,7 @@ class ValidationSuite:
         """
         logger.info("Comparing baseline vs test...")
 
-        comparison = {
+        comparison: dict[str, Any] = {
             "comparison_date": "2026-02-09",
             "baseline": str(baseline_dir),
             "test": str(test_dir),

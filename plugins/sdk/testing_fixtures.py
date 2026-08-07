@@ -48,7 +48,7 @@ def make_test_audio(
     if channels == 2:
         signal = np.column_stack([signal, signal * 0.95])
 
-    return signal.astype(np.float32)
+    return signal.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def make_noisy_audio(
@@ -92,7 +92,7 @@ def make_noisy_audio(
             pos = rng.randint(0, result.shape[0] - 20)
             result[pos : pos + 5, :] += 0.5 * rng.randn(5, channels)
 
-    return result.astype(np.float32)
+    return result.astype(np.float32)  # type: ignore[no-any-return]
 
 
 @dataclass

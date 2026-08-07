@@ -291,7 +291,7 @@ class TestTeamCoordinationEventExtraction:
         assert len(team_evs) == 2
         assert team_evs[0]["phase_id"] == "phase_50_spectral_repair"
         assert team_evs[0]["reason"] == "phase50_after_hf_restoration"
-        assert "brillanz" in team_evs[0]["excluded_goals"]
+        assert "brillanz" in team_evs[0]["excluded_goals"]  # type: ignore[operator]
         assert team_evs[0]["threshold_mult"] == 1.08
         assert team_evs[1]["reason"] == "transition_additive_to_subtractive"
 
@@ -499,7 +499,7 @@ class TestHearingPreservation:
             + np.sin(2 * np.pi * 3520 * t) * 0.12
             + np.sin(2 * np.pi * 5280 * t) * 0.08
         )
-        return sig.astype(np.float32)
+        return sig.astype(np.float32)  # type: ignore[no-any-return]
 
     def _hf_energy(self, signal: np.ndarray, cutoff_hz: float = 2000.0) -> float:
         """Energie oberhalb cutoff_hz via FFT."""

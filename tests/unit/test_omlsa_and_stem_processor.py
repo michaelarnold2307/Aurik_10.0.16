@@ -21,7 +21,7 @@ SR = 44100
 
 def _sine(n: int = 2048, freq: float = 440.0, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, n / SR, n, endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise_mag(n: int = 512, level: float = 0.02) -> np.ndarray:

@@ -107,7 +107,7 @@ def _freq_dependent_ms_width(
     if n_fft <= hop:
         n_fft = hop * 2  # Ensure nperseg > hop for valid noverlap
     if len(S) < n_fft:
-        return S  # Audio too short for STFT
+        return S  # type: ignore[no-any-return]  # Audio too short for STFT
     _, _, Z = sig.stft(
         S,
         fs=sr,
@@ -239,7 +239,7 @@ class StereoWidthEnhancerPhase(PhaseInterface):
         if not _p48_studio:
             effective_strength = float(np.clip(effective_strength, 0.0, 0.25))
             logger.debug(
-                "phase_48: Restoration-Mode — Strength auf %.2f, Width-Cap 1.08 (Gesang-Präsenz-Schutz)",
+                "Verarbeitungsschritt_48: Restoration-Betriebsart — Strength auf %.2f, Width-Cap 1.08 (Gesang-Präsenz-Schutz)",
                 effective_strength,
             )
         _p48_width_default = _DEFAULT_WIDTH if _p48_studio else 1.08
@@ -286,7 +286,7 @@ class StereoWidthEnhancerPhase(PhaseInterface):
                 L_out, R_out = _freq_dependent_ms_width(L, R, sample_rate, reduced_width, diffuse)
                 side_reduction = reduced_width / width if width > 0 else 1.0
                 logger.debug(
-                    "Phase 48 IACC-Guard: iacc=%.3f < %.2f → width %.2f → %.2f",
+                    "Verarbeitungsschritt 48 IACC-Guard: iacc=%.3f < %.2f → width %.2f → %.2f",
                     iacc_val,
                     _IACC_MIN,
                     width,
@@ -311,20 +311,23 @@ class StereoWidthEnhancerPhase(PhaseInterface):
             _hg_48 = check_hallucination(audio, processed, sr=sample_rate, mode=_mode_48)
             if _hg_48.requires_rollback:
                 logger.warning(
-                    "phase_48: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_48.spectral_novelty
+                    "Verarbeitungsschritt_48: hallucination_guard rollback (spectral_novelty=%.3f)",
+                    _hg_48.spectral_novelty,
                 )
                 processed = np.clip(np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             elif _hg_48.score_penalty > 0.0:
                 logger.info(
-                    "phase_48: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
+                    "Verarbeitungsschritt_48: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_48.score_penalty,
                     _hg_48.spectral_novelty,
                 )
         except Exception as _hg48_exc:
-            logger.debug("phase_48: hallucination_guard failed (non-blocking): %s", _hg48_exc)
+            logger.debug(
+                "Verarbeitungsschritt_48: hallucination_guard fehlgeschlagen (nicht blockierend): %s", _hg48_exc
+            )
 
         logger.info(
-            "Phase 48 StereoWidth: width=%.2f, diffuse=%s, iacc=%.3f, side_red=%.2f",
+            "Verarbeitungsschritt 48 StereoWidth: width=%.2f, diffuse=%s, iacc=%.3f, side_red=%.2f",
             width,
             diffuse,
             iacc_val,

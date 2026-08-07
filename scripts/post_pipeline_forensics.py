@@ -9,6 +9,7 @@ Usage:
   python scripts/post_pipeline_forensics.py
 
   # In Pipeline integriert (wird von UV3._execute_pipeline am Ende aufgerufen):
+from typing import Any
   from scripts.post_pipeline_forensics import run_forensics
   run_forensics(q_score=result_quality_score)
 """
@@ -18,6 +19,7 @@ import logging
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
@@ -59,7 +61,7 @@ def run_forensics(q_score: float | None = None, since: str | None = None) -> dic
     agg = ExceptionAggregator()
     entries = agg.aggregate(since=since)  # §v10.711: Zeitgefiltert
     total = sum(e.count for e in entries)
-    by_pattern = {}
+    by_pattern: dict[Any, Any] = {}  # type: ignore[name-defined]
     for e in entries:
         by_pattern[e.pattern_class] = by_pattern.get(e.pattern_class, 0) + e.count
     unclassified = by_pattern.get("UNCLASSIFIED", 0)

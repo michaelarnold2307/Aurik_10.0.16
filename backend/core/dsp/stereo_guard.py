@@ -107,7 +107,7 @@ def check_mono_compatibility(
         )
 
     except Exception as exc:
-        logger.debug("check_mono_compatibility non-blocking: %s", exc)
+        logger.debug("Pruefung_mono_compatibility nicht blockierend: %s", exc)
         return _fallback
 
 
@@ -233,5 +233,5 @@ def compute_iacc(
         )
 
     except Exception as exc:
-        logger.debug("compute_iacc non-blocking: %s", exc)
+        logger.debug("berechnen_iacc nicht blockierend: %s", exc)
         return _fallback_wide

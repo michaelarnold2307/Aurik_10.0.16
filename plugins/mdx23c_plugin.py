@@ -102,9 +102,9 @@ class MDX23CModel:
                         try:
                             _rel(f"MDX23C_{self.stem_key}")
                         except Exception:
-                            logger.warning("mdx23c_plugin.py::_load fallback", exc_info=True)
+                            logger.warning("mdx23c_plugin.py::_laden Ersatzpfad", exc_info=True)
                         if not _try_alloc(f"MDX23C_{self.stem_key}", size_gb=0.55):
-                            logger.warning("MDX23C [%s]: ML-Budget erschöpft — NMF-β-Fallback", self.stem_key)
+                            logger.warning("MDX23C [%s]: ML-Grenze erschöpft — NMF-β-Ersatzpfad", self.stem_key)
                             return
                 except Exception:
                     _rel = None  # Budget-Modul nicht verfügbar (harmlos bei raise, kein fail-open da try_alloc bereits im Fehlerpfad)
@@ -144,7 +144,7 @@ class MDX23CModel:
                         unload_fn=lambda s=self: setattr(s, "_session", None) or setattr(s, "_ok", False),
                     )
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
                 return
             except Exception as exc:
                 logger.debug("MDX23C [%s] Ladefehler (%s): %s", self.stem_key, path.name, exc)
@@ -153,9 +153,9 @@ class MDX23CModel:
 
                     _release(f"MDX23C_{self.stem_key}")
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
-        logger.warning("MDX23C [%s]: Kein ONNX-Modell gefunden — NMF-β-Fallback aktiv", self.stem_key)
+        logger.warning("MDX23C [%s]: Kein ONNX-Modell gefunden — NMF-β-Ersatzpfad aktiv", self.stem_key)
 
     # ------------------------------------------------------------------
     def separate(self, audio: np.ndarray, sr: int) -> np.ndarray:
@@ -189,18 +189,18 @@ class MDX23CModel:
                 _plm_mdx = _get_plm_fn()
                 _plm_mdx.set_active(f"MDX23C_{self.stem_key}", True)
             except Exception as _exc:
-                logger.debug("MDX23C: PLM set_active failed: %s", _exc)
+                logger.debug("MDX23C: PLM set_active fehlgeschlagen: %s", _exc)
             try:
                 out = self._mdx_separate(resampled)
             except Exception as exc:
-                logger.warning("MDX23C ONNX-Fehler: %s — NMF-β-Fallback", exc)
+                logger.warning("MDX23C ONNX-Fehler: %s — NMF-β-Ersatzpfad", exc)
                 out = self._nmf_beta_fallback(resampled, is_vocals=is_vocals)
             finally:
                 if _plm_mdx is not None:
                     try:
                         _plm_mdx.set_active(f"MDX23C_{self.stem_key}", False)
                     except Exception as _exc:
-                        logger.debug("MDX23C: PLM unset_active failed: %s", _exc)
+                        logger.debug("MDX23C: PLM unset_active fehlgeschlagen: %s", _exc)
         else:
             out = self._nmf_beta_fallback(resampled, is_vocals=is_vocals)
 
@@ -400,7 +400,7 @@ class MDX23CModel:
                 sdr_proxy_db = 10.0 * np.log10(target_in_band / (reject_in_band + 1e-12) + 1e-12)
                 if sdr_proxy_db < 5.0:
                     logger.debug(
-                        "MDX23C NMF-β: Proxy-SDR %.1f dB < 5 dB — HPSS-Fallback",
+                        "MDX23C NMF-β: Proxy-SDR %.1f dB < 5 dB — HPSS-Ersatzpfad",
                         sdr_proxy_db,
                     )
                     return MDX23CModel._hpss_fallback(audio, is_vocals)
@@ -419,14 +419,14 @@ class MDX23CModel:
                 result.append(out)
 
             logger.info(
-                "MDX23C NMF-β-Fallback: %s Stem (K=%d, SDR-Proxy≥5 dB OK)",
+                "MDX23C NMF-β-Ersatzpfad: %s Stem (K=%d, SDR-Proxy≥5 dB OK)",
                 "vocals" if is_vocals else "instruments",
                 K,
             )
             return np.stack(result)
 
         except Exception as exc:
-            logger.warning("MDX23C NMF-β fehlgeschlagen: %s — HPSS-Fallback", exc)
+            logger.warning("MDX23C NMF-β fehlgeschlagen: %s — HPSS-Ersatzpfad", exc)
             return MDX23CModel._hpss_fallback(audio, is_vocals)
 
     @staticmethod
@@ -446,7 +446,7 @@ class MDX23CModel:
                 result.append(H if is_vocals else P)
             return np.stack(result)
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # Numpy-only Fallback: Medianfilter auf Spektrogramm
         try:
@@ -483,7 +483,7 @@ class MDX23CModel:
                 result.append(sig)
             return np.stack(result)
         except Exception:
-            logger.warning("mdx23c_plugin.py::_hpss_fallback fallback", exc_info=True)
+            logger.warning("mdx23c_plugin.py::_hpss_Ersatzpfad Ersatzpfad", exc_info=True)
             return audio.copy()
 
     @staticmethod
@@ -500,7 +500,7 @@ class MDX23CModel:
             out = np.stack([resample_poly(ch, up, dn).astype(np.float32) for ch in audio])
             return out, tgt
         except Exception:
-            logger.warning("mdx23c_plugin.py::_resample fallback", exc_info=True)
+            logger.warning("mdx23c_plugin.py::_resample Ersatzpfad", exc_info=True)
             return audio, src
 
 
@@ -585,7 +585,7 @@ class MDX23CPlugin:
             sf.write(output_wav, result.T if result.ndim == 2 else result, sr)
             logger.info("✅ MDX23C [%s]: %s → %s", stem, input_wav, output_wav)
         except Exception as exc:
-            logger.error("MDX23C process_files [%s] fehlgeschlagen: %s", stem, exc)
+            logger.error("MDX23C verarbeiten_files [%s] fehlgeschlagen: %s", stem, exc)
             raise
 
     def process_batch(
@@ -657,7 +657,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     if len(sys.argv) < 3:
-        logger.debug("Verwendung: mdx23c_plugin.py <input.wav> <output.wav> [stem=vocals]")
+        logger.debug("Verwendung: mdx23c_plugin.py <Eingabe.wav> <Ausgabe.wav> [stem=vocals]")
         sys.exit(1)
     stem = sys.argv[3] if len(sys.argv) > 3 else "vocals"
     get_mdx23c_plugin().process_files(sys.argv[1], sys.argv[2], stem=stem)

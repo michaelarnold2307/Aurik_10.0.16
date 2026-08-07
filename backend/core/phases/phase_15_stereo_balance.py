@@ -155,6 +155,7 @@ class StereoBalancePhaseV2(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -182,6 +183,7 @@ class StereoBalancePhaseV2(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -617,13 +619,13 @@ if __name__ == "__main__":
         result = phase.process(test_audio, test_sample_rate, test_material)
 
         if result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2fx realtime)",
                 result.execution_time_seconds,
                 result.execution_time_seconds / duration,
             )
-            logger.debug("   Correction Applied: %s", result.metadata["correction_applied"])
+            logger.debug("   Correction angewendet: %s", result.metadata["correction_applied"])
             if result.metadata["correction_applied"]:
                 logger.debug("   Global Imbalance Before: %.2f dB", result.metrics["imbalance_db_before"])
                 logger.debug("   Global Imbalance After: %.2f dB", result.metrics["imbalance_db_after"])
@@ -635,13 +637,13 @@ if __name__ == "__main__":
                 logger.debug("   Band 2 (High) Before: %.2f dB", result.metrics["band_2_imbalance_before"])
                 logger.debug("   Band 2 (High) After: %.2f dB", result.metrics["band_2_imbalance_after"])
         else:
-            logger.debug("❌ Processing failed!")
+            logger.debug("❌ Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Stereo Balance v2.0 Test Complete!")
+    logger.debug("✅ Professional Stereo Balance v2.0 Test vollstaendig!")
     logger.debug("=" * 80)
     logger.debug("Algorithm: multiband_spectral_balance_v2")
-    logger.debug("Scientific Reference: Rumsey (2001), Bech & Zacharov (2006), Toole (2008),")
+    logger.debug("Scientific Referenz: Rumsey (2001), Bech & Zacharov (2006), Toole (2008),")
     logger.debug("                     ITU-R BS.1770-4, EBU R128, Moore (2012)")
     logger.debug("Benchmark: iZotope Ozone Imager, Brainworx bx_digital V3, Waves Center,")
     logger.debug("           TC Electronic Finalizer, Nugen Audio VisLM, SSL X-ISM")

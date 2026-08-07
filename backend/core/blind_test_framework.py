@@ -137,7 +137,7 @@ class ABXTestHarness:
                 )
             )
 
-        correct = sum(1 for r in results if r.correct)
+        correct = sum(1 for r in results if r.correct)  # type: ignore
         p_value = _binomial_p_value(correct, self.num_trials, p0=0.5)
 
         return ABXSession(
@@ -168,7 +168,7 @@ class ABXTestHarness:
     def _to_mono(audio: np.ndarray) -> np.ndarray:
         if audio.ndim == 1:
             return audio
-        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]
 
 
 # ── §G50 MUSHRA Proxy ───────────────────────────────────────────────────
@@ -369,7 +369,7 @@ class MUSHRAScorer:
     def _to_mono(audio: np.ndarray) -> np.ndarray:
         if audio.ndim == 1:
             return audio
-        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────

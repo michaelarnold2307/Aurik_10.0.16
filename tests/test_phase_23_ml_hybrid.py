@@ -67,7 +67,7 @@ def create_test_audio(duration: float = 2.0, sample_rate: int = 44100) -> np.nda
         if 0 <= pos < len(audio):
             audio[pos] = 0.8 * np.sign(audio[pos])
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit
@@ -87,7 +87,7 @@ def test_quality_modes():
         print(f"\n--- Testing Mode: {mode.value.upper()} ---")
         QualityModeConfig.set_mode(mode)
 
-        result = phase.process(audio, 44100, material)
+        result = phase.process(audio, 44100, material)  # type: ignore[arg-type]
 
         results[mode.value] = {
             "success": result.success,
@@ -155,9 +155,9 @@ def test_defect_severity_routing():
 
     for case in test_cases:
         print(f"\n--- {case['name']} ---")
-        audio = case["audio_gen"]()
+        audio = case["audio_gen"]()  # type: ignore[operator]
 
-        result = phase.process(audio, 44100, MaterialType.STREAMING)
+        result = phase.process(audio, 44100, MaterialType.STREAMING)  # type: ignore[arg-type]
 
         print(f"  Success: {result.success}")
         print(f"  RT Factor: {result.metadata.get('rt_factor', 0):.2f}×")
@@ -187,7 +187,7 @@ def test_dsp_fallback():
 
     # Simulate ML failure by using invalid audio
     # (AudioSR plugin should handle this gracefully)
-    result = phase.process(audio, 44100, MaterialType.CD_DIGITAL)
+    result = phase.process(audio, 44100, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
 
     print(f"Success: {result.success}")
     print(f"RT Factor: {result.metadata.get('rt_factor', 0):.2f}×")
@@ -211,7 +211,7 @@ def test_performance_comparison():
     print("\n--- DSP Mode (FAST) ---")
     QualityModeConfig.set_mode(QualityMode.FAST)
     start = time.time()
-    result_dsp = phase.process(audio, 44100, MaterialType.CD_DIGITAL)
+    result_dsp = phase.process(audio, 44100, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
     time_dsp = time.time() - start
 
     print(f"  Execution Time: {time_dsp:.3f}s")
@@ -222,7 +222,7 @@ def test_performance_comparison():
     print("\n--- Adaptive Mode (BALANCED) ---")
     QualityModeConfig.set_mode(QualityMode.BALANCED)
     start = time.time()
-    result_ml = phase.process(audio, 44100, MaterialType.CD_DIGITAL)
+    result_ml = phase.process(audio, 44100, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
     time_ml = time.time() - start
 
     print(f"  Execution Time: {time_ml:.3f}s")
@@ -284,7 +284,7 @@ def test_real_audio_file():
 
         # Test BALANCED mode
         QualityModeConfig.set_mode(QualityMode.BALANCED)
-        result = phase.process(audio, sr, MaterialType.CD_DIGITAL)
+        result = phase.process(audio, sr, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
 
         print(f"  Success: {result.success}")
         print(f"  RT Factor: {result.metadata.get('rt_factor', 0):.2f}×")

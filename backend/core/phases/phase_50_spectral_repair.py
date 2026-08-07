@@ -338,6 +338,7 @@ class SpectralRepairPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -388,6 +389,7 @@ class SpectralRepairPhase(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -428,11 +430,12 @@ class SpectralRepairPhase(PhaseInterface):
             _pim = apply_pim_intensity(
                 kwargs, "spectral_repair2", default_nr=0.45, default_de_ess=0.25, default_comp=1.0
             )
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_50_spectral_repair.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_50_spectral_repair.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         audio, _p50_transposed = to_channels_last(audio)
         self.validate_input(audio)
@@ -458,7 +461,7 @@ class SpectralRepairPhase(PhaseInterface):
                     _zone_frac_50 = float(np.clip(_zone_s_50 / max(1, _n_s_50), 0.0, 1.0))
                     effective_strength = float(np.clip(effective_strength + _zone_frac_50 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_50:
-                logger.debug("Phase50 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_50)
+                logger.debug("Verarbeitungsschritt50 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_50)
 
         if effective_strength <= 1e-6:
             dry = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -566,7 +569,7 @@ class SpectralRepairPhase(PhaseInterface):
                         if _end > _start:
                             _p50_vfa_zones.append((_start, _end, _cap))
                     except (TypeError, ValueError, IndexError):
-                        pass
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
                 _p50_vfa = kwargs.get("vfa_result") or {}
                 if isinstance(_p50_vfa, dict):
@@ -598,7 +601,7 @@ class SpectralRepairPhase(PhaseInterface):
                                 audio = _audio_evt_pre50 * (1.0 - _pz_cap50) + audio * _pz_cap50
                                 break
                 logger.info(
-                    "Phase50 §4.11 pre_echo_repair: n_events=%d, material=%s",
+                    "Verarbeitungsschritt50 §4.11 pre_echo_repair: n_events=%d, material=%s",
                     len(_pre_echo_events_50),
                     _mat_str_50,
                 )
@@ -609,12 +612,12 @@ class SpectralRepairPhase(PhaseInterface):
                 _pre_echo_sig_rms = float(np.sqrt(np.mean(_audio_pre_pre_echo.astype(np.float64) ** 2) + 1e-12))
                 if _pre_echo_diff_rms > _pre_echo_sig_rms * 0.25:
                     logger.warning(
-                        "Phase50 pre_echo_repair over-processing guard: diff_rms/sig_rms=%.3f > 0.25, rollback",
+                        "Verarbeitungsschritt50 pre_echo_repair over-processing guard: diff_rms/sig_rms=%.3f > 0.25, rollback",
                         _pre_echo_diff_rms / _pre_echo_sig_rms,
                     )
                     audio = _audio_pre_pre_echo
             except Exception as _ped50_exc:
-                logger.debug("Phase50 §4.11 pre_echo_repair non-blocking: %s", _ped50_exc)
+                logger.debug("Verarbeitungsschritt50 §4.11 pre_echo_repair nicht blockierend: %s", _ped50_exc)
 
         n_channels = 1 if audio.ndim == 1 else audio.shape[1]
         is_stereo = audio.ndim == 2
@@ -667,7 +670,7 @@ class SpectralRepairPhase(PhaseInterface):
         snr_before = 10.0 * np.log10(sig_power / noise_power)
 
         logger.info(
-            "Phase 50 SpectralRepair: n_repaired=%d, repair_ratio=%.5f",
+            "Verarbeitungsschritt 50 SpectralRepair: n_repaired=%d, repair_Verhaeltnis=%.5f",
             total_bins,
             repair_ratio,
         )
@@ -685,7 +688,7 @@ class SpectralRepairPhase(PhaseInterface):
                 mode="additive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase50 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt50 masking clamp nicht blockierend: %s", _pm_exc)
 
         repaired_audio = np.nan_to_num(repaired_audio, nan=0.0, posinf=0.0, neginf=0.0)
         repaired_audio = np.clip(repaired_audio, -1.0, 1.0)
@@ -723,17 +726,18 @@ class SpectralRepairPhase(PhaseInterface):
             )
             if _hg_result50.requires_rollback:
                 logger.warning(
-                    "§2.46e phase_50 Hallucination-Guard rollback: spectral_novelty=%.3f", _hg_result50.spectral_novelty
+                    "§2.46e Verarbeitungsschritt_50 Hallucination-Guard rollback: spectral_novelty=%.3f",
+                    _hg_result50.spectral_novelty,
                 )
                 repaired_audio = audio.copy()
             if _hg_result50.score_penalty > 0:
                 logger.info(
-                    "§2.46e phase_50 score_penalty=%.1f (spectral_novelty=%.3f)",
+                    "§2.46e Verarbeitungsschritt_50 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_result50.score_penalty,
                     _hg_result50.spectral_novelty,
                 )
         except Exception as _hg50_exc:
-            logger.debug("§2.46e phase_50 Hallucination-Guard (non-blocking): %s", _hg50_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_50 Hallucination-Guard (nicht blockierend): %s", _hg50_exc)
 
         # §0p HNR-Blend nach STFT-Inpainting (RELEASE_MUST §0p): ΔHNR > 3 dB → Dry-Wet-Blend
         _p50_panns = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
@@ -747,7 +751,7 @@ class SpectralRepairPhase(PhaseInterface):
                 if _hnr_diag_p50.get("over_cleaned"):
                     repaired_audio = _hnr_blended_p50
             except Exception as _hnr_exc_p50:
-                logger.debug("§0p HNR-Blend phase_50 (non-blocking): %s", _hnr_exc_p50)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_50 (nicht blockierend): %s", _hnr_exc_p50)
 
         # §V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach STFT-Inpainting (RELEASE_MUST §0p V19-V26)
         _mat50_guards = str(kwargs.get("material_type", _material_50) or "unknown").lower()
@@ -761,9 +765,11 @@ class SpectralRepairPhase(PhaseInterface):
                 _nt50_d = _nt50_dist_fn(_nt50_residual, _mat50_guards, sr=sample_rate)
                 if _nt50_d > 0.25:
                     repaired_audio = (0.5 * repaired_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_50: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt50_d)
+                    logger.warning(
+                        "§V19 Verarbeitungsschritt_50: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt50_d
+                    )
         except Exception as _nt50_exc:
-            logger.debug("§V19 phase_50 noise_texture non-blocking: %s", _nt50_exc)
+            logger.debug("§V19 Verarbeitungsschritt_50 noise_texture nicht blockierend: %s", _nt50_exc)
 
         if _p50_panns >= 0.25:
             try:
@@ -782,12 +788,12 @@ class SpectralRepairPhase(PhaseInterface):
                         mikrodynamik_wet_scalar * repaired_audio + (1.0 - mikrodynamik_wet_scalar) * audio
                     ).astype(np.float32)
                     logger.warning(
-                        "§V20 phase_50: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f",
+                        "§V20 Verarbeitungsschritt_50: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f",
                         _corr50,
                         mikrodynamik_wet_scalar,
                     )
             except Exception as _v20_50_exc:
-                logger.debug("§V20 phase_50 mikrodynamik non-blocking: %s", _v20_50_exc)
+                logger.debug("§V20 Verarbeitungsschritt_50 mikrodynamik nicht blockierend: %s", _v20_50_exc)
 
         if any(x in _mat50_guards for x in ("shellac", "vinyl", "tape", "analog")):
             try:
@@ -797,7 +803,7 @@ class SpectralRepairPhase(PhaseInterface):
 
                 repaired_audio = _nfmin50(repaired_audio, sample_rate, _mat50_guards, original_audio=audio)
             except Exception as _v21_50_exc:
-                logger.debug("§V21 phase_50 noise_floor non-blocking: %s", _v21_50_exc)
+                logger.debug("§V21 Verarbeitungsschritt_50 noise_floor nicht blockierend: %s", _v21_50_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -810,7 +816,7 @@ class SpectralRepairPhase(PhaseInterface):
                 _sc_wet_50 = 0.70  # Phase-Strength −30 % (§V24)
                 repaired_audio = (_sc_wet_50 * repaired_audio + (1.0 - _sc_wet_50) * audio).astype(np.float32)
         except Exception as _sc_exc_50:  # pylint: disable=broad-except
-            logger.debug("§V24 phase_50 spectral_color non-blocking: %s", _sc_exc_50)
+            logger.debug("§V24 Verarbeitungsschritt_50 spectral_color nicht blockierend: %s", _sc_exc_50)
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel
@@ -819,7 +825,7 @@ class SpectralRepairPhase(PhaseInterface):
 
             repaired_audio = _opm50(audio, repaired_audio, None, max_delta_db=1.5)
         except Exception as _v26_50_exc:
-            logger.debug("§V26 phase_50 onset_guard non-blocking: %s", _v26_50_exc)
+            logger.debug("§V26 Verarbeitungsschritt_50 onset_guard nicht blockierend: %s", _v26_50_exc)
 
         if _p50_panns >= 0.25:
             try:
@@ -831,11 +837,11 @@ class SpectralRepairPhase(PhaseInterface):
                 if not _vibr50.ok:
                     repaired_audio = (0.5 * repaired_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§2.72 phase_50: vibrato_reduction=%.1f%% → 50%% dry-blend",
+                        "§2.72 Verarbeitungsschritt_50: vibrato_reduction=%.1f%% → 50%% dry-blend",
                         _vibr50.depth_reduction_pct,
                     )
             except Exception as _vib50_exc:
-                logger.debug("§2.72 phase_50 vibrato non-blocking: %s", _vib50_exc)
+                logger.debug("§2.72 Verarbeitungsschritt_50 vibrato nicht blockierend: %s", _vib50_exc)
 
         _rms_in_50 = float(np.sqrt(np.mean(np.asarray(audio, dtype=np.float64) ** 2) + 1e-12))
         _rms_out_50 = float(np.sqrt(np.mean(np.asarray(repaired_audio, dtype=np.float64) ** 2) + 1e-12))

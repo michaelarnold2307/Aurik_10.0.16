@@ -220,8 +220,8 @@ class TestONNXPluginManager:
         # Get info after loading
         manager.load_model("test_model")
         info = manager.get_model_info("test_model")
-        assert info["loaded"] == True
-        assert "statistics" in info
+        assert info["loaded"] == True  # type: ignore[index]
+        assert "statistics" in info  # type: ignore[operator]
 
     @patch("backend.core.onnx.plugin_manager.OptimizedONNXModel")
     def test_load_all_models(self, mock_model_class, mock_registry, tmp_path, mock_onnx_model):

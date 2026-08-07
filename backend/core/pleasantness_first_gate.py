@@ -151,7 +151,7 @@ class PleasantnessFirstGate:
         try:
             from backend.core.human_pleasantness_estimator import compute_pleasantness
 
-            hpe_current = compute_pleasantness(self._current_audio, self._original_sr)
+            hpe_current = compute_pleasantness(self._current_audio, self._original_sr)  # type: ignore[arg-type]
             hpe_candidate = compute_pleasantness(candidate_audio, self._original_sr)
 
             delta = hpe_candidate.score - hpe_current.score
@@ -168,7 +168,7 @@ class PleasantnessFirstGate:
                 )
             return True, (f"HPE-Gate ALLOWED {phase_name}: Pleasantness verbessert ({delta:+.3f})")
         except Exception as e:
-            logger.debug("PleasantnessFirstGate HPE check error: %s", e)
+            logger.debug("PleasantnessFirstGate HPE Pruefung error: %s", e)
             return True, f"HPE-Gate SKIPPED {phase_name}: HPE unavailable"
 
     def check_phase_end(self, phase_name: str, result_audio: np.ndarray) -> PhasePleasantness:
@@ -176,7 +176,7 @@ class PleasantnessFirstGate:
         try:
             from backend.core.human_pleasantness_estimator import compute_pleasantness
 
-            hpe_before = compute_pleasantness(self._current_audio, self._original_sr)
+            hpe_before = compute_pleasantness(self._current_audio, self._original_sr)  # type: ignore[arg-type]
             hpe_after = compute_pleasantness(result_audio, self._original_sr)
             delta = hpe_after.score - hpe_before.score
             improved = delta > HPE_MIN_IMPROVEMENT
@@ -213,7 +213,7 @@ class PleasantnessFirstGate:
 
             return check
         except Exception as e:
-            logger.debug("PleasantnessFirstGate phase-end error: %s", e)
+            logger.debug("PleasantnessFirstGate Verarbeitungsschritt-end error: %s", e)
             return PhasePleasantness(phase_name=phase_name, hpe_before=0.5, hpe_after=0.5, delta=0.0, improved=False)
 
     def should_skip_remaining(self) -> bool:

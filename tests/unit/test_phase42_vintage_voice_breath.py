@@ -38,7 +38,7 @@ def _make_vocal(f0: float = 220.0, duration_s: float = 1.0) -> np.ndarray:
     # Atemrauschen simulieren
     rng = np.random.default_rng(42)
     sig += rng.standard_normal(n) * 0.02
-    return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.6).astype(np.float32)
+    return (sig / (np.max(np.abs(sig)) + 1e-12) * 0.6).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

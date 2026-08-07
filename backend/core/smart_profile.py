@@ -88,7 +88,7 @@ def build_profile(material: str, era: int = 0, genre: str = "", mode: str = "res
         )
         return profile
     except Exception as e:
-        logger.debug("build_profile failed: %s", e)
+        logger.debug("build_Profil fehlgeschlagen: %s", e)
         return SmartProfile(material=material, era=era, genre=genre)
 
 

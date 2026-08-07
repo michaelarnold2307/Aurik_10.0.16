@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "aliases": [
+        "Elke Best - Du wolltest nur ein Abenteuer, aber ich suchte einen Freund",
+        "Du wolltest nur ein Abenteuer"
+      ],
+      "artist": "Elke Best",
+      "confidence": 1.0,
+      "release_medium": "vinyl",
+      "source": "user_confirmed",
+      "title": "Du wolltest nur ein Abenteuer, aber ich suchte einen Freund",
+      "transfer_chain": ["reel_tape", "lacquer_disc", "vinyl", "mp3_low"],
+      "year": 1977
+    }
+  ],
+  "version": 1
+}

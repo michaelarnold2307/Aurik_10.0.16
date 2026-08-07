@@ -122,7 +122,7 @@ class TestMPEGFrameLossDetector:
         from backend.core.defect_detection.mpeg_frame_loss import detect_mpeg_frame_loss
 
         audio = np.sin(2 * np.pi * 440 * np.linspace(0, 3, 3 * SR)).astype(np.float32)
-        locations, confidence = detect_mpeg_frame_loss(audio, SR)
+        locations, confidence = detect_mpeg_frame_loss(audio, SR)  # type: ignore[misc]
         assert isinstance(locations, list)
         assert 0.0 <= confidence <= 1.0
 
@@ -131,7 +131,7 @@ class TestMPEGFrameLossDetector:
 
         mono = np.sin(2 * np.pi * 440 * np.linspace(0, 3, 3 * SR)).astype(np.float32)
         stereo = np.column_stack([mono, mono * 0.9])
-        locations, confidence = detect_mpeg_frame_loss(stereo, SR)
+        locations, confidence = detect_mpeg_frame_loss(stereo, SR)  # type: ignore[misc]
         assert isinstance(locations, list)
         assert 0.0 <= confidence <= 1.0
 

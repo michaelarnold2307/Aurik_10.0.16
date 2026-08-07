@@ -117,7 +117,7 @@ def _evaluate_export_quality_gate(
     required = quality_gate.get("required_gates") or []
     required_str = ", ".join(str(x) for x in required) if required else "nicht angegeben"
     logger.warning(
-        "Quality gate failed. Recovery metadata required before export. reason=%s required_gates=%s degradation=%s",
+        "Quality gate fehlgeschlagen. Wiederherstellung metadata required before Ausgabe. reason=%s required_gates=%s degradation=%s",
         fail_reason,
         required_str,
         degradation_status,
@@ -333,11 +333,11 @@ def export_multi_version(
             )
             results[fmt] = path
         except Exception as e:
-            logger.debug("⚠️ Export failed for format '%s': %s", fmt, e)
+            logger.debug("⚠️ Ausgabe fehlgeschlagen for format '%s': %s", fmt, e)
             results[fmt] = None  # type: ignore[assignment]
 
     logger.debug(
-        "✓ Multi-version export complete: %s / %s formats", len([p for p in results.values() if p]), len(formats)
+        "✓ Multi-version Ausgabe vollstaendig: %s / %s formats", len([p for p in results.values() if p]), len(formats)
     )
     return results
 
@@ -460,12 +460,12 @@ def export_stems(
             results[stem_name] = path
             logger.debug("  ✓ %s → %s", stem_name, os.path.basename(path))
         except Exception as e:
-            logger.debug("  ⚠️  %s export failed: %s", stem_name, e)
+            logger.debug("  ⚠️  %s Ausgabe fehlgeschlagen: %s", stem_name, e)
             results[stem_name] = None  # type: ignore[assignment]
 
     # Print summary
     successful = len([p for p in results.values() if p])
-    logger.debug("✓ Stem export complete: %s/%s stems exported", successful, len(stems))
+    logger.debug("✓ Stem Ausgabe vollstaendig: %s/%s stems exported", successful, len(stems))
 
     # Print metrics
     metrics = separator.get_metrics()

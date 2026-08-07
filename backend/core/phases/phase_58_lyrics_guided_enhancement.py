@@ -97,7 +97,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
                     _zone_frac_58 = float(np.clip(_zone_s_58 / max(1, _n_s_58), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_58 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_58:
-                logger.debug("Phase58 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_58)
+                logger.debug("Verarbeitungsschritt58 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_58)
 
         if _effective_strength <= 0.0:
             return create_phase_result(
@@ -127,7 +127,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
         vocal_prob: float = float(kwargs.get("vocal_probability", 1.0))
         if vocal_prob < _VOCAL_PROB_MIN:
             logger.debug(
-                "phase_58_lyrics_guided_enhancement: skipped — vocal_prob=%.3f < %.2f",
+                "Verarbeitungsschritt_58_lyrics_guided_enhancement: uebersprungen — vocal_prob=%.3f < %.2f",
                 vocal_prob,
                 _VOCAL_PROB_MIN,
             )
@@ -165,7 +165,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
         if lge is None:
             _load_exc: BaseException = load_error if load_error is not None else RuntimeError("lge unavailable")
             logger.warning(
-                "phase_58_lyrics_guided_enhancement: LGE unavailable (%s) — DSP passthrough",
+                "Verarbeitungsschritt_58_lyrics_guided_enhancement: LGE nicht verfuegbar (%s) — DSP passthrough",
                 type(_load_exc).__name__,
             )
             return create_phase_result(
@@ -206,7 +206,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
                 )
                 transcription = pre_transcription
                 logger.info(
-                    "phase_58_lyrics_guided_enhancement: saliency path (pre-transcription) — %d segments",
+                    "Verarbeitungsschritt_58_lyrics_guided_enhancement: saliency path (pre-transcription) — %d segments",
                     len(pre_transcription.words) if pre_transcription is not None else 0,
                 )
             else:
@@ -224,7 +224,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
                     raise last_enhance_exc
         except Exception as exc:
             logger.warning(
-                "phase_58_lyrics_guided_enhancement: enhance() failed (%s) — passthrough",
+                "Verarbeitungsschritt_58_lyrics_guided_enhancement: verbessern() fehlgeschlagen (%s) — passthrough",
                 type(exc).__name__,
             )
             return create_phase_result(
@@ -248,7 +248,7 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
         warnings: list[str] = []
         if elapsed > latency_budget_s and latency_budget_s > 0.0:
             logger.warning(
-                "phase_58_lyrics_guided_enhancement: latency %.2f s > budget %.2f s for %.1f s audio",
+                "Verarbeitungsschritt_58_lyrics_guided_enhancement: latency %.2f s > Grenze %.2f s for %.1f s audio",
                 elapsed,
                 latency_budget_s,
                 dur_s,
@@ -296,9 +296,9 @@ class Phase58LyricsGuidedEnhancement(PhaseInterface):
             )
             if _hg58.requires_rollback:
                 audio_out = audio.copy()
-                logger.warning("§2.46e phase_58 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_58 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg58_exc:
-            logger.debug("§2.46e phase_58 HallucinationGuard (non-blocking): %s", _hg58_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_58 HallucinationGuard (nicht blockierend): %s", _hg58_exc)
 
         return create_phase_result(
             audio=audio_out,

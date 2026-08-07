@@ -62,7 +62,7 @@ class StreamingProcessor:
         # Bei kurzen Dateien direkt verarbeiten
         if n_total <= chunk_samples:
             logger.debug("StreamingProcessor: Datei kurz genug — Direktverarbeitung")
-            return process_fn(audio, sr, **kwargs)
+            return process_fn(audio, sr, **kwargs)  # type: ignore[no-any-return]
 
         is_stereo = audio.ndim == 2 and audio.shape[1] >= 2
         if is_stereo:

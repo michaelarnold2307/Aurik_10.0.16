@@ -41,7 +41,7 @@ class _DummyPhase:
 
     def process(self, audio: np.ndarray, sample_rate: int = 48000, **kwargs):
         self.last_strength = kwargs.get("strength")
-        self.last_kwargs = dict(kwargs)
+        self.last_kwargs = dict(kwargs)  # type: ignore[assignment]
         return create_phase_result(audio=np.asarray(audio, dtype=np.float32))
 
 
@@ -49,7 +49,7 @@ class _DummyPhase:
 def test_song_calibration_pullback_avoids_hard_edges():
     profile = UnifiedRestorerV3._build_song_calibration_profile(
         material_type=MaterialType.SHELLAC,
-        mode=QualityMode.BALANCED,
+        mode=QualityMode.BALANCED,  # type: ignore[arg-type]
         restorability_score=0.0,
         input_snr_db=-10.0,
         max_defect_severity=1.0,
@@ -67,7 +67,9 @@ def test_implicit_strength_gets_stability_corridor():
     phase = _DummyPhase("phase_03_denoise")
     uv3._conductor_strength_hints = {"phase_03_denoise": 0.99}
 
-    audio = np.zeros(1024, dtype=np.float32)
+    audio = (0.05 * np.sin(2 * np.pi * 440 * np.arange(1024) / 48000)).astype(
+        np.float32
+    )  # §Early-Silence-Gate: nonzero, sonst wird die Phase komplett übersprungen
     uv3._profiled_phase_call(phase, audio, sample_rate=48000)
 
     assert isinstance(phase.last_strength, float)
@@ -78,7 +80,9 @@ def test_explicit_strength_not_overridden_by_corridor():
     uv3 = UnifiedRestorerV3()
     phase = _DummyPhase("phase_03_denoise")
 
-    audio = np.zeros(1024, dtype=np.float32)
+    audio = (0.05 * np.sin(2 * np.pi * 440 * np.arange(1024) / 48000)).astype(
+        np.float32
+    )  # §Early-Silence-Gate: nonzero, sonst wird die Phase komplett übersprungen
     uv3._profiled_phase_call(phase, audio, sample_rate=48000, strength=0.99)
 
     assert isinstance(phase.last_strength, float)
@@ -89,7 +93,9 @@ def test_phase03_gets_tdp_stem_aware_nr_auto_injected():
     uv3 = UnifiedRestorerV3()
     phase = _DummyPhase("phase_03_denoise")
 
-    audio = np.zeros(1024, dtype=np.float32)
+    audio = (0.05 * np.sin(2 * np.pi * 440 * np.arange(1024) / 48000)).astype(
+        np.float32
+    )  # §Early-Silence-Gate: nonzero, sonst wird die Phase komplett übersprungen
     uv3._profiled_phase_call(phase, audio, sample_rate=48000)
 
     assert isinstance(phase.last_kwargs, dict)
@@ -100,7 +106,9 @@ def test_non_phase03_does_not_get_tdp_stem_aware_nr_injected():
     uv3 = UnifiedRestorerV3()
     phase = _DummyPhase("phase_29_tape_hiss_reduction")
 
-    audio = np.zeros(1024, dtype=np.float32)
+    audio = (0.05 * np.sin(2 * np.pi * 440 * np.arange(1024) / 48000)).astype(
+        np.float32
+    )  # §Early-Silence-Gate: nonzero, sonst wird die Phase komplett übersprungen
     uv3._profiled_phase_call(phase, audio, sample_rate=48000)
 
     assert isinstance(phase.last_kwargs, dict)
@@ -252,7 +260,7 @@ def test_extract_defect_focus_scores_uses_metadata_when_present():
 def test_wow_flutter_fingerprint_boosts_time_pitch_not_dynamics_eq():
     neutral = UnifiedRestorerV3._build_song_calibration_profile(
         material_type=MaterialType.TAPE,
-        mode=QualityMode.BALANCED,
+        mode=QualityMode.BALANCED,  # type: ignore[arg-type]
         restorability_score=60.0,
         input_snr_db=30.0,
         max_defect_severity=0.40,
@@ -261,7 +269,7 @@ def test_wow_flutter_fingerprint_boosts_time_pitch_not_dynamics_eq():
     )
     wow_heavy = UnifiedRestorerV3._build_song_calibration_profile(
         material_type=MaterialType.TAPE,
-        mode=QualityMode.BALANCED,
+        mode=QualityMode.BALANCED,  # type: ignore[arg-type]
         restorability_score=60.0,
         input_snr_db=30.0,
         max_defect_severity=0.40,
@@ -579,7 +587,9 @@ def test_phase53_profiled_phase_call_propagates_updated_genre_label():
     }
 
     phase = _DummyPhase("phase_07_harmonic_restoration")
-    audio = np.zeros(1024, dtype=np.float32)
+    audio = (0.05 * np.sin(2 * np.pi * 440 * np.arange(1024) / 48000)).astype(
+        np.float32
+    )  # §Early-Silence-Gate: nonzero, sonst wird die Phase komplett übersprungen
     uv3._profiled_phase_call(phase, audio, sample_rate=48000)
 
     assert isinstance(phase.last_kwargs, dict)

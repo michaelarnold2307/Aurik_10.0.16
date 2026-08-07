@@ -489,25 +489,25 @@ if __name__ == "__main__":
     import soundfile as sf
 
     if len(sys.argv) < 2:
-        logger.debug("Usage: python harmonic_character_analyzer.py <audio_file> [--enhance]")
+        logger.debug("Usage: python harmonic_character_analyzer.py <audio_file> [--verbessern]")
         sys.exit(1)
 
     # Load audio
     audio_path = sys.argv[1]
-    logger.debug("Analyzing: %s", audio_path)
+    logger.debug("analysiere: %s", audio_path)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(audio_path)
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Analyze
     analysis = analyze_harmonic_character(audio, sr)
 
     # Report
     logger.debug("\n" + "=" * 70)
-    logger.debug("HARMONIC CHARACTER ANALYSIS")
+    logger.debug("HARMONIC CHARACTER Analyse")
     logger.debug("=" * 70)
-    logger.debug("Harmonic Richness Score:  %.3f (threshold: 0.75)", analysis.harmonic_richness_score)
+    logger.debug("Harmonic Richness Wert:  %.3f (Schwelle: 0.75)", analysis.harmonic_richness_score)
     logger.debug("Status: %s", "✅ PASSED" if analysis.passed else "❌ FAILED")
     logger.debug("")
     logger.debug("Harmonic Distribution:")
@@ -542,7 +542,7 @@ if __name__ == "__main__":
         enhanced, report = enhance_harmonic_warmth(audio, sr, saturation_gain=suggestions["saturation_gain"])
         output_path = audio_path.replace(".wav", "_enhanced.wav")
         sf.write(output_path, enhanced, sr)
-        logger.debug("✅ Enhanced audio saved: %s", output_path)
+        logger.debug("✅ verbessert audio gespeichert: %s", output_path)
         logger.debug(
             f"   Even Harmonics: {report['even_harmonics_before']:.2f}% → {report['even_harmonics_after']:.2f}%"
         )

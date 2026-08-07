@@ -65,15 +65,15 @@ Version: 2.0.0 (Professional Upgrade)
 Date: 15. Februar 2026
 """
 
-import os
 import logging
+import os
 import time
 from typing import Any
 
 import numpy as np
 import scipy.signal as signal
-from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 
+from backend.core.audio_utils import safe_stft  # §v10.115 explicit wrapper (no monkey-patch)
 from backend.core.ml_model_readiness import check_ml_model_ready
 
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult, create_phase_result
@@ -397,9 +397,8 @@ class DenoisePhase(PhaseInterface):
         # §v10.303.14 Depth-Pre-Guard: Bei depth≥4 ist das Signal so
         # degradiert dass ML-Modelle (MIIPHER, BS-RoFormer) nur Artefakte
         # produzieren. Model-Ladung überspringen → 6min/Run gespart.
-        _chain_pre = (
-            kwargs.get("transfer_chain")
-            or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
+        _chain_pre = kwargs.get("transfer_chain") or (kwargs.get("_restoration_context", {}) or {}).get(
+            "transfer_chain", []
         )
         _depth_pre = len(_chain_pre) if _chain_pre else 1
         _str_pre = float(kwargs.get("strength", 1.0))
@@ -452,7 +451,7 @@ class DenoisePhase(PhaseInterface):
 
                 compute_per_band_nr_mask(_pim, sample_rate)
             except Exception:
-                logger.debug("process: silent except suppressed", exc_info=True)
+                logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         start_time = time.time()
         _progress_cb = kwargs.get("progress_sub_callback")
 
@@ -462,7 +461,7 @@ class DenoisePhase(PhaseInterface):
 
             _get_plm_evict().evict_for_phase("phase_03_denoise")
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
 
         def _report_progress(pct: float, label: str) -> None:
             if callable(_progress_cb):
@@ -486,7 +485,7 @@ class DenoisePhase(PhaseInterface):
             from backend.core.adaptive_parameter_infrastructure import derive_noise_floor
 
             _nf = derive_noise_floor(audio, sample_rate)
-            _bands_adaptive = dict(params.get("bands", {}))
+            _bands_adaptive = dict(params.get("bands", {}))  # type: ignore[call-overload]
             for _bname, _bfactors in _nf.get("band_reduction_factors", {}).items():
                 if _bname in _bands_adaptive:
                     # Adaptive Skalierung: mehr Reduktion wo Noise-Floor nah am Signal
@@ -497,12 +496,12 @@ class DenoisePhase(PhaseInterface):
             params["_noise_floor_db"] = _nf["noise_floor_db"]
             params["_estimated_snr_db"] = _nf["estimated_snr_db"]
             logger.debug(
-                "Phase 03 adaptive: noise_floor=%.1f dB snr=%.1f dB → band_reduction scaled",
+                "Verarbeitungsschritt 03 adaptive: noise_floor=%.1f dB snr=%.1f dB → band_reduction scaled",
                 _nf["noise_floor_db"],
                 _nf["estimated_snr_db"],
             )
         except Exception as _nf_exc:
-            logger.debug("Phase 03 adaptive noise floor non-blocking: %s", _nf_exc)
+            logger.debug("Verarbeitungsschritt 03 adaptive noise floor nicht blockierend: %s", _nf_exc)
 
         # PMGG passes strength via kwargs to control retry intensity (§2.29).
         # If not provided, fall back to material-specific default.
@@ -577,25 +576,27 @@ class DenoisePhase(PhaseInterface):
         _genre_lower_03 = genre_label.strip().lower() if genre_label else ""
         if _genre_lower_03 in ("klassik", "oper") and "strength" not in kwargs:
             effective_strength = max(0.01, effective_strength * 0.75)
-            logger.debug("Phase 03: Genre=%s → NR strength reduced to %.2f", genre_label, effective_strength)
+            logger.debug(
+                "Verarbeitungsschritt 03: Genre=%s → NR strength reduced to %.2f", genre_label, effective_strength
+            )
         elif _genre_lower_03 == "rock" and "strength" not in kwargs:
             effective_strength = min(1.0, effective_strength * 1.10)
         elif _genre_lower_03 == "reggae" and "strength" not in kwargs:
             # Vinyl warmth + tape character of reggae/dub recordings = texture, not noise.
             effective_strength = max(0.01, effective_strength * 0.80)
-            logger.debug("Phase 03: Genre=Reggae → NR strength capped to %.2f", effective_strength)
+            logger.debug("Verarbeitungsschritt 03: Genre=Reggae → NR strength capped to %.2f", effective_strength)
         elif _genre_lower_03 == "gospel" and "strength" not in kwargs:
             # Church room ambience and choir breath texture — preserve.
             effective_strength = max(0.01, effective_strength * 0.85)
-            logger.debug("Phase 03: Genre=Gospel → NR strength reduced to %.2f", effective_strength)
+            logger.debug("Verarbeitungsschritt 03: Genre=Gospel → NR strength reduced to %.2f", effective_strength)
         elif _genre_lower_03 == "folk" and "strength" not in kwargs:
             # Breathing, finger noise, room texture are part of the performance.
             effective_strength = max(0.01, effective_strength * 0.83)
-            logger.debug("Phase 03: Genre=Folk → NR strength reduced to %.2f", effective_strength)
+            logger.debug("Verarbeitungsschritt 03: Genre=Folk → NR strength reduced to %.2f", effective_strength)
         elif _genre_lower_03 == "blues" and "strength" not in kwargs:
             # Tube amp noise floor is an intentional timbral component.
             effective_strength = max(0.01, effective_strength * 0.88)
-            logger.debug("Phase 03: Genre=Blues → NR strength reduced to %.2f", effective_strength)
+            logger.debug("Verarbeitungsschritt 03: Genre=Blues → NR strength reduced to %.2f", effective_strength)
         elif _genre_lower_03 in ("electronic", "hip-hop") and "strength" not in kwargs:
             # Clean-recorded digital material — conservative NR to avoid artifacts.
             effective_strength = max(0.01, effective_strength * 0.90)
@@ -614,7 +615,7 @@ class DenoisePhase(PhaseInterface):
             _nmr_result_03 = _nmr_fn_03(audio, sample_rate)
             if not _nmr_result_03.ok:
                 logger.warning(
-                    "Phase03 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt03 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             effective_strength = float(
                 np.clip(
@@ -624,12 +625,12 @@ class DenoisePhase(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase03 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt03 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_03.recommended_nr_strength_delta,
                 effective_strength,
             )
         except Exception as _nmr_exc_03:  # pylint: disable=broad-except
-            logger.debug("Phase03 §V40 NMR non-blocking: %s", _nmr_exc_03)
+            logger.debug("Verarbeitungsschritt03 §V40 NMR nicht blockierend: %s", _nmr_exc_03)
 
         # §2.51 Layout-Normalisierung: phase_03 erwartet intern channels-first (2, N) oder mono (N,).
         # channels-last (N, 2) → channels-first (2, N) für die gesamte Phase; am Ende zurückkonvertieren.
@@ -654,7 +655,7 @@ class DenoisePhase(PhaseInterface):
                 _npa_audio_03 = _npa_audio_03.T  # channels-first → channels-last for NPA detector
             _npa_result_03 = get_natural_performance_detector().detect(_npa_audio_03, sample_rate)
         except Exception as _npa_exc_03:
-            logger.debug("§2.46f NPA detection non-blocking: %s", _npa_exc_03)
+            logger.debug("§2.46f NPA detection nicht blockierend: %s", _npa_exc_03)
 
         # Check resource availability for ML-Hybrid (fallback to lightweight if needed)
         use_lightweight = False
@@ -666,7 +667,7 @@ class DenoisePhase(PhaseInterface):
                 use_lightweight = False
             elif use_lightweight:
                 logger.info(
-                    "Phase 03: Resource constraint detected, forcing DSP-only mode (CPU: %.1f%%, Memory: %.1f%%)",
+                    "Verarbeitungsschritt 03: Resource constraint erkannt, forcing DSP-only Betriebsart (CPU: %.1f%%, Memory: %.1f%%)",
                     adaptive_resource_manager.get_cpu_usage(),
                     adaptive_resource_manager.get_memory_usage(),
                 )
@@ -701,12 +702,12 @@ class DenoisePhase(PhaseInterface):
                     if _est_snr_db is not None and _est_snr_db > 35.0:
                         _snr_bypass = True
                         logger.info(
-                            "§2.47 Phase 03: estimated SNR=%.1f dB > 35 dB → "
+                            "§2.47 Verarbeitungsschritt 03: estimated SNR=%.1f dB > 35 dB → "
                             "Dry-Signal bypass (clean signal, no denoising needed)",
                             _est_snr_db,
                         )
         except Exception as _snr_exc:
-            logger.debug("SNR bypass estimation failed (non-blocking): %s", _snr_exc)
+            logger.debug("SNR bypass estimation fehlgeschlagen (nicht blockierend): %s", _snr_exc)
 
         if _snr_bypass:
             execution_time = time.time() - start_time
@@ -771,12 +772,14 @@ class DenoisePhase(PhaseInterface):
                 audio = np.clip(np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
                 _tdp_active = True
                 logger.info(
-                    "Phase 03 TDP stem-aware NR aktiv: material=%s mode=%s",
+                    "Verarbeitungsschritt 03 TDP stem-aware NR aktiv: material=%s Betriebsart=%s",
                     material_type,
                     _tdp_mode,
                 )
             except Exception as _tdp_exc:
-                logger.debug("Phase 03 TDP stem-aware NR skipped (non-blocking): %s", _tdp_exc)
+                logger.debug(
+                    "Verarbeitungsschritt 03 TDP stem-aware NR uebersprungen (nicht blockierend): %s", _tdp_exc
+                )
                 _tdp_active = False
 
         def _recombine_tdp_if_needed(processed_audio: np.ndarray) -> tuple[np.ndarray, bool]:
@@ -827,7 +830,9 @@ class DenoisePhase(PhaseInterface):
                     _out_m = _tdp_processor.recombine(_perc, _proc, sample_rate, original_perc=_perc)
                     return np.clip(_out_m, -1.0, 1.0).astype(np.float32), True
             except Exception as _tdp_rec_exc:
-                logger.debug("Phase 03 TDP recombine skipped (non-blocking): %s", _tdp_rec_exc)
+                logger.debug(
+                    "Verarbeitungsschritt 03 TDP recombine uebersprungen (nicht blockierend): %s", _tdp_rec_exc
+                )
             return processed_audio, False
 
         def _recombine_bsrof_if_needed(processed_audio: np.ndarray) -> tuple[np.ndarray, bool]:
@@ -857,13 +862,16 @@ class DenoisePhase(PhaseInterface):
                 _n_r = min(_len_n(_proc_v), _len_n(_inst))
                 _out = np.clip(_trim(_proc_v, _n_r) + _trim(_inst, _n_r), -1.0, 1.0).astype(np.float32)
                 logger.debug(
-                    "Phase 03 BS-RoFormer Remix: voc_rms=%.4f inst_rms=%.4f",
+                    "Verarbeitungsschritt 03 BS-RoFormer Remix: voc_rms=%.4f inst_rms=%.4f",
                     float(np.sqrt(np.mean(_trim(_proc_v, _n_r) ** 2))),
                     float(np.sqrt(np.mean(_trim(_inst, _n_r) ** 2))),
                 )
                 return _out, True
             except Exception as _bsr_mix_exc:
-                logger.debug("Phase 03 BS-RoFormer Rekombination fehlgeschlagen (non-blocking): %s", _bsr_mix_exc)
+                logger.debug(
+                    "Verarbeitungsschritt 03 BS-RoFormer Rekombination fehlgeschlagen (nicht blockierend): %s",
+                    _bsr_mix_exc,
+                )
                 return processed_audio, False
 
         # Build a robust vocal-evidence signal once and use it across all denoise tiers.
@@ -915,7 +923,7 @@ class DenoisePhase(PhaseInterface):
         if _denker_strength <= _dsp_threshold and not use_lightweight:
             use_lightweight = True
             logger.info(
-                "§DENKER Phase 03: strength=%.2f ≤ %.2f → DSP-only (Denker-Entscheidung)",
+                "§DENKER Verarbeitungsschritt 03: strength=%.2f ≤ %.2f → DSP-only (Denker-Entscheidung)",
                 _denker_strength,
                 _dsp_threshold,
             )
@@ -927,7 +935,7 @@ class DenoisePhase(PhaseInterface):
             _vocal_blend = float(np.clip(1.0 - _panns_singing, 0.15, 1.0))
             effective_strength = float(np.clip(effective_strength * _vocal_blend, 0.05, 1.0))
             logger.info(
-                "§DENKER Phase 03: strength=%.2f (Selbstkalibrierung), panns=%.2f → ML reduziert auf %.2f (Vokal-Blend)",
+                "§DENKER Verarbeitungsschritt 03: strength=%.2f (Selbstkalibrierung), panns=%.2f → ML reduziert auf %.2f (Vokal-Blend)",
                 _denker_strength,
                 _panns_singing,
                 effective_strength,
@@ -937,9 +945,8 @@ class DenoisePhase(PhaseInterface):
         # nicht mehr zwischen Rauschen und Signal unterscheiden können → Musical Noise,
         # Dropouts und zerstörte Stimmharmonik. DSP-OMLSA ist sicherer und erhält mehr
         # Signalstruktur. Zusätzlich wird die Stärke auf max. 0.40 begrenzt.
-        _chain_p03 = (
-            kwargs.get("transfer_chain")
-            or (kwargs.get("_restoration_context", {}) or {}).get("transfer_chain", [])
+        _chain_p03 = kwargs.get("transfer_chain") or (kwargs.get("_restoration_context", {}) or {}).get(
+            "transfer_chain", []
         )
         _transfer_depth_p03 = len(_chain_p03) if _chain_p03 else 1
 
@@ -947,15 +954,13 @@ class DenoisePhase(PhaseInterface):
         # Signal so stark degradiert dass der Denoiser Musik-Signal als Rauschen klassifiziert
         # → Musical Noise (HF/LF-Varianz steigt auf >3.0). Höherer G_floor verhindert dies:
         #   depth=3 → +0.05 (0.15), depth=4 → +0.10 (0.20), depth=5+ → +0.15 (0.25)
-        _gfloor_depth_boost = float(
-            np.clip((_transfer_depth_p03 - 2) * 0.05, 0.0, 0.15)
-        )
+        _gfloor_depth_boost = float(np.clip((_transfer_depth_p03 - 2) * 0.05, 0.0, 0.15))
         if _gfloor_depth_boost > 0.0:
             params = dict(params)  # shallow copy — Klassen-Dict nie mutieren
-            _gfloor_old = float(params.get("g_floor", 0.10))
+            _gfloor_old = float(params.get("g_floor", 0.10))  # type: ignore[arg-type]
             params["g_floor"] = float(np.clip(_gfloor_old + _gfloor_depth_boost, 0.10, 0.45))
             logger.info(
-                "§v10.101 Phase 03 depth=%d → G_floor %.2f→%.2f (Musical-Noise-Prävention)",
+                "§v10.101 Verarbeitungsschritt 03 depth=%d → G_floor %.2f→%.2f (Musical-Noise-Prävention)",
                 _transfer_depth_p03,
                 _gfloor_old,
                 params["g_floor"],
@@ -968,8 +973,9 @@ class DenoisePhase(PhaseInterface):
             _cap = 0.20 if _transfer_depth_p03 >= 4 else 0.40
             effective_strength = float(np.clip(effective_strength, 0.0, _cap))
             logger.info(
-                "§v10.58 Phase 03 depth=%d → DSP-only + max strength %.2f (degradiertes Signal)",
-                _transfer_depth_p03, _cap,
+                "§v10.58 Verarbeitungsschritt 03 depth=%d → DSP-only + max strength %.2f (degradiertes Signal)",
+                _transfer_depth_p03,
+                _cap,
             )
 
         _bsrof_gate = (
@@ -991,7 +997,7 @@ class DenoisePhase(PhaseInterface):
                         _avail_gb,
                     )
             except Exception:
-                logger.debug("BS-RoFormer RAM-Check fehlgeschlagen", exc_info=True)
+                logger.debug("BS-RoFormer RAM-Pruefung fehlgeschlagen", exc_info=True)
             if _bsrof_ram_ok:
                 try:
                     from plugins.bs_roformer_plugin import get_bs_roformer  # pylint: disable=import-outside-toplevel
@@ -1034,7 +1040,7 @@ class DenoisePhase(PhaseInterface):
                             audio = _voc_stem_bsr  # NR verarbeitet nur Vokal-Stem
                             _bsrof_stem_active = True
                             logger.info(
-                                "Phase 03 BS-RoFormer Vokal-Stem-NR aktiv: panns=%.2f snr=%s sdri=%.1f dB model=%s",
+                                "Verarbeitungsschritt 03 BS-RoFormer Vokal-Stem-NR aktiv: panns=%.2f snr=%s sdri=%.1f dB model=%s",
                                 _panns_singing,
                                 f"{_est_snr_db:.1f}" if _est_snr_db is not None else "?",
                                 _sdri_bsr,
@@ -1042,12 +1048,12 @@ class DenoisePhase(PhaseInterface):
                             )
                         else:
                             logger.info(
-                                "Phase 03 BS-RoFormer: SDRi=%.1f dB < -1.0 dB → Standard-NR",
+                                "Verarbeitungsschritt 03 BS-RoFormer: SDRi=%.1f dB < -1.0 dB → Standard-NR",
                                 _sdri_bsr,
                             )
                 except Exception as _bsr_exc:
                     logger.debug(
-                        "Phase 03 BS-RoFormer Vokal-Stem-NR nicht verfügbar (non-blocking): %s",
+                        "Verarbeitungsschritt 03 BS-RoFormer Vokal-Stem-NR nicht verfügbar (nicht blockierend): %s",
                         _bsr_exc,
                     )
         # ── Ende BS-RoFormer Vocal-Stem-NR ────────────────────────────────────────────────────
@@ -1095,7 +1101,7 @@ class DenoisePhase(PhaseInterface):
                             _g_floor_nonharm,
                         )
             except Exception as _vhm_exc:
-                logger.debug("§Lücke2 VocalHarmonicDecomp: non-blocking fallback — %s", _vhm_exc)
+                logger.debug("§Lücke2 VocalHarmonicDecomp: nicht blockierend Ersatzpfad — %s", _vhm_exc)
 
         # §Lücke-B TubeHarmonicFingerprint: H2/H4-Charakter erkennen und G_floor anheben.
         # Bei authentischen Röhren-/Bandmaschinen-Aufnahmen (Shellac/Vinyl/Tape) schützt
@@ -1123,7 +1129,7 @@ class DenoisePhase(PhaseInterface):
                         params["g_floor"],
                     )
             except Exception as _thf_exc:
-                logger.debug("§Lücke-B TubeHarmonicFingerprint: non-blocking fallback — %s", _thf_exc)
+                logger.debug("§Lücke-B TubeHarmonicFingerprint: nicht blockierend Ersatzpfad — %s", _thf_exc)
 
         # §4.5b-Instrumental: Rein instrumentales Material (PANNs-Gesang < 0.10) braucht
         # erhöhten g_floor um Obertonstrukturen bei Streichern/Bläsern/Chor (harmonische
@@ -1166,7 +1172,7 @@ class DenoisePhase(PhaseInterface):
                     _panns_singing,
                 )
             except Exception as _hpg_exc:
-                logger.debug("§2.28 HPG: non-blocking fallback — %s", _hpg_exc)
+                logger.debug("§2.28 HPG: nicht blockierend Ersatzpfad — %s", _hpg_exc)
 
         # §4.5 / §2.47 DeepFilterNet Tier-0 PRIMARY: Vocal broadband noise
         # DeepFilterNet v3.II is the primary model for broadband noise with vocal content
@@ -1186,13 +1192,13 @@ class DenoisePhase(PhaseInterface):
                 _dfn_energy_bias_db = max(_zone_biases_p03) if _zone_biases_p03 else -6.0
                 _has_passaggio_p03 = len({_r for _, _, _r, _ in _reg_seq_p03}) > 1
                 logger.debug(
-                    "§0p phase_03 Passaggio=%s energy_bias=%.1f dB zones=%d",
+                    "§0p Verarbeitungsschritt_03 Passaggio=%s energy_bias=%.1f dB zones=%d",
                     _has_passaggio_p03,
                     _dfn_energy_bias_db,
                     len(_reg_seq_p03),
                 )
             except Exception as _reg_exc:
-                logger.debug("§0p Passaggio temporal phase_03 (non-blocking): %s", _reg_exc)
+                logger.debug("§0p Passaggio temporal Verarbeitungsschritt_03 (nicht blockierend): %s", _reg_exc)
         _dfn_applied = False
         # §4.4 MIIPHER Primary Tier (v10.0.0.x): vocal, SNR < 10 dB, post-1950.
         # MIIPHER (W2v-BERT 2.0) delivers highest vocal quality for deep-noise material
@@ -1229,7 +1235,7 @@ class DenoisePhase(PhaseInterface):
                     _miipher_route = _miipher_plugin.route_metadata.get("capability_status", "sota_fallback")
                     if _miipher_route == "dsp_fallback":
                         logger.info(
-                            "§4.4 MIIPHER_QUALITY_GATE: dsp_fallback route erkannt — "
+                            "§4.4 MIIPHER_QUALITY_GATE: dsp_Ersatzpfad route erkannt — "
                             "DFN-Kette übernimmt Vokal-NR (kein SGMSE+/DFN verfügbar)",
                         )
                         raise RuntimeError("miipher_dsp_fallback")  # outer try-except fängt; _miipher_applied=False
@@ -1242,11 +1248,11 @@ class DenoisePhase(PhaseInterface):
                         _miipher_out, _miipher_hnr = _hnr_blend_m(_miipher_audio_pre, _miipher_out, sample_rate)
                         if _miipher_hnr.get("over_cleaned"):
                             logger.debug(
-                                "§0p MIIPHER HNR-Blend: ΔHNR=%.1f dB -> blend applied",
+                                "§0p MIIPHER HNR-Blend: ΔHNR=%.1f dB -> blend angewendet",
                                 float(_miipher_hnr.get("hnr_delta_db", 0.0)),  # type: ignore[arg-type]
                             )
                     except Exception as _miipher_hnr_exc:
-                        logger.debug("MIIPHER HNR-Blend (non-blocking): %s", _miipher_hnr_exc)
+                        logger.debug("MIIPHER HNR-Blend (nicht blockierend): %s", _miipher_hnr_exc)
                     # §2.46e Hallucination-Guard [RELEASE_MUST]
                     try:
                         from backend.core.dsp.hallucination_guard import (  # pylint: disable=import-outside-toplevel
@@ -1259,7 +1265,7 @@ class DenoisePhase(PhaseInterface):
                         if getattr(_miipher_hall, "requires_rollback", False):
                             logger.warning(
                                 "§2.46e MIIPHER: Hallucination-Guard Rollback "
-                                "(spectral_novelty=%.3f > 0.15) — MIIPHER skipped",
+                                "(spectral_novelty=%.3f > 0.15) — MIIPHER uebersprungen",
                                 float(getattr(_miipher_hall, "spectral_novelty", 0.0)),
                             )
                             _miipher_out = _miipher_audio_pre
@@ -1267,7 +1273,7 @@ class DenoisePhase(PhaseInterface):
                             audio = _miipher_out
                             _miipher_applied = True
                             logger.info(
-                                "§4.4 MIIPHER Primary: vocal restoration applied "
+                                "§4.4 MIIPHER Primary: vocal restoration angewendet "
                                 "(snr=%.1f dB panns=%.2f decade=%d material=%s)",
                                 _miipher_snr,
                                 _panns_singing,
@@ -1276,11 +1282,11 @@ class DenoisePhase(PhaseInterface):
                             )
                     except Exception as _miipher_hall_exc:
                         # Guard unavailable: accept result (non-blocking, §0j)
-                        logger.debug("MIIPHER Hallucination-Guard (non-blocking): %s", _miipher_hall_exc)
+                        logger.debug("MIIPHER Hallucination-Guard (nicht blockierend): %s", _miipher_hall_exc)
                         audio = _miipher_out
                         _miipher_applied = True
             except Exception as _miipher_exc:
-                logger.debug("MIIPHER Primary nicht verfügbar (non-blocking): %s", _miipher_exc)
+                logger.debug("MIIPHER Primary nicht verfügbar (nicht blockierend): %s", _miipher_exc)
 
         _dfn_eligible = (
             _is_vocal_material
@@ -1339,7 +1345,9 @@ class DenoisePhase(PhaseInterface):
                             _dfn_result_raw = _dfn_result_raw[:, _ctx_n03_dfn : _ctx_n03_dfn + _dfn_target_len]
                         elif _dfn_result_raw.ndim == 1 and len(_dfn_result_raw) >= _ctx_n03_dfn + _dfn_target_len:
                             _dfn_result_raw = _dfn_result_raw[_ctx_n03_dfn : _ctx_n03_dfn + _dfn_target_len]
-                        logger.debug("phase_03 DFN: context-padding stripped (%d samples offset)", _ctx_n03_dfn)
+                        logger.debug(
+                            "Verarbeitungsschritt_03 DFN: context-padding stripped (%d samples offset)", _ctx_n03_dfn
+                        )
                     _dfn_result = _dfn_result_raw
                 else:
                     _dfn_result = _dfn_plugin.enhance(audio, sr=sample_rate, energy_bias_db=_dfn_energy_bias_db)
@@ -1388,7 +1396,7 @@ class DenoisePhase(PhaseInterface):
                                     len(_dfn_pmask),
                                 )
                         except Exception as _dfn_pmask_exc:
-                            logger.debug("§2.36 DFN Phonem-Bypass (non-blocking): %s", _dfn_pmask_exc)
+                            logger.debug("§2.36 DFN Phonem-Bypass (nicht blockierend): %s", _dfn_pmask_exc)
                         audio = np.nan_to_num(_dfn_result, nan=0.0, posinf=0.0, neginf=0.0)
                         audio = np.clip(audio, -1.0, 1.0)
                         # §4.4 dfn_restricted: 30% wet blend for early-electrical era
@@ -1420,10 +1428,10 @@ class DenoisePhase(PhaseInterface):
                                 if _hnr_diag.get("over_cleaned"):
                                     audio = audio_blended
                             except Exception as _hnr_exc:
-                                logger.debug("§HNR-Guard phase_03 (non-blocking): %s", _hnr_exc)
+                                logger.debug("§HNR-Guard Verarbeitungsschritt_03 (nicht blockierend): %s", _hnr_exc)
                         logger.info(
-                            "§4.5 DeepFilterNet Tier-0 PRIMARY: vocal broadband denoise applied "
-                            "(panns_singing=%.2f, material=%s, energy_ratio=%.3f)",
+                            "§4.5 DeepFilterNet Tier-0 PRIMARY: vocal broadband denoise angewendet "
+                            "(panns_singing=%.2f, material=%s, energy_Verhaeltnis=%.3f)",
                             _panns_singing,
                             material_type,
                             _dfn_e_out / _dfn_e_in,
@@ -1431,7 +1439,7 @@ class DenoisePhase(PhaseInterface):
                     else:
                         logger.info(
                             "§4.5 DeepFilterNet Tier-0 PRIMARY: energy guard triggered "
-                            "(e_ratio=%.4f < 0.20) → fallback to SGMSE+/ML-Hybrid/OMLSA",
+                            "(e_Verhaeltnis=%.4f < 0.20) → Ersatzpfad to SGMSE+/ML-Hybrid/OMLSA",
                             _dfn_e_out / max(_dfn_e_in, 1e-10),
                         )
             except Exception as _dfn_exc:
@@ -1522,7 +1530,10 @@ class DenoisePhase(PhaseInterface):
                                 if _sgaudio.ndim == 2
                                 else _sgaudio[_ctx_n03_sg : _ctx_n03_sg + _sg_target_len]
                             )
-                            logger.debug("phase_03 SGMSE+: context-padding stripped (%d samples offset)", _ctx_n03_sg)
+                            logger.debug(
+                                "Verarbeitungsschritt_03 SGMSE+: context-padding stripped (%d samples offset)",
+                                _ctx_n03_sg,
+                            )
                 else:
                     _sgmse_result = _sgmse_plugin.enhance(audio, sr=sample_rate, sigma=_sgmse_sigma)
                 if _sgmse_result is not None and np.isfinite(_sgmse_result.audio).all():
@@ -1530,7 +1541,7 @@ class DenoisePhase(PhaseInterface):
                     audio = np.clip(audio, -1.0, 1.0)
                     _sgmse_applied = True
                     logger.info(
-                        "§Hebel-2 SGMSE+ Tier-1 FALLBACK: vocal enhancement applied "
+                        "§Hebel-2 SGMSE+ Tier-1 Ersatzpfad: vocal enhancement angewendet "
                         "(sigma=%.2f snr=%.1f dB material=%s model=%s — Richter et al. 2022)",
                         _sgmse_sigma,
                         _snr_for_sigma,
@@ -1538,7 +1549,7 @@ class DenoisePhase(PhaseInterface):
                         _sgmse_result.model_used,
                     )
             except Exception as _sgmse_exc:
-                logger.debug("SGMSE+ Tier-1 FALLBACK nicht verfügbar, weiter mit OMLSA: %s", _sgmse_exc)
+                logger.debug("SGMSE+ Tier-1 Ersatzpfad nicht verfügbar, weiter mit OMLSA: %s", _sgmse_exc)
             finally:
                 if _plm03_sgmse is not None:
                     try:
@@ -1575,7 +1586,7 @@ class DenoisePhase(PhaseInterface):
         if use_ml_hybrid and _skip_ml_hybrid_after_vocal_primary:
             use_ml_hybrid = False
             logger.info(
-                "Phase 03 ML-Hybrid übersprungen: MIIPHER/Vokalpfad bereits aktiv "
+                "Verarbeitungsschritt 03 ML-Hybrid übersprungen: MIIPHER/Vokalpfad bereits aktiv "
                 "(material=%s panns=%.2f) — konservative OMLSA/DSP-Restglättung statt Resemble-Zweitpass",
                 material_type,
                 _panns_singing,
@@ -1583,7 +1594,9 @@ class DenoisePhase(PhaseInterface):
 
         if use_ml_hybrid:
             try:
-                logger.info("Phase 03 ML-Hybrid: mode=%s, material=%s", quality_mode, material_type)
+                logger.info(
+                    "Verarbeitungsschritt 03 ML-Hybrid: Betriebsart=%s, material=%s", quality_mode, material_type
+                )
 
                 # §2.51: audio re-normalisieren — DFN/MIIPHER/SGMSE können layout geändert haben.
                 # Sicherheits-Re-Normalisierung zu channels-first (2, N) direkt vor ML-Hybrid.
@@ -1632,7 +1645,8 @@ class DenoisePhase(PhaseInterface):
                                 else _hyb_audio[_ctx_n03_hyb : _ctx_n03_hyb + _hyb_target_len]
                             )
                             logger.debug(
-                                "phase_03 ML-Hybrid: context-padding stripped (%d samples offset)", _ctx_n03_hyb
+                                "Verarbeitungsschritt_03 ML-Hybrid: context-padding stripped (%d samples offset)",
+                                _ctx_n03_hyb,
                             )
                 else:
                     ml_result = denoiser.denoise(_mlhyb_audio, sample_rate=sample_rate)
@@ -1658,7 +1672,7 @@ class DenoisePhase(PhaseInterface):
                     noise_reduction_db = 15.0  # Default estimate
 
                 logger.info(
-                    "ML-Hybrid complete: OMLSA=%s, Resemble=%s, quality=%.3f, reduction=%.1fdB, time=%.2fs",
+                    "ML-Hybrid vollstaendig: OMLSA=%s, Resemble=%s, quality=%.3f, reduction=%.1fdB, time=%.2fs",
                     ml_result.omlsa_applied,
                     ml_result.resemble_applied,
                     ml_result.quality_estimate,
@@ -1700,8 +1714,10 @@ class DenoisePhase(PhaseInterface):
                 if _ml_e_in > 1e-6 and _ml_e_out / _ml_e_in < _energy_threshold_p03:
                     # Resemble output is near-silence: fall back to DSP-OMLSA path
                     logger.info(
-                        "Phase 03 ML Energy-Preservation Guard: Resemble e_ratio=%.4f < %.2f (SNR=%.1fdB) → DSP fallback",
-                        _ml_e_out / _ml_e_in, _energy_threshold_p03, _snr_for_energy,
+                        "Verarbeitungsschritt 03 ML Energy-Preservation Guard: Resemble e_Verhaeltnis=%.4f < %.2f (SNR=%.1fdB) → DSP Ersatzpfad",
+                        _ml_e_out / _ml_e_in,
+                        _energy_threshold_p03,
+                        _snr_for_energy,
                     )
                     warnings.append(
                         f"ML energy-preservation: Resemble near-silence (ratio={_ml_e_out / _ml_e_in:.3f}) → DSP fallback"  # pylint: disable=line-too-long
@@ -1775,7 +1791,7 @@ class DenoisePhase(PhaseInterface):
                         ).astype(np.float32)
                         _ml_effective_wet = _ml_wet
                         logger.info(
-                            "Phase 03 ML strength wet-scale: effective=%.3f default=%.3f wet=%.3f",
+                            "Verarbeitungsschritt 03 ML strength wet-scale: effective=%.3f default=%.3f wet=%.3f",
                             effective_strength,
                             _ml_default_strength,
                             _ml_wet,
@@ -1784,7 +1800,7 @@ class DenoisePhase(PhaseInterface):
                         ml_result.audio = np.clip(np.asarray(audio, dtype=np.float32), -1.0, 1.0)
                         _ml_effective_wet = 0.0
                         logger.warning(
-                            "Phase 03 ML strength wet-scale: shape mismatch ref=%s out=%s → dry fallback",
+                            "Verarbeitungsschritt 03 ML strength wet-scale: shape mismatch ref=%s out=%s → dry Ersatzpfad",
                             getattr(_ml_ref_audio, "shape", None),
                             getattr(ml_result.audio, "shape", None),
                         )
@@ -1836,13 +1852,13 @@ class DenoisePhase(PhaseInterface):
 
             except Exception as e:
                 logger.warning(
-                    "ML-Hybrid denoising failed: %s, falling back to DSP. Error type: %s", e, type(e).__name__
+                    "ML-Hybrid denoising fehlgeschlagen: %s, falling back to DSP. Error type: %s", e, type(e).__name__
                 )
                 # Fall through to DSP path below
 
         # DSP-Only Path (Fast mode or ML fallback)
         _report_progress(20.0, "DSP-Entrauschung (OMLSA/IMCRA)...")
-        logger.info("Phase 03 DSP-Only: material=%s, strength=%s", material_type, effective_strength)
+        logger.info("Verarbeitungsschritt 03 DSP-Only: material=%s, strength=%s", material_type, effective_strength)
 
         # Override material-default strength with PMGG-controlled effective_strength
         dsp_params = dict(params)
@@ -1973,12 +1989,12 @@ class DenoisePhase(PhaseInterface):
                                 )
                     _noise_texture_applied = True
                     logger.info(
-                        "§0a noise-texture-matching applied: material=%s nf=%.1f dBFS",
+                        "§0a noise-texture-matching angewendet: material=%s nf=%.1f dBFS",
                         material_type,
                         _nf_dbfs,
                     )
         except Exception as _ntm_exc:
-            logger.debug("§0a noise-texture-matching non-blocking: %s", _ntm_exc)
+            logger.debug("§0a noise-texture-matching nicht blockierend: %s", _ntm_exc)
 
         # §2.62 Psychoakustischer Masking-Guard — protect inaudible content from clinical silence
         try:
@@ -1992,7 +2008,7 @@ class DenoisePhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _mask62_exc:
-            logger.debug("§2.62 masking clamp non-blocking: %s", _mask62_exc)
+            logger.debug("§2.62 masking clamp nicht blockierend: %s", _mask62_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — restore protected breath/vibrato zones after NR
         if _npa_result_03 is not None:
@@ -2014,9 +2030,12 @@ class DenoisePhase(PhaseInterface):
                     else:
                         if _post_nr_guard_ref_audio.ndim == 1:
                             result_audio[_npa_mask_03] = _post_nr_guard_ref_audio[_npa_mask_03]
-                    logger.debug("§2.46f NPA phase03: restored %d protected samples", int(np.sum(_npa_mask_03)))
+                    logger.debug(
+                        "§2.46f NPA Verarbeitungsschritt03: wiederhergestellt %d protected samples",
+                        int(np.sum(_npa_mask_03)),
+                    )
             except Exception as _npa_rest_03:
-                logger.debug("§2.46f NPA restoration non-blocking: %s", _npa_rest_03)
+                logger.debug("§2.46f NPA restoration nicht blockierend: %s", _npa_rest_03)
 
         # §2.46f Edge-Taper (defense-in-depth): secondary safety net after context-padding above.
         # Context-padding is the primary fix (root cause); edge-taper catches any residual boundary
@@ -2093,13 +2112,13 @@ class DenoisePhase(PhaseInterface):
                         result_audio[-_edge_n:] * _fade[::-1] + _ref_e * (1.0 - _fade[::-1])
                     ).astype(result_audio.dtype)
                 logger.debug(
-                    "Phase03 edge-taper: %.0f ms; silence_start=%s silence_end=%s",
+                    "Verarbeitungsschritt03 edge-taper: %.0f ms; silence_start=%s silence_end=%s",
                     _edge_fade_s * 1000,
                     _rms_s < _SILENCE_EDGE_RMS,
                     _rms_e < _SILENCE_EDGE_RMS,
                 )
         except Exception as _et03_exc:
-            logger.debug("Phase03 edge-taper non-blocking: %s", _et03_exc)
+            logger.debug("Verarbeitungsschritt03 edge-taper nicht blockierend: %s", _et03_exc)
 
         # §TimbralCoherence: Carrier-Rauchtextur nach Over-NR wiederherstellen.
         # ML-NR (DFN, SGMSE+) kann den Träger-Rauschboden zu stark abtragen.
@@ -2118,7 +2137,9 @@ class DenoisePhase(PhaseInterface):
             )
             result_audio = np.clip(np.nan_to_num(result_audio, nan=0.0), -1.0, 1.0).astype(np.float32)
         except Exception as _ntr_exc_p03:
-            logger.debug("§TimbralCoherence noise_texture_resynth phase03 (non-blocking): %s", _ntr_exc_p03)
+            logger.debug(
+                "§TimbralCoherence noise_texture_resynth Verarbeitungsschritt03 (nicht blockierend): %s", _ntr_exc_p03
+            )
 
         # §G3 OMLSA post-DFN Restglätter (SOTA Matrix: "DFN v3 + OMLSA Restglätter danach").
         # Nach DFN verbleiben spektrale Gain-Ripple (Musical Noise). IMCRA Noise-PSD → Wiener-
@@ -2126,7 +2147,7 @@ class DenoisePhase(PhaseInterface):
         if _dfn_applied and _panns_singing >= 0.10:
             try:
                 from backend.core.dsp.noise_estimator import compute_imcra_noise_estimate as _imcra_p03  # pylint: disable=import-outside-toplevel  # noqa: I001
-                from backend.core.audio_utils import safe_stft as _stft_p03, istft as _istft_p03  # pylint: disable=import-outside-toplevel
+                from backend.core.audio_utils import safe_stft as _stft_p03, safe_istft as _istft_p03  # pylint: disable=import-outside-toplevel
 
                 _g3_mono = (
                     result_audio.mean(axis=0).astype(np.float32)
@@ -2172,7 +2193,7 @@ class DenoisePhase(PhaseInterface):
                         _pm_g3_col = _pm_g3_interp[:, np.newaxis]  # (n_bins, 1)
                         _g3_gain = _pm_g3_col * _G_PRES_G3 + (1.0 - _pm_g3_col) * _g3_gain
                         _g3_gain = np.maximum(_g3_gain, 0.10)
-                        logger.debug("§4.8a-ii phase_03 preserve_mask: max_pm=%.2f", float(_pm_g3.max()))
+                        logger.debug("§4.8a-ii Verarbeitungsschritt_03 preserve_mask: max_pm=%.2f", float(_pm_g3.max()))
                     # §Gap5 EmotionalArc FrissonZone Schutz (§0p v10.0.0):
                     # Frisson- und Whisper-Zonen erhalten weniger NR (arc_weight ≥ 1.4).
                     # NR-Gain wird in geschützten Zonen Richtung 1.0 geblendet.
@@ -2193,9 +2214,13 @@ class DenoisePhase(PhaseInterface):
                             _g3_gain = _g3_gain + _arc_protect[np.newaxis, :] * (1.0 - _g3_gain)
                             _g3_gain = np.clip(_g3_gain, _G_floor_g3, 1.0)
                             _n_prot = int(np.sum(_arc_weights > 1.05))
-                            logger.debug("§Gap5 Arc-Schutz phase_03: %d/%d Frames geschützt", _n_prot, _g3_n_frames)
+                            logger.debug(
+                                "§Gap5 Arc-Schutz Verarbeitungsschritt_03: %d/%d Frames geschützt",
+                                _n_prot,
+                                _g3_n_frames,
+                            )
                         except Exception as _arc_exc:
-                            logger.debug("§Gap5 Arc-Schutz phase_03 non-blocking: %s", _arc_exc)
+                            logger.debug("§Gap5 Arc-Schutz Verarbeitungsschritt_03 nicht blockierend: %s", _arc_exc)
                     _g3_stft_sm = _g3_stft[:, :_g3_n_frames] * _g3_gain
                     _, _g3_out = _istft_p03(_g3_stft_sm, nperseg=_g3_n_fft, noverlap=_g3_n_fft - _g3_hop, boundary=True)
                     _g3_out = np.asarray(_g3_out, dtype=np.float32)
@@ -2222,7 +2247,7 @@ class DenoisePhase(PhaseInterface):
                             "§G3 OMLSA post-DFN: G_floor=%.2f wet=%.2f (Musical-Noise-Glättung)", _G_floor_g3, _wet_g3
                         )
             except Exception as _g3_exc:
-                logger.debug("§G3 OMLSA post-DFN non-blocking: %s", _g3_exc)
+                logger.debug("§G3 OMLSA post-DFN nicht blockierend: %s", _g3_exc)
 
         # §0p VQI per-Phase Gate: Bei Vokalaufnahmen VQI messen und bei Rollback-Grenzwert
         # auf Eingangs-Audio zurückfallen, um Stimmqualitätsverlust durch NR zu verhindern.
@@ -2234,6 +2259,8 @@ class DenoisePhase(PhaseInterface):
                 )
                 from backend.core.musical_goals.vocal_quality_index import (
                     compute_vqi as _compute_vqi_p03,
+                )
+                from backend.core.musical_goals.vocal_quality_index import (
                     get_vqi_material_floor as _gvmf_p03,
                 )
 
@@ -2260,11 +2287,17 @@ class DenoisePhase(PhaseInterface):
                         _vqi_blend_p03 * result_audio + (1.0 - _vqi_blend_p03) * _post_nr_guard_ref_audio
                     ).astype(np.float32)
                     logger.info(
-                        "phase_03: VQI-Blend vqi=%.3f < thr=%.2f (floor=%.2f) blend=%.2f panns=%.2f",
-                        _vqi_p03, _vqi_thr_p03, _vqi_floor_p03, _vqi_blend_p03, _panns_singing,
+                        "Verarbeitungsschritt_03: VQI-Blend vqi=%.3f < thr=%.2f (floor=%.2f) blend=%.2f panns=%.2f",
+                        _vqi_p03,
+                        _vqi_thr_p03,
+                        _vqi_floor_p03,
+                        _vqi_blend_p03,
+                        _panns_singing,
                     )
             except Exception as _vqi_exc_p03:
-                logger.debug("VQI per-phase phase03 (non-blocking): %s", _vqi_exc_p03)
+                logger.debug(
+                    "VQI per-Verarbeitungsschritt Verarbeitungsschritt03 (nicht blockierend): %s", _vqi_exc_p03
+                )
 
         # §G1 Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-NR.
         # VQI allein erkennt keine subtilen Formantverschiebungen < 2 dB —
@@ -2288,14 +2321,14 @@ class DenoisePhase(PhaseInterface):
                 if _fg_rollback_p03:
                     result_audio = _post_nr_guard_ref_audio.copy()
                     logger.warning(
-                        "§G1 FormantGuard phase_03: max F-shift %.2f dB > %.1f dB → Rollback",
+                        "§G1 FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB > %.1f dB → Rollback",
                         _fg_shift_p03,
                         _fg_tol_p03,
                     )
                 else:
-                    logger.debug("§G1 FormantGuard phase_03: max F-shift %.2f dB — OK", _fg_shift_p03)
+                    logger.debug("§G1 FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB — OK", _fg_shift_p03)
             except Exception as _fg_p03_exc:
-                logger.debug("§G1 FormantGuard phase_03 non-blocking: %s", _fg_p03_exc)
+                logger.debug("§G1 FormantGuard Verarbeitungsschritt_03 nicht blockierend: %s", _fg_p03_exc)
 
         # §G2 Breath-Segment Protection (§2.46f + §Frisson): EMOTIONAL_TENSION Atemgeräusche
         # sind Naturalness-Marker — NR-Output in diesen Zonen mit Original zurückblenden.
@@ -2342,9 +2375,11 @@ class DenoisePhase(PhaseInterface):
                     _blended_any_p03 = True
                 if _blended_any_p03:
                     result_audio = np.clip(np.nan_to_num(_result_blend_p03, nan=0.0), -1.0, 1.0).astype(np.float32)
-                    logger.debug("§G2 BreathProtect phase_03: %d tension-segs geschützt", len(_breath_segs_p03))
+                    logger.debug(
+                        "§G2 BreathProtect Verarbeitungsschritt_03: %d tension-segs geschützt", len(_breath_segs_p03)
+                    )
             except Exception as _g2_p03_exc:
-                logger.debug("§G2 BreathProtect phase_03 non-blocking: %s", _g2_p03_exc)
+                logger.debug("§G2 BreathProtect Verarbeitungsschritt_03 nicht blockierend: %s", _g2_p03_exc)
 
         # §Gap3 PhraseBoundaryGuard — taper DSP artifacts at phrase transitions (§0p Vocal-Supremacy)
         try:
@@ -2372,9 +2407,9 @@ class DenoisePhase(PhaseInterface):
                 else:
                     result_audio = _post_nr_guard_ref_audio + (result_audio - _post_nr_guard_ref_audio) * _pbg_env_03
                 result_audio = np.clip(np.nan_to_num(result_audio, nan=0.0), -1.0, 1.0).astype(np.float32)
-                logger.debug("§Gap3 PhraseBoundaryGuard phase_03: %d boundaries", len(_pbg_bounds_03))
+                logger.debug("§Gap3 PhraseBoundaryGuard Verarbeitungsschritt_03: %d boundaries", len(_pbg_bounds_03))
         except Exception as _pbg_exc_03:
-            logger.debug("PhraseBoundaryGuard phase_03 (non-blocking): %s", _pbg_exc_03)
+            logger.debug("PhraseBoundaryGuard Verarbeitungsschritt_03 (nicht blockierend): %s", _pbg_exc_03)
 
         # V19 Noise-Textur-Invariante (§NTI): Residual nach NR darf kein material-fremdes
         # Spektralprofil (Whitening) aufweisen — Textur des Trägers bewahren (VERBOTEN-V19).
@@ -2389,11 +2424,11 @@ class DenoisePhase(PhaseInterface):
             if _nt03_dist > 0.25:
                 result_audio = (0.5 * result_audio + 0.5 * _post_nr_guard_ref_audio).astype(np.float32)
                 logger.warning(
-                    "Phase03 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
+                    "Verarbeitungsschritt03 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend (Träger-Textur bewahrt)",
                     _nt03_dist,
                 )
         except Exception as _nt03_exc:
-            logger.debug("Phase03 V19 Noise-Textur-Guard (non-blocking): %s", _nt03_exc)
+            logger.debug("Verarbeitungsschritt03 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt03_exc)
 
         # V20 Mikrodynamik-Korrelation (§2.75): Frame-Energie auf voiced-Zonen ≥ 0.97.
         # NR darf Vokal-Mikrodynamik nicht degradieren (VERBOTEN-V20).
@@ -2417,12 +2452,12 @@ class DenoisePhase(PhaseInterface):
                     # §v10.110: V20 ist ein Qualitäts-GUARD, kein Fehler.
                     # Die Mikrodynamik-Blendung arbeitet korrekt — INFO statt WARNING.
                     logger.info(
-                        "Phase03 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend (Schutz aktiv)",
+                        "Verarbeitungsschritt03 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend (Schutz aktiv)",
                         _corr03,
                         _wet03,
                     )
             except Exception as _dyn03_exc:
-                logger.debug("Phase03 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn03_exc)
+                logger.debug("Verarbeitungsschritt03 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn03_exc)
 
         # V21 Mindestrauschboden (§2.76): Analog-Material darf nach NR keine digitale
         # Stille (−∞ dBFS) aufweisen — Rauschboden ist Naturalness-Marker (VERBOTEN-V21).
@@ -2434,7 +2469,7 @@ class DenoisePhase(PhaseInterface):
 
                 result_audio = _nfg03(result_audio, sample_rate, _mat03_str, original_audio=_post_nr_guard_ref_audio)
             except Exception as _nf03_exc:
-                logger.debug("Phase03 V21 Noise-Floor-Guard (non-blocking): %s", _nf03_exc)
+                logger.debug("Verarbeitungsschritt03 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf03_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -2451,7 +2486,7 @@ class DenoisePhase(PhaseInterface):
                     np.float32
                 )
         except Exception as _sc_exc_03:  # pylint: disable=broad-except
-            logger.debug("§V24 phase_03 spectral_color non-blocking: %s", _sc_exc_03)
+            logger.debug("§V24 Verarbeitungsschritt_03 spectral_color nicht blockierend: %s", _sc_exc_03)
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # NR nicht energetisch beeinflusst werden (VERBOTEN-V26).
@@ -2462,7 +2497,7 @@ class DenoisePhase(PhaseInterface):
 
             result_audio = _opg03(_post_nr_guard_ref_audio, result_audio, None, max_delta_db=1.5)
         except Exception as _on03_exc:
-            logger.debug("Phase03 V26 Onset-Guard (non-blocking): %s", _on03_exc)
+            logger.debug("Verarbeitungsschritt03 V26 Onset-Guard (nicht blockierend): %s", _on03_exc)
 
         # §2.72 Vibrato-Tiefe-Guard (§0p Vocal-Supremacy RELEASE_MUST): F0-Modulationstiefe
         # darf durch NR nicht mehr als ±10 % reduziert werden → 50 %-Blend (VERBOTEN-§2.72).
@@ -2476,11 +2511,11 @@ class DenoisePhase(PhaseInterface):
                 if not _vib03_result.ok:
                     result_audio = (0.5 * result_audio + 0.5 * _post_nr_guard_ref_audio).astype(np.float32)
                     logger.warning(
-                        "Phase03 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
+                        "Verarbeitungsschritt03 §2.72 Vibrato-Tiefe: reduction=%.1f%% > 10%% → 50%%-Blend",
                         _vib03_result.depth_reduction_pct,
                     )
             except Exception as _vib03_exc:
-                logger.debug("Phase03 §2.72 Vibrato-Guard (non-blocking): %s", _vib03_exc)
+                logger.debug("Verarbeitungsschritt03 §2.72 Vibrato-Guard (nicht blockierend): %s", _vib03_exc)
 
         # §V42 Rauigkeits-Regression nach NR (non-blocking, §2.62): VERBOTEN-V42
         try:
@@ -2491,12 +2526,12 @@ class DenoisePhase(PhaseInterface):
             _zr03 = _crr03(_post_nr_guard_ref_audio, result_audio, sample_rate)
             if _zr03.roughness_regression:
                 result_audio = (0.90 * result_audio + 0.10 * _post_nr_guard_ref_audio).astype(np.float32)
-                logger.warning("Phase03 §V42 Rauigkeits-Regression → Blend ×0.90")
+                logger.warning("Verarbeitungsschritt03 §V42 Rauigkeits-Regression → Blend ×0.90")
             if _zr03.pumping_detected:
                 result_audio = (0.80 * result_audio + 0.20 * _post_nr_guard_ref_audio).astype(np.float32)
-                logger.warning("Phase03 §V42 NR-Pumpen → Blend ×0.80")
+                logger.warning("Verarbeitungsschritt03 §V42 NR-Pumpen → Blend ×0.80")
         except Exception as _zr03_exc:  # pylint: disable=broad-except
-            logger.debug("Phase03 §V42 Roughness-Check non-blocking: %s", _zr03_exc)
+            logger.debug("Verarbeitungsschritt03 §V42 Roughness-Pruefung nicht blockierend: %s", _zr03_exc)
 
         # §2.71 Strength-Envelope: Chirurgische Wet/Dry-Mischung.
         # In defektdichten Regionen (Envelope→1.0) wird das NR-Signal voll
@@ -2518,11 +2553,11 @@ class DenoisePhase(PhaseInterface):
                 _env_mix = float(np.mean(np.abs(result_audio - _env_pre)))
                 if _env_mix > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 03: Δ=%.4f RMS — chirurgische NR angewendet",
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 03: Δ=%.4f RMS — chirurgische NR angewendet",
                         _env_mix,
                     )
             except Exception as _se_apply_exc:
-                logger.debug("§2.71 Envelope-Blending non-blocking: %s", _se_apply_exc)
+                logger.debug("§2.71 Envelope-Blending nicht blockierend: %s", _se_apply_exc)
 
         # §GEBOT-G56: Selbst-Verifikation vor Return
         try:
@@ -2531,13 +2566,13 @@ class DenoisePhase(PhaseInterface):
             _vfy03 = verify_output_quality(audio, _p03_out(result_audio), sample_rate)
             if _vfy03["needs_readjust"]:
                 logger.info(
-                    "Phase 03: verify_output_quality needs readjust (rms=%.1fdB corr=%.3f) — reducing strength",
+                    "Verarbeitungsschritt 03: pruefen_Ausgabe_quality needs readjust (rms=%.1fdB corr=%.3f) — reducing strength",
                     _vfy03["rms_change_db"],
                     _vfy03["spectral_correlation"],
                 )
                 warnings.append(f"Auto-readjust: RMS change {_vfy03['rms_change_db']:.1f} dB")
         except Exception as _e:
-            logger.debug("backend.core.phases.phase_03_denoise: non-critical exception: %s", _e)
+            logger.debug("backend.core.phases.Verarbeitungsschritt_03_denoise: unkritisch exception: %s", _e)
 
         return create_phase_result(
             audio=_p03_out(result_audio),
@@ -2639,7 +2674,7 @@ class DenoisePhase(PhaseInterface):
                 _rms_out_db = compute_gated_rms_dbfs(np.asarray(processed_audio, dtype=np.float32))
                 rms_drop_db = (_rms_out_db - _rms_in_db) if _rms_in_db > -90.0 else 0.0
                 logger.info(
-                    "Phase 03 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
+                    "Verarbeitungsschritt 03 loudness-preservation: material=%s rms_drop=%.2f dB via makeup %.2f dB (envelope-gated)",
                     material_key,
                     rms_drop_db,
                     makeup_gain_db,
@@ -2724,7 +2759,9 @@ class DenoisePhase(PhaseInterface):
             _alpha = 1.0 - (_e_out / _e_in) / _target_ratio  # 0…1
             audio_filtered = ((1.0 - _alpha) * audio_filtered + _alpha * audio).astype(np.float32)
             audio_filtered = np.clip(audio_filtered, -1.0, 1.0)
-            logger.info("Energy-Preservation Guard: e_ratio=%.3f → blended with alpha=%.3f", _e_out / _e_in, _alpha)
+            logger.info(
+                "Energy-Preservation Guard: e_Verhaeltnis=%.3f → blended with alpha=%.3f", _e_out / _e_in, _alpha
+            )
 
         # Statistiken
         reduction_db = self._measure_noise_reduction(audio, audio_filtered)
@@ -2810,12 +2847,14 @@ class DenoisePhase(PhaseInterface):
             _masking_freqs_ref = np.linspace(0.0, sr / 2.0, _mask_ratio_03.shape[0], dtype=np.float32)
             assert _masking_floor_ref is not None  # assigned above — narrows ndarray|None for Pylance
             logger.debug(
-                "§2.62 phase_03 Masking-Guard: mean_floor=%.3f max_floor=%.3f",
+                "§2.62 Verarbeitungsschritt_03 Masking-Guard: mean_floor=%.3f max_floor=%.3f",
                 float(np.mean(_masking_floor_ref)),
                 float(np.max(_masking_floor_ref)),
             )
         except Exception as _msk_exc_03:
-            logger.debug("§2.62 phase_03 Masking-Guard nicht verfügbar (non-blocking): %s", _msk_exc_03)
+            logger.debug(
+                "§2.62 Verarbeitungsschritt_03 Masking-Guard nicht verfügbar (nicht blockierend): %s", _msk_exc_03
+            )
 
         for zone_name, zone_win, zone_hop, f_low, f_high in self._MRSA_ZONES:
             try:
@@ -2867,7 +2906,7 @@ class DenoisePhase(PhaseInterface):
                         _mfloor_z = np.interp(f_z, _masking_freqs_ref, _masking_floor_ref).astype(np.float32)
                         G_z = np.maximum(G_z, _mfloor_z[:, np.newaxis])
                     except Exception as e:
-                        logger.warning("phase_03_denoise.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_03_denoise.py::unbekannter Ersatzpfad: %s", e)
                         pass  # nie pipeline-blockierend
                 G_mb = self._apply_multiband_gate(G_z, f_z, params["bands"])
                 G_sm = self._suppress_musical_noise(
@@ -2942,7 +2981,7 @@ class DenoisePhase(PhaseInterface):
                     w_acc[k] += w
 
             except Exception as zone_exc:
-                logger.warning("MRSA zone '%s' failed: %s", zone_name, zone_exc)
+                logger.warning("MRSA zone '%s' fehlgeschlagen: %s", zone_name, zone_exc)
                 continue
 
         # Weighted average; unprocessed bins → gain=1.0 (pass-through)
@@ -2975,7 +3014,7 @@ class DenoisePhase(PhaseInterface):
                     100.0 * float(np.mean(_p36_mask)),
                 )
         except Exception as _pmask_exc:
-            logger.debug("§2.36 Phoneme-Mask NR-Bypass (non-blocking): %s", _pmask_exc)
+            logger.debug("§2.36 Phoneme-Mask NR-Bypass (nicht blockierend): %s", _pmask_exc)
 
         # §v10.303.13 Transient-Guard: Transiente Frames (Onsets, Attacks)
         # bekommen 50% weniger Denoising. Verhindert Groove-Verlust
@@ -2983,7 +3022,7 @@ class DenoisePhase(PhaseInterface):
         try:
             from backend.core.dsp.transient_guard import compute_transient_mask
 
-            _t_mask = compute_transient_mask(audio, sample_rate)
+            _t_mask = compute_transient_mask(audio, sr)
             if len(_t_mask) != n_t:
                 _t_src = np.linspace(0.0, 1.0, len(_t_mask))
                 _t_dst = np.linspace(0.0, 1.0, n_t)
@@ -2994,10 +3033,12 @@ class DenoisePhase(PhaseInterface):
                 G_combined = G_combined * (1.0 - _tm2d * 0.5) + _tm2d * 0.5
                 logger.info(
                     "§v10.303.13 Transient-Guard: %d/%d Frames (%.1f%%) vor Denoise geschützt",
-                    _n_transient, n_t, 100.0 * _n_transient / max(1, n_t),
+                    _n_transient,
+                    n_t,
+                    100.0 * _n_transient / max(1, n_t),
                 )
         except Exception as _texc:
-            logger.debug("§v10.303.13 Transient-Guard (non-blocking): %s", _texc)
+            logger.debug("§v10.303.13 Transient-Guard (nicht blockierend): %s", _texc)
 
         # Apply MRSA gain with gain-gradient phase correction (Prusa & Holighaus 2017 §3.4)
         Zxx_processed = self._apply_gain_gradient_phase_correction(Zxx_ref, G_combined, REF_HOP, sr)
@@ -3017,7 +3058,7 @@ class DenoisePhase(PhaseInterface):
             )
             audio_out = np.asarray(audio_out, dtype=np.float32)
         except Exception as _istft_p03_exc:
-            logger.warning("phase_03 istft failed, passthrough: %s", _istft_p03_exc)
+            logger.warning("Verarbeitungsschritt_03 istft fehlgeschlagen, passthrough: %s", _istft_p03_exc)
             audio_out = np.zeros(n_samples, dtype=np.float32)
 
         # Length matching
@@ -3282,7 +3323,7 @@ class DenoisePhase(PhaseInterface):
                         float(np.mean(_hpg_gain)),
                     )
             except Exception as _hpg_gain_exc:
-                logger.debug("§2.28 HPG gain integration: non-blocking — %s", _hpg_gain_exc)
+                logger.debug("§2.28 HPG gain integration: nicht blockierend — %s", _hpg_gain_exc)
 
         logger.debug(
             "OMLSA: μ_G=%.3f σ_G=%.3f μ_p=%.3f (salience_adaptive=%s)",
@@ -3672,7 +3713,7 @@ class DenoisePhase(PhaseInterface):
             hf_before = signal.sosfilt(sos, before)
             hf_after = signal.sosfilt(sos, after)
         except Exception as e:
-            logger.warning("phase_03_denoise.py::_measure_noise_reduction fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_03_denoise.py::_measure_noise_reduction Ersatzpfad: %s", e)
             return 0.0
 
         energy_before = np.sum(hf_before**2) + 1e-10
@@ -3691,7 +3732,7 @@ if __name__ == "__main__":
     # Test Professional Denoise Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Denoise Phase v2.0 - Test")
+    logger.debug("Professional Denoise Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio
@@ -3736,7 +3777,7 @@ if __name__ == "__main__":
         _result = _phase.process(_audio_with_noise.copy(), material_type=_material)
 
         if _result.success:
-            logger.debug("Processing Complete!")
+            logger.debug("Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f\u00d7 realtime)",
                 _result.metadata["execution_time_seconds"],
@@ -3749,12 +3790,12 @@ if __name__ == "__main__":
             logger.debug("   Adaptive Tracking: %s", _result.metadata["adaptive_noise_tracking"])
             logger.debug("   Warnings: %s", _result.warnings if _result.warnings else "None")
         else:
-            logger.debug("Processing Failed!")
+            logger.debug("Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("Professional Denoise v2.0 Test Complete!")
+    logger.debug("Professional Denoise v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _result.metadata["algorithm"])
-    logger.debug("Scientific Reference: %s", _result.metadata["scientific_ref"])
+    logger.debug("Scientific Referenz: %s", _result.metadata["scientific_ref"])
     logger.debug("Benchmark: %s", _result.metadata["benchmark"])
     logger.debug("Quality Impact: 0.93 (Professional-Grade)")

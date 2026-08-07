@@ -64,7 +64,7 @@ class _DummyWindow:
 
     def _ensure_playhead_timer(self):
         if self._playhead_timer is None:
-            self._playhead_timer = _DummyTimer()
+            self._playhead_timer = _DummyTimer()  # type: ignore[assignment]
         return self._playhead_timer
 
 
@@ -170,7 +170,7 @@ def test_play_audio_normalizes_before_sounddevice(monkeypatch: pytest.MonkeyPatc
         dtype=np.float32,
     )
 
-    modern_window.ModernMainWindow._play_audio(window, audio, 48_000)
+    modern_window.ModernMainWindow._play_audio(window, audio, 48_000)  # type: ignore[arg-type]
 
     played = captured.get("data")
     assert isinstance(played, np.ndarray)

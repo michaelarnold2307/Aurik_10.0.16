@@ -170,6 +170,7 @@ def _collect_protected_zones(kwargs: dict) -> list[tuple[float, float, float]]:
                 if end_s > start_s:
                     zones.append((start_s, end_s, cap))
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
     return zones
 
@@ -197,6 +198,7 @@ def _build_sibilance_locality_profile(
             try:
                 start_s, end_s = float(loc[0]), float(loc[1])
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
             s = max(0, int(max(0.0, start_s) * sample_rate) - pad)
             e = min(n_samples, int(max(0.0, end_s) * sample_rate) + pad)
@@ -407,7 +409,7 @@ def _try_mp_senet_refine(audio: np.ndarray, sr: int) -> tuple[np.ndarray | None,
     _dfn_release = None
     try:
         if _try_allocate_ml_budget_43 is not None and not _try_allocate_ml_budget_43("MpSeNet_phase43", 0.25):
-            logger.debug("MP-SENet phase_43: ml_memory_budget insufficient — DSP-Fallback")
+            logger.debug("MP-SENet Verarbeitungsschritt_43: ml_memory_Grenze insufficient — DSP-Ersatzpfad")
             return None, "unavailable"
         _dfn_release = _release_ml_budget_43
     except ImportError:
@@ -420,7 +422,7 @@ def _try_mp_senet_refine(audio: np.ndarray, sr: int) -> tuple[np.ndarray | None,
             _plm43_mps = _get_plugin_lifecycle_manager_43()
             _plm43_mps.set_active("MP-SENet", True)
     except Exception as e:
-        logger.warning("phase_43_ml_deesser.py::_try_mp_senet_refine fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_43_ml_deesser.py::_try_mp_senet_refine Ersatzpfad: %s", e)
 
     try:
         if _get_mp_senet_plugin_43 is None:
@@ -429,7 +431,7 @@ def _try_mp_senet_refine(audio: np.ndarray, sr: int) -> tuple[np.ndarray | None,
         result = plugin.enhance(audio, sr)
         return result.audio, result.model_used
     except Exception as exc:
-        logger.debug("Phase 43 MP-SENet refinement unavailable: %s", exc)
+        logger.debug("Verarbeitungsschritt 43 MP-SENet refinement nicht verfuegbar: %s", exc)
         return None, "unavailable"
     finally:
         if _dfn_release is not None:
@@ -438,7 +440,7 @@ def _try_mp_senet_refine(audio: np.ndarray, sr: int) -> tuple[np.ndarray | None,
             try:
                 _plm43_mps.set_active("MP-SENet", False)
             except Exception as e:
-                logger.warning("phase_43_ml_deesser.py::_try_mp_senet_refine fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_43_ml_deesser.py::_try_mp_senet_refine Ersatzpfad: %s", e)
 
 
 class AdaptiveDeEsserPhase(PhaseInterface):
@@ -499,18 +501,19 @@ class AdaptiveDeEsserPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "ml_deesser", default_nr=0.2, default_de_ess=0.85, default_comp=1.0)
-            # De-Esser braucht de_ess_strength, nicht nr_strength
-            if "de_ess_strength" in kwargs:
-                kwargs["de_ess_strength"] = _pim["de_ess_strength"]
-            if "strength_cap" in kwargs:
-                # Erhöhe Cap: PIM will mehr De-Essing → weniger Deckelung
-                kwargs["strength_cap"] = min(1.0, 0.6 + _pim["de_ess_strength"] * 0.5)
-            # NR-Parameter weiterhin für Noise-Reduction-Anteil
-            for _key in ("noise_reduction_strength", "nr_strength"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                # De-Esser braucht de_ess_strength, nicht nr_strength
+                if "de_ess_strength" in kwargs:
+                    kwargs["de_ess_strength"] = _pim["de_ess_strength"]
+                if "strength_cap" in kwargs:
+                    # Erhöhe Cap: PIM will mehr De-Essing → weniger Deckelung
+                    kwargs["strength_cap"] = min(1.0, 0.6 + _pim["de_ess_strength"] * 0.5)
+                # NR-Parameter weiterhin für Noise-Reduction-Anteil
+                for _key in ("noise_reduction_strength", "nr_strength"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_43_ml_deesser.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_43_ml_deesser.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         self.validate_input(audio)
         t0 = time.time()
@@ -523,7 +526,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
             if _get_plugin_lifecycle_manager_43 is not None:
                 _get_plugin_lifecycle_manager_43().evict_for_phase("phase_43_ml_deesser")
         except Exception as e:
-            logger.warning("phase_43_ml_deesser.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_43_ml_deesser.py::verarbeiten Ersatzpfad: %s", e)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -580,7 +583,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
         _ctx_gender = kwargs.get("phase19_gender")
         if _ctx_gender and gender == "unknown":
             gender = str(_ctx_gender)
-            logger.debug("Phase 43: gender inherited from Phase 19: %s", gender)
+            logger.debug("Verarbeitungsschritt 43: gender inherited from Verarbeitungsschritt 19: %s", gender)
         default_low, default_high = GENDER_FREQ_MAP.get(gender, GENDER_FREQ_MAP["unknown"])
         # §2.36a PhonemeTimeline: language-specific sibilant band overrides gender-freq defaults
         _ptl_43 = kwargs.get("phoneme_timeline")
@@ -590,13 +593,13 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                 default_low = float(_ptl_low)
                 default_high = float(_ptl_high)
                 logger.debug(
-                    "Phase 43: sibilant_band_hz override → %.0f–%.0f Hz (language=%s)",
+                    "Verarbeitungsschritt 43: sibilant_band_hz override → %.0f–%.0f Hz (language=%s)",
                     default_low,
                     default_high,
                     getattr(_ptl_43, "language", "?"),
                 )
             except Exception as _ptl_exc:
-                logger.debug("Phase 43: sibilant_band_hz fallback to gender-based: %s", _ptl_exc)
+                logger.debug("Verarbeitungsschritt 43: sibilant_band_hz Ersatzpfad to gender-based: %s", _ptl_exc)
         freq_low: float = float(kwargs.get("freq_low", default_low))
         freq_high: float = float(kwargs.get("freq_high", default_high))
 
@@ -624,7 +627,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                 # Überwiegend natürliche Sibilanz → kein De-Essing
                 strength_cap = min(strength_cap, 0.05)
                 logger.debug(
-                    "Phase 43 §Lücke4: dominant=NATURAL natural_frac=%.2f → strength_cap=%.2f",
+                    "Verarbeitungsschritt 43 §Lücke4: dominant=NATURAL natural_frac=%.2f → strength_cap=%.2f",
                     _sib_summary.get("natural_fraction", 0.0),
                     strength_cap,
                 )
@@ -632,9 +635,9 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                 # Hiss-überlagerte Sibilanz → sehr konservatives De-Essing
                 _masked_cap = 0.45 if _sib_pressure >= 0.55 else 0.30
                 strength_cap = min(strength_cap, _masked_cap)
-                logger.debug("Phase 43 §Lücke4: dominant=MASKED_HISS → strength_cap=%.2f", strength_cap)
+                logger.debug("Verarbeitungsschritt 43 §Lücke4: dominant=MASKED_HISS → strength_cap=%.2f", strength_cap)
         except Exception as _sib_exc:
-            logger.debug("Phase 43 §Lücke4 Sibilance-Pathology: fallback — %s", _sib_exc)
+            logger.debug("Verarbeitungsschritt 43 §Lücke4 Sibilance-Pathology: Ersatzpfad — %s", _sib_exc)
 
         x = audio.astype(np.float64)
 
@@ -646,7 +649,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
             _breath_cap = float(np.clip(0.60 - (_breathiness - 0.4) * 0.10, 0.50, 1.0))
             strength_cap = max(strength_cap, _breath_cap)
             logger.info(
-                "Phase 43 Breathiness-Guard: breathiness=%.2f → strength_cap angepasst auf %.2f",
+                "Verarbeitungsschritt 43 Breathiness-Guard: breathiness=%.2f → strength_cap angepasst auf %.2f",
                 _breathiness,
                 strength_cap,
             )
@@ -788,7 +791,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                 else:
                     processed = (_gate43 * processed + (1.0 - _gate43) * _x_ref43).astype(audio.dtype)
                 logger.debug(
-                    "Phase 43 segment-gate: %d sibilant windows, %.1f%% gated",
+                    "Verarbeitungsschritt 43 segment-gate: %d sibilant windows, %.1f%% gated",
                     len(_sib_segs43),
                     100.0 * float(np.mean(_gate43)),
                 )
@@ -826,12 +829,12 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                     else:
                         processed[_smask_43] = _x_ref43_fb[_smask_43]
                     logger.debug(
-                        "§2.36 phase_43 Phonem-Fallback: %d/%d Frames (Plosiv-Schutz)",
+                        "§2.36 Verarbeitungsschritt_43 Phonem-Ersatzpfad: %d/%d Frames (Plosiv-Schutz)",
                         int(np.sum(_pmask_43)),
                         len(_pmask_43),
                     )
             except Exception as _pmask43_exc:
-                logger.debug("§2.36 phase_43 Phonem-Fallback (non-blocking): %s", _pmask43_exc)
+                logger.debug("§2.36 Verarbeitungsschritt_43 Phonem-Ersatzpfad (nicht blockierend): %s", _pmask43_exc)
 
         if x.ndim == 2 and x.shape[0] == 2 and x.shape[1] > 2:
             _n_locality43 = x.shape[1]
@@ -920,7 +923,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                     ml_refine_bypassed = True
                     ml_refine_bypass_reason = "safety_gate"
                     logger.debug(
-                        "Phase 43 ML refinement rejected: sib_impr=%.3f intelligibility=%.3f rms_delta_db=%.2f",
+                        "Verarbeitungsschritt 43 ML refinement rejected: sib_impr=%.3f intelligibility=%.3f rms_delta_db=%.2f",
                         sibilance_improvement,
                         ml_intelligibility.intelligibility_score,
                         rms_delta_db,
@@ -950,11 +953,11 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                         voice_gender=gender,
                     )
         except Exception as _snr_exc:
-            logger.debug("Phase 43 §2.8 SNR invariant skipped: %s", _snr_exc)
+            logger.debug("Verarbeitungsschritt 43 §2.8 SNR invariant uebersprungen: %s", _snr_exc)
 
         logger.info(
-            "Phase 43 DeEsser: gender=%s freq=[%.0f–%.0f Hz] "
-            "threshold=%.1f dB ratio=%.1f strength_cap=%.2f avg_GR=%.2f dB "
+            "Verarbeitungsschritt 43 DeEsser: gender=%s freq=[%.0f–%.0f Hz] "
+            "Schwelle=%.1f dB Verhaeltnis=%.1f strength_cap=%.2f avg_GR=%.2f dB "
             "(sib_pressure=%.2f ctrl_strength=%.2f eff_strength=%.2f)",
             gender,
             freq_low,
@@ -982,9 +985,9 @@ class AdaptiveDeEsserPhase(PhaseInterface):
             _nt43_dist = _nt43_dist_fn(_nt43_residual, str(material_type), sr=sample_rate)
             if _nt43_dist > 0.25:
                 processed = (0.5 * processed + 0.5 * audio).astype(np.float32)
-                logger.warning("Phase43 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend", _nt43_dist)
+                logger.warning("Verarbeitungsschritt43 V19 Noise-Textur-Dist=%.3f > 0.25 → 50%%-Blend", _nt43_dist)
         except Exception as _nt43_exc:
-            logger.debug("Phase43 V19 Noise-Textur-Guard (non-blocking): %s", _nt43_exc)
+            logger.debug("Verarbeitungsschritt43 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt43_exc)
 
         # §V24 Spektralfarbe-Prüfung nach De-Essing (§2.74, non-blocking WARNING)
         try:
@@ -997,7 +1000,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
                 _sc_wet_43 = 0.70  # Phase-Strength −30 % (§V24)
                 processed = (_sc_wet_43 * processed + (1.0 - _sc_wet_43) * audio).astype(np.float32)
         except Exception as _sc_exc_43:
-            logger.debug("§V24 phase_43 spectral_color non-blocking: %s", _sc_exc_43)
+            logger.debug("§V24 Verarbeitungsschritt_43 spectral_color nicht blockierend: %s", _sc_exc_43)
 
         # V26 Onset-Guard (§2.77): Sibilanten-Transients nach De-Essing schützen (non-blocking)
         try:
@@ -1007,7 +1010,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
 
             processed = _opg43(audio, processed, None, max_delta_db=1.5)
         except Exception as _on43_exc:
-            logger.debug("Phase43 V26 Onset-Guard (non-blocking): %s", _on43_exc)
+            logger.debug("Verarbeitungsschritt43 V26 Onset-Guard (nicht blockierend): %s", _on43_exc)
 
         # §2.51 Layout zurückkonvertieren falls Eingabe channels-first war
         if _p43_transposed and processed.ndim == 2:

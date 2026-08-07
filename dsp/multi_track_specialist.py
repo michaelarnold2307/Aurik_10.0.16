@@ -16,6 +16,7 @@ Date: 10. Februar 2026
 
 import logging
 import warnings
+from typing import Any
 
 import numpy as np
 from scipy import fft
@@ -63,7 +64,7 @@ class TimeAligner:
         self.max_delay_ms = np.clip(max_delay_ms, 1.0, 1000.0)
         self.correlation_threshold = np.clip(correlation_threshold, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -128,7 +129,7 @@ class TimeAligner:
         # Convert to delay in samples
         delay_samples = (search_start + peak_idx) - center
 
-        return delay_samples, float(peak_correlation)
+        return delay_samples, float(peak_correlation)  # type: ignore[return-value]
 
     def align_tracks(self, reference: np.ndarray, target: np.ndarray, delay_samples: int) -> np.ndarray:
         """
@@ -211,7 +212,7 @@ class TimeAligner:
             return audio_stereo
 
         if abs(delay_samples) < 1:
-            logger.info("[TimeAlign] No significant delay detected")
+            logger.info("[TimeAlign] No significant delay erkannt")
             self.metrics["alignment_applied"] = False
             return audio_stereo
 
@@ -270,7 +271,7 @@ class PhaseAligner:
         self.phase_threshold_degrees = np.clip(phase_threshold_degrees, 10.0, 180.0)
         self.correction_strength = np.clip(correction_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -352,7 +353,7 @@ class PhaseAligner:
         if abs(abs(phase_diff_degrees) - 180.0) < 30.0:
             # Invert polarity
             corrected = -audio * self.correction_strength + audio * (1 - self.correction_strength)
-            return corrected
+            return corrected  # type: ignore[no-any-return]
         else:
             # Phasenversatz via IIR-Allpass-Filter
             # Ziel-Phase in Radian
@@ -371,9 +372,9 @@ class PhaseAligner:
                 corrected = sosfilt(sos, audio.astype(np.float64)).astype(audio.dtype)
                 # Dry/Wet-Mix mit correction_strength
                 mix = float(getattr(self, "correction_strength", 1.0))
-                return (corrected * mix + audio * (1.0 - mix)).astype(audio.dtype)
+                return (corrected * mix + audio * (1.0 - mix)).astype(audio.dtype)  # type: ignore[no-any-return]
             except Exception:
-                logger.warning("multi_track_specialist.py::correct_phase fallback", exc_info=True)
+                logger.warning("multi_track_specialist.py::correct_Verarbeitungsschritt Ersatzpfad", exc_info=True)
                 return audio.copy()
 
     def process(self, audio_stereo: np.ndarray, sample_rate: int) -> np.ndarray:
@@ -412,13 +413,13 @@ class PhaseAligner:
 
         # Check if correction is needed
         if abs(phase_diff) < self.phase_threshold_degrees:
-            logger.info("[PhaseAlign] Phase difference (%.1f°) below threshold, skipping", phase_diff)
+            logger.info("[PhaseAlign] Verarbeitungsschritt difference (%.1f°) below Schwelle, skipping", phase_diff)
             self.metrics["correction_applied"] = False
             self.metrics["polarity_inverted"] = False
             return audio_stereo
 
         # Correct phase
-        logger.info("[PhaseAlign] Correcting phase: %.1f°", phase_diff)
+        logger.info("[PhaseAlign] Correcting Verarbeitungsschritt: %.1f°", phase_diff)
         corrected_target = self.correct_phase(target, phase_diff)
 
         self.metrics["correction_applied"] = True
@@ -466,7 +467,7 @@ class PhaseCancellationCorrector:
         self.cancellation_threshold_db = np.clip(cancellation_threshold_db, -40.0, -10.0)
         self.correction_strength = np.clip(correction_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -573,12 +574,12 @@ class PhaseCancellationCorrector:
 
         # Check if correction is needed
         if not cancellation_detected:
-            logger.info("[PhaseCancellation] No cancellation detected (M/S ratio: %.1f dB)", ms_ratio_db)
+            logger.info("[PhaseCancellation] No cancellation erkannt (M/S Verhaeltnis: %.1f dB)", ms_ratio_db)
             self.metrics["correction_applied"] = False
             return audio_stereo
 
         # Correct cancellation
-        logger.info("[PhaseCancellation] Cancellation detected (M/S ratio: %.1f dB), correcting...", ms_ratio_db)
+        logger.info("[PhaseCancellation] Cancellation erkannt (M/S Verhaeltnis: %.1f dB), correcting...", ms_ratio_db)
         left_corrected, right_corrected = self.correct_cancellation(left, right)
 
         self.metrics["correction_applied"] = True
@@ -624,7 +625,7 @@ class StereoBalanceCorrector:
         self.imbalance_threshold_db = np.clip(imbalance_threshold_db, 0.5, 10.0)
         self.correction_strength = np.clip(correction_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -740,7 +741,7 @@ class StereoBalanceCorrector:
 
         # Check if correction is needed
         if abs(imbalance_db) < self.imbalance_threshold_db:
-            logger.info("[StereoBalance] Imbalance (%.2f dB) below threshold, skipping", abs(imbalance_db))
+            logger.info("[StereoBalance] Imbalance (%.2f dB) below Schwelle, skipping", abs(imbalance_db))
             self.metrics["correction_applied"] = False
             return audio_stereo
 
@@ -799,7 +800,7 @@ class MidSideProcessor:
         self.mid_gain_db = np.clip(mid_gain_db, -12.0, 12.0)
         self.side_gain_db = np.clip(side_gain_db, -12.0, 12.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -942,7 +943,7 @@ class CombFilterRemover:
         self.notch_threshold_db = np.clip(notch_threshold_db, -20.0, -3.0)
         self.correction_strength = np.clip(correction_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -1008,7 +1009,7 @@ class CombFilterRemover:
             return notch_frequencies
 
         except Exception as e:
-            logger.error("[CombFilter] ⚠️  Detection failed: %s, returning empty", e)
+            logger.error("[CombFilter] ⚠️  Detection fehlgeschlagen: %s, returning empty", e)
             return []
 
     def correct_comb(self, audio: np.ndarray, notch_frequencies: list[float], sample_rate: int) -> np.ndarray:
@@ -1100,16 +1101,16 @@ class CombFilterRemover:
 
             # Check if correction is needed
             if not notch_frequencies:
-                logger.info("[CombFilter] No comb filtering detected")
+                logger.info("[CombFilter] No comb filtering erkannt")
                 self.metrics["correction_applied"] = False
                 return audio
 
             # Correct
-            logger.info("[CombFilter] %s notches detected, correcting...", len(notch_frequencies))
+            logger.info("[CombFilter] %s notches erkannt, correcting...", len(notch_frequencies))
             audio_corrected = self.correct_comb(audio, notch_frequencies, sample_rate)
 
             self.metrics["correction_applied"] = True
-            logger.info("[CombFilter] Correction applied successfully")
+            logger.info("[CombFilter] Correction angewendet erfolgreich")
 
             return audio_corrected
 
@@ -1237,43 +1238,43 @@ class MultiTrackSpecialist:
                 try:
                     output = self.time_aligner.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Time Alignment failed: %s", e)
+                    logger.error("[MultiTrack] ⚠️  Time Alignment fehlgeschlagen: %s", e)
             # Step 2: Phase Alignment
             if self.enable_phase_alignment:
-                logger.info("\n[MultiTrack] Step 2/6: Phase Alignment")
+                logger.info("\n[MultiTrack] Step 2/6: Verarbeitungsschritt Alignment")
                 try:
                     output = self.phase_aligner.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Phase Alignment failed: %s", e)
+                    logger.error("[MultiTrack] ⚠️  Verarbeitungsschritt Alignment fehlgeschlagen: %s", e)
             # Step 3: Comb Filter Removal (deaktiviert)
             if False:
-                logger.info("\n[MultiTrack] Step 3/6: Comb Filter Removal (SKIPPED - performance issue)")
+                logger.info("\n[MultiTrack] Step 3/6: Comb Filter Removal (uebersprungen - performance issue)")
                 try:
                     output = self.comb_filter_remover.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Comb Filter Removal failed: %s", e)
+                    logger.error("[MultiTrack] ⚠️  Comb Filter Removal fehlgeschlagen: %s", e)
             # Step 4: Phase Cancellation Correction
             if self.enable_phase_cancellation_correction:
-                logger.info("\n[MultiTrack] Step 4/6: Phase Cancellation Correction")
+                logger.info("\n[MultiTrack] Step 4/6: Verarbeitungsschritt Cancellation Correction")
                 try:
                     output = self.phase_cancellation_corrector.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Phase Cancellation Correction failed: %s", e)
+                    logger.error("[MultiTrack] ⚠️  Verarbeitungsschritt Cancellation Correction fehlgeschlagen: %s", e)
             # Step 5: Stereo Balance Correction
             if self.enable_stereo_balance_correction:
                 logger.info("\n[MultiTrack] Step 5/6: Stereo Balance Correction")
                 try:
                     output = self.stereo_balance_corrector.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Stereo Balance Correction failed: %s", e)
+                    logger.error("[MultiTrack] ⚠️  Stereo Balance Correction fehlgeschlagen: %s", e)
             # Step 6: Mid/Side Processing (optional, creative)
             if self.enable_mid_side_processing:
                 logger.info("\n[MultiTrack] Step 6/6: Mid/Side Processing")
                 try:
                     output = self.mid_side_processor.process(output, sample_rate)
                 except Exception as e:
-                    logger.error("[MultiTrack] ⚠️  Mid/Side Processing failed: %s", e)
-            logger.info("\n[MultiTrack] Processing complete!")
+                    logger.error("[MultiTrack] ⚠️  Mid/Side Processing fehlgeschlagen: %s", e)
+            logger.info("\n[MultiTrack] Processing vollstaendig!")
             self._audit_log({"shape": output.shape, "success": True})
             return output
         except Exception as e:
@@ -1282,7 +1283,7 @@ class MultiTrackSpecialist:
             return audio
 
     def _log_contract(self):
-        logger.info("[Contract][MultiTrackSpecialist] process(audio: np.ndarray, sample_rate: int) -> np.ndarray")
+        logger.info("[Contract][MultiTrackSpecialist] verarbeiten(audio: np.ndarray, sample_rate: int) -> np.ndarray")
 
     def _audit_log(self, result: dict):
         logger.info("[AuditLog][MultiTrackSpecialist] Ergebnis: %s", result)
@@ -1342,11 +1343,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Transpose if stereo (N, 2) → (2, N)
     if audio.ndim == 2:
@@ -1386,4 +1387,4 @@ if __name__ == "__main__":
         output = output.T
 
     sf.write(args.output, output, sr)
-    logger.info("Saved: %s", args.output)
+    logger.info("gespeichert: %s", args.output)

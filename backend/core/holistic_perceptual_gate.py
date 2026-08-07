@@ -124,7 +124,9 @@ class HolisticPerceptualGate:
     def _get_depth_adaptive_af_min(transfer_chain: list[str] | None) -> float:
         """§v10.120 Depth-adaptiver artifact_freedom-Mindestwert für HPI-Gate.
 
-        Konsistent mit spec_constitution.py Music-Death-Shield.
+        Konsistent mit spec_constitution.py Music-Death-Shield: Baseline (depth<2)
+        = 0.95 (§0h `artifact_freedom_min`), nur bei tieferen Transfer-Chains
+        gelockert (depth=2→0.88, depth=3→0.80, depth≥4→0.70 cassette).
         """
         _depth = max(1, len(transfer_chain)) if transfer_chain else 1
         if _depth >= 4:
@@ -133,7 +135,7 @@ class HolisticPerceptualGate:
             return 0.80  # moderate
         elif _depth == 2:
             return 0.88  # shallow
-        return 0.90  # studio master (Restoration-Floor)
+        return 0.95  # studio master / single-generation (§0h Music-Death-Shield baseline)
 
     def evaluate_restoration(
         self,
@@ -214,7 +216,7 @@ class HolisticPerceptualGate:
                 if timbral_ref > _timbral_ref_before:
                     logger.debug(
                         "§2.44 Codec-Digital-Floor: timbral_ref %.3f → %.3f"
-                        " (timbral_input_floor=%.3f mat=%s restorability=%.0f)",
+                        " (timbral_Eingabe_floor=%.3f mat=%s restorability=%.0f)",
                         _timbral_ref_before,
                         timbral_ref,
                         _timbral_input_floor,
@@ -255,7 +257,7 @@ class HolisticPerceptualGate:
                 if timbral_ref > _timbral_ref_before_analog:
                     logger.debug(
                         "§2.44 Analog-Carrier-Floor: timbral_ref %.3f → %.3f"
-                        " (timbral_input_floor=%.3f mat=%s restorability=%.0f)",
+                        " (timbral_Eingabe_floor=%.3f mat=%s restorability=%.0f)",
                         _timbral_ref_before_analog,
                         timbral_ref,
                         _timbral_input_floor_analog,
@@ -615,7 +617,7 @@ class HolisticPerceptualGate:
                 )
 
         logger.info(
-            "§2.44 ReferenceMemory updated key=%s obs=%d calibrated=%s α_eff=%.3f",
+            "§2.44 ReferenceMemory updated key=%s obs=%d kalibriert=%s α_eff=%.3f",
             key,
             self._ref_memory[key].obs_count,
             self._ref_memory[key].calibrated,
@@ -655,7 +657,7 @@ class HolisticPerceptualGate:
                 loaded += 1
             logger.info("§2.44 ReferenceMemory: %d Einträge von Disk geladen (%s)", loaded, _HPG_REF_MEMORY_PATH)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("§2.44 ReferenceMemory: Disk-Load fehlgeschlagen — starte mit leerem Memory: %s", exc)
+            logger.warning("§2.44 ReferenceMemory: Disk-laden fehlgeschlagen — starte mit leerem Memory: %s", exc)
 
     def _save_ref_memory_to_disk(self) -> None:
         """§2.44 Speichert aktuelles Referenz-Memory nach ~/.aurik/hpg_reference_memory.json.
@@ -682,7 +684,7 @@ class HolisticPerceptualGate:
             tmp_path.replace(_HPG_REF_MEMORY_PATH)
             logger.debug("§2.44 ReferenceMemory: %d Einträge auf Disk gespeichert", len(payload))
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("§2.44 ReferenceMemory: Disk-Save fehlgeschlagen (non-blocking): %s", exc)
+            logger.warning("§2.44 ReferenceMemory: Disk-speichern fehlgeschlagen (nicht blockierend): %s", exc)
 
     def _get_reference_vector(self, genre: str, material: str, era_bin: str) -> np.ndarray | None:
         """§2.44 Fallback-Kaskade (5 Stufen).
@@ -955,7 +957,7 @@ class HolisticPerceptualGate:
             self._mert_proxy_used = False  # VERSA succeeded
             return _versa_sim
         except Exception as _versa_exc:
-            logger.debug("§2.44 VERSA primary failed → MERT proxy fallback: %s", _versa_exc)
+            logger.debug("§2.44 VERSA primary fehlgeschlagen → MERT proxy Ersatzpfad: %s", _versa_exc)
             self._mert_proxy_used = True  # VERSA failed, MERT is proxy
 
         # ─── FALLBACK PATH 1: MERT plugin ─────────────────────────────────────
@@ -1001,7 +1003,7 @@ class HolisticPerceptualGate:
                 sim = 0.65 * float(plugin_sim) + 0.35 * float(proxy_sim)
                 return float(np.clip(sim, 0.0, 1.0))
             except Exception as exc:
-                logger.debug("§2.44 MERT similarity fallback to spectral proxy: %s", exc)
+                logger.debug("§2.44 MERT similarity Ersatzpfad to spectral proxy: %s", exc)
                 # Disable repeated failing plugin initialization attempts in this process.
                 self._mert_path_disabled = True
 
@@ -1225,7 +1227,7 @@ class HolisticPerceptualGate:
                 score = float(_plg.score(mono.astype(np.float32), sr))
                 return float(np.clip(score, 0.0, 1.0))
         except Exception:  # plugin not installed → DSP fallback
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # DSP proxy: three reference-free quality correlates
         try:
@@ -1292,7 +1294,7 @@ class HolisticPerceptualGate:
             proxy = 0.35 * sfm_score + 0.40 * snr_score + 0.25 * harmonic_coh
             return float(np.clip(proxy, 0.0, 1.0))
         except Exception as _exc:
-            logger.debug("NORESQA DSP-proxy error (non-blocking): %s", _exc)
+            logger.debug("NORESQA DSP-proxy error (nicht blockierend): %s", _exc)
             return 1.0  # neutral: don't penalise when guard fails
 
     def _compute_studio_quality_gain(

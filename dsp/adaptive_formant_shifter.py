@@ -112,7 +112,7 @@ class AdaptiveFormantShifter:
                 # TorchScript-Modell (Platzhalter)
                 # model = torch.jit.load('formant_shifter.pt')
                 # result = model(torch.from_numpy(audio).float().unsqueeze(0)).squeeze(0).numpy()
-                logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                 fallback_used = True
                 result = self._formant_shift_classic(audio, sr, shift_ratio)
             else:
@@ -123,7 +123,7 @@ class AdaptiveFormantShifter:
             result = audio.copy()
 
         if audit_log:
-            logger.info("AdaptiveFormantShifter: shift_ratio=%s, fallback_used=%s", shift_ratio, fallback_used)
+            logger.info("AdaptiveFormantShifter: shift_Verhaeltnis=%s, Ersatzpfad_used=%s", shift_ratio, fallback_used)
         return result
 
     def _formant_shift_classic(self, audio: np.ndarray, sr: int, shift_ratio: float) -> np.ndarray:
@@ -135,7 +135,7 @@ class AdaptiveFormantShifter:
             return self._world_formant_shift(audio, sr, shift_ratio)
         else:
             logger.warning(
-                "Unbekannte Formant-Shift-Methode '%s' — Fallback auf LPC-Formantverschiebung",
+                "Unbekannte Formant-Shift-Methode '%s' — Ersatzpfad auf LPC-Formantverschiebung",
                 self.method,
             )
             return self._lpc_formant_shift(audio, sr, shift_ratio)
@@ -160,7 +160,7 @@ class AdaptiveFormantShifter:
         try:
             a = librosa.lpc(audio_f64, order=order)  # [1, a1, a2, …, a_order]
         except Exception:
-            logger.warning("adaptive_formant_shifter.py::_lpc_formant_shift fallback", exc_info=True)
+            logger.warning("adaptive_formant_shifter.py::_lpc_formant_shift Ersatzpfad", exc_info=True)
             return audio.copy()
 
         # Guard: degenerate LPC → LAPACK DLASCL failure
@@ -197,7 +197,7 @@ class AdaptiveFormantShifter:
         if rms_out > 1e-10:
             result *= rms_in / rms_out
 
-        return np.clip(result, -1.0, 1.0).astype(audio.dtype)
+        return np.clip(result, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # PSOLA-basierte Formantverschiebung (scipy-only, kein pysptk/pyworld)
@@ -293,12 +293,12 @@ class AdaptiveFormantShifter:
             result *= rms_in / rms_out
 
         logger.info(
-            "PSOLA-Formant-Shift: shift_ratio=%.3f, hop=%d, n_fft=%d",
+            "PSOLA-Formant-Shift: shift_Verhaeltnis=%.3f, hop=%d, n_fft=%d",
             shift_ratio,
             hop_length,
             n_fft,
         )
-        return np.clip(result, -1.0, 1.0).astype(audio.dtype)
+        return np.clip(result, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # WORLD-ähnliche Formantverschiebung via Mel-Cepstraler Spektralhüllkurve
@@ -386,12 +386,12 @@ class AdaptiveFormantShifter:
             result *= rms_in / rms_out
 
         logger.info(
-            "WORLD-Formant-Shift: shift_ratio=%.3f, lifter=%d, hop=%d",
+            "WORLD-Formant-Shift: shift_Verhaeltnis=%.3f, lifter=%d, hop=%d",
             shift_ratio,
             lifter_cutoff,
             hop_length,
         )
-        return np.clip(result, -1.0, 1.0).astype(audio.dtype)
+        return np.clip(result, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
 
     def auto_optimize_params(self, audio: np.ndarray, sr: int, target: np.ndarray | None = None) -> dict[str, Any]:
         """
@@ -418,6 +418,6 @@ class AdaptiveFormantShifter:
 
         self.last_params = {"method": self.method, "shift_ratio": shift_ratio, "centroid_src": centroid_src}
         logger.info(
-            f"auto_optimize_params (FormantShifter): centroid_src={centroid_src:.1f} Hz → shift_ratio={shift_ratio:.3f}"
+            f"auto_optimieren_params (FormantShifter): centroid_src={centroid_src:.1f} Hz → shift_Verhaeltnis={shift_ratio:.3f}"
         )
         return self.last_params

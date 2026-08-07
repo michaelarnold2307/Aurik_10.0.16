@@ -94,11 +94,11 @@ class OptimizationIntegration:
         self._augmentation_cache: dict[str, RandAugment | AutoAugment] = {}
         self._moo_optimizer: NSGAII | None = None
 
-        logger.info("OptimizationIntegration initialized (v8.2)")
+        logger.info("OptimizationIntegration initialisiert (v8.2)")
         logger.info("  Optimization path: %s", self.optimization_base_path)
-        logger.info("  Loaded parameters for %s materials", len(self.material_params_cache))
-        logger.info("  Phase 1: Perceptual Loss, E2E Optimization, Hyperparameter Optimization")
-        logger.info("  Phase 2-4: NAS, Ensemble, MOO, Uncertainty, Augmentation available")
+        logger.info("  geladen parameters for %s materials", len(self.material_params_cache))
+        logger.info("  Verarbeitungsschritt 1: Perceptual Loss, E2E Optimization, Hyperparameter Optimization")
+        logger.info("  Verarbeitungsschritt 2-4: NAS, Ensemble, MOO, Uncertainty, Augmentation verfuegbar")
 
     def _load_all_material_parameters(self) -> bool:
         """Lädt optimized parameters for all available materials."""
@@ -109,7 +109,7 @@ class OptimizationIntegration:
             params = self._load_material_parameters(material)
             if params:
                 self.material_params_cache[material] = params
-                logger.info("  Loaded optimized parameters for: %s", material)
+                logger.info("  geladen optimiert parameters for: %s", material)
                 loaded_any = True
 
         return loaded_any
@@ -119,7 +119,7 @@ class OptimizationIntegration:
         params_path = self.optimization_base_path / material_type / f"best_params_{material_type}.yaml"
 
         if not params_path.exists():
-            logger.debug("No optimized parameters found for %s: %s", material_type, params_path)
+            logger.debug("No optimiert parameters found for %s: %s", material_type, params_path)
             return None
 
         try:
@@ -127,7 +127,7 @@ class OptimizationIntegration:
                 params = yaml.safe_load(f)
             return params  # type: ignore[no-any-return]
         except Exception as e:
-            logger.error("Failed to load parameters for %s: %s", material_type, e)
+            logger.error("konnte nicht laden parameters for %s: %s", material_type, e)
             return None
 
     def get_optimized_parameters(self, material_type: str, fallback_to_defaults: bool = True) -> dict[str, Any]:
@@ -229,7 +229,7 @@ class OptimizationIntegration:
         self._update_compressor_config(context, params)
         self._update_musical_goals_weights(context, params)
 
-        logger.info("Applied optimized parameters for material: %s", material_type)
+        logger.info("angewendet optimiert parameters for material: %s", material_type)
 
         return context
 
@@ -326,7 +326,7 @@ class OptimizationIntegration:
         """
         if reference_audio is None:
             # No reference: use self-consistency metrics
-            logger.warning("No reference audio provided, quality assessment limited")
+            logger.warning("No Referenz audio provided, quality assessment limited")
             return 0.5 if not return_details else (0.5, {"warning": "no_reference"})  # type: ignore[return-value,dict-item]
 
         # Convert to torch tensors (robust against array subclasses/views).
@@ -474,7 +474,7 @@ class OptimizationIntegration:
         cache_key = f"{material_type}_{input_channels}_{initial_channels}_{n_cells}_{n_nodes}"
 
         if not force_new and cache_key in self._nas_network_cache:
-            logger.debug("Using cached NAS network for %s", material_type)
+            logger.debug("Using zwischengespeichert NAS network for %s", material_type)
             return self._nas_network_cache[cache_key]
 
         # Create new network
@@ -493,12 +493,12 @@ class OptimizationIntegration:
                         weights_only=True,
                     )
                 )
-                logger.info("Loaded pretrained NAS network for %s", material_type)
+                logger.info("geladen pretrained NAS network for %s", material_type)
             except Exception as e:
-                logger.warning("Failed to load NAS weights for %s: %s", material_type, e)
+                logger.warning("konnte nicht laden NAS weights for %s: %s", material_type, e)
 
         self._nas_network_cache[cache_key] = network
-        logger.info("Created NAS network for %s: %s cells, %s nodes", material_type, n_cells, n_nodes)
+        logger.info("erstellt NAS network for %s: %s cells, %s nodes", material_type, n_cells, n_nodes)
 
         return network  # type: ignore[no-any-return]
 
@@ -528,7 +528,7 @@ class OptimizationIntegration:
         )
 
         if cache_key and cache_key in self._ensemble_cache:
-            logger.debug("Using cached ensemble for %s", material_type)
+            logger.debug("Using zwischengespeichert ensemble for %s", material_type)
             return self._ensemble_cache[cache_key]
 
         # Wrap members if needed
@@ -537,16 +537,16 @@ class OptimizationIntegration:
             if isinstance(model, EnsembleMember):
                 wrapped_members.append(model)
             else:
-                wrapped_members.append(EnsembleMember(model=model, name=f"member_{i}", weight=1.0 / len(members)))
+                wrapped_members.append(EnsembleMember(model=model, name=f"member_{i}", weight=1.0 / len(members)))  # type: ignore[arg-type]
 
         # Create ensemble
-        ensemble = AdvancedEnsemble(ensemble_members=wrapped_members, strategy=strategy, device=self.device)
+        ensemble = AdvancedEnsemble(ensemble_members=wrapped_members, strategy=strategy, device=self.device)  # type: ignore[arg-type]
 
         if cache_key:
             self._ensemble_cache[cache_key] = ensemble
 
         logger.info(
-            "Created %s ensemble with %s members (meta_dim=%s, out_dim=%s)",
+            "erstellt %s ensemble with %s members (meta_dim=%s, out_dim=%s)",
             strategy,
             len(members),
             meta_features_dim,
@@ -571,7 +571,7 @@ class OptimizationIntegration:
         """
         if self._moo_optimizer is None:
             self._moo_optimizer = create_audio_restoration_moo()
-            logger.info("Created Multi-Objective Optimizer (generic audio restoration)")
+            logger.info("erstellt Multi-Objective Optimizer (generic audio restoration)")
         logger.debug(
             "MOO request: material=%s pop=%s objectives=%s",
             material_type,
@@ -605,7 +605,7 @@ class OptimizationIntegration:
         cache_key = f"{material_type}_{method}_{n_samples}" if material_type else None
 
         if not force_new and cache_key and cache_key in self._uncertainty_quantifier_cache:
-            logger.debug("Using cached uncertainty quantifier for %s", material_type)
+            logger.debug("Using zwischengespeichert uncertainty quantifier for %s", material_type)
             return self._uncertainty_quantifier_cache[cache_key]
 
         # Create quantifier
@@ -614,7 +614,7 @@ class OptimizationIntegration:
         if cache_key:
             self._uncertainty_quantifier_cache[cache_key] = quantifier
 
-        logger.info("Created %s uncertainty quantifier", method)
+        logger.info("erstellt %s uncertainty quantifier", method)
 
         return quantifier
 
@@ -642,7 +642,7 @@ class OptimizationIntegration:
         cache_key = f"{material_type}_{strategy}_{n_ops}_{magnitude}"
 
         if not force_new and cache_key in self._augmentation_cache:
-            logger.debug("Using cached augmentation policy for %s", material_type)
+            logger.debug("Using zwischengespeichert augmentation policy for %s", material_type)
             return self._augmentation_cache[cache_key]
 
         # Create augmentation policy
@@ -656,14 +656,14 @@ class OptimizationIntegration:
             if policy_path.exists():
                 try:
                     policy.load_policies(str(policy_path))  # type: ignore[attr-defined]
-                    logger.info("Loaded pretrained augmentation policy for %s", material_type)
+                    logger.info("geladen pretrained augmentation policy for %s", material_type)
                 except Exception as e:
-                    logger.warning("Failed to load augmentation policy: %s", e)
+                    logger.warning("konnte nicht laden augmentation policy: %s", e)
         else:
             raise ValueError(f"Unknown augmentation strategy: {strategy}")
 
         self._augmentation_cache[cache_key] = policy
-        logger.info("Created %s augmentation policy for %s", strategy, material_type)
+        logger.info("erstellt %s augmentation policy for %s", strategy, material_type)
 
         return policy
 

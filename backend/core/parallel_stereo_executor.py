@@ -66,10 +66,10 @@ def run_phase_stereo_parallel(
     """
     if audio.ndim != 2 or audio.shape[0] != 2:
         # Mono oder nicht standard → sequentiell
-        return phase_fn(audio, sample_rate, **kwargs)
+        return phase_fn(audio, sample_rate, **kwargs)  # type: ignore[no-any-return]
 
     if not is_parallel_safe(phase_id):
-        return phase_fn(audio, sample_rate, **kwargs)
+        return phase_fn(audio, sample_rate, **kwargs)  # type: ignore[no-any-return]
 
     try:
         _left = np.asarray(audio[0], dtype=np.float32)
@@ -101,8 +101,8 @@ def run_phase_stereo_parallel(
         )
 
         logger.debug("⚡ Parallel-Stereo %s: left+right parallel ausgeführt", phase_id)
-        return _out
+        return _out  # type: ignore[no-any-return]
 
     except Exception as exc:
         logger.warning("⚠️ Parallel-Stereo %s fehlgeschlagen: %s → sequentiell", phase_id, exc)
-        return phase_fn(audio, sample_rate, **kwargs)
+        return phase_fn(audio, sample_rate, **kwargs)  # type: ignore[no-any-return]

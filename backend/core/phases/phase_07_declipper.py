@@ -107,7 +107,7 @@ def _histogram_clip_threshold(audio: np.ndarray, material: str = "unknown") -> f
         threshold = float(np.clip(p995, 0.88, 0.999))
 
     logger.info(
-        "Phase 07 self-cal: material=%s P95=%.4f P99=%.4f P995=%.4f ratio=%.2f hard_clip=%s → threshold=%.4f",
+        "Verarbeitungsschritt 07 self-cal: material=%s P95=%.4f P99=%.4f P995=%.4f Verhaeltnis=%.2f hard_clip=%s → Schwelle=%.4f",
         material,
         p95,
         p99,
@@ -166,7 +166,7 @@ def _declip_pchip(audio: np.ndarray, threshold: float) -> np.ndarray:
 
     if n_unclipped < 4:
         logger.warning(
-            "Phase 07 declip: nur %d ungeclippte Samples von %d — "
+            "Verarbeitungsschritt 07 declip: nur %d ungeclippte Samples von %d — "
             "Material ist nahezu vollständig übersteuert, PCHIP nicht anwendbar",
             n_unclipped,
             n_total,
@@ -183,7 +183,7 @@ def _declip_pchip(audio: np.ndarray, threshold: float) -> np.ndarray:
         declipped = audio.copy()
         declipped[clipped] = interp(x[clipped].astype(np.float64))
     except Exception:
-        logger.warning("Phase 07 PCHIP fehlgeschlagen — Fallback: lineare Interpolation")
+        logger.warning("Verarbeitungsschritt 07 PCHIP fehlgeschlagen — Ersatzpfad: lineare Interpolation")
         declipped = np.interp(x, x[unclipped], audio[unclipped])
 
     # Adaptive Blend: Hanning-Crossfade an Clip-Grenzen
@@ -260,7 +260,7 @@ class DeclipperPhase(PhaseInterface):
         self,
         audio: np.ndarray,
         sample_rate: int = 48000,
-        strength: float = 1.0,
+        strength: float = 1.0,  # type: ignore[override]
         **kwargs,
     ) -> PhaseResult:
         """Führe selbstkalibrierendes Declipping durch.
@@ -301,7 +301,7 @@ class DeclipperPhase(PhaseInterface):
 
         if self._n_clips == 0:
             logger.info(
-                "Phase 07: keine Clips detektiert (threshold=%.4f) — Passthrough",
+                "Verarbeitungsschritt 07: keine Clips detektiert (Schwelle=%.4f) — Passthrough",
                 self._clip_threshold,
             )
             return PhaseResult(
@@ -334,12 +334,12 @@ class DeclipperPhase(PhaseInterface):
         if is_mono:
             audio_out = audio_out.ravel()
 
-        reduction_db = float(
-            20 * np.log10(np.mean(np.abs(audio_in - audio_out)) / max(np.mean(np.abs(audio_in)), 1e-10) + 1e-10)
-        )
+        _diff_mean = float(np.mean(np.abs(audio_in - audio_out)))
+        _input_mean = max(float(np.mean(np.abs(audio_in))), 1e-10)
+        reduction_db = float(20 * np.log10(_diff_mean / _input_mean + 1e-10))
 
         logger.info(
-            "Phase 07 declip: %d clips (%.2f%%), threshold=%.4f, "
+            "Verarbeitungsschritt 07 declip: %d clips (%.2f%%), Schwelle=%.4f, "
             "crossfade=%d samples (%.1f ms), strength=%.2f, reduction=%.1f dB",
             self._n_clips,
             self._clip_fraction * 100,

@@ -137,7 +137,7 @@ class CLPResult:
 
 def _freq_to_erb(freq_hz: np.ndarray) -> np.ndarray:
     """Konvertiert Hz zu ERB-Nummer (Moore/Glasberg 1983)."""
-    return 21.4 * np.log10(0.00437 * freq_hz + 1.0)
+    return 21.4 * np.log10(0.00437 * freq_hz + 1.0)  # type: ignore[no-any-return]
 
 
 def _compute_vocal_presence(spectrum: np.ndarray, freqs: np.ndarray) -> float:
@@ -218,10 +218,10 @@ def _detect_transient_zones(audio: np.ndarray, sr: int) -> list[tuple[float, flo
     if not onset_strength:
         return []
 
-    onset_strength = np.array(onset_strength)
+    onset_strength = np.array(onset_strength)  # type: ignore[assignment]
     # Transient = lokales RMS-Maximum
     threshold = float(np.percentile(onset_strength, 85))
-    is_transient = onset_strength > threshold * 1.5
+    is_transient = onset_strength > threshold * 1.5  # type: ignore[operator]
 
     # Gruppiere benachbarte Transienten zu Zonen
     zones = []

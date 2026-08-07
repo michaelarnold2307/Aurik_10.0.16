@@ -77,10 +77,10 @@ def reprocess_studio2026(
         h1 = _engine._compute_hpe(ra, sr)
         decision = _engine.decide(h0, h1, name, 1.0)
         if decision.action == SteerAction.SKIP:
-            logger.info("Studio2026 %s: SKIP (SteeringEngine)", name)
+            logger.info("Studio2026 %s: ueberspringen (SteeringEngine)", name)
             return arr
         if decision.action == SteerAction.RETRY_LIGHTER:
-            logger.info("Studio2026 %s: RETRY (SteeringEngine, str=%.2f)", name, decision.new_strength)
+            logger.info("Studio2026 %s: Wiederholung (SteeringEngine, str=%.2f)", name, decision.new_strength)
             kw2 = dict(kw)
             for k in list(kw2):
                 if k in ("strength", "amount", "gain_db"):
@@ -227,7 +227,7 @@ def _dynamic_eq(audio: np.ndarray, sr: int, material: str) -> np.ndarray:
 
         if audio.ndim == 2:
             ratio = np.clip(result / (mono + 1e-12), 0.8, 1.2)
-            return (audio * ratio[:, np.newaxis]).astype(np.float32)
+            return (audio * ratio[:, np.newaxis]).astype(np.float32)  # type: ignore[no-any-return]
         return np.clip(result, -1, 1).astype(np.float32)
     except Exception as e:
         logger.warning("unknown: %s", e)
@@ -298,9 +298,9 @@ def _adaptive_mb_compression(audio: np.ndarray, sr: int) -> np.ndarray:
 
         combined = processed[0] + processed[1] + processed[2] + processed[3]
         if audio.ndim == 2:
-            ratio = np.clip(combined / (mono + 1e-12), 0.8, 1.2)
-            return (audio * ratio[:, np.newaxis]).astype(np.float32)
-        return combined.astype(np.float32)
+            ratio_arr = np.asarray(np.clip(combined / (mono + 1e-12), 0.8, 1.2), dtype=np.float32)
+            return (audio * ratio_arr[:, np.newaxis]).astype(np.float32)  # type: ignore[no-any-return]
+        return combined.astype(np.float32)  # type: ignore[no-any-return]
     except Exception as e:
         logger.warning("unknown: %s", e)
         return audio
@@ -338,7 +338,7 @@ def _freq_dependent_stereo(audio: np.ndarray, sr: int) -> np.ndarray:
 
         S_new = S_lo + S_mid + S_hi
         L_out, R_out = (M + S_new), (M - S_new)
-        return np.stack([L_out, R_out], axis=1).astype(np.float32)
+        return np.stack([L_out, R_out], axis=1).astype(np.float32)  # type: ignore[no-any-return]
     except Exception as e:
         logger.warning("_freq_dependent_stereo: %s", e)
         return audio
@@ -371,10 +371,10 @@ def _transient_tonal_enhance(audio: np.ndarray, sr: int) -> np.ndarray:
 
         if audio.ndim == 2:
             ratio = np.clip(result / (mono + 1e-12), 0.85, 1.15)
-            return (audio * ratio[:, np.newaxis]).astype(np.float32)
-        return result.astype(np.float32)
+            return (audio * ratio[:, np.newaxis]).astype(np.float32)  # type: ignore[no-any-return]
+        return result.astype(np.float32)  # type: ignore[no-any-return]
     except Exception as e:
-        logger.warning("_transient_tonal_enhance: %s", e)
+        logger.warning("_transient_tonal_verbessern: %s", e)
         return audio
 
 
@@ -416,7 +416,7 @@ def _dynamic_presence_air(audio: np.ndarray, sr: int) -> np.ndarray:
 
         if audio.ndim == 2:
             ratio = np.clip(result / (mono + 1e-12), 0.7, 1.3)
-            return (audio * ratio[:, np.newaxis]).astype(np.float32)
+            return (audio * ratio[:, np.newaxis]).astype(np.float32)  # type: ignore[no-any-return]
         return result.astype(np.float32)
     except Exception as e:
         logger.warning("_dynamic_presence_air: %s", e)
@@ -443,8 +443,8 @@ def _sub_bass_synth(audio: np.ndarray, sr: int) -> np.ndarray:
         mixed = mono + sub_only * 0.12
         if audio.ndim == 2:
             ratio = np.clip(mixed / (mono + 1e-12), 0.9, 1.1)
-            return (audio * ratio[:, np.newaxis]).astype(np.float32)
-        return mixed.astype(np.float32)
+            return (audio * ratio[:, np.newaxis]).astype(np.float32)  # type: ignore[no-any-return]
+        return mixed.astype(np.float32)  # type: ignore[no-any-return]
     except Exception as e:
         logger.warning("_sub_bass_synth: %s", e)
         return audio
@@ -529,7 +529,7 @@ def _true_peak_limiter(audio: np.ndarray, sr: int):
         lu_after = 20.0 * np.log10(rms_after) - 3.0
         return result, lu_before, lu_after
     except Exception as e:
-        logger.warning("_true_peak_limiter fallback: %s", e)
+        logger.warning("_true_peak_limiter Ersatzpfad: %s", e)
         mono = audio.mean(axis=1) if audio.ndim == 2 else audio
         rms = float(np.sqrt(np.mean(mono**2)) + 1e-12)
         lu = 20.0 * np.log10(rms) - 3.0
@@ -608,7 +608,7 @@ def _verify_harmonics(audio, original, sr):
         m = x.mean(axis=1) if x.ndim == 2 else x.ravel()[:4096]
         s = np.abs(np.fft.rfft(m * np.hanning(len(m))))
         peaks = [s[i] for i in range(1, len(s) - 1) if s[i] > s[i - 1] and s[i] > s[i + 1] and s[i] > np.mean(s) * 2]
-        peaks = np.array(peaks[:10])
+        peaks = np.array(peaks[:10])  # type: ignore[assignment]
         return np.ones(1) if len(peaks) == 0 else peaks / (np.sum(peaks) + 1e-12)
 
     ho, hc = _h(original), _h(audio)

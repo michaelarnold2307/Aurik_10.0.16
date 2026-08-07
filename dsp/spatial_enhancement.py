@@ -578,7 +578,7 @@ class SpatialEnhancementSystem:
         report["spatial"] = spatial_report
 
         # Calculate overall metrics
-        report["stages_applied"] = 4
+        report["stages_applied"] = 4  # type: ignore[assignment]
         report["spatial_quality"] = report["width"]["width_change"] * 100  # Width improvement
 
         return result, report
@@ -607,11 +607,11 @@ def main():
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Ensure stereo
     if audio.shape[1] == 1:
@@ -636,7 +636,7 @@ def main():
     logger.info("  Early reflections: %s", "Yes" if report["depth"]["early_reflections_enhanced"] else "No")
 
     logger.info("\nWidth: %.2fx", report["width"]["width_change"])
-    logger.info("  Original: %.2f", report["width"]["original_width"])
+    logger.info("  Originalsignal: %.2f", report["width"]["original_width"])
     logger.info("  New: %.2f", report["width"]["new_width"])
 
     logger.info("\nTexture: %.1f dB", report["texture"]["texture_enhancement_db"])
@@ -646,10 +646,10 @@ def main():
     logger.info("  Haas enhancement: %s", "Yes" if report["spatial"]["haas_enhancement_applied"] else "No")
 
     logger.info("\nSpatial Quality: %.1f", report["spatial_quality"])
-    logger.info("Stages applied: %s", report["stages_applied"])
+    logger.info("Stages angewendet: %s", report["stages_applied"])
 
     # Save
-    logger.info("\nSaving: %s", args.output)
+    logger.info("\nspeichere: %s", args.output)
     sf.write(args.output, processed, sr)
     logger.info("✓ Done!")
 

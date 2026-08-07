@@ -424,7 +424,7 @@ def _auto_load_calibration() -> None:
         # Verzögerter Import, um Zirkel zu vermeiden
         MertMushraProxy.load_calibration_artifact()
     except Exception:
-        logger.debug("§3.6 auto-load: Modul-Import noch nicht bereit", exc_info=True)
+        logger.debug("§3.6 auto-laden: Modul-Import noch nicht bereit", exc_info=True)
 
 
 # Führe Auto-Load aus, sobald die Klasse definiert ist (am Ende des Moduls via __init_subclass__ oder explizit)
@@ -483,7 +483,7 @@ class MertMushraProxy:
                     )
                 )
         except Exception as _panns_exc:
-            logger.debug("PANNs vocal detection unavailable, using spectral heuristic: %s", _panns_exc)
+            logger.debug("PANNs vocal detection nicht verfuegbar, using spectral heuristic: %s", _panns_exc)
 
         # Try FCPE next (no model load — only if already in memory)
         try:
@@ -502,7 +502,7 @@ class MertMushraProxy:
                 if f0_hz.size > 0:
                     return float(np.clip(float(np.mean(f0_hz > 0.0)), 0.0, 1.0))
         except Exception as _fcpe_exc:
-            logger.debug("FCPE vocal detection unavailable, using spectral heuristic: %s", _fcpe_exc)
+            logger.debug("FCPE vocal detection nicht verfuegbar, using spectral heuristic: %s", _fcpe_exc)
 
         # Lightweight spectral heuristic fallback
         try:
@@ -524,7 +524,7 @@ class MertMushraProxy:
             # Mapping: ratio ~0.40 (balanced) → 0.4; ratio ~0.65 (vocal-dominant) → 0.7
             return float(np.clip(ratio * 1.1, 0.0, 0.95))
         except Exception as e:
-            logger.warning("mert_mushra_proxy.py::_estimate_vocal_probability fallback: %s", e)
+            logger.warning("mert_mushra_proxy.py::_estimate_vocal_probability Ersatzpfad: %s", e)
             return 0.5  # Unknown → neutral
 
     def evaluate(
@@ -668,7 +668,7 @@ class MertMushraProxy:
             try:
                 MertMushraProxy.load_calibration_artifact()
             except Exception:
-                logger.debug("§3.6 auto-load: noch nicht verfügbar", exc_info=True)
+                logger.debug("§3.6 auto-laden: noch nicht verfügbar", exc_info=True)
 
         if _calibrated_weights is not None:
             effective_weights = dict(_calibrated_weights)
@@ -902,7 +902,7 @@ class MertMushraProxy:
         _calibrated_confidence = conf
 
         logger.info(
-            "MUSHRA-Proxy Stage 2 calibrated: r≈%.3f conf=%.2f (N=%d pairs, α=%.1f)",
+            "MUSHRA-Proxy Stufe 2 kalibriert: r≈%.3f conf=%.2f (N=%d pairs, α=%.1f)",
             r_est,
             conf,
             len(mushra_scores),
@@ -937,11 +937,11 @@ class MertMushraProxy:
         """
         global _calibrated_weights, _calibrated_confidence
         if _calibrated_weights is None:
-            logger.warning("§3.6 save: keine kalibrierten Gewichte zum Speichern")
+            logger.warning("§3.6 speichern: keine kalibrierten Gewichte zum Speichern")
             return None
 
-        import json as _json
         import hashlib
+        import json as _json
         from datetime import datetime, timezone
 
         artifact = {
@@ -955,13 +955,14 @@ class MertMushraProxy:
 
         try:
             from pathlib import Path
+
             out_path = Path(cls._CALIBRATION_ARTIFACT_PATH)
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(_json.dumps(artifact, indent=2, ensure_ascii=False))
-            logger.info("§3.6 calibration artifact saved: %s", out_path)
+            logger.info("§3.6 Kalibrierung artifact gespeichert: %s", out_path)
             return str(out_path)
         except Exception:
-            logger.warning("§3.6 save: Fehler beim Schreiben des Artefakts", exc_info=True)
+            logger.warning("§3.6 speichern: Fehler beim Schreiben des Artefakts", exc_info=True)
             return None
 
     @classmethod
@@ -977,7 +978,7 @@ class MertMushraProxy:
 
         artifact_path = Path(cls._CALIBRATION_ARTIFACT_PATH)
         if not artifact_path.exists():
-            logger.debug("§3.6 load: kein Kalibrierungsartefakt gefunden")
+            logger.debug("§3.6 laden: kein Kalibrierungsartefakt gefunden")
             return False
 
         try:
@@ -987,26 +988,21 @@ class MertMushraProxy:
             stored_stage = data.get("calibration_stage")
 
             if not stored_weights or stored_stage is None:
-                logger.warning("§3.6 load: Artefakt unvollständig")
+                logger.warning("§3.6 laden: Artefakt unvollständig")
                 return False
 
             # Drift-Check: Haben sich Core-Dateien geändert?
             stored_hashes = data.get("core_file_hashes", {})
             current_hashes = cls._compute_core_hashes()
-            drifted_files = [
-                f for f in current_hashes
-                if current_hashes[f] != stored_hashes.get(f, "")
-            ]
+            drifted_files = [f for f in current_hashes if current_hashes[f] != stored_hashes.get(f, "")]
 
             if drifted_files:
                 logger.warning(
-                    "§3.6 DRIFT DETECTED: %d core files changed since calibration: %s",
+                    "§3.6 DRIFT erkannt: %d core files changed since Kalibrierung: %s",
                     len(drifted_files),
                     ", ".join(drifted_files),
                 )
-                logger.warning(
-                    "§3.6: Alte Gewichte verworfen. Bitte calibrate_from_panel() erneut aufrufen."
-                )
+                logger.warning("§3.6: Alte Gewichte verworfen. Bitte calibrate_from_panel() erneut aufrufen.")
                 _calibrated_weights = None
                 _calibrated_confidence = None
                 return False
@@ -1014,7 +1010,7 @@ class MertMushraProxy:
             _calibrated_weights = stored_weights
             _calibrated_confidence = stored_confidence
             logger.info(
-                "§3.6 calibration loaded: stage=%d conf=%.2f, %d weights",
+                "§3.6 Kalibrierung geladen: Stufe=%d conf=%.2f, %d weights",
                 stored_stage,
                 stored_confidence or 0.0,
                 len(stored_weights),
@@ -1022,7 +1018,7 @@ class MertMushraProxy:
             return True
 
         except Exception:
-            logger.warning("§3.6 load: Fehler beim Lesen des Artefakts", exc_info=True)
+            logger.warning("§3.6 laden: Fehler beim Lesen des Artefakts", exc_info=True)
             return False
 
     @classmethod
@@ -1108,8 +1104,10 @@ class MertMushraProxy:
             _calibrated_confidence = conf
 
             logger.info(
-                "§3.6 Bootstrap: calibrated from %d synthetic samples, r≈%.3f conf=%.2f",
-                n_samples, r_est, conf,
+                "§3.6 Bootstrap: kalibriert from %d synthetic samples, r≈%.3f conf=%.2f",
+                n_samples,
+                r_est,
+                conf,
             )
 
             # Persistiere sofort
@@ -1147,7 +1145,7 @@ class MertMushraProxy:
             mos = _visqol.score(ref, test, sr)
             return float(np.clip(mos, 1.0, 5.0))
         except Exception as exc:
-            logger.debug("ViSQOL computation failed: %s", exc)
+            logger.debug("ViSQOL computation fehlgeschlagen: %s", exc)
             return 3.0
 
     # ------------------------------------------------------------------
@@ -1260,7 +1258,7 @@ class MertMushraProxy:
             )
             return float(np.clip(penalty, 0.0, 10.0))
         except Exception as exc:
-            logger.debug("Artifact penalty computation failed: %s", exc)
+            logger.debug("Artifact penalty computation fehlgeschlagen: %s", exc)
             return 0.5  # neutral fallback
 
     # ------------------------------------------------------------------
@@ -1374,7 +1372,7 @@ class MertMushraProxy:
             # Combined: 70% weighted mean quality + 30% consistency
             return float(np.clip(0.70 * weighted_mean + 0.30 * consistency, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Temporal consistency computation failed: %s", exc)
+            logger.debug("Temporal consistency computation fehlgeschlagen: %s", exc)
             return 0.8  # neutral-ish fallback
 
     # ------------------------------------------------------------------
@@ -1399,7 +1397,7 @@ class MertMushraProxy:
             emb_test = compute_dsp_embedding(test, sr)
             return _cosine_similarity(emb_ref, emb_test)
         except Exception as exc:
-            logger.debug("CLAP cosine computation failed: %s", exc)
+            logger.debug("CLAP cosine computation fehlgeschlagen: %s", exc)
             return 0.5  # neutral fallback
 
     # ------------------------------------------------------------------
@@ -1444,7 +1442,7 @@ class MertMushraProxy:
                 return 0.5  # neutral
             return (total_sc / n + total_lm / n) / 2.0
         except Exception as exc:
-            logger.debug("MR-STFT loss computation failed: %s", exc)
+            logger.debug("MR-STFT loss computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -1476,7 +1474,7 @@ class MertMushraProxy:
             weighted_diff = diff * weights[:, np.newaxis]
             return float(np.mean(weighted_diff))
         except Exception as exc:
-            logger.debug("ISO 226 distance computation failed: %s", exc)
+            logger.debug("ISO 226 distance computation fehlgeschlagen: %s", exc)
             return 2.0
 
     # ------------------------------------------------------------------
@@ -1510,7 +1508,7 @@ class MertMushraProxy:
 
             return _cosine_similarity(emb_ref, emb_test)
         except Exception as exc:
-            logger.debug("MERT cosine computation failed: %s", exc)
+            logger.debug("MERT cosine computation fehlgeschlagen: %s", exc)
             return float("nan")
 
     @staticmethod
@@ -1550,7 +1548,7 @@ class MertMushraProxy:
             # DSP fallback: compute feature vector
             return _extract_dsp_embedding(mono, target_sr)
         except Exception as exc:
-            logger.debug("Embedding extraction failed: %s", exc)
+            logger.debug("Embedding extraction fehlgeschlagen: %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -1586,7 +1584,7 @@ class MertMushraProxy:
             nsim = (2 * mu_r * mu_t + C1) * (2 * sig_rt + C2) / ((mu_r**2 + mu_t**2 + C1) * (sig_r**2 + sig_t**2 + C2))
             return float(np.clip(nsim, 0.0, 1.0))
         except Exception as e:
-            logger.warning("mert_mushra_proxy.py::_compute_nsim fallback: %s", e)
+            logger.warning("mert_mushra_proxy.py::_berechnen_nsim Ersatzpfad: %s", e)
             return float(np.clip(1.0 - np.sqrt(np.mean((ref - test) ** 2)), 0.0, 1.0))
 
     @staticmethod
@@ -1602,7 +1600,7 @@ class MertMushraProxy:
             frame_dists = np.sqrt(2.0 * np.sum(diff**2, axis=1))
             return max(0.0, (10.0 / math.log(10)) * float(np.mean(frame_dists)))
         except Exception as e:
-            logger.warning("mert_mushra_proxy.py::_compute_mcd fallback: %s", e)
+            logger.warning("mert_mushra_proxy.py::_berechnen_mcd Ersatzpfad: %s", e)
             return 5.0
 
     @staticmethod
@@ -1635,7 +1633,7 @@ class MertMushraProxy:
             corr = _pearson(_cr, _ct) if np.std(_cr) > 1e-12 and np.std(_ct) > 1e-12 else 1.0
             return float(np.clip(corr, 0.0, 1.0))
         except Exception as e:
-            logger.warning("mert_mushra_proxy.py::_compute_chroma_corr fallback: %s", e)
+            logger.warning("mert_mushra_proxy.py::_berechnen_chroma_corr Ersatzpfad: %s", e)
             return 0.5
 
     @staticmethod
@@ -1646,7 +1644,7 @@ class MertMushraProxy:
             rms_test = float(np.sqrt(np.mean(test**2) + 1e-12))
             return 20.0 * math.log10(rms_test) - 20.0 * math.log10(rms_ref)
         except Exception as e:
-            logger.warning("mert_mushra_proxy.py::_compute_lufs_diff fallback: %s", e)
+            logger.warning("mert_mushra_proxy.py::_berechnen_lufs_diff Ersatzpfad: %s", e)
             return 0.0
 
     @staticmethod
@@ -1744,7 +1742,7 @@ class MertMushraProxy:
             score = 0.6 * iacc_preservation + 0.4 * width_preservation
             return float(np.clip(score, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Stereo imaging computation failed: %s", exc)
+            logger.debug("Stereo imaging computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -1770,7 +1768,7 @@ class MertMushraProxy:
             preservation_rate, _orig_events, _proc_events = metric.compute_transient_preservation(ref, test, sr)
             return float(np.clip(preservation_rate, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Transient shape computation failed: %s", exc)
+            logger.debug("Transient shape computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -1830,7 +1828,7 @@ class MertMushraProxy:
             nmr_db = 10.0 * np.log10(max(float(np.mean(ratio)), 1e-20))
             return float(np.clip(nmr_db, -60.0, 60.0))
         except Exception as exc:
-            logger.debug("NMR computation failed: %s", exc)
+            logger.debug("NMR computation fehlgeschlagen: %s", exc)
             return 0.0
 
     # ------------------------------------------------------------------
@@ -1874,7 +1872,7 @@ class MertMushraProxy:
 
             return float(np.clip(0.6 * arousal_q + 0.4 * valence_q, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Emotional arc computation failed: %s", exc)
+            logger.debug("Emotional arc computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -1938,6 +1936,7 @@ class MertMushraProxy:
 
                         a = solve_toeplitz(r[:order], r[1 : order + 1])
                     except Exception:
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                         continue
                     if not np.isfinite(a).all():
                         continue
@@ -1978,7 +1977,7 @@ class MertMushraProxy:
                 return 0.5
             return float(np.mean(scores))
         except Exception as exc:
-            logger.debug("Vocal formant computation failed: %s", exc)
+            logger.debug("Vocal formant computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2044,7 +2043,7 @@ class MertMushraProxy:
             preservation = 1.0 - abs(ref_hnr - test_hnr) / denom
             return float(np.clip(preservation, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Vocal HNR computation failed: %s", exc)
+            logger.debug("Vocal HNR computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2212,7 +2211,7 @@ class MertMushraProxy:
                 )
             )
         except Exception as exc:
-            logger.debug("Pitch accuracy computation failed: %s", exc)
+            logger.debug("Pitch accuracy computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2338,7 +2337,7 @@ class MertMushraProxy:
             # Combined: 60% CPPS + 40% presence band
             return float(np.clip(0.60 * cpps_score + 0.40 * pres_score, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Vocal presence/CPPS computation failed: %s", exc)
+            logger.debug("Vocal presence/CPPS computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2486,7 +2485,7 @@ class MertMushraProxy:
 
             return float(np.clip(np.mean(band_scores), 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Modulation fidelity computation failed: %s", exc)
+            logger.debug("Modulation fidelity computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2612,7 +2611,7 @@ class MertMushraProxy:
             # Combined: 55% shape correlation + 45% amplitude fidelity
             return float(np.clip(0.55 * shape_corr + 0.45 * rms_score, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Harmonic structure computation failed: %s", exc)
+            logger.debug("Harmonic structure computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2711,7 +2710,7 @@ class MertMushraProxy:
             # Combined: 70% correlation + 30% magnitude
             return float(np.clip(0.70 * corr_score + 0.30 * mag_score, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Spectral flux correlation computation failed: %s", exc)
+            logger.debug("Spectral flux correlation computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2745,7 +2744,7 @@ class MertMushraProxy:
                     nsim = MertMushraProxy._compute_nsim(ref, test, sr)
                     return float(np.clip(nsim, 0.0, 1.0))
                 except Exception as e:
-                    logger.warning("mert_mushra_proxy.py::_compute_worst_segment_score fallback: %s", e)
+                    logger.warning("mert_mushra_proxy.py::_berechnen_worst_segment_Wert Ersatzpfad: %s", e)
                     return 0.5
 
             n_segs = len(ref) // seg_len
@@ -2783,7 +2782,7 @@ class MertMushraProxy:
             # Return the WORST segment (min-pool) — this is the floor
             return float(np.clip(min(seg_scores), 0.0, 1.0))
         except Exception as exc:
-            logger.debug("Worst-segment score computation failed: %s", exc)
+            logger.debug("Worst-segment Wert computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -2978,7 +2977,7 @@ class MertMushraProxy:
             return float(np.clip(score, 0.0, 1.0))
 
         except Exception as exc:
-            logger.debug("Perceptual disturbance computation failed: %s", exc)
+            logger.debug("Perceptual disturbance computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -3132,7 +3131,7 @@ class MertMushraProxy:
             return float(np.clip(score, 0.0, 1.0))
 
         except Exception as exc:
-            logger.debug("Roughness computation failed: %s", exc)
+            logger.debug("Roughness computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -3293,7 +3292,7 @@ class MertMushraProxy:
             return float(np.clip(score, 0.0, 1.0))
 
         except Exception as exc:
-            logger.debug("Specific loudness diff computation failed: %s", exc)
+            logger.debug("Specific loudness diff computation fehlgeschlagen: %s", exc)
             return 0.5
 
     # ------------------------------------------------------------------
@@ -3448,7 +3447,7 @@ class MertMushraProxy:
             return float(np.clip(score, 0.0, 1.0))
 
         except Exception as exc:
-            logger.debug("Fluctuation strength computation failed: %s", exc)
+            logger.debug("Fluctuation strength computation fehlgeschlagen: %s", exc)
             return 0.5
 
 
@@ -3476,7 +3475,7 @@ def _extract_hf_embedding(mert_plugin: object, audio: np.ndarray, sr: int) -> np
         embedding = last_hidden.mean(dim=1).squeeze(0).cpu().numpy()
         return embedding.astype(np.float32)  # type: ignore[no-any-return]
     except Exception as exc:
-        logger.debug("HF embedding extraction failed: %s", exc)
+        logger.debug("HF embedding extraction fehlgeschlagen: %s", exc)
         return None
 
 
@@ -3497,7 +3496,7 @@ def _extract_onnx_embedding(mert_plugin: object, audio: np.ndarray, sr: int) -> 
         _plm = _get_plm_mert()
         _plm.set_active("MERT", True)
     except Exception as e:
-        logger.warning("mert_mushra_proxy.py::_extract_onnx_embedding fallback: %s", e)
+        logger.warning("mert_mushra_proxy.py::_extrahieren_onnx_embedding Ersatzpfad: %s", e)
 
     try:
         min_len = sr  # 1 s minimum
@@ -3513,14 +3512,14 @@ def _extract_onnx_embedding(mert_plugin: object, audio: np.ndarray, sr: int) -> 
             embedding = result.flatten()
         return embedding.astype(np.float32)  # type: ignore[no-any-return]
     except Exception as exc:
-        logger.debug("ONNX embedding extraction failed: %s", exc)
+        logger.debug("ONNX embedding extraction fehlgeschlagen: %s", exc)
         return None
     finally:
         if _plm is not None:
             try:
                 _plm.set_active("MERT", False)
             except Exception as e:
-                logger.warning("mert_mushra_proxy.py::_extract_onnx_embedding fallback: %s", e)
+                logger.warning("mert_mushra_proxy.py::_extrahieren_onnx_embedding Ersatzpfad: %s", e)
 
 
 def _extract_dsp_embedding(audio: np.ndarray, sr: int) -> np.ndarray:
@@ -3580,7 +3579,7 @@ def _extract_dsp_embedding(audio: np.ndarray, sr: int) -> np.ndarray:
 
         return vec  # type: ignore[no-any-return]
     except Exception as e:
-        logger.warning("mert_mushra_proxy.py::_extract_dsp_embedding fallback: %s", e)
+        logger.warning("mert_mushra_proxy.py::_extrahieren_dsp_embedding Ersatzpfad: %s", e)
         return np.zeros(512, dtype=np.float32)  # type: ignore[no-any-return]
 
 
@@ -3726,7 +3725,7 @@ def get_proxy_evaluator() -> MertMushraProxy:
         with _lock:
             if _instance is None:
                 _instance = MertMushraProxy()
-                logger.debug("MertMushraProxy singleton created.")
+                logger.debug("MertMushraProxy singleton erstellt.")
     return _instance
 
 

@@ -3,6 +3,7 @@
 §IMPORT-GUARD: Prevents import shadowing (UnboundLocalError) in Aurik codebase.
 
 Bug pattern detected 2026-07-22:
+from typing import Any
   import os                               # module level
   def foo():
       os.path.join(...)                   # UnboundLocalError!
@@ -21,6 +22,7 @@ Usage:
 import os
 import re
 import sys
+from typing import Any
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -44,7 +46,7 @@ SKIP_DIRS = {
 
 def find_import_shadowing(filepath):
     """Find functions that shadow a module-level import."""
-    bugs = []
+    bugs: list[Any] = []  # type: ignore[name-defined]
     try:
         with open(filepath) as f:
             lines = f.readlines()

@@ -38,6 +38,24 @@ def report_trends(trends):
             print(f"  WARNUNG: Quality-Gate '{gate}' wurde mindestens einmal nicht bestanden!")
 
 
+def monitor_regression() -> dict:
+    """Composite-Einstiegspunkt für `PolicyEngine.monitor_regression()`.
+
+    Verkettet Audit-Log-Laden → Trend-Analyse → Reporting und liefert
+    zusätzlich die Gates zurück, die mindestens einmal nicht bestanden wurden.
+    """
+    audit_data = load_audit_log()
+    trends = analyze_trends(audit_data)
+    report_trends(trends)
+    regressions = {gate: values for gate, values in trends.items() if any(v is False for v in values)}
+    return {
+        "status": "ok" if audit_data else "no_audit_data",
+        "n_entries": len(audit_data),
+        "trends": trends,
+        "regressions": regressions,
+    }
+
+
 def main():
     audit_data = load_audit_log()
     trends = analyze_trends(audit_data)

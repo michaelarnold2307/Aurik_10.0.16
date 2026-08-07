@@ -323,7 +323,7 @@ class MediaForensicsEngine:
                     )
                 )
         except Exception:
-            logger.debug("ForensicsEngine: dynamics analysis failed", exc_info=True)
+            logger.debug("ForensicsEngine: dynamics Analyse fehlgeschlagen", exc_info=True)
         return evidence
 
     def _analyze_stereo(self, audio, sr):
@@ -360,7 +360,7 @@ class MediaForensicsEngine:
                     )
                 )
         except Exception:
-            logger.debug("ForensicsEngine: stereo analysis failed", exc_info=True)
+            logger.debug("ForensicsEngine: stereo Analyse fehlgeschlagen", exc_info=True)
         return evidence
 
     def _analyze_codecs(self, audio, sr):
@@ -388,7 +388,7 @@ class MediaForensicsEngine:
                     )
                 )
         except Exception:
-            logger.debug("ForensicsEngine: codec analysis failed", exc_info=True)
+            logger.debug("ForensicsEngine: codec Analyse fehlgeschlagen", exc_info=True)
         return evidence
 
     def _analyze_analog_specific(self, audio, sr):
@@ -433,7 +433,7 @@ class MediaForensicsEngine:
                     )
                 )
         except Exception:
-            logger.debug("ForensicsEngine: analog-specific analysis failed", exc_info=True)
+            logger.debug("ForensicsEngine: analog-specific Analyse fehlgeschlagen", exc_info=True)
         return evidence
 
     def _generate_hypotheses(self) -> list:

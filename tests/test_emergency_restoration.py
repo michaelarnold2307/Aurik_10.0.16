@@ -54,7 +54,7 @@ def mildly_damaged_audio():
 
     # 2. Some noise (15%)
     noise_mask = np.random.random(len(audio)) < 0.15
-    audio[noise_mask] += np.random.normal(0, 0.3, np.sum(noise_mask))
+    audio[noise_mask] += np.random.normal(0, 0.3, np.sum(noise_mask))  # type: ignore[call-overload]
 
     return audio, sr
 
@@ -76,7 +76,7 @@ def severely_damaged_audio():
 
     # 2. Heavy noise (30%)
     noise_mask = np.random.random(len(audio)) < 0.30
-    audio[noise_mask] = np.random.normal(0, 0.8, np.sum(noise_mask))
+    audio[noise_mask] = np.random.normal(0, 0.8, np.sum(noise_mask))  # type: ignore[call-overload]
 
     # 3. Some silence (20%)
     silence_mask = np.random.random(len(audio)) < 0.20

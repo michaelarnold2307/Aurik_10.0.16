@@ -37,7 +37,7 @@ class AdaptiveChainRouter:
     def __init__(self, templates: dict[str, list[str]]) -> None:
         """Initialisiert den Router mit den gegebenen Ketten-Templates."""
         self.templates = templates
-        logger.info("AdaptiveChainRouter initialized with %s templates", len(templates))
+        logger.info("AdaptiveChainRouter initialisiert with %s templates", len(templates))
 
     def select_chain(self, forensic_report: dict[str, str], confidence: float) -> list[str]:
         """Wählt die optimale Verarbeitungskette basierend auf Forensik-Report und Confidence."""

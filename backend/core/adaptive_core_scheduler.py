@@ -104,7 +104,7 @@ class AdaptiveCoreScheduler:
         if num_cores is None:
             # Auto: Nutze OPTIMAL_CORES, aber nie mehr als System hat
             self.num_cores = min(self.OPTIMAL_CORES, system_cores, self.MAX_CORES)
-            logger.info("Auto-detected %s cores, using %s (optimal)", system_cores, self.num_cores)
+            logger.info("Auto-erkannt %s cores, using %s (optimal)", system_cores, self.num_cores)
         else:
             # User override, aber warnen wenn suboptimal
             self.num_cores = min(num_cores, self.MAX_CORES)
@@ -136,7 +136,7 @@ class AdaptiveCoreScheduler:
             self._init_memory_pool()
 
         logger.info(
-            f"AdaptiveCoreScheduler initialized: {self.num_cores} cores, "
+            f"AdaptiveCoreScheduler initialisiert: {self.num_cores} cores, "
             f"MemPool={enable_memory_pool}, Monitoring={enable_monitoring}"
         )
 
@@ -153,9 +153,9 @@ class AdaptiveCoreScheduler:
                 "fft_buffers": [np.zeros(2**16, dtype=np.complex128) for _ in range(self.num_cores)],  # 64K FFT
                 "temp_arrays": [np.zeros((10 * 44100), dtype=np.float32) for _ in range(self.num_cores)],  # 10s Temp
             }
-            logger.info("Memory Pool initialized: %s MB pre-allocated", self.MEMORY_POOL_SIZE_MB)
+            logger.info("Memory Pool initialisiert: %s MB pre-allocated", self.MEMORY_POOL_SIZE_MB)
         except Exception as e:
-            logger.warning("Memory Pool initialization failed: %s, continuing without pool", e)
+            logger.warning("Memory Pool initialization fehlgeschlagen: %s, continuing without pool", e)
             self.memory_pool = None
 
     def register_phase(
@@ -193,7 +193,9 @@ class AdaptiveCoreScheduler:
         for dep in dependencies:
             self.dependency_graph[dep].append(phase_id)
 
-        logger.debug("Registered phase: %s, deps=%s, est_time=%.1fs", phase_id, dependencies, estimated_time)
+        logger.debug(
+            "Registered Verarbeitungsschritt: %s, deps=%s, est_time=%.1fs", phase_id, dependencies, estimated_time
+        )
 
     def get_ready_phases(self) -> list[str]:
         """Gibt Liste von Phasen zurück, die jetzt ausgeführt werden können."""
@@ -225,13 +227,13 @@ class AdaptiveCoreScheduler:
             result_audio = phase.function(audio, **kwargs)
 
             execution_time = time.time() - start_time
-            logger.debug("✅ %s completed in %.2fs", phase_id, execution_time)
+            logger.debug("✅ %s abgeschlossen in %.2fs", phase_id, execution_time)
 
             return result_audio, execution_time
 
         except Exception as e:
             execution_time = time.time() - start_time
-            logger.error("❌ %s failed after %.2fs: %s", phase_id, execution_time, e)
+            logger.error("❌ %s fehlgeschlagen after %.2fs: %s", phase_id, execution_time, e)
             raise
 
     def execute_all(self, audio: np.ndarray, **kwargs) -> np.ndarray:
@@ -335,7 +337,7 @@ class AdaptiveCoreScheduler:
         total_time = time.time() - start_time
         self._compute_statistics(total_time)
 
-        logger.info("✅ Pipeline completed in %.2fs", total_time)
+        logger.info("✅ Pipeline abgeschlossen in %.2fs", total_time)
 
         return current_audio
 
@@ -496,7 +498,7 @@ if __name__ == "__main__":
     logger.debug("ADAPTIVE CORE SCHEDULER TEST")
     logger.debug("%s", "=" * 60)
     logger.debug("Audio: %s minutes @ %s Hz", duration, sr)
-    logger.debug("Cores: %s available, using %s (optimal)\n", mp.cpu_count(), AdaptiveCoreScheduler.OPTIMAL_CORES)
+    logger.debug("Cores: %s verfuegbar, using %s (optimal)\n", mp.cpu_count(), AdaptiveCoreScheduler.OPTIMAL_CORES)
 
     # Initialisiere Scheduler
     scheduler = AdaptiveCoreScheduler(num_cores=4)
@@ -531,4 +533,4 @@ if __name__ == "__main__":
         logger.debug("Speedup:          %.2f×", stats.parallelization_speedup)
         logger.debug("Core Efficiency:  %.1f%%", stats.core_efficiency * 100)
         logger.debug("Peak Memory:      %s MB", stats.peak_memory_mb)
-        logger.debug("\nResult: %s samples processed ✅", len(result_audio))
+        logger.debug("\nErgebnis: %s samples verarbeitet ✅", len(result_audio))

@@ -44,7 +44,7 @@ RNG = np.random.default_rng(42)
 
 def _sine(freq: float = 440.0, dur: float = 1.0, sr: int = SR, amp: float = 0.5) -> np.ndarray:
     t = np.linspace(0, dur, int(sr * dur), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(dur: float = 1.0, sr: int = SR, amp: float = 0.1, seed: int = 42) -> np.ndarray:
@@ -510,7 +510,7 @@ class TestIntrinsicAudioQualityScorer:
         return IntrinsicAudioQualityScorer()
 
     def test_01_score_returns_result(self, scorer):
-        from backend.core.multi_pass_strategy import IntrinsicQualityScore
+        from backend.core.multi_pass_strategy import IntrinsicQualityScore  # type: ignore[attr-defined]
 
         r = scorer.score(_sine(), SR)
         assert isinstance(r, IntrinsicQualityScore)
@@ -929,7 +929,7 @@ class TestPsychoAcousticMetrics:
         assert math.isfinite(val) and val >= 0.0
 
     def test_13_measure_quality_improvement(self):
-        from backend.core.comprehensive_metrics import measure_quality_improvement
+        from backend.core.comprehensive_metrics import measure_quality_improvement  # type: ignore[attr-defined]
 
         ref = _sine(440.0, 1.0)
         test = ref + _noise(1.0, amp=0.05)

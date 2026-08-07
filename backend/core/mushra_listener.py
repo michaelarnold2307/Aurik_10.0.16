@@ -215,8 +215,8 @@ def create_mushra_app(manager: MUSHRASessionManager | None = None):
                 "trial_id": trial.trial_id,
                 "scenario": trial.scenario,
                 "display_order": trial.display_order,
-                "trial_index": st.current_trial_idx + 1,
-                "total_trials": len(st.trials),
+                "trial_index": st.current_trial_idx + 1,  # type: ignore[union-attr]
+                "total_trials": len(st.trials),  # type: ignore[union-attr]
                 "completed": False,
             }
         )
@@ -231,9 +231,9 @@ def create_mushra_app(manager: MUSHRASessionManager | None = None):
         return jsonify(
             {
                 "ok": True,
-                "completed_trials": st.current_trial_idx,
-                "total_trials": len(st.trials),
-                "finished": st.completed,
+                "completed_trials": st.current_trial_idx,  # type: ignore[union-attr]
+                "total_trials": len(st.trials),  # type: ignore[union-attr]
+                "finished": st.completed,  # type: ignore[union-attr]
             }
         )
 

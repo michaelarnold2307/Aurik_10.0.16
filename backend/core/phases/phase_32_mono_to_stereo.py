@@ -293,7 +293,7 @@ class MonoToStereoPhaseV2(PhaseInterface):
 
         if not is_mono:
             logger.debug(
-                "Input already stereo (L/R correlation = %.3f < %.3f)",
+                "Eingabe already stereo (L/R correlation = %.3f < %.3f)",
                 correlation,
                 mono_correlation_threshold,
             )
@@ -318,7 +318,7 @@ class MonoToStereoPhaseV2(PhaseInterface):
             )
 
         # Input is mono → apply pseudo-stereo
-        logger.info("Mono input detected (L/R correlation = %.3f), applying pseudo-stereo", correlation)
+        logger.info("Mono Eingabe erkannt (L/R correlation = %.3f), applying pseudo-stereo", correlation)
 
         # Step 1: Extract mono signal (average L+R)
         mono = np.mean(audio, axis=1)
@@ -376,17 +376,20 @@ class MonoToStereoPhaseV2(PhaseInterface):
             _hg_32 = check_hallucination(audio, pseudo_stereo, sr=sample_rate, mode=_mode_32)
             if _hg_32.requires_rollback:
                 logger.warning(
-                    "phase_32: hallucination_guard rollback (spectral_novelty=%.3f)", _hg_32.spectral_novelty
+                    "Verarbeitungsschritt_32: hallucination_guard rollback (spectral_novelty=%.3f)",
+                    _hg_32.spectral_novelty,
                 )
                 pseudo_stereo = np.clip(np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             elif _hg_32.score_penalty > 0.0:
                 logger.info(
-                    "phase_32: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
+                    "Verarbeitungsschritt_32: hallucination_guard penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_32.score_penalty,
                     _hg_32.spectral_novelty,
                 )
         except Exception as _hg32_exc:
-            logger.debug("phase_32: hallucination_guard failed (non-blocking): %s", _hg32_exc)
+            logger.debug(
+                "Verarbeitungsschritt_32: hallucination_guard fehlgeschlagen (nicht blockierend): %s", _hg32_exc
+            )
         return PhaseResult(
             success=True,
             audio=pseudo_stereo,
@@ -631,7 +634,7 @@ class MonoToStereoPhaseV2(PhaseInterface):
 
             return enhanced  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("phase_32_mono_to_stereo.py::_enhance_hf_content fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_32_mono_to_stereo.py::_verbessern_hf_content Ersatzpfad: %s", e)
             return audio
 
     def _check_mono_compatibility(self, audio: np.ndarray) -> bool:

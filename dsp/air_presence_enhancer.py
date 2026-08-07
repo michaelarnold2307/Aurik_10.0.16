@@ -217,7 +217,7 @@ class AirPresenceEnhancer:
         sos = np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]])
         filtered = signal.sosfilt(sos, audio)
         filtered = np.nan_to_num(filtered, nan=0.0, posinf=0.0, neginf=0.0)
-        return filtered
+        return filtered  # type: ignore[no-any-return]
 
     def _apply_bell(self, audio: np.ndarray, sr: int, freq: float, gain_db: float, q: float) -> np.ndarray:
         """
@@ -259,7 +259,7 @@ class AirPresenceEnhancer:
         sos = np.array([[b0 / a0, b1 / a0, b2 / a0, 1.0, a1 / a0, a2 / a0]])
         filtered = signal.sosfilt(sos, audio)
         filtered = np.nan_to_num(filtered, nan=0.0, posinf=0.0, neginf=0.0)
-        return filtered
+        return filtered  # type: ignore[no-any-return]
 
     def _apply_micro_reverb(self, audio: np.ndarray, sr: int, mix: float) -> np.ndarray:
         """
@@ -435,7 +435,7 @@ if __name__ == "__main__":
     from backend.file_import import load_audio_file
 
     if len(sys.argv) < 2:
-        logger.info("Usage: python air_presence_enhancer.py <audio_file> [output_file]")
+        logger.info("Usage: python air_presence_enhancer.py <audio_file> [Ausgabe_file]")
         logger.info("Options:")
         logger.info("  --air-gain <dB>       Air band gain (default: 1.5)")
         logger.info("  --presence-gain <dB>  Presence band gain (default: 1.0)")
@@ -446,7 +446,7 @@ if __name__ == "__main__":
     audio_path = sys.argv[1]
     logger.info("Processing: %s", audio_path)
     _res = load_audio_file(audio_path)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Parse options
     air_gain = 1.5
@@ -491,4 +491,4 @@ if __name__ == "__main__":
 
     sf.write(output_path, enhanced, sr)
     logger.info("")
-    logger.info("✅ Enhanced audio saved: %s", output_path)
+    logger.info("✅ verbessert audio gespeichert: %s", output_path)

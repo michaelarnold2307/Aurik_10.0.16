@@ -376,7 +376,9 @@ def compute_phase_proxy_for_pmgg(
         try:
             result.update(handler(audio_before, audio_after, sr))
         except Exception as e:
-            logger.warning("cassette_defect_verifier.py::compute_phase_proxy_for_pmgg fallback: %s", e)
+            logger.warning(
+                "cassette_defect_verifier.py::berechnen_Verarbeitungsschritt_proxy_for_pmgg Ersatzpfad: %s", e
+            )
 
     # Layer 3: Kategorie-basierte Universal-Proxies (v10.3)
     category = _PHASE_CATEGORIES.get(phase_id)
@@ -386,7 +388,9 @@ def compute_phase_proxy_for_pmgg(
             try:
                 result.update(cat_fn(audio_before, audio_after, sr))
             except Exception as e:
-                logger.warning("cassette_defect_verifier.py::compute_phase_proxy_for_pmgg fallback: %s", e)
+                logger.warning(
+                    "cassette_defect_verifier.py::berechnen_Verarbeitungsschritt_proxy_for_pmgg Ersatzpfad: %s", e
+                )
 
     # Layer 4: Universelle Fallback-Proxies
     result.update(_universal_proxies(audio_before, audio_after, sr))
@@ -394,7 +398,7 @@ def compute_phase_proxy_for_pmgg(
 
 
 # Category proxy function dispatch table (built after all functions defined)
-_CATEGORY_PROXY_FUNCTIONS: dict[str, callable] = {}
+_CATEGORY_PROXY_FUNCTIONS: dict[str, callable] = {}  # type: ignore[valid-type]
 
 
 # ─────────────────────────────────────────────────────────
@@ -1070,7 +1074,7 @@ def _proxy_category_passthrough(before: np.ndarray, after: np.ndarray, sr: int) 
 
 
 # ── Kategorie-Dispatcher ──
-_CATEGORY_PROXY_GENERATORS: dict[str, callable] = {
+_CATEGORY_PROXY_GENERATORS: dict[str, callable] = {  # type: ignore[valid-type]
     "denoise": _proxy_category_denoise,
     "eq_correction": _proxy_category_eq_correction,
     "synthesis_inpaint": _proxy_category_synthesis_inpaint,
@@ -1193,7 +1197,7 @@ def _proxy_specific_phase_29_hiss(before: np.ndarray, after: np.ndarray, sr: int
 
 
 # ── Spezifische Handler-Dispatch ──
-_SPECIFIC_HANDLERS: dict[str, callable] = {
+_SPECIFIC_HANDLERS: dict[str, callable] = {  # type: ignore[valid-type]
     "phase_03": _proxy_specific_phase_03_denoise,
     "phase_03_denoise": _proxy_specific_phase_03_denoise,
     "phase_09": _proxy_specific_phase_09_crackle,

@@ -375,7 +375,7 @@ def audit_all_specs(
             incs = _check_spec_internal_consistency(content, spec_file)
             result.inconsistencies.extend(incs)
         except Exception as _e:
-            logger.debug("spec_improvement_loop: non-critical exception: %s", _e)
+            logger.debug("spec_improvement_loop: unkritisch exception: %s", _e)
 
     # ── 5. Gap-Erkennung: Code-Features ohne Spec-Abdeckung ──────────────
     result.gaps.extend(_detect_spec_gaps(root))
@@ -662,7 +662,7 @@ def _detect_spec_gaps(repo_root: Path) -> list[str]:
             if missing:
                 gaps.append(f"VERBOTEN-Regeln nicht in Constitution: {sorted(missing)}")
         except Exception as _e:
-            logger.debug("spec_improvement_loop: non-critical exception: %s", _e)
+            logger.debug("spec_improvement_loop: unkritisch exception: %s", _e)
 
     return gaps
 

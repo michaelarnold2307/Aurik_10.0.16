@@ -126,9 +126,9 @@ class DoNoHarmGuardian:
             self._max_naturalness_drop = self.REST_MAX_NATURALNESS_DROP
             self._max_rms_change_db = self.REST_MAX_RMS_CHANGE_DB
             self._min_peak_headroom_db = 0.5
-        self._input_sr: int = 0
-        self._input_snapshot: GuardianSnapshot | None = None
-        self._captured: bool = False
+        self._input_sr: int = 0  # type: ignore[no-redef]
+        self._input_snapshot: GuardianSnapshot | None = None  # type: ignore[no-redef]
+        self._captured: bool = False  # type: ignore[no-redef]
         # §v10.103: Clean-Referenz bei Mode-Wechsel konsistent zurücksetzen
         self._clean_reference = None
         self._clean_snapshot = None
@@ -160,8 +160,8 @@ class DoNoHarmGuardian:
             self._clean_snapshot = self._measure(carrier_checkpoint, sr)
             self._reference_mode = "carrier_checkpoint"
             logger.debug(
-                "DoNoHarmGuardian: input + carrier_checkpoint captured — "
-                "reference_mode=carrier_checkpoint "
+                "DoNoHarmGuardian: Eingabe + carrier_checkpoint captured — "
+                "Referenz_Betriebsart=carrier_checkpoint "
                 "clean_naturalness=%.3f clean_brightness=%.3f",
                 self._clean_snapshot.naturalness_estimate,
                 self._clean_snapshot.spectral_brightness,
@@ -172,7 +172,7 @@ class DoNoHarmGuardian:
             self._reference_mode = "degraded_input"
 
         logger.debug(
-            "DoNoHarmGuardian: input captured — brightness=%.3f naturalness=%.3f rms=%.1f dBFS",
+            "DoNoHarmGuardian: Eingabe captured — brightness=%.3f naturalness=%.3f rms=%.1f dBFS",
             self._input_snapshot.spectral_brightness,
             self._input_snapshot.naturalness_estimate,
             self._input_snapshot.rms_dbfs,
@@ -201,7 +201,7 @@ class DoNoHarmGuardian:
             GuardianVerdict mit passed=True wenn alle Metriken ok sind.
         """
         if not self._captured:
-            logger.warning("DoNoHarmGuardian: evaluate() ohne capture_input() — lasse durch")
+            logger.warning("DoNoHarmGuardian: evaluate() ohne Erfassung_Eingabe() — lasse durch")
             return GuardianVerdict(passed=True, reason="no_input_captured")
 
         self._chain_depth = max(1, int(chain_depth))  # §v10.102: für depth-adaptive Schwellwerte
@@ -230,7 +230,7 @@ class DoNoHarmGuardian:
             return GuardianVerdict(
                 passed=True,
                 reason=f"perceptual_override:MUSHRA={mushra_score:.0f}_HPI={hpi_score:.3f}",
-                metrics_input=self._input_snapshot,
+                metrics_input=self._input_snapshot,  # type: ignore[arg-type]
                 metrics_output=output_snap,
                 degraded_metrics=[],
                 severity="none",
@@ -255,7 +255,7 @@ class DoNoHarmGuardian:
         degraded: list[str] = []
 
         # 1. Spectral Brightness — §v10.103 P2: gegen REFERENZ statt Input
-        _brightness_drop = ref_snap.spectral_brightness - output_snap.spectral_brightness
+        _brightness_drop = ref_snap.spectral_brightness - output_snap.spectral_brightness  # type: ignore[union-attr]
         if _brightness_drop > self._max_brightness_drop:
             degraded.append(f"brightness_drop={_brightness_drop:.3f} (>{self._max_brightness_drop}) [ref={_ref_label}]")
 
@@ -266,12 +266,12 @@ class DoNoHarmGuardian:
             _nat_threshold = 0.30 + 0.10 * _depth_nat + (0.10 if _depth_nat >= 4 else 0.0)
         else:
             _nat_threshold = self._max_naturalness_drop
-        _nat_drop = ref_snap.naturalness_estimate - output_snap.naturalness_estimate
+        _nat_drop = ref_snap.naturalness_estimate - output_snap.naturalness_estimate  # type: ignore[union-attr]
         if _nat_drop > _nat_threshold:
             degraded.append(f"naturalness_drop={_nat_drop:.3f} (>{_nat_threshold}) [ref={_ref_label}]")
 
         # 3. RMS Change — gegen REFERENZ
-        _rms_change = abs(output_snap.rms_dbfs - ref_snap.rms_dbfs)
+        _rms_change = abs(output_snap.rms_dbfs - ref_snap.rms_dbfs)  # type: ignore[union-attr]
         if _rms_change > self._max_rms_change_db:
             degraded.append(f"rms_change={_rms_change:.1f} dB (>{self._max_rms_change_db}) [ref={_ref_label}]")
 
@@ -282,18 +282,18 @@ class DoNoHarmGuardian:
             _crest_threshold = 2.0 + 2.0 * _depth_crest
         else:
             _crest_threshold = 3.0
-        _crest_ref = ref_snap.peak_dbfs - ref_snap.rms_dbfs
+        _crest_ref = ref_snap.peak_dbfs - ref_snap.rms_dbfs  # type: ignore[union-attr]
         _crest_output = output_snap.peak_dbfs - output_snap.rms_dbfs
         _crest_drop = _crest_ref - _crest_output
         if _crest_drop > _crest_threshold:
             degraded.append(
                 f"peak_degraded: crest_drop={_crest_drop:.1f}dB (>{_crest_threshold}) "
-                f"[ref={_ref_label} ref={ref_snap.peak_dbfs:.1f}/{ref_snap.rms_dbfs:.1f} "
+                f"[ref={_ref_label} ref={ref_snap.peak_dbfs:.1f}/{ref_snap.rms_dbfs:.1f} "  # type: ignore[union-attr]
                 f"out={output_snap.peak_dbfs:.1f}/{output_snap.rms_dbfs:.1f}]"
             )
 
         # 5. Dynamic Range — gegen REFERENZ
-        _dr_change = ref_snap.dynamic_range_db - output_snap.dynamic_range_db
+        _dr_change = ref_snap.dynamic_range_db - output_snap.dynamic_range_db  # type: ignore[union-attr]
         if _dr_change > 6.0:
             degraded.append(f"dynamic_range_collapse={_dr_change:.1f} dB [ref={_ref_label}]")
 
@@ -313,9 +313,9 @@ class DoNoHarmGuardian:
             _reason = "all_metrics_ok"
             logger.info(
                 "DoNoHarmGuardian: PASSED — brightness=%.3f→%.3f naturalness=%.3f→%.3f [ref=%s]",
-                ref_snap.spectral_brightness,
+                ref_snap.spectral_brightness,  # type: ignore[union-attr]
                 output_snap.spectral_brightness,
-                ref_snap.naturalness_estimate,
+                ref_snap.naturalness_estimate,  # type: ignore[union-attr]
                 output_snap.naturalness_estimate,
                 _ref_label,
             )
@@ -323,7 +323,7 @@ class DoNoHarmGuardian:
         return GuardianVerdict(
             passed=passed,
             reason=_reason,
-            metrics_input=ref_snap,
+            metrics_input=ref_snap,  # type: ignore[arg-type]
             metrics_output=output_snap,
             degraded_metrics=degraded,
             severity=_severity,

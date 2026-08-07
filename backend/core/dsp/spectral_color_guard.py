@@ -112,6 +112,7 @@ def check_spectral_color_preservation(
     if threshold == 0.97:  # Default-Wert → auto-adaptiv
         try:
             from backend.core.calibration_context import get_calibration_context
+
             _ctx = get_calibration_context()
             if _ctx is not None:
                 _rs = float(np.clip(_ctx.restorability_score, 0.0, 100.0))
@@ -162,7 +163,7 @@ def check_spectral_color_preservation(
 
         if not ok:
             logger.info(
-                "§V24 Spektralfarbe: Korrelation=%.3f < %.2f → Phase-Strength − 30 %% (WARNING)",
+                "§V24 Spektralfarbe: Korrelation=%.3f < %.2f → Verarbeitungsschritt-Strength − 30 %% (WARNING)",
                 corr,
                 SPECTRAL_COLOR_THRESHOLD,
             )
@@ -175,5 +176,5 @@ def check_spectral_color_preservation(
         )
 
     except Exception as exc:
-        logger.debug("check_spectral_color_preservation non-blocking: %s", exc)
+        logger.debug("Pruefung_spectral_color_preservation nicht blockierend: %s", exc)
         return _fallback

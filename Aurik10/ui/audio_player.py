@@ -104,7 +104,7 @@ class StreamingAudioPlayer:
         try:
             dev = sd.query_devices(kind="output")
         except Exception as exc:
-            logger.debug("StreamingAudioPlayer: output device query failed: %s", exc)
+            logger.debug("StreamingAudioPlayer: Ausgabe device query fehlgeschlagen: %s", exc)
             return False
         if not isinstance(dev, dict):
             return False
@@ -259,7 +259,7 @@ class StreamingAudioPlayer:
                     self._stream.stop()
                     self._stream.close()
                 except Exception:
-                    logger.warning("audio_player.py::shutdown fallback", exc_info=True)
+                    logger.warning("audio_player.py::Herunterfahren Ersatzpfad", exc_info=True)
                 self._stream = None
             self._resample_cache.clear()
 
@@ -342,7 +342,7 @@ class StreamingAudioPlayer:
                 try:
                     cb()
                 except Exception:
-                    logger.warning("audio_player.py::_audio_callback fallback", exc_info=True)
+                    logger.warning("audio_player.py::_audio_callback Ersatzpfad", exc_info=True)
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -403,7 +403,7 @@ class StreamingAudioPlayer:
                 if self._stream.active or not self._stream.closed:
                     return True
             except Exception:
-                logger.warning("audio_player.py::_ensure_stream fallback", exc_info=True)
+                logger.warning("audio_player.py::_ensure_stream Ersatzpfad", exc_info=True)
             # Stream dead — recreate
             self._stream = None
 
@@ -435,7 +435,7 @@ class StreamingAudioPlayer:
             logger.debug("StreamingAudioPlayer: stream opened @ %d Hz, latency=150ms", dev_sr)
             return True
         except Exception as exc:
-            logger.warning("StreamingAudioPlayer: stream creation failed: %s", exc)
+            logger.warning("StreamingAudioPlayer: stream creation fehlgeschlagen: %s", exc)
             self._stream = None
             return False
 
@@ -455,7 +455,7 @@ class StreamingAudioPlayer:
         try:
             data = np.asarray(audio, dtype=np.float32)
         except Exception:
-            logger.warning("audio_player.py::_prepare fallback", exc_info=True)
+            logger.warning("audio_player.py::_prepare Ersatzpfad", exc_info=True)
             return None
 
         # Shape normalisation: (channels, samples) → (samples, channels)
@@ -482,14 +482,14 @@ class StreamingAudioPlayer:
 
                 data = _soxr_player.resample(data, sr, output_sr, quality="HQ").astype(np.float32)
             except Exception as exc:
-                logger.debug("soxr resample failed (%s), trying resample_poly", exc)
+                logger.debug("soxr resample fehlgeschlagen (%s), trying resample_poly", exc)
                 try:
                     from scipy.signal import resample_poly
 
                     g = math.gcd(sr, output_sr)
                     data = resample_poly(data, output_sr // g, sr // g, axis=0).astype(np.float32)
                 except Exception as exc2:
-                    logger.debug("resample_poly also failed: %s — playing at source SR", exc2)
+                    logger.debug("resample_poly also fehlgeschlagen: %s — playing at source SR", exc2)
                     # Fallback: play at wrong SR (slight pitch shift, better than silence)
 
         data = np.ascontiguousarray(data, dtype=np.float32)

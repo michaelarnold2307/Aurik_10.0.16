@@ -97,7 +97,7 @@ def apply(
         _pt_score = float(defect_scores.get("print_through", 0.0))
         if _pt_score < min_print_through_score:
             logger.debug(
-                "Phase 57: Print-Through-Score %.3f < %.3f — übersprungen",
+                "Verarbeitungsschritt 57: Print-Through-Wert %.3f < %.3f — übersprungen",
                 _pt_score,
                 min_print_through_score,
             )
@@ -134,14 +134,14 @@ def apply(
     # Schritt 1: Kreuzkorrelation → delay_pre, delay_post
     delay_pre, delay_post = _find_delays(x, max_delay_samples)
     logger.debug(
-        "Phase 57: delay_pre=%d samples (%.1f ms), delay_post=%d samples (%.1f ms)",
+        "Verarbeitungsschritt 57: delay_pre=%d samples (%.1f ms), delay_post=%d samples (%.1f ms)",
         delay_pre,
         delay_pre * 1000.0 / sample_rate,
         delay_post,
         delay_post * 1000.0 / sample_rate,
     )
     if delay_pre <= 0 and delay_post <= 0:
-        logger.debug("Phase 57: Keine signifikanten Echos gefunden — übersprungen")
+        logger.debug("Verarbeitungsschritt 57: Keine signifikanten Echos gefunden — übersprungen")
         no_echo_result: np.ndarray = np.clip(audio, -1.0, 1.0).astype(np.float32)
         return no_echo_result
 
@@ -155,14 +155,14 @@ def apply(
             alpha_post_max=alpha_post_max,
         )
     except Exception as _lms_exc:
-        logger.warning("Phase 57: LMS-Subtraction fehlgeschlagen, NMF-Fallback: %s", _lms_exc)
+        logger.warning("Verarbeitungsschritt 57: LMS-Subtraction fehlgeschlagen, NMF-Ersatzpfad: %s", _lms_exc)
         x_clean = _nmf_post_echo_fallback(x, delay_post, alpha_post_max)
 
     # Schritt 4: Spectral-Coherence-Check — Rollback wenn Qualität schlechter
     _coh = _spectral_coherence(x, x_clean, sample_rate)
     if _coh < coherence_floor:
         logger.warning(
-            "Phase 57: Spectral Coherence nach LMS %.3f < %.3f — Rollback auf Original",
+            "Verarbeitungsschritt 57: Spectral Coherence nach LMS %.3f < %.3f — Rollback auf Originalsignal",
             _coh,
             coherence_floor,
         )
@@ -273,7 +273,7 @@ def _lms_bilateral_subtraction(
             out[t] = e
 
     logger.debug(
-        "Phase 57: LMS bilateral — delay_pre=%d delay_post=%d alpha_pre_max=%.3f alpha_post_max=%.3f",
+        "Verarbeitungsschritt 57: LMS bilateral — delay_pre=%d delay_post=%d alpha_pre_max=%.3f alpha_post_max=%.3f",
         delay_pre,
         delay_post,
         alpha_pre_max,
@@ -294,7 +294,9 @@ def _nmf_post_echo_fallback(x: np.ndarray, delay_post: int, alpha_max: float) ->
     alpha = alpha_max * 0.5
     for t in range(delay_post, n):
         out[t] = x[t] - alpha * x[t - delay_post]
-    logger.debug("Phase 57: NMF-Fallback (einseitig, Post-Echo) delay=%d alpha=%.3f", delay_post, alpha)
+    logger.debug(
+        "Verarbeitungsschritt 57: NMF-Ersatzpfad (einseitig, Post-Echo) delay=%d alpha=%.3f", delay_post, alpha
+    )
     return out
 
 
@@ -410,6 +412,7 @@ class PrintThroughReductionPhase(PhaseInterface):
                     start_s = max(0.0, float(loc[0]))
                     end_s = max(start_s, float(loc[1]))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end_s <= start_s:
                     continue
@@ -463,6 +466,7 @@ class PrintThroughReductionPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -501,7 +505,7 @@ class PrintThroughReductionPhase(PhaseInterface):
             _nmr_result_57 = _nmr_fn_57(audio, sample_rate)
             if not _nmr_result_57.ok:
                 logger.warning(
-                    "Phase57 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt57 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             _effective_strength = float(
                 np.clip(
@@ -511,12 +515,12 @@ class PrintThroughReductionPhase(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase57 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt57 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_57.recommended_nr_strength_delta,
                 _effective_strength,
             )
         except Exception as _nmr_exc_57:  # pylint: disable=broad-except
-            logger.debug("Phase57 §V40 NMR non-blocking: %s", _nmr_exc_57)
+            logger.debug("Verarbeitungsschritt57 §V40 NMR nicht blockierend: %s", _nmr_exc_57)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -584,7 +588,7 @@ class PrintThroughReductionPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase57 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt57 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — Print-Through-Reduktion darf
         # Atemgeräusche und Vibrato-Zonen nicht durch Subtraktionsfilter tilgen.
@@ -610,7 +614,7 @@ class PrintThroughReductionPhase(PhaseInterface):
                 elif result_audio.ndim == 1 and audio.ndim == 1:
                     result_audio[_npa_m57] = audio[_npa_m57]
         except Exception as _npa57_exc:
-            logger.debug("§2.46f phase_57 NPA-Guard (non-blocking): %s", _npa57_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_57 NPA-Guard (nicht blockierend): %s", _npa57_exc)
 
         # §2.36 Phonem-Schutz: Print-Through-Reduktion subtrahiert Vor-/Nachhall-Energie.
         # Plosive Burst-Transienten haben ähnliche Burst-Energie — Plosiv-Frames schützen.
@@ -654,9 +658,12 @@ class PrintThroughReductionPhase(PhaseInterface):
                 _nt57_d = _nt57_dist_fn(_nt57_residual, _mat57_str, sr=sample_rate)
                 if _nt57_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("\u00a7V19 phase_57: noise_texture_dist=%.3f > 0.25 \u2192 50%% dry-blend", _nt57_d)
+                    logger.warning(
+                        "\u00a7V19 Verarbeitungsschritt_57: noise_texture_dist=%.3f > 0.25 \u2192 50%% dry-blend",
+                        _nt57_d,
+                    )
         except Exception as _nt57_exc:
-            logger.debug("\u00a7V19 phase_57 noise_texture non-blocking: %s", _nt57_exc)
+            logger.debug("\u00a7V19 Verarbeitungsschritt_57 noise_texture nicht blockierend: %s", _nt57_exc)
 
         # §V20 Mikrodynamik-Korrelation: Voiced-Frame-Energie nach LMS-NR nicht degradieren.
         _p57_panns = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
@@ -674,9 +681,13 @@ class PrintThroughReductionPhase(PhaseInterface):
                     _need57 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
                     _wet57 = _recommend_mkk_wet(_corr57, _p57_panns, global_need=_need57)
                     result_audio = (_wet57 * result_audio + (1.0 - _wet57) * audio).astype(np.float32)
-                    logger.warning("\u00a7V20 phase_57: mikrodynamik_corr=%.4f < 0.97 \u2192 wet=%.3f", _corr57, _wet57)
+                    logger.warning(
+                        "\u00a7V20 Verarbeitungsschritt_57: mikrodynamik_corr=%.4f < 0.97 \u2192 wet=%.3f",
+                        _corr57,
+                        _wet57,
+                    )
             except Exception as _v20_57_exc:
-                logger.debug("\u00a7V20 phase_57 mikrodynamik non-blocking: %s", _v20_57_exc)
+                logger.debug("\u00a7V20 Verarbeitungsschritt_57 mikrodynamik nicht blockierend: %s", _v20_57_exc)
 
         # §V21 Mindestrauschboden: Pausenzonen auf Tape/Shellac dürfen nicht auf digitale Stille fallen.
         if any(x in _mat57_str for x in ("tape", "shellac", "reel", "analog", "vinyl")):
@@ -687,7 +698,7 @@ class PrintThroughReductionPhase(PhaseInterface):
 
                 result_audio = _nfmin57(result_audio, sample_rate, _mat57_str, original_audio=audio)
             except Exception as _v21_57_exc:
-                logger.debug("\u00a7V21 phase_57 noise_floor non-blocking: %s", _v21_57_exc)
+                logger.debug("\u00a7V21 Verarbeitungsschritt_57 noise_floor nicht blockierend: %s", _v21_57_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

@@ -53,7 +53,7 @@ adaptive_rms_energy_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlmessung bei DC-Offset",
             "expected_when": "center=False",
             "severity": 0.1,

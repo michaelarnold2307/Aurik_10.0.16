@@ -9,7 +9,6 @@ WAS HIER STEHT, GILT. Keine Ausnahmen, keine Overrides ohne Spec-Änderung.
 
 Integration:
   from backend.core.spec_constitution import get_constitution
-from backend.core.defect_scanner import MaterialType  # §v10.113
   const = get_constitution()
   const.check_artifact_freedom(audio, sr)     → (bool, str)
   const.get_forbidden_patterns()               → list[ForbiddenPattern]
@@ -27,6 +26,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+
+from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 
@@ -705,16 +706,76 @@ REQUIRED_PATTERNS: list[RequiredPattern] = [
     RequiredPattern("G39", "Encoding", "encoding.*utf", "UTF-8 Pflicht", "warning"),
     RequiredPattern("G40", "License", "Aurik 10|Copyright.*Aurik", "Lizenzheader Pflicht", "warning"),
     # ── §v10.305 Startup-Integrations-Vertrag (§G71–§G80) ──────────────
-    RequiredPattern("G71", "StartupEvent", "_detection_complete\\.set|complete\\.set", "Jedes threading.Event MUSS in finally/except-garantiert gesetzt werden", "critical"),
-    RequiredPattern("G72", "LockFreeImport", "# LOCK_FREE_IMPORT|NO_LOCK_DURING_IMPORT", "Lock NICHT während Import/I/O halten — in finally/ausserhalb importieren", "critical"),
-    RequiredPattern("G73", "WarmupValidator", "warmup.*validator|validate.*warmup.*accessor|_verify_warmup", "Warmup MUSS Plugin-Zugriffsnamen vor erstem Lauf validieren", "critical"),
-    RequiredPattern("G74", "WatchdogSelfTest", "watchdog.*self.*test|_self_test.*watchdog|_probe_rocm|_probe.*pad", "Jeder Watchdog/Probe MUSS Startup-Selbsttest haben + aufgerufen werden", "critical"),
-    RequiredPattern("G75", "CacheInvalidation", "__pycache__|PYTHONDONTWRITEBYTECODE|python.*-B", "Startup-Skript MUSS -B-Flag oder PYTHONDONTWRITEBYTECODE setzen", "warning"),
-    RequiredPattern("G76", "HappyPathGate", " detected_medium_label\\.setText|_update_all|_dispatch_to_gui.*_update_all", "GUI MUSS mindestens einen Pfad haben, der Analyse-Labels setzt — Warning bei stillem Skip", "critical"),
-    RequiredPattern("G77", "StartupSmokeTest", "test_startup_smoke|test_startup_integration|startup.*smoke", "Startup-Smoke-Test: GPU+Warmup+PreAnalysis in <60s", "warning"),
-    RequiredPattern("G78", "ImportCheck", "^import os$|^from os import", "Jedes Modul MUSS alle verwendeten Standard-Imports haben (ruff F821)", "critical"),
-    RequiredPattern("G79", "EventFinally", "finally:.*_detection_complete|except.*_detection_complete", "_detection_complete MUSS in finally-Block gesetzt werden", "critical"),
-    RequiredPattern("G80", "ProbeInvocation", "_probe_.*\\(\\)|self\\._probe_", "Jede _probe_*-Methode MUSS in __init__ oder _detect_backend aufgerufen werden", "critical"),
+    RequiredPattern(
+        "G71",
+        "StartupEvent",
+        "_detection_complete\\.set|complete\\.set",
+        "Jedes threading.Event MUSS in finally/except-garantiert gesetzt werden",
+        "critical",
+    ),
+    RequiredPattern(
+        "G72",
+        "LockFreeImport",
+        "# LOCK_FREE_IMPORT|NO_LOCK_DURING_IMPORT",
+        "Lock NICHT während Import/I/O halten — in finally/ausserhalb importieren",
+        "critical",
+    ),
+    RequiredPattern(
+        "G73",
+        "WarmupValidator",
+        "warmup.*validator|validate.*warmup.*accessor|_verify_warmup",
+        "Warmup MUSS Plugin-Zugriffsnamen vor erstem Lauf validieren",
+        "critical",
+    ),
+    RequiredPattern(
+        "G74",
+        "WatchdogSelfTest",
+        "watchdog.*self.*test|_self_test.*watchdog|_probe_rocm|_probe.*pad",
+        "Jeder Watchdog/Probe MUSS Startup-Selbsttest haben + aufgerufen werden",
+        "critical",
+    ),
+    RequiredPattern(
+        "G75",
+        "CacheInvalidation",
+        "__pycache__|PYTHONDONTWRITEBYTECODE|python.*-B",
+        "Startup-Skript MUSS -B-Flag oder PYTHONDONTWRITEBYTECODE setzen",
+        "warning",
+    ),
+    RequiredPattern(
+        "G76",
+        "HappyPathGate",
+        " detected_medium_label\\.setText|_update_all|_dispatch_to_gui.*_update_all",
+        "GUI MUSS mindestens einen Pfad haben, der Analyse-Labels setzt — Warning bei stillem Skip",
+        "critical",
+    ),
+    RequiredPattern(
+        "G77",
+        "StartupSmokeTest",
+        "test_startup_smoke|test_startup_integration|startup.*smoke",
+        "Startup-Smoke-Test: GPU+Warmup+PreAnalysis in <60s",
+        "warning",
+    ),
+    RequiredPattern(
+        "G78",
+        "ImportCheck",
+        "^import os$|^from os import",
+        "Jedes Modul MUSS alle verwendeten Standard-Imports haben (ruff F821)",
+        "critical",
+    ),
+    RequiredPattern(
+        "G79",
+        "EventFinally",
+        "finally:.*_detection_complete|except.*_detection_complete",
+        "_detection_complete MUSS in finally-Block gesetzt werden",
+        "critical",
+    ),
+    RequiredPattern(
+        "G80",
+        "ProbeInvocation",
+        "_probe_.*\\(\\)|self\\._probe_",
+        "Jede _probe_*-Methode MUSS in __init__ oder _detect_backend aufgerufen werden",
+        "critical",
+    ),
 ]
 
 
@@ -977,7 +1038,7 @@ class SpecConstitution:
                     line = code_text[max(0, m.start() - 20) : m.end() + 20].replace("\n", " ")
                     hits.append((fp, line.strip()))
             except re.error:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         return hits
 
     # ── Musical Goals ───────────────────────────────────────────────────
@@ -1012,7 +1073,7 @@ class SpecConstitution:
         NIEDRIGER als die Defaults — sie respektieren die physikalischen Grenzen.
         """
         thresholds: dict[str, float] = {}
-        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        _mk = material.value if isinstance(material, MaterialType) else material  # type: ignore[name-defined]  # §v10.113
         floor = self._material_floors.get(_mk, {})
         for goal, cfg in self._musical_goals.items():
             floor_val = floor.get(goal, cfg["threshold"])
@@ -1122,7 +1183,7 @@ class SpecConstitution:
 
         # Physikalisches Limit: Floor = maximal erreichbarer Wert für dieses Material.
         # Das dynamische Modell darf den Floor NICHT überschreiten.
-        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
+        _mk = material.value if isinstance(material, MaterialType) else material  # type: ignore[name-defined]  # §v10.113
         floor = self._material_floors.get(_mk, {})
         for goal in computed:
             if goal in floor:

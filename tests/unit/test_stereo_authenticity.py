@@ -72,7 +72,7 @@ def _mono_1d(duration_s: float = 3.0) -> np.ndarray:
     """Mono-Audio als 1-D-Array."""
     n = int(duration_s * SR)
     t = np.linspace(0, duration_s, n, endpoint=False)
-    return np.sin(2 * np.pi * 440 * t).astype(np.float32) * 0.5
+    return np.sin(2 * np.pi * 440 * t).astype(np.float32) * 0.5  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

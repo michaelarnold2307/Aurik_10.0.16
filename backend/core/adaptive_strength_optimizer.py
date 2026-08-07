@@ -235,7 +235,7 @@ def optimize_phase_strength(
         try:
             audio_after = phase_runner(audio_input, current)
         except Exception as e:
-            logger.debug("AdaptiveStrength %s @ %.3f failed: %s", phase_id, current, e)
+            logger.debug("AdaptiveStrength %s @ %.3f fehlgeschlagen: %s", phase_id, current, e)
             current += step
             continue
 
@@ -277,7 +277,7 @@ def optimize_phase_strength(
                         best_delta = delta_up
                         best_strength = next_up
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             break
 
     # ── Entscheidung ──
@@ -285,7 +285,7 @@ def optimize_phase_strength(
 
     if was_skipped:
         logger.info(
-            "§ADAPTIVE SKIP %s: best_delta=%.4f < -0.05 @ strength=%.3f → Phase übersprungen",
+            "§ADAPTIVE ueberspringen %s: best_delta=%.4f < -0.05 @ strength=%.3f → Verarbeitungsschritt übersprungen",
             phase_id,
             best_delta,
             best_strength,
@@ -393,6 +393,7 @@ def optimize_pipeline(
             try:
                 current_audio = runner(current_audio, result.optimal_strength)
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 pass
 
         logger.debug(

@@ -34,7 +34,7 @@ class _W2VWrapper(torch.nn.Module):
 
     def forward(self, input_values: torch.Tensor) -> torch.Tensor:
         out = self.model(input_values=input_values)
-        return out.last_hidden_state
+        return out.last_hidden_state  # type: ignore[no-any-return]
 
 
 def main() -> int:
@@ -54,7 +54,7 @@ def main() -> int:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     torch.onnx.export(
         wrapper,
-        dummy,
+        (dummy,),
         str(OUT_PATH),
         input_names=["input_values"],
         output_names=["last_hidden_state"],

@@ -61,7 +61,7 @@ def _make_manager_cpu_only() -> MLDeviceManager:
     from backend.core.ml_device_manager import MLDeviceManager
 
     with (
-        patch("backend.core.ml_device_manager.MLDeviceManager._detect_rocm"),
+        patch("backend.core.ml_device_manager.MLDeviceManager._detect_cuda_or_rocm"),
         patch("backend.core.ml_device_manager.MLDeviceManager._detect_directml"),
     ):
         mgr = MLDeviceManager()
@@ -142,7 +142,7 @@ def test_non_heavy_plugin_always_cpu():
     from backend.core.ml_device_manager import GPUBackend, MLDeviceManager
 
     with (
-        patch("backend.core.ml_device_manager.MLDeviceManager._detect_rocm"),
+        patch("backend.core.ml_device_manager.MLDeviceManager._detect_cuda_or_rocm"),
         patch("backend.core.ml_device_manager.MLDeviceManager._detect_directml"),
     ):
         mgr = MLDeviceManager()
@@ -173,7 +173,7 @@ def _make_manager_rocm(vram_gb: float = 8.0, gpu_name: str = "AMD Radeon RX 7900
     )
 
     with (
-        patch("backend.core.ml_device_manager.MLDeviceManager._detect_rocm"),
+        patch("backend.core.ml_device_manager.MLDeviceManager._detect_cuda_or_rocm"),
         patch("backend.core.ml_device_manager.MLDeviceManager._detect_directml"),
     ):
         mgr = MLDeviceManager()

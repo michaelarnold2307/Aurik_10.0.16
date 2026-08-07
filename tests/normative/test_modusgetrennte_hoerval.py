@@ -129,7 +129,7 @@ class TestHPIGateModeDispatch:
         import importlib
 
         mod = importlib.import_module(src)
-        with open(mod.__file__, encoding="utf-8") as handle:
+        with open(mod.__file__, encoding="utf-8") as handle:  # type: ignore[arg-type]
             source_code = handle.read()
         assert "timbral_fidelity" in source_code or "timbral" in source_code
         assert "artifact_freedom" in source_code
@@ -143,7 +143,7 @@ class TestHPIGateModeDispatch:
         import importlib
 
         mod = importlib.import_module(src)
-        with open(mod.__file__, encoding="utf-8") as handle:
+        with open(mod.__file__, encoding="utf-8") as handle:  # type: ignore[arg-type]
             source_code = handle.read()
         assert "studio_quality_gain" in source_code or "pqs_improvement" in source_code
 
@@ -164,7 +164,7 @@ class TestUV3ModeMapping:
             assert hasattr(QualityMode, "MAXIMUM")
         except ImportError:
             # QualityMode may live elsewhere
-            from backend.core.restoration_config import QualityMode
+            from backend.core.restoration_config import QualityMode  # type: ignore[no-redef]
 
             assert hasattr(QualityMode, "QUALITY")
             assert hasattr(QualityMode, "MAXIMUM")
@@ -174,7 +174,7 @@ class TestUV3ModeMapping:
         try:
             from backend.core.unified_restorer_v3 import QualityMode
         except ImportError:
-            from backend.core.restoration_config import QualityMode
+            from backend.core.restoration_config import QualityMode  # type: ignore[no-redef]
         assert QualityMode.QUALITY.value is not None
 
     def test_studio_mode_is_maximum(self):
@@ -182,7 +182,7 @@ class TestUV3ModeMapping:
         try:
             from backend.core.unified_restorer_v3 import QualityMode
         except ImportError:
-            from backend.core.restoration_config import QualityMode
+            from backend.core.restoration_config import QualityMode  # type: ignore[no-redef]
         assert QualityMode.MAXIMUM.value is not None
 
 

@@ -114,7 +114,7 @@ class HybridMLDenoiser:
         # Lazy-load Resemble Enhance (heavy Docker dependency)
         self._resemble = None
 
-        logger.info("HybridMLDenoiser initialized: strategy=%s", self.config.strategy.value)
+        logger.info("HybridMLDenoiser initialisiert: strategy=%s", self.config.strategy.value)
 
     @property
     def resemble(self) -> ResembleEnhancePlugin:
@@ -123,10 +123,10 @@ class HybridMLDenoiser:
             try:
                 loaded = get_loaded_resemble_enhance_plugin()
                 self._resemble = loaded if loaded is not None else get_resemble_enhance_plugin()  # type: ignore[assignment]
-                logger.info("Resemble Enhance plugin loaded successfully")
+                logger.info("Resemble verbessern plugin geladen erfolgreich")
             except Exception as e:
-                logger.warning("Failed to load Resemble Enhance: %s", e)
-                logger.warning("Falling back to OMLSA-only mode")
+                logger.warning("konnte nicht laden Resemble verbessern: %s", e)
+                logger.warning("Falling back to OMLSA-only Betriebsart")
         return self._resemble  # type: ignore[return-value]
 
     def denoise(
@@ -155,7 +155,7 @@ class HybridMLDenoiser:
 
         # Stage 1: OMLSA preprocessing (if enabled)
         if strategy in [DenoiseStrategy.OMLSA_ONLY, DenoiseStrategy.HYBRID]:
-            logger.info("Stage 1: Applying OMLSA preprocessing...")
+            logger.info("Stufe 1: Applying OMLSA preprocessing...")
             audio, omlsa_meta = self._apply_omlsa(audio, sample_rate, noise_profile)
             omlsa_applied = True
             metadata["omlsa"] = omlsa_meta
@@ -164,7 +164,7 @@ class HybridMLDenoiser:
             quality_estimate = self._estimate_quality(audio, sample_rate)
             metadata["quality_after_omlsa"] = quality_estimate  # type: ignore[assignment]
 
-            logger.info("OMLSA complete: quality=%.3f", quality_estimate)
+            logger.info("OMLSA vollstaendig: quality=%.3f", quality_estimate)
 
             # Skip Resemble if quality already good enough
             if quality_estimate >= self.config.quality_threshold and strategy == DenoiseStrategy.HYBRID:
@@ -182,13 +182,13 @@ class HybridMLDenoiser:
 
                 _resemble_budget_ok = _ml_try_allocate("ResembleEnhance", size_gb=0.5)
             except Exception as e:
-                logger.warning("hybrid_ml_denoiser.py::denoise fallback: %s", e)
+                logger.warning("hybrid_ml_denoiser.py::denoise Ersatzpfad: %s", e)
             if (
                 _resemble_budget_ok
                 and self._has_sufficient_ml_headroom(audio, sample_rate)
                 and self.resemble is not None
             ):
-                logger.info("Stage 2: Applying Resemble Enhance refinement...")
+                logger.info("Stufe 2: Applying Resemble verbessern refinement...")
                 # Protect ResembleEnhance from PLM eviction during inference
                 try:
                     from backend.core.plugin_lifecycle_manager import (
@@ -208,12 +208,12 @@ class HybridMLDenoiser:
                     quality_estimate = self._estimate_quality(audio, sample_rate)
                     metadata["quality_after_resemble"] = quality_estimate  # type: ignore[assignment]
 
-                    logger.info("Resemble complete: quality=%.3f", quality_estimate)
+                    logger.info("Resemble vollstaendig: quality=%.3f", quality_estimate)
                 finally:
                     if _plm is not None:
                         _plm.set_active("ResembleEnhance", False)
             else:
-                logger.warning("Resemble not available, using OMLSA result")
+                logger.warning("Resemble not verfuegbar, using OMLSA Ergebnis")
 
         processing_time = time.time() - start_time
         metadata["processing_time"] = processing_time  # type: ignore[assignment]
@@ -378,7 +378,7 @@ class HybridMLDenoiser:
                 metadata["returncode"] = returncode
 
                 return audio_enhanced, metadata
-            logger.error("Resemble processing failed: %s", stderr)
+            logger.error("Resemble processing fehlgeschlagen: %s", stderr)
             metadata["success"] = False
             metadata["error"] = stderr
             return audio, metadata
@@ -403,7 +403,7 @@ class HybridMLDenoiser:
 
             import psutil  # pylint: disable=import-outside-toplevel
         except Exception as e:
-            logger.warning("hybrid_ml_denoiser.py::_has_sufficient_ml_headroom fallback: %s", e)
+            logger.warning("hybrid_ml_denoiser.py::_has_sufficient_ml_headroom Ersatzpfad: %s", e)
             return True
 
         n_samples = int(
@@ -436,14 +436,14 @@ class HybridMLDenoiser:
 
                 evict_stale_plugins(required_mb=int(required_gb * 1024))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             gc.collect()
             try:
                 import ctypes as _ct  # pylint: disable=import-outside-toplevel
 
                 _ct.CDLL("libc.so.6").malloc_trim(0)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             avail_gb = psutil.virtual_memory().available / (1024**3)
 
         if avail_gb < required_gb:
@@ -591,8 +591,8 @@ if __name__ == "__main__":
         _res_main = _dsr_main.denoise(_noisy_main, _sr_main)
 
         logger.debug("✅ Strategy: %s", _res_main.strategy_used.value)
-        logger.debug("✅ OMLSA applied: %s", _res_main.omlsa_applied)
-        logger.debug("✅ Resemble applied: %s", _res_main.resemble_applied)
+        logger.debug("✅ OMLSA angewendet: %s", _res_main.omlsa_applied)
+        logger.debug("✅ Resemble angewendet: %s", _res_main.resemble_applied)
         logger.debug("✅ Processing time: %.2fs", _res_main.processing_time)
         logger.debug("✅ Quality estimate: %.3f", _res_main.quality_estimate)
         logger.debug("")

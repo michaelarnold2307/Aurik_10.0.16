@@ -349,7 +349,7 @@ def test_precomputed_plan_empty_uses_legacy_select(sr, short_audio):
         call_count.append(1)
         return orig_select(*a, **kw)
 
-    uv3._select_phases = _counting_select
+    uv3._select_phases = _counting_select  # type: ignore[method-assign]
 
     _ret = _make_pipeline_mock(short_audio)
     with (

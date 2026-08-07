@@ -45,7 +45,7 @@ class TestFeedbackChainIntegrationContracts:
         res = fc.run(_silence(), lambda a, sr: a)
         assert res.iterations == 1
         log = res.metadata.get("goal_priority_log", [])
-        assert any("contract-abort" in s for s in list(log) if isinstance(s, str))  # type: ignore[arg-type]
+        assert any("contract-abort" in s for s in list(log) if isinstance(s, str))  # type: ignore[call-overload]
 
 
 class TestUnifiedRestorerWiringContracts:

@@ -1,5 +1,6 @@
 import glob
 import importlib
+import logging
 import os
 import time
 from typing import Any
@@ -7,6 +8,8 @@ from typing import Any
 import requests
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -67,4 +70,4 @@ try:
 
     Instrumentator().instrument(app).expose(app)
 except ImportError:
-    pass
+    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)

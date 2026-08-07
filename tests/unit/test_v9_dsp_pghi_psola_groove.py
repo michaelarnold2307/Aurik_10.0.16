@@ -203,7 +203,7 @@ class TestPsolaPitchShifter:
 
     def _make_sine(self, freq_hz: float = 220.0, duration_s: float = 1.0, sr: int = 48000) -> np.ndarray:
         t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
-        return (np.sin(2 * np.pi * freq_hz * t) * 0.5).astype(np.float32)
+        return (np.sin(2 * np.pi * freq_hz * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_01_import(self):
         """psola-Modul ist importierbar."""

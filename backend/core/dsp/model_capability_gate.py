@@ -155,7 +155,7 @@ class ModelCapabilityGate:
                 reason="bundled_or_loaded" if bundled or loaded else "model_file_missing_or_not_loaded",
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§MCG-1 MelBandRoFormer capability unavailable: %s", exc)
+            logger.debug("§MCG-1 MelBandRoFormer capability nicht verfuegbar: %s", exc)
             return ModelCapability(
                 "melbandroformer",
                 "separation",
@@ -204,7 +204,7 @@ class ModelCapabilityGate:
                 },
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§MCG-1 MIIPHER capability unavailable: %s", exc)
+            logger.debug("§MCG-1 MIIPHER capability nicht verfuegbar: %s", exc)
             return ModelCapability(
                 "miipher",
                 "vocal_nr",
@@ -268,7 +268,7 @@ class ModelCapabilityGate:
                 metadata={"checkpoint_available": ckpt_exists},
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§MCG-1 SGMSE capability unavailable: %s", exc)
+            logger.debug("§MCG-1 SGMSE capability nicht verfuegbar: %s", exc)
             return ModelCapability(
                 "sgmse_plus",
                 "vocal_nr",
@@ -305,7 +305,7 @@ class ModelCapabilityGate:
                 reason="model_available" if bundled or loaded else "model_files_missing",
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§MCG-1 DeepFilterNet capability unavailable: %s", exc)
+            logger.debug("§MCG-1 DeepFilterNet capability nicht verfuegbar: %s", exc)
             return ModelCapability(
                 "deepfilternet_v3_ii",
                 "music_nr",
@@ -332,7 +332,7 @@ class ModelCapabilityGate:
                 reason="model_available" if bundled or loaded else "model_file_missing",
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§MCG-1 Demucs capability unavailable: %s", exc)
+            logger.debug("§MCG-1 Demucs capability nicht verfuegbar: %s", exc)
             return ModelCapability(
                 "demucs_v4",
                 "separation",

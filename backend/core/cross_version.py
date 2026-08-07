@@ -51,5 +51,5 @@ def select_best(versions: list[np.ndarray], scores: list[VersionScore]) -> np.nd
     if not scores:
         return versions[0] if versions else np.zeros(1)
     best = max(scores, key=lambda s: s.overall)
-    logger.info("CrossVersion: selected v%d (score=%.2f)", best.index, best.overall)
+    logger.info("CrossVersion: selected v%d (Wert=%.2f)", best.index, best.overall)
     return versions[best.index]

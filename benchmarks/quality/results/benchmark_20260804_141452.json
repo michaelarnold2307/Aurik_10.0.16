@@ -1,0 +1,1314 @@
+{
+  "aggregate": {
+    "avg_lsd": 7.56,
+    "avg_si_sdr_db": 41.54,
+    "avg_si_sdr_vs_baseline": -58.46,
+    "avg_snr_db": 41.54,
+    "avg_snr_vs_baseline": -58.46,
+    "files_better_than_baseline": 0
+  },
+  "baseline": "passthrough",
+  "corpus": "corpus",
+  "files_failed": 0,
+  "files_ok": 72,
+  "files_total": 72,
+  "results": [
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/clean/cassette_hiphop_1980s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.85,
+        "crest_original": 2.85,
+        "lsd_aurik": 9.87,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.8,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.2,
+        "snr_aurik": 41.8,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.2
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/cassette/clean/cassette_pop_1980s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/clean/cassette_rock_1990s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.91,
+        "crest_original": 2.88,
+        "lsd_aurik": 12.32,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.77,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.23,
+        "snr_aurik": 41.77,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.23
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/damaged/cassette_hiphop_1980s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.95,
+        "crest_original": 2.96,
+        "lsd_aurik": 7.79,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 32.75,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -67.25,
+        "snr_aurik": 32.75,
+        "snr_baseline": 100.0,
+        "snr_delta": -67.25
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/damaged/cassette_hiphop_1980s_wow_flutter.wav",
+      "metrics": {
+        "crest_aurik": 2.85,
+        "crest_original": 2.85,
+        "lsd_aurik": 8.51,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 46.28,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -53.72,
+        "snr_aurik": 46.28,
+        "snr_baseline": 100.0,
+        "snr_delta": -53.72
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/cassette/damaged/cassette_pop_1980s_combined.wav",
+      "metrics": {
+        "crest_aurik": 5.74,
+        "crest_original": 6.16,
+        "lsd_aurik": 5.4,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 32.11,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -67.89,
+        "snr_aurik": 32.11,
+        "snr_baseline": 100.0,
+        "snr_delta": -67.89
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/cassette/damaged/cassette_pop_1980s_hiss_wow.wav",
+      "metrics": {
+        "crest_aurik": 4.25,
+        "crest_original": 4.24,
+        "lsd_aurik": 6.09,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.56,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.44,
+        "snr_aurik": 33.56,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.44
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/damaged/cassette_rock_1990s_dropouts.wav",
+      "metrics": {
+        "crest_aurik": 2.92,
+        "crest_original": 2.89,
+        "lsd_aurik": 12.32,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.75,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.25,
+        "snr_aurik": 41.75,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.25
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/cassette/damaged/cassette_rock_1990s_hiss_wow.wav",
+      "metrics": {
+        "crest_aurik": 2.84,
+        "crest_original": 2.85,
+        "lsd_aurik": 7.14,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 36.71,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -63.29,
+        "snr_aurik": 36.71,
+        "snr_baseline": 100.0,
+        "snr_delta": -63.29
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/digital/clean/digital_electronic_2000s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/clean/digital_jazz_2010s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.86,
+        "crest_original": 2.86,
+        "lsd_aurik": 8.02,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.8,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.2,
+        "snr_aurik": 41.8,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.2
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/clean/digital_pop_2000s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.86,
+        "crest_original": 2.86,
+        "lsd_aurik": 8.8,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.98,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.02,
+        "snr_aurik": 41.98,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.02
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/digital/damaged/digital_electronic_2000s_clicks.wav",
+      "metrics": {
+        "crest_aurik": 6.83,
+        "crest_original": 7.05,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 32.02,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -67.98,
+        "snr_aurik": 32.03,
+        "snr_baseline": 100.0,
+        "snr_delta": -67.97
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/digital/damaged/digital_electronic_2000s_mp3.wav",
+      "metrics": {
+        "crest_aurik": 4.06,
+        "crest_original": 4.0,
+        "lsd_aurik": 3.88,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 32.62,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -67.38,
+        "snr_aurik": 32.62,
+        "snr_baseline": 100.0,
+        "snr_delta": -67.38
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/damaged/digital_jazz_2010s_clicks.wav",
+      "metrics": {
+        "crest_aurik": 6.04,
+        "crest_original": 6.85,
+        "lsd_aurik": 10.81,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 21.56,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -78.44,
+        "snr_aurik": 21.59,
+        "snr_baseline": 100.0,
+        "snr_delta": -78.41
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/damaged/digital_jazz_2010s_mp3_artifacts.wav",
+      "metrics": {
+        "crest_aurik": 2.85,
+        "crest_original": 2.85,
+        "lsd_aurik": 8.41,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 40.9,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -59.1,
+        "snr_aurik": 40.9,
+        "snr_baseline": 100.0,
+        "snr_delta": -59.1
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/damaged/digital_pop_2000s_clicks.wav",
+      "metrics": {
+        "crest_aurik": 5.78,
+        "crest_original": 6.75,
+        "lsd_aurik": 13.12,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 19.89,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -80.11,
+        "snr_aurik": 19.93,
+        "snr_baseline": 100.0,
+        "snr_delta": -80.07
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/digital/damaged/digital_pop_2000s_mp3_artifacts.wav",
+      "metrics": {
+        "crest_aurik": 2.89,
+        "crest_original": 2.89,
+        "lsd_aurik": 8.75,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 40.62,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -59.38,
+        "snr_aurik": 40.62,
+        "snr_baseline": 100.0,
+        "snr_delta": -59.38
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/clean/reel_classical_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.81,
+        "crest_original": 2.9,
+        "lsd_aurik": 7.65,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.16,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.84,
+        "snr_aurik": 42.16,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.84
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/clean/reel_jazz_1950s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.88,
+        "crest_original": 2.87,
+        "lsd_aurik": 5.98,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.67,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.33,
+        "snr_aurik": 41.67,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.33
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/reel_tape/clean/reel_soul_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/damaged/reel_classical_1960s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.82,
+        "crest_original": 2.89,
+        "lsd_aurik": 8.57,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 35.51,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -64.49,
+        "snr_aurik": 35.51,
+        "snr_baseline": 100.0,
+        "snr_delta": -64.49
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/damaged/reel_classical_1960s_wow_flutter.wav",
+      "metrics": {
+        "crest_aurik": 2.79,
+        "crest_original": 2.79,
+        "lsd_aurik": 6.01,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 47.03,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -52.97,
+        "snr_aurik": 47.03,
+        "snr_baseline": 100.0,
+        "snr_delta": -52.97
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/damaged/reel_jazz_1950s_dropouts.wav",
+      "metrics": {
+        "crest_aurik": 2.89,
+        "crest_original": 2.89,
+        "lsd_aurik": 5.98,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.59,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.41,
+        "snr_aurik": 41.59,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.41
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/reel_tape/damaged/reel_jazz_1950s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 3.01,
+        "crest_original": 3.01,
+        "lsd_aurik": 5.64,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.45,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.55,
+        "snr_aurik": 33.45,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.55
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/reel_tape/damaged/reel_soul_1960s_dropouts.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 68.08,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -31.92,
+        "snr_aurik": 68.08,
+        "snr_baseline": 100.0,
+        "snr_delta": -31.92
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/reel_tape/damaged/reel_soul_1960s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 4.12,
+        "crest_original": 4.12,
+        "lsd_aurik": 2.11,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 46.7,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -53.3,
+        "snr_aurik": 46.7,
+        "snr_baseline": 100.0,
+        "snr_delta": -53.3
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/clean/shellac_blues_1930s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.79,
+        "crest_original": 2.79,
+        "lsd_aurik": 5.98,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.86,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.14,
+        "snr_aurik": 41.86,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.14
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/clean/shellac_classical_1940s_clean.wav",
+      "metrics": {
+        "crest_aurik": 3.07,
+        "crest_original": 3.07,
+        "lsd_aurik": 9.25,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.22,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.78,
+        "snr_aurik": 42.22,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.78
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/shellac/clean/shellac_jazz_1920s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum.wav",
+      "metrics": {
+        "crest_aurik": 6.25,
+        "crest_original": 6.98,
+        "lsd_aurik": 10.23,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 16.32,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -83.68,
+        "snr_aurik": 16.41,
+        "snr_baseline": 100.0,
+        "snr_delta": -83.59
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/damaged/shellac_blues_1930s_surface_noise.wav",
+      "metrics": {
+        "crest_aurik": 3.71,
+        "crest_original": 4.23,
+        "lsd_aurik": 6.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 40.48,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -59.52,
+        "snr_aurik": 40.48,
+        "snr_baseline": 100.0,
+        "snr_delta": -59.52
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/damaged/shellac_classical_1940s_crackle.wav",
+      "metrics": {
+        "crest_aurik": 5.98,
+        "crest_original": 6.22,
+        "lsd_aurik": 13.42,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 15.04,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -84.96,
+        "snr_aurik": 15.17,
+        "snr_baseline": 100.0,
+        "snr_delta": -84.83
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/shellac/damaged/shellac_classical_1940s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 3.22,
+        "crest_original": 3.25,
+        "lsd_aurik": 8.07,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 31.15,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -68.85,
+        "snr_aurik": 31.15,
+        "snr_baseline": 100.0,
+        "snr_delta": -68.85
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/shellac/damaged/shellac_jazz_1920s_crackle.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 4.08,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 44.44,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -55.56,
+        "snr_aurik": 44.44,
+        "snr_baseline": 100.0,
+        "snr_delta": -55.56
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/shellac/damaged/shellac_jazz_1920s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.16,
+        "lsd_aurik": 5.04,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.72,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.28,
+        "snr_aurik": 33.72,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.28
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/tape/clean/tape_blues_1970s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/clean/tape_classical_1970s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.89,
+        "crest_original": 2.89,
+        "lsd_aurik": 10.2,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.08,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.92,
+        "snr_aurik": 42.08,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.92
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/clean/tape_country_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.95,
+        "crest_original": 2.95,
+        "lsd_aurik": 7.21,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.83,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.17,
+        "snr_aurik": 41.83,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.17
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/clean/tape_folk_1970s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.95,
+        "crest_original": 2.95,
+        "lsd_aurik": 10.2,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.97,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.03,
+        "snr_aurik": 41.97,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.03
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/clean/tape_jazz_1950s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.91,
+        "crest_original": 2.91,
+        "lsd_aurik": 9.52,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.03,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.97,
+        "snr_aurik": 42.03,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.97
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/clean/tape_rock_1980s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.76,
+        "crest_original": 2.8,
+        "lsd_aurik": 7.38,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.69,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.31,
+        "snr_aurik": 41.69,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.31
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout.wav",
+      "metrics": {
+        "crest_aurik": 4.19,
+        "crest_original": 4.2,
+        "lsd_aurik": 4.13,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 38.68,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -61.32,
+        "snr_aurik": 38.68,
+        "snr_baseline": 100.0,
+        "snr_delta": -61.32
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/tape/damaged/tape_blues_1970s_wow.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 83.3,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -16.7,
+        "snr_aurik": 83.3,
+        "snr_baseline": 100.0,
+        "snr_delta": -16.7
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_classical_1970s_dropouts_hum.wav",
+      "metrics": {
+        "crest_aurik": 2.99,
+        "crest_original": 2.99,
+        "lsd_aurik": 12.03,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.13,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.87,
+        "snr_aurik": 42.13,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.87
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_classical_1970s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.95,
+        "crest_original": 2.98,
+        "lsd_aurik": 10.01,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.67,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.33,
+        "snr_aurik": 33.67,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.33
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_country_1960s_dropouts.wav",
+      "metrics": {
+        "crest_aurik": 2.97,
+        "crest_original": 2.97,
+        "lsd_aurik": 7.21,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.73,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.27,
+        "snr_aurik": 41.73,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.27
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_country_1960s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 3.08,
+        "crest_original": 3.08,
+        "lsd_aurik": 7.42,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 31.49,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -68.51,
+        "snr_aurik": 31.49,
+        "snr_baseline": 100.0,
+        "snr_delta": -68.51
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_folk_1970s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 3.13,
+        "crest_original": 3.11,
+        "lsd_aurik": 9.58,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.29,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.71,
+        "snr_aurik": 33.29,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.71
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_folk_1970s_wow_flutter.wav",
+      "metrics": {
+        "crest_aurik": 2.95,
+        "crest_original": 2.95,
+        "lsd_aurik": 11.78,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 46.72,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -53.28,
+        "snr_aurik": 46.72,
+        "snr_baseline": 100.0,
+        "snr_delta": -53.28
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_jazz_1950s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 2.96,
+        "crest_original": 2.95,
+        "lsd_aurik": 13.06,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 30.72,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -69.28,
+        "snr_aurik": 30.72,
+        "snr_baseline": 100.0,
+        "snr_delta": -69.28
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_jazz_1950s_wow_flutter.wav",
+      "metrics": {
+        "crest_aurik": 2.91,
+        "crest_original": 2.9,
+        "lsd_aurik": 8.66,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 46.92,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -53.08,
+        "snr_aurik": 46.92,
+        "snr_baseline": 100.0,
+        "snr_delta": -53.08
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_rock_1980s_dropouts_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.81,
+        "crest_original": 2.83,
+        "lsd_aurik": 7.07,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 34.58,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -65.42,
+        "snr_aurik": 34.58,
+        "snr_baseline": 100.0,
+        "snr_delta": -65.42
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/tape/damaged/tape_rock_1980s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.82,
+        "crest_original": 2.84,
+        "lsd_aurik": 7.73,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.12,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.88,
+        "snr_aurik": 33.12,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.88
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/clean/vinyl_blues_1950s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.92,
+        "crest_original": 2.92,
+        "lsd_aurik": 9.22,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.77,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.23,
+        "snr_aurik": 41.77,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.23
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/clean/vinyl_classical_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.8,
+        "crest_original": 2.8,
+        "lsd_aurik": 6.11,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 42.15,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -57.85,
+        "snr_aurik": 42.15,
+        "snr_baseline": 100.0,
+        "snr_delta": -57.85
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/clean/vinyl_jazz_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.76,
+        "crest_original": 2.8,
+        "lsd_aurik": 14.46,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.85,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.15,
+        "snr_aurik": 41.85,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.15
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/vinyl/clean/vinyl_rock_1960s_clean.wav",
+      "metrics": {
+        "crest_aurik": 4.17,
+        "crest_original": 4.17,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 78.79,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -21.21,
+        "snr_aurik": 78.79,
+        "snr_baseline": 100.0,
+        "snr_delta": -21.21
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/clean/vinyl_rock_1970s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.92,
+        "crest_original": 2.92,
+        "lsd_aurik": 8.95,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.87,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.13,
+        "snr_aurik": 41.87,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.13
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/clean/vinyl_soul_1970s_clean.wav",
+      "metrics": {
+        "crest_aurik": 2.91,
+        "crest_original": 2.91,
+        "lsd_aurik": 11.51,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 41.78,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -58.22,
+        "snr_aurik": 41.78,
+        "snr_baseline": 100.0,
+        "snr_delta": -58.22
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle.wav",
+      "metrics": {
+        "crest_aurik": 3.35,
+        "crest_original": 4.01,
+        "lsd_aurik": 9.47,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 38.77,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -61.23,
+        "snr_aurik": 38.77,
+        "snr_baseline": 100.0,
+        "snr_delta": -61.23
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_blues_1950s_hiss_hum.wav",
+      "metrics": {
+        "crest_aurik": 2.97,
+        "crest_original": 2.97,
+        "lsd_aurik": 9.29,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 35.42,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -64.58,
+        "snr_aurik": 35.42,
+        "snr_baseline": 100.0,
+        "snr_delta": -64.58
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_classical_1960s_hiss_hum_wow.wav",
+      "metrics": {
+        "crest_aurik": 2.89,
+        "crest_original": 2.9,
+        "lsd_aurik": 5.34,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 37.99,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -62.01,
+        "snr_aurik": 37.99,
+        "snr_baseline": 100.0,
+        "snr_delta": -62.01
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_classical_1960s_surface_noise.wav",
+      "metrics": {
+        "crest_aurik": 4.68,
+        "crest_original": 4.95,
+        "lsd_aurik": 5.98,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 39.66,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -60.34,
+        "snr_aurik": 39.66,
+        "snr_baseline": 100.0,
+        "snr_delta": -60.34
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_jazz_1960s_hiss_crackle.wav",
+      "metrics": {
+        "crest_aurik": 6.83,
+        "crest_original": 7.48,
+        "lsd_aurik": 14.99,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 18.66,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -81.34,
+        "snr_aurik": 18.72,
+        "snr_baseline": 100.0,
+        "snr_delta": -81.28
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_jazz_1960s_surface_noise.wav",
+      "metrics": {
+        "crest_aurik": 3.92,
+        "crest_original": 4.3,
+        "lsd_aurik": 17.79,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 39.86,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -60.14,
+        "snr_aurik": 39.86,
+        "snr_baseline": 100.0,
+        "snr_delta": -60.14
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/vinyl/damaged/vinyl_rock_1960s_clicks.wav",
+      "metrics": {
+        "crest_aurik": 6.83,
+        "crest_original": 7.05,
+        "lsd_aurik": 0.0,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.84,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.16,
+        "snr_aurik": 33.84,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.16
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 10.0,
+      "file": "corpus/vinyl/damaged/vinyl_rock_1960s_hum_crackle.wav",
+      "metrics": {
+        "crest_aurik": 4.27,
+        "crest_original": 4.27,
+        "lsd_aurik": 4.16,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 44.46,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -55.54,
+        "snr_aurik": 44.46,
+        "snr_baseline": 100.0,
+        "snr_delta": -55.54
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_rock_1970s_clicks.wav",
+      "metrics": {
+        "crest_aurik": 5.9,
+        "crest_original": 6.68,
+        "lsd_aurik": 13.29,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 17.02,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -82.98,
+        "snr_aurik": 17.11,
+        "snr_baseline": 100.0,
+        "snr_delta": -82.89
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_rock_1970s_hiss.wav",
+      "metrics": {
+        "crest_aurik": 2.98,
+        "crest_original": 3.0,
+        "lsd_aurik": 9.35,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 33.38,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -66.62,
+        "snr_aurik": 33.38,
+        "snr_baseline": 100.0,
+        "snr_delta": -66.62
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_soul_1970s_crackle_hiss.wav",
+      "metrics": {
+        "crest_aurik": 5.73,
+        "crest_original": 6.33,
+        "lsd_aurik": 14.65,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 17.77,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -82.23,
+        "snr_aurik": 17.84,
+        "snr_baseline": 100.0,
+        "snr_delta": -82.16
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    },
+    {
+      "duration_s": 15.0,
+      "file": "corpus/vinyl/damaged/vinyl_soul_1970s_wow_flutter.wav",
+      "metrics": {
+        "crest_aurik": 2.91,
+        "crest_original": 2.91,
+        "lsd_aurik": 10.99,
+        "lsd_baseline": 0.0,
+        "si_sdr_aurik": 46.16,
+        "si_sdr_baseline": 100.0,
+        "si_sdr_delta": -53.84,
+        "snr_aurik": 46.16,
+        "snr_baseline": 100.0,
+        "snr_delta": -53.84
+      },
+      "sample_rate": 48000,
+      "status": "ok"
+    }
+  ],
+  "timestamp": "2026-08-04T12:14:52.372713+00:00"
+}

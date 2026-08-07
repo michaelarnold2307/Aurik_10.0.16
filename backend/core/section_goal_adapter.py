@@ -11,6 +11,8 @@ Minimal-Interface: eine Funktion `adapt(audio, sr) -> list[tuple[float, float, s
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -110,3 +112,114 @@ def _merge_adjacent(
         else:
             merged.append((start, end, label))
     return merged
+
+
+@dataclass
+class SectionTarget:
+    """§Gap7-wire v10.0.0: Per-Sektion Ziel-Parameter für SectionStrengthEnvelope (§INV-3).
+
+    Konsumiert von `backend.core.dsp.section_strength_envelope.build_strength_envelope()`.
+    """
+
+    start_s: float
+    end_s: float
+    label: str = "full"
+    nr_strength_scale: float = 1.0
+    vq_weight: float = 1.0
+    frisson_protection: bool = False
+
+
+# §Gap7: Musikfunktionale Basis-Gewichtung pro Sektionstyp.
+#
+# nr_strength_scale — Rauschunterdrückungs-Intensität relativ zur Baseline (1.0).
+#   Dichtere/lautere Sektionen maskieren Rauschen psychoakustisch stärker
+#   (simultane Verdeckung, Fletcher-Munson) → geringere NR nötig, um Pumping/
+#   Artefakte an Transienten zu vermeiden. Dünnere/leisere Sektionen (Intro,
+#   Outro, Stille) legen den Rauschflor frei → mehr NR-Spielraum.
+#
+# vq_weight — Vokal-Qualitäts-Gewichtung. Der emotionale Fokus eines Songs
+#   liegt auf dem Refrain (Hook) — dort muss die Stimme am saubersten/präsentesten
+#   sein; Intro/Outro sind häufiger instrumental oder ausklingend.
+_SECTION_PROFILE: dict[str, tuple[float, float]] = {
+    # label:      (nr_strength_scale, vq_weight)
+    "intro": (1.10, 0.80),
+    "verse": (1.00, 1.00),
+    "chorus": (0.90, 1.30),
+    "bridge": (1.00, 1.10),
+    "outro": (1.05, 0.90),
+    "silence": (1.20, 0.50),
+    "full": (1.00, 1.00),
+}
+
+
+def _normalize_frisson_zones(frisson_zones: list[Any] | None) -> list[tuple[float, float]]:
+    """Normalisiert FrissonZone-Objekte (.start_s/.end_s) oder (start_s, end_s[, ...])-Tupel."""
+    if not frisson_zones:
+        return []
+    out: list[tuple[float, float]] = []
+    for z in frisson_zones:
+        try:
+            if hasattr(z, "start_s") and hasattr(z, "end_s"):
+                out.append((float(z.start_s), float(z.end_s)))
+            elif isinstance(z, (tuple, list)) and len(z) >= 2:
+                out.append((float(z[0]), float(z[1])))
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+class SectionGoalAdapter:
+    """§Gap7-wire v10.0.0: Sektionsweise Ziel-Anpassung (Intro/Vers/Chorus/Outro).
+
+    Verbindet `get_sections()` (SSM-Boundary-Detektion) mit musikfunktionaler
+    NR-Stärke-/Vokalqualitäts-Gewichtung sowie Frisson-Schutz aus VFA-Zonen.
+    Zustandslos (keine per-Song-Daten werden im Objekt gehalten) — ein
+    Singleton ist damit §V8-konform (kein Cross-Song-Contamination-Risiko).
+    """
+
+    def compute_section_targets(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        *,
+        frisson_zones: list[Any] | None = None,
+    ) -> list[SectionTarget]:
+        """Berechnet per-Sektion Ziel-Parameter aus dem ORIGINAL-Audio.
+
+        Args:
+            audio: Original-Audio-Referenz (samples,) oder (channels, samples)
+            sr: Sample-Rate
+            frisson_zones: Optionale FrissonZone-Objekte/Tupel (§0p Klimax-Schutz)
+
+        Returns:
+            Liste von SectionTarget, sortiert nach start_s.
+        """
+        sections = get_sections(audio, sr)
+        zones = _normalize_frisson_zones(frisson_zones)
+
+        targets: list[SectionTarget] = []
+        for start_s, end_s, label in sections:
+            nr_scale, vq_weight = _SECTION_PROFILE.get(label, _SECTION_PROFILE["full"])
+            protected = any(start_s < z_end and end_s > z_start for z_start, z_end in zones)
+            targets.append(
+                SectionTarget(
+                    start_s=start_s,
+                    end_s=end_s,
+                    label=label,
+                    nr_strength_scale=nr_scale,
+                    vq_weight=vq_weight,
+                    frisson_protection=protected,
+                )
+            )
+        return targets
+
+
+_adapter: SectionGoalAdapter | None = None
+
+
+def get_section_goal_adapter() -> SectionGoalAdapter:
+    """Gibt die globale SectionGoalAdapter-Instanz zurück (zustandslos, §V8-konform)."""
+    global _adapter
+    if _adapter is None:
+        _adapter = SectionGoalAdapter()
+    return _adapter

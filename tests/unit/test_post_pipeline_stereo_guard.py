@@ -20,7 +20,7 @@ def _stereo(dur: float = 1.0, amp_l: float = 0.3, amp_r: float = 0.3) -> np.ndar
     t = np.linspace(0, dur, int(dur * SR), endpoint=False, dtype=np.float32)
     L = amp_l * np.sin(2 * np.pi * 440 * t)
     R = amp_r * np.sin(2 * np.pi * 440 * t)
-    return np.stack([L, R]).astype(np.float32)
+    return np.stack([L, R]).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _imbalance_db(audio: np.ndarray) -> float:

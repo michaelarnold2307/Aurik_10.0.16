@@ -217,7 +217,7 @@ class WowFlutterFix(PhaseInterface):
         _rest = float(np.clip(restorability_score, 0.0, 100.0))
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
 
-        _det_base = WowFlutterFix.DETECTION_THRESHOLD.get(_mk, 0.5)
+        _det_base = WowFlutterFix.DETECTION_THRESHOLD.get(_mk, 0.5)  # type: ignore[call-overload]
         _yin_base = float(WowFlutterFix.YIN_THRESHOLD)
 
         _ml_conf_base_by_mat = {
@@ -229,7 +229,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.CD_DIGITAL: 0.58,
             MaterialType.STREAMING: 0.60,
         }
-        _ml_conf_base = float(_ml_conf_base_by_mat.get(_mk, 0.60))
+        _ml_conf_base = float(_ml_conf_base_by_mat.get(_mk, 0.60))  # type: ignore[call-overload]
 
         _min_conf_base_by_mat = {
             MaterialType.SHELLAC: 0.30,
@@ -240,7 +240,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.CD_DIGITAL: 0.30,
             MaterialType.STREAMING: 0.32,
         }
-        _min_conf_base = float(_min_conf_base_by_mat.get(_mk, 0.26))
+        _min_conf_base = float(_min_conf_base_by_mat.get(_mk, 0.26))  # type: ignore[call-overload]
 
         _mode_det_adj = {
             "fast": +0.25,
@@ -459,7 +459,10 @@ class WowFlutterFix(PhaseInterface):
                     ] * _fade_in.astype(np.float32)
                     _original_audio[:_crossfade_len] = _overlap_region
                     _chunk_has_overlap = True
-                    logger.debug("Phase 12 chunk-overlap: crossfaded %d samples from previous chunk", _crossfade_len)
+                    logger.debug(
+                        "Verarbeitungsschritt 12 chunk-overlap: crossfaded %d samples from previous chunk",
+                        _crossfade_len,
+                    )
             self._chunk_overlap_tail = None  # consumed
 
         # §2.60/§2.51 STCG pre-phase: L/R-Alignment VOR Chunk-Verarbeitung.
@@ -484,7 +487,7 @@ class WowFlutterFix(PhaseInterface):
                     audio, sample_rate, phase_id="phase_12_pre_chunking"
                 )
             except Exception as _stcg_p12_exc:
-                logger.debug("Phase 12 STCG pre-chunking skipped: %s", _stcg_p12_exc)
+                logger.debug("Verarbeitungsschritt 12 STCG pre-chunking uebersprungen: %s", _stcg_p12_exc)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -503,7 +506,9 @@ class WowFlutterFix(PhaseInterface):
             _rctx_fb = kwargs.get("_restoration_context", {}) or {}
             _defect_scores_fb = _rctx_fb.get("defect_scores", _rctx_fb.get("defect_focus_scores", {})) or {}
             _wow_sev_defect = float(_defect_scores_fb.get("wow", _defect_scores_fb.get("wow_severity", 0.0)) or 0.0)
-            _flutter_sev_defect = float(_defect_scores_fb.get("flutter", _defect_scores_fb.get("flutter_severity", 0.0)) or 0.0)
+            _flutter_sev_defect = float(
+                _defect_scores_fb.get("flutter", _defect_scores_fb.get("flutter_severity", 0.0)) or 0.0
+            )
         _wow_flutter_skip = _wow_sev_defect < 0.15 and _flutter_sev_defect < 0.15
         if _wow_flutter_skip:
             # §v10.303: Erste Meldung als INFO, Wiederholungen als DEBUG (Log-Spam-Prävention)
@@ -545,8 +550,8 @@ class WowFlutterFix(PhaseInterface):
 
         # Get material-specific parameters
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        strength = float(self.CORRECTION_STRENGTH.get(_mk, 0.7) * _effective_strength)
-        threshold = self.DETECTION_THRESHOLD.get(_mk, 0.5)
+        strength = float(self.CORRECTION_STRENGTH.get(_mk, 0.7) * _effective_strength)  # type: ignore[call-overload]
+        threshold = self.DETECTION_THRESHOLD.get(_mk, 0.5)  # type: ignore[call-overload]
 
         is_stereo = audio.ndim == 2
         mono = safe_to_mono(audio).astype(np.float32) if is_stereo else audio.copy()
@@ -566,7 +571,7 @@ class WowFlutterFix(PhaseInterface):
                 use_lightweight = False
             elif use_lightweight:
                 logger.info(
-                    "Phase 12: Resource constraint detected, forcing DSP-only mode (CPU: %.1f%%, Memory: %.1f%%)",
+                    "Verarbeitungsschritt 12: Resource constraint erkannt, forcing DSP-only Betriebsart (CPU: %.1f%%, Memory: %.1f%%)",
                     adaptive_resource_manager.get_cpu_usage(),
                     adaptive_resource_manager.get_memory_usage(),
                 )
@@ -587,7 +592,7 @@ class WowFlutterFix(PhaseInterface):
             global _POLYPHONIC_CB_ACTIVE, _POLYPHONIC_CONSECUTIVE_ZERO_CONSENSUS
             if _POLYPHONIC_CB_ACTIVE:
                 logger.debug(
-                    "Phase 12: Polyphoner Pfad per Circuit-Breaker deaktiviert "
+                    "Verarbeitungsschritt 12: Polyphoner Pfad per Circuit-Breaker deaktiviert "
                     "(nach %d konsekutiven Zero-Consensus-Chunks) — pYIN direkt",
                     _POLYPHONIC_CB_MAX_FAILURES,
                 )
@@ -601,14 +606,14 @@ class WowFlutterFix(PhaseInterface):
                     pitch_trajectory, confidence = _poly_est.estimate(mono, sample_rate)
                     _poly_applied = True
                     logger.info(
-                        "Phase 12 polyphoner Konsensus: T=%d Frames, material=%s",
+                        "Verarbeitungsschritt 12 polyphoner Konsensus: T=%d Frames, material=%s",
                         len(pitch_trajectory),
                         material.value,
                     )
                 except Exception as _poly_exc:
                     _poly_fallback = True
                     logger.warning(
-                        "PolyphonicSpeedCurveEstimator fehlgeschlagen (%s) — ML-Hybrid-Fallback",
+                        "PolyphonicSpeedCurveEstimator fehlgeschlagen (%s) — ML-Hybrid-Ersatzpfad",
                         _poly_exc,
                     )
 
@@ -630,12 +635,15 @@ class WowFlutterFix(PhaseInterface):
                 # §G-PYIN-CACHE: Avoid re-running ML detection for same audio (per-channel calls)
                 _audio_hash = hash(mono.tobytes())
                 if _audio_hash in _PYIN_CACHE:
-                    ml_result = _PYIN_CACHE[_audio_hash]
+                    ml_result = _PYIN_CACHE[_audio_hash]  # type: ignore[index]
                     logger.debug(
-                        "Phase 12 ML-Hybrid: cached pitch result reused (confidence=%.3f)", ml_result.mean_confidence
+                        "Verarbeitungsschritt 12 ML-Hybrid: zwischengespeichert pitch Ergebnis reused (confidence=%.3f)",
+                        ml_result.mean_confidence,
                     )
                 else:
-                    logger.info("Phase 12 ML-Hybrid: mode=%s, material=%s", quality_mode, material.value)
+                    logger.info(
+                        "Verarbeitungsschritt 12 ML-Hybrid: Betriebsart=%s, material=%s", quality_mode, material.value
+                    )
 
                     # Configure ML pitch detector strategy
                     if quality_mode in ["quality", "maximum"]:
@@ -655,7 +663,7 @@ class WowFlutterFix(PhaseInterface):
                     ml_result = detector.detect_pitch(mono, sample_rate=sample_rate)
                     if len(_PYIN_CACHE) >= _PYIN_CACHE_MAX:
                         _PYIN_CACHE.pop(next(iter(_PYIN_CACHE)))
-                    _PYIN_CACHE[_audio_hash] = ml_result
+                    _PYIN_CACHE[_audio_hash] = ml_result  # type: ignore[index]
 
                 logger.info(
                     "ML-Hybrid Pitch-Detektion abgeschlossen: pYIN=%s, CREPE=%s, confidence=%.3f",
@@ -670,7 +678,7 @@ class WowFlutterFix(PhaseInterface):
 
             except Exception as e:
                 logger.warning(
-                    "ML-Hybrid Pitch-Detektion fehlgeschlagen: %s, Fallback auf pYIN DSP. Fehlertyp: %s",
+                    "ML-Hybrid Pitch-Detektion fehlgeschlagen: %s, Ersatzpfad auf pYIN DSP. Fehlertyp: %s",
                     e,
                     type(e).__name__,
                 )
@@ -679,7 +687,7 @@ class WowFlutterFix(PhaseInterface):
 
         # DSP-Only (Fast-Modus oder Fallback): pYIN
         if not _poly_applied and not use_ml_hybrid:
-            logger.info("Phase 12 pYIN DSP: material=%s", material.value)
+            logger.info("Verarbeitungsschritt 12 pYIN DSP: material=%s", material.value)
             pitch_trajectory, confidence = self._estimate_pitch_yin(mono, sample_rate)
 
         # Polyphonie-Guard: Wenn der Konsensus nur minimale Evidenz liefert
@@ -688,7 +696,7 @@ class WowFlutterFix(PhaseInterface):
         # Instabilitäten (Bandhopser/Wow) nicht unentdeckt bleiben.
         if _poly_applied and self._polyphonic_estimate_is_insufficient(pitch_trajectory, confidence):
             logger.info(
-                "Phase 12: Polyphoner Konsensus unzureichend (T=%d, valid_pitch=%d, valid_conf=%d) — "
+                "Verarbeitungsschritt 12: Polyphoner Konsensus unzureichend (T=%d, valid_pitch=%d, valid_conf=%d) — "
                 "Re-Estimate via pYIN",
                 int(pitch_trajectory.size),
                 int(np.sum(np.asarray(pitch_trajectory) > 0.0)),
@@ -707,7 +715,7 @@ class WowFlutterFix(PhaseInterface):
                     # Inhalte (Solo-Gesang, Sprache, Mono-Aufnahmen). Der
                     # pYIN-Schätzer (Mauch & Dixon 2014) übernimmt zuverlässig.
                     logger.info(
-                        "Phase 12 Circuit-Breaker: %d konsekutive Zero-Consensus-Chunks — "
+                        "Verarbeitungsschritt 12 Circuit-Breaker: %d konsekutive Zero-Consensus-Chunks — "
                         "polyphoner Pfad für diesen Lauf deaktiviert",
                         _POLYPHONIC_CONSECUTIVE_ZERO_CONSENSUS,
                     )
@@ -764,18 +772,20 @@ class WowFlutterFix(PhaseInterface):
                         _mean_conf = _c_mean_conf
                         _centroid_succeeded = True
                         logger.info(
-                            "Phase 12: Instantan-Frequenz-Fallback aktiviert — "
+                            "Verarbeitungsschritt 12: Instantan-Frequenz-Ersatzpfad aktiviert — "
                             "Konfidenz %.3f, T=%d Frames, material=%s",
                             _mean_conf,
                             len(pitch_trajectory),
                             material.value,
                         )
                 except Exception as _c_exc:
-                    logger.warning("Phase 12 IF-Fallback fehlgeschlagen (%s) — Transportstabilisierung", _c_exc)
+                    logger.warning(
+                        "Verarbeitungsschritt 12 IF-Ersatzpfad fehlgeschlagen (%s) — Transportstabilisierung", _c_exc
+                    )
 
             if not _centroid_succeeded:
                 logger.info(
-                    "Phase 12: konservativer Fallback aktiv (Konfidenz %.3f < %.2f) — "
+                    "Verarbeitungsschritt 12: konservativer Ersatzpfad aktiv (Konfidenz %.3f < %.2f) — "
                     "Transportstabilisierung statt Vollkorrektur",
                     _mean_conf,
                     _MIN_CONFIDENCE_FOR_CORRECTION,
@@ -800,7 +810,7 @@ class WowFlutterFix(PhaseInterface):
                     )
                     if n_level_dips_repaired > 0:
                         logger.info(
-                            "Phase 12 tape level stabilizer (low confidence path): %d dips repaired",
+                            "Verarbeitungsschritt 12 tape level stabilizer (low confidence path): %d dips repaired",
                             n_level_dips_repaired,
                         )
                 # §v10.60 Modulation-Noise-Reduction: Wenn Pitch-Confidence zu niedrig
@@ -821,7 +831,7 @@ class WowFlutterFix(PhaseInterface):
                             env_out = _mod_strength * env_smooth + (1.0 - _mod_strength) * env
                             gain = np.divide(env_out, env, out=np.ones_like(env), where=env > 1e-10)
                             gain = np.clip(gain, 0.7, 1.3)
-                            return (sig.astype(np.float64) * gain).astype(np.float32)
+                            return (sig.astype(np.float64) * gain).astype(np.float32)  # type: ignore[no-any-return]
 
                         if audio.ndim == 2:
                             ch_first = audio.shape[0] == 2 and audio.shape[1] > 2
@@ -834,12 +844,12 @@ class WowFlutterFix(PhaseInterface):
                         else:
                             audio = _stabilize_envelope(audio)
                         logger.debug(
-                            "Phase 12: Envelope-Stabilisierung (mod=%.2f, cutoff=%.0f Hz)",
+                            "Verarbeitungsschritt 12: Envelope-Stabilisierung (mod=%.2f, cutoff=%.0f Hz)",
                             _mod_strength,
                             _mod_cutoff,
                         )
                     except Exception as _mod_exc:
-                        logger.debug("Phase 12 Envelope non-blocking: %s", _mod_exc)
+                        logger.debug("Verarbeitungsschritt 12 Envelope nicht blockierend: %s", _mod_exc)
                 audio, _rms_drop_db, _makeup_db = self._preserve_phase_loudness(
                     _original_audio,
                     audio,
@@ -882,7 +892,7 @@ class WowFlutterFix(PhaseInterface):
         )
         if _sinusoidal_wow_profile.get("applied", False):
             logger.info(
-                "Phase 12 sinusförmiger Wow-Fit aktiv: freq=%.2f Hz amp=%.1f cents r2=%.2f",
+                "Verarbeitungsschritt 12 sinusförmiger Wow-Fit aktiv: freq=%.2f Hz amp=%.1f cents r2=%.2f",
                 float(_sinusoidal_wow_profile.get("frequency_hz", 0.0)),
                 float(_sinusoidal_wow_profile.get("amplitude_cents", 0.0)),
                 float(_sinusoidal_wow_profile.get("r2", 0.0)),
@@ -934,7 +944,7 @@ class WowFlutterFix(PhaseInterface):
                 )
                 if n_level_dips_repaired > 0:
                     logger.info(
-                        "Phase 12 tape level stabilizer (no wow/flutter): %d dips repaired",
+                        "Verarbeitungsschritt 12 tape level stabilizer (no wow/flutter): %d dips repaired",
                         n_level_dips_repaired,
                     )
 
@@ -1089,7 +1099,7 @@ class WowFlutterFix(PhaseInterface):
         )
         if vocals_conf >= 0.4:
             logger.debug(
-                "Phase 12: PSOLA aktiviert (PANNs Vocals-Konfidenz=%.2f ≥ 0.40)",
+                "Verarbeitungsschritt 12: PSOLA aktiviert (PANNs Vocals-Konfidenz=%.2f ≥ 0.40)",
                 vocals_conf,
             )
         if is_stereo:
@@ -1156,7 +1166,7 @@ class WowFlutterFix(PhaseInterface):
                 _mid_norm_gain = float(np.clip(_mid_rms_in / _mid_rms_out, 0.5, 2.0))  # ±6 dB
                 _mid_stretched = np.clip(_mid_stretched * _mid_norm_gain, -1.0, 1.0)
                 logger.debug(
-                    "phase_12: M/S Mid-RMS-Normalisierung: in=%.1f dBFS out=%.1f dBFS gain=%.1f dB",
+                    "Verarbeitungsschritt_12: M/S Mid-RMS-Normalisierung: in=%.1f dBFS out=%.1f dBFS gain=%.1f dB",
                     20.0 * np.log10(_mid_rms_in + 1e-12),
                     20.0 * np.log10(_mid_rms_out + 1e-12),
                     20.0 * np.log10(_mid_norm_gain + 1e-12),
@@ -1166,7 +1176,7 @@ class WowFlutterFix(PhaseInterface):
             _p12_n = min(len(restored_left), len(restored_right), audio_sample_count(audio))
             if _p12_n < audio_sample_count(audio):
                 logger.debug(
-                    "phase_12: M/S-Längenangleichung: orig=%d → %d",
+                    "Verarbeitungsschritt_12: M/S-Längenangleichung: orig=%d → %d",
                     audio_sample_count(audio),
                     _p12_n,
                 )
@@ -1201,7 +1211,7 @@ class WowFlutterFix(PhaseInterface):
                 _rest_ref = np.asarray(audio, dtype=np.float64) if len(audio) == len(restored) else None
                 restored = self._apply_neural_phase_coherence(restored, sample_rate, reference=_rest_ref)
         except Exception as _c3_proc_exc:
-            logger.debug("§C3 Phase coherence integration non-blocking: %s", _c3_proc_exc)
+            logger.debug("§C3 Verarbeitungsschritt coherence integration nicht blockierend: %s", _c3_proc_exc)
 
         _report_progress(82.0, "Wow/Flutter: Zeitstreckung abgeschlossen")
         # Step 6: Verify correction (measure residual deviation)
@@ -1266,7 +1276,7 @@ class WowFlutterFix(PhaseInterface):
             )
             restored_mono = safe_to_mono(restored) if is_stereo else restored
             logger.info(
-                "Phase 12 transport_bump repair: %d/%d bumps repaired (strength=%.3f, conf=%.3f)",
+                "Verarbeitungsschritt 12 transport_bump repair: %d/%d bumps repaired (strength=%.3f, conf=%.3f)",
                 n_bumps_repaired,
                 len(bump_locations),
                 _bump_strength,
@@ -1299,7 +1309,7 @@ class WowFlutterFix(PhaseInterface):
             if n_level_dips_repaired > 0:
                 restored_mono = safe_to_mono(restored) if is_stereo else restored
                 logger.info(
-                    "Phase 12 tape level stabilizer: %d dips repaired",
+                    "Verarbeitungsschritt 12 tape level stabilizer: %d dips repaired",
                     n_level_dips_repaired,
                 )
 
@@ -1337,7 +1347,7 @@ class WowFlutterFix(PhaseInterface):
 
         if _chroma_pearson < 0.95:
             logger.warning(
-                "Phase 12 chroma guard: Pearson %.3f < 0.95 — reverting to original audio "
+                "Verarbeitungsschritt 12 chroma guard: Pearson %.3f < 0.95 — reverting to Originalsignal audio "
                 "(wow/flutter correction caused tonal center drift)",
                 _chroma_pearson,
             )
@@ -1422,7 +1432,7 @@ class WowFlutterFix(PhaseInterface):
                 else:
                     restored[_npa_mask12] = _original_audio[_npa_mask12]
         except Exception as _npa12_exc:
-            logger.debug("§2.46f Phase12 NPA-Guard (non-blocking): %s", _npa12_exc)
+            logger.debug("§2.46f Verarbeitungsschritt12 NPA-Guard (nicht blockierend): %s", _npa12_exc)
 
         restored, _rms_drop_db, _makeup_db = self._preserve_phase_loudness(
             _original_audio,
@@ -1441,10 +1451,10 @@ class WowFlutterFix(PhaseInterface):
                     restored = np.clip(restored, -1.0, 1.0)
                     _makeup_db = _approved
             except Exception as _e:
-                logger.debug("%s: non-critical exception: %s", __name__, _e)
+                logger.debug("%s: unkritisch exception: %s", __name__, _e)
         if abs(_makeup_db) > 0.01:
             logger.info(
-                "Phase 12 loudness-preservation: material=%s rms_drop=%+.2f dB via makeup %+.2f dB",
+                "Verarbeitungsschritt 12 loudness-preservation: material=%s rms_drop=%+.2f dB via makeup %+.2f dB",
                 material.value,
                 _rms_drop_db,
                 _makeup_db,
@@ -1556,7 +1566,7 @@ class WowFlutterFix(PhaseInterface):
         try:
             coeffs, *_ = np.linalg.lstsq(design, y, rcond=None)
         except Exception as e:
-            logger.warning("phase_12_wow_flutter_fix.py::_fit_sinusoidal_wow_curve fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_12_wow_flutter_fix.py::_fit_sinusoidal_wow_curve Ersatzpfad: %s", e)
             return pitch_trajectory, profile
         amp_cents = float(np.hypot(coeffs[0], coeffs[1]))
         if amp_cents < 4.0 or amp_cents > 60.0:
@@ -1622,7 +1632,7 @@ class WowFlutterFix(PhaseInterface):
                 proc = np.asarray(proc_aligned, dtype=np.float64)
                 _stcg_applied = True
             except Exception as exc:
-                logger.debug("Phase 12 loudness-preservation: STCG skipped (%s)", exc)
+                logger.debug("Verarbeitungsschritt 12 loudness-preservation: STCG uebersprungen (%s)", exc)
 
         # §2.51 Stereo-lag xcorr fallback — NUR wenn STCG fehlgeschlagen ist.
         # GCC-PHAT (used by STCG) fails for narrow-band (near-sinusoidal) audio.
@@ -1658,14 +1668,14 @@ class WowFlutterFix(PhaseInterface):
                         _new_r = np.concatenate([np.zeros(-_lag_samples), proc[: _N_proc + _lag_samples, 1]])
                     proc = np.column_stack([proc[:, 0], _new_r])
                     logger.debug(
-                        "§2.51 Phase-12 xcorr fallback: L/R lag=%d → correction=%+d samples",
+                        "§2.51 Verarbeitungsschritt-12 xcorr Ersatzpfad: L/R lag=%d → correction=%+d samples",
                         _lag_samples,
                         _lag_samples,
                     )
             except Exception as _xc_exc:
-                logger.debug("§2.51 Phase-12 xcorr fallback non-blocking: %s", _xc_exc)
+                logger.debug("§2.51 Verarbeitungsschritt-12 xcorr Ersatzpfad nicht blockierend: %s", _xc_exc)
 
-        _max_rms_drop_db = {
+        _max_rms_drop_db = {  # type: ignore[call-overload]
             MaterialType.SHELLAC: 1.2,
             MaterialType.WAX_CYLINDER: 1.2,
             MaterialType.WIRE_RECORDING: 1.3,
@@ -1796,10 +1806,10 @@ class WowFlutterFix(PhaseInterface):
                 return pitch_trajectory, confidence
 
             except Exception as _lib_exc:
-                logger.debug("librosa.pyin unavailable (%s) — falling back to Python pYIN (30 s cap)", _lib_exc)
+                logger.debug("librosa.pyin nicht verfuegbar (%s) — falling back to Python pYIN (30 s cap)", _lib_exc)
         else:
             logger.debug(
-                "librosa.pyin disabled by policy/env (quality_mode=%s, env=%s) — using Python pYIN fallback",
+                "librosa.pyin deaktiviert by policy/env (quality_Betriebsart=%s, env=%s) — using Python pYIN Ersatzpfad",
                 _qm_hint,
                 _pyin_env,
             )
@@ -1817,7 +1827,7 @@ class WowFlutterFix(PhaseInterface):
             audio_pyin = audio[_mid - _half : _mid + _half]
             _analysis_offset_samples = _mid - _half
             logger.debug(
-                "pYIN Python fallback: %.0f s audio capped to %d s centre", len(audio) / sample_rate, _PYIN_CAP_S
+                "pYIN Python Ersatzpfad: %.0f s audio capped to %d s centre", len(audio) / sample_rate, _PYIN_CAP_S
             )
         else:
             audio_pyin = audio
@@ -1930,7 +1940,7 @@ class WowFlutterFix(PhaseInterface):
             confidence = _full_conf
             num_windows = _full_windows
             logger.debug(
-                "pYIN Python fallback: trajectory expanded to %d frames (full audio),"
+                "pYIN Python Ersatzpfad: trajectory expanded to %d frames (full audio),"
                 " center window at frames %d..%d, neutral pitch=%.1f Hz outside window",
                 _full_windows,
                 _s,
@@ -2046,7 +2056,7 @@ class WowFlutterFix(PhaseInterface):
                         local_strength = min(local_strength, pz_cap)
                         break
                 except Exception:
-                    logger.debug("_compute_bump_local_strength: silent except suppressed", exc_info=True)
+                    logger.debug("_berechnen_bump_local_strength: silent except suppressed", exc_info=True)
                     continue
         if base_strength < 1e-6:
             return 0.0
@@ -2476,7 +2486,7 @@ class WowFlutterFix(PhaseInterface):
 
         # Kurzsignal-Guard: mindestens 4 s für Sub-Hz Auflösung
         if len(mono) < sample_rate * 4:
-            logger.debug("Phase 12 IF-Fallback: Audio zu kurz (%d Samples < 4s)", len(mono))
+            logger.debug("Verarbeitungsschritt 12 IF-Ersatzpfad: Audio zu kurz (%d Samples < 4s)", len(mono))
             return np.zeros(1, dtype=np.float64), np.zeros(1, dtype=np.float64)
 
         try:
@@ -2504,7 +2514,7 @@ class WowFlutterFix(PhaseInterface):
             valid_fraction = float(np.sum(valid_mask)) / float(max(1, len(valid_mask)))
             if valid_fraction < VALID_FRAC_MIN:
                 logger.debug(
-                    "Phase 12 IF-Fallback: zu wenig valide IF-Frames (%.1f %% < %.0f %%)",
+                    "Verarbeitungsschritt 12 IF-Ersatzpfad: zu wenig valide IF-Frames (%.1f %% < %.0f %%)",
                     valid_fraction * 100,
                     VALID_FRAC_MIN * 100,
                 )
@@ -2541,7 +2551,9 @@ class WowFlutterFix(PhaseInterface):
             wow_rms = float(np.sqrt(np.mean(wow_component**2)))
             amplitude_cents = float(abs(1200.0 * np.log2(1.0 + wow_rms * np.sqrt(2.0) + 1e-10)))
             if amplitude_cents < AMP_MIN_CENTS or amplitude_cents > AMP_MAX_CENTS:
-                logger.debug("Phase 12 IF-Fallback: Amplitude außerhalb Bereich (%.2f Cents)", amplitude_cents)
+                logger.debug(
+                    "Verarbeitungsschritt 12 IF-Ersatzpfad: Amplitude außerhalb Bereich (%.2f Cents)", amplitude_cents
+                )
                 return np.zeros(1, dtype=np.float64), np.zeros(1, dtype=np.float64)
 
             # Dominanz: Wow-Peak vs. Breitband-IF-Energie (0.2–4 Hz)
@@ -2559,7 +2571,7 @@ class WowFlutterFix(PhaseInterface):
 
             if _dominance < 0.10:
                 logger.debug(
-                    "Phase 12 IF-Fallback: keine dominante Wow-Komponente (peak=%.2f Hz, dominance=%.4f < 0.10)",
+                    "Verarbeitungsschritt 12 IF-Ersatzpfad: keine dominante Wow-Komponente (peak=%.2f Hz, dominance=%.4f < 0.10)",
                     _peak_freq,
                     _dominance,
                 )
@@ -2583,7 +2595,7 @@ class WowFlutterFix(PhaseInterface):
             confidence = np.full(len(virtual_pitch), _conf_level, dtype=np.float64)
 
             logger.info(
-                "Phase 12 IF-Fallback (IEC 60386): T=%d Frames, "
+                "Verarbeitungsschritt 12 IF-Ersatzpfad (IEC 60386): T=%d Frames, "
                 "Wow-Peak=%.2f Hz, Amplitude=%.1f Cents, Dominanz=%.3f, valid_frac=%.2f",
                 len(virtual_pitch),
                 _peak_freq,
@@ -2594,7 +2606,7 @@ class WowFlutterFix(PhaseInterface):
             return virtual_pitch, confidence
 
         except Exception as _exc:
-            logger.warning("Phase 12 IF-Fallback fehlgeschlagen: %s", _exc)
+            logger.warning("Verarbeitungsschritt 12 IF-Ersatzpfad fehlgeschlagen: %s", _exc)
             return np.zeros(1, dtype=np.float64), np.zeros(1, dtype=np.float64)
 
     def _stabilize_tape_level(
@@ -3168,7 +3180,7 @@ class WowFlutterFix(PhaseInterface):
                 _adaptive_limit = max(100.0, min(_adaptive_limit, 400.0))
                 if _span_cents > _adaptive_limit:
                     logger.info(
-                        "Phase 12 pitch span %.0f cents > %.0f (mat=%s wow=%.2f)",
+                        "Verarbeitungsschritt 12 pitch span %.0f cents > %.0f (mat=%s wow=%.2f)",
                         _span_cents,
                         _adaptive_limit,
                         _mat_key,
@@ -3177,7 +3189,7 @@ class WowFlutterFix(PhaseInterface):
                     return np.ones_like(pitch_trajectory)
                 else:
                     logger.info(
-                        "Phase 12 pitch span %.0f cents within limit %.0f (mat=%s wow=%.2f)",
+                        "Verarbeitungsschritt 12 pitch span %.0f cents within limit %.0f (mat=%s wow=%.2f)",
                         _span_cents,
                         _adaptive_limit,
                         _mat_key,
@@ -3247,7 +3259,9 @@ class WowFlutterFix(PhaseInterface):
                     start_s = max(0.0, float(loc[0]))
                     end_s = max(start_s, float(loc[1]))
                 except Exception:
-                    logger.debug("_apply_defect_locality_to_stretch_factors: silent except suppressed", exc_info=True)
+                    logger.debug(
+                        "_anwenden_defect_locality_to_stretch_factors: silent except suppressed", exc_info=True
+                    )
                     continue
                 merged_locations.append((start_s, end_s))
 
@@ -3316,13 +3330,15 @@ class WowFlutterFix(PhaseInterface):
             _result = np.clip(_result, -1.0, 1.0)
 
             logger.debug(
-                "phase_12: DDSP-Harmonic-Isolation: harmonic_ratio=%.2f → Trägertextur erhalten",
+                "Verarbeitungsschritt_12: DDSP-Harmonic-Isolation: harmonic_Verhaeltnis=%.2f → Trägertextur erhalten",
                 _harmonic_ratio,
             )
             _out: np.ndarray = np.asarray(_result, dtype=audio.dtype)
             return _out
         except Exception as _hpss_exc:
-            logger.debug("phase_12: HPSS-Isolation Fallback auf Phase-Vocoder: %s", _hpss_exc)
+            logger.debug(
+                "Verarbeitungsschritt_12: HPSS-Isolation Ersatzpfad auf Verarbeitungsschritt-Vocoder: %s", _hpss_exc
+            )
             return self._phase_vocoder_timestretch(audio, stretch_factors, sample_rate)
 
     def _phase_vocoder_timestretch(
@@ -3360,7 +3376,7 @@ class WowFlutterFix(PhaseInterface):
                 hop_ratio=self.PITCH_HOP_FACTOR,
             )
         except Exception as _pv_exc:
-            logger.debug("§PV1 phase vocoder unavailable (%s) — fallback to WSOLA", _pv_exc)
+            logger.debug("§PV1 Verarbeitungsschritt vocoder nicht verfuegbar (%s) — Ersatzpfad to WSOLA", _pv_exc)
             return self._phase_vocoder_wsola_fallback(audio, stretch_factors)
 
     def _phase_vocoder_wsola_fallback(self, audio: np.ndarray, stretch_factors: np.ndarray) -> np.ndarray:
@@ -3385,7 +3401,7 @@ class WowFlutterFix(PhaseInterface):
             if win >= 5:
                 sf_samples = savgol_filter(sf_samples, window_length=win, polyorder=2, mode="interp")
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         sf_samples = np.clip(sf_samples, 0.90, 1.10)
         if np.max(np.abs(sf_samples - 1.0)) < 0.002:
@@ -3516,14 +3532,14 @@ class WowFlutterFix(PhaseInterface):
             result = (1.0 - blend) * audio_f + blend * output
             result = np.clip(result, -1.0, 1.0)
             logger.debug(
-                "§C3 Neural Phase Coherence: repaired %d incoherent STFT bins (blend=%.2f)",
+                "§C3 Neural Verarbeitungsschritt Coherence: repaired %d incoherent STFT bins (blend=%.2f)",
                 n_incoherent,
                 blend,
             )
             return result.astype(audio.dtype)  # type: ignore[no-any-return]
 
         except Exception as _c3_exc:
-            logger.debug("§C3 Neural Phase Coherence non-blocking: %s", _c3_exc)
+            logger.debug("§C3 Neural Verarbeitungsschritt Coherence nicht blockierend: %s", _c3_exc)
             return self._phase_coherence_emergency_smoothing(audio, sample_rate)
 
     def _phase_coherence_emergency_smoothing(self, audio: np.ndarray, sample_rate: int) -> np.ndarray:
@@ -3585,7 +3601,7 @@ class WowFlutterFix(PhaseInterface):
             result = np.clip(result, -1.0, 1.0)
             return result.astype(audio.dtype, copy=False)  # type: ignore[no-any-return]
         except Exception as _c3_fallback_exc:
-            logger.debug("§C3 emergency smoothing fallback failed: %s", _c3_fallback_exc)
+            logger.debug("§C3 emergency smoothing Ersatzpfad fehlgeschlagen: %s", _c3_fallback_exc)
             return audio.copy()
 
     def _psola_timestretch(
@@ -3647,7 +3663,7 @@ class WowFlutterFix(PhaseInterface):
         # Guard: fall back to Phase Vocoder when median period < hop/2 (f0 > 187 Hz).
         if int(np.median(period_samps)) < hop // 2:
             logger.debug(
-                "phase_12 PSOLA safety: median f0=%.0f Hz > %.0f Hz threshold → Phase-Vocoder fallback",
+                "Verarbeitungsschritt_12 PSOLA safety: median f0=%.0f Hz > %.0f Hz Schwelle → Verarbeitungsschritt-Vocoder Ersatzpfad",
                 float(sample_rate) / max(float(np.median(period_samps)), 1.0),
                 float(sample_rate) / max(hop // 2, 1),
             )
@@ -3706,7 +3722,7 @@ def _run_test() -> None:  # pragma: no cover
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Phase 12: Professional Wow & Flutter Correction v2.0")
+    logger.debug("Verarbeitungsschritt 12: Professional Wow & Flutter Correction v2.0")
     logger.debug("=" * 80)
     logger.debug("")
 
@@ -3736,7 +3752,7 @@ def _run_test() -> None:  # pragma: no cover
     audio += 0.15 * np.sin(2 * phase)  # 2nd harmonic
     audio += 0.10 * np.sin(3 * phase)  # 3rd harmonic
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, sample_rate)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, sample_rate)
     logger.debug("Base frequency: 440 Hz with harmonics (2nd, 3rd)")
     logger.debug("Wow: %s Hz, Depth: %.2f%%", wow_freq, wow_depth * 100)
     logger.debug("Flutter: %s Hz, Depth: %.2f%%", flutter_freq, flutter_depth * 100)
@@ -3761,7 +3777,7 @@ def _run_test() -> None:  # pragma: no cover
 
         if result.metrics["wow_flutter_detected"]:
             logger.debug("✅ Professional Wow & Flutter Correction:")
-            logger.debug("   Detected: YES")
+            logger.debug("   erkannt: YES")
             logger.debug("   Max Deviation: %.3f%%", result.metrics["max_deviation_percent"])
             logger.debug("   Wow Magnitude: %.3f%%", result.metrics["wow_magnitude_percent"])
             logger.debug("   Flutter Magnitude: %.3f%%", result.metrics["flutter_magnitude_percent"])
@@ -3775,13 +3791,13 @@ def _run_test() -> None:  # pragma: no cover
             )
             logger.debug("")
         else:
-            logger.debug("⚠️  No significant wow/flutter detected")
+            logger.debug("⚠️  No significant wow/flutter erkannt")
             logger.debug("   Max Deviation: %.3f%%", result.metrics["max_deviation_percent"])
-            logger.debug("   Threshold: %s%%", phase.DETECTION_THRESHOLD.get(material, 0.5))  # _mat_enum_
+            logger.debug("   Schwelle: %s%%", phase.DETECTION_THRESHOLD.get(material, 0.5))  # _mat_enum_
             logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test completed")
+    logger.debug("Test abgeschlossen")
     logger.debug("=" * 80)
 
 

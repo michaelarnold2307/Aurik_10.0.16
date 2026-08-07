@@ -160,7 +160,7 @@ class PsychoacousticMaskingModel:
         f_khz = freq_hz / 1000.0
         ath_spl_db = 3.64 * (f_khz ** (-0.8)) - 6.5 * math.exp(-0.6 * (f_khz - 3.3) ** 2) + 1e-3 * (f_khz**4)
         ath_dbfs = ath_spl_db - 100.0
-        return ath_dbfs
+        return ath_dbfs  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     # Binaural Masking Level Difference (BMLD) — IACC-basiert
@@ -400,7 +400,7 @@ class PsychoacousticMaskingModel:
                     try:
                         _ctx.__exit__(None, None, None)
                     except Exception as _ctx_exc:
-                        logger.debug("Context manager exit failed in masking model: %s", _ctx_exc)
+                        logger.debug("Context manager exit fehlgeschlagen in masking model: %s", _ctx_exc)
 
         return MaskingResult(
             gain_modifier=gain_mod,

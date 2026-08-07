@@ -54,11 +54,11 @@ class SpeakerIdentityResult:
 
 
 def _hz_to_mel(hz: float) -> float:
-    return 2595.0 * np.log10(1.0 + hz / 700.0)
+    return 2595.0 * np.log10(1.0 + hz / 700.0)  # type: ignore[no-any-return]
 
 
 def _mel_to_hz(mel: float) -> float:
-    return 700.0 * (10.0 ** (mel / 2595.0) - 1.0)
+    return 700.0 * (10.0 ** (mel / 2595.0) - 1.0)  # type: ignore[no-any-return]
 
 
 def _mel_filterbank(n_filters: int, n_fft: int, sr: int) -> np.ndarray:
@@ -66,7 +66,7 @@ def _mel_filterbank(n_filters: int, n_fft: int, sr: int) -> np.ndarray:
     f_min, f_max = 0.0, sr / 2.0
     mel_min, mel_max = _hz_to_mel(f_min), _hz_to_mel(f_max)
     mel_points = np.linspace(mel_min, mel_max, n_filters + 2)
-    hz_points = _mel_to_hz(mel_points)
+    hz_points = _mel_to_hz(mel_points)  # type: ignore[arg-type]
     bin_points = np.floor((n_fft + 1) * hz_points / sr).astype(int)
 
     filters = np.zeros((n_filters, n_fft // 2 + 1))
@@ -169,7 +169,7 @@ def extract_mfcc_voiceprint(
     if norm > 1e-12:
         embedding /= norm
 
-    return embedding.astype(np.float64)
+    return embedding.astype(np.float64)  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -217,7 +217,7 @@ class SpeakerIdentityGuard:
             SpeakerIdentityResult mit similarity und identity_preserved-Flag
         """
         if self._pre_embedding is None:
-            logger.warning("SpeakerIdentity: Kein Pre-Embedding — check_phase übersprungen.")
+            logger.warning("SpeakerIdentity: Kein Pre-Embedding — Pruefung_Verarbeitungsschritt übersprungen.")
             return SpeakerIdentityResult(
                 phase_id=phase_id,
                 cosine_similarity=1.0,
@@ -238,7 +238,7 @@ class SpeakerIdentityGuard:
 
             if not identity_preserved:
                 logger.warning(
-                    "SpeakerIdentity: %s — Identität möglicherweise verändert (cosine_sim=%.4f < threshold=%.2f)",
+                    "SpeakerIdentity: %s — Identität möglicherweise verändert (cosine_sim=%.4f < Schwelle=%.2f)",
                     phase_id,
                     similarity,
                     threshold,
@@ -257,7 +257,7 @@ class SpeakerIdentityGuard:
                 pre_embedding_shape=self._pre_shape,
             )
         except Exception as exc:
-            logger.error("SpeakerIdentity: check_phase fehlgeschlagen: %s", exc)
+            logger.error("SpeakerIdentity: Pruefung_Verarbeitungsschritt fehlgeschlagen: %s", exc)
             return SpeakerIdentityResult(
                 phase_id=phase_id,
                 cosine_similarity=1.0,

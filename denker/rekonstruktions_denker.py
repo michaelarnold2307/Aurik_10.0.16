@@ -197,7 +197,7 @@ class RekonstruktionsDenker:
         if _hint in _DIGITAL_MATERIAL_TYPES:
             logger.info(
                 "RekonstruktionsDenker: GapReconstructor übersprungen für digitales Material '%s' "
-                "— phase_24 übernimmt Codec-Dropout-Reparatur.",
+                "— Verarbeitungsschritt_24 übernimmt Codec-Dropout-Reparatur.",
                 _hint,
             )
             _no_op = RekonstruktionsErgebnis(
@@ -227,14 +227,14 @@ class RekonstruktionsDenker:
                         _sf = getattr(defect_result, "spectral_fingerprint", {})
                         _est_bw_hz = float(_sf.get("effective_bandwidth_hz", 0.0))
                         logger.info(
-                            "RekonstruktionsDenker: BANDWIDTH_LOSS detected "
+                            "RekonstruktionsDenker: BANDWIDTH_LOSS erkannt "
                             "(severity=%.3f, est_bw=%.0f Hz) — hint passed to UV3",
                             float(getattr(_ds, "severity", 0.0)),
                             _est_bw_hz,
                         )
                         break
             except Exception as _bw_exc:
-                logger.debug("Bandwidth extraction failed: %s", _bw_exc)
+                logger.debug("Bandwidth extraction fehlgeschlagen: %s", _bw_exc)
 
         # §2.41: Material-adaptive GapReconstructor-Instanz
         reconstructor = self._get_reconstructor(material=material_hint or material)
@@ -246,7 +246,7 @@ class RekonstruktionsDenker:
                 raw = reconstructor.reconstruct(audio, sr, material_hint=material_hint or material)
                 result = self._konvertiere(raw)
             except Exception as exc:
-                logger.warning("GapReconstructor.reconstruct() fehlgeschlagen: %s — DSP-Fallback", exc)
+                logger.warning("GapReconstructor.reconstruct() fehlgeschlagen: %s — DSP-Ersatzpfad", exc)
                 result = self._dsp_fallback(audio, sr, reason=str(exc))
 
         # §11.7a: Attach ReconstructionContext fields
@@ -273,10 +273,10 @@ class RekonstruktionsDenker:
                 return detected_raw
             if isinstance(detected_raw, Iterable):
                 return list(detected_raw)
-            logger.debug("detect_only lieferte unerwarteten Typ: %s", type(detected_raw).__name__)
+            logger.debug("erkennen_only lieferte unerwarteten Typ: %s", type(detected_raw).__name__)
             return []
         except Exception as exc:
-            logger.debug("detect_only fehlgeschlagen: %s", exc)
+            logger.debug("erkennen_only fehlgeschlagen: %s", exc)
             return []
 
     # ------------------------------------------------------------------
@@ -372,7 +372,7 @@ class RekonstruktionsDenker:
                 )
             return GapReconstructor(config=cfg)
         except Exception as exc:
-            logger.warning("GapReconstructor konnte nicht geladen werden: %s — DSP-Fallback aktiv", exc)
+            logger.warning("GapReconstructor konnte nicht geladen werden: %s — DSP-Ersatzpfad aktiv", exc)
             return None
 
     def _konvertiere(self, raw: Any) -> RekonstruktionsErgebnis:
@@ -409,7 +409,7 @@ class RekonstruktionsDenker:
             phases = list(getattr(raw, "phases_applied", []) or [])
         except Exception as phase_exc:
             logger.debug(
-                "RekonstruktionsDenker: phases_applied nicht lesbar (Ursache: %s). "
+                "RekonstruktionsDenker: phases_angewendet nicht lesbar (Ursache: %s). "
                 "Lösung: GapReconstructor-Rückgabeformat prüfen.",
                 phase_exc,
             )

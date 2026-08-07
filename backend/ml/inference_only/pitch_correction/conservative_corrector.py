@@ -105,8 +105,8 @@ class ConservativePitchCorrector:
         )
 
         logger.info(
-            "ConservativePitchCorrector initialized: "
-            f"error_threshold={error_threshold_cents}¢, max_dcs={max_dcs}, "
+            "ConservativePitchCorrector initialisiert: "
+            f"error_Schwelle={error_threshold_cents}¢, max_dcs={max_dcs}, "
             f"min_epistemic_conf={min_epistemic_confidence}, "
             f"formant_preservation={formant_preservation}"
         )
@@ -132,7 +132,7 @@ class ConservativePitchCorrector:
         is_stereo = audio.ndim > 1
 
         # Step 1: Analyze pitch
-        logger.info("Analyzing pitch...")
+        logger.info("analysiere pitch...")
         pitch_analysis = self.pitch_detector.detect(audio_mono)
 
         # Step 2: Epistemic Gate Check
@@ -150,16 +150,16 @@ class ConservativePitchCorrector:
 
         # Step 3: Check for vibrato/glissando (should NOT correct)
         if pitch_analysis.vibrato_detected:
-            logger.info("Pitch correction REJECTED: Vibrato detected (intentional)")
+            logger.info("Pitch correction REJECTED: Vibrato erkannt (intentional)")
             return audio, {"corrected": False, "reason": "vibrato_preservation", "analysis": pitch_analysis}
 
         if pitch_analysis.glissando_detected:
-            logger.info("Pitch correction REJECTED: Glissando detected (intentional)")
+            logger.info("Pitch correction REJECTED: Glissando erkannt (intentional)")
             return audio, {"corrected": False, "reason": "glissando_preservation", "analysis": pitch_analysis}
 
         # Step 4: Check if errors exist
         if len(pitch_analysis.pitch_errors) == 0:
-            logger.info("No pitch errors detected (everything within threshold)")
+            logger.info("No pitch errors erkannt (everything within Schwelle)")
             return audio, {"corrected": False, "reason": "no_errors_detected", "analysis": pitch_analysis}
 
         # Step 5: Generate correction plan
@@ -281,7 +281,7 @@ class ConservativePitchCorrector:
         # Weighted combination
         risk = 0.6 * magnitude_risk + 0.4 * confidence_risk
 
-        return risk
+        return risk  # type: ignore[no-any-return]
 
     def _apply_correction(
         self, audio: np.ndarray, pitch_analysis: PitchAnalysis, correction_plan: CorrectionPlan, dry_wet: float
@@ -292,7 +292,7 @@ class ConservativePitchCorrector:
         Uses phase vocoder + formant shift compensation.
         """
         if not LIBROSA_AVAILABLE:
-            logger.error("librosa not available, cannot apply correction")
+            logger.error("librosa not verfuegbar, cannot anwenden correction")
             return audio
 
         # Extract pitch curve
@@ -360,11 +360,11 @@ class ConservativePitchCorrector:
             # Dry/wet mix
             audio_final = dry_wet * audio_corrected + (1 - dry_wet) * audio
 
-            logger.info("Pitch correction successfully applied")
+            logger.info("Pitch correction erfolgreich angewendet")
             return audio_final
 
         except Exception as e:
-            logger.error("Pitch correction failed: %s", e)
+            logger.error("Pitch correction fehlgeschlagen: %s", e)
             return audio
 
     def can_correct_safely(self, audio: np.ndarray) -> dict:

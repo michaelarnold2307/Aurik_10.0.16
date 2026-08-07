@@ -119,7 +119,7 @@ def get_phase_decisions(result: Any) -> list[dict[str, Any]]:
         trace = build_from_result(result)
         return [p.to_dict() for p in trace.phases]
     except Exception as e:
-        logger.debug("get_phase_decisions fehlgeschlagen: %s", e)
+        logger.debug("get_Verarbeitungsschritt_decisions fehlgeschlagen: %s", e)
         return []
 
 
@@ -173,7 +173,7 @@ def save_trace_json(result: Any, path: str) -> bool:
         logger.info("Pipeline-Trace gespeichert: %s", path)
         return True
     except Exception as e:
-        logger.error("save_trace_json fehlgeschlagen (%s): %s", path, e)
+        logger.error("speichern_trace_json fehlgeschlagen (%s): %s", path, e)
         return False
 
 

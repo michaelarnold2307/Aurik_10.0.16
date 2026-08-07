@@ -104,7 +104,7 @@ class ReferenceTrackCalibrator:
         # Stufe 1: Preset — Referenz-Track analysieren
         _ref_profile = self._analyze_reference(reference_audio, reference_sr)
         logger.info(
-            "🎯 Reference Preset: LUFS=%.1f tilt=%.1f brill=%.2f warm=%.2f",
+            "🎯 Referenz Preset: LUFS=%.1f tilt=%.1f brill=%.2f warm=%.2f",
             _ref_profile.integrated_lufs,
             _ref_profile.spectral_tilt_db_oct,
             _ref_profile.brilliance,
@@ -166,7 +166,7 @@ class ReferenceTrackCalibrator:
 
         goals.confidence = self._compute_confidence(_ref_profile, _material_floor)
         logger.info(
-            "🎯 Calibrated Goals (self=%s): LUFS=%.1f tilt=%.1f brill=%.2f warm=%.2f (conf=%.0f%%)",
+            "🎯 kalibriert Goals (self=%s): LUFS=%.1f tilt=%.1f brill=%.2f warm=%.2f (conf=%.0f%%)",
             goals.self_calibration_applied,
             goals.target_lufs,
             goals.target_tilt,
@@ -219,7 +219,7 @@ class ReferenceTrackCalibrator:
         try:
             from backend.core.calibration_matrix import get_material_floor as _gmf
 
-            return dict(_gmf(material) or {})
+            return dict(_gmf(material) or {})  # type: ignore
         except Exception:
             pass  # Material floor lookup best-effort — non-critical
         return {"lufs": -20.0, "warmth": 0.55, "hpe": 0.60}

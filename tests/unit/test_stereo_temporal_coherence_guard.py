@@ -37,7 +37,7 @@ def _make_tone(freq: float = 440.0, duration_s: float = 15.0, sr: int = SR) -> n
     # Add band-limited noise so the signal has realistic broadband content
     rng = np.random.default_rng(42)
     sig += 0.05 * rng.standard_normal(len(sig)).astype(np.float32)
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _shift_integer(signal: np.ndarray, delay_samples: int) -> np.ndarray:

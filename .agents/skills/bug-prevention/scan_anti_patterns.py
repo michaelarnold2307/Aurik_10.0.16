@@ -14,10 +14,13 @@ Gefundene Anti-Patterns (aus 460 analysierten Exceptions):
 """
 
 import ast
+import logging
 import os
 import re
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── Konfiguration ──────────────────────────────────────────────────────────
 
@@ -155,7 +158,7 @@ def check_os_without_import(filepath: str, source: str) -> list[str]:
                             f"FIX: `import os` am Modul-Anfang"
                         )
         except SyntaxError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     return issues
 
 

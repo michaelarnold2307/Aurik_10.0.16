@@ -269,7 +269,7 @@ def restore_dynamics(
     if max_val > 1.2:
         result /= max_val * 0.95
 
-    return result.astype(audio.dtype)
+    return result.astype(audio.dtype)  # type: ignore[no-any-return]
 
 
 def _restore_dynamics_mono(
@@ -368,7 +368,7 @@ class DynamicsPreserver:
             self._cumulative_loss_db = 0.0
             self._warnings.clear()
         logger.info(
-            "DynamicsPreserver: Original-Profil erfasst (Crest=%.1fdB, Range=%.1fdB, Micro=%.1fdB)",
+            "DynamicsPreserver: Originalsignal-Profil erfasst (Crest=%.1fdB, Range=%.1fdB, Micro=%.1fdB)",
             profile.crest_factor_db,
             profile.dynamic_range_db,
             profile.micro_dynamic_db,
@@ -378,7 +378,7 @@ class DynamicsPreserver:
     def check_phase(self, phase_name: str, audio: np.ndarray, sr: int) -> DynamicsLoss:
         """Prüft Dynamik-Erhalt nach einer Phase und warnt bei Verlust."""
         if self._original_profile is None:
-            logger.debug("DynamicsPreserver: Kein Original-Profil — überspringe Check.")
+            logger.debug("DynamicsPreserver: Kein Originalsignal-Profil — überspringe Pruefung.")
             return DynamicsLoss()
 
         current = capture_dynamics_profile(audio, sr)

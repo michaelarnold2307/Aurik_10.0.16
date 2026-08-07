@@ -12,6 +12,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from typing import Any
 
 PHASE_DIR = Path("backend/core/phases")
 
@@ -84,9 +85,9 @@ def audit_phase(filepath: Path) -> list[dict]:
     findings = []
 
     for feat_name, feat_info in SOTA_FEATURES.items():
-        if not feat_info["relevance"](content, name):
+        if not feat_info["relevance"](content, name):  # type: ignore[operator]
             continue  # Not relevant for this phase
-        if feat_info["check"](content):
+        if feat_info["check"](content):  # type: ignore[operator]
             continue  # Already using it
 
         findings.append(
@@ -116,7 +117,7 @@ def main():
         return
 
     # Group by feature
-    by_feature = {}
+    by_feature: dict[Any, Any] = {}
     for f in all_findings:
         feat = f["feature"]
         if feat not in by_feature:

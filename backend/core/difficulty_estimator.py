@@ -20,7 +20,7 @@ class DifficultyEstimate:
     estimated_duration_minutes: float = 10.0
     expected_improvement_mos: float = 1.5
     defect_count: int = 0
-    defect_types: list[str] = None
+    defect_types: list[str] = None  # type: ignore[assignment]
     material: str = "unknown"
     era: int = 0
     recommendation: str = ""
@@ -31,7 +31,11 @@ class DifficultyEstimate:
 
 
 def estimate(
-    audio: np.ndarray, sr: int, material: str = "unknown", era: int = 0, defects: dict[str, float] = None
+    audio: np.ndarray,
+    sr: int,
+    material: str = "unknown",
+    era: int = 0,
+    defects: dict[str, float] = None,  # type: ignore[assignment]
 ) -> DifficultyEstimate:
     """Schätzt Restaurierungs-Schwierigkeit aus Audio-Charakteristik."""
     mono = np.mean(audio, axis=-1) if audio.ndim > 1 else np.asarray(audio, dtype=np.float32)

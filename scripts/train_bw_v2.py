@@ -187,7 +187,7 @@ def multi_resolution_stft_loss(pred, target):
                 return_complex=True,
                 pad_mode="reflect",
             ).abs()
-            total += F.l1_loss(pred_spec, target_spec)
+            total += F.l1_loss(pred_spec, target_spec)  # type: ignore[assignment]
         loss += total / B
     return loss / 3.0
 

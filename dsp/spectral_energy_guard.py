@@ -83,17 +83,17 @@ class SpectralEnergyGuard:
             # Quality-Gate
             if energy < 0 or np.isnan(energy):
                 logger.warning("[QualityGate] Warnung: Unplausible Energie, Rollback aktiviert.")
-                result["spectral_energy"] = 0.0
+                result["spectral_energy"] = 0.0  # type: ignore[assignment]
                 result["ok"] = False
-                result["error"] = "Unplausible Energie detektiert"
+                result["error"] = "Unplausible Energie detektiert"  # type: ignore[assignment]
                 self._audit_log(result, sr)
                 return result
-            result["spectral_energy"] = energy
+            result["spectral_energy"] = energy  # type: ignore[assignment]
             result["ok"] = ok
             self._audit_log(result, sr)
             return result
         except Exception as e:
-            result["error"] = str(e)
+            result["error"] = str(e)  # type: ignore[assignment]
             logger.error("[SpectralEnergyGuard][Fehler] %s", e)
             self._audit_log(result, sr if "sr" in locals() else None)
             return result

@@ -494,12 +494,19 @@ class TestMediumDetector:
         monkeypatch.setattr(
             detector,
             "_bayesian_score",
+            # mp3_low dominant (realistic: a genuine mp3-encoded file has strong
+            # codec-artifact evidence). vinyl/cassette given only marginal mass so
+            # that, AFTER the ×0.50 .mp3 analog-penalty + renormalisation, both
+            # fall below _ANALOG_POSTERIOR_MIN (0.08) — this is what actually
+            # routes the decision into the §2.46a physical-inference Fallback-Gate
+            # (the code path this test intends to exercise), instead of letting
+            # vinyl win via the raw Bayesian-analog-floor check before it.
             lambda _fp, **_kw: {
-                "vinyl": 0.46,
-                "cassette": 0.39,
-                "cd_digital": 0.00,
-                "mp3_low": 0.00,
-                "aac": 0.00,
+                "mp3_low": 0.90,
+                "cd_digital": 0.03,
+                "aac": 0.02,
+                "vinyl": 0.03,
+                "cassette": 0.02,
             },
         )
         monkeypatch.setattr(

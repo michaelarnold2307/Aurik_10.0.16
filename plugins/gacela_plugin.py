@@ -171,11 +171,11 @@ class GacelaPlugin:
             from backend.core.ml_memory_budget import try_allocate
 
             if not try_allocate(self._BUDGET_NAME, size_gb=self._BUDGET_SIZE_GB):
-                logger.info("GACELA: ML-Budget erschöpft — DSP-Fallback aktiv.")
+                logger.info("GACELA: ML-Grenze erschöpft — DSP-Ersatzpfad aktiv.")
                 self._model_ready = False
                 return
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         try:
             import torch
 
@@ -229,10 +229,10 @@ class GacelaPlugin:
                     from backend.core.ml_device_manager import get_ml_device_manager as _mgr
 
                     if not _mgr().try_allocate_vram("Gacela", self._BUDGET_SIZE_GB):
-                        logger.info("GACELA: VRAM-Budget erschöpft — CPU-Load")
+                        logger.info("GACELA: VRAM-Grenze erschöpft — CPU-laden")
                         _dev = "cpu"
                 except Exception:
-                    logger.warning("gacela_plugin.py::_try_load fallback", exc_info=True)
+                    logger.warning("gacela_plugin.py::_try_laden Ersatzpfad", exc_info=True)
             self._generator.to(_dev)
             for enc in self._encoders:
                 enc.to(_dev)
@@ -253,9 +253,9 @@ class GacelaPlugin:
                 from dsp.pghi import PghiReconstructor
 
                 self._pghi_rec = PghiReconstructor(sr=48000)
-                logger.debug("GACELA: canonical PGHI reconstructor loaded.")
+                logger.debug("GACELA: canonical PGHI reconstructor geladen.")
             except Exception as _pghi_exc:
-                logger.debug("GACELA: dsp.pghi unavailable, using inline fallback: %s", _pghi_exc)
+                logger.debug("GACELA: dsp.pghi nicht verfuegbar, using inline Ersatzpfad: %s", _pghi_exc)
                 self._pghi_rec = None
 
             self._model_ready = True
@@ -265,11 +265,11 @@ class GacelaPlugin:
 
                 _reg_plm(self._BUDGET_NAME, size_gb=self._BUDGET_SIZE_GB, unload_fn=_unload_gacela)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         except Exception as exc:
             logger.warning(
-                "GACELA: Modell konnte nicht geladen werden (%s) — DSP-Fallback aktiv.",
+                "GACELA: Modell konnte nicht geladen werden (%s) — DSP-Ersatzpfad aktiv.",
                 exc,
             )
             self._model_ready = False
@@ -278,7 +278,7 @@ class GacelaPlugin:
 
                 _release(self._BUDGET_NAME)
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # ── ML-Inpainting (primärer Pfad) ────────────────────────────────────────
 
@@ -342,7 +342,7 @@ class GacelaPlugin:
                 t = torch.from_numpy(mel).unsqueeze(0).unsqueeze(0).to(self._device)  # [1,1,80,480]
                 t = _time_average(t, TIME_AVG)  # [1,1,80,240]
                 with torch.no_grad():
-                    return encoder(t)  # [1,16,5,8]
+                    return encoder(t)  # type: ignore[no-any-return]  # [1,16,5,8]
 
             enc_L = _encode(left_mono, self._encoders[0])
             enc_R = _encode(right_mono, self._encoders[1])
@@ -417,7 +417,7 @@ class GacelaPlugin:
 
         except Exception as exc:
             if self._device != "cpu":
-                logger.warning("GACELA: GPU-Inferenz fehlgeschlagen (%s) — CPU-Retry", exc)
+                logger.warning("GACELA: GPU-Inferenz fehlgeschlagen (%s) — CPU-Wiederholung", exc)
                 try:
                     for _attr in ("_generator", "_border_enc_l", "_border_enc_r", "_spec_inverter"):
                         _m = getattr(self, _attr, None)
@@ -429,7 +429,7 @@ class GacelaPlugin:
 
                         _mgr().report_gpu_error("Gacela", exc)
                     except Exception:
-                        logger.warning("gacela_plugin.py::unknown fallback", exc_info=True)
+                        logger.warning("gacela_plugin.py::unknown Ersatzpfad", exc_info=True)
                 except Exception as _mv_exc:
                     logger.debug("GACELA GPU→CPU move fehlgeschlagen: %s", _mv_exc)
                     self._device = "cpu"
@@ -495,7 +495,7 @@ def _unload_gacela() -> None:
 
         gc.collect()
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
 
 _lock = threading.Lock()

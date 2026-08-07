@@ -372,7 +372,7 @@ def detect_sub_ceiling_clipping(audio: np.ndarray, amplitude_bins: int = 1000) -
         b2 = float(np.sum((abs_audio >= peak - 0.020) & (abs_audio < peak - 0.005)))
         band_pile_ratio = b1 / (b2 / 3.0 + 0.5)
         logger.debug(
-            "detect_sub_ceiling M2: band_pile_ratio=%.2f (b1=%.0f, b2=%.0f, peak=%.4f)",
+            "erkennen_sub_ceiling M2: band_pile_Verhaeltnis=%.2f (b1=%.0f, b2=%.0f, peak=%.4f)",
             band_pile_ratio,
             b1,
             b2,
@@ -380,7 +380,7 @@ def detect_sub_ceiling_clipping(audio: np.ndarray, amplitude_bins: int = 1000) -
         )
         if band_pile_ratio >= BAND_PILE_RATIO_THRESHOLD:
             logger.info(
-                "detect_sub_ceiling: Band-Pile-Clip erkannt (ratio=%.1f ≥ %.1f, peak=%.4f)",
+                "erkennen_sub_ceiling: Band-Pile-Clip erkannt (Verhaeltnis=%.1f ≥ %.1f, peak=%.4f)",
                 band_pile_ratio,
                 BAND_PILE_RATIO_THRESHOLD,
                 peak,
@@ -497,7 +497,9 @@ def analyse_clipping(audio: np.ndarray, sr: int) -> ClippingAnalysisResult:
     _no_harmonic_data = abs(thd_odd - 1.0) < 0.001 and abs(thd_even - 1.0) < 0.001 and flat_pct < 0.01
     if _no_harmonic_data:
         confidence = 0.0
-        logger.debug("ClippingDetector: no harmonic data available (polyphonic/no-clear-fundamental) — confidence=0.0")
+        logger.debug(
+            "ClippingDetector: no harmonic data verfuegbar (polyphonic/no-leeren-fundamental) — confidence=0.0"
+        )
     else:
         flat_distance = abs(flat_pct - FLAT_TOPS_THRESHOLD_PCT) / max(flat_pct, FLAT_TOPS_THRESHOLD_PCT, 1e-6)
         if thd_odd + thd_even < 1e-8:
@@ -510,7 +512,7 @@ def analyse_clipping(audio: np.ndarray, sr: int) -> ClippingAnalysisResult:
         confidence = float(np.clip(min(flat_distance, thd_ratio_distance + 0.1), 0.0, 1.0))
 
     logger.info(
-        "ClippingDetector: result=%s flat_tops=%.3f%% odd=%.3f even=%.3f confidence=%.2f",
+        "ClippingDetector: Ergebnis=%s flat_tops=%.3f%% odd=%.3f even=%.3f confidence=%.2f",
         clipping_type.value,
         flat_pct,
         thd_odd,

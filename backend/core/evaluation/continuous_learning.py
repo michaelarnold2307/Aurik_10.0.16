@@ -121,9 +121,9 @@ class SuccessPatternAnalyzer:
                     self.raw_data.append(data)
                     loaded += 1
             except Exception as e:
-                logger.warning("Failed to load %s: %s", json_file, e)
+                logger.warning("konnte nicht laden %s: %s", json_file, e)
 
-        logger.info("Loaded %s audit reports from %s", loaded, self.audit_dir)
+        logger.info("geladen %s audit reports from %s", loaded, self.audit_dir)
         return loaded
 
     def analyze_patterns(self) -> dict[str, ProcessingStrategy]:
@@ -328,7 +328,7 @@ class ConfidenceCalibrator:
                 success = strategy.quality_gate_pass_rate > 0.8
                 self.calibration_data.append((conf, success))
 
-        logger.info("Collected %s calibration data points", len(self.calibration_data))
+        logger.info("Collected %s Kalibrierung data points", len(self.calibration_data))
 
     def analyze_calibration(self) -> dict[str, Any]:
         """
@@ -547,14 +547,14 @@ class ContinuousLearningSystem:
         current_weights = dict.fromkeys(strategies.keys(), 0.5)  # Placeholder
         weight_recommendations = self.optimizer.generate_weight_recommendations(current_weights, optimal_weights)
 
-        logger.info("✓ Generated %s weight recommendations", len(weight_recommendations))
+        logger.info("✓ erzeugt %s weight recommendations", len(weight_recommendations))
 
         # 4. Calibrate confidence predictions
         self.calibrator.collect_calibration_data(strategies)
         calibration_analysis = self.calibrator.analyze_calibration()
         calibration_recommendations = self.calibrator.generate_calibration_recommendations(calibration_analysis)
 
-        logger.info("✓ Confidence calibration: %s", calibration_analysis.get("status", "unknown"))
+        logger.info("✓ Confidence Kalibrierung: %s", calibration_analysis.get("status", "unknown"))
 
         # 5. Aggregate performance metrics
         self.aggregator.aggregate_from_reports(self.analyzer.raw_data)
@@ -580,7 +580,7 @@ class ContinuousLearningSystem:
             optimization_summary=optimization_summary,
         )
 
-        logger.info("✅ Learning Cycle Complete!")
+        logger.info("✅ Learning Cycle vollstaendig!")
         return report
 
     def _generate_summary(
@@ -686,5 +686,5 @@ if __name__ == "__main__":
     learning_system.export_report(report, output_dir="/tmp/aurik_learning")  # nosec B108 — Demo-/Test-Pfad, kein Produktionscode
 
     logger.debug("\n" + "=" * 80)
-    logger.debug("✓ Test completed successfully!")
+    logger.debug("✓ Test abgeschlossen erfolgreich!")
     logger.debug("=" * 80 + "\n")

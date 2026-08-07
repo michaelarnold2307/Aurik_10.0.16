@@ -158,7 +158,7 @@ class TransientShaper(PhaseInterface):
         # bw_loss > 0.8 → keine nutzbaren Transienten im HF-Bereich → skip.
         _bw = float(kwargs.get("bandwidth_loss", 0.0))
         if _bw > 0.80:
-            logger.info("Phase 36: skipped — bandwidth_loss=%.2f > 0.80 (fragile material)", _bw)
+            logger.info("Verarbeitungsschritt 36: uebersprungen — bandwidth_loss=%.2f > 0.80 (fragile material)", _bw)
             return PhaseResult(success=True, audio=audio, metadata={"skipped": "fragile"})
         # §v10.706 B16: SMP has_soft_saturation → Tape-Sättigung weicht Transienten auf
         _mat_val = str(getattr(material, "value", material)).lower() if material else "unknown"
@@ -169,8 +169,14 @@ class TransientShaper(PhaseInterface):
                 kwargs = dict(kwargs)
                 kwargs["strength"] = float(kwargs.get("strength", 1.0)) * 0.80
         except Exception:
-            logger.debug("Phase_36: SourceMediumProfile nicht verfügbar — has_soft_saturation-Check übersprungen")
-        return self._process_impl(audio, sample_rate, material, **kwargs)
+            logger.debug(
+                "Verarbeitungsschritt_36: SourceMediumProfile nicht verfügbar — has_soft_saturation-Pruefung übersprungen"
+            )
+        # §Fix: material=None must not shadow _process_impl's own sensible
+        # default (MaterialType.CD_DIGITAL) — forwarding None unconditionally
+        # crashed later at `material.name` when callers omit `material`.
+        _material = material if material is not None else MaterialType.CD_DIGITAL
+        return self._process_impl(audio, sample_rate, _material, **kwargs)
 
     def _process_impl(  # type: ignore[override]
         self, audio: np.ndarray, sample_rate: int, material: MaterialType = MaterialType.CD_DIGITAL, **kwargs
@@ -198,7 +204,8 @@ class TransientShaper(PhaseInterface):
 
         if _effective_strength < 0.01:  # §v10.0.5: < 1% = keine sinnvolle Wirkung
             logger.info(
-                "Phase 36: skipped — effective_strength=%.3f (no transient shaping applied)", _effective_strength
+                "Verarbeitungsschritt 36: uebersprungen — effective_strength=%.3f (no transient shaping angewendet)",
+                _effective_strength,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
@@ -232,7 +239,7 @@ class TransientShaper(PhaseInterface):
                 _p36_sat_scale = 0.50
             _effective_strength = float(_effective_strength * _p36_sat_scale)
             logger.debug(
-                "Phase 36 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
+                "Verarbeitungsschritt 36 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
                 _p36_soft_sat_sev,
                 _p36_soft_sat_preserve,
                 _p36_sat_scale,
@@ -241,7 +248,7 @@ class TransientShaper(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config_raw = self.SHAPING_CONFIG.get(_mk, self.SHAPING_CONFIG[MaterialType.CD_DIGITAL])
+        config_raw = self.SHAPING_CONFIG.get(_mk, self.SHAPING_CONFIG[MaterialType.CD_DIGITAL])  # type: ignore[call-overload]
         config = {
             "attack_gain_db": [  # type: ignore[attr-defined]
                 float(v * _effective_strength)
@@ -314,9 +321,9 @@ class TransientShaper(PhaseInterface):
             )
             if _hg36.requires_rollback:
                 shaped_audio = audio.copy()
-                logger.warning("§2.46e phase_36 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                logger.warning("§2.46e Verarbeitungsschritt_36 HallucinationGuard: rollback (spectral_novelty > 0.15)")
         except Exception as _hg36_exc:
-            logger.debug("§2.46e phase_36 HallucinationGuard (non-blocking): %s", _hg36_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_36 HallucinationGuard (nicht blockierend): %s", _hg36_exc)
 
         return PhaseResult(
             success=True,
@@ -354,7 +361,9 @@ class TransientShaper(PhaseInterface):
         # **GUARD: Short-Audio-Buffer (§2.47, §0 Primum non nocere)**
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_36: audio too short (%d < %d), passthrough", len(audio), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_36: audio too short (%d < %d), passthrough", len(audio), MIN_AUDIO_SAMPLES
+            )
             return np.asarray(audio, dtype=np.float32).copy()  # type: ignore[no-any-return]
 
         # Split into bands

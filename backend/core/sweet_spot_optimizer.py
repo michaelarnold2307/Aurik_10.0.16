@@ -378,7 +378,7 @@ def _check_frequency_masking(mono: np.ndarray, sr: int) -> float:
                 band_energies.append(float(np.sum(spec[mask] ** 2)))
             else:
                 band_energies.append(0.0)
-        band_energies = np.array(band_energies)
+        band_energies = np.array(band_energies)  # type: ignore[assignment]
         band_energies /= np.sum(band_energies) + 1e-12
         band_energies_all.append(band_energies)
 
@@ -417,7 +417,7 @@ def _get_hpe(mono: np.ndarray, sr: int) -> float:
 
         return float(compute_pleasantness(mono, sr).score)
     except Exception as e:
-        logger.warning("sweet_spot_optimizer.py::_get_hpe fallback: %s", e)
+        logger.warning("sweet_spot_optimizer.py::_get_hpe Ersatzpfad: %s", e)
         return 0.5
 
 
@@ -427,7 +427,7 @@ def _get_inviting(mono: np.ndarray, sr: int) -> float:
 
         return float(check_inviting_sound(mono, sr).score)
     except Exception as e:
-        logger.warning("sweet_spot_optimizer.py::_get_inviting fallback: %s", e)
+        logger.warning("sweet_spot_optimizer.py::_get_inviting Ersatzpfad: %s", e)
         return 0.5
 
 
@@ -437,7 +437,7 @@ def _get_transparency(mono: np.ndarray, sr: int, arr: np.ndarray) -> float:
 
         return float(check_transparency(mono.astype(np.float32), sr).score)
     except Exception as e:
-        logger.warning("sweet_spot_optimizer.py::_get_transparency fallback: %s", e)
+        logger.warning("sweet_spot_optimizer.py::_get_transparency Ersatzpfad: %s", e)
         return 0.5
 
 
@@ -447,7 +447,7 @@ def _get_goosebumps(mono: np.ndarray, sr: int) -> float:
 
         return float(compute_goosebumps(mono, sr).score)
     except Exception as e:
-        logger.warning("sweet_spot_optimizer.py::_get_goosebumps fallback: %s", e)
+        logger.warning("sweet_spot_optimizer.py::_get_goosebumps Ersatzpfad: %s", e)
         return 0.5
 
 

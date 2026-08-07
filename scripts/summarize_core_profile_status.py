@@ -14,6 +14,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "models" / "manifest.json"
@@ -75,7 +76,7 @@ def _parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = _parse_args()
-    manifest_models = []
+    manifest_models: list[Any] = []
     if MANIFEST.exists():
         data = json.loads(MANIFEST.read_text(encoding="utf-8"))
         manifest_models = data.get("models", []) if isinstance(data, dict) else []
@@ -129,7 +130,7 @@ def main() -> int:
         manifest_target_exists: bool = False
 
         if manifest_exists:
-            bundled_path = str(entry.get("bundled_path", ""))
+            bundled_path = str(entry.get("bundled_path", ""))  # type: ignore[union-attr]
             valid_paths = {a.rel_path}
             if a.name == "sgmse_plus":
                 valid_paths.add("models/sgmse_plus/sgmse_plus.ts")
@@ -138,8 +139,8 @@ def main() -> int:
             target_path = ROOT / bundled_path if bundled_path else Path()
             manifest_target_exists = target_path.exists()
             if manifest_target_exists:
-                size_ok = int(entry.get("size_bytes", -1)) == target_path.stat().st_size
-                sha_ok = str(entry.get("sha256", "")) == _sha256(target_path)
+                size_ok = int(entry.get("size_bytes", -1)) == target_path.stat().st_size  # type: ignore[union-attr]
+                sha_ok = str(entry.get("sha256", "")) == _sha256(target_path)  # type: ignore[union-attr]
 
         if a.name == "fcpe":
             crepe_fallback = (ROOT / "models/crepe/crepe.onnx").exists()

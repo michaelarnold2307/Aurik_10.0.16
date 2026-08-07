@@ -226,7 +226,7 @@ class GermanSchlagerClassifier:
             # CLAP-Embeddings künstlich verschlechtert.
             if clap_score < 0.35 and weighted_mean >= 0.50:
                 logger.info(
-                    "GenreClassifier: CLAP-Score %.3f < 0.35 bei DSP-Ensemble %.3f ≥ 0.50 "
+                    "GenreClassifier: CLAP-Wert %.3f < 0.35 bei DSP-Ensemble %.3f ≥ 0.50 "
                     "→ CLAP nicht aussagekräftig, pure-DSP-Konfidenz",
                     clap_score,
                     weighted_mean,
@@ -410,7 +410,7 @@ class GermanSchlagerClassifier:
                 audio_48k = librosa.resample(audio if audio.ndim == 1 else audio[:, 0], orig_sr=sr, target_sr=48_000)
                 sr_48k = 48_000
             except Exception as _exc:
-                logger.debug("Lyrics hint: resample to 48k failed: %s", _exc)
+                logger.debug("Lyrics hint: resample to 48k fehlgeschlagen: %s", _exc)
                 return 0.0
 
         try:
@@ -427,11 +427,11 @@ class GermanSchlagerClassifier:
             #   - Module imported AND has is_lyrics_guided_loaded → honour its result
             #   - Module imported BUT no is_lyrics_guided_loaded (e.g. test mock) → proceed
             if _lge_mod is None:
-                logger.debug("Lyrics hint skipped — LGE module not imported (pre-analysis guard)")
+                logger.debug("Lyrics hint uebersprungen — LGE module not imported (pre-Analyse guard)")
                 return 0.0
             _is_loaded_fn = getattr(_lge_mod, "is_lyrics_guided_loaded", None)
             if _is_loaded_fn is not None and not _is_loaded_fn():
-                logger.debug("Lyrics hint skipped — LGE not yet loaded (pre-analysis guard)")
+                logger.debug("Lyrics hint uebersprungen — LGE not yet geladen (pre-Analyse guard)")
                 return 0.0
 
             from backend.core.lyrics_guided_enhancement import get_lyrics_guided_enhancement
@@ -439,7 +439,7 @@ class GermanSchlagerClassifier:
             lge = get_lyrics_guided_enhancement()
             transcription = lge.transcribe(audio_48k, sr_48k)
         except Exception as exc:
-            logger.debug("Lyrics hint unavailable for genre classification: %s", exc)
+            logger.debug("Lyrics hint nicht verfuegbar for genre classification: %s", exc)
             return 0.0
 
         words = getattr(transcription, "words", []) or []
@@ -524,7 +524,7 @@ class GermanSchlagerClassifier:
             # stochastic borderline-noise segments while keeping tonal/music material.
             return flatness <= 0.42
         except Exception as e:
-            logger.warning("genre_classifier.py::_is_music_like fallback: %s", e)
+            logger.warning("genre_classifier.py::_is_music_like Ersatzpfad: %s", e)
             return True  # on error: conservative — continue classification
 
     def _compute_accordion_score(self, mono: np.ndarray, sr: int) -> float:
@@ -613,19 +613,19 @@ class GermanSchlagerClassifier:
                         coherence = float(np.clip(1.0 - freq_spread / 2.0, 0.0, 1.0))
                         score *= 1.0 - 0.40 * coherence
                         logger.debug(
-                            "AccordionDiscriminator: band_peaks=%s spread=%.2f Hz coherence=%.2f → score×%.2f",
+                            "AccordionDiscriminator: band_peaks=%s spread=%.2f Hz coherence=%.2f → Wert×%.2f",
                             [f"{f:.1f}" for f in band_peak_freqs],
                             freq_spread,
                             coherence,
                             1.0 - 0.40 * coherence,
                         )
             except Exception as _disc_exc:
-                logger.debug("AccordionDiscriminator skipped: %s", _disc_exc)
+                logger.debug("AccordionDiscriminator uebersprungen: %s", _disc_exc)
 
             return float(np.nan_to_num(np.clip(score, 0.0, 1.0)))
 
         except Exception as e:
-            logger.debug("AccordionScore Fallback: %s", e)
+            logger.debug("AccordionScore Ersatzpfad: %s", e)
             return 0.0
 
     # ---- Tier-3: Harmonischer Simplizitäts-Index ----
@@ -679,7 +679,7 @@ class GermanSchlagerClassifier:
             return float(np.clip(np.nan_to_num(hsi), 0.0, 1.0))
 
         except Exception as e:
-            logger.debug("HSI Fallback: %s", e)
+            logger.debug("HSI Ersatzpfad: %s", e)
             return 0.5
 
     # ---- Tier-4: Rhythmus-Muster-Klassifikation ----
@@ -735,7 +735,7 @@ class GermanSchlagerClassifier:
             return float(np.nan_to_num(best_score)), best_subgenre, best_bpm
 
         except Exception as e:
-            logger.debug("RhythmPattern Fallback: %s", e)
+            logger.debug("RhythmPattern Ersatzpfad: %s", e)
             return 0.35, "unknown", 120.0
 
     # ---- Tier-5: Deutsch-Vokal-Formant-Prior ----
@@ -801,6 +801,7 @@ class GermanSchlagerClassifier:
                         f1_vals.append(formants[0])
                         f2_vals.append(formants[1])
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
 
             if len(f1_vals) < 5:
@@ -831,7 +832,7 @@ class GermanSchlagerClassifier:
             return float(np.nan_to_num(prior))
 
         except Exception as e:
-            logger.debug("VocalPrior Fallback: %s", e)
+            logger.debug("VocalPrior Ersatzpfad: %s", e)
             return 0.5
 
     # ---- Tier-7: Vokalsprach-Erkennung (Deutsch vs. Englisch) ----
@@ -914,6 +915,7 @@ class GermanSchlagerClassifier:
                         f1_vals.append(formants[0])
                         f2_vals.append(formants[1])
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
 
             # --- Merkmal 1: Umlaut-Score (F2-F1 > 1400, F1 < 550) ---
@@ -949,7 +951,7 @@ class GermanSchlagerClassifier:
                 # Ratio > 1.2 → eher Deutsch; < 0.8 → eher Englisch
                 ch_score = float(np.clip((ratio - 0.8) / 0.8, 0.0, 1.0))
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             lang_de_score = float(
                 np.clip(
@@ -959,7 +961,7 @@ class GermanSchlagerClassifier:
                 )
             )
             logger.debug(
-                "VocalLanguage: umlaut=%.2f f2_bimodal=%.2f ch_ratio=%.2f → lang_de=%.2f",
+                "VocalLanguage: umlaut=%.2f f2_bimodal=%.2f ch_Verhaeltnis=%.2f → lang_de=%.2f",
                 umlaut_score,
                 f2_bimodal_score,
                 ch_score,
@@ -968,7 +970,7 @@ class GermanSchlagerClassifier:
             return float(np.nan_to_num(lang_de_score, nan=0.5))
 
         except Exception as exc:
-            logger.debug("VocalLanguage Fallback: %s", exc)
+            logger.debug("VocalLanguage Ersatzpfad: %s", exc)
             return 0.5
 
     # ---- Tier-6: Melodische Wiederholungsrate ----
@@ -1022,7 +1024,7 @@ class GermanSchlagerClassifier:
             return float(np.nan_to_num(score))
 
         except Exception as e:
-            logger.debug("MelodicRepetition Fallback: %s", e)
+            logger.debug("MelodicRepetition Ersatzpfad: %s", e)
             return 0.35
 
     # ---- Multi-Genre Scoring (Rock / Jazz / Klassik / Oper) ----
@@ -1058,7 +1060,7 @@ class GermanSchlagerClassifier:
             duration_s = len(mono) / sr
             return float(len(onsets) / max(duration_s, 1.0))
         except Exception as e:
-            logger.warning("genre_classifier.py::_onset_rate fallback: %s", e)
+            logger.warning("genre_classifier.py::_onset_rate Ersatzpfad: %s", e)
             return 2.0
 
     @staticmethod
@@ -1752,7 +1754,7 @@ class GermanSchlagerClassifier:
 
             _tags = _panns_classify_audio(audio, sr)
         except Exception as e:
-            logger.warning("genre_classifier.py::_compute_panns_genre_prior fallback: %s", e)
+            logger.warning("genre_classifier.py::_berechnen_panns_genre_prior Ersatzpfad: %s", e)
             return {}
         if not isinstance(_tags, dict) or not _tags:
             return {}
@@ -1964,7 +1966,7 @@ class GermanSchlagerClassifier:
                 neg_mean = float(np.mean(neg_scores)) if neg_scores else 0.0
                 result_score = float(np.clip(pos_total - 0.5 * neg_mean, 0.0, 1.0))
                 logger.info(
-                    "GenreClassifier CLAP: score=%.3f (pos=%.3f neg_mean=%.3f)", result_score, pos_total, neg_mean
+                    "GenreClassifier CLAP: Wert=%.3f (pos=%.3f neg_mean=%.3f)", result_score, pos_total, neg_mean
                 )
                 return float(np.nan_to_num(result_score))
 
@@ -2035,7 +2037,7 @@ class GermanSchlagerClassifier:
 
             return np.asarray(librosa.resample(audio, orig_sr=sr_in, target_sr=sr_out), dtype=np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("genre_classifier.py::_resample fallback: %s", e)
+            logger.warning("genre_classifier.py::_resample Ersatzpfad: %s", e)
             return audio
 
     def _estimate_key(self, audio: np.ndarray, sr: int) -> str:
@@ -2063,7 +2065,7 @@ class GermanSchlagerClassifier:
             key_names = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "H"]
             return f"{key_names[key_idx]}-Dur"
         except Exception as e:
-            logger.warning("genre_classifier.py::_estimate_key fallback: %s", e)
+            logger.warning("genre_classifier.py::_estimate_key Ersatzpfad: %s", e)
             return "Unbekannt"
 
     def _determine_genre_label(self, subgenre: str, _bpm: float, lang_de_score: float = 0.5) -> str:

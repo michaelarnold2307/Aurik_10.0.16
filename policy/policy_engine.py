@@ -8,7 +8,7 @@ import numpy as np
 try:
     from dsp.custom_compressor import CustomCompressor
 except ImportError:
-    CustomCompressor = None
+    CustomCompressor = None  # type: ignore[assignment, misc]
 from backend.core.forensics.analysis_and_modules import FeatureExtractor, PolicyManager
 from backend.core.validate_musical_goals import (
     ArtifactChecker,
@@ -40,7 +40,7 @@ class AdaptiveController:
         feedback_loop = self._adaptive_feedback_loop(feedback)
         # KI-gestützte Auswahl und Gewichtung
         ki_decision = self._ki_module_selection(feedback)
-        updated = self.policy_manager.update(feedback)
+        updated = self.policy_manager.update(feedback)  # type: ignore[func-returns-value]
         result: dict[str, object] = updated if isinstance(updated, dict) else {}
         result["explainable_ai"] = {"feature_attribution": attribution, "layer_analysis": layer_analysis}
         result["feedback_loop"] = feedback_loop
@@ -65,7 +65,7 @@ class AdaptiveController:
             weights["HiFi-GAN"] += 0.1
         # Quality-Gate Einfluss
         for m in modules:
-            weights[m] *= quality
+            weights[m] *= quality  # type: ignore[operator]
         # Auswahl der Top-Module
         top_modules = sorted(weights.items(), key=lambda x: x[1], reverse=True)[:3]
         return {"selected_modules": [m[0] for m in top_modules], "weights": weights}
@@ -268,7 +268,7 @@ class ChainAuthenticityChecker:
                 json.dump(audit_data, f, indent=2)
         except Exception as e:
             print(f"[ChainAuthenticityChecker] Fehler beim Audit-Log: {e}")
-        return details
+        return details  # type: ignore[return-value]
 
 
 class VocalQualityChecker:
@@ -285,14 +285,14 @@ class VocalQualityChecker:
     }
 
     def check(self, scores: dict[str, float]) -> dict[str, bool]:
-        results = {}
-        media_characteristics = scores.get("media_characteristics", {})
+        results: dict[Any, Any] = {}
+        media_characteristics: Any = scores.get("media_characteristics", {})
         is_vocal_material = (
             bool(media_characteristics.get("vocal")) if isinstance(media_characteristics, dict) else False
         )
 
         # Prefer explicit vocal_scores payload provided by the caller.
-        vocal_scores = scores.get("vocal_scores", {})
+        vocal_scores: Any = scores.get("vocal_scores", {})
         metric_source = vocal_scores if isinstance(vocal_scores, dict) and vocal_scores else scores
 
         # Do not create false negatives for non-vocal material or absent vocal metrics.
@@ -371,7 +371,7 @@ class PolicyEngine:
             from backend.core.forensics.detector import MediaForensicsEngine
 
             media_engine = MediaForensicsEngine()
-            media_report = media_engine.detect(audio, sr)
+            media_report = media_engine.detect(audio, sr)  # type: ignore[attr-defined]
             detected_media = media_report.media_type if hasattr(media_report, "media_type") else str(media_report)
         except Exception as e:
             detected_media = f"unbekannt ({e})"
@@ -408,7 +408,7 @@ class PolicyEngine:
                 if dsp_cls:
                     dsp_chain.append(dsp_cls())
             except Exception:
-                logger.warning("policy_engine.py::process fallback", exc_info=True)
+                logger.warning("policy_engine.py::verarbeiten Ersatzpfad", exc_info=True)
         # Adaptive Policy: Passe Reihenfolge und Auswahl nach Features, Genre, Experten-Feedback an
         if features.get("genre") == "jazz":
             dsp_chain = sorted(dsp_chain, key=lambda x: getattr(x, "category", "dynamics"))
@@ -489,7 +489,7 @@ class PolicyEngine:
         except Exception:
             klang_result = {}
         # Experten-Feedback
-        feedback_result = self.integrate_feedback(features)
+        feedback_result = self.integrate_feedback(features)  # type: ignore[arg-type]
         regression_result = self.monitor_regression()
         release_result = self.check_release()
         # Sicherstellen, dass feedback_data eine Liste ist
@@ -500,9 +500,9 @@ class PolicyEngine:
         chain_auth_result = self.chain_authenticity_checker.check(
             [d.__class__.__name__ for d in dsp_chain], media_history or {}
         )
-        vocal_quality_result = self.vocal_quality_checker.check(features)
+        vocal_quality_result = self.vocal_quality_checker.check(features)  # type: ignore[arg-type]
         decision_quality_result = _build_decision_quality_payload(
-            features=features,
+            features=features,  # type: ignore[arg-type]
             vocal_quality=vocal_quality_result,
             release_result=release_result if isinstance(release_result, dict) else None,
             regression_result=regression_result if isinstance(regression_result, dict) else None,
@@ -539,7 +539,7 @@ class PolicyEngine:
             with open(audit_path, "w") as f:
                 json.dump(audit_data, f, indent=2)
         except Exception:
-            logger.warning("policy_engine.py::unknown fallback", exc_info=True)
+            logger.warning("policy_engine.py::unknown Ersatzpfad", exc_info=True)
         # Rückgabe: alle Exzellenz-relevanten Ergebnisse inkl. Tonträgeranzeige
         return {
             "quality_passed": quality_results.get("voice_match", True),
@@ -634,8 +634,6 @@ class PolicyEngine:
             optimizer_result = optimize_feedback(feedback_data)
         except ImportError:
             optimizer_result = {"status": "feedback_optimizer_not_available"}
-        return optimizer_result
-        optimizer_result = {"status": "feedback_optimizer_not_available"}
         return optimizer_result
 
     def monitor_regression(self) -> dict:

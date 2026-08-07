@@ -176,7 +176,7 @@ def _butterworth_lowpass(audio: np.ndarray, cutoff_hz: float, sr: int) -> np.nda
     from scipy.signal import butter, sosfiltfilt
 
     sos = butter(6, cutoff_hz / (sr / 2), btype="low", output="sos")
-    return sosfiltfilt(sos, audio).astype(np.float32)
+    return sosfiltfilt(sos, audio).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _to_mel(audio: torch.Tensor, sr: int = 48000, n_mels: int = 256) -> torch.Tensor:
@@ -214,8 +214,8 @@ def multi_resolution_stft_loss(pred: torch.Tensor, target: torch.Tensor) -> torc
                 window=torch.hann_window(n_fft, device=target.device),
                 return_complex=True,
             )
-            loss += F.l1_loss(pred_stft.abs(), target_stft.abs())
-    return loss / 6.0
+            loss += F.l1_loss(pred_stft.abs(), target_stft.abs())  # type: ignore[assignment]
+    return loss / 6.0  # type: ignore[return-value]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -285,7 +285,7 @@ def train(
 
     torch.onnx.export(
         model,
-        dummy_input,
+        (dummy_input,),
         str(onnx_path),
         input_names=["limited_mel"],
         output_names=["full_mel"],

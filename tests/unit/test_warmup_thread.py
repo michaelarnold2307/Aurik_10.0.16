@@ -188,7 +188,7 @@ class TestWarmupThread:
                 stub = types.ModuleType(qt_mod)
                 # Minimal-Stubs damit Imports nicht knallen
                 if qt_mod == "PyQt5.QtCore":
-                    stub.Qt = types.SimpleNamespace(
+                    stub.Qt = types.SimpleNamespace(  # type: ignore[attr-defined]
                         AA_EnableHighDpiScaling=1,
                         AA_UseHighDpiPixmaps=2,
                         AA_ShareOpenGLContexts=3,
@@ -202,7 +202,7 @@ class TestWarmupThread:
                         AlignCenter=132,
                     )
                 elif qt_mod == "PyQt5.QtWidgets":
-                    stub.QApplication = type(
+                    stub.QApplication = type(  # type: ignore[attr-defined]
                         "QApplication",
                         (),
                         {

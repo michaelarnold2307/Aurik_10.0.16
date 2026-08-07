@@ -59,7 +59,7 @@ def _make_vocal_with_crackle(duration_s: float = 1.2) -> np.ndarray:
         audio[s:e] += click
 
     audio = np.clip(audio, -1.0, 1.0)
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.fixture

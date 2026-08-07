@@ -40,12 +40,8 @@ def spectral_novelty(original: np.ndarray, processed: np.ndarray, sr: int = 4800
     if _min_len < n_fft:
         return 0.0
     _a, _b = _a[:_min_len], _b[:_min_len]
-    spec_a = np.abs(
-        np.stack([np.fft.rfft(_a[i : i + n_fft]) for i in range(0, _min_len - n_fft, hop)])
-    )
-    spec_b = np.abs(
-        np.stack([np.fft.rfft(_b[i : i + n_fft]) for i in range(0, _min_len - n_fft, hop)])
-    )
+    spec_a = np.abs(np.stack([np.fft.rfft(_a[i : i + n_fft]) for i in range(0, _min_len - n_fft, hop)]))
+    spec_b = np.abs(np.stack([np.fft.rfft(_b[i : i + n_fft]) for i in range(0, _min_len - n_fft, hop)]))
     _n = min(spec_a.shape[0], spec_b.shape[0])
     diff = np.abs(spec_b[:_n] - spec_a[:_n])
     return float(np.clip(np.mean(diff) / (np.mean(spec_a[:_n]) + 1e-10), 0.0, 1.0))
@@ -78,8 +74,7 @@ def calibrate_thresholds(song_dir: str, min_songs: int = 10) -> dict:
                 _files.append(os.path.join(_root, _fn))
 
     if len(_files) < min_songs:
-        logger.warning("Nur %d Songs gefunden (min %d). Kalibrierung ggf. ungenau.",
-                       len(_files), min_songs)
+        logger.warning("Nur %d Songs gefunden (min %d). Kalibrierung ggf. ungenau.", len(_files), min_songs)
 
     _novelties: dict[str, list[float]] = {
         "apollo": [],
@@ -87,7 +82,7 @@ def calibrate_thresholds(song_dir: str, min_songs: int = 10) -> dict:
         "resemble_enhance": [],
     }
 
-    for _i, _file in enumerate(_files[:max(min_songs, 50)]):
+    for _i, _file in enumerate(_files[: max(min_songs, 50)]):
         logger.info("[%d/%d] %s", _i + 1, min(len(_files), 50), os.path.basename(_file))
         try:
             import soundfile as sf
@@ -98,48 +93,48 @@ def calibrate_thresholds(song_dir: str, min_songs: int = 10) -> dict:
             _audio = np.asarray(_audio, dtype=np.float32)
             _audio = _audio[: min(len(_audio), 48000 * 30)]  # Max 30s
         except Exception as exc:
-            logger.warning("  skip: %s", exc)
+            logger.warning("  ueberspringen: %s", exc)
             continue
 
         # ── Apollo ──
         try:
             _apollo = ApolloPhase0Guard()
             _apollo._hallucination_threshold = 999.0  # Disable guard
-            _out, _applied = _apollo.process(_audio, 48000, "mp3_high")
+            _out, _applied = _apollo.process(_audio, 48000, "mp3_high")  # type: ignore[misc]
             # _apollo.process returns ApolloResult now, but we need raw
             # Actually ApolloPhase0Guard.process returns (audio, bool)
             # Let me use the raw model
-            if hasattr(_out, "audio"):
-                _out_audio = _out.audio
+            if hasattr(_out, "audio"):  # type: ignore[has-type]
+                _out_audio = _out.audio  # type: ignore[has-type]
             else:
-                _out_audio = _out
-            _nov = spectral_novelty(_audio[:len(_out_audio)], _out_audio[:len(_audio)], 48000)
+                _out_audio = _out  # type: ignore[has-type]
+            _nov = spectral_novelty(_audio[: len(_out_audio)], _out_audio[: len(_audio)], 48000)
             _novelties["apollo"].append(_nov)
             logger.info("  apollo: novelty=%.4f", _nov)
         except Exception as exc:
-            logger.debug("  apollo failed: %s", exc)
+            logger.debug("  apollo fehlgeschlagen: %s", exc)
 
         # ── DeepFilterNet ──
         try:
             _dfn = DeepFilterNetGuard()
             _dfn._threshold = 999.0
             _dfn_out, _dfn_applied = _dfn.process(_audio, 48000)
-            _nov_df = spectral_novelty(_audio[:len(_dfn_out)], _dfn_out, 48000)
+            _nov_df = spectral_novelty(_audio[: len(_dfn_out)], _dfn_out, 48000)
             _novelties["deepfilternet"].append(_nov_df)
             logger.info("  deepfilternet: novelty=%.4f", _nov_df)
         except Exception as exc:
-            logger.debug("  deepfilternet failed: %s", exc)
+            logger.debug("  deepfilternet fehlgeschlagen: %s", exc)
 
         # ── Resemble Enhance ──
         try:
             _re = ResembleEnhanceGuard()
             _re._threshold = 999.0
             _re_out, _re_applied = _re.process(_audio, 48000)
-            _nov_re = spectral_novelty(_audio[:len(_re_out)], _re_out, 48000)
+            _nov_re = spectral_novelty(_audio[: len(_re_out)], _re_out, 48000)
             _novelties["resemble_enhance"].append(_nov_re)
-            logger.info("  resemble_enhance: novelty=%.4f", _nov_re)
+            logger.info("  resemble_verbessern: novelty=%.4f", _nov_re)
         except Exception as exc:
-            logger.debug("  resemble_enhance failed: %s", exc)
+            logger.debug("  resemble_verbessern fehlgeschlagen: %s", exc)
 
     # ── Empfehlungen ──
     _recommendations = {}
@@ -157,12 +152,12 @@ def calibrate_thresholds(song_dir: str, min_songs: int = 10) -> dict:
         # Empfehlung: P95 + 10% Margin (konservativ)
         _rec = float(np.clip(_p95 * 1.10, 0.05, 0.50))
         _recommendations[_stufe] = {
-            "p50": round(_p50, 4),
-            "p75": round(_p75, 4),
-            "p90": round(_p90, 4),
-            "p95": round(_p95, 4),
-            "recommended_threshold": round(_rec, 4),
-            "n_samples": len(_values),
+            "p50": round(_p50, 4),  # type: ignore[dict-item]
+            "p75": round(_p75, 4),  # type: ignore[dict-item]
+            "p90": round(_p90, 4),  # type: ignore[dict-item]
+            "p95": round(_p95, 4),  # type: ignore[dict-item]
+            "recommended_threshold": round(_rec, 4),  # type: ignore[dict-item]
+            "n_samples": len(_values),  # type: ignore[dict-item]
         }
         _STATS[_stufe] = _arr
 

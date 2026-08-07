@@ -33,7 +33,7 @@ def de_esser():
 def _sine_band(freq_hz: float, n: int = SR, amp: float = 0.5) -> np.ndarray:
     """Pure sine in the sibilance band (narrow spectral peak)."""
     t = np.arange(n) / SR
-    return amp * np.sin(2.0 * np.pi * freq_hz * t)
+    return amp * np.sin(2.0 * np.pi * freq_hz * t)  # type: ignore[no-any-return]
 
 
 def _bandlimited_noise(f_low: float, f_high: float, n: int = SR, amp: float = 0.1, seed: int = 42) -> np.ndarray:
@@ -45,7 +45,7 @@ def _bandlimited_noise(f_low: float, f_high: float, n: int = SR, amp: float = 0.
     filtered = scipy.signal.sosfilt(sos, noise)
     # Normalise amplitude
     peak = np.max(np.abs(filtered)) + 1e-12
-    return filtered * (amp / peak)
+    return filtered * (amp / peak)  # type: ignore[no-any-return]
 
 
 # ─── A: API contract ─────────────────────────────────────────────────────────

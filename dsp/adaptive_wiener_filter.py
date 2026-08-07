@@ -34,7 +34,7 @@ def _iso226_weight_curve(n_bins: int, sr: int) -> np.ndarray:
     sensitivity = np.exp(-0.5 * ((np.log2(np.maximum(freqs, 20.0) / 3500.0)) ** 2) / 1.5**2)
     # Map: high sensitivity → weight 1.0 (gentle filter), low → 0.5 (aggressive)
     weights = 0.5 + 0.5 * sensitivity
-    return np.nan_to_num(weights, nan=0.75)
+    return np.nan_to_num(weights, nan=0.75)  # type: ignore[no-any-return]
 
 
 class AdaptiveWienerFilter:
@@ -98,7 +98,7 @@ class AdaptiveWienerFilter:
         gain = np.clip(gain, 0.0, 1.0)
 
         clean_mag = gain * noisy_mag
-        return clean_mag
+        return clean_mag  # type: ignore[no-any-return]
 
     def auto_optimize(self, noisy_mag: np.ndarray, noise_mag: np.ndarray) -> None:
         """Adapt alpha and spectral_floor based on estimated SNR.
@@ -118,7 +118,7 @@ class AdaptiveWienerFilter:
         self.eps = self.noise_floor
 
         logger.debug(
-            "AdaptiveWienerFilter.auto_optimize: SNR=%.1f dB → alpha=%.4f, spectral_floor=%.4f",
+            "AdaptiveWienerFilter.auto_optimieren: SNR=%.1f dB → alpha=%.4f, spectral_floor=%.4f",
             snr_db,
             self.alpha,
             self.spectral_floor,

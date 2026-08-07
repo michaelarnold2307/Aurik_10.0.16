@@ -97,9 +97,12 @@ class ChunkedPipeline:
         # §v10.459: Guard gegen negative step (overlap > chunk_size)
         if overlap_samples >= chunk_samples:
             overlap_samples = max(1, chunk_samples // 4)
-            logger.warning("ChunkedPipeline: overlap (%.1fs) >= chunk (%.1fs) → clamped to %.1fs",
-                         self.config.overlap_s, self.config.chunk_duration_s,
-                         overlap_samples / sample_rate)
+            logger.warning(
+                "ChunkedPipeline: overlap (%.1fs) >= chunk (%.1fs) → clamped to %.1fs",
+                self.config.overlap_s,
+                self.config.chunk_duration_s,
+                overlap_samples / sample_rate,
+            )
         step = chunk_samples - overlap_samples
 
         chunks: list[tuple[int, int]] = []
@@ -141,7 +144,7 @@ class ChunkedPipeline:
         # Hann-Fenster: fade-out + fade-in = 1.0 (perfekte Rekonstruktion)
         t = np.linspace(0, np.pi, overlap_samples, dtype=np.float32)
         fade_out = np.cos(t * 0.5) ** 2  # cos² fade-out
-        fade_in = np.sin(t * 0.5) ** 2   # sin² fade-in
+        fade_in = np.sin(t * 0.5) ** 2  # sin² fade-in
         # §v10.451: Stereo: (n,1) broadcast mit (n,ch) → (n,ch)
         if chunk_a.ndim == 2:
             fade_out = fade_out[:, np.newaxis]
@@ -152,7 +155,7 @@ class ChunkedPipeline:
             a_tail = chunk_a[-overlap_samples:]
             b_head = chunk_b[:overlap_samples]
 
-        return a_tail * fade_out + b_head * fade_in
+        return a_tail * fade_out + b_head * fade_in  # type: ignore[no-any-return]
 
     def collect_results(self, results: list[ChunkResult], sample_rate: int) -> np.ndarray:
         """Setzt Chunk-Ergebnisse mit Crossfade + RMS-Matching zusammen.
@@ -186,8 +189,8 @@ class ChunkedPipeline:
             if i > 0 and match_samples > 0:
                 # §v10.712: RMS-Match vor Crossfade
                 _prev_chunk = results[i - 1]
-                _prev_tail = _prev_chunk.audio[-min(match_samples, _prev_chunk.audio.shape[0]):]
-                _curr_head = chunk_audio[:min(match_samples, chunk_audio.shape[0])]
+                _prev_tail = _prev_chunk.audio[-min(match_samples, _prev_chunk.audio.shape[0]) :]
+                _curr_head = chunk_audio[: min(match_samples, chunk_audio.shape[0])]
 
                 _rms_prev = float(np.sqrt(np.mean(np.square(_prev_tail)) + 1e-12))
                 _rms_curr = float(np.sqrt(np.mean(np.square(_curr_head)) + 1e-12))
@@ -200,8 +203,11 @@ class ChunkedPipeline:
                         chunk_audio = chunk_audio * _rms_ratio
                         _rms_db = 20.0 * np.log10(_rms_ratio)
                         logger.info(
-                            "§v10.712 RMS-Match Chunk %d→%d: ratio=%.3f (%.1f dB)",
-                            i - 1, i, _rms_ratio, _rms_db,
+                            "§v10.712 RMS-Match Chunk %d→%d: Verhaeltnis=%.3f (%.1f dB)",
+                            i - 1,
+                            i,
+                            _rms_ratio,
+                            _rms_db,
                         )
 
             chunk_audio = chunk_audio.astype(np.float32)
@@ -218,10 +224,10 @@ class ChunkedPipeline:
                 crossfade_len = min(overlap_samples, out_end - out_start)
                 if crossfade_len > 0:
                     if output.ndim == 1:
-                        prev_tail = output[out_start:out_start + crossfade_len]
+                        prev_tail = output[out_start : out_start + crossfade_len]
                         curr_head = chunk_audio[:crossfade_len]
                     else:
-                        prev_tail = output[out_start:out_start + crossfade_len, :]
+                        prev_tail = output[out_start : out_start + crossfade_len, :]
                         curr_head = chunk_audio[:crossfade_len, :]
                     faded = self.crossfade(prev_tail, curr_head, crossfade_len)
                     if output.ndim == 1:
@@ -255,7 +261,7 @@ class ChunkedPipeline:
         for i in range(1, len(results)):
             _a = results[i - 1]
             _b = results[i]
-            if not hasattr(_a, 'audio') or not hasattr(_b, 'audio'):
+            if not hasattr(_a, "audio") or not hasattr(_b, "audio"):
                 continue
             _a_end = _a.audio[-check_samples:, :] if _a.audio.ndim >= 2 else _a.audio[-check_samples:]
             _b_start = _b.audio[:check_samples, :] if _b.audio.ndim >= 2 else _b.audio[:check_samples]
@@ -263,9 +269,9 @@ class ChunkedPipeline:
             _rms_b = float(np.sqrt(np.mean(np.square(_b_start)) + 1e-12))
             _rms_db = 20.0 * np.log10(max(_rms_a, _rms_b) / max(min(_rms_a, _rms_b), 1e-12))
             if _rms_db > 0.5:
-                _w = f"Crossfade-Warnung Chunk {i-1}→{i}: RMS-Sprung {_rms_db:.1f} dB"
+                _w = f"Crossfade-Warnung Chunk {i - 1}→{i}: RMS-Sprung {_rms_db:.1f} dB"
                 logger.warning(_w)
                 warnings.append(_w)
         if not warnings:
-            logger.debug(f"Crossfade-Qualität: {len(results)-1} Übergänge OK")
+            logger.debug(f"Crossfade-Qualität: {len(results) - 1} Übergänge OK")
         return warnings

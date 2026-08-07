@@ -47,7 +47,7 @@ def _make_defect_result(
 def _make_tone(sr: int, duration_s: float, freq: float = 440.0, amp: float = 0.5) -> np.ndarray:
     """Generate a pure sine tone."""
     t = np.arange(int(sr * duration_s)) / sr
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float64)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float64)  # type: ignore[no-any-return]
 
 
 def _make_silence(sr: int, duration_s: float) -> np.ndarray:

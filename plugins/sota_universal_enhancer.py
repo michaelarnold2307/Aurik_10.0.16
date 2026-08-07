@@ -62,7 +62,7 @@ class SOTAUniversalEnhancer:
         elif typ == "mix" and self.mix_model:
             # WpePlugin: enhance(audio, sr) → ndarray
             result = self.mix_model.enhance(audio, sr)  # type: ignore[assignment]
-            return np.clip(np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
+            return np.clip(np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)  # type: ignore[call-overload, no-any-return]
         elif self.fallback_model:
             result = self.fallback_model.enhance(audio, sr)
             out = result.audio if hasattr(result, "audio") else result

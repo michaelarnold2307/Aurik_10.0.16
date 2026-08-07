@@ -106,10 +106,10 @@ class SpectralArtifactDetector:
             detected = artifact_score > self.artifact_threshold
             # Quality-Gate
             if artifact_score < 0 or np.isnan(artifact_score):
-                logger.warning("ArtifactDetector: Unplausibler Artefakt-Score, Rollback aktiviert.")
+                logger.warning("ArtifactDetector: Unplausibler Artefakt-Wert, Rollback aktiviert.")
                 result["artifact_score"] = 0.0
                 result["detected"] = False
-                result["error"] = "Unplausibler Artefakt-Score detektiert"
+                result["error"] = "Unplausibler Artefakt-Score detektiert"  # type: ignore[assignment]
                 self._audit_log(result, sr)
                 return result
             result["artifact_score"] = artifact_score
@@ -117,8 +117,8 @@ class SpectralArtifactDetector:
             self._audit_log(result, sr)
             return result
         except Exception as e:
-            result["error"] = str(e)
-            logger.error("ArtifactDetector: Fehler in process(): %s", e)
+            result["error"] = str(e)  # type: ignore[assignment]
+            logger.error("ArtifactDetector: Fehler in verarbeiten(): %s", e)
             self._audit_log(result, sr if "sr" in locals() else None)
             return result
 
@@ -137,7 +137,7 @@ class SpectralArtifactDetector:
             self._audit_log(result)
             return result
         except Exception as e:
-            logger.error("ArtifactDetector: Fehler in detect(): %s", e)
+            logger.error("ArtifactDetector: Fehler in erkennen(): %s", e)
             result = {"clipping": 0.0, "dropouts": 0.0, "hf_energy": 0.0, "error": str(e)}
             self._audit_log(result)
             return result

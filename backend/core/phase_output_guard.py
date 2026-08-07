@@ -95,7 +95,7 @@ def _run_inference_with_timeout(
         return fut.result(timeout=timeout)
     except concurrent.futures.TimeoutError:
         logger.error(
-            "Inference timeout after %.0f s — fn=%s. DSP fallback required; phase added to deferred_phases.",
+            "Inference Zeitlimit after %.0f s — fn=%s. DSP Ersatzpfad required; Verarbeitungsschritt added to deferred_phases.",
             timeout,
             getattr(fn, "__qualname__", repr(fn)),
         )

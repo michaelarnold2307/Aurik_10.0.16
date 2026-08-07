@@ -43,7 +43,7 @@ vinyl_emulation_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Störgeräusche",
             "expected_when": "noise_level > 0.05 or crackle_level > 0.05",
             "severity": 0.2,

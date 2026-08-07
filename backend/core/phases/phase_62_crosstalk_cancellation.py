@@ -128,12 +128,14 @@ def apply(
     if defect_scores is not None:
         xt_score = float(defect_scores.get("crosstalk", 0.0))
         if xt_score < min_crosstalk_score:
-            logger.debug("Phase 62: crosstalk score %.3f < %.3f — skipped", xt_score, min_crosstalk_score)
+            logger.debug(
+                "Verarbeitungsschritt 62: crosstalk Wert %.3f < %.3f — uebersprungen", xt_score, min_crosstalk_score
+            )
             return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     # Crosstalk cancellation only applies to stereo
     if audio.ndim != 2:
-        logger.debug("Phase 62: mono input — skipped (no crosstalk possible)")
+        logger.debug("Verarbeitungsschritt 62: mono Eingabe — uebersprungen (no crosstalk possible)")
         return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     # Normalise to [channels, samples] = (2, N)
@@ -314,6 +316,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -341,6 +344,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -460,12 +464,12 @@ class CrosstalkCancellationPhase(PhaseInterface):
                     _wet62 = recommend_mikrodynamik_wet(_corr62, _panns62, global_need=_need62)
                     result_audio = (_wet62 * result_audio + (1.0 - _wet62) * audio).astype(np.float32)
                     logger.warning(
-                        "Phase62 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
+                        "Verarbeitungsschritt62 V20 Mikrodynamik-Korr=%.3f < 0.97 → wet=%.3f Blend",
                         _corr62,
                         _wet62,
                     )
             except Exception as _dyn62_exc:
-                logger.debug("Phase62 V20 Mikrodynamik-Guard (non-blocking): %s", _dyn62_exc)
+                logger.debug("Verarbeitungsschritt62 V20 Mikrodynamik-Guard (nicht blockierend): %s", _dyn62_exc)
 
         # V26 Onset-Guard (§2.77): Matrix-Inversion darf Transient-Energie in Onset-
         # Fenstern (0–20 ms nach Transient) nicht um mehr als 1.5 dB verschieben.
@@ -476,7 +480,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
 
             result_audio = apply_onset_protection_mask(audio, result_audio, None, max_delta_db=1.5)
         except Exception as _on62_exc:
-            logger.debug("Phase62 V26 Onset-Guard (non-blocking): %s", _on62_exc)
+            logger.debug("Verarbeitungsschritt62 V26 Onset-Guard (nicht blockierend): %s", _on62_exc)
 
         # §2.46f NPA-Guard: Atemgeräusche und Early-Reflections vor Crosstalk-Subtraktion schützen.
         try:
@@ -496,7 +500,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
                 else:
                     result_audio[_npa_mask62] = audio[_npa_mask62]
         except Exception as _npa62_exc:
-            logger.debug("§2.46f Phase62 NPA-Guard (non-blocking): %s", _npa62_exc)
+            logger.debug("§2.46f Verarbeitungsschritt62 NPA-Guard (nicht blockierend): %s", _npa62_exc)
 
         # §2.62 Psychoakustischer Masking-Guard: Crosstalk-Subtraktion entfernt
         # keine vom Musiksignal maskierten Komponenten (G_floor ≥ 0.10).
@@ -507,7 +511,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
 
             result_audio = apply_psychoacoustic_masking_clamp(audio, result_audio, sample_rate, mode="restoration")
         except Exception as _pmask62_exc:
-            logger.debug("§2.62 Phase62 Masking-Guard (non-blocking): %s", _pmask62_exc)
+            logger.debug("§2.62 Verarbeitungsschritt62 Masking-Guard (nicht blockierend): %s", _pmask62_exc)
 
         # §V19 Noise-Textur-Invariante (VERBOTEN-V19): Residual bewahrt Materialcharakter
         _mat62_str = str(material_type or "unknown").lower()
@@ -522,9 +526,9 @@ class CrosstalkCancellationPhase(PhaseInterface):
                 )
                 if _nt62_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_62 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt62_d)
+                    logger.warning("§V19 Verarbeitungsschritt_62 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt62_d)
         except Exception as _nt62_exc:
-            logger.debug("§V19 phase_62 noise_texture_guard (non-blocking): %s", _nt62_exc)
+            logger.debug("§V19 Verarbeitungsschritt_62 noise_texture_guard (nicht blockierend): %s", _nt62_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -537,7 +541,7 @@ class CrosstalkCancellationPhase(PhaseInterface):
                 if not _sc62.ok:
                     result_audio = (0.70 * result_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc62_exc:
-            logger.debug("§V24 phase_62 spectral_color_guard (non-blocking): %s", _sc62_exc)
+            logger.debug("§V24 Verarbeitungsschritt_62 spectral_color_guard (nicht blockierend): %s", _sc62_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

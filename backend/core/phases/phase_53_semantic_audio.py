@@ -50,7 +50,7 @@ try:
 
     _clap_factory_impl = _clap_factory_loaded
 except Exception as e:
-    logger.warning("phase_53_semantic_audio.py::unbekannter Fallback: %s", e)
+    logger.warning("Verarbeitungsschritt_53_semantic_audio.py::unbekannter Ersatzpfad: %s", e)
 _clap_factory: Any = _clap_factory_impl
 
 _beats_factory_impl: Any = None
@@ -59,7 +59,7 @@ try:
 
     _beats_factory_impl = _beats_factory_loaded
 except Exception as e:
-    logger.warning("phase_53_semantic_audio.py::unbekannter Fallback: %s", e)
+    logger.warning("Verarbeitungsschritt_53_semantic_audio.py::unbekannter Ersatzpfad: %s", e)
 _beats_factory: Any = _beats_factory_impl
 
 
@@ -394,21 +394,25 @@ class SemanticAudioPhase(PhaseInterface):
                             genre_hint_confidence = float(_clap_top_genres[0][1])
                             _clap_succeeded = True
                         logger.info(
-                            "Phase 53: CLAP OK (model=%s, conf=%.2f, top_genre=%s, instruments=%s)",
+                            "Verarbeitungsschritt 53: CLAP OK (model=%s, conf=%.2f, top_genre=%s, instruments=%s)",
                             _clap_model_used,
                             _clap_confidence,
                             _clap_top_genres[:2],
                             _clap_instruments[:2],
                         )
                     except Exception as _clap_err:
-                        logger.debug("Phase 53: CLAP tagging fehlgeschlagen (%s) — BEATs-Fallback", _clap_err)
+                        logger.debug(
+                            "Verarbeitungsschritt 53: CLAP tagging fehlgeschlagen (%s) — BEATs-Ersatzpfad", _clap_err
+                        )
                     finally:
                         _release_ml_budget("CLAP_phase53")
             except Exception as _clap_imp_err:
-                logger.debug("Phase 53: CLAP-Import nicht verfügbar (%s) — BEATs-Fallback", _clap_imp_err)
+                logger.debug(
+                    "Verarbeitungsschritt 53: CLAP-Import nicht verfügbar (%s) — BEATs-Ersatzpfad", _clap_imp_err
+                )
         else:
             _clap_model_used = "disabled_runtime_context"
-            logger.info("Phase 53: CLAP deaktiviert (pytest/safe-validation) — BEATs/DSP aktiv")
+            logger.info("Verarbeitungsschritt 53: CLAP deaktiviert (pytest/safe-Validierung) — BEATs/DSP aktiv")
 
         # ── Tier-0: BEATs iter3 Audio Tagging (SOTA §4.4) ───────────────────────────
         # AudioSet-527-Klassifikation für semantisch reichere Pipeline-Metadaten.
@@ -437,16 +441,18 @@ class SemanticAudioPhase(PhaseInterface):
                             genre_hint_source = "beats"
                             genre_hint_confidence = float(_top_conf)
                     logger.info(
-                        "Phase 53: BEATs OK (model=%s, top=%s)",
+                        "Verarbeitungsschritt 53: BEATs OK (model=%s, top=%s)",
                         _beats_model_used,
                         [f"{t}({c:.2f})" for t, c in _beats_top_k[:3]],
                     )
                 except Exception as _beats_err:
-                    logger.debug("Phase 53: BEATs tagging fehlgeschlagen (%s) — DSP-Fallback", _beats_err)
+                    logger.debug(
+                        "Verarbeitungsschritt 53: BEATs tagging fehlgeschlagen (%s) — DSP-Ersatzpfad", _beats_err
+                    )
                 finally:
                     _release_ml_budget("BEATs_phase53")
         except Exception as _imp_err:
-            logger.debug("Phase 53: BEATs-Import nicht verfügbar (%s) — DSP-only", _imp_err)
+            logger.debug("Verarbeitungsschritt 53: BEATs-Import nicht verfügbar (%s) — DSP-only", _imp_err)
 
         meta = {
             "bpm": round(bpm, 1),
@@ -475,7 +481,7 @@ class SemanticAudioPhase(PhaseInterface):
         }
 
         logger.info(
-            "Phase 53 SemanticAudio: BPM=%.1f, Key=%s, Genre=%s, Loudness=%s",
+            "Verarbeitungsschritt 53 SemanticAudio: BPM=%.1f, Key=%s, Genre=%s, Loudness=%s",
             bpm,
             key,
             genre_hint,

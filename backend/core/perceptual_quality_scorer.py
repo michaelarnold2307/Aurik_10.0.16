@@ -97,7 +97,7 @@ class PerceptualQualityScorer:
         dürfen abweichende SRs übergeben (§5.4 copilot-instructions.md).
         """
         if sr != 48000:
-            logger.debug("score_audio: SR=%d (erwartet 48000) — weiterverarbeitung trotzdem", sr)
+            logger.debug("Wert_audio: SR=%d (erwartet 48000) — weiterverarbeitung trotzdem", sr)
 
         # Channels-first (2, N) → Mono-Mix (N,) für konsistente Längenberechnung.
         # len() auf (2, N) liefert 2 (Kanäle), nicht Samples → würde Stub auslösen.
@@ -226,7 +226,7 @@ class PerceptualQualityScorer:
         Akzeptiert beliebige Sample-Raten (siehe score_audio-Docstring).
         """
         if sr != 48000:
-            logger.debug("score_audio_absolute: SR=%d (erwartet 48000) — weiterverarbeitung trotzdem", sr)
+            logger.debug("Wert_audio_absolute: SR=%d (erwartet 48000) — weiterverarbeitung trotzdem", sr)
 
         # Channels-first (2, N) → Mono-Mix für korrekte Berechnung
         if audio.ndim == 2:

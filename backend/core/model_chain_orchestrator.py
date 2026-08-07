@@ -84,7 +84,7 @@ class ModelChainOrchestrator:
 
         if self._ram_used_gb + _size_gb > _MAX_TOTAL_ML_RAM_GB:
             logger.warning(
-                "⚠️ MCO: %s nicht geladen — ML-Budget erschöpft (%.1f/%.1f GB)",
+                "⚠️ MCO: %s nicht geladen — ML-Grenze erschöpft (%.1f/%.1f GB)",
                 model_name,
                 self._ram_used_gb,
                 _MAX_TOTAL_ML_RAM_GB,

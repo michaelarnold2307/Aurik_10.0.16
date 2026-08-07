@@ -42,7 +42,7 @@ def test_low_restorability_adjustment():
 def test_profile_bounds():
     for material in ["tape", "reel_tape", "cd_digital", "unknown"]:
         for qm in ["balanced", "quality", "maximum", "fast", None]:
-            p = _profile(material, qm, 30.0)
+            p = _profile(material, qm, 30.0)  # type: ignore[arg-type]
             assert 0.05 <= p["min_splice_score"] <= 0.25
             assert 6.0 <= p["crossfade_ms"] <= 30.0
 

@@ -154,7 +154,7 @@ class FinalEQ(PhaseInterface):
     }
 
     # Material-adaptive EQ configurations
-    EQ_CONFIG = {
+    EQ_CONFIG: dict[MaterialType, dict[str, dict[str, str | float]]] = {
         MaterialType.SHELLAC: {
             "low": {"type": "shelf", "freq": 80, "gain_db": 2.5, "q": 0.7},
             "low_mid": {"type": "bell", "freq": 350, "gain_db": -1.0, "q": 1.2},
@@ -270,8 +270,9 @@ class FinalEQ(PhaseInterface):
             )
 
         is_stereo = audio.ndim == 2
-        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = {k: dict(v) for k, v in self.EQ_CONFIG.get(_mk, self.EQ_CONFIG[MaterialType.CD_DIGITAL]).items()}
+        # Bug-Fix: EQ_CONFIG ist mit MaterialType-Membern indiziert (kein str-Enum-Mixin) —
+        # .value hier hätte den Lookup immer auf CD_DIGITAL zurückfallen lassen.
+        config = {k: dict(v) for k, v in self.EQ_CONFIG.get(material, self.EQ_CONFIG[MaterialType.CD_DIGITAL]).items()}
 
         # ── §v10 Spectrum-Aware Adaptation: Material-Referenz ≠ Song-IST ─────
         # Die EQ_CONFIG liefert die physikalisch ERWARTETE Korrektur für den
@@ -290,7 +291,7 @@ class FinalEQ(PhaseInterface):
                 _band["gain_db"] = float(_nominal_gain * _effective_strength)
 
         # Total-Gain-Check nach adaptiver Skalierung
-        total_gain = sum(abs(band["gain_db"]) for band in config.values())  # type: ignore[arg-type]
+        total_gain = sum(abs(float(band["gain_db"])) for band in config.values())
         if total_gain < 0.5:
             logger.info("Total EQ gain < 0.5 dB - skipping for %s", material.name)
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -347,7 +348,7 @@ class FinalEQ(PhaseInterface):
                     mode="additive",
                 )
             except Exception as _pm_exc:
-                logger.debug("Phase16 masking clamp non-blocking: %s", _pm_exc)
+                logger.debug("Verarbeitungsschritt16 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §V24 Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
         try:
@@ -360,7 +361,7 @@ class FinalEQ(PhaseInterface):
                 _sc_wet_p16 = 0.70  # Phase-Strength −30 % (§V24)
                 eq_audio = (_sc_wet_p16 * eq_audio + (1.0 - _sc_wet_p16) * audio).astype(np.float32)
         except Exception as _sc_exc_p16:
-            logger.debug("§V24 phase_16 spectral_color non-blocking: %s", _sc_exc_p16)
+            logger.debug("§V24 Verarbeitungsschritt_16 spectral_color nicht blockierend: %s", _sc_exc_p16)
 
         # §V26 Onset-Schutz nach EQ (§2.77, non-blocking)
         try:
@@ -370,7 +371,7 @@ class FinalEQ(PhaseInterface):
 
             eq_audio = _opm_p16(audio, eq_audio, None, max_delta_db=1.5)
         except Exception as _opm_exc_p16:
-            logger.debug("§V26 phase_16 onset_guard non-blocking: %s", _opm_exc_p16)
+            logger.debug("§V26 Verarbeitungsschritt_16 onset_guard nicht blockierend: %s", _opm_exc_p16)
 
         # ── §v10 Reference Target Matching ──
         try:
@@ -396,7 +397,7 @@ class FinalEQ(PhaseInterface):
                     signal.butter(2, 100, "lowshelf", fs=sample_rate, output="sos"), audio, axis=0
                 )
         except Exception as _e:
-            logger.debug("%s: non-critical exception: %s", __name__, _e)
+            logger.debug("%s: unkritisch exception: %s", __name__, _e)
 
         return PhaseResult(
             success=True,
@@ -421,7 +422,9 @@ class FinalEQ(PhaseInterface):
         # **GUARD: Short-Audio-Buffer (§2.47, §0 Primum non nocere)**
         MIN_AUDIO_SAMPLES = 512  # 10 ms @ 48 kHz
         if len(audio) < MIN_AUDIO_SAMPLES:
-            logger.debug("phase_16: audio too short (%d < %d), skipping EQ", len(audio), MIN_AUDIO_SAMPLES)
+            logger.debug(
+                "Verarbeitungsschritt_16: audio too short (%d < %d), skipping EQ", len(audio), MIN_AUDIO_SAMPLES
+            )
             return np.asarray(audio, dtype=np.float32).copy()  # type: ignore[no-any-return]
 
         eq_audio = audio.copy()

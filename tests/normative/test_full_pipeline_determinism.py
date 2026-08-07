@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 """Vollpipeline-Determinismus-Gate — [RELEASE_MUST] (§2.40 / §5.5 spec 07, v10.0.0)
 
 Spec §2.40 (copilot-instructions.md, spec 02 §2.40, spec 07 §5.5):
@@ -150,7 +154,7 @@ class TestBasicDeterminism:
     def _make_audio(self, n=4800, channels=1, seed=42) -> np.ndarray:
         rng = np.random.default_rng(seed)
         if channels == 1:
-            return rng.uniform(-0.5, 0.5, n).astype(np.float32)
+            return rng.uniform(-0.5, 0.5, n).astype(np.float32)  # type: ignore[no-any-return]
         return rng.uniform(-0.5, 0.5, (channels, n)).astype(np.float32)
 
     def test_mono_two_runs_are_deterministic(self):
@@ -452,6 +456,7 @@ class TestFallbackGuardReleaseModeIsDeterministic:
             try:
                 r = execute_with_fallback(fn, lambda: 0.0)
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
             assert r.release_mode in _VALID_RELEASE_MODES
 

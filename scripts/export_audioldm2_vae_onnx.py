@@ -38,7 +38,7 @@ weights_path = hf_hub_download("cvssp/audioldm2", "vae/diffusion_pytorch_model.s
 with open(config_path) as f:
     config = json.load(f)
 print(f"   Config: {config['_class_name']}, latent={config['latent_channels']}ch")
-print(f"   Weights: {os.path.getsize(weights_path)/(1024**2):.0f} MB")
+print(f"   Weights: {os.path.getsize(weights_path) / (1024**2):.0f} MB")
 
 # ---------------------------------------------------------------------------
 # Step 2: Build VAE from config using diffusers
@@ -48,8 +48,8 @@ from diffusers.models.autoencoders.autoencoder_kl import AutoencoderKL
 
 # Extract decoder-relevant config
 vae = AutoencoderKL(
-    in_channels=config["in_channels"],          # 1 (mel)
-    out_channels=config["out_channels"],        # 1
+    in_channels=config["in_channels"],  # 1 (mel)
+    out_channels=config["out_channels"],  # 1
     block_out_channels=tuple(config["block_out_channels"]),  # (128, 256, 512)
     down_block_types=tuple(config["down_block_types"]),
     up_block_types=tuple(config["up_block_types"]),
@@ -83,10 +83,11 @@ print("🧊 Tracing VAE decoder → ONNX…")
 #   latent_time = 300 / 8 = 37.5 → need to handle padding
 # Let's export with a typical shape: (1, 8, 8, 128) for ~3.2s
 
-latent_h = 8   # mel_bins=64 / downsample=8
+latent_h = 8  # mel_bins=64 / downsample=8
 latent_w = 128  # time_frames=1024 / 8 = 128 (10.24 s @ 100fps)
 
 dummy_latent = torch.randn(1, config["latent_channels"], latent_h, latent_w, dtype=torch.float32)
+
 
 # Wrap the decoder forward pass
 class VAEDecoderWrapper(torch.nn.Module):
@@ -102,6 +103,7 @@ class VAEDecoderWrapper(torch.nn.Module):
         # Return the sample (mel spectrogram)
         return decoded.sample
 
+
 wrapper = VAEDecoderWrapper(vae)
 wrapper.eval()
 
@@ -113,13 +115,12 @@ with torch.no_grad():
     # output is (1, 1, H*4, W*4) where H,W are the latent spatial dims
     expected_h = latent_h * 4
     expected_w = latent_w * 4
-    assert test_out.shape[0] == 1 and test_out.shape[1] == 1, \
-        f"Expected (1, 1, *, *), got {tuple(test_out.shape)}"
+    assert test_out.shape[0] == 1 and test_out.shape[1] == 1, f"Expected (1, 1, *, *), got {tuple(test_out.shape)}"
 
 # Export to ONNX
 torch.onnx.export(
     wrapper,
-    dummy_latent,
+    (dummy_latent,),
     str(ONNX_OUT),
     input_names=["latent"],
     output_names=["mel_spectrogram"],
@@ -157,8 +158,8 @@ print(f"   Mean diff: {mean_diff:.6f}")
 assert max_diff < 0.01, f"ONNX output differs too much from PyTorch (max={max_diff})"
 
 size_mb = os.path.getsize(ONNX_OUT) / (1024 * 1024)
-print(f"\n🎉 VAE decoder exported successfully!")
+print("\n🎉 VAE decoder exported successfully!")
 print(f"   Output: {ONNX_OUT}")
 print(f"   Size:   {size_mb:.0f} MB")
-print(f"   Input:  (batch, 8, H, W) — dynamic H, W")
-print(f"   Output: (batch, 1, H×8, W×8)")
+print("   Input:  (batch, 8, H, W) — dynamic H, W")
+print("   Output: (batch, 1, H×8, W×8)")

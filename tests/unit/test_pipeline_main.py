@@ -27,7 +27,7 @@ SR = 48000
 
 def _sine(secs: float = 1.0) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False)
-    return np.sin(2 * np.pi * 440.0 * t).astype(np.float32)
+    return np.sin(2 * np.pi * 440.0 * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(secs: float = 1.0) -> np.ndarray:
@@ -65,7 +65,7 @@ def _make_pipeline_with_mock_engine(audio: np.ndarray, mode=ProcessingMode.RESTO
         pipeline = AurikAutonomousPipeline(mode=mode, enable_self_learning=False)
         # Engine muss aktiv bleiben:
         pipeline._engine = MockEngine.return_value
-        pipeline._engine.process.return_value = mock_result
+        pipeline._engine.process.return_value = mock_result  # type: ignore[attr-defined]
     return pipeline, mock_result
 
 

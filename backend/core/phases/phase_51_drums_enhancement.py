@@ -225,7 +225,7 @@ class DrumsEnhancementV1(PhaseInterface):
                     _zone_frac_51 = float(np.clip(_zone_s_51 / max(1, _n_s_51), 0.0, 1.0))
                     effective_strength = float(np.clip(effective_strength + _zone_frac_51 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_51:
-                logger.debug("Phase51 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_51)
+                logger.debug("Verarbeitungsschritt51 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_51)
 
         if effective_strength <= 1e-6:
             dry = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -258,7 +258,7 @@ class DrumsEnhancementV1(PhaseInterface):
                 _p51_sat_scale = 0.45
             effective_strength = float(effective_strength * _p51_sat_scale)
             logger.debug(
-                "Phase 51 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
+                "Verarbeitungsschritt 51 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (strength=%.3f)",
                 _p51_soft_sat_sev,
                 _p51_soft_sat_preserve,
                 _p51_sat_scale,
@@ -275,7 +275,7 @@ class DrumsEnhancementV1(PhaseInterface):
         # Wenn PANNs-Tags vorhanden aber Drums nicht erkannt → Phase überspringen
         if panns_tags and drums_confidence < 0.50:
             logger.info(
-                "Phase 51: Drums-Confidence %.2f < 0.50 — Phase übersprungen (Spec §2.9)",
+                "Verarbeitungsschritt 51: Drums-Confidence %.2f < 0.50 — Verarbeitungsschritt übersprungen (Spec §2.9)",
                 drums_confidence,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -300,10 +300,12 @@ class DrumsEnhancementV1(PhaseInterface):
                 modifications={},
             )
         if drums_confidence > 0:
-            logger.info("Phase 51: PANNs Drums-Confidence=%.2f ≥ 0.50 — Verarbeitung aktiv", drums_confidence)
+            logger.info(
+                "Verarbeitungsschritt 51: PANNs Drums-Confidence=%.2f ≥ 0.50 — Verarbeitung aktiv", drums_confidence
+            )
 
         if not DRUMS_ENHANCEMENT_AVAILABLE:
-            logger.warning("DrumsEnhancementSystem not available, bypassing...")
+            logger.warning("DrumsEnhancementSystem not verfuegbar, bypassing...")
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             return PhaseResult(
@@ -377,9 +379,9 @@ class DrumsEnhancementV1(PhaseInterface):
                         correction_strength=formant_strength,
                     )
                     igt_frames = igt_report.get("frames_processed", 0)
-                    logger.debug("Phase 51 InstrumentFormant: drums frames=%d", igt_frames)
+                    logger.debug("Verarbeitungsschritt 51 InstrumentFormant: drums frames=%d", igt_frames)
             except Exception as _igt_exc:
-                logger.debug("Phase 51 instrument_guided_enhance skipped: %s", _igt_exc)
+                logger.debug("Verarbeitungsschritt 51 instrument_guided_verbessern uebersprungen: %s", _igt_exc)
 
             # Formant-Drift-Korrektur via DTW (Schritt 3)
             try:
@@ -388,14 +390,14 @@ class DrumsEnhancementV1(PhaseInterface):
                 )
                 enhanced = drift_result.audio
                 logger.debug(
-                    "Phase 51 drift correction: detected=%s frames=%d/%d drift=%.1fHz",
+                    "Verarbeitungsschritt 51 drift correction: erkannt=%s frames=%d/%d drift=%.1fHz",
                     drift_result.drift_detected,
                     drift_result.n_frames_corrected,
                     drift_result.total_frames,
                     drift_result.mean_drift_hz,
                 )
             except Exception as _drift_exc:
-                logger.debug("Phase 51 drift correction skipped: %s", _drift_exc)
+                logger.debug("Verarbeitungsschritt 51 drift correction uebersprungen: %s", _drift_exc)
 
             # Sub-Stem-Verarbeitung (Schritt 4)
             try:
@@ -405,10 +407,12 @@ class DrumsEnhancementV1(PhaseInterface):
                 )
                 enhanced = ss_result.audio
                 logger.debug(
-                    "Phase 51 sub-stem: bands=%d strength=%.2f", ss_result.n_bands, ss_result.processing_strength
+                    "Verarbeitungsschritt 51 sub-stem: bands=%d strength=%.2f",
+                    ss_result.n_bands,
+                    ss_result.processing_strength,
                 )
             except Exception as _ss_exc:
-                logger.debug("Phase 51 sub-stem skipped: %s", _ss_exc)
+                logger.debug("Verarbeitungsschritt 51 sub-stem uebersprungen: %s", _ss_exc)
 
             # Physics-Resonanz (Schritt 5 — Biquad Body Resonance)
             try:
@@ -418,12 +422,12 @@ class DrumsEnhancementV1(PhaseInterface):
                 )
                 enhanced = pr_result.audio
                 logger.debug(
-                    "Phase 51 physics resonance: peaks=%d strength=%.2f",
+                    "Verarbeitungsschritt 51 physics resonance: peaks=%d strength=%.2f",
                     pr_result.n_peaks,
                     pr_result.enhancement_strength,
                 )
             except Exception as _pr_exc:
-                logger.debug("Phase 51 physics resonance skipped: %s", _pr_exc)
+                logger.debug("Verarbeitungsschritt 51 physics resonance uebersprungen: %s", _pr_exc)
 
             if 0.0 < effective_strength < 1.0:
                 enhanced = audio + effective_strength * (enhanced - audio)
@@ -475,9 +479,11 @@ class DrumsEnhancementV1(PhaseInterface):
                 )
                 if _hg51.requires_rollback:
                     enhanced = audio.copy()
-                    logger.warning("§2.46e phase_51 HallucinationGuard: rollback (spectral_novelty > 0.15)")
+                    logger.warning(
+                        "§2.46e Verarbeitungsschritt_51 HallucinationGuard: rollback (spectral_novelty > 0.15)"
+                    )
             except Exception as _hg51_exc:
-                logger.debug("§2.46e phase_51 HallucinationGuard (non-blocking): %s", _hg51_exc)
+                logger.debug("§2.46e Verarbeitungsschritt_51 HallucinationGuard (nicht blockierend): %s", _hg51_exc)
 
             return PhaseResult(
                 success=True,
@@ -507,7 +513,7 @@ class DrumsEnhancementV1(PhaseInterface):
             )
 
         except Exception as e:
-            logger.error("Drums enhancement failed: %s", e, exc_info=True)
+            logger.error("Drums enhancement fehlgeschlagen: %s", e, exc_info=True)
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             return PhaseResult(

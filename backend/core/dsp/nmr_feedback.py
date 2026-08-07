@@ -231,7 +231,7 @@ def compute_nmr_score(
         )
 
     except Exception as exc:
-        logger.warning("NMR-Score-Berechnung fehlgeschlagen: %s — Fallback", exc)
+        logger.warning("NMR-Wert-Berechnung fehlgeschlagen: %s — Ersatzpfad", exc)
         return _fallback
 
 

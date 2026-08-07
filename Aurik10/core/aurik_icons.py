@@ -129,7 +129,7 @@ def _make_pixmap(svg_path: str, size: int) -> object:
         return px
 
     except ImportError:
-        logger.debug("aurik_icons: PyQt5.QtSvg not available — returning fallback pixmap")
+        logger.debug("aurik_icons: PyQt5.QtSvg not verfuegbar — returning Ersatzpfad pixmap")
         try:
             from PyQt5.QtCore import Qt
             from PyQt5.QtGui import QPixmap
@@ -138,7 +138,7 @@ def _make_pixmap(svg_path: str, size: int) -> object:
             px.fill(Qt.transparent)
             return px
         except Exception:
-            logger.warning("aurik_icons.py::_make_pixmap fallback", exc_info=True)
+            logger.warning("aurik_icons.py::_make_pixmap Ersatzpfad", exc_info=True)
             return None
 
 

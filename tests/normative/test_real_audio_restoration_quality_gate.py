@@ -36,7 +36,7 @@ def _load_gate_report() -> dict | None:
     if not REPORT_PATH.exists():
         return None
     try:
-        return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
+        return json.loads(REPORT_PATH.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -45,7 +45,7 @@ def _load_daily_status() -> dict | None:
     if not DAILY_STATUS.exists():
         return None
     try:
-        return json.loads(DAILY_STATUS.read_text(encoding="utf-8"))
+        return json.loads(DAILY_STATUS.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -63,14 +63,13 @@ class TestRealAudioQualityGate:
         data = _load_gate_report()
         if data is None:
             pytest.skip(
-                "Kein Quality-Gate-Report gefunden. "
-                "Führe 'python audit/real_audio_restoration_quality_gate.py' aus."
+                "Kein Quality-Gate-Report gefunden. Führe 'python audit/real_audio_restoration_quality_gate.py' aus."
             )
         return data
 
     @pytest.fixture
     def gate(self, report: dict) -> dict:
-        return report.get("gate", {})
+        return report.get("gate", {})  # type: ignore[no-any-return]
 
     def test_gate_exists(self, gate: dict):
         """Quality Gate Report muss existieren und ein 'gate'-Feld enthalten."""
@@ -104,41 +103,31 @@ class TestRealAudioQualityGate:
     def test_minimum_vocal_cases(self, gate: dict):
         """Mindestens 5 Vokal-Cases erforderlich."""
         vocal_cases = gate.get("vocal_cases", 0)
-        assert vocal_cases >= 5, (
-            f"Nur {vocal_cases} Vokal-Cases (mindestens 5 erforderlich)."
-        )
+        assert vocal_cases >= 5, f"Nur {vocal_cases} Vokal-Cases (mindestens 5 erforderlich)."
 
     def test_hpi_above_minimum(self, gate: dict):
         """HPI-Average muss ≥ 0.60 betragen (Basis-Schwelle für CI)."""
         hpi = gate.get("hpi_average")
         if hpi is None:
             pytest.skip("HPI-Average nicht verfügbar")
-        assert hpi >= 0.60, (
-            f"HPI-Average {hpi:.3f} < 0.60. Siehe diagnose_gate_failures.py."
-        )
+        assert hpi >= 0.60, f"HPI-Average {hpi:.3f} < 0.60. Siehe diagnose_gate_failures.py."
 
     def test_quality_above_minimum(self, gate: dict):
         """Quality-Estimate-Average muss ≥ 0.70 betragen (Basis-Schwelle für CI)."""
         qe = gate.get("quality_estimate_average")
         if qe is None:
             pytest.skip("Quality-Estimate-Average nicht verfügbar")
-        assert qe >= 0.70, (
-            f"Quality-Estimate {qe:.3f} < 0.70."
-        )
+        assert qe >= 0.70, f"Quality-Estimate {qe:.3f} < 0.70."
 
     def test_noise_texture_above_minimum(self, gate: dict):
         """Noise-Texture-Pass-Rate muss ≥ 0.50 betragen (Basis-Schwelle)."""
         rate = gate.get("noise_texture_case_pass_rate", 0)
-        assert rate >= 0.50, (
-            f"Noise-Texture-Pass-Rate {rate:.1%} < 50%."
-        )
+        assert rate >= 0.50, f"Noise-Texture-Pass-Rate {rate:.1%} < 50%."
 
     def test_goosebumps_above_minimum(self, gate: dict):
         """Goosebumps-Pass-Rate muss ≥ 0.50 betragen (Basis-Schwelle)."""
         rate = gate.get("goosebumps_case_pass_rate", 0)
-        assert rate >= 0.50, (
-            f"Goosebumps-Pass-Rate {rate:.1%} < 50%."
-        )
+        assert rate >= 0.50, f"Goosebumps-Pass-Rate {rate:.1%} < 50%."
 
 
 # ── Daily Status Tests ─────────────────────────────────────────────────────
@@ -158,7 +147,7 @@ class TestDailyGateStatus:
 
     def test_daily_gate_stored_recently(self, status: dict):
         """Daily-Status muss in den letzten 48h aktualisiert worden sein."""
-        from datetime import datetime, timezone, timedelta
+        from datetime import datetime, timedelta, timezone
 
         ts = status.get("timestamp") or status.get("generated_at")
         if ts is None:
@@ -180,6 +169,5 @@ class TestDailyGateStatus:
         for key in ("hpi_average", "real_audio_cases", "musical_goal_case_pass_rate"):
             if key in gate and key in status:
                 assert abs(status[key] - gate[key]) < 0.001, (
-                    f"Daily-Status {key}={status[key]:.3f} weicht von "
-                    f"Gate-Report {key}={gate[key]:.3f} ab"
+                    f"Daily-Status {key}={status[key]:.3f} weicht von Gate-Report {key}={gate[key]:.3f} ab"
                 )

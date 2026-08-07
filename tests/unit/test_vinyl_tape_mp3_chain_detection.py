@@ -40,7 +40,7 @@ def _make_audio(seconds: float = 3.0, wow_hz: float = 0.0, infrasonic_rms: float
         flutter = wow_hz * np.sin(2 * np.pi * 3.5 * t)  # ~3.5 Hz pinch-roller flutter
         signal = signal * (1.0 + 0.1 * flutter)
     signal = np.clip(signal, -1.0, 1.0)
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -128,13 +128,13 @@ class TestInferAnalogSourceWithDisc:
             snr_db=40.0,
             noise_floor_db=-50.0,
             effective_bandwidth_hz=10_000.0,
-            noise_color="pink",
+            noise_color="pink",  # type: ignore[arg-type]
         )
 
     def test_no_tape_with_low_flutter_and_disc(self):
         """Geringer Flutter + Disc → kein reel_tape (Vinyl-Flutter-Ceiling)."""
         fp = self._make_fp(wow=0.20, rotation=0.50, infrasonic=0.08, crackle=0.010)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         assert "reel_tape" not in mat_names
 
@@ -146,7 +146,7 @@ class TestInferAnalogSourceWithDisc:
         cassette) als Zwischenglied erkannt wird — nicht die spezifische Sorte.
         """
         fp = self._make_fp(wow=0.50, rotation=0.03, infrasonic=0.08, crackle=0.010)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         _tape_family = {"reel_tape", "cassette", "tape"}
         assert any(m in _tape_family for m in mat_names), f"Keine Tape-Stufe erkannt, sources={sources}"
@@ -154,7 +154,7 @@ class TestInferAnalogSourceWithDisc:
     def test_reel_tape_order_after_vinyl(self):
         """reel_tape muss nach vinyl in der sortierten Quell-Liste stehen."""
         fp = self._make_fp(wow=0.55, rotation=0.04, infrasonic=0.08, crackle=0.010)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         if "vinyl" in mat_names and "reel_tape" in mat_names:
             assert mat_names.index("vinyl") < mat_names.index("reel_tape")
@@ -170,7 +170,7 @@ class TestInferAnalogSourceWithDisc:
         Disambiguation: wow=0.034 < 0.06 → reel_tape gewinnt über Kassette.
         """
         fp = self._make_fp(wow=0.034, rotation=0.371, infrasonic=0.08, crackle=0.010, codec=0.40)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         assert "reel_tape" in mat_names, f"reel_tape missing at codec=0.40/studio-flutter, sources={sources}"
 
@@ -179,7 +179,7 @@ class TestInferAnalogSourceWithDisc:
         # threshold=0.20, wow=0.45 > 0.20 → reel_tape oder cassette erkannt.
         # Disambiguation: wow=0.45 >= 0.06 → cassette bevorzugt wenn BW-Erkennung feuert.
         fp = self._make_fp(wow=0.45, rotation=0.02, infrasonic=0.00, crackle=0.001)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         _tape_family = {"reel_tape", "cassette", "tape"}
         assert any(m in _tape_family for m in mat_names), f"Keine Tape-Familie erkannt, sources={sources}"
@@ -187,7 +187,7 @@ class TestInferAnalogSourceWithDisc:
     def test_disambiguation_reel_tape_wins_low_flutter(self):
         """§2.46a Disambiguation: wow < 0.06 → reel_tape gewinnt über Kassette."""
         fp = self._make_fp(wow=0.034, rotation=0.371, infrasonic=0.08, crackle=0.010, codec=0.40)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         assert "cassette" not in mat_names, f"Cassette sollte bei wow=0.034 entfernt werden, sources={sources}"
         assert "reel_tape" in mat_names, f"reel_tape fehlt, sources={sources}"
@@ -195,7 +195,7 @@ class TestInferAnalogSourceWithDisc:
     def test_disambiguation_cassette_wins_high_flutter(self):
         """§2.46a Disambiguation: wow >= 0.06 → cassette gewinnt über reel_tape."""
         fp = self._make_fp(wow=0.50, rotation=0.03, infrasonic=0.08, crackle=0.010)
-        sources = self.det._infer_analog_source_from_fingerprint(fp)
+        sources = self.det._infer_analog_source_from_fingerprint(fp)  # type: ignore[arg-type]
         mat_names = [m for m, _ in sources]
         assert "reel_tape" not in mat_names, f"reel_tape sollte bei wow=0.50 entfernt werden, sources={sources}"
         assert "cassette" in mat_names, f"cassette fehlt, sources={sources}"

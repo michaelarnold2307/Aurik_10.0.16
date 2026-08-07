@@ -13,6 +13,7 @@ import logging
 import os
 from dataclasses import dataclass
 from importlib import import_module
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -157,13 +158,13 @@ class LyricsAligner:
             self.use_whisper = False
             self.use_mfa = False
             logger.info(
-                "Lyrics Aligner: legacy path disabled by policy (set %s=1 for dev only)",
+                "Lyrics Aligner: legacy path deaktiviert by policy (set %s=1 for dev only)",
                 self.LEGACY_ENABLE_ENV,
             )
 
         self._whisper_available = False
         self._mfa_available = False
-        self._mfa_models_available = set()  # Track which MFA models are installed
+        self._mfa_models_available: set[Any] = set()  # Track which MFA models are installed
 
         self._initialize()
 
@@ -181,13 +182,13 @@ class LyricsAligner:
     def _check_whisper_availability(self) -> None:
         """Deaktiviert Docker-based Whisper path for production policy compliance."""
         self._whisper_available = False
-        logger.info("Lyrics Aligner: Docker-based Whisper path disabled by policy")
+        logger.info("Lyrics Aligner: Docker-based Whisper path deaktiviert by policy")
 
     def _check_mfa_availability(self) -> None:
         """Prüft if MFA is available and which models are installed."""
         if not self._legacy_enabled:
             self._mfa_available = False
-            logger.info("Lyrics Aligner: MFA path disabled by policy")
+            logger.info("Lyrics Aligner: MFA path deaktiviert by policy")
             return
 
         try:
@@ -196,14 +197,14 @@ class LyricsAligner:
             result = subprocess.run(["which", "mfa"], capture_output=True, text=True, timeout=5)
             if result.returncode == 0:
                 self._mfa_available = True
-                logger.info("✅ Lyrics Aligner: MFA available")
+                logger.info("✅ Lyrics Aligner: MFA verfuegbar")
 
                 # Check which models are available
                 self._check_mfa_models()
             else:
                 logger.warning("⚠️ Lyrics Aligner: MFA not found")
         except Exception as e:
-            logger.warning("MFA check failed: %s", e)
+            logger.warning("MFA Pruefung fehlgeschlagen: %s", e)
 
     def _check_mfa_models(self) -> None:
         """Prüft which MFA acoustic models are installed."""
@@ -228,7 +229,7 @@ class LyricsAligner:
                     logger.warning("     mfa model download acoustic german_mfa")
 
         except Exception as e:
-            logger.warning("Could not check MFA models: %s", e)
+            logger.warning("Could not Pruefung MFA models: %s", e)
 
     def align(
         self, audio: npt.NDArray[np.float32], sr: int, lyrics: str | None = None, language: str | None = None
@@ -260,7 +261,7 @@ class LyricsAligner:
             # Use detected language if auto-detection was used
             if not language and not self.language:
                 lang = detected_lang if detected_lang != "unknown" else "en"
-                logger.info("   Detected language: %s", lang)
+                logger.info("   erkannt language: %s", lang)
         else:
             logger.info("🎤 Using provided lyrics (language: %s)...", lang)
             transcript = lyrics
@@ -333,7 +334,7 @@ class LyricsAligner:
         if in_segment:
             segments.append({"start": start / sr, "end": len(audio) / sr, "word": "[speech]", "confidence": 0.5})
 
-        transcript = " ".join([seg["word"] for seg in segments])
+        transcript = " ".join([seg["word"] for seg in segments])  # type: ignore[misc]
         language = "unknown"
 
         return transcript, language, segments
@@ -393,15 +394,15 @@ class LyricsAligner:
         # Check if MFA model for this language is available
         if language not in self._mfa_models_available:
             logger.warning(
-                f"MFA model for language '{language}' not available. "
-                f"Using word-level only. Available: {self._mfa_models_available}"
+                f"MFA model for language '{language}' not verfuegbar. "
+                f"Using word-level only. verfuegbar: {self._mfa_models_available}"
             )
             return self._word_level_only(word_segments)
 
         try:
             return self._mfa_alignment_process(audio, sr, word_segments, language)
         except Exception as e:
-            logger.warning("MFA alignment failed: %s. Using word-level only.", e)
+            logger.warning("MFA alignment fehlgeschlagen: %s. Using word-level only.", e)
             return self._word_level_only(word_segments)
 
     def _mfa_alignment_process(
@@ -418,7 +419,7 @@ class LyricsAligner:
             raise ValueError(f"Language '{language}' not supported for MFA. Supported: {list(self.MFA_MODELS.keys())}")
 
         models = self.MFA_MODELS[language]
-        logger.info("Running MFA phoneme-level alignment for %s...", models["name"])
+        logger.info("laeuft MFA phoneme-level alignment for %s...", models["name"])
 
         # Create temporary directory for MFA
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -468,10 +469,10 @@ class LyricsAligner:
             textgrid_module = import_module("textgrid")
             tg = textgrid_module.TextGrid.fromFile(textgrid_path)
         except ImportError:
-            logger.warning("textgrid not available. Falling back to simplified TextGrid parser.")
+            logger.warning("textgrid not verfuegbar. Falling back to simplified TextGrid parser.")
             return self._parse_textgrid_simple(textgrid_path, word_segments)
         except Exception as e:
-            logger.warning("TextGrid parsing failed: %s. Using simplified parser.", e)
+            logger.warning("TextGrid parsing fehlgeschlagen: %s. Using simplified parser.", e)
             return self._parse_textgrid_simple(textgrid_path, word_segments)
 
         words = []
@@ -690,4 +691,4 @@ if __name__ == "__main__":
             logger.info("        ... and %s more", len(word.phonemes) - 3)
 
     logger.info(str("\n" + "=" * 80))
-    logger.info("✅ Lyrics Aligner Demo Complete")
+    logger.info("✅ Lyrics Aligner Demo vollstaendig")

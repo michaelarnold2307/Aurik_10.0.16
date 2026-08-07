@@ -131,7 +131,7 @@ class AutoReprocessingEngine:
         self.enable_forensic_guidance = enable_forensic_guidance
 
         logger.info(
-            f"AutoReprocessingEngine initialized: max_attempts={max_attempts}, min_improvement={min_improvement}"
+            f"AutoReprocessingEngine initialisiert: max_attempts={max_attempts}, min_improvement={min_improvement}"
         )
 
     def reprocess_on_failure(
@@ -182,7 +182,7 @@ class AutoReprocessingEngine:
         context = context or {}
         attempts: list[ReprocessingAttempt] = []
 
-        logger.info("Reprocessing started: %s violations detected", len(initial_violations))
+        logger.info("Reprocessing gestartet: %s violations erkannt", len(initial_violations))
 
         # Track best result so far
         best_audio = failed_processed
@@ -201,12 +201,12 @@ class AutoReprocessingEngine:
                 if self.enable_hybrid_fallback and attempt_num == self.max_attempts:
                     strategy = ReprocessingStrategy.HYBRID_BLEND
                 else:
-                    logger.warning("Out of strategies at attempt %s", attempt_num)
+                    logger.warning("Out of strategies at Versuch %s", attempt_num)
                     break
             else:
                 strategy = strategies[attempt_num - 1]
 
-            logger.info("Attempt %s/%s: Strategy=%s", attempt_num, self.max_attempts, strategy.value)
+            logger.info("Versuch %s/%s: Strategy=%s", attempt_num, self.max_attempts, strategy.value)
 
             # Execute strategy
             try:
@@ -214,7 +214,7 @@ class AutoReprocessingEngine:
                     strategy, original, failed_processed, sr, processing_function, attempt_num, context
                 )
             except Exception as e:
-                logger.error("Strategy %s failed: %s", strategy.value, e)
+                logger.error("Strategy %s fehlgeschlagen: %s", strategy.value, e)
                 attempts.append(
                     ReprocessingAttempt(
                         attempt_number=attempt_num,
@@ -249,7 +249,7 @@ class AutoReprocessingEngine:
             attempts.append(attempt)
 
             logger.info(
-                f"Attempt {attempt_num}: "
+                f"Versuch {attempt_num}: "
                 f"passed={passed}, violations={len(violations)}, "
                 f"avg_improvement={np.mean(list(improvements.values())):.3f}"
             )
@@ -263,7 +263,7 @@ class AutoReprocessingEngine:
 
             # Success? Stop retrying
             if passed:
-                logger.info("✓ Reprocessing succeeded at attempt %s", attempt_num)
+                logger.info("✓ Reprocessing succeeded at Versuch %s", attempt_num)
                 return ReprocessingResult(
                     success=True,
                     best_audio=reprocessed,
@@ -298,7 +298,7 @@ class AutoReprocessingEngine:
             )
         else:
             # Complete failure, rollback to original
-            logger.error("All reprocessing attempts failed, rolling back to original")
+            logger.error("All reprocessing attempts fehlgeschlagen, rolling back to Originalsignal")
 
             return ReprocessingResult(
                 success=False,
@@ -409,7 +409,7 @@ class AutoReprocessingEngine:
         params = {**context, "prefer_dsp": True, "ml_weight": 0.3}
         reprocessed = processing_function(original, sr, params)
 
-        logger.info("Alternative chain: DSP-preferred mode")
+        logger.info("Alternative chain: DSP-preferred Betriebsart")
 
         return reprocessed, params
 
@@ -427,7 +427,7 @@ class AutoReprocessingEngine:
 
         params = {"processed_weight": proc_weight, "original_weight": orig_weight}
 
-        logger.info("Hybrid blend: %.0f processed + %.0f original", proc_weight, orig_weight)
+        logger.info("Hybrid blend: %.0f verarbeitet + %.0f Originalsignal", proc_weight, orig_weight)
 
         return blended, params
 
@@ -443,7 +443,7 @@ class AutoReprocessingEngine:
 
         params = {"rollback_mode": "partial", "blend_ratio": 0.8}
 
-        logger.info("Partial rollback: 80%% processed + 20%% original")
+        logger.info("Partial rollback: 80%% verarbeitet + 20%% Originalsignal")
 
         return partial, params
 

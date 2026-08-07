@@ -575,7 +575,7 @@ class MusicalQualityAssurance:
     def __init__(self):
         """Initialisiert Musical Quality Assurance System."""
         self.analyzer = QualityAnalyzer()
-        logger.info("Musical Quality Assurance System initialized (v%s)", self.VERSION)
+        logger.info("Musical Quality Assurance System initialisiert (v%s)", self.VERSION)
 
     def establish_baseline(
         self, audio: np.ndarray, sample_rate: int, medium_type: MediumType, processing_mode: ProcessingMode
@@ -595,7 +595,7 @@ class MusicalQualityAssurance:
         baseline = self.analyzer.analyze_quality(audio, sample_rate)
 
         logger.info("Quality Baseline: %.1f/100 (%s)", baseline.overall_score, baseline.quality_level.value)
-        logger.info("  Medium: %s, Mode: %s", medium_type.value, processing_mode.value)
+        logger.info("  Medium: %s, Betriebsart: %s", medium_type.value, processing_mode.value)
         logger.info("  SNR: %.1f dB, Clarity: %.2f, Warmth: %.2f", baseline.snr_db, baseline.clarity, baseline.warmth)
         logger.info("  Authenticity: %.2f, Naturalness: %.2f", baseline.authenticity, baseline.naturalness)
 
@@ -643,6 +643,7 @@ class MusicalQualityAssurance:
         # baseline forces destructive over-denoising that PMGG correctly prevents.
         # Smooth ramp: below _RAMP_LOW dB baseline → 0.3 dB min; above _RAMP_HIGH → 3.0 dB.
         _snr_target = medium_gates.min_snr_db
+        _snr_baseline = baseline.snr_db if baseline is not None else 0.0
         # §v10.131 Depth-adaptive SNR: tiefe Transfer-Ketten haben physikalisch
         # niedrigere SNR-Ceilings. Bei depth≥4 wird das Target proportional relaxiert.
         try:
@@ -655,7 +656,6 @@ class MusicalQualityAssurance:
                 _snr_target = float(max(_snr_target * _depth_factor, _snr_baseline * 0.95))
         except Exception:
             logger.debug("musical_quality_assurance.py:655: Silent exception absorbed", exc_info=True)
-        _snr_baseline = baseline.snr_db if baseline is not None else 0.0
         # §v10.131 Depth-adaptive: bei tiefen Ketten mehr SNR-Verlust tolerieren
         _snr_depth_relax = 0.0
         try:
@@ -1119,22 +1119,22 @@ class MusicalQualityAssurance:
 
         # Log results
         if passed:
-            logger.info("✓ Musical integrity check PASSED (integrity: %.1f%%)", overall_integrity * 100)
+            logger.info("✓ Musical integrity Pruefung PASSED (integrity: %.1f%%)", overall_integrity * 100)
             logger.info(
                 f"  Character preserved: {character_preservation:.2%}, Naturalness change: {naturalness_change:+.2f}"
             )
         else:
-            logger.warning("⚠ Musical integrity check FAILED (%s violations)", len(violations))
+            logger.warning("⚠ Musical integrity Pruefung fehlgeschlagen (%s violations)", len(violations))
             for violation in violations:
                 logger.warning("  - %s: %s", violation.value, violation_details[violation])
             if should_rollback:
                 logger.warning("  → OPTIMIZATION RECOMMENDED: Try reduced intensity")
             if should_stop_processing:
-                logger.warning("  → ADAPTIVE MODE: Switch to gentler processing path")
+                logger.warning("  → ADAPTIVE Betriebsart: Switch to gentler processing path")
 
         return result
 
-    def validate_final_quality(
+    def validate_final_quality(  # type: ignore[return]
         self,
         original_audio: np.ndarray,
         processed_audio: np.ndarray,
@@ -1167,7 +1167,7 @@ class MusicalQualityAssurance:
             Comprehensive musical quality report
         """
         logger.info("=" * 60)
-        logger.info("FINAL MUSICAL QUALITY VALIDATION")
+        logger.info("FINAL MUSICAL QUALITY Validierung")
         logger.info("=" * 60)
 
         # Analyze qualities
@@ -1200,9 +1200,12 @@ class MusicalQualityAssurance:
                 _perceptual_improvement = 0.6 * _mushra_improvement + 0.4 * _hpi
             musical_improvement = 0.4 * _tech_improvement + 0.6 * _perceptual_improvement
             logger.info(
-                "§v10.700 B4: Perzeptuelle Verbesserung MUSHRA=%.0f HPI=%.2f → "
-                "tech=%.3f perc=%.3f → combined=%.3f",
-                _mushra, _hpi, _tech_improvement, _perceptual_improvement, musical_improvement,
+                "§v10.700 B4: Perzeptuelle Verbesserung MUSHRA=%.0f HPI=%.2f → tech=%.3f perc=%.3f → combined=%.3f",
+                _mushra,
+                _hpi,
+                _tech_improvement,
+                _perceptual_improvement,
+                musical_improvement,
             )
         else:
             musical_improvement = _tech_improvement
@@ -1344,8 +1347,8 @@ class MusicalQualityAssurance:
         )
 
         # Log report
-        logger.info("Input Quality:  %.1f/100 (%s)", input_quality.overall_score, input_quality.quality_level.value)
-        logger.info("Output Quality: %.1f/100 (%s)", output_quality.overall_score, output_quality.quality_level.value)
+        logger.info("Eingabe Quality:  %.1f/100 (%s)", input_quality.overall_score, input_quality.quality_level.value)
+        logger.info("Ausgabe Quality: %.1f/100 (%s)", output_quality.overall_score, output_quality.quality_level.value)
         logger.info("Musical Improvement: %+.1f%%", musical_improvement * 100)
         logger.info("Processing Intensity: %.1f%% (%s modules)", processing_intensity * 100, len(modules_applied))
         logger.info("Authenticity Preserved: %s", authenticity_preserved)
@@ -1394,52 +1397,49 @@ class MusicalQualityAssurance:
             if defect_countdown.get("zero_audible_defects", False):
                 result["zero_audible_defects"] = True
                 result["guarantees"].append(
-                    "KEINE HÖRBAREN DEFEKTE — "
-                    f'{defect_countdown.get("resolved", 0)} Defekte vollständig behoben'
+                    f"KEINE HÖRBAREN DEFEKTE — {defect_countdown.get('resolved', 0)} Defekte vollständig behoben"
                 )
             else:
                 _remaining = defect_countdown.get("audible_after", 0)
                 result["warnings"].append(
-                    f'⚠️ {_remaining} Defekte noch hörbar — '
-                    f'Empfehlung: Erneute Restauration mit höherer Intensität'
+                    f"⚠️ {_remaining} Defekte noch hörbar — Empfehlung: Erneute Restauration mit höherer Intensität"
                 )
 
         # 2. Perzeptuelle Verbesserung
         if quality_report.quality_guaranteed:
-            result["guarantees"].append(
-                f'✅ QUALITY GUARANTEED — '
-                f'MUSHRA-Verbesserung bestätigt'
-            )
+            result["guarantees"].append("✅ QUALITY GUARANTEED — MUSHRA-Verbesserung bestätigt")
         elif getattr(quality_report, "quality_uncertain", False):
             result["warnings"].append(
-                '⚠️ QUALITY UNCERTAIN — Keine perzeptuellen Daten verfügbar. '
-                'Die Verbesserung konnte nicht vom simulierten menschlichen Ohr bestätigt werden.'
+                "⚠️ QUALITY UNCERTAIN — Keine perzeptuellen Daten verfügbar. "
+                "Die Verbesserung konnte nicht vom simulierten menschlichen Ohr bestätigt werden."
             )
         else:
-            result["warnings"].append(
-                '⚠️ QUALITY NOT GUARANTEED — Siehe MQA-Report für Details.'
-            )
+            result["warnings"].append("⚠️ QUALITY NOT GUARANTEED — Siehe MQA-Report für Details.")
 
         # 3. Wohlklang-Garantie (MUSHRA)
-        _mushra = float(getattr(quality_report, "output_quality", None)
-                        and getattr(quality_report.output_quality, "mushra_score", 0.0) or 0.0)
+        _mushra = float(
+            (
+                getattr(quality_report, "output_quality", None)
+                and getattr(quality_report.output_quality, "mushra_score", 0.0)
+            )
+            or 0.0
+        )
         if _mushra >= 80.0:
             result["wohlklang_garantiert"] = True
-            result["guarantees"].append(
-                f'🎵 WOHLKLANG GARANTIERT — MUSHRA {_mushra:.0f}/100'
-            )
+            result["guarantees"].append(f"🎵 WOHLKLANG GARANTIERT — MUSHRA {_mushra:.0f}/100")
         elif _mushra > 0:
             result["warnings"].append(
-                f'⚠️ MUSHRA {_mushra:.0f}/100 unter Wohlklang-Schwelle (80) — '
-                f'Empfehlung: Studio-2026-Mode für maximale Qualität'
+                f"⚠️ MUSHRA {_mushra:.0f}/100 unter Wohlklang-Schwelle (80) — "
+                f"Empfehlung: Studio-2026-Mode für maximale Qualität"
             )
 
         # Log summary
         _garantien = len(result["guarantees"])
         _warnungen = len(result["warnings"])
         logger.info(
-            "§v10.703 Export-Gate: %d Garantien, %d Warnungen → %s",
-            _garantien, _warnungen,
+            "§v10.703 Ausgabe-Gate: %d Garantien, %d Warnungen → %s",
+            _garantien,
+            _warnungen,
             "✅ EXPORT FREIGEGEBEN" if result["export_ready"] else "⚠️ EXPORT MIT VORBEHALT",
         )
         return result
@@ -1480,10 +1480,9 @@ class MusicalQualityAssurance:
         }
 
         logger.info(
-            "§v10.703 Wohlklang-Garantie: MUSHRA %.0f < 80 → ReRun empfohlen "
-            "(global_scalar -%.0f%%, strength ×%.2f)",
+            "§v10.703 Wohlklang-Garantie: MUSHRA %.0f < 80 → ReRun empfohlen (global_scalar -%.0f%%, strength ×%.2f)",
             mushra_score,
-            _rerun["global_scalar_reduction"] * 100,
+            _rerun["global_scalar_reduction"] * 100,  # type: ignore[operator]
             _rerun["strength_multiplier"],
         )
 

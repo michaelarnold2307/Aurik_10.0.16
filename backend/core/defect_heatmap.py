@@ -46,7 +46,8 @@ def compute(audio: np.ndarray, sr: int, time_resolution_s: float = 1.0) -> dict[
 
         # 3. Hiss: Rauschflur über 8kHz
         hiss = spec[freqs >= 8000]
-        heatmap[seg, 2] = float(np.clip(np.mean(hiss) / max(np.mean(spec), 1e-10) * 5, 0, 1))
+        _hiss_ratio = float(np.mean(hiss)) / max(float(np.mean(spec)), 1e-10) * 5.0
+        heatmap[seg, 2] = max(0.0, min(1.0, _hiss_ratio))
 
         # 4. Clipping
         heatmap[seg, 3] = float(np.clip(np.mean(np.abs(chunk) > 0.95) * 50, 0, 1))
@@ -57,7 +58,8 @@ def compute(audio: np.ndarray, sr: int, time_resolution_s: float = 1.0) -> dict[
 
         # 6. Crackle: feine HF-Impulse (kürzer als Clicks)
         crackle = np.diff(chunk)
-        heatmap[seg, 5] = float(np.clip(np.std(crackle) / max(np.std(chunk), 1e-10), 0, 1))
+        _crackle_ratio = float(np.std(crackle)) / max(float(np.std(chunk)), 1e-10)
+        heatmap[seg, 5] = max(0.0, min(1.0, _crackle_ratio))
 
     return {
         "time_resolution_s": time_resolution_s,

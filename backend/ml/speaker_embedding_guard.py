@@ -250,7 +250,7 @@ class SpeakerEmbeddingGuard:
         """Cepstral Mean-Variance Normalization."""
         mean = np.mean(mfccs, axis=0)
         std = np.std(mfccs, axis=0) + 1e-8
-        return (mfccs - mean) / std
+        return (mfccs - mean) / std  # type: ignore[no-any-return]
 
 
 __all__ = [

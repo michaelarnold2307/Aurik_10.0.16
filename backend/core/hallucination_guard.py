@@ -68,7 +68,7 @@ def compute_spectral_novelty(
             "total_energy_db": float(10.0 * np.log10(E_total_after)),
         }
     except Exception as exc:
-        logger.debug("Spectral novelty computation (non-blocking): %s", exc)
+        logger.debug("Spectral novelty computation (nicht blockierend): %s", exc)
         return 0.0, {"error": str(exc)}
 
 
@@ -136,7 +136,7 @@ def check_harmonic_ceiling_violation(
             "violation": violation,
         }
     except Exception as exc:
-        logger.debug("Harmonic ceiling violation check (non-blocking): %s", exc)
+        logger.debug("Harmonic ceiling violation Pruefung (nicht blockierend): %s", exc)
         return False, {"error": str(exc)}
 
 
@@ -179,8 +179,8 @@ def apply_hallucination_guard(
 
         if ceiling_violation and mode == "restoration":
             logger.warning(
-                "§2.46e HARD-STOP: Harmonic ceiling violation in restoration mode "
-                "(ceiling=%.0f Hz, ratio=%.1fx, +%.1f dB)",
+                "§2.46e HARD-STOP: Harmonic ceiling violation in restoration Betriebsart "
+                "(ceiling=%.0f Hz, Verhaeltnis=%.1fx, +%.1f dB)",
                 material_bw_ceiling_hz,
                 metadata.get("ceiling_band_ratio", 0.0),
                 metadata.get("ceiling_band_db", 0.0),
@@ -191,7 +191,7 @@ def apply_hallucination_guard(
 
         # Spec §2.46e: novelty rollback threshold in restoration mode.
         if novelty > 0.15 and mode == "restoration":
-            logger.warning("§2.46e HARD-STOP: High spectral novelty (%.3f) in restoration mode", novelty)
+            logger.warning("§2.46e HARD-STOP: High spectral novelty (%.3f) in restoration Betriebsart", novelty)
             metadata["hallucination_decision"] = "rollback"
             metadata["hallucination_severity"] = "high_novelty"
             return audio_before, metadata
@@ -208,5 +208,5 @@ def apply_hallucination_guard(
         metadata["hallucination_decision"] = "pass_with_penalty" if penalty_score < 1.0 else "pass"
         return audio_after, metadata
     except Exception as exc:
-        logger.debug("§2.46e Hallucination-Guard exception (non-blocking): %s", exc)
+        logger.debug("§2.46e Hallucination-Guard exception (nicht blockierend): %s", exc)
         return audio_after, {"error": str(exc), "hallucination_decision": "error_passthrough"}

@@ -9,7 +9,7 @@ def _stereo_noise(sr: int = 48000, dur_s: float = 1.0) -> np.ndarray:
     rng = np.random.default_rng(1234)
     left = 0.1 * rng.standard_normal(n)
     right = 0.1 * rng.standard_normal(n)
-    return np.stack([left, right], axis=1).astype(np.float64)
+    return np.stack([left, right], axis=1).astype(np.float64)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

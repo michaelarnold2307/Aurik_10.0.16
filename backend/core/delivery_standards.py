@@ -403,12 +403,13 @@ class LoudnessAnalyzer:
                     if np.isfinite(loudness) and loudness > -70:  # Valid loudness
                         loudness_values.append(loudness)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
 
             return np.array(loudness_values)  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.warning("Short-term loudness calculation failed: %s", e)
+            logger.warning("Short-term loudness calculation fehlgeschlagen: %s", e)
             return np.array([])  # type: ignore[no-any-return]
 
 
@@ -464,7 +465,7 @@ class TruePeakLimiter:
             return result.astype(audio.dtype)  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.warning("True Peak limiting failed: %s, using simple clipper", e)
+            logger.warning("True Peak limiting fehlgeschlagen: %s, using simple clipper", e)
             # Fallback: Simple hard clip
             return np.clip(audio, -self.threshold_linear, self.threshold_linear)  # type: ignore[no-any-return]
 
@@ -589,7 +590,7 @@ class BWFMetadataWriter:
             return True
 
         except Exception as e:
-            logger.error("BWF metadata writing failed: %s", e)
+            logger.error("BWF metadata schreibe fehlgeschlagen: %s", e)
             return False
 
 
@@ -629,7 +630,7 @@ class DeliveryStandardsManager:
     def __init__(self) -> None:
         """Initialisiert DeliveryStandardsManager."""
         self.loudness_analyzer = LoudnessAnalyzer()
-        logger.info("DeliveryStandardsManager initialized")
+        logger.info("DeliveryStandardsManager initialisiert")
 
     def process_for_standard(
         self, audio: np.ndarray, sample_rate: int, standard: DeliveryStandard, output_path: Path | None = None
@@ -688,7 +689,7 @@ class DeliveryStandardsManager:
                 ratio=config.drc_ratio,
                 threshold_lufs=config.target_lufs - 6.0,  # Attack 6 LU below target
             )
-            logger.info("  DRC applied (ratio %s:1)", config.drc_ratio)
+            logger.info("  DRC angewendet (Verhaeltnis %s:1)", config.drc_ratio)
 
         # === 4. True Peak Limiting ===
         if config.enable_true_peak_limiting:
@@ -798,7 +799,7 @@ class DeliveryStandardsManager:
             return audio * gain_smooth  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.warning("DRC failed: %s, returning original", e)
+            logger.warning("DRC fehlgeschlagen: %s, returning Originalsignal", e)
             return audio
 
 
@@ -822,7 +823,7 @@ if __name__ == "__main__":
 
     # Load test audio
     _res = load_audio_file("test_audio/test_input.wav")
-    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])
+    audio, sr = np.asarray(_res["audio"], dtype=np.float32), int(_res["sr"])  # type: ignore[index]
 
     # Process for EBU R128
     manager = DeliveryStandardsManager()
@@ -837,9 +838,9 @@ if __name__ == "__main__":
     # Save result
     sf.write("test_output/ebu_r128_compliant.wav", result["audio"], sr)
 
-    logger.debug("\n✅ %s Processing Complete", result["standard_name"])
+    logger.debug("\n✅ %s Processing vollstaendig", result["standard_name"])
     logger.debug("   Initial Loudness: %.1f LUFS", result["initial_loudness"])
     logger.debug("   Final Loudness: %.1f LUFS", result["final_loudness"])
-    logger.debug("   Gain Applied: %.1f dB", result["gain_applied_db"])
+    logger.debug("   Gain angewendet: %.1f dB", result["gain_applied_db"])
     logger.debug("   True Peak: %.1f dBTP", result["true_peak_dbtp"])
     logger.debug("   Compliant: %s", result["compliant"])

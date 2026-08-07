@@ -158,6 +158,7 @@ def _compute_splice_local_strength(
                     local_strength = min(local_strength, float(_pz[2]))
                     break
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
 
     return float(np.clip(local_strength, 0.05, 1.0))
@@ -238,7 +239,9 @@ def apply(
     if defect_scores is not None:
         splice_score = float(defect_scores.get("tape_splice_artifact", 0.0))
         if splice_score < min_splice_score:
-            logger.debug("Phase 64: splice score %.3f < %.3f — skipped", splice_score, min_splice_score)
+            logger.debug(
+                "Verarbeitungsschritt 64: splice Wert %.3f < %.3f — uebersprungen", splice_score, min_splice_score
+            )
             return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     crossfade_samples = max(1, int(crossfade_ms * 0.001 * sample_rate))
@@ -319,6 +322,7 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 s = int(max(0.0, float(loc[0])) * sample_rate)
                 e = int(max(0.0, float(loc[1])) * sample_rate)
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
             if e <= s:
                 continue
@@ -424,7 +428,7 @@ class TapeSpliceRepairPhase(PhaseInterface):
                     _zone_frac_64 = float(np.clip(_zone_s_64 / max(1, _n_s_64), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_64 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_64:
-                logger.debug("Phase64 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_64)
+                logger.debug("Verarbeitungsschritt64 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_64)
 
         _profile_64 = self._compute_splice_profile(
             str(material_type or kwargs.get("material_type") or kwargs.get("material") or "unknown"),
@@ -453,11 +457,15 @@ class TapeSpliceRepairPhase(PhaseInterface):
         _rms_in_db = _rms_dbfs_gated(audio)
 
         # §v10.303.6 Early-Exit: Keine Splice-Zonen → nichts zu reparieren
-        _splice_zones_raw = kwargs.get("defect_locations", {}).get("tape_splice_artifact", []) if isinstance(kwargs.get("defect_locations"), dict) else []
+        _splice_zones_raw = (
+            kwargs.get("defect_locations", {}).get("tape_splice_artifact", [])
+            if isinstance(kwargs.get("defect_locations"), dict)
+            else []
+        )
         _splice_count = len(_splice_zones_raw) if _splice_zones_raw else 0
         if _splice_count == 0:
             logger.info(
-                "Phase 64 §v10.303.6 Early-Exit: Keine Klebestellen gefunden → skip (%.2fs)",
+                "Verarbeitungsschritt 64 §v10.303.6 Early-Exit: Keine Klebestellen gefunden → ueberspringen (%.2fs)",
                 _time.perf_counter() - t0,
             )
             return PhaseResult(
@@ -473,24 +481,24 @@ class TapeSpliceRepairPhase(PhaseInterface):
             try:
                 _p64_zones.append((float(_z[0]), float(_z[1]), 0.20))  # §0p Vibrato-Schutz
             except Exception as e:
-                logger.warning("phase_64_tape_splice_repair.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_64_tape_splice_repair.py::verarbeiten Ersatzpfad: %s", e)
         for _z in kwargs.get("frisson_zones") or []:
             try:
                 _fz_s = float(getattr(_z, "start_s", None) or _z[0])
                 _fz_e = float(getattr(_z, "end_s", None) or _z[1])
                 _p64_zones.append((_fz_s, _fz_e, 0.30))  # Frisson sakrosankt
             except Exception as e:
-                logger.warning("phase_64_tape_splice_repair.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_64_tape_splice_repair.py::verarbeiten Ersatzpfad: %s", e)
         for _z in kwargs.get("whisper_zones") or []:
             try:
                 _p64_zones.append((float(_z[0]), float(_z[1]), 0.25))  # Flüsterpassagen
             except Exception as e:
-                logger.warning("phase_64_tape_splice_repair.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_64_tape_splice_repair.py::unbekannter Ersatzpfad: %s", e)
         for _z in kwargs.get("passaggio_zones") or []:
             try:
                 _p64_zones.append((float(_z[0]), float(_z[1]), 0.35))  # Passaggio-Übergänge
             except Exception as e:
-                logger.warning("phase_64_tape_splice_repair.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_64_tape_splice_repair.py::unbekannter Ersatzpfad: %s", e)
         result_audio = apply(
             audio,
             sample_rate,
@@ -532,9 +540,9 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 )
                 if _nt64_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_64 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt64_d)
+                    logger.warning("§V19 Verarbeitungsschritt_64 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt64_d)
         except Exception as _nt64_exc:
-            logger.debug("§V19 phase_64 noise_texture_guard (non-blocking): %s", _nt64_exc)
+            logger.debug("§V19 Verarbeitungsschritt_64 noise_texture_guard (nicht blockierend): %s", _nt64_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -547,7 +555,7 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 if not _sc64.ok:
                     result_audio = (0.70 * result_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc64_exc:
-            logger.debug("§V24 phase_64 spectral_color_guard (non-blocking): %s", _sc64_exc)
+            logger.debug("§V24 Verarbeitungsschritt_64 spectral_color_guard (nicht blockierend): %s", _sc64_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

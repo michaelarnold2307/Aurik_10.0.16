@@ -50,7 +50,7 @@ class ShellacEqualizer:
                 "HMV": (500, +18.0, 5500, -18.0),  # HMV / EMI (corrected: 5.5 kHz, not 3.5 kHz)
             }
             if self.curve not in curve_params:
-                logger.warning("Unbekannte Entzerrungskurve: %s, Fallback auf 78rpm", self.curve)
+                logger.warning("Unbekannte Entzerrungskurve: %s, Ersatzpfad auf 78rpm", self.curve)
             params = curve_params.get(self.curve, curve_params["78rpm"])
             audio_out = self._apply_shellac_eq(audio, sr, *params)
         except Exception as e:
@@ -115,5 +115,5 @@ class ShellacEqualizer:
             return lfilter(b2, a2, y)
 
         if audio.ndim == 1:
-            return _filt(audio).astype(audio.dtype)
-        return np.stack([_filt(ch) for ch in audio], axis=0).astype(audio.dtype)
+            return _filt(audio).astype(audio.dtype)  # type: ignore[no-any-return]
+        return np.stack([_filt(ch) for ch in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]

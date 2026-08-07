@@ -659,7 +659,7 @@ def get_venue_profile(
 
     rel = _era_relevance(profile, era_decade)
     if rel < 0.10:
-        logger.debug("venue_acoustic_db: %s era_relevance=%.2f < 0.10 — skipped", profile.label, rel)
+        logger.debug("venue_acoustic_db: %s era_relevance=%.2f < 0.10 — uebersprungen", profile.label, rel)
         return None
 
     logger.debug("venue_acoustic_db: %r → %s (era_rel=%.2f)", venue_hint, profile.label, rel)

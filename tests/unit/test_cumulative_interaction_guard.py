@@ -102,10 +102,11 @@ def test_05_rollback_on_cumulative_drift():
     state = guard.reset()
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
-    # Use ADDITIVE phase_07: authenticitaet/tonal_center NOT excluded.
-    # natuerlichkeit/artikulation/timbre_authentizitaet ARE excluded (§2.44).
-    # authentizitaet drift of -0.12 exceeds any default adaptive tolerance.
-    degraded = _goals(auth=0.78)  # -0.12 drift in authentizitaet
+    # Use ADDITIVE phase_07: tonal_center NOT excluded.
+    # natuerlichkeit/artikulation/timbre_authentizitaet/authentizitaet ARE excluded
+    # (§2.44; authentizitaet added §2.55-Sync 2026-08-06).
+    # tonal_center drift of -0.18 exceeds any default adaptive tolerance.
+    degraded = _goals(tonal=0.78)  # -0.18 drift in tonal_center
     bad_audio = audio * 0.5
     result_audio, rolled_back = guard.check_after_phase(
         state,
@@ -126,16 +127,18 @@ def test_06_consecutive_rollbacks_stop_pipeline():
     state = guard.reset()
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
-    # All 5 phases are ADDITIVE/DYNAMICS with NO natuerlichkeit exclusion in CIG
-    # (§2.55 sync: phase_19/phase_21 now have nat excluded in CIG — use saturation/EQ phases instead).
-    # natuerlichkeit drift -0.12 exceeds adaptive tolerance for all of them.
+    # All 5 phases are ADDITIVE/DYNAMICS with NO authentizitaet exclusion in CIG
+    # (§2.55 sync: phase_19/phase_21 now have nat excluded in CIG — use saturation/EQ phases instead;
+    # phase_07 gained authentizitaet exclusion 2026-08-06 — swapped for phase_06 which only
+    # excludes timbre_authentizitaet).
+    # authentizitaet drift -0.12 exceeds adaptive tolerance for all of them.
     degraded = _goals(auth=0.78)  # -0.12 drift
     rollback_phases = [
-        "phase_07_harmonic_restoration",  # CIG: artikulation+timbre only → nat rollback
-        "phase_10_multiband_compression",  # CIG: no entry → nat rollback
-        "phase_11_limiter",  # CIG: no entry → nat rollback
-        "phase_35_multiband_compression",  # CIG: no entry → nat rollback
-        "phase_44_stereo_enhancement",  # CIG: timbre only → nat rollback
+        "phase_06_frequency_restoration",  # CIG: timbre only → auth rollback
+        "phase_10_multiband_compression",  # CIG: no entry → auth rollback
+        "phase_11_limiter",  # CIG: no entry → auth rollback
+        "phase_35_multiband_compression",  # CIG: no entry → auth rollback
+        "phase_44_stereo_enhancement",  # CIG: timbre only → auth rollback
     ]
     for i, ph in enumerate(rollback_phases):
         guard.check_after_phase(state, ph, audio * 0.3, degraded, SR)
@@ -152,7 +155,7 @@ def test_07_rollback_resets_on_success():
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
     # First: degraded natuerlichkeit via ADDITIVE phase → rollback
-    degraded = _goals(auth=0.78)  # -0.12 drift, no exclusions for phase_07
+    degraded = _goals(tonal=0.78)  # -0.18 drift, no exclusions for phase_07 on tonal_center
     guard.check_after_phase(state, "phase_07_harmonic_restoration", audio * 0.5, degraded, SR)
     assert state.consecutive_rollbacks == 1
     # Second: good → reset counter
@@ -335,8 +338,8 @@ def test_13_metadata_contains_rollback_info():
     state = guard.reset()
     audio = _audio()
     guard.set_pre_pipeline_baseline(state, audio, _goals())
-    # ADDITIVE phase_07: natuerlichkeit drift triggers rollback (no exclusions)
-    degraded = _goals(auth=0.78)  # -0.12 drift
+    # ADDITIVE phase_07: tonal_center drift triggers rollback (no exclusions)
+    degraded = _goals(tonal=0.78)  # -0.18 drift
     guard.check_after_phase(state, "phase_07_harmonic_restoration", audio, degraded, SR)
     meta = guard.get_rollback_metadata(state)
     assert len(meta["interaction_rollbacks"]) == 1
@@ -604,9 +607,9 @@ def test_23_rollback_returns_checkpoint_audio():
     state = guard.reset()
     original_audio = _audio()
     guard.set_pre_pipeline_baseline(state, original_audio, _goals())
-    # ADDITIVE phase_07: natuerlichkeit drift triggers rollback (no exclusions)
+    # ADDITIVE phase_07: tonal_center drift triggers rollback (no exclusions)
     bad_audio = original_audio * 0.1
-    degraded = _goals(auth=0.78)  # -0.12 drift
+    degraded = _goals(tonal=0.78)  # -0.18 drift
     result_audio, rolled_back = guard.check_after_phase(
         state,
         "phase_07_harmonic_restoration",

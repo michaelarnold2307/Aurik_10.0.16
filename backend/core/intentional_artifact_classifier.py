@@ -441,7 +441,7 @@ class IntentionalArtifactClassifier:
                 _res = self.classify(material_type)
                 preserve_features = list(_res.preserve_features)
             else:
-                logger.debug("get_preserve_mask: keine iac_result und kein material_type → Zero-Maske")
+                logger.debug("get_preserve_mask: keine iac_Ergebnis und kein material_type → Zero-Maske")
                 return np.zeros(_N_BINS, dtype=np.float32)  # type: ignore[no-any-return]
 
             _sr_eff = max(int(sr), 44100)
@@ -472,7 +472,7 @@ class IntentionalArtifactClassifier:
             return mask  # type: ignore[no-any-return]
 
         except Exception as _exc:
-            logger.debug("get_preserve_mask non-blocking: %s", _exc)
+            logger.debug("get_preserve_mask nicht blockierend: %s", _exc)
             return np.zeros(_N_BINS, dtype=np.float32)  # type: ignore[no-any-return]
 
 

@@ -64,7 +64,7 @@ def extend_bandwidth(
     try:
         extended = _spectral_extend(mono, sr, cutoff, amount)
     except Exception as e:
-        logger.warning("bandwidth_extender fallback: %s", e)
+        logger.warning("bandwidth_extender Ersatzpfad: %s", e)
         return audio
 
     if is_stereo:
@@ -73,7 +73,7 @@ def extend_bandwidth(
     else:
         result = extended
 
-    return result.astype(np.float32)
+    return result.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _spectral_extend(
@@ -129,7 +129,7 @@ def _spectral_extend(
     # 5. Mix: Original + synthetisierte Höhen × amount
     mixed = mono + extended_hi * amount
 
-    return mixed.astype(np.float32)
+    return mixed.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def get_material_bandwidth(material: str) -> float | None:

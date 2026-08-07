@@ -92,7 +92,7 @@ except ImportError:
 # SOUNDFILE_AVAILABLE wird nach Umstieg auf enhance() nicht mehr benötigt.
 
 try:
-    from backend.core.quality_mode import QualityMode, should_use_ml  # type: ignore[attr-defined]
+    from backend.core.quality_mode import QualityMode
 
     QUALITY_MODE_AVAILABLE = True
 except ImportError:
@@ -178,10 +178,10 @@ class ClickRemovalPhase(PhaseInterface):
             if not DEEPFILTERNET_PLUGIN_AVAILABLE or DeepFilterNetV3IIPlugin is None:
                 raise ImportError("DeepFilterNet v3 II plugin unavailable")
             self._deepfilternet_plugin = DeepFilterNetV3IIPlugin()
-            logger.info("✅ DeepFilterNet v3 II Plugin loaded for Click Removal")
+            logger.info("✅ DeepFilterNet v3 II Plugin geladen for Click Removal")
             return self._deepfilternet_plugin
         except Exception as e:
-            logger.warning("⚠️  DeepFilterNet Plugin not available: %s", e)
+            logger.warning("⚠️  DeepFilterNet Plugin not verfuegbar: %s", e)
             logger.info("    Falling back to DSP-only click removal")
             return None
 
@@ -348,7 +348,7 @@ class ClickRemovalPhase(PhaseInterface):
             try:
                 guarded = apply_silence_preservation(original, guarded, silence_mask)
             except Exception as exc:
-                logger.debug("§silence-guarantee phase_01: restore skipped: %s", exc)
+                logger.debug("§silence-guarantee Verarbeitungsschritt_01: wiederherstellen uebersprungen: %s", exc)
         try:
             guarded = limit_quiet_edge_boost(
                 original,
@@ -358,7 +358,7 @@ class ClickRemovalPhase(PhaseInterface):
                 max_edge_boost_db=0.5,
             )
         except Exception as exc:
-            logger.debug("§0h quiet-edge guard phase_01 skipped: %s", exc)
+            logger.debug("§0h quiet-edge guard Verarbeitungsschritt_01 uebersprungen: %s", exc)
         return np.clip(np.nan_to_num(guarded, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
     @staticmethod
@@ -408,11 +408,12 @@ class ClickRemovalPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "click_removal", default_nr=0.3, default_de_ess=0.1, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception:
-            logger.debug("process: silent except suppressed", exc_info=True)
+            logger.debug("verarbeiten: silent except suppressed", exc_info=True)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         start_time = time.time()
         progress_sub_callback = kwargs.get("progress_sub_callback")
@@ -424,9 +425,9 @@ class ClickRemovalPhase(PhaseInterface):
         if QUALITY_MODE_AVAILABLE and quality_mode:
             try:
                 qm = QualityMode[quality_mode.upper()]
-                use_ml = should_use_ml(1, qm)  # Phase 1
+                use_ml = qm.is_ml_enabled  # Phase 1
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         # §0j energy_bias: panns_singing für DFN-Vokal-Schutz
         _panns_singing = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", 0.0)))
@@ -439,22 +440,22 @@ class ClickRemovalPhase(PhaseInterface):
                 try:
                     _p01_protected_zones.append((float(_z[0]), float(_z[1]), 0.20))
                 except (TypeError, IndexError):
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             for _z in _vfa_p01.get("frisson_zones", []):
                 try:
                     _p01_protected_zones.append((float(_z[0]), float(_z[1]), 0.30))
                 except (TypeError, IndexError):
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             for _z in _vfa_p01.get("whisper_zones", []):
                 try:
                     _p01_protected_zones.append((float(_z[0]), float(_z[1]), 0.25))
                 except (TypeError, IndexError):
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             for _z in _vfa_p01.get("passaggio_zones", []):
                 try:
                     _p01_protected_zones.append((float(_z[0]), float(_z[1]), 0.35))
                 except (TypeError, IndexError):
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # Get material-specific thresholds
         thresholds = dict(self.MATERIAL_THRESHOLDS.get(material_type, self.MATERIAL_THRESHOLDS["unknown"]))
@@ -1090,7 +1091,7 @@ class ClickRemovalPhase(PhaseInterface):
                     stats["total"] += 1
             else:
                 # ML failed, add back to normal clicks for DSP fallback
-                logger.warning("ML click repair failed, falling back to DSP")
+                logger.warning("ML click repair fehlgeschlagen, falling back to DSP")
                 normal_clicks.extend(severe_clicks)
         else:
             # No ML available/enabled, process all with DSP

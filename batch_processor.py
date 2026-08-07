@@ -24,6 +24,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -88,18 +89,38 @@ def _load_audio_pair(path: str) -> tuple[np.ndarray, int, np.ndarray]:
     load_audio_file = _load_audio_file
     if load_audio_file is None:
         load_audio_file = _get_load_audio_fn()
-    loaded_native = load_audio_file(path, target_sr=None, mono=False, do_carrier_analysis=False)
+    _max_load_retries = 3
+    _last_error = "Unbekannter Ladefehler"
+    loaded_native = None
+    for _load_attempt in range(_max_load_retries):
+        loaded_native = load_audio_file(path, target_sr=None, mono=False, do_carrier_analysis=False)
+        if (
+            isinstance(loaded_native, dict)
+            and loaded_native.get("audio") is not None
+            and loaded_native.get("sr") is not None
+        ):
+            break
+        _last_error = str((loaded_native or {}).get("error") or _last_error)
+        if _load_attempt < _max_load_retries - 1:
+            logger.debug("Audio laden Wiederholung %d/%d: %s", _load_attempt + 1, _max_load_retries, _last_error)
     if not isinstance(loaded_native, dict) or loaded_native.get("audio") is None or loaded_native.get("sr") is None:
-        raise RuntimeError(str((loaded_native or {}).get("error") or "Unbekannter Ladefehler"))
+        raise RuntimeError(_last_error)
 
     audio_native = _coerce_audio_array(loaded_native["audio"])
     sr_native = int(loaded_native["sr"])
     if sr_native == _TARGET_SR:
         return audio_native, sr_native, audio_native
 
-    loaded_48k = load_audio_file(path, target_sr=_TARGET_SR, mono=False, do_carrier_analysis=False)
+    loaded_48k = None
+    for _load_attempt in range(_max_load_retries):
+        loaded_48k = load_audio_file(path, target_sr=_TARGET_SR, mono=False, do_carrier_analysis=False)
+        if isinstance(loaded_48k, dict) and loaded_48k.get("audio") is not None:
+            break
+        _last_error = str((loaded_48k or {}).get("error") or "48-kHz-Ladefehler")
+        if _load_attempt < _max_load_retries - 1:
+            logger.debug("48-kHz-Audio laden Wiederholung %d/%d: %s", _load_attempt + 1, _max_load_retries, _last_error)
     if not isinstance(loaded_48k, dict) or loaded_48k.get("audio") is None:
-        raise RuntimeError(str((loaded_48k or {}).get("error") or "48-kHz-Ladefehler"))
+        raise RuntimeError(_last_error)
     audio_48k = _coerce_audio_array(loaded_48k["audio"])
     return audio_native, sr_native, audio_48k
 
@@ -171,9 +192,9 @@ class BatchProcessor:
         self.state_file = self.output_dir / ".batch_state.json"
         self.completed = self._load_state() if resume else set()
 
-        logger.info("BatchProcessor initialized: %d workers, output: %s", workers, output_dir)
+        logger.info("BatchProcessor initialisiert: %d workers, Ausgabe: %s", workers, output_dir)
         if resume and self.completed:
-            logger.info("Resume mode: %d files already processed", len(self.completed))
+            logger.info("Resume Betriebsart: %d files already verarbeitet", len(self.completed))
 
     def _load_state(self) -> set:
         """Load completed files from state file."""
@@ -183,7 +204,7 @@ class BatchProcessor:
                     state = json.load(f)
                 return set(state.get("completed", []))
             except Exception:
-                logger.warning("batch_processor.py::_load_state fallback", exc_info=True)
+                logger.warning("batch_processor.py::_laden_state Ersatzpfad", exc_info=True)
                 return set()
         return set()
 
@@ -222,7 +243,7 @@ class BatchProcessor:
         if self.resume:
             files = [f for f in files if str(f) not in self.completed]
 
-        logger.info("Found %d audio files to process", len(files))
+        logger.info("Found %d audio files to verarbeiten", len(files))
         return files
 
     def process_file(self, input_file: Path, config: dict | None = None) -> dict:
@@ -372,7 +393,7 @@ class BatchProcessor:
 
         except Exception as e:
             elapsed = time.time() - start_time
-            logger.error("Failed to process %s: %s", input_file.name, e)
+            logger.error("konnte nicht verarbeiten %s: %s", input_file.name, e)
 
             return {"file": str(input_file), "success": False, "error": str(e), "elapsed": elapsed}
 
@@ -424,13 +445,13 @@ class BatchProcessor:
         logger.info("BATCH PROCESSING SUMMARY")
         logger.info("=" * 80)
         logger.info("Total Files:   %d", total)
-        logger.info("Successful:    %d (%.1f%%)", len(successful), success_pct)
-        logger.info("Failed:        %d (%.1f%%)", len(failed), failed_pct)
+        logger.info("erfolgreich:    %d (%.1f%%)", len(successful), success_pct)
+        logger.info("fehlgeschlagen:        %d (%.1f%%)", len(failed), failed_pct)
         logger.info("Total Time:    %.1fs", total_time)
         logger.info("Average Time:  %.1fs per file", avg_time)
 
         if failed:
-            logger.info("Failed Files:")
+            logger.info("fehlgeschlagen Files:")
             for r in failed:
                 logger.info("  - %s: %s", os.path.basename(r["file"]), r["error"])
 
@@ -521,7 +542,7 @@ def main():
                         _report.elapsed_seconds,
                     )
             except Exception as _exc:
-                logger.warning("Album-Konsistenz-Pass fehlgeschlagen (non-critical): %s", _exc)
+                logger.warning("Album-Konsistenz-Pass fehlgeschlagen (unkritisch): %s", _exc)
         else:
             logger.info(
                 "Album-Konsistenz-Pass: übersprungen (%d erfolgreiche Songs < 3 Minimum).",
@@ -602,7 +623,7 @@ def correlate_defects_across_tracks(track_analyses: list[dict]) -> dict[str, lis
     # Generate per-track parameter recommendations
     track_params = []
     for ta in track_analyses:
-        params = {"path": ta.get("path"), "use_shared": []}
+        params: Any = {"path": ta.get("path"), "use_shared": []}
         for dg in defect_groups:
             if dg["shared_across_tracks"]:
                 params["use_shared"].append(dg["defect_type"])

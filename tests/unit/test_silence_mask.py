@@ -23,7 +23,7 @@ def _music(duration_s: float = 2.0, sr: int = 48_000, level: float = 0.3) -> np.
     """Synthetisches Music-Signal (Sinus-Summe) auf gegebenem Pegel."""
     t = np.linspace(0.0, duration_s, int(duration_s * sr), endpoint=False)
     sig = (np.sin(2 * np.pi * 440.0 * t) + 0.5 * np.sin(2 * np.pi * 880.0 * t)) * level
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(duration_s: float = 1.0, sr: int = 48_000) -> np.ndarray:
@@ -285,7 +285,7 @@ class TestPegelexplosionRegression:
 
     def _make_song_with_silence(self) -> np.ndarray:
         """Intro-Stille + Musik + Outro-Stille."""
-        return np.concatenate(
+        return np.concatenate(  # type: ignore[no-any-return]
             [
                 _silence(1.0, self.SR),  # Intro
                 _music(3.0, self.SR, level=0.3),

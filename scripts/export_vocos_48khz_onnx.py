@@ -86,6 +86,13 @@ class ISTFTHeadONNX(nn.Module):
         self.N, self.H, self.g = N, H, g
         self.out = orig_head.out  # reuse trained Linear
 
+        # Explicit annotations: register_buffer() otherwise types these as
+        # "Tensor | Module" via nn.Module.__getattr__, breaking @/* operators.
+        self.win: torch.Tensor
+        self.cos_mat: torch.Tensor
+        self.sin_mat: torch.Tensor
+        self.norm_h: torch.Tensor
+
         win = torch.hann_window(N)
         self.register_buffer("win", win)
 

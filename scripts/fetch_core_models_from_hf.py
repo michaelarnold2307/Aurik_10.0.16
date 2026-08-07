@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import os
 import shutil
 import urllib.error
@@ -22,6 +23,8 @@ import urllib.parse
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 DROPIN = ROOT / "models" / ".dropin"
@@ -140,7 +143,7 @@ def _has_hf_token() -> bool:
 def _http_json(url: str) -> list | dict:
     req = urllib.request.Request(url, headers=_request_headers())
     with urllib.request.urlopen(req, timeout=25) as r:
-        return json.load(r)
+        return json.load(r)  # type: ignore[no-any-return]
 
 
 def _search_models(query: str, limit: int) -> list[str]:
@@ -171,6 +174,7 @@ def _pick_candidate(target: Target, model_ids: list[str]) -> tuple[str, str, int
         try:
             files = _model_files(mid)
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
         for f in files:
             name = str(f.get("rfilename", ""))

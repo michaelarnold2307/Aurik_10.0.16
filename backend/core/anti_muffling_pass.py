@@ -238,7 +238,7 @@ class AntiMufflingPass:
                     else:
                         result = ch_result[: len(result)].astype(np.float32)
             except Exception as e:
-                logger.warning("anti_muffling_pass.py::unbekannter Fallback: %s", e)
+                logger.warning("anti_muffling_pass.py::unbekannter Ersatzpfad: %s", e)
 
         # ── Clamp ──
         result = np.clip(result, -1.0, 1.0).astype(np.float32)

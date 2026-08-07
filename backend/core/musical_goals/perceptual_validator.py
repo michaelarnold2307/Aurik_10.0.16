@@ -140,59 +140,59 @@ class PerceptualValidator:
         # ast_audio_set_classifier.py _AUDIOSET_CLASS_NAMES.
         #
         # bass-kraft:     Low-frequency instruments → sub-bass energy
-        "bass-kraft":       [10, 73, 413],   # Bass drum, Double bass, Bass guitar
+        "bass-kraft": [10, 73, 413],  # Bass drum, Double bass, Bass guitar
         # brillanz:        High-frequency percussive → presence/clarity
-        "brillanz":         [310, 311, 346],  # Hi-hat, Cymbal, Tambourine
+        "brillanz": [310, 311, 346],  # Hi-hat, Cymbal, Tambourine
         # waerme:          Mid-low harmonic instruments → warmth
-        "waerme":           [137, 363, 364],  # Cello, String section, Orchestra
+        "waerme": [137, 363, 364],  # Cello, String section, Orchestra
         # natuerlichkeit:  Musical content (nicht Speech) → naturalness
-        "natuerlichkeit":   [15, 407, 137],   # Music, Singing, Cello
+        "natuerlichkeit": [15, 407, 137],  # Music, Singing, Cello
         # authentizitaet:  Source/genre authenticity markers
-        "authentizitaet":   [15, 28, 37],     # Music, Musical instrument, Independent music
+        "authentizitaet": [15, 28, 37],  # Music, Musical instrument, Independent music
         # emotionalitaet:  Mood classes → emotional impact
-        "emotionalitaet":   [399, 400, 401],  # Happy music, Sad music, Exciting music
+        "emotionalitaet": [399, 400, 401],  # Happy music, Sad music, Exciting music
         # transparenz:     High-frequency clarity + vocal presence
-        "transparenz":      [15, 407, 310],   # Music, Singing, Hi-hat
+        "transparenz": [15, 407, 310],  # Music, Singing, Hi-hat
     }
 
     # §v10.304: Genre-adaptive Goal-Mappings.
     # Jazz → andere Referenz-Instrumente als Metal oder Klassik.
     _GENRE_GOAL_MAPPINGS: dict[str, dict[str, list[int]]] = {
         "jazz": {
-            "bass-kraft":       [73, 137, 10],     # Double bass, Cello, Bass drum
-            "brillanz":         [310, 196, 138],    # Hi-hat, Flute, Bell
-            "waerme":           [141, 137, 363],    # Piano, Cello, String section
-            "emotionalitaet":   [401, 403, 400],    # Sad, Tender, Happy
+            "bass-kraft": [73, 137, 10],  # Double bass, Cello, Bass drum
+            "brillanz": [310, 196, 138],  # Hi-hat, Flute, Bell
+            "waerme": [141, 137, 363],  # Piano, Cello, String section
+            "emotionalitaet": [401, 403, 400],  # Sad, Tender, Happy
         },
         "classical_music": {
-            "bass-kraft":       [137, 73, 363],     # Cello, Double bass, String section
-            "brillanz":         [196, 138, 311],    # Flute, Bell, Cymbal
-            "waerme":           [363, 137, 141],    # String section, Cello, Piano
-            "emotionalitaet":   [403, 401, 400],    # Tender, Sad, Happy
+            "bass-kraft": [137, 73, 363],  # Cello, Double bass, String section
+            "brillanz": [196, 138, 311],  # Flute, Bell, Cymbal
+            "waerme": [363, 137, 141],  # String section, Cello, Piano
+            "emotionalitaet": [403, 401, 400],  # Tender, Sad, Happy
         },
         "rock_music": {
-            "bass-kraft":       [10, 413, 143],     # Bass drum, Bass guitar, Electric guitar
-            "brillanz":         [311, 310, 143],    # Cymbal, Hi-hat, Electric guitar
-            "waerme":           [143, 141, 10],     # Electric guitar, Piano, Bass drum
-            "emotionalitaet":   [404, 400, 401],    # Exciting, Happy, Sad
+            "bass-kraft": [10, 413, 143],  # Bass drum, Bass guitar, Electric guitar
+            "brillanz": [311, 310, 143],  # Cymbal, Hi-hat, Electric guitar
+            "waerme": [143, 141, 10],  # Electric guitar, Piano, Bass drum
+            "emotionalitaet": [404, 400, 401],  # Exciting, Happy, Sad
         },
         "pop_music": {
-            "bass-kraft":       [413, 10, 141],     # Bass guitar, Bass drum, Piano
-            "brillanz":         [310, 311, 407],    # Hi-hat, Cymbal, Singing
-            "waerme":           [141, 407, 137],    # Piano, Singing, Cello
-            "emotionalitaet":   [400, 404, 401],    # Happy, Exciting, Sad
+            "bass-kraft": [413, 10, 141],  # Bass guitar, Bass drum, Piano
+            "brillanz": [310, 311, 407],  # Hi-hat, Cymbal, Singing
+            "waerme": [141, 407, 137],  # Piano, Singing, Cello
+            "emotionalitaet": [400, 404, 401],  # Happy, Exciting, Sad
         },
         "electronic_music": {
-            "bass-kraft":       [10, 413, 299],     # Bass drum, Bass guitar, Synthesizer
-            "brillanz":         [311, 310, 299],    # Cymbal, Hi-hat, Synthesizer
-            "waerme":           [299, 141, 137],    # Synthesizer, Piano, Cello
-            "emotionalitaet":   [404, 400, 401],    # Exciting, Happy, Sad
+            "bass-kraft": [10, 413, 299],  # Bass drum, Bass guitar, Synthesizer
+            "brillanz": [311, 310, 299],  # Cymbal, Hi-hat, Synthesizer
+            "waerme": [299, 141, 137],  # Synthesizer, Piano, Cello
+            "emotionalitaet": [404, 400, 401],  # Exciting, Happy, Sad
         },
         "hip_hop": {
-            "bass-kraft":       [10, 413, 104],     # Bass drum, Bass guitar, Bass
-            "brillanz":         [310, 311, 407],    # Hi-hat, Cymbal, Singing
-            "waerme":           [407, 141, 143],    # Singing, Piano, Electric guitar
-            "emotionalitaet":   [404, 400, 357],    # Exciting, Happy, Hip hop
+            "bass-kraft": [10, 413, 104],  # Bass drum, Bass guitar, Bass
+            "brillanz": [310, 311, 407],  # Hi-hat, Cymbal, Singing
+            "waerme": [407, 141, 143],  # Singing, Piano, Electric guitar
+            "emotionalitaet": [404, 400, 357],  # Exciting, Happy, Hip hop
         },
     }
 
@@ -227,7 +227,7 @@ class PerceptualValidator:
         # 1) ONNX bundle at models/ast/ast_model.onnx
         # 2) HF local directory at models/ast_perceptual_base
         _central_loaded = self._try_load_central_classifier()
-        if not _central_loaded and self._try_load_onnx_model():
+        if _central_loaded or self._try_load_onnx_model():
             self.device = None
         else:
             self.device = torch.device("cpu") if _load_torch_stack() and torch is not None else None
@@ -268,7 +268,7 @@ class PerceptualValidator:
             from backend.core.plugin_lifecycle_manager import register_plugin
 
             if not try_allocate("ASTPerceptualONNX", 0.35):
-                logger.warning("AST ONNX wurde wegen ML-Budgetlimit nicht geladen — DSP-Fallback aktiviert")
+                logger.warning("AST ONNX wurde wegen ML-Budgetlimit nicht geladen — DSP-Ersatzpfad aktiviert")
                 return False
 
             try:
@@ -325,7 +325,7 @@ class PerceptualValidator:
             from backend.core.plugin_lifecycle_manager import register_plugin
 
             if not try_allocate("ASTPerceptualHF", 0.35):
-                logger.warning("AST HF wurde wegen ML-Budgetlimit nicht geladen — DSP-Fallback aktiviert")
+                logger.warning("AST HF wurde wegen ML-Budgetlimit nicht geladen — DSP-Ersatzpfad aktiviert")
                 return
 
             def _load_hf_model() -> tuple:
@@ -367,12 +367,12 @@ class PerceptualValidator:
                 register_plugin("ASTPerceptualHF", 0.35, _unload_hf)
                 logger.info("Psychoakustisches Modell geladen: %s (CPU)", model_name)
             except _cf.TimeoutError:
-                logger.warning("Modell-Laden Timeout (8 s) — DSP-Fallback aktiviert")
+                logger.warning("Modell-Laden Zeitlimit (8 s) — DSP-Ersatzpfad aktiviert")
                 self.feature_extractor = None
                 self.model = None
                 release("ASTPerceptualHF")
             except Exception as _load_err:
-                logger.warning("Modell-Laden Fehler: %s — DSP-Fallback", _load_err)
+                logger.warning("Modell-Laden Fehler: %s — DSP-Ersatzpfad", _load_err)
                 self.feature_extractor = None
                 self.model = None
                 release("ASTPerceptualHF")
@@ -382,12 +382,12 @@ class PerceptualValidator:
         except OSError as e:
             # Expected: model directory not bundled yet — DSP fallback is the intended path.
             # Log at DEBUG to avoid noise in startup logs.
-            logger.debug("PerceptualValidator: Modell nicht gefunden, DSP-Fallback aktiv (%s)", e)
+            logger.debug("PerceptualValidator: Modell nicht gefunden, DSP-Ersatzpfad aktiv (%s)", e)
             self.feature_extractor = None
             self.model = None
         except Exception as e:
-            logger.warning("Failed to load psychoacoustic model: %s", e)
-            logger.debug("Perceptual validation will use fallback heuristics")
+            logger.warning("konnte nicht laden psychoacoustic model: %s", e)
+            logger.debug("Perceptual Validierung will use Ersatzpfad heuristics")
             self.feature_extractor = None
             self.model = None
 
@@ -487,20 +487,20 @@ class PerceptualValidator:
                 _plm_ast = _get_plm_ast()
                 _plm_ast.set_active("ASTPerceptualONNX", True)
             except Exception as e:
-                logger.warning("perceptual_validator.py::_predict_psychoacoustic_score fallback: %s", e)
+                logger.warning("perceptual_validator.py::_predict_psychoacoustic_Wert Ersatzpfad: %s", e)
             try:
                 _inp = self._prepare_ast_onnx_input(audio, sr)
                 _res = self.onnx_session.run([self._onnx_output_name], {self._onnx_input_name: _inp})[0]
                 logits = np.asarray(_res, dtype=np.float32)
                 return self._map_onnx_output_to_goal(logits, goal_name)
             except Exception as e:
-                logger.debug("AST ONNX prediction failed: %s", e)
+                logger.debug("AST ONNX prediction fehlgeschlagen: %s", e)
             finally:
                 if _plm_ast is not None:
                     try:
                         _plm_ast.set_active("ASTPerceptualONNX", False)
                     except Exception as e:
-                        logger.warning("perceptual_validator.py::_predict_psychoacoustic_score fallback: %s", e)
+                        logger.warning("perceptual_validator.py::_predict_psychoacoustic_Wert Ersatzpfad: %s", e)
 
         if self.model is None:
             # Fallback: Heuristic-based scoring
@@ -531,7 +531,7 @@ class PerceptualValidator:
             return psychoacoustic_score, confidence
 
         except Exception as e:
-            logger.warning("Psychoacoustic prediction failed: %s", e)
+            logger.warning("Psychoacoustic prediction fehlgeschlagen: %s", e)
             return self._heuristic_psychoacoustic_score(audio, sr, goal_name, metadata)
 
     def _map_model_output_to_goal(self, probs: Any, goal_name: str, metadata: dict[str, Any]) -> tuple[float, float]:
@@ -775,7 +775,7 @@ class PerceptualValidator:
         )
 
         self.listening_test_requests.append(request)
-        logger.info("Created listening test request (priority=%s): %s", priority, reason)
+        logger.info("erstellt listening test request (priority=%s): %s", priority, reason)
 
     def _collect_ab_test_sample(
         self,
@@ -870,7 +870,7 @@ class PerceptualValidator:
         request = next((r for r in self.listening_test_requests if r.session_id == session_id), None)
 
         if not request:
-            logger.warning("No listening test request found for session %s", session_id)
+            logger.warning("No listening test request found for Sitzung %s", session_id)
             return  # type: ignore[return-value]
 
         # Store result
@@ -892,7 +892,7 @@ class PerceptualValidator:
 
         # Remove from queue
         self.listening_test_requests.remove(request)
-        logger.info("Listening test result submitted for session %s", session_id)
+        logger.info("Listening test Ergebnis submitted for Sitzung %s", session_id)
 
     def get_statistics(self) -> dict[str, Any]:
         """Gibt zurück: validation statistics."""
@@ -906,3 +906,28 @@ class PerceptualValidator:
                 "low": len([r for r in self.listening_test_requests if r.priority == "low"]),
             },
         }
+
+    def is_loaded(self) -> bool:
+        """Ob ein echtes psychoakustisches Modell aktiv ist (zentraler AST, ONNX oder HF).
+
+        Ohne aktives Modell fällt `validate_goal()` auf DSP-Heuristiken zurück (§G8-Transparenz-
+        konform per `logger.warning()` an den jeweiligen Ladeversuchen) — dieser Wert spiegelt
+        genau diesen Zustand für `ml_model_readiness.py` wider.
+        """
+        return self.onnx_session is not None or self.model is not None
+
+
+_validator: PerceptualValidator | None = None
+
+
+def get_perceptual_validator() -> PerceptualValidator:
+    """Gibt die globale PerceptualValidator-Instanz zurück (Singleton).
+
+    Kein per-Song-Zustand (§V8): `ab_test_samples`/`listening_test_requests` sind
+    projektweite Trainingsdaten-Sammlung, keine Song-spezifischen Audio-Daten —
+    ein Singleton ist hier architektonisch korrekt, analog `get_ast_classifier()`.
+    """
+    global _validator
+    if _validator is None:
+        _validator = PerceptualValidator()
+    return _validator

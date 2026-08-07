@@ -163,7 +163,7 @@ class TestAdvancedEnsemble:
         """Test Mixture of Experts."""
         experts = [nn.Sequential(nn.Linear(100, 50), nn.ReLU(), nn.Linear(50, 10)) for _ in range(3)]
 
-        moe = MixtureOfExperts(experts, input_dim=100, k_active=2)
+        moe = MixtureOfExperts(experts, input_dim=100, k_active=2)  # type: ignore[arg-type]
 
         x = torch.randn(4, 100)
         output, aux_losses = moe(x)
@@ -347,7 +347,7 @@ class TestUncertaintyQuantification:
         """Test Ensemble Uncertainty."""
         models = [nn.Sequential(nn.Linear(10, 20), nn.ReLU(), nn.Linear(20, 1)) for _ in range(3)]
 
-        ensemble_uq = EnsembleUncertainty(models, device="cpu")
+        ensemble_uq = EnsembleUncertainty(models, device="cpu")  # type: ignore[arg-type]
 
         x = torch.randn(4, 10)
         mean, std, details = ensemble_uq.predict_with_uncertainty(x)

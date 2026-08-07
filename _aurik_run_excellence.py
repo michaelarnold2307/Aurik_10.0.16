@@ -29,7 +29,7 @@ def _optional_import(module_name: str) -> Any:
     try:
         return importlib.import_module(module_name)
     except Exception:
-        logger.warning("_aurik_run_excellence.py::_optional_import fallback", exc_info=True)
+        logger.warning("_aurik_Ausfuehrung_excellence.py::_optional_import Ersatzpfad", exc_info=True)
         return None
 
 
@@ -176,9 +176,9 @@ def _progress_cb(pct: int, msg: str, elapsed_s: float = 0.0) -> None:
         remaining = total_est - elapsed_s
         _m, _s = divmod(int(remaining), 60)
         eta = f"  noch ca. {_m}:{_s:02d}" if _m > 0 else f"  noch ca. {_s}s"
-    logger.info(f"\r[{progress_bar}] {pct:3d}%{eta}  {msg[:60]}", end="", flush=True)
+    logger.info(f"\r[{progress_bar}] {pct:3d}%{eta}  {msg[:60]}", end="", flush=True)  # type: ignore[call-arg]
     if pct >= 100:
-        logger.info()
+        logger.info()  # type: ignore[call-arg]
 
 
 def main() -> int:
@@ -266,15 +266,15 @@ def main() -> int:
     # Quality-Gate prüfen
     if ergebnis.quality_estimate < 0.55:
         logger.warning(
-            "⚠ quality_estimate=%.3f < 0.55 — Export-Gate NICHT bestanden!",
+            "⚠ quality_estimate=%.3f < 0.55 — Ausgabe-Gate NICHT bestanden!",
             ergebnis.quality_estimate,
         )
         logger.warning(
-            "Export wird abgebrochen — Ursache: Qualitäts-Gate verfehlt. "
-            "Lösung: Pipeline/Gating vor Export korrigieren."
+            "Ausgabe wird abgebrochen — Ursache: Qualitäts-Gate verfehlt. "
+            "Lösung: Pipeline/Gating vor Ausgabe korrigieren."
         )
         return 2
-    logger.info("✓ Export-Gate bestanden (quality_estimate=%.3f ≥ 0.55)", ergebnis.quality_estimate)
+    logger.info("✓ Ausgabe-Gate bestanden (quality_estimate=%.3f ≥ 0.55)", ergebnis.quality_estimate)
 
     # ── Export ───────────────────────────────────────────────────────────────
     stem = input_path.stem
@@ -323,12 +323,12 @@ def main() -> int:
         logger.info("✓ FLAC exportiert: %s", out_flac_final)
 
     except Exception as exp_err:
-        logger.warning("AudioExporter fehlgeschlagen (%s) — Fallback auf soundfile", exp_err)
+        logger.warning("AudioExporter fehlgeschlagen (%s) — Ersatzpfad auf soundfile", exp_err)
         if _sf is None:
-            logger.error("Fallback fehlgeschlagen: soundfile ist nicht verfügbar.")
+            logger.error("Ersatzpfad fehlgeschlagen: soundfile ist nicht verfügbar.")
             return 4
         if _export_guard is None:
-            logger.error("Fallback fehlgeschlagen: Bridge export_guard ist nicht verfügbar.")
+            logger.error("Ersatzpfad fehlgeschlagen: Bridge Ausgabe_guard ist nicht verfügbar.")
             return 4
 
         # (samples, channels) oder (samples,) für soundfile
@@ -339,7 +339,7 @@ def main() -> int:
         finally:
             if tmp_wav.exists():
                 tmp_wav.unlink(missing_ok=True)
-        logger.info("✓ WAV exportiert (soundfile-Fallback): %s", out_wav)
+        logger.info("✓ WAV exportiert (soundfile-Ersatzpfad): %s", out_wav)
 
     logger.info("═" * 70)
     logger.info("Fertig! Ausgabe liegt in: %s/", OUTPUT_DIR)

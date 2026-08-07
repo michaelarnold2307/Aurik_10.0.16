@@ -323,7 +323,7 @@ class PhaseProgressNarrator:
     """Erklärt jeden Schritt — für jeden verständlich."""
 
     def __init__(self) -> None:
-        self._session_key = hashlib.md5(str(id(self)).encode()).hexdigest()[:6]
+        self._session_key = hashlib.md5(str(id(self)).encode(), usedforsecurity=False).hexdigest()[:6]
         self._used: dict[str, list[int]] = {}
         self._last_ts: dict[str, float] = {}
         self._rotate_every_s: float = 10.0
@@ -610,7 +610,7 @@ class PhaseProgressNarrator:
                 f"Spuren gelesen wie ein Detektiv. {rest}"
             ),
         ]
-        return _templates[rng.randint(0, len(_templates) - 1)]
+        return _templates[rng.randint(0, len(_templates) - 1)]  # type: ignore[no-any-return]
 
     def _chapter_repairing(self, mat, defects, era, rng) -> str:
         _def_str = f"{defects}" if defects else "verschiedene altersbedingte Störungen"
@@ -634,7 +634,7 @@ class PhaseProgressNarrator:
                 f"als wäre die Zeit spurlos an ihr vorübergegangen."
             ),
         ]
-        return _templates[rng.randint(0, len(_templates) - 1)]
+        return _templates[rng.randint(0, len(_templates) - 1)]  # type: ignore[no-any-return]
 
     def _chapter_enhancing(self, mat, era, chain, rng) -> str:
         _templates = [
@@ -657,7 +657,7 @@ class PhaseProgressNarrator:
                 f"geklungen hat, und stellt diesen Charakter wieder her."
             ),
         ]
-        return _templates[rng.randint(0, len(_templates) - 1)]
+        return _templates[rng.randint(0, len(_templates) - 1)]  # type: ignore[no-any-return]
 
     def _chapter_polishing(self, mat, era, rng) -> str:
         _templates = [
@@ -679,7 +679,7 @@ class PhaseProgressNarrator:
                 f"der Sorgfalt eines Uhrmachers an den letzten Feinheiten."
             ),
         ]
-        return _templates[rng.randint(0, len(_templates) - 1)]
+        return _templates[rng.randint(0, len(_templates) - 1)]  # type: ignore[no-any-return]
 
     def _chapter_result(self, mat, era, rest, rng) -> str:
         _templates = [
@@ -694,7 +694,7 @@ class PhaseProgressNarrator:
                 f"das ist das wichtigste Prinzip."
             ),
         ]
-        return _templates[rng.randint(0, len(_templates) - 1)]
+        return _templates[rng.randint(0, len(_templates) - 1)]  # type: ignore[no-any-return]
 
     # ── Ende Live-Chapter-Narration ──────────────────────────────────────
 

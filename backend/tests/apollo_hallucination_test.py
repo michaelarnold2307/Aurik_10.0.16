@@ -49,12 +49,8 @@ def spectral_novelty(original: np.ndarray, processed: np.ndarray, sr: int) -> fl
     _b = processed if processed.ndim == 1 else np.mean(processed, axis=0)
     n_fft, hop = 2048, 512
 
-    spec_a = np.abs(
-        np.array([np.fft.rfft(_a[i : i + n_fft]) for i in range(0, len(_a) - n_fft, hop)])
-    )
-    spec_b = np.abs(
-        np.array([np.fft.rfft(_b[i : i + n_fft]) for i in range(0, len(_b) - n_fft, hop)])
-    )
+    spec_a = np.abs(np.array([np.fft.rfft(_a[i : i + n_fft]) for i in range(0, len(_a) - n_fft, hop)]))
+    spec_b = np.abs(np.array([np.fft.rfft(_b[i : i + n_fft]) for i in range(0, len(_b) - n_fft, hop)]))
     m = min(spec_a.shape[0], spec_b.shape[0])
     spec_a, spec_b = spec_a[:m], spec_b[:m]
 
@@ -78,8 +74,9 @@ def load_apollo():
         model = torch.jit.load(str(_APOLLO_MODEL), map_location=dev)
         model.eval()
         model.to(dev)
-        logger.info("Apollo geladen: %s (%.1f MB, device=%s)", _APOLLO_MODEL.name,
-                     _APOLLO_MODEL.stat().st_size / 1e6, dev)
+        logger.info(
+            "Apollo geladen: %s (%.1f MB, device=%s)", _APOLLO_MODEL.name, _APOLLO_MODEL.stat().st_size / 1e6, dev
+        )
         return model, dev
     except ImportError:
         logger.error("torch nicht installiert. pip install torch")
@@ -123,7 +120,7 @@ def apollo_process(model, audio: np.ndarray, sr: int, device: str = "cpu") -> np
         result = result[:_orig_len]
 
     result = np.nan_to_num(result, nan=0.0, posinf=1.0, neginf=-1.0)
-    return np.clip(result, -1.0, 1.0)
+    return np.clip(result, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ── Test-Signale ─────────────────────────────────────────────────────────
@@ -136,7 +133,7 @@ def generate_cassette_hiss(sr: int = 48000, duration: float = 2.0) -> np.ndarray
 
         noise = np.random.randn(int(sr * duration)).astype(np.float32) * 0.03
         sos = butter(4, [300 / (sr / 2), 8000 / (sr / 2)], btype="band", output="sos")
-        return sosfilt(sos, noise).astype(np.float32)
+        return sosfilt(sos, noise).astype(np.float32)  # type: ignore[no-any-return]
     except ImportError:
         # Fallback ohne scipy
         noise = np.random.randn(int(sr * duration)).astype(np.float32) * 0.03
@@ -158,7 +155,8 @@ def mp3_compress(audio: np.ndarray, sr: int, bitrate: str = "128k") -> np.ndarra
         sf.write(_tmp_wav.name, audio, sr)
         subprocess.run(
             ["ffmpeg", "-y", "-i", _tmp_wav.name, "-b:a", bitrate, _tmp_mp3.name],
-            capture_output=True, check=True,
+            capture_output=True,
+            check=True,
         )
         result, result_sr = sf.read(_tmp_mp3.name)
         return np.asarray(result, dtype=np.float32)
@@ -177,9 +175,7 @@ def mp3_compress(audio: np.ndarray, sr: int, bitrate: str = "128k") -> np.ndarra
 # ── Gänsehaut-Score (vereinfacht) ────────────────────────────────────────
 
 
-def simplified_goosebumps_score(
-    audio: np.ndarray, sr: int, original: np.ndarray | None = None
-) -> float:
+def simplified_goosebumps_score(audio: np.ndarray, sr: int, original: np.ndarray | None = None) -> float:
     """Vereinfachter Gänsehaut-Score basierend auf Dynamik-Kontrast.
 
     Misst: (Peak-to-RMS Ratio) × (Spektrale-Varianz) relativ zum Original.
@@ -194,7 +190,7 @@ def simplified_goosebumps_score(
 
     # Spektrale Varianz
     n_fft = 2048
-    spec = np.abs(np.fft.rfft(_a[:n_fft * 4]))
+    spec = np.abs(np.fft.rfft(_a[: n_fft * 4]))
     spec_var = float(np.var(spec) / (np.mean(spec) + 1e-10))
 
     # Kombinierter Score, normalisiert
@@ -246,9 +242,8 @@ def run_tests() -> dict:
         "elapsed_s": round(elapsed, 2),
         "hallucination": novelty > 0.15,
     }
-    logger.info("  Spectral Novelty: %.4f (threshold: 0.15)", novelty)
-    logger.info("  RMS: %.1f dB → %.1f dB (Δ %.1f dB)", test1["rms_in_db"],
-                 test1["rms_out_db"], test1["rms_delta_db"])
+    logger.info("  Spectral Novelty: %.4f (Schwelle: 0.15)", novelty)
+    logger.info("  RMS: %.1f dB → %.1f dB (Δ %.1f dB)", test1["rms_in_db"], test1["rms_out_db"], test1["rms_delta_db"])
     logger.info("  Gänsehaut: %.4f → %.4f", test1["goosebumps_in"], test1["goosebumps_out"])
     results["hiss_test"] = test1
 
@@ -269,7 +264,7 @@ def run_tests() -> dict:
         "elapsed_s": round(elapsed, 2),
         "hallucination": novelty2 > 0.15,
     }
-    logger.info("  Spectral Novelty: %.4f (threshold: 0.15)", novelty2)
+    logger.info("  Spectral Novelty: %.4f (Schwelle: 0.15)", novelty2)
     results["sine_test"] = test2
 
     # ── Gesamt-Verdict ────────────────────────────────────────────────
@@ -280,9 +275,9 @@ def run_tests() -> dict:
         else "✅ GEEIGNET — Apollo beschränkt sich auf Decompression, keine Halluzination"
     )
 
-    results["verdict"] = verdict
-    results["status"] = "FAIL" if any_hallucination else "PASS"
-    results["hallucination_detected"] = any_hallucination
+    results["verdict"] = verdict  # type: ignore[assignment]
+    results["status"] = "FAIL" if any_hallucination else "PASS"  # type: ignore[assignment]
+    results["hallucination_detected"] = any_hallucination  # type: ignore[assignment]
 
     logger.info("\n" + "=" * 60)
     logger.info(verdict)

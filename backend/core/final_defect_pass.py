@@ -40,7 +40,7 @@ def final_defect_pass(audio: np.ndarray, sr: int) -> np.ndarray:
     # Nach der vollen Reparatur: prüfe ob Gesang beschädigt wurde
     result = _interpolate_vocal_damage(result, sr, vocal)
 
-    return np.clip(result, -1.0, 1.0).astype(np.float32)
+    return np.clip(result, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _fix_azimuth_full(audio, sr):
@@ -103,7 +103,7 @@ def _restore_hf_full(audio, sr):
                     result[i : i + block] = np.fft.irfft(ch_fft, n=block)
             restored += 1
 
-    logger.info("FinalPass HF: %d blocks restored (full strength)", restored)
+    logger.info("FinalPass HF: %d blocks wiederhergestellt (full strength)", restored)
     return result
 
 
@@ -118,7 +118,7 @@ def _remove_residual_clicks(audio, sr):
 
     for i in range(win, n - win, win * 8):  # Non-overlapping
         if removed >= max_modifications:
-            logger.warning("FinalPass clicks: ABORT at %d (safety limit)", removed)
+            logger.warning("FinalPass clicks: abbrechen at %d (safety limit)", removed)
             break
 
         seg = mono[i - win : i + win]
@@ -174,7 +174,7 @@ def _interpolate_vocal_damage(audio, sr, vocal_mask):
                     ch_data[i : i + win] = smoothed
                 repaired += 1
 
-        prev_rms = rms
+        prev_rms = rms  # type: ignore[assignment]
 
     logger.info("FinalPass vocal: %d damaged sections interpolated", repaired)
     return result

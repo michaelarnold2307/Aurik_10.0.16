@@ -37,7 +37,7 @@ def _load_benchmark_results() -> dict:
     for d in dirs:
         summary = d / "oss_summary.json"
         if summary.exists():
-            return json.loads(summary.read_text(encoding="utf-8"))
+            return json.loads(summary.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
     return {}
 
 
@@ -45,6 +45,7 @@ def _oss_benchmark_available() -> bool:
     """Prüft ob die OSS-Benchmark-Tools installiert sind."""
     try:
         import numpy as np
+
         return True
     except ImportError:
         return False

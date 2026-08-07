@@ -104,7 +104,7 @@ class MetricReliabilityGraph:
             self._save_locked_nonblocking()
 
         logger.debug(
-            "MetricReliabilityGraph update: phase=%s context=%s goals=%d",
+            "MetricReliabilityGraph Aktualisierung: Verarbeitungsschritt=%s context=%s goals=%d",
             phase_id,
             _context_key,
             len(_deltas),
@@ -257,7 +257,7 @@ class MetricReliabilityGraph:
                 if _ctx_map:
                     self._store[str(_ctx)] = _ctx_map
         except Exception as exc:
-            logger.debug("MetricReliabilityGraph.load non-blocking: %s", exc)
+            logger.debug("MetricReliabilityGraph.laden nicht blockierend: %s", exc)
 
     def _save_locked_nonblocking(self) -> None:
         try:
@@ -276,7 +276,7 @@ class MetricReliabilityGraph:
                 _tmp_name = tmp.name
             os.replace(_tmp_name, self._path)
         except Exception as exc:
-            logger.debug("MetricReliabilityGraph.save non-blocking: %s", exc)
+            logger.debug("MetricReliabilityGraph.speichern nicht blockierend: %s", exc)
 
     def _evict_if_needed_locked(self) -> None:
         if len(self._store) <= _MAX_CONTEXTS:

@@ -14,6 +14,7 @@ Pytest usage:
     pytest tests/test_enhanced_quality_gates.py -v
 """
 
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -168,7 +169,7 @@ class TestAutoReprocessingEngine:
 
         baseline = {"brillanz": 0.80, "waerme": 0.85, "transparenz": 0.88}
 
-        context = {}
+        context: dict[Any, Any] = {}
 
         strategies = engine._select_strategies(violations, baseline, context)
 
@@ -187,7 +188,7 @@ class TestAutoReprocessingEngine:
             # Simulate intensity-scaled processing
             return audio * (0.9 + 0.1 * intensity)
 
-        context = {}
+        context: dict[Any, Any] = {}
 
         # Execute parameter reduction (attempt 1 → 50% intensity)
         reprocessed, params = engine._strategy_parameter_reduction(
@@ -204,7 +205,7 @@ class TestAutoReprocessingEngine:
         original, sr = test_audio_mono
         processed, _ = test_audio_degraded
 
-        context = {}
+        context: dict[Any, Any] = {}
 
         # Execute hybrid blend (attempt 1 → 70% processed + 30% original)
         blended, params = engine._strategy_hybrid_blend(original, processed, sr, attempt_num=1, context=context)

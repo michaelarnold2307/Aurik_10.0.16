@@ -83,7 +83,7 @@ class PipelineCheckpoint:
 
             with open(cp_file, "wb") as f:
                 pickle.dump(cp, f)
-            logger.info("§CKPT Gespeichert: Phase %d/%d → %s", phase_idx + 1, total_phases, cp_file.name)
+            logger.info("§CKPT Gespeichert: Verarbeitungsschritt %d/%d → %s", phase_idx + 1, total_phases, cp_file.name)
             return str(cp_file)
         except Exception as e:
             logger.debug("§CKPT Fehler beim Speichern: %s", e)
@@ -97,7 +97,7 @@ class PipelineCheckpoint:
             if not path.exists():
                 return None
             with open(path, "rb") as f:
-                cp = pickle.load(f)
+                cp = pickle.load(f)  # nosec B301 — lokaler Aurik-Checkpoint, nicht nutzerfremde Quelle
             # Audio aus .npy laden
             audio_file = Path(cp.checkpoint_file)
             if audio_file.exists():
@@ -105,12 +105,12 @@ class PipelineCheckpoint:
             else:
                 return None
             logger.info(
-                "§CKPT Geladen: Phase %d/%d, %d Phasen bereits ausgeführt",
+                "§CKPT Geladen: Verarbeitungsschritt %d/%d, %d Phasen bereits ausgeführt",
                 cp.phase_idx + 1,
                 cp.total_phases,
                 len(cp.executed_phases),
             )
-            return cp
+            return cp  # type: ignore[no-any-return]
         except Exception as e:
             logger.warning("§CKPT Fehler beim Laden: %s", e)
             return None
@@ -127,7 +127,7 @@ class PipelineCheckpoint:
                     return str(f)
             return None
         except Exception as e:
-            logger.warning("pipeline_resilience.py::find_latest fallback: %s", e)
+            logger.warning("pipeline_resilience.py::find_latest Ersatzpfad: %s", e)
             return None
 
     @staticmethod
@@ -141,7 +141,7 @@ class PipelineCheckpoint:
                 count += 1
             return count
         except Exception as e:
-            logger.warning("pipeline_resilience.py::cleanup fallback: %s", e)
+            logger.warning("pipeline_resilience.py::cleanup Ersatzpfad: %s", e)
             return 0
 
 

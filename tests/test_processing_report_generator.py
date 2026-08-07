@@ -14,6 +14,7 @@ Date: 2026-02-10
 """
 
 import json
+from typing import Any
 
 import numpy as np
 import pytest
@@ -525,7 +526,7 @@ class TestIntegrationScenarios:
         # Clean audio (no processing needed)
         audio = 0.3 * np.sin(2 * np.pi * 440 * t)
 
-        history = {"detected_issues": [], "applied_modules": [], "parameters": {}, "confidence_scores": {}}
+        history: Any = {"detected_issues": [], "applied_modules": [], "parameters": {}, "confidence_scores": {}}
 
         generator = ProcessingReportGenerator()
         report = generator.create_report(

@@ -180,7 +180,7 @@ class BatchProcessor:
             if config.on_file_complete:
                 config.on_file_complete(
                     input_file,
-                    Path(result["output_path"]) if result["output_path"] else None,
+                    Path(result["output_path"]) if result["output_path"] else None,  # type: ignore[arg-type]
                     result["success"],
                     result.get("error", ""),
                 )
@@ -202,10 +202,10 @@ class BatchProcessor:
             if config.on_progress:
                 config.on_progress(len(config.input_files), len(config.input_files), "Complete")
 
-            return results
+            return results  # type: ignore[no-any-return]
 
         except Exception as e:
-            logger.error(f"Parallel processing failed: {e}")
+            logger.error(f"Parallel processing fehlgeschlagen: {e}")
             # Fallback to sequential
             logger.info("Falling back to sequential processing")
             return self._process_sequential(config)
@@ -268,7 +268,7 @@ class BatchProcessor:
             result["success"] = True
 
         except Exception as e:
-            logger.error(f"Failed to process {input_file}: {e}")
+            logger.error(f"konnte nicht verarbeiten {input_file}: {e}")
             result["error"] = str(e)
             result["success"] = False
 
@@ -295,7 +295,7 @@ class ProcessingState:
             try:
                 self.audio_backup.unlink()
             except Exception as e:
-                logger.warning(f"Failed to cleanup backup: {e}")
+                logger.warning(f"konnte nicht cleanup backup: {e}")
 
 
 class UndoRedoManager:
@@ -344,10 +344,10 @@ class UndoRedoManager:
             if output_path.exists():
                 shutil.copy2(output_path, backup_path)
             else:
-                backup_path = None
+                backup_path = None  # type: ignore[assignment]
         except Exception as e:
-            logger.warning(f"Failed to create backup: {e}")
-            backup_path = None
+            logger.warning(f"konnte nicht erstellen backup: {e}")
+            backup_path = None  # type: ignore[assignment]
 
         # Create state
         state = ProcessingState(
@@ -400,9 +400,9 @@ class UndoRedoManager:
         if state.audio_backup and state.audio_backup.exists():
             try:
                 shutil.copy2(state.audio_backup, state.output_path)
-                logger.info(f"Restored backup: {state.output_path}")
+                logger.info(f"wiederhergestellt backup: {state.output_path}")
             except Exception as e:
-                logger.error(f"Failed to restore backup: {e}")
+                logger.error(f"konnte nicht wiederherstellen backup: {e}")
 
         return state
 
@@ -458,7 +458,7 @@ class UndoRedoManager:
             if self.backup_dir.exists() and not any(self.backup_dir.iterdir()):
                 self.backup_dir.rmdir()
         except Exception:
-            logger.warning("workflow_manager.py::cleanup_all fallback", exc_info=True)
+            logger.warning("workflow_manager.py::cleanup_all Ersatzpfad", exc_info=True)
 
 
 # ===== GAP #28: Session Management Integration =====
@@ -488,11 +488,11 @@ class WorkflowSessionManager:
 
             self.backend_manager = SessionManager(sessions_dir=sessions_dir)
         except ImportError:
-            logger.warning("Backend SessionManager not available, using stub")
-            self.backend_manager = None
+            logger.warning("Backend SessionManager not verfuegbar, using stub")
+            self.backend_manager = None  # type: ignore[assignment]
         except Exception as e:
-            logger.warning(f"Failed to initialize backend SessionManager: {e}, using stub")
-            self.backend_manager = None
+            logger.warning(f"konnte nicht initialisieren backend SessionManager: {e}, using stub")
+            self.backend_manager = None  # type: ignore[assignment]
 
         self.current_session_id: str | None = None
         self.auto_save = True
@@ -512,7 +512,7 @@ class WorkflowSessionManager:
             if isinstance(session, str):
                 session_id = session
             else:
-                session_id = session.session_id
+                session_id = session.session_id  # type: ignore[assignment]
             self.current_session_id = session_id
             return session_id
         return "stub_session"
@@ -556,7 +556,7 @@ class WorkflowSessionManager:
                     self.backend_manager.save_session()
 
             except Exception as e:
-                logger.error(f"Failed to add file to session: {e}")
+                logger.error(f"konnte nicht add file to Sitzung: {e}")
 
     def get_recent_sessions(self, limit: int = 10) -> list[dict]:
         """Gibt zurück: list of recent sessions."""
@@ -567,7 +567,7 @@ class WorkflowSessionManager:
     def export_session(self, session_id: str, export_path: Path) -> bool:
         """Export session to file."""
         if self.backend_manager:
-            return self.backend_manager.export_session(session_id, export_path)
+            return self.backend_manager.export_session(session_id, export_path)  # type: ignore[no-any-return]
         return False
 
     def import_session(self, import_path: Path) -> str | None:

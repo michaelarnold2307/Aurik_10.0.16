@@ -191,7 +191,7 @@ class ProcessingModeManager:
         """
         self.current_mode = mode
         self.config = PROCESSING_MODE_CONFIGS[mode]
-        logger.info("ProcessingModeManager initialized with mode: %s", mode.value)
+        logger.info("ProcessingModeManager initialisiert with Betriebsart: %s", mode.value)
 
     def set_mode(self, mode: ProcessingMode) -> None:
         """Change processing mode."""
@@ -384,12 +384,12 @@ def print_mode_comparison(achieved_goals: dict[str, float]) -> None:
     results = manager.compare_modes(achieved_goals)
 
     logger.debug("\n" + "=" * 80)
-    logger.debug("PROCESSING MODE COMPARISON")
+    logger.debug("PROCESSING Betriebsart COMPARISON")
     logger.debug("=" * 80)
 
     for i, result in enumerate(results, 1):
         passed_str = "✅ PASS" if result["passed"] else "❌ FAIL"
-        logger.debug("\n%s. %s | Score: %.2f | %s", i, result["mode_name"], result["overall_score"], passed_str)
+        logger.debug("\n%s. %s | Wert: %.2f | %s", i, result["mode_name"], result["overall_score"], passed_str)
 
         if result["violations"]:
             logger.debug("   Violations: %s", len(result["violations"]))

@@ -27,6 +27,8 @@ from backend.core.defect_scanner import MaterialType  # §v10.113
 
 logger = logging.getLogger(__name__)
 
+MATERIAL_EXPECTED_BW = 20000.0
+
 # Pfad zur Anker-Datei (optional — DSP-Fallback wenn fehlt)
 _ANCHORS_PATH = Path(__file__).parent.parent.parent / "models" / "era_classifier" / "reference_anchors.npz"
 
@@ -159,7 +161,7 @@ class ReferenceAnchorSynthesizer:
         elif hasattr(anchor_result, "anchor_spectrum"):
             anchor_spectrum = anchor_result.anchor_spectrum  # type: ignore[assignment]
         else:
-            anchor_spectrum = np.zeros(N_ANCHOR_BINS, dtype=np.float32)
+            anchor_spectrum = np.zeros(N_ANCHOR_BINS, dtype=np.float32)  # type: ignore[assignment]
 
         channels = ([audio[0], audio[1]] if audio.shape[0] == 2 else [audio[0]]) if audio.ndim == 2 else [audio]
 
@@ -234,9 +236,9 @@ class ReferenceAnchorSynthesizer:
             1950: 10000,
             1960: 12000,
             1970: 16000,
-        }.get(era_decade // 10 * 10, 20000)
+        }.get(era_decade // 10 * 10, MATERIAL_EXPECTED_BW)
 
-        if bw_hz < 20000:
+        if bw_hz < MATERIAL_EXPECTED_BW:
             bw_mask = freqs > bw_hz
             rolloff = np.zeros(N_ANCHOR_BINS, dtype=np.float32)
             rolloff[bw_mask] = -24.0 * np.log2(freqs[bw_mask] / bw_hz + 1e-9)

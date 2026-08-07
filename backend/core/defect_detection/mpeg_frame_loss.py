@@ -55,14 +55,14 @@ def detect_mpeg_frame_loss(
     duration = n_samples / sr
 
     if duration < 2.0:
-        return [], 0.0
+        return [], 0.0  # type: ignore[return-value]
 
     if hop_size is None:
         hop_size = fft_size // 4
 
     n_frames = (n_samples - fft_size) // hop_size + 1
     if n_frames < 2:
-        return [], 0.0
+        return [], 0.0  # type: ignore[return-value]
 
     # --- 1. Spektrogramm ---
     window = np.hanning(fft_size)
@@ -176,7 +176,7 @@ def detect_mpeg_frame_loss(
     all_locations = sorted(set(all_locations))
 
     if not all_locations:
-        return [], 0.0
+        return [], 0.0  # type: ignore[return-value]
 
     # Brickwall als stärkster Indikator für MPEG-Frame-Verlust
     total_defect_s = sum(e - s for s, e in all_locations)
@@ -202,7 +202,7 @@ def detect_mpeg_frame_loss(
         "severity": round(severity, 4),
     }
 
-    return all_locations, confidence
+    return all_locations, confidence  # type: ignore[return-value]
 
 
 def _overlaps_existing(start: float, end: float, existing: list[tuple[float, float]], margin: float = 0.05) -> bool:

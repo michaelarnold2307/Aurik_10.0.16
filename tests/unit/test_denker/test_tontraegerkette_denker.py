@@ -38,7 +38,7 @@ SR = 48_000
 
 def _sine(dur: float = 1.0) -> np.ndarray:
     t = np.linspace(0, dur, int(SR * dur), endpoint=False)
-    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_ketten_ergebnis():
@@ -46,7 +46,7 @@ def _make_ketten_ergebnis():
     try:
         from denker.tontraegerkette_denker import KettenErgebnis
 
-        return KettenErgebnis(
+        return KettenErgebnis(  # type: ignore[call-arg]
             chain_string="cassette_tape → mp3_low",
             combined_phases=["phase_03_denoise", "phase_23_spectral_repair"],
             chain_complexity=0.8,

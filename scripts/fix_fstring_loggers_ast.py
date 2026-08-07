@@ -55,7 +55,7 @@ def _fmt_spec_str(spec_node: ast.JoinedStr | None) -> str:
     # Only handle constant spec (no dynamic width/precision)
     if len(spec_node.values) == 1 and isinstance(spec_node.values[0], ast.Constant):
         return str(spec_node.values[0].value)
-    return None  # dynamic spec — skip this entire call
+    return None  # type: ignore  # dynamic spec — skip this entire call
 
 
 def _spec_to_percent(spec: str, conv: int) -> str | None:
@@ -105,7 +105,7 @@ def _transform_joinedstr(node: ast.JoinedStr) -> tuple[str, list[str]] | None:
             fmt_parts.append(literal)
         elif isinstance(part, ast.FormattedValue):
             conv = part.conversion  # -1, 114=r, 115=s, 97=a
-            spec_str = _fmt_spec_str(part.format_spec)
+            spec_str = _fmt_spec_str(part.format_spec)  # type: ignore[arg-type]
             if spec_str is None:
                 return None  # dynamic spec — skip
 
@@ -203,7 +203,7 @@ def _process_file(path: Path, apply: bool) -> int:
     try:
         original = path.read_text(encoding="utf-8")
     except Exception:
-        logger.warning("fix_fstring_loggers_ast.py::_process_file fallback", exc_info=True)
+        logger.warning("fix_fstring_loggers_ast.py::_verarbeiten_file Ersatzpfad", exc_info=True)
         return 0
 
     lines = original.splitlines(keepends=True)

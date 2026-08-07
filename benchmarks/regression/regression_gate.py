@@ -58,14 +58,14 @@ def _make_music(dur: float = 2.0, sr: int = 48000) -> np.ndarray:
     sig += 0.3 * np.sin(2 * np.pi * 130.81 * t) * bass_env
     str_env = (1.0 - np.exp(-t * 1.5)) * np.exp(-t * 0.3)
     sig += 0.15 * np.sin(2 * np.pi * 349.23 * t) * str_env
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_noisy(clean: np.ndarray, snr_db: float = 10.0) -> np.ndarray:
     rng = np.random.RandomState(42)
     sp = np.mean(clean**2)
     npwr = sp / (10 ** (snr_db / 10))
-    return clean + np.sqrt(npwr) * rng.randn(len(clean)).astype(np.float32)
+    return clean + np.sqrt(npwr) * rng.randn(len(clean)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -99,7 +99,7 @@ def _artifact_score(clean: np.ndarray, processed: np.ndarray) -> float:
     hf = int(len(cs) * 0.75)
     if hf >= len(cs):
         return 1.0
-    return max(0.0, min(1.0, (np.sum(cs[hf:]) + 1e-10) / (np.sum(ps[hf:]) + 1e-10)))
+    return max(0.0, min(1.0, (np.sum(cs[hf:]) + 1e-10) / (np.sum(ps[hf:]) + 1e-10)))  # type: ignore[no-any-return]
 
 
 def compute_pqs(clean: np.ndarray, restored: np.ndarray) -> float:
@@ -141,14 +141,14 @@ def aurik_pipeline(audio: np.ndarray, sr: int = 48000, use_real: bool = True, fu
         from scipy.signal import butter, filtfilt
 
         b, a = butter(6, 12000 / (sr / 2), btype="low")
-        return filtfilt(b, a, audio.astype(np.float64)).astype(np.float32)
+        return filtfilt(b, a, audio.astype(np.float64)).astype(np.float32)  # type: ignore[no-any-return]
     try:
         from backend.core.comfort_guard import apply_comfort_guard
         from backend.core.phases.phase_01_click_removal import ClickRemovalPhase
         from backend.core.phases.phase_03_denoise import DenoisePhase
 
         a = audio.astype(np.float32)
-        r1 = ClickRemovalPhase(sample_rate=sr).process(a, sample_rate=sr, material_type="vinyl")
+        r1 = ClickRemovalPhase(sample_rate=sr).process(a, sample_rate=sr, material_type="vinyl")  # type: ignore[call-arg]
         r3 = DenoisePhase(sample_rate=sr).process(r1.audio, sample_rate=sr, material_type="vinyl")
         return apply_comfort_guard(r3.audio, sr)
     except Exception:
@@ -243,7 +243,7 @@ def generate_baseline(dur: float = 1.0) -> Baseline:
         except Exception as e:
             ec_results[name] = {
                 "no_crash": False,
-                "error": str(e)[:100],
+                "error": str(e)[:100],  # type: ignore[dict-item]
                 "runtime_s": 0.0,
             }
 
@@ -264,7 +264,7 @@ def generate_baseline(dur: float = 1.0) -> Baseline:
                 "success": r.success,
             }
         except Exception as e:
-            param_results[f"denoise_{mat}"] = {"error": str(e)[:100]}
+            param_results[f"denoise_{mat}"] = {"error": str(e)[:100]}  # type: ignore[dict-item]
 
     return Baseline(
         version="10.0.0-Phantom",
@@ -335,11 +335,11 @@ def analyze_phase_contributions(dur: float = 1.0) -> dict:
     try:
         from backend.core.phases.phase_01_click_removal import ClickRemovalPhase
 
-        p1 = ClickRemovalPhase(sample_rate=sr)
+        p1 = ClickRemovalPhase(sample_rate=sr)  # type: ignore[call-arg]
         r1 = p1.process(noisy, sample_rate=sr, material_type="vinyl")
         contributions["phase_01_click_removal"] = compute_pqs(music, r1.audio)
     except Exception as e:
-        contributions["phase_01_click_removal"] = f"ERROR: {e}"
+        contributions["phase_01_click_removal"] = f"ERROR: {e}"  # type: ignore[assignment]
 
     # Phase 03 only
     try:
@@ -349,7 +349,7 @@ def analyze_phase_contributions(dur: float = 1.0) -> dict:
         r3 = p3.process(noisy, sample_rate=sr, material_type="vinyl")
         contributions["phase_03_denoise"] = compute_pqs(music, r3.audio)
     except Exception as e:
-        contributions["phase_03_denoise"] = f"ERROR: {e}"
+        contributions["phase_03_denoise"] = f"ERROR: {e}"  # type: ignore[assignment]
 
     # Full mini-pipeline
     contributions["full_mini_pipeline"] = compute_pqs(music, aurik_pipeline(noisy, sr))

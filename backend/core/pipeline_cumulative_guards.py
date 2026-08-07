@@ -52,7 +52,7 @@ class CumulativeDynamicsTracker:
         self._original_crest_db = self._measure_crest(audio)
         self._current_crest_db = self._original_crest_db
         if self._original_crest_db is not None:
-            logger.info("§CUMUL-Dyn Original-Crest: %.1f dB", self._original_crest_db)
+            logger.info("§CUMUL-Dyn Originalsignal-Crest: %.1f dB", self._original_crest_db)
 
     def check(self, audio: np.ndarray, phase_id: str) -> dict[str, Any]:
         """Prüft nach einer Phase den kumulativen Crest-Verlust.
@@ -100,7 +100,7 @@ class CumulativeDynamicsTracker:
             logger.error(
                 "§CUMUL-Dyn BLOCK: %.1f dB Crest-Verlust → "
                 "alle subtraktiven Phasen gesperrt! "
-                "Original-Crest=%.1f dB, aktuell=%.1f dB",
+                "Originalsignal-Crest=%.1f dB, aktuell=%.1f dB",
                 self._cumulative_loss_db,
                 self._original_crest_db,
                 new_crest,
@@ -166,7 +166,7 @@ class EarlyQualityGate:
         if _mat in ("cassette", "reel_tape", "tape"):
             self._crest_abort_db: float = 4.0 + 2.0 * _depth  # depth=1→6, depth=4→12
         else:
-            self._crest_abort_db: float = 4.0
+            self._crest_abort_db: float = 4.0  # type: ignore[no-redef]
 
     def set_pre_snapshot(self, audio: np.ndarray) -> None:
         """Speichert Pre-Pipeline-Metriken."""
@@ -177,7 +177,7 @@ class EarlyQualityGate:
             self._snapshot_rms_db = float(20.0 * np.log10(rms))
             self._snapshot_crest_db = float(20.0 * np.log10(peak / rms))
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def after_phase(self, phase_id: str, audio: np.ndarray, phase_failed: bool = False) -> dict[str, Any]:
         """Wird nach jeder Phase aufgerufen. Prüft Early-Abort-Bedingungen."""
@@ -217,7 +217,7 @@ class EarlyQualityGate:
                         f"{self._executed}/{self._total} Phasen — "
                         f"Material zu schlecht für Full-Pipeline"
                     )
-                    logger.warning("§EARLY-GATE ABORT: %s", result["reason"])
+                    logger.warning("§EARLY-GATE abbrechen: %s", result["reason"])
             except Exception:
                 pass
 
@@ -396,7 +396,7 @@ def diagnose_phase40_performance(phase_id: str, elapsed_s: float, audio_duration
     rt_factor = elapsed_s / max(audio_duration_s, 0.1)
     if rt_factor > 1.0:
         logger.warning(
-            "§PERF-GUARD phase_40: %.1fs für %.1fs Audio = %.1f× RT "
+            "§PERF-GUARD Verarbeitungsschritt_40: %.1fs für %.1fs Audio = %.1f× RT "
             "(erwartet <0.5×). Möglicher Performance-Bug in "
             "Loudness-Normalization-Loop.",
             elapsed_s,
@@ -434,9 +434,9 @@ def cross_validate_assessment(
         result["flags"].append("mushra_false_positive")
         result["recommendation"] = "degraded_input"
         logger.warning(
-            "§CROSS-VALIDATE: MUSHRA=%.0f aber QualityGate Δ=%.1f → "
+            "§CROSS-validieren: MUSHRA=%.0f aber QualityGate Δ=%.1f → "
             "MUSHRA vermutlich False-Positive (unverändertes Audio?). "
-            "Empfehlung: degraded_input melden, nicht 'Excellent'.",
+            "Empfehlung: degraded_Eingabe melden, nicht 'Excellent'.",
             mushra_score,
             quality_gate_delta,
         )
@@ -446,7 +446,7 @@ def cross_validate_assessment(
         result["consistent"] = False
         result["flags"].append("hpi_naturalness_mismatch")
         logger.warning(
-            "§CROSS-VALIDATE: HPI=%.3f aber Naturalness=%.3f → "
+            "§CROSS-validieren: HPI=%.3f aber Naturalness=%.3f → "
             "HPI könnte durch konservative Parameter verfälscht sein.",
             hpi_score,
             naturalness,
@@ -457,7 +457,7 @@ def cross_validate_assessment(
         result["consistent"] = False
         result["flags"].append("mushra_afg_mismatch")
         logger.warning(
-            "§CROSS-VALIDATE: MUSHRA=%.0f aber AFG=%.3f → subjektive Bewertung ignoriert hörbare Artefakte.",
+            "§CROSS-validieren: MUSHRA=%.0f aber AFG=%.3f → subjektive Bewertung ignoriert hörbare Artefakte.",
             mushra_score,
             artifact_freedom,
         )
@@ -493,7 +493,7 @@ class PipelineCumulativeGuard:
 
     @property
     def original_crest_db(self) -> float:
-        return self.dynamics._original_crest_db
+        return self.dynamics._original_crest_db  # type: ignore[return-value]
 
     @property
     def cumulative_crest_loss_db(self) -> float:
@@ -559,7 +559,7 @@ class PipelineCumulativeGuard:
         self._onset_tolerance_pct = calib.onset_loss_tolerance_pct
         self._onset_block_pct = calib.onset_loss_block_pct
         logger.info(
-            "§CALIBRATED crest=%.1f/%.1fdB nt=%.3f/%d onset=%.0f/%.0f%% early=%.0f%% cons=%s",
+            "§kalibriert crest=%.1f/%.1fdB nt=%.3f/%d onset=%.0f/%.0f%% early=%.0f%% cons=%s",
             self._crest_tolerance_db,
             self._crest_block_db,
             self._nt_tolerance,
@@ -683,7 +683,7 @@ class PipelineCumulativeGuard:
             "crest_loss_db": round(self.dynamics._cumulative_loss_db, 1),
             "nt_triggers": self.noise_texture._trigger_count,
             "groove_rollbacks": self.groove._total_rollbacks,
-            "early_abort": self.early_gate.aborted,
+            "early_abort": self.early_gate.aborted,  # type: ignore[union-attr]
             "phase_timings": self._phase_timings[-10:],
         }
 

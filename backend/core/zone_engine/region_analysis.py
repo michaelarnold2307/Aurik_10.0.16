@@ -189,7 +189,7 @@ class RegionDetector:
         min_samples = int(sr * self.min_region_duration_ms / 1000.0)
         regions = [r for r in regions if r.duration_samples >= min_samples]
 
-        logger.info("Detected %s regions in audio", len(regions))
+        logger.info("erkannt %s regions in audio", len(regions))
         return regions
 
     def _classify_frame(
@@ -346,7 +346,7 @@ class RegionAnalyzer:
                 }
             )
         except Exception as e:
-            logger.warning("Spectral analysis failed: %s", e)
+            logger.warning("Spectral Analyse fehlgeschlagen: %s", e)
 
         # Dynamic analysis
         rms = np.sqrt(np.mean(region_audio**2))
@@ -372,7 +372,7 @@ class RegionAnalyzer:
                     analysis["f0_std"] = float(np.nanstd(voiced_f0))
                     analysis["voiced_ratio"] = float(np.sum(voiced_flag) / len(voiced_flag))
             except Exception as e:
-                logger.warning("F0 analysis failed: %s", e)
+                logger.warning("F0 Analyse fehlgeschlagen: %s", e)
 
         elif region.region_type == RegionType.MUSIC:
             # Tempo for music
@@ -380,7 +380,7 @@ class RegionAnalyzer:
                 tempo, _ = librosa.beat.beat_track(y=region_audio, sr=sr)  # type: ignore[attr-defined]
                 analysis["tempo_bpm"] = float(np.asarray(tempo).flat[0])
             except Exception as e:
-                logger.warning("Tempo analysis failed: %s", e)
+                logger.warning("Tempo Analyse fehlgeschlagen: %s", e)
 
         return analysis
 
@@ -553,7 +553,7 @@ class RegionAnalysisSystem:
 
         # 1. Detect regions
         regions = self.detector.detect_regions(audio, sr)
-        logger.info("  ├─ Detected %s regions", len(regions))
+        logger.info("  ├─ erkannt %s regions", len(regions))
 
         # 2. Analyze each region
         region_data = []
@@ -594,7 +594,7 @@ class RegionAnalysisSystem:
             "metadata": {"analysis_only": True, "no_audio_modification": True, "normative_compliance": True},
         }
 
-        logger.info("  └─ Region analysis complete: %s regions identified", len(regions))
+        logger.info("  └─ Region Analyse vollstaendig: %s regions identified", len(regions))
 
         return report
 
@@ -611,7 +611,7 @@ class RegionAnalysisSystem:
         with open(output_path, "w") as f:
             json.dump(report, f, indent=2)
 
-        logger.info("Region analysis exported to %s", output_path)
+        logger.info("Region Analyse exported to %s", output_path)
 
 
 # ==============================================================================

@@ -269,7 +269,7 @@ class HarmonicLatticeAnalyzer:
             else:
                 audio_corr = np.pad(audio_corr, (0, n_samples - len(audio_corr)))
         except Exception as e:
-            logger.warning("harmonic_lattice_analyzer.py::unbekannter Fallback: %s", e)
+            logger.warning("harmonic_lattice_analyzer.py::unbekannter Ersatzpfad: %s", e)
             return np.clip(audio_f32, -1.0, 1.0)  # type: ignore[no-any-return]  # graceful passthrough on any STFT error
 
         # Dry/wet blend — confidence already factored into `wet`.

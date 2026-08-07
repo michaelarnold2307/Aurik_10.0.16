@@ -28,15 +28,14 @@ from typing import Any
 
 from backend.core.calibration_context import CalibrationContext, get_calibration_context
 
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # Physikalische Konstanten (AUSNAHME von §V25 — physikalische Wahrheiten)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-DIGITAL_BLACK_DBFS = -60.0          # §V25-Ausnahme: physikalische Konstante
-TRUE_PEAK_CEILING_DBTP = -0.3      # ITU-R BS.1770
-NYQUIST_FACTOR = 0.95              # Sicherheitsabstand zu Nyquist
-MIN_SIGNAL_LENGTH_S = 0.1          # 100ms Minimum für sinnvolle Analyse
+DIGITAL_BLACK_DBFS = -60.0  # §V25-Ausnahme: physikalische Konstante
+TRUE_PEAK_CEILING_DBTP = -0.3  # ITU-R BS.1770
+NYQUIST_FACTOR = 0.95  # Sicherheitsabstand zu Nyquist
+MIN_SIGNAL_LENGTH_S = 0.1  # 100ms Minimum für sinnvolle Analyse
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -128,20 +127,12 @@ class CalibratedConstants:
     def gdd_spectral_ms(self, phase_id: str = "") -> float:
         """GDD-Schwelle für spectral-subtraction Phasen (phase_03, phase_29, …)."""
         return (
-            self.gdd_spectral_base_ms
-            * self.gdd_restorability_factor
-            * self.gdd_material_factor
-            * self.gdd_chain_factor
+            self.gdd_spectral_base_ms * self.gdd_restorability_factor * self.gdd_material_factor * self.gdd_chain_factor
         )
 
     def gdd_general_ms(self) -> float:
         """GDD-Schwelle für allgemeine STFT-Phasen."""
-        return (
-            self.gdd_base_ms
-            * self.gdd_restorability_factor
-            * self.gdd_analog_factor
-            * self.gdd_chain_factor
-        )
+        return self.gdd_base_ms * self.gdd_restorability_factor * self.gdd_analog_factor * self.gdd_chain_factor
 
     # ═══════════════════════════════════════════════════════════════════════
     # Constitution: artifact_freedom
@@ -235,7 +226,7 @@ class CalibratedConstants:
     @property
     def echo_corr_threshold(self) -> float:
         """§v10.131 Depth-adaptive Echo-Korrelations-Schwelle.
-        
+
         depth=1-2: 0.35 (Studio-Master, strikt)
         depth=3:   0.45 (moderate chain)
         depth≥4:   0.55 (Kassette — harmonische Resonanz, kein Artefakt)
@@ -251,7 +242,7 @@ class CalibratedConstants:
     def hnr_warn_db(self) -> float:
         """Harmonics-to-Noise-Ratio Warn-Schwelle in dB."""
         depth = max(1, int(self.transfer_chain_depth))
-        vocal_conf = float(getattr(self, 'vocal_confidence', 0.0) or 0.0)
+        vocal_conf = float(getattr(self, "vocal_confidence", 0.0) or 0.0)
         base = 2.0 if vocal_conf > 0.3 else 3.0
         return float(base + max(0, depth - 2) * 0.5)
 
@@ -367,8 +358,8 @@ class CalibratedConstants:
             restorability_score=float(ctx.restorability_score),
             transfer_chain_depth=int(ctx.transfer_chain_depth),
             material_type=str(ctx.material_type),
-            snr_db=float(getattr(ctx, 'snr_db', 30.0)),
-            bandwidth_hz=float(getattr(ctx, 'bandwidth_hz', 20000.0)),
+            snr_db=float(getattr(ctx, "snr_db", 30.0)),
+            bandwidth_hz=float(getattr(ctx, "bandwidth_hz", 20000.0)),
         )
 
 
@@ -387,13 +378,21 @@ _MATERIAL_THRESHOLD_BONUS: dict[str, float] = {
     "lacquer_disc": 0.007,
 }
 
-_ANALOG_MATERIALS: frozenset[str] = frozenset({
-    "vinyl", "shellac", "tape", "cassette", "reel_tape",
-    "wax_cylinder", "wire_recording", "lacquer_disc",
-})
+_ANALOG_MATERIALS: frozenset[str] = frozenset(
+    {
+        "vinyl",
+        "shellac",
+        "tape",
+        "cassette",
+        "reel_tape",
+        "wax_cylinder",
+        "wire_recording",
+        "lacquer_disc",
+    }
+)
 
 # Basis-GDD-Schwellen (physikalisch begründet, NICHT empirisch geraten)
-_GDD_BASE_MS = 5.0          # 5ms: minimale STFT-Gruppenlaufzeit bei 48kHz/2048
+_GDD_BASE_MS = 5.0  # 5ms: minimale STFT-Gruppenlaufzeit bei 48kHz/2048
 _GDD_SPECTRAL_BASE_MS = 10.0  # 10ms: NR-Phasen entfernen Rausch-Phaseninhalt
 
 
@@ -409,9 +408,9 @@ def get_constants(ctx: CalibrationContext | None = None) -> CalibratedConstants:
 
     Beim ersten Aufruf wird aus dem CalibrationContext erzeugt und gecached.
     """
-    cached = getattr(_constants_cache, 'value', None)
+    cached = getattr(_constants_cache, "value", None)
     if cached is not None and ctx is None:
-        return cached
+        return cached  # type: ignore[no-any-return]
     const = CalibratedConstants.from_context(ctx)
     _constants_cache.value = const
     return const

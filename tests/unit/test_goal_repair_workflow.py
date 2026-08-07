@@ -15,6 +15,7 @@ All tests are fast unit tests (no ML, no heavy DSP) using tiny synthetic audio.
 
 import math
 import unittest.mock as mock
+from typing import Any
 
 import numpy as np
 import pytest
@@ -25,7 +26,7 @@ import pytest
 def _sine(sr: int = 48_000, duration_s: float = 0.5, freq: float = 440.0) -> np.ndarray:
     """Mono sine wave, float32, range [-1, 1]."""
     t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False, dtype=np.float32)
-    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.5 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(sr: int = 48_000, duration_s: float = 0.5) -> np.ndarray:
@@ -40,12 +41,12 @@ def _stereo(sr: int = 48_000, duration_s: float = 0.5) -> np.ndarray:
 class TestMesseUndRepariere:
     """Tests for ExzellenzDenker.messe_und_repariere() — §0 + §2.45 compliance."""
 
-    def _make_denker(self, goal_scores: dict[str, float]) -> object:
+    def _make_denker(self, goal_scores: dict[str, float]) -> Any:
         """Build an ExzellenzDenker whose messe_ziele() returns fixed goal scores."""
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value=dict(goal_scores))
+        denker.messe_ziele = mock.Mock(return_value=dict(goal_scores))  # type: ignore[method-assign]
         return denker
 
     def test_no_violations_returns_unchanged_audio(self):
@@ -68,10 +69,10 @@ class TestMesseUndRepariere:
         }
         denker = self._make_denker(all_good)
         audio = _sine()
-        out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)
+        out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)  # type: ignore[attr-defined]
 
         # messe_ziele called exactly once (no repair attempt)
-        assert denker.messe_ziele.call_count == 1
+        assert denker.messe_ziele.call_count == 1  # type: ignore[attr-defined]
         np.testing.assert_array_equal(out_audio, audio)
         assert out_goals == all_good
 
@@ -86,9 +87,9 @@ class TestMesseUndRepariere:
         }
         denker = self._make_denker(borderline)
         audio = _sine()
-        out_audio, _ = denker.messe_und_repariere(audio, 48_000)
+        out_audio, _ = denker.messe_und_repariere(audio, 48_000)  # type: ignore[attr-defined]
 
-        assert denker.messe_ziele.call_count == 1  # no re-measurement
+        assert denker.messe_ziele.call_count == 1  # no re-measurement  # type: ignore[attr-defined]
         np.testing.assert_array_equal(out_audio, audio)  # audio unchanged
 
     def test_significant_p35_violation_triggers_repair_attempt(self):
@@ -107,7 +108,7 @@ class TestMesseUndRepariere:
             _mock_opt.return_value._modulation_strength = 0.3
             audio = _sine()
             # Second call returns slightly improved scores
-            denker.messe_ziele.side_effect = [
+            denker.messe_ziele.side_effect = [  # type: ignore[attr-defined]
                 dict(with_violations),  # initial measurement
                 {  # after TD repair — improvement
                     "micro_dynamics": 0.76,
@@ -117,30 +118,43 @@ class TestMesseUndRepariere:
                     "waerme": 0.80,
                 },
             ]
-            out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)
+            out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)  # type: ignore[attr-defined]
 
         # At minimum 2 measurements: initial + after repair
-        assert denker.messe_ziele.call_count >= 2
+        assert denker.messe_ziele.call_count >= 2  # type: ignore[attr-defined]
 
     def test_p1p2_regression_guard_rejects_candidate(self):
-        """A candidate that regresses P1/P2 by > 0.02 is rejected (§0)."""
+        """A candidate that regresses a P1/P2 blend goal beyond its §v10.306
+        category threshold (0.03) WITHOUT a compensating net-gain (net_gain
+        <= -0.02) is rejected (§0 / §v10.306 Net-Improvement-Gate).
+
+        Note: §v10.306 recalibrated the previous 0.01/0.015/0.02 thresholds
+        (within measurement noise, rejected genuine improvements) to 0.03
+        (P1/P2 blend) / 0.04 (mode-core) / 0.05 (general) + an overall
+        Net-Improvement-Gate. A regression only blocks acceptance when it
+        exceeds ITS category threshold AND the overall net_gain is clearly
+        negative (<= -0.02) — a small regression offset by other gains is
+        intentionally accepted.
+        """
         initial = {
             "natuerlichkeit": 0.91,
-            "authentizitaet": 0.89,
+            "authentizitaet": 0.89,  # P1/P2 blend goal
             "micro_dynamics": 0.70,  # violation — triggers repair
             "groove": 0.72,
             "waerme": 0.80,
         }
         denker = self._make_denker(initial)
-        # Repair candidate: micro_dynamics improved but natuerlichkeit regressed
+        # Repair candidate: authentizitaet (P1/P2) regresses well beyond its 0.03
+        # category threshold, and the tiny micro_dynamics gain does NOT offset it
+        # (net_gain = -0.05 + 0.02 = -0.03 <= -0.02) → reject.
         repaired_regressed = {
-            "natuerlichkeit": 0.88,  # regression of 0.03 > allowed 0.02 → REJECT
-            "authentizitaet": 0.89,
-            "micro_dynamics": 0.78,  # better
-            "groove": 0.76,
+            "natuerlichkeit": 0.91,
+            "authentizitaet": 0.84,  # -0.05, exceeds P1/P2 threshold (0.03)
+            "micro_dynamics": 0.72,  # +0.02, does not offset the regression
+            "groove": 0.72,
             "waerme": 0.80,
         }
-        denker.messe_ziele.side_effect = [
+        denker.messe_ziele.side_effect = [  # type: ignore[attr-defined]
             dict(initial),
             dict(repaired_regressed),  # after TD repair
         ]
@@ -148,12 +162,12 @@ class TestMesseUndRepariere:
             _mopt.return_value.optimize.return_value = (_sine(), mock.Mock(applied_steps=[]))
             _mopt.return_value._modulation_strength = 0.3
             audio = _sine()
-            out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)
+            out_audio, out_goals = denker.messe_und_repariere(audio, 48_000)  # type: ignore[attr-defined]
 
         # Audio must remain unchanged because candidate was rejected
         np.testing.assert_array_equal(out_audio, audio)
         # Goals must reflect initial (not regressed candidate)
-        assert out_goals.get("natuerlichkeit") == pytest.approx(0.91)
+        assert out_goals.get("authentizitaet") == pytest.approx(0.89)
 
     def test_equal_passcount_prefers_lower_core_deficit(self):
         """Bei gleicher Pass-Anzahl wird der Kandidat mit niedrigerem Kernziel-Defizit gewählt."""
@@ -172,18 +186,21 @@ class TestMesseUndRepariere:
             "groove": 0.82,
         }
         denker = self._make_denker(initial)
-        denker.messe_ziele.side_effect = [dict(initial), dict(candidate)]
+        denker.messe_ziele.side_effect = [dict(initial), dict(candidate)]  # type: ignore[attr-defined]
 
         with mock.patch("backend.core.excellence_optimizer.ExcellenceOptimizer") as _mopt:
             _mopt.return_value.optimize.return_value = (_sine(), mock.Mock(applied_steps=[]))
             _mopt.return_value._modulation_strength = 0.3
-            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000, reference_audio=_sine(freq=220.0))
+            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000, reference_audio=_sine(freq=220.0))  # type: ignore[attr-defined]
 
-        assert denker.messe_ziele.call_count >= 2
+        assert denker.messe_ziele.call_count >= 2  # type: ignore[attr-defined]
         assert out_goals.get("spatial_depth", 0.0) >= candidate["spatial_depth"] - 1e-6
 
     def test_mode_core_guard_rejects_spatial_depth_drop(self):
-        """Restoration-Kernziel spatial_depth darf nicht über die Core-Drop-Grenze regressieren."""
+        """Restoration mode-core goal spatial_depth regressing beyond its §v10.306
+        category threshold (0.04), with no compensating net-gain (net_gain
+        <= -0.02), is rejected.
+        """
         initial = {
             "natuerlichkeit": 0.92,
             "authentizitaet": 0.90,
@@ -191,26 +208,33 @@ class TestMesseUndRepariere:
             "micro_dynamics": 0.70,
             "groove": 0.71,
         }
+        # spatial_depth regresses -0.05 (exceeds mode-core threshold 0.04); the
+        # small micro_dynamics gain does not offset it (net_gain = -0.05 + 0.01
+        # = -0.04 <= -0.02) → reject.
         regressed_candidate = {
             "natuerlichkeit": 0.92,
             "authentizitaet": 0.90,
-            "spatial_depth": 0.70,  # -0.02 > erlaubte -0.015 für Kernziele
-            "micro_dynamics": 0.79,
-            "groove": 0.79,
+            "spatial_depth": 0.67,  # -0.05 > mode-core threshold 0.04
+            "micro_dynamics": 0.71,
+            "groove": 0.71,
         }
         denker = self._make_denker(initial)
-        denker.messe_ziele.side_effect = [dict(initial), dict(regressed_candidate)]
+        denker.messe_ziele.side_effect = [dict(initial), dict(regressed_candidate)]  # type: ignore[attr-defined]
 
         with mock.patch("backend.core.excellence_optimizer.ExcellenceOptimizer") as _mopt:
             _mopt.return_value.optimize.return_value = (_sine(), mock.Mock(applied_steps=[]))
             _mopt.return_value._modulation_strength = 0.3
-            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000)
+            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000)  # type: ignore[attr-defined]
 
         np.testing.assert_array_equal(out_audio, _sine())
         assert out_goals.get("spatial_depth") == pytest.approx(initial["spatial_depth"])
 
     def test_local_intent_guard_rejects_unbalanced_auth_spatial_tradeoff(self):
-        """Kleiner Authentizitätsgewinn darf keinen disproportionalen Spatial-Depth-Drop rechtfertigen."""
+        """A small authentizitaet gain must not justify a disproportionate
+        spatial_depth drop: since spatial_depth regresses well beyond its
+        §v10.306 mode-core threshold (0.04) and the overall net_gain stays
+        clearly negative (<= -0.02), the candidate is rejected.
+        """
         initial = {
             "natuerlichkeit": 0.92,
             "authentizitaet": 0.90,
@@ -218,20 +242,22 @@ class TestMesseUndRepariere:
             "micro_dynamics": 0.70,
             "groove": 0.71,
         }
+        # authentizitaet gains only +0.005, spatial_depth drops -0.07 (>> mode-core
+        # threshold 0.04); net_gain = +0.005 - 0.07 + 0.01 = -0.055 <= -0.02 → reject.
         regressed_candidate = {
             "natuerlichkeit": 0.92,
             "authentizitaet": 0.905,  # +0.005
-            "spatial_depth": 0.709,  # -0.011 (unter Core-Guard -0.015, aber disproportional)
-            "micro_dynamics": 0.79,
-            "groove": 0.79,
+            "spatial_depth": 0.65,  # -0.07, far beyond mode-core threshold 0.04
+            "micro_dynamics": 0.71,
+            "groove": 0.71,
         }
         denker = self._make_denker(initial)
-        denker.messe_ziele.side_effect = [dict(initial), dict(regressed_candidate)]
+        denker.messe_ziele.side_effect = [dict(initial), dict(regressed_candidate)]  # type: ignore[attr-defined]
 
         with mock.patch("backend.core.excellence_optimizer.ExcellenceOptimizer") as _mopt:
             _mopt.return_value.optimize.return_value = (_sine(), mock.Mock(applied_steps=[]))
             _mopt.return_value._modulation_strength = 0.3
-            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000)
+            out_audio, out_goals = denker.messe_und_repariere(_sine(), 48_000)  # type: ignore[attr-defined]
 
         np.testing.assert_array_equal(out_audio, _sine())
         assert out_goals.get("authentizitaet") == pytest.approx(initial["authentizitaet"])
@@ -275,7 +301,7 @@ class TestMesseUndRepariere:
         }
 
         denker = self._make_denker(initial)
-        denker.messe_ziele.side_effect = [
+        denker.messe_ziele.side_effect = [  # type: ignore[attr-defined]
             dict(initial),
             dict(step3_reject_1),
             dict(step3_reject_2),
@@ -283,7 +309,7 @@ class TestMesseUndRepariere:
         ]
 
         ref = _sine(freq=220.0)
-        out_audio, out_goals = denker.messe_und_repariere(_sine(freq=440.0), 48_000, reference_audio=ref)
+        out_audio, out_goals = denker.messe_und_repariere(_sine(freq=440.0), 48_000, reference_audio=ref)  # type: ignore[attr-defined]
 
         assert out_goals.get("spatial_depth", 0.0) >= local_rescue["spatial_depth"] - 1e-6
         assert out_goals.get("waerme", 0.0) >= local_rescue["waerme"] - 1e-6
@@ -302,7 +328,7 @@ class TestMesseUndRepariere:
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.80})
+        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.80})  # type: ignore[method-assign]
         nan_audio = np.full(480, np.nan, dtype=np.float32)
         out_audio, _ = denker.messe_und_repariere(nan_audio, 48_000)
         assert np.all(np.isfinite(out_audio))
@@ -324,13 +350,13 @@ class TestMesseUndRepariere:
             "authentizitaet": 0.89,
         }
         denker = self._make_denker(initial)
-        denker.messe_ziele.side_effect = [
+        denker.messe_ziele.side_effect = [  # type: ignore[attr-defined]
             dict(initial),
             dict(improved_via_blend),  # blend measurement
         ]
         reference = _sine(freq=220.0)
         audio = _sine(freq=440.0)
-        out_audio, out_goals = denker.messe_und_repariere(audio, 48_000, reference_audio=reference)
+        out_audio, out_goals = denker.messe_und_repariere(audio, 48_000, reference_audio=reference)  # type: ignore[attr-defined]
         # Blend result should be accepted (improvement found)
         assert out_goals.get("waerme", 0.0) >= initial["waerme"]
 
@@ -339,7 +365,7 @@ class TestMesseUndRepariere:
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value={"groove": 0.85})
+        denker.messe_ziele = mock.Mock(return_value={"groove": 0.85})  # type: ignore[method-assign]
         result = denker.messe_und_repariere(_sine(), 48_000)
         assert isinstance(result, tuple) and len(result) == 2
         assert isinstance(result[0], np.ndarray)
@@ -450,7 +476,7 @@ class TestMesseUndRepariereContract:
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85})
+        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85})  # type: ignore[method-assign]
         audio = np.zeros(shape, dtype=np.float32)
         out_audio, _ = denker.messe_und_repariere(audio, 48_000)
         assert out_audio.shape == shape
@@ -460,7 +486,7 @@ class TestMesseUndRepariereContract:
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85})
+        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85})  # type: ignore[method-assign]
         audio = np.random.uniform(-0.9, 0.9, 4800).astype(np.float32)
         out_audio, _ = denker.messe_und_repariere(audio, 48_000)
         assert np.all(out_audio >= -1.0) and np.all(out_audio <= 1.0)
@@ -470,7 +496,7 @@ class TestMesseUndRepariereContract:
         from denker.exzellenz_denker import ExzellenzDenker
 
         denker = ExzellenzDenker()
-        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85, "brillanz": float("nan")})
+        denker.messe_ziele = mock.Mock(return_value={"micro_dynamics": 0.85, "brillanz": float("nan")})  # type: ignore[method-assign]
         # NaN goals are filtered by messe_ziele — here we test the pass-through
         _, goals = denker.messe_und_repariere(_sine(), 48_000)
         for v in goals.values():
@@ -483,7 +509,7 @@ class TestMesseUndRepariereContract:
 
         denker = ExzellenzDenker()
         initial_goals = {"micro_dynamics": 0.70, "groove": 0.70}  # triggers repair
-        denker.messe_ziele = mock.Mock(return_value=dict(initial_goals))
+        denker.messe_ziele = mock.Mock(return_value=dict(initial_goals))  # type: ignore[method-assign]
         audio = _sine()
         # Force ExcellenceOptimizer to raise
         with mock.patch(

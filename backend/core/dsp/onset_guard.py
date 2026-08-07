@@ -82,7 +82,7 @@ def apply_onset_protection_mask(
                     if start < n:
                         onset_mask_arr[start:end] = True
             except Exception as e:
-                logger.warning("onset_guard.py::apply_onset_protection_mask fallback: %s", e)
+                logger.warning("onset_guard.py::anwenden_onset_protection_mask Ersatzpfad: %s", e)
                 return post  # Ohne Onset-Daten: kein Eingriff
         else:
             onset_mask_arr = np.asarray(onset_mask, dtype=bool)
@@ -142,5 +142,5 @@ def apply_onset_protection_mask(
         return result  # type: ignore[no-any-return]
 
     except Exception as exc:
-        logger.debug("apply_onset_protection_mask non-blocking: %s", exc)
+        logger.debug("anwenden_onset_protection_mask nicht blockierend: %s", exc)
         return post

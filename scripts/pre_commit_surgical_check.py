@@ -41,8 +41,8 @@ for k, v in _SURGICAL_REPAIR_FUNCTIONS.items():
     if not callable(v):
         errs.append(f"_SURGICAL_REPAIR_FUNCTIONS['{k}'] ist NICHT callable")
 
-for e in errs:
-    print(f"  ❌ {e}")
+for e in errs:  # type: ignore[misc]
+    print(f"  ❌ {e}")  # type: ignore[misc]
 
 if errs:
     print(f"\n❌ FAILED: {len(errs)} Fehler")

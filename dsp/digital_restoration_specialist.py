@@ -13,6 +13,7 @@ Date: 8. Februar 2026
 
 import logging
 import warnings
+from typing import Any
 
 import numpy as np
 from scipy import interpolate, signal
@@ -69,7 +70,7 @@ class CodecArtifactRemover:
         self.spectral_hole_threshold_db = np.clip(spectral_hole_threshold_db, -80.0, -30.0)
         self.smoothing_strength = np.clip(smoothing_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -110,7 +111,7 @@ class CodecArtifactRemover:
         # Find transient indices
         transient_indices = np.where(transient_mask)[0].tolist()
 
-        return transient_indices
+        return transient_indices  # type: ignore[no-any-return]
 
     def remove_pre_echo(self, audio: np.ndarray, transient_indices: list[int], sample_rate: int) -> np.ndarray:
         """
@@ -188,7 +189,7 @@ class CodecArtifactRemover:
         # Holes are bins consistently below threshold
         hole_mask = mag_db_median < threshold
 
-        return hole_mask.flatten()
+        return hole_mask.flatten()  # type: ignore[no-any-return]
 
     def fill_spectral_holes(self, audio: np.ndarray, hole_mask: np.ndarray, sample_rate: int) -> np.ndarray:
         """
@@ -239,7 +240,7 @@ class CodecArtifactRemover:
         elif len(audio_filled) > len(audio):
             audio_filled = audio_filled[: len(audio)]
 
-        return audio_filled
+        return audio_filled  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sample_rate: int) -> np.ndarray:
         """
@@ -289,7 +290,7 @@ class CodecArtifactRemover:
             logger.info("[CodecArtifact] %s spectral holes found, filling...", n_holes)
             audio_cleaned = self.fill_spectral_holes(audio_cleaned, hole_mask, sample_rate)
         else:
-            logger.info("[CodecArtifact] No significant spectral holes detected")
+            logger.info("[CodecArtifact] No significant spectral holes erkannt")
 
         # Store metrics
         self.metrics["pre_echo_detected"] = len(transient_indices) > 0
@@ -343,7 +344,7 @@ class PacketLossConcealer:
         self.gap_threshold_ms = np.clip(gap_threshold_ms, 1.0, 100.0)
         self.interpolation_method = interpolation_method if interpolation_method in ["linear", "cubic"] else "cubic"
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -482,7 +483,7 @@ class PacketLossConcealer:
         gaps = self.detect_gaps(audio, sample_rate)
 
         if not gaps:
-            logger.info("[PacketLoss] No packet loss detected")
+            logger.info("[PacketLoss] No packet loss erkannt")
             self.metrics["gaps_detected"] = 0
             self.metrics["gaps_concealed"] = 0
             self.metrics["total_gap_duration_ms"] = 0.0
@@ -555,7 +556,7 @@ class JitterCorrector:
         self.jitter_threshold_ppm = np.clip(jitter_threshold_ppm, 10.0, 1000.0)
         self.correction_strength = np.clip(correction_strength, 0.0, 1.0)
 
-        self.metrics = {}
+        self.metrics: dict[Any, Any] = {}
 
         # DSPContract
         self._log_contract()
@@ -598,7 +599,7 @@ class JitterCorrector:
         else:
             jitter_ppm = 0.0
 
-        return jitter_ppm
+        return jitter_ppm  # type: ignore[no-any-return]
 
     def correct_jitter(self, audio: np.ndarray, jitter_ppm: float, sample_rate: int) -> np.ndarray:
         """
@@ -635,7 +636,7 @@ class JitterCorrector:
         audio_corrected = (1 - alpha) * audio + alpha * audio_filtered
 
         # Cast back to original dtype
-        return audio_corrected.astype(input_dtype)
+        return audio_corrected.astype(input_dtype)  # type: ignore[no-any-return]
 
     def process(self, audio: np.ndarray, sample_rate: int) -> np.ndarray:
         """
@@ -673,7 +674,7 @@ class JitterCorrector:
 
         # Correct if above threshold
         if jitter_ppm > self.jitter_threshold_ppm:
-            logger.info("[Jitter] Jitter above threshold (%s ppm), correcting...", self.jitter_threshold_ppm)
+            logger.info("[Jitter] Jitter above Schwelle (%s ppm), correcting...", self.jitter_threshold_ppm)
             audio_corrected = self.correct_jitter(audio, jitter_ppm, sample_rate)
         else:
             logger.info("[Jitter] Jitter within acceptable range, no correction needed")
@@ -795,7 +796,7 @@ class DigitalRestorationSpecialist:
             logger.info("\n[DigitalRestoration] Step 3/3: Codec Artifact Removal")
             output = self.codec_artifact_remover.process(output, sample_rate)
 
-        logger.info("\n[DigitalRestoration] Processing complete!")
+        logger.info("\n[DigitalRestoration] Processing vollstaendig!")
         return output
 
     def get_metrics(self) -> dict:
@@ -846,11 +847,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Transpose if stereo
     if audio.ndim == 2:
@@ -890,4 +891,4 @@ if __name__ == "__main__":
         output = output.T
 
     sf.write(args.output, output, sr)
-    logger.info("Saved: %s", args.output)
+    logger.info("gespeichert: %s", args.output)

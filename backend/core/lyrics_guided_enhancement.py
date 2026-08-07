@@ -616,11 +616,7 @@ class LyricsGuidedEnhancement:
 
     def is_loaded(self) -> bool:
         """Return True if at least one model backend is ready."""
-        return (
-            self._whisper_hf_model is not None
-            or self._ort_session is not None
-            or self._aligner_session is not None
-        )
+        return self._whisper_hf_model is not None or self._ort_session is not None or self._aligner_session is not None
 
     # ── ONNX bootstrap ─────────────────────────────────────────────────────
 
@@ -638,7 +634,7 @@ class LyricsGuidedEnhancement:
 
             if not _try_alloc("lyrics_transcriber_whisper", size_gb=0.04):
                 logger.info(
-                    "LyricsGuidedEnhancement: ML-Budget erschöpft (Whisper) — DSP-Fallback aktiv.",
+                    "LyricsGuidedEnhancement: ML-Grenze erschöpft (Whisper) — DSP-Ersatzpfad aktiv.",
                 )
                 return
             _release_on_fail = partial(_ml_release, "lyrics_transcriber_whisper")
@@ -655,7 +651,7 @@ class LyricsGuidedEnhancement:
                     providers=["CPUExecutionProvider"],
                 )
                 logger.info(
-                    "LyricsGuidedEnhancement: whisper_tiny.onnx loaded (%.1f MB)",
+                    "LyricsGuidedEnhancement: whisper_tiny.onnx geladen (%.1f MB)",
                     model_path.stat().st_size / 1e6,
                 )
                 _loaded = True
@@ -668,15 +664,15 @@ class LyricsGuidedEnhancement:
                         unload_fn=lambda: setattr(self, "_ort_session", None),
                     )
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             else:
                 logger.debug(
-                    "LyricsGuidedEnhancement: whisper_tiny.onnx not found at %s — DSP fallback active",
+                    "LyricsGuidedEnhancement: whisper_tiny.onnx not found at %s — DSP Ersatzpfad active",
                     model_path,
                 )
         except Exception as exc:
             logger.debug(
-                "LyricsGuidedEnhancement: ONNX load failed (%s) — DSP fallback active",
+                "LyricsGuidedEnhancement: ONNX laden fehlgeschlagen (%s) — DSP Ersatzpfad active",
                 exc,
             )
         finally:
@@ -684,7 +680,7 @@ class LyricsGuidedEnhancement:
                 try:
                     _release_on_fail()  # type: ignore[operator, call-arg]
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_aligner(self) -> None:
         """Lädt wav2vec2_forced_alignment.onnx (§2.36 PFLICHT: Phonem-Alignment).
@@ -704,7 +700,7 @@ class LyricsGuidedEnhancement:
 
             if not _try_alloc("lyrics_aligner_wav2vec2", size_gb=0.13):
                 logger.info(
-                    "LyricsGuidedEnhancement: ML-Budget erschöpft (wav2vec2 Aligner) — DSP-Fallback aktiv.",
+                    "LyricsGuidedEnhancement: ML-Grenze erschöpft (wav2vec2 Aligner) — DSP-Ersatzpfad aktiv.",
                 )
                 return
             _release_on_fail = partial(_ml_release, "lyrics_aligner_wav2vec2")
@@ -721,7 +717,7 @@ class LyricsGuidedEnhancement:
                     providers=["CPUExecutionProvider"],
                 )
                 logger.info(
-                    "LyricsGuidedEnhancement: wav2vec2_forced_alignment.onnx loaded (%.1f MB)",
+                    "LyricsGuidedEnhancement: wav2vec2_forced_alignment.onnx geladen (%.1f MB)",
                     model_path.stat().st_size / 1e6,
                 )
                 _loaded = True
@@ -734,16 +730,16 @@ class LyricsGuidedEnhancement:
                         unload_fn=lambda: setattr(self, "_aligner_session", None),
                     )
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             else:
                 logger.debug(
                     "LyricsGuidedEnhancement: wav2vec2_forced_alignment.onnx not found at %s"
-                    " — DSP phoneme-prior fallback active",
+                    " — DSP phoneme-prior Ersatzpfad active",
                     model_path,
                 )
         except Exception as exc:
             logger.debug(
-                "LyricsGuidedEnhancement: aligner ONNX load failed (%s) — DSP phoneme-prior fallback active",
+                "LyricsGuidedEnhancement: aligner ONNX laden fehlgeschlagen (%s) — DSP phoneme-prior Ersatzpfad active",
                 exc,
             )
         finally:
@@ -751,7 +747,7 @@ class LyricsGuidedEnhancement:
                 try:
                     _release_on_fail()  # type: ignore[operator, call-arg]
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # ── §v10.303.50 HF Whisper Decoder bootstrap ────────────────────────────
 
@@ -777,31 +773,29 @@ class LyricsGuidedEnhancement:
 
             if not _try_alloc("lyrics_whisper_hf", size_gb=0.25):
                 logger.info(
-                    "LyricsGuidedEnhancement: ML-Budget erschöpft (HF Whisper) — "
-                    "ONNX-Encoder/DSP-Fallback aktiv.",
+                    "LyricsGuidedEnhancement: ML-Grenze erschöpft (HF Whisper) — ONNX-Encoder/DSP-Ersatzpfad aktiv.",
                 )
                 return
             _release_on_fail = partial(_ml_release, "lyrics_whisper_hf")
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         _loaded = False
         try:
             import torch
-            from transformers import WhisperProcessor, WhisperForConditionalGeneration
+            from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
             model_path = Path(__file__).resolve().parents[2] / "models" / "whisper"
             if not (model_path / "config.json").exists():
                 logger.debug(
-                    "LyricsGuidedEnhancement: HF Whisper model not found at %s — "
-                    "ONNX/DSP fallback active",
+                    "LyricsGuidedEnhancement: HF Whisper model not found at %s — ONNX/DSP Ersatzpfad active",
                     model_path,
                 )
                 return
 
-            self._whisper_hf_processor = WhisperProcessor.from_pretrained(
+            self._whisper_hf_processor = WhisperProcessor.from_pretrained(  # nosec B615 — local_files_only=True, kein Download
                 str(model_path), local_files_only=True
             )
-            self._whisper_hf_model = WhisperForConditionalGeneration.from_pretrained(
+            self._whisper_hf_model = WhisperForConditionalGeneration.from_pretrained(  # nosec B615 — local_files_only=True, kein Download
                 str(model_path), local_files_only=True
             )
             self._whisper_hf_model.eval()
@@ -819,7 +813,7 @@ class LyricsGuidedEnhancement:
                     try:
                         _ml_release("lyrics_whisper_hf")
                     except Exception:
-                        pass
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
                 _reg_plm(
                     "lyrics_whisper_hf",
@@ -827,10 +821,10 @@ class LyricsGuidedEnhancement:
                     unload_fn=_unload_hf,
                 )
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
             logger.debug(
-                "§v10.303.50 HF Whisper load failed (%s) — ONNX/DSP fallback active",
+                "§v10.303.50 HF Whisper laden fehlgeschlagen (%s) — ONNX/DSP Ersatzpfad active",
                 exc,
             )
         finally:
@@ -838,7 +832,7 @@ class LyricsGuidedEnhancement:
                 try:
                     _release_on_fail()
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # Minimum samples required by wav2vec2 feature extractor (7 Conv1d layers,
     # cumulative receptive field: kernels [10,3,3,3,3,2,2], strides [5,2,2,2,2,2,2]
@@ -892,8 +886,8 @@ class LyricsGuidedEnhancement:
             # input shape: {N}".  Return DSP classification unchanged.
             if len(audio_input) < self._MIN_WAV2VEC2_SAMPLES:
                 logger.debug(
-                    "LyricsGuidedEnhancement._align_phonemes: input too short"
-                    " (%d samples < %d min) — DSP silence fallback",
+                    "LyricsGuidedEnhancement._align_phonemes: Eingabe too short"
+                    " (%d samples < %d min) — DSP silence Ersatzpfad",
                     len(audio_input),
                     self._MIN_WAV2VEC2_SAMPLES,
                 )
@@ -911,7 +905,7 @@ class LyricsGuidedEnhancement:
                 _plm_w2v = _get_plm_w2v()
                 _plm_w2v.set_active("lyrics_aligner_wav2vec2", True)
             except Exception as e:
-                logger.warning("lyrics_guided_enhancement.py::_align_phonemes fallback: %s", e)
+                logger.warning("lyrics_guided_enhancement.py::_align_phonemes Ersatzpfad: %s", e)
             # OOM-Guard: chunk wav2vec2 into 30 s segments to prevent 34+ GB
             # intermediate allocation on long files (§2.36 — root cause of OOM).
             _MAX_W2V_CHUNK = 30 * sr_16k  # 480 000 samples @ 16 kHz
@@ -941,7 +935,7 @@ class LyricsGuidedEnhancement:
                     try:
                         _plm_w2v.set_active("lyrics_aligner_wav2vec2", False)  # type: ignore[attr-defined]
                     except Exception as e:
-                        logger.warning("lyrics_guided_enhancement.py::unbekannter Fallback: %s", e)
+                        logger.warning("lyrics_guided_enhancement.py::unbekannter Ersatzpfad: %s", e)
 
             # Run encoder: output is (1, T_frames, vocab_size) CTC log-probs
             if logits.ndim != 3:
@@ -1000,7 +994,7 @@ class LyricsGuidedEnhancement:
                 )
             return updated
         except Exception as exc:
-            logger.debug("LyricsGuidedEnhancement._align_phonemes failed (%s) — DSP fallback", exc)
+            logger.debug("LyricsGuidedEnhancement._align_phonemes fehlgeschlagen (%s) — DSP Ersatzpfad", exc)
             return words
 
     # ── §v10.303.52 Semantic keyword-guided DSP ─────────────────────────────
@@ -1014,46 +1008,46 @@ class LyricsGuidedEnhancement:
         # dynamics_scale: 1.0=neutral, <1.0=weichere Kompression, >1.0=stärker
         # space_scale:    1.0=neutral, >1.0=mehr Raum/Akustik-Erhalt
         # groove_ms:     Timing-Verschiebung in ms (negativ=fester, positiv=lockerer)
-        "liebe":    {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
-        "love":     {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
-        "herz":     {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
-        "heart":    {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
-        "tränen":   {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
-        "tears":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
-        "schmerz":  {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
-        "pain":     {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
-        "tanz":     {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
-        "dance":    {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
-        "freude":   {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
-        "joy":      {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
-        "glück":    {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
-        "happy":    {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
-        "traum":    {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
-        "dream":    {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
-        "hoffen":   {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
-        "hope":     {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
-        "feuer":    {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
-        "fire":     {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
-        "stark":    {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
-        "strong":   {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
-        "einsam":   {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
-        "lonely":   {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
-        "nacht":    {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
-        "night":    {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
-        "wind":     {"low_db": -0.5, "mid_db": 0.0, "high_db": 1.5, "dyn": 0.80, "space": 1.20, "groove": 2.0},
-        "meer":     {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
-        "sea":      {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
-        "ocean":    {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
-        "himmel":   {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
-        "sky":      {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
-        "fliegen":  {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
-        "fly":      {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
-        "krieg":    {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
-        "war":      {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
-        "still":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
-        "leise":    {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
-        "laut":     {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
-        "loud":     {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
+        "liebe": {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
+        "love": {"low_db": 1.0, "mid_db": 0.5, "high_db": 0.0, "dyn": 0.75, "space": 1.15, "groove": 2.0},
+        "herz": {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
+        "heart": {"low_db": 1.5, "mid_db": 0.0, "high_db": -0.5, "dyn": 0.70, "space": 1.10, "groove": 3.0},
+        "tränen": {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
+        "tears": {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.60, "space": 1.25, "groove": 5.0},
+        "schmerz": {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
+        "pain": {"low_db": -1.0, "mid_db": -1.5, "high_db": -1.5, "dyn": 0.55, "space": 1.30, "groove": 7.0},
+        "tanz": {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "dance": {"low_db": 2.0, "mid_db": 1.0, "high_db": 0.5, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "freude": {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "joy": {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "glück": {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "happy": {"low_db": 1.0, "mid_db": 1.5, "high_db": 1.5, "dyn": 1.10, "space": 1.00, "groove": -2.0},
+        "traum": {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
+        "dream": {"low_db": -0.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.85, "space": 1.20, "groove": 1.0},
+        "hoffen": {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
+        "hope": {"low_db": 0.5, "mid_db": 1.0, "high_db": 1.0, "dyn": 0.90, "space": 1.10, "groove": 0.0},
+        "feuer": {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
+        "fire": {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.20, "space": 0.85, "groove": -2.0},
+        "stark": {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "strong": {"low_db": 2.0, "mid_db": 1.5, "high_db": 1.0, "dyn": 1.15, "space": 0.90, "groove": -3.0},
+        "einsam": {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
+        "lonely": {"low_db": -2.0, "mid_db": -1.0, "high_db": -1.0, "dyn": 0.50, "space": 1.30, "groove": 8.0},
+        "nacht": {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
+        "night": {"low_db": -1.0, "mid_db": -0.5, "high_db": -0.5, "dyn": 0.65, "space": 1.25, "groove": 4.0},
+        "wind": {"low_db": -0.5, "mid_db": 0.0, "high_db": 1.5, "dyn": 0.80, "space": 1.20, "groove": 2.0},
+        "meer": {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "sea": {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "ocean": {"low_db": -1.0, "mid_db": 0.0, "high_db": 0.5, "dyn": 0.70, "space": 1.30, "groove": 5.0},
+        "himmel": {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
+        "sky": {"low_db": -1.5, "mid_db": 0.5, "high_db": 2.0, "dyn": 0.80, "space": 1.25, "groove": 1.0},
+        "fliegen": {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
+        "fly": {"low_db": -2.0, "mid_db": 1.0, "high_db": 3.0, "dyn": 0.85, "space": 1.30, "groove": 0.0},
+        "krieg": {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
+        "war": {"low_db": 1.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.25, "space": 0.80, "groove": -4.0},
+        "still": {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
+        "leise": {"low_db": 0.0, "mid_db": -1.0, "high_db": -1.5, "dyn": 0.50, "space": 1.35, "groove": 6.0},
+        "laut": {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
+        "loud": {"low_db": 2.0, "mid_db": 2.0, "high_db": 2.0, "dyn": 1.30, "space": 0.75, "groove": -5.0},
     }
 
     def _apply_semantic_keyword_dsp(
@@ -1136,8 +1130,11 @@ class LyricsGuidedEnhancement:
                 nperseg = min(2048, n_samples)
                 noverlap = nperseg * 3 // 4
                 _f, _t, Zxx = _sig.stft(
-                    _ch_audio.astype(np.float64), fs=sr, window="hann",
-                    nperseg=nperseg, noverlap=noverlap,
+                    _ch_audio.astype(np.float64),
+                    fs=sr,
+                    window="hann",
+                    nperseg=nperseg,
+                    noverlap=noverlap,
                 )
                 _band_mask = (_f >= _f_low) & (_f <= _f_high)
                 _n_frames = Zxx.shape[1]
@@ -1149,7 +1146,11 @@ class LyricsGuidedEnhancement:
                 ).astype(np.float64)
                 Zxx[_band_mask, :] *= _frame_curve[np.newaxis, :]
                 _, _ch_out = _sig.istft(
-                    Zxx, fs=sr, window="hann", nperseg=nperseg, noverlap=noverlap,
+                    Zxx,
+                    fs=sr,
+                    window="hann",
+                    nperseg=nperseg,
+                    noverlap=noverlap,
                 )
                 _ch_out = _ch_out[:n_samples]
                 if is_stereo:
@@ -1163,14 +1164,15 @@ class LyricsGuidedEnhancement:
         logger.info(
             "§v10.303.52 Semantic-DSP: %d Wörter mit Keyword-Match verarbeitet",
             sum(
-                1 for w in transcription.words
-                if str(getattr(w, "word", "") or "").lower().strip()
-                in self._SEMANTIC_DSP_PARAMS
+                1
+                for w in transcription.words
+                if str(getattr(w, "word", "") or "").lower().strip() in self._SEMANTIC_DSP_PARAMS
             ),
         )
         return np.clip(
             np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0),
-            -1.0, 1.0,
+            -1.0,
+            1.0,
         ).astype(np.float32)
 
     # ── Public API ──────────────────────────────────────────────────────────
@@ -1238,25 +1240,28 @@ class LyricsGuidedEnhancement:
                         _sentiment.arousal_mean,
                     )
             except Exception as _lsm_exc:
-                logger.debug("§LSM-1 Sentiment non-blocking: %s", _lsm_exc)
+                logger.debug("§LSM-1 Sentiment nicht blockierend: %s", _lsm_exc)
 
         audio_out = audio * saliency[np.newaxis, :] if audio.ndim == 2 else audio * saliency
 
         # §2.36a: per-phoneme spectral DSP on top of saliency boost
         # §v10.303.51: language-specific phoneme profiles applied
-        _lang_profile = self._get_phoneme_profile(
-            getattr(transcription, "language", "unknown")
-        )
+        _lang_profile = self._get_phoneme_profile(getattr(transcription, "language", "unknown"))
         processor = get_content_aware_processor()
         audio_out = processor.apply_phoneme_dsp_to_audio(
-            audio_out, transcription, sr, strength=0.50,
+            audio_out,
+            transcription,
+            sr,
+            strength=0.50,
             language_profile=_lang_profile,  # §v10.303.51
         )
 
         # §v10.303.52: Semantic keyword-guided DSP (real word text → EQ/dynamics)
         if not transcription.fallback_used and transcription.words:
             audio_out = self._apply_semantic_keyword_dsp(
-                audio_out, transcription, sr,
+                audio_out,
+                transcription,
+                sr,
             )
 
         # §v10.303.50 Privacy: clear word text BEFORE returning result
@@ -1310,7 +1315,7 @@ class LyricsGuidedEnhancement:
         try:
             transcription = self._transcribe_internal(mono, sr, float(n_samples / max(1, sr)))
         except Exception as exc:
-            logger.debug("get_phoneme_mask: transcription failed (%s) — no protection", exc)
+            logger.debug("get_phoneme_mask: transcription fehlgeschlagen (%s) — no protection", exc)
             return np.zeros(n_frames, dtype=bool)  # type: ignore[no-any-return]
 
         _CONSONANT_TYPES = frozenset({"plosive", "fricative_stressed", "fricative_unstressed"})
@@ -1348,7 +1353,7 @@ class LyricsGuidedEnhancement:
                 return self._transcribe_hf(mono, sr, dur)
             except Exception as exc:
                 logger.debug(
-                    "§v10.303.50 HF Whisper transcription failed (%s) — ONNX/DSP fallback",
+                    "§v10.303.50 HF Whisper transcription fehlgeschlagen (%s) — ONNX/DSP Ersatzpfad",
                     exc,
                 )
         # Fallback 1: ONNX encoder (energy-based segmentation)
@@ -1357,7 +1362,7 @@ class LyricsGuidedEnhancement:
                 return self._transcribe_onnx(mono, sr, dur)
             except Exception as exc:
                 logger.debug(
-                    "LyricsGuidedEnhancement: ONNX transcription failed (%s) — DSP fallback",
+                    "LyricsGuidedEnhancement: ONNX transcription fehlgeschlagen (%s) — DSP Ersatzpfad",
                     exc,
                 )
         # Fallback 2: pure DSP
@@ -1387,7 +1392,7 @@ class LyricsGuidedEnhancement:
             _plm_hf = _get_plm_hf()
             _plm_hf.set_active("lyrics_whisper_hf", True)
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         try:
             # Prepare input features
@@ -1406,13 +1411,15 @@ class LyricsGuidedEnhancement:
                 )
 
             # Decode full text (RAM only — never logged)
-            full_text: str = self._whisper_hf_processor.batch_decode(
-                predicted_ids, skip_special_tokens=True
-            )[0].strip()
+            full_text: str = self._whisper_hf_processor.batch_decode(predicted_ids, skip_special_tokens=True)[0].strip()
 
             if not full_text:
                 return LyricsTranscriptionResult(
-                    [], "unknown", 0.0, dur, fallback_used=True,
+                    [],
+                    "unknown",
+                    0.0,
+                    dur,
+                    fallback_used=True,
                 )
 
             # Parse word-level timestamps from token output
@@ -1441,7 +1448,7 @@ class LyricsGuidedEnhancement:
                 try:
                     _plm_hf.set_active("lyrics_whisper_hf", False)
                 except Exception:
-                    pass
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def _parse_hf_tokens_to_words(
         self,
@@ -1467,9 +1474,7 @@ class LyricsGuidedEnhancement:
             return []
 
         # Decode with special tokens to preserve timestamps
-        raw_with_special = self._whisper_hf_processor.decode(
-            ids, skip_special_tokens=False
-        )
+        raw_with_special = self._whisper_hf_processor.decode(ids, skip_special_tokens=False)
 
         # Parse segments from timestamp-annotated output
         return self._parse_hf_segments(raw_with_special, mono_16k, dur)
@@ -1517,14 +1522,12 @@ class LyricsGuidedEnhancement:
                         sw_start = start_s + sw_idx * sub_dur
                         sw_end = min(sw_start + sub_dur, end_s)
                         seg_audio = mono_16k[
-                            max(0, int(sw_start * 16_000)) : min(
-                                len(mono_16k), int(sw_end * 16_000) + 1
-                            )
+                            max(0, int(sw_start * 16_000)) : min(len(mono_16k), int(sw_end * 16_000) + 1)
                         ]
                         # Classify phoneme type from audio
-                        is_stressed = len(seg_audio) > 0 and float(
-                            np.sqrt(np.mean(seg_audio.astype(np.float64) ** 2))
-                        ) > 0.01
+                        is_stressed = (
+                            len(seg_audio) > 0 and float(np.sqrt(np.mean(seg_audio.astype(np.float64) ** 2))) > 0.01
+                        )
                         phoneme_type = LyricsGuidedEnhancement._classify_phoneme_type(
                             seg_audio if len(seg_audio) >= 4 else np.zeros(4, dtype=np.float32),
                             16_000,
@@ -1555,9 +1558,9 @@ class LyricsGuidedEnhancement:
         },
         # German: harder consonants, more formant clarity
         "de": {
-            "fricative_gain_db": 1.0,      # "sch", "ch" need more presence
-            "plosive_burst_db": 1.5,       # "p", "t", "k" aspirated
-            "vowel_formant_db": 1.5,       # Umlaute need formant clarity
+            "fricative_gain_db": 1.0,  # "sch", "ch" need more presence
+            "plosive_burst_db": 1.5,  # "p", "t", "k" aspirated
+            "vowel_formant_db": 1.5,  # Umlaute need formant clarity
             "silence_nr_strength": 1.0,
         },
         # English: softer fricatives, less formant boost
@@ -1569,40 +1572,38 @@ class LyricsGuidedEnhancement:
         },
         # French: nasal vowels, soft consonants
         "fr": {
-            "fricative_gain_db": -1.0,     # softer sibilants
-            "plosive_burst_db": 0.0,       # unaspirated plosives
-            "vowel_formant_db": 2.0,       # nasal vowel clarity
+            "fricative_gain_db": -1.0,  # softer sibilants
+            "plosive_burst_db": 0.0,  # unaspirated plosives
+            "vowel_formant_db": 2.0,  # nasal vowel clarity
             "silence_nr_strength": 0.85,
         },
         # Italian: vowel-dominant, musical
         "it": {
             "fricative_gain_db": -0.5,
             "plosive_burst_db": 0.0,
-            "vowel_formant_db": 2.0,       # bel canto formants
+            "vowel_formant_db": 2.0,  # bel canto formants
             "silence_nr_strength": 0.9,
         },
         # Spanish: clear consonants, rolled R
         "es": {
             "fricative_gain_db": 0.5,
-            "plosive_burst_db": 1.0,       # stronger plosives
-            "vowel_formant_db": 1.0,       # pure 5-vowel system
+            "plosive_burst_db": 1.0,  # stronger plosives
+            "vowel_formant_db": 1.0,  # pure 5-vowel system
             "silence_nr_strength": 1.0,
         },
         # Japanese: mora-timed, pitch accent
         "ja": {
-            "fricative_gain_db": -1.0,     # softer overall
+            "fricative_gain_db": -1.0,  # softer overall
             "plosive_burst_db": -0.5,
             "vowel_formant_db": 0.5,
-            "silence_nr_strength": 0.8,    # more silence between morae
+            "silence_nr_strength": 0.8,  # more silence between morae
         },
     }
 
     def _get_phoneme_profile(self, language: str) -> dict[str, float]:
         """Return language-specific phoneme DSP profile (falls back to unknown)."""
         lang_key = str(language or "unknown").strip().lower()[:2]
-        return self._LANGUAGE_PHONEME_PROFILES.get(
-            lang_key, self._LANGUAGE_PHONEME_PROFILES["unknown"]
-        )
+        return self._LANGUAGE_PHONEME_PROFILES.get(lang_key, self._LANGUAGE_PHONEME_PROFILES["unknown"])
 
     def _transcribe_onnx(self, mono: np.ndarray, sr: int, dur: float) -> LyricsTranscriptionResult:
         """Führt aus: whisper_tiny.onnx encoder; derive vocal segments from hidden-state RMS.
@@ -1624,7 +1625,7 @@ class LyricsGuidedEnhancement:
             _plm_whisper = _get_plm_w()
             _plm_whisper.set_active("lyrics_transcriber_whisper", True)
         except Exception as e:
-            logger.warning("lyrics_guided_enhancement.py::_transcribe_onnx fallback: %s", e)
+            logger.warning("lyrics_guided_enhancement.py::_transcribe_onnx Ersatzpfad: %s", e)
         # Encoder inference — output: (1, 1500, 384)
         try:
             hidden = self._ort_session.run(None, {"input_features": features})[0]  # type: ignore[attr-defined]
@@ -1633,7 +1634,7 @@ class LyricsGuidedEnhancement:
                 try:
                     _plm_whisper.set_active("lyrics_transcriber_whisper", False)  # type: ignore[attr-defined]
                 except Exception as e:
-                    logger.warning("lyrics_guided_enhancement.py::_transcribe_onnx fallback: %s", e)
+                    logger.warning("lyrics_guided_enhancement.py::_transcribe_onnx Ersatzpfad: %s", e)
         frame_energy = np.sqrt(np.mean(hidden[0] ** 2, axis=-1))  # (1500,)
 
         e_max = float(frame_energy.max()) or 1.0
@@ -1699,7 +1700,7 @@ class LyricsGuidedEnhancement:
 
             return _ptl_detect(mono, sr)
         except Exception as exc:
-            logger.debug("LyricsGuidedEnhancement._detect_language_from_mono failed: %s", exc)
+            logger.debug("LyricsGuidedEnhancement._erkennen_language_from_mono fehlgeschlagen: %s", exc)
             return ("unknown", 0.0)
 
     # ── DSP helpers ────────────────────────────────────────────────────────
@@ -1741,7 +1742,7 @@ class LyricsGuidedEnhancement:
                 if fricative_ratio >= 0.30:
                     return "fricative_stressed" if is_stressed else "fricative_unstressed"
         except Exception as _phoneme_exc:
-            logger.debug("LGE phoneme DSP classifier unavailable (non-critical): %s", _phoneme_exc)
+            logger.debug("LGE phoneme DSP classifier nicht verfuegbar (unkritisch): %s", _phoneme_exc)
 
         # --- Plosive: very short burst (< 30 ms) with high peak/RMS ratio ---
         if dur_ms < 30.0 and n >= 4:
@@ -1771,7 +1772,7 @@ class LyricsGuidedEnhancement:
                     return "fricative_stressed" if is_stressed else "fricative_unstressed"
             except Exception as _exc:
                 logger.debug(
-                    "Operation failed (non-critical): %s", _exc
+                    "Operation fehlgeschlagen (unkritisch): %s", _exc
                 )  # DSP failed → fall through to vowel classification
 
         return "vowel_stressed" if is_stressed else "vowel_unstressed"

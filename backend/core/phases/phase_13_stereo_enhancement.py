@@ -178,7 +178,7 @@ class StereoEnhancementPhaseV2(PhaseInterface):
                     _zone_frac_13 = float(np.clip(_zone_s_13 / max(1, _n_s_13), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_13 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_13:
-                logger.debug("Phase13 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_13)
+                logger.debug("Verarbeitungsschritt13 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_13)
 
         self.validate_input(audio)
 
@@ -245,8 +245,8 @@ class StereoEnhancementPhaseV2(PhaseInterface):
         _WIDE_STEREO_GUARD = 0.45
         if initial_correlation < _WIDE_STEREO_GUARD:
             logger.debug(
-                "phase_13: initial_correlation=%.3f < %.2f — already wide stereo, "
-                "no enhancement needed, returning input unchanged",
+                "Verarbeitungsschritt_13: initial_correlation=%.3f < %.2f — already wide stereo, "
+                "no enhancement needed, returning Eingabe unchanged",
                 initial_correlation,
                 _WIDE_STEREO_GUARD,
             )
@@ -301,7 +301,7 @@ class StereoEnhancementPhaseV2(PhaseInterface):
         # Step 4: Final correlation check and limiting
         final_correlation = self._measure_correlation(enhanced_audio)
         if final_correlation < 0.5:  # Emergency mono compatibility check
-            logger.warning("Low correlation detected (%.2f), reducing width", final_correlation)
+            logger.warning("Low correlation erkannt (%.2f), reducing width", final_correlation)
             enhanced_audio = self._reduce_width_for_compatibility(enhanced_audio, audio)
             final_correlation = self._measure_correlation(enhanced_audio)
 
@@ -624,7 +624,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Professional Stereo Enhancement Phase v2.0 - Test")
+    logger.debug("Professional Stereo Enhancement Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     _test_sr: int = 44100
@@ -647,7 +647,7 @@ if __name__ == "__main__":
     test_audio = np.column_stack((_test_left, _test_right))
 
     logger.debug("\nTest Audio: %ss @ %s Hz (stereo)", _test_dur, _test_sr)
-    logger.debug("Multi-frequency stereo with phase/amplitude differences")
+    logger.debug("Multi-frequency stereo with Verarbeitungsschritt/amplitude differences")
     logger.debug("440 Hz (A4), 880 Hz (A5), 1760 Hz (A6), 3520 Hz (A7)")
     logger.debug("Moderate initial stereo image")
 
@@ -664,7 +664,7 @@ if __name__ == "__main__":
         result = phase.process(test_audio, _test_sr, material)
 
         if result.success:
-            logger.debug("✅ Processing Complete!")
+            logger.debug("✅ Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f\u00d7 realtime)",
                 result.execution_time_seconds,
@@ -680,13 +680,13 @@ if __name__ == "__main__":
             logger.debug("   Band 2 (Mid) Width Increase: %.1f%%", result.metrics["band_2_width_increase"])
             logger.debug("   Band 3 (High) Width Increase: %.1f%%", result.metrics["band_3_width_increase"])
         else:
-            logger.debug("❌ Processing failed!")
+            logger.debug("❌ Processing fehlgeschlagen!")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Stereo Enhancement v2.0 Test Complete!")
+    logger.debug("✅ Professional Stereo Enhancement v2.0 Test vollstaendig!")
     logger.debug("=" * 80)
     logger.debug("Algorithm: multiband_ms_processing_v2")
-    logger.debug("Scientific Reference: Blumlein (1931), Haas (1951), Gerzon (1985-1992),")
+    logger.debug("Scientific Referenz: Blumlein (1931), Haas (1951), Gerzon (1985-1992),")
     logger.debug("                     Fletcher & Munson (1933), Orban (1990s)")
     logger.debug("Benchmark: iZotope Ozone Imager, Waves S1, Brainworx bx_digital V3,")
     logger.debug("           FabFilter Pro-Q 3, Sonnox SuprEsser")

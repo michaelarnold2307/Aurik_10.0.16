@@ -47,7 +47,7 @@ def report_to_csv(result_dir="results_sota"):
                     else forensic_report.get("primary_media", "")
                 )
                 transfer_chain = (
-                    getattr(forensic_report, "transfer_chain", [])
+                    getattr(forensic_report, "transfer_chain", [])  # type: ignore[assignment]
                     if hasattr(forensic_report, "transfer_chain")
                     else forensic_report.get("transfer_chain", [])
                 )

@@ -119,7 +119,7 @@ def _estimate_f0_crepe(mono: np.ndarray, sr: int, hop: int) -> np.ndarray | None
         return f0_raw
 
     except Exception as exc:
-        logger.debug("VocalHarmonicMask: CREPE unavailable, using ZCPA — %s", exc)
+        logger.debug("VocalHarmonicMask: CREPE nicht verfuegbar, using ZCPA — %s", exc)
         return None
 
 
@@ -306,5 +306,5 @@ def build_vocal_harmonic_mask(
     try:
         return VocalHarmonicMask(audio, sr, use_crepe=use_crepe)
     except Exception as exc:
-        logger.debug("build_vocal_harmonic_mask: non-blocking fallback — %s", exc)
+        logger.debug("build_vocal_harmonic_mask: nicht blockierend Ersatzpfad — %s", exc)
         return None

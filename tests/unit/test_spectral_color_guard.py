@@ -19,7 +19,7 @@ _N = 48000  # 1 s bei 48 kHz
 
 def _make_sine(freq_hz: float, n: int = _N, amp: float = 0.3) -> np.ndarray:
     t = np.linspace(0.0, n / SR, n, endpoint=False)
-    return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_noise(n: int = _N, amp: float = 0.1) -> np.ndarray:

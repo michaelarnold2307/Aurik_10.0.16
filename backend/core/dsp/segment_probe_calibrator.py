@@ -377,7 +377,7 @@ def run_segment_probe(
         )
 
     except Exception as _exc:
-        logger.debug("§2.82 SegmentProbe Exception (non-blocking): %s", _exc)
+        logger.debug("§2.82 SegmentProbe Exception (nicht blockierend): %s", _exc)
         return SegmentProbeResult(
             confirmed_strength=oracle_strength,
             oracle_strength=oracle_strength,

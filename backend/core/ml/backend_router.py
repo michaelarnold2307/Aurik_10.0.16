@@ -142,12 +142,12 @@ def detect_gpu_capabilities(fail_fast: bool = False) -> MLEngineConfig:
         return config
 
     # ── CPU-Fallback ─────────────────────────────────────────────────────
-    logger.info("Keine GPU-Backends erkannt, CPU-Fallback")
+    logger.info("Keine GPU-Backends erkannt, CPU-Ersatzpfad")
     config.warnings.append("GPU-Backend nicht verfügbar — CPU wird verwendet")
     return config
 
 
-def get_onnx_session_options(config: MLEngineConfig) -> onnxruntime.SessionOptions:  # noqa: F821
+def get_onnx_session_options(config: MLEngineConfig) -> onnxruntime.SessionOptions:  # type: ignore[name-defined]  # noqa: F821
     """Optimierte ONNX-Session-Optionen pro Provider.
 
     Args:
@@ -191,7 +191,7 @@ def _get_available_providers() -> list[str]:
     try:
         import onnxruntime as ort
 
-        return ort.get_available_providers()
+        return ort.get_available_providers()  # type: ignore[no-any-return]
     except Exception:
         return []
 

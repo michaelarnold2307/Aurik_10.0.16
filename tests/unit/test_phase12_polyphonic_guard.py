@@ -48,7 +48,7 @@ def test_polyphonic_reestimate_logs_info_not_warning(monkeypatch, caplog) -> Non
     audio = np.zeros(48000, dtype=np.float32)
 
     with caplog.at_level(logging.INFO):
-        result = phase.process(audio, sample_rate=48000, material_type=MaterialType.VINYL, quality_mode="maximum")
+        result = phase.process(audio, sample_rate=48000, material_type=MaterialType.VINYL, quality_mode="maximum")  # type: ignore[arg-type]
 
     assert result.success is True
     assert result.metrics["skipped_reason"] == "low_confidence_fallback"

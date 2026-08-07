@@ -133,7 +133,7 @@ class BlindQualityEstimator:
                 + 0.10 * hf_pres
                 + 0.10 * stereo_nat
                 + 0.10 * trans_dens
-                + 0.20 * mert_score
+                + 0.20 * mert_score  # type: ignore[operator]
             )
         else:
             overall = (
@@ -436,13 +436,13 @@ class BlindQualityEstimator:
         try:
             from plugins.mert_plugin import MertPlugin
         except ImportError:
-            logger.debug("§3.3 MERT: plugin not available, skipping perceptual quality")
+            logger.debug("§3.3 MERT: plugin not verfuegbar, skipping perceptual quality")
             return None
 
         try:
             plugin = MertPlugin()
             if not plugin.model_available:
-                logger.debug("§3.3 MERT: model not loaded, skipping perceptual quality")
+                logger.debug("§3.3 MERT: model not geladen, skipping perceptual quality")
                 return None
 
             # Extract MERT analysis (use first 10s max for efficiency)
@@ -471,13 +471,17 @@ class BlindQualityEstimator:
                 mert_score = min(mert_score, 85.0)
 
             logger.debug(
-                "§3.3 MERT quality: nat=%.3f harm=%.3f tonal=%.3f model=%s → score=%.1f",
-                nat_score, harmonicity, tonal_consistency, model_used, mert_score,
+                "§3.3 MERT quality: nat=%.3f harm=%.3f tonal=%.3f model=%s → Wert=%.1f",
+                nat_score,
+                harmonicity,
+                tonal_consistency,
+                model_used,
+                mert_score,
             )
             return float(np.clip(mert_score, 0.0, 100.0))
 
         except Exception:
-            logger.debug("§3.3 MERT: perceptual quality estimation failed", exc_info=True)
+            logger.debug("§3.3 MERT: perceptual quality estimation fehlgeschlagen", exc_info=True)
             return None
 
     # ── Helpers ──────────────────────────────────────────────────────────
@@ -486,4 +490,4 @@ class BlindQualityEstimator:
     def _to_mono(audio: np.ndarray) -> np.ndarray:
         if audio.ndim == 1:
             return audio
-        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)
+        return audio.mean(axis=0) if audio.shape[1] < audio.shape[0] else audio.mean(axis=1)  # type: ignore[no-any-return]

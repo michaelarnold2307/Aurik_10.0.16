@@ -62,7 +62,7 @@ def enrich_quality_gate(
                 }
             )
     except Exception as e:
-        logger.debug("Harmonic-Score nicht verfügbar: %s", e)
+        logger.debug("Harmonic-Wert nicht verfügbar: %s", e)
 
     # Transient Preservation (§G47)
     try:
@@ -82,7 +82,7 @@ def enrich_quality_gate(
                 }
             )
     except Exception as e:
-        logger.debug("Transient-Score nicht verfügbar: %s", e)
+        logger.debug("Transient-Wert nicht verfügbar: %s", e)
 
     # Formant Preservation (§G48)
     try:
@@ -102,7 +102,7 @@ def enrich_quality_gate(
                 }
             )
     except Exception as e:
-        logger.debug("Formant-Score nicht verfügbar: %s", e)
+        logger.debug("Formant-Wert nicht verfügbar: %s", e)
 
     # Artifact Freedom (§G53)
     try:
@@ -122,7 +122,7 @@ def enrich_quality_gate(
                 }
             )
     except Exception as e:
-        logger.debug("Artifact-Score nicht verfügbar: %s", e)
+        logger.debug("Artifact-Wert nicht verfügbar: %s", e)
 
     # Micro-Dynamics (§G52)
     try:
@@ -142,6 +142,6 @@ def enrich_quality_gate(
                 }
             )
     except Exception as e:
-        logger.debug("Micro-Dynamics-Score nicht verfügbar: %s", e)
+        logger.debug("Micro-Dynamics-Wert nicht verfügbar: %s", e)
 
     return enriched

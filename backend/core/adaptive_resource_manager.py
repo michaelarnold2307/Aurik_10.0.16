@@ -67,7 +67,7 @@ class AdaptiveResourceManager:
         self._monitor_thread: threading.Thread | None = None
         self._stop_event: threading.Event | None = None
         self.use_lightweight = False  # Fallback-Flag
-        logger.info("AdaptiveResourceManager initialized: %s-%s cores", self.min_cores, self.max_cores)
+        logger.info("AdaptiveResourceManager initialisiert: %s-%s cores", self.min_cores, self.max_cores)
 
     def get_cpu_usage(self) -> float:
         """Gibt zurück: current CPU usage percentage."""
@@ -145,13 +145,13 @@ class AdaptiveResourceManager:
                     n_evicted = evict_stale_plugins()
                     if n_evicted > 0:
                         logger.info(
-                            "ARM: RAM %.1f%% > %d%% threshold — evicted %d plugin(s)",
+                            "ARM: RAM %.1f%% > %d%% Schwelle — evicted %d plugin(s)",
                             memory_usage,
                             self.memory_threshold,
                             n_evicted,
                         )
                 except Exception as evict_exc:
-                    logger.debug("ARM: eviction check failed: %s", evict_exc)
+                    logger.debug("ARM: eviction Pruefung fehlgeschlagen: %s", evict_exc)
                 gc.collect()
 
             # Interruptible sleep — stoppt sofort bei stop_monitoring()

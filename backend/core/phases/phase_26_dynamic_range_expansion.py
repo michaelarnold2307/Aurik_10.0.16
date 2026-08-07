@@ -43,6 +43,7 @@ Version: 2.0.0 Professional
 import logging
 import os
 import time
+from typing import Any
 
 import numpy as np
 from scipy import signal
@@ -276,13 +277,13 @@ class DynamicRangeExpansion(PhaseInterface):
                     _boost_26 = _zone_frac_26 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_26, 0.0, 1.0))
                     logger.debug(
-                        "Phase26 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt26 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_26,
                         _boost_26,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_26:
-                logger.debug("Phase26 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_26)
+                logger.debug("Verarbeitungsschritt26 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_26)
 
         quality_mode = kwargs.get("quality_mode")
         restorability_score = kwargs.get("restorability_score", 50.0)
@@ -298,10 +299,13 @@ class DynamicRangeExpansion(PhaseInterface):
             if getattr(_smp26, "is_compressed", False):
                 self._max_expansion_db_current *= 0.75
                 logger.info(
-                    "Phase26 SMP: is_compressed → max_expansion_db reduziert auf %.1f", self._max_expansion_db_current
+                    "Verarbeitungsschritt26 SMP: is_compressed → max_expansion_db reduziert auf %.1f",
+                    self._max_expansion_db_current,
                 )
         except Exception:
-            logger.debug("Phase_26: SourceMediumProfile nicht verfügbar — is_compressed-Check übersprungen")
+            logger.debug(
+                "Verarbeitungsschritt_26: SourceMediumProfile nicht verfügbar — is_compressed-Pruefung übersprungen"
+            )
 
         # §v10.94 Non-Plus-Ultra: P10 Kompressions-Gain lesen und Expansion anpassen.
         # P10 (Compression) läuft VOR P26 (Expansion) mit denselben Crossover-Bändern
@@ -324,8 +328,8 @@ class DynamicRangeExpansion(PhaseInterface):
                 )
 
         is_stereo = audio.ndim == 2
-        _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.EXPANSION_CONFIG.get(_mk, self.EXPANSION_CONFIG[MaterialType.CD_DIGITAL]))
+        _mk = material
+        config: dict[str, Any] = dict(self.EXPANSION_CONFIG.get(_mk, self.EXPANSION_CONFIG[MaterialType.CD_DIGITAL]))
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -358,7 +362,7 @@ class DynamicRangeExpansion(PhaseInterface):
         _eff_down = float(1.0 + (config["downward_ratio"] - 1.0) * _effective_strength)
         if _eff_up <= 1.02 and _eff_down <= 1.02:
             logger.info(
-                "§v10.0.5 DR-Expansion-Skip: eff_ratio up/down=%.3f/%.3f (str=%.3f) → skipped",
+                "§v10.0.5 DR-Expansion-ueberspringen: eff_Verhaeltnis up/down=%.3f/%.3f (str=%.3f) → uebersprungen",
                 _eff_up,
                 _eff_down,
                 _effective_strength,
@@ -396,8 +400,8 @@ class DynamicRangeExpansion(PhaseInterface):
             config["upward_ratio"] = float(1.0 + (config["upward_ratio"] - 1.0) * _p26_sat_scale)
             config["downward_ratio"] = float(1.0 + (config["downward_ratio"] - 1.0) * _p26_sat_scale)
             logger.debug(
-                "Phase 26 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f "
-                "(up_ratio=%.3f down_ratio=%.3f)",
+                "Verarbeitungsschritt 26 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f "
+                "(up_Verhaeltnis=%.3f down_Verhaeltnis=%.3f)",
                 _p26_soft_sat_sev,
                 _p26_soft_sat_preserve,
                 _p26_sat_scale,
@@ -425,13 +429,15 @@ class DynamicRangeExpansion(PhaseInterface):
             _mono_for_nf = audio if audio.ndim == 1 else audio.mean(axis=0).astype(np.float64)
             _current_nf_db = self._estimate_noise_floor_mono(_mono_for_nf, sample_rate)
             logger.debug(
-                "Phase 26: NF_current=%.1fdB → per-band CD floors=%s, downward_thresh=%.1fdB (mode)",
+                "Verarbeitungsschritt 26: NF_current=%.1fdB → per-band CD floors=%s, downward_Schwelle=%.1fdB (Betriebsart)",
                 _current_nf_db,
                 [f"{f:.0f}" for f in self._CD_PER_BAND_FLOOR_DB],
                 config.get("downward_threshold_db", -50.0),
             )
         except Exception:
-            logger.debug("phase_26_dynamic_range_expansion.py:420: Silent exception absorbed", exc_info=True)
+            logger.debug(
+                "Verarbeitungsschritt_26_dynamic_range_expansion.py:420: Silent exception absorbed", exc_info=True
+            )
 
         # §2.51 Linked-Stereo: Gain-Envelope aus \u221a(L\u00b2+R\u00b2)/\u221a2, identisch auf L+R
         if is_stereo:
@@ -477,7 +483,7 @@ class DynamicRangeExpansion(PhaseInterface):
                     _dr_ceiling_capped = True
                     logger.info(
                         "§6.2b DR-Ceiling: source already exceeds ceiling "
-                        "(dr_before=%.1f >= ceil=%.1f, material=%s) → expansion skipped",
+                        "(dr_before=%.1f >= ceil=%.1f, material=%s) → expansion uebersprungen",
                         dr_before,
                         _dr_ceil,
                         _mat_key,
@@ -499,7 +505,7 @@ class DynamicRangeExpansion(PhaseInterface):
                         dr_after,
                     )
         except Exception as _dr_ceil_exc:
-            logger.debug("DR-Ceiling check failed (non-blocking): %s", _dr_ceil_exc)
+            logger.debug("DR-Ceiling Pruefung fehlgeschlagen (nicht blockierend): %s", _dr_ceil_exc)
 
         execution_time = time.time() - start_time
         rt_factor = execution_time / (audio_sample_count(audio) / sample_rate)
@@ -534,18 +540,18 @@ class DynamicRangeExpansion(PhaseInterface):
             )
             if _hg_result26.requires_rollback:
                 logger.warning(
-                    "§2.46e phase_26 Hallucination-Guard rollback: spectral_novelty=%.3f",
+                    "§2.46e Verarbeitungsschritt_26 Hallucination-Guard rollback: spectral_novelty=%.3f",
                     _hg_result26.spectral_novelty,
                 )
                 expanded_audio = audio.copy()
             if _hg_result26.score_penalty > 0:
                 logger.info(
-                    "§2.46e phase_26 score_penalty=%.1f (spectral_novelty=%.3f)",
+                    "§2.46e Verarbeitungsschritt_26 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_result26.score_penalty,
                     _hg_result26.spectral_novelty,
                 )
         except Exception as _hg26_exc:
-            logger.debug("§2.46e phase_26 Hallucination-Guard (non-blocking): %s", _hg26_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_26 Hallucination-Guard (nicht blockierend): %s", _hg26_exc)
 
         # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Dynamic-Expansion darf Spektralfarbe nicht verändern
         try:
@@ -557,9 +563,9 @@ class DynamicRangeExpansion(PhaseInterface):
             if not _sc26.ok:
                 _sc26_wet = 0.70
                 expanded_audio = (_sc26_wet * expanded_audio + (1.0 - _sc26_wet) * audio).astype(np.float32)
-                logger.warning("§V24 phase_26 spectral_color non-ok → strength −30%%")
+                logger.warning("§V24 Verarbeitungsschritt_26 spectral_color non-ok → strength −30%%")
         except Exception as _sc26_exc:
-            logger.debug("§V24 phase_26 spectral_color (non-blocking): %s", _sc26_exc)
+            logger.debug("§V24 Verarbeitungsschritt_26 spectral_color (nicht blockierend): %s", _sc26_exc)
 
         return PhaseResult(
             success=True,
@@ -700,8 +706,8 @@ class DynamicRangeExpansion(PhaseInterface):
 
         # D1: Per-band base floor
         _per_band_floors = config.get("downward_floor_db_per_band")
-        if _per_band_floors is not None and band_idx < len(_per_band_floors):
-            _base_floor_db = float(_per_band_floors[band_idx])
+        if _per_band_floors is not None and band_idx < len(_per_band_floors):  # type: ignore[arg-type]
+            _base_floor_db = float(_per_band_floors[band_idx])  # type: ignore[index]
         else:
             _base_floor_db = config.get("downward_floor_db", -72.0)
 

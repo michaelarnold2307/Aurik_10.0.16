@@ -125,18 +125,18 @@ class StemLevelRestorer:
         # Guard: minimum duration
         n_samples = audio.shape[0] if audio.ndim >= 1 else len(audio)
         if n_samples / sample_rate < self._MIN_DURATION_S:
-            logger.debug("§SLR-1 skipped: audio too short (%.1f s)", n_samples / sample_rate)
+            logger.debug("§SLR-1 uebersprungen: audio too short (%.1f s)", n_samples / sample_rate)
             return None
 
         # Guard: only process if singing detected
         if panns_singing < 0.35:
-            logger.debug("§SLR-1 skipped: panns_singing=%.3f < 0.35", panns_singing)
+            logger.debug("§SLR-1 uebersprungen: panns_singing=%.3f < 0.35", panns_singing)
             return None
 
         try:
             return self._run(audio, sample_rate, panns_singing, ctx)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 restore non-blocking: %s", exc)
+            logger.debug("§SLR-1 wiederherstellen nicht blockierend: %s", exc)
             return StemLevelRestorerResult(
                 audio=audio,
                 snr_gain_db=0.0,
@@ -165,7 +165,7 @@ class StemLevelRestorer:
         _vocal_energy_bias = _REGISTER_BIAS.get(_vsp_reg, -6.0)
         _multi_singer = bool(_ctx.get("multi_singer", False))
         if _multi_singer:
-            logger.debug("§SLR-1 multi_singer=True detected; HNR-blend kept per-stem")
+            logger.debug("§SLR-1 multi_singer=True erkannt; HNR-blend kept per-stem")
         logger.debug(
             "§SLR-1 panns_singing=%.3f register=%s vocal_energy_bias=%.1f dB",
             panns_singing,
@@ -191,7 +191,7 @@ class StemLevelRestorer:
                 _vocal_energy_bias,
             )
         except Exception as _me:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 MIIPHER non-blocking: %s", _me)
+            logger.debug("§SLR-1 MIIPHER nicht blockierend: %s", _me)
 
         # §SLR-1c: HNR-Blend after MIIPHER (§0p)
         if _miipher_used:
@@ -200,13 +200,13 @@ class StemLevelRestorer:
 
                 _vocal_out, _ = apply_hnr_blend(_vocal_stem, _vocal_out, sample_rate)
             except Exception as _hnr_exc:  # pylint: disable=broad-except
-                logger.debug("§SLR-1 HNR-blend non-blocking: %s", _hnr_exc)
+                logger.debug("§SLR-1 HNR-blend nicht blockierend: %s", _hnr_exc)
 
         # §SLR-1d: DeepFilterNet v3 on instrumental stem (§0j energy_bias −9 dB)
         try:
             _instr_out, _dfn_used, _instrumental_nr_model = self._apply_dfn(_instr_stem, sample_rate)
         except Exception as _de:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 DFN non-blocking: %s", _de)
+            logger.debug("§SLR-1 DFN nicht blockierend: %s", _de)
 
         # §SLR-1e: Hallucination-Guard on each processed stem (§2.46e)
         _vocal_out = self._hallucination_guard(_vocal_stem, _vocal_out, sample_rate, "vocal")
@@ -239,7 +239,7 @@ class StemLevelRestorer:
             elif not _multi_singer and _singer_cosine < 0.92:
                 _rollback_reason = f"singer_identity_below_floor:{_singer_cosine:.3f}"
         except Exception as _vqi_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 VQI gate non-blocking: %s", _vqi_exc)
+            logger.debug("§SLR-1 VQI gate nicht blockierend: %s", _vqi_exc)
 
         if _rollback_reason:
             logger.warning("§SLR-1 §0p vocal gate rollback: %s", _rollback_reason)
@@ -280,7 +280,7 @@ class StemLevelRestorer:
             if isinstance(ctx, dict) and "active_ml_plugins" in ctx:
                 return int(max(0, int(ctx.get("active_ml_plugins", 0))))
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         try:
             from backend.core.plugin_lifecycle_manager import (  # pylint: disable=import-outside-toplevel
@@ -292,7 +292,7 @@ class StemLevelRestorer:
             if isinstance(_entries, dict):
                 return int(sum(1 for _entry in _entries.values() if bool(getattr(_entry, "active", False))))
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         return 0
 
@@ -324,9 +324,9 @@ class StemLevelRestorer:
             )
             if route.success:
                 return route.vocal.astype(np.float32), route.instrumental.astype(np.float32), route.model_used
-            logger.debug("§SLR-1 separation router fallback chain: %s", route.fallback_chain)
+            logger.debug("§SLR-1 separation router Ersatzpfad chain: %s", route.fallback_chain)
         except Exception as _router_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 separation router fallback to DSP: %s", _router_exc)
+            logger.debug("§SLR-1 separation router Ersatzpfad to DSP: %s", _router_exc)
         _vocal, _instr = self._dsp_stem_split(audio, sample_rate)
         return _vocal, _instr, "dsp_bandpass_residual"
 
@@ -370,7 +370,7 @@ class StemLevelRestorer:
             _instr = (audio - _vocal).astype(np.float32)
             return _vocal, _instr
         except Exception as _sos_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 DSP stem split failed: %s", _sos_exc)
+            logger.debug("§SLR-1 DSP stem split fehlgeschlagen: %s", _sos_exc)
             # Last resort: equal split
             _half = (audio * 0.5).astype(np.float32)
             return _half.copy(), _half.copy()
@@ -399,7 +399,7 @@ class StemLevelRestorer:
             _out = np.clip(_out, -1.0, 1.0)
             return _out, True, _result.model_used
         except Exception as _router_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 vocal NR router non-blocking: %s", _router_exc)
+            logger.debug("§SLR-1 vocal NR router nicht blockierend: %s", _router_exc)
             return vocal_stem, False, "none"
 
     # -----------------------------------------------------------------------
@@ -429,7 +429,7 @@ class StemLevelRestorer:
             _out = np.clip(_out, -1.0, 1.0)
             return _out, True, _result.model_used
         except Exception as _dfn_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 DeepFilterNet non-blocking: %s", _dfn_exc)
+            logger.debug("§SLR-1 DeepFilterNet nicht blockierend: %s", _dfn_exc)
             return stem, False, "none"
 
     # -----------------------------------------------------------------------
@@ -450,12 +450,12 @@ class StemLevelRestorer:
             _result = check_hallucination(pre, post, sr=sample_rate, mode="restoration")
             if _result.requires_rollback:
                 logger.warning(
-                    "§SLR-1 §2.46e hallucination detected on %s stem → rollback",
+                    "§SLR-1 §2.46e hallucination erkannt on %s stem → rollback",
                     stem_name,
                 )
                 return pre
         except Exception as _hg_exc:  # pylint: disable=broad-except
-            logger.debug("§SLR-1 hallucination_guard non-blocking: %s", _hg_exc)
+            logger.debug("§SLR-1 hallucination_guard nicht blockierend: %s", _hg_exc)
         return post
 
     # -----------------------------------------------------------------------
@@ -486,7 +486,7 @@ def get_stem_level_restorer() -> StemLevelRestorer:
         with _lock:
             if _instance is None:
                 _instance = StemLevelRestorer()
-                logger.debug("§SLR-1 StemLevelRestorer singleton created.")
+                logger.debug("§SLR-1 StemLevelRestorer singleton erstellt.")
     return _instance
 
 

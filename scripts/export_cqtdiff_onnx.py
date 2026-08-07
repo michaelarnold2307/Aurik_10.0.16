@@ -165,7 +165,7 @@ def main() -> None:
 
             x_in = c_in * x_noisy
             raw_out = self.inner(x_in, c_noise)  # [B, 65536]
-            return c_skip * x_noisy + c_out * raw_out
+            return c_skip * x_noisy + c_out * raw_out  # type: ignore[no-any-return]
 
     wrapper = ScoreNetWrapper(model)
     wrapper.eval()

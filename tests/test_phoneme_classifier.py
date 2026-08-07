@@ -277,13 +277,13 @@ class TestPhonemeClassifierSibilants:
     def test_frequency_ordering(self):
         """Test that sibilant frequencies are ordered correctly"""
         # Voiceless should be higher than voiced counterparts
-        assert self.classifier.get_frequency_center("s") > self.classifier.get_frequency_center("z")
-        assert self.classifier.get_frequency_center("ʃ") > self.classifier.get_frequency_center("ʒ")
-        assert self.classifier.get_frequency_center("tʃ") > self.classifier.get_frequency_center("dʒ")
+        assert self.classifier.get_frequency_center("s") > self.classifier.get_frequency_center("z")  # type: ignore[operator]
+        assert self.classifier.get_frequency_center("ʃ") > self.classifier.get_frequency_center("ʒ")  # type: ignore[operator]
+        assert self.classifier.get_frequency_center("tʃ") > self.classifier.get_frequency_center("dʒ")  # type: ignore[operator]
 
         # Alveolar should be higher than postalveolar
-        assert self.classifier.get_frequency_center("s") > self.classifier.get_frequency_center("ʃ")
-        assert self.classifier.get_frequency_center("z") > self.classifier.get_frequency_center("ʒ")
+        assert self.classifier.get_frequency_center("s") > self.classifier.get_frequency_center("ʃ")  # type: ignore[operator]
+        assert self.classifier.get_frequency_center("z") > self.classifier.get_frequency_center("ʒ")  # type: ignore[operator]
 
 
 class TestPhonemeClassifierArticulation:

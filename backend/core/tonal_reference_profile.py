@@ -877,7 +877,7 @@ class TonalCurve:
         try:
             return _apply_bark_ceiling(audio_pre, audio_post, sr, self.band_ceiling_db, self.confidence)
         except Exception as exc:
-            logger.debug("TonalCurve.apply_ceiling non-blocking: %s", exc)
+            logger.debug("TonalCurve.anwenden_ceiling nicht blockierend: %s", exc)
             return audio_post
 
     def apply_snr_adaptive_ceiling(
@@ -916,7 +916,7 @@ class TonalCurve:
             )
             return result
         except Exception as exc:
-            logger.debug("TonalCurve.apply_snr_adaptive_ceiling fallback: %s", exc)
+            logger.debug("TonalCurve.anwenden_snr_adaptive_ceiling Ersatzpfad: %s", exc)
             return self.apply_ceiling(audio_pre, audio_post, sr)
 
     def apply_target_steering(
@@ -1060,7 +1060,7 @@ class TonalCurve:
             return np.clip(result, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
         except Exception as exc:
-            logger.debug("TonalCurve.apply_target_steering non-blocking: %s", exc)
+            logger.debug("TonalCurve.anwenden_target_steering nicht blockierend: %s", exc)
             return audio_post
 
 
@@ -1533,7 +1533,7 @@ class TonalReferenceProfiler:
             )
             return merged_curve
         except Exception as exc:
-            logger.debug("get_curve_with_provenance fallback: %s", exc)
+            logger.debug("get_curve_with_provenance Ersatzpfad: %s", exc)
             return self.get_curve(
                 era_decade=era_decade,
                 genre_label=genre_label,

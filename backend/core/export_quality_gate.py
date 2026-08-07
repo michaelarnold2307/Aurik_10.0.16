@@ -109,7 +109,7 @@ class ExportQualityGate:
             try:
                 from backend.core.listening_fatigue_metric import measure_fatigue
 
-                result.fatigue_score = float(measure_fatigue(audio, sr))
+                result.fatigue_score = float(measure_fatigue(audio, sr))  # type: ignore[arg-type]
                 if result.fatigue_score > _FATIGUE_WARN:
                     result.fatigue_ok = False
                     result.warnings.append(
@@ -155,7 +155,7 @@ class ExportQualityGate:
         peak = float(np.max(np.abs(arr)))
         # +0.5 dB Marge für Intersample-Peaks
         tp = 20.0 * np.log10(peak + 1e-12) + 0.5
-        return min(tp, 0.0) if peak >= 0.99 else tp
+        return min(tp, 0.0) if peak >= 0.99 else tp  # type: ignore[no-any-return]
 
     @staticmethod
     def _measure_lufs(arr: np.ndarray, sr: int) -> float:
@@ -172,22 +172,22 @@ class ExportQualityGate:
                 seg = mono[i * block_n : (i + 1) * block_n]
                 rms = float(np.sqrt(np.mean(seg**2) + 1e-12))
                 block_rms.append(rms)
-            block_rms = np.array(block_rms)
+            block_rms = np.array(block_rms)  # type: ignore[assignment]
 
             # Gate: untere 10% der Blöcke ignorieren (Stille)
             if len(block_rms) >= 10:
                 threshold = float(np.percentile(block_rms, 10))
-                active = block_rms[block_rms > threshold]
+                active = block_rms[block_rms > threshold]  # type: ignore[operator]
             else:
-                active = block_rms
+                active = block_rms  # type: ignore[assignment]
 
-            if len(active) < 1:
+            if len(active) < 1:  # type: ignore[arg-type]
                 return -70.0
 
             integrated_rms = float(np.mean(active))
             if integrated_rms < 1e-10:
                 return -70.0
-            return 20.0 * np.log10(integrated_rms)
+            return 20.0 * np.log10(integrated_rms)  # type: ignore[no-any-return]
         except Exception:
             return -23.0  # typical music LUFS fallback
 

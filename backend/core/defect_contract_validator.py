@@ -94,7 +94,7 @@ def validate_defect_contracts(
                 )
 
     except ImportError as e:
-        logger.warning("⚠️ SOTA ContractValidator: PhasePruner-Check skipped (%s)", e)
+        logger.warning("⚠️ SOTA ContractValidator: PhasePruner-Pruefung uebersprungen (%s)", e)
 
     # ── 2. DefectPrecisionEnhancer: analyze_defects existiert ─────────
     try:
@@ -109,7 +109,7 @@ def validate_defect_contracts(
                 )
             )
     except ImportError:
-        logger.warning("⚠️ SOTA ContractValidator: DefectPrecisionEnhancer-Check skipped (not importable)")
+        logger.warning("⚠️ SOTA ContractValidator: DefectPrecisionEnhancer-Pruefung uebersprungen (not importable)")
 
     # ── 3. SongGoalImportance: Defekt-Keys prüfen ─────────────────────
     try:
@@ -128,7 +128,7 @@ def validate_defect_contracts(
                 )
             )
     except ImportError:
-        logger.warning("⚠️ SOTA ContractValidator: SongGoalImportance-Check skipped")
+        logger.warning("⚠️ SOTA ContractValidator: SongGoalImportance-Pruefung uebersprungen")
 
     # ── 4. DefectManifest ↔ PhasePruner Synchronisation ─────────────
     try:
@@ -149,7 +149,7 @@ def validate_defect_contracts(
                         )
                     )
     except ImportError:
-        logger.warning("⚠️ SOTA ContractValidator: DefectManifest-Check skipped")
+        logger.warning("⚠️ SOTA ContractValidator: DefectManifest-Pruefung uebersprungen")
 
     # ── 5. ML-Health-Check: Kritische Modelle prüfen ──────────────────
     try:
@@ -172,7 +172,7 @@ def validate_defect_contracts(
                     )
                 )
     except ImportError:
-        logger.warning("⚠️ SOTA ContractValidator: ML-Health-Check skipped")
+        logger.warning("⚠️ SOTA ContractValidator: ML-Health-Pruefung uebersprungen")
 
     # ── 6. Keine toten Verzeichnisse mehr ──────────────────────────────
     # import os → module level (§v10.105)

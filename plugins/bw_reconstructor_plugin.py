@@ -79,7 +79,7 @@ class BWReconstructorPlugin:
         if not path.exists():
             logger.warning(
                 "BWReconstructorPlugin: ONNX-Modell nicht gefunden unter %s. "
-                "Bitte train_bw_reconstructor.py und export_bw_to_onnx.py ausführen, "
+                "Bitte train_bw_reconstructor.py und Ausgabe_bw_to_onnx.py ausführen, "
                 "oder --model-path angeben.",
                 path,
             )
@@ -91,7 +91,7 @@ class BWReconstructorPlugin:
                 from backend.core.ml_memory_budget import try_allocate
 
                 if not try_allocate(self._BUDGET_NAME, size_gb=self._BUDGET_SIZE_GB):
-                    logger.info("BWReconstructor: ML-Budget erschöpft — Plugin inaktiv.")
+                    logger.info("BWReconstructor: ML-Grenze erschöpft — Plugin inaktiv.")
                     return
             except ImportError:
                 pass
@@ -113,10 +113,10 @@ class BWReconstructorPlugin:
                 _reg_plm(
                     self._BUDGET_NAME,
                     size_gb=self._BUDGET_SIZE_GB,
-                    unload_fn=lambda s=_self: setattr(s, "_session", None),
+                    unload_fn=lambda s=_self: setattr(s, "_session", None),  # type: ignore[misc]
                 )
             except Exception:
-                logger.debug("PLM-Registrierung nicht möglich (non-critical)")
+                logger.debug("PLM-Registrierung nicht möglich (unkritisch)")
 
             logger.info("BWReconstructorPlugin geladen: %s (%.1f MB)", path.name, path.stat().st_size / 1e6)
 
@@ -150,7 +150,7 @@ class BWReconstructorPlugin:
             Rekonstruiertes Audiosignal in der originalen Samplerate.
         """
         if not self.available:
-            logger.warning("BWReconstructorPlugin nicht verfügbar — gebe Original zurück.")
+            logger.warning("BWReconstructorPlugin nicht verfügbar — gebe Originalsignal zurück.")
             return audio.copy()
 
         audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -224,7 +224,7 @@ class BWReconstructorPlugin:
         hi = np.clip(lo + 1, 0, len(audio) - 1)
         lo = np.clip(lo, 0, len(audio) - 1)
         frac = indices - lo
-        return (1.0 - frac) * audio[lo] + frac * audio[hi]
+        return (1.0 - frac) * audio[lo] + frac * audio[hi]  # type: ignore[no-any-return]
 
     def _audio_to_mel(self, audio: np.ndarray) -> np.ndarray:
         """Konvertiert Audio zu logarithmiertem Mel-Spektrogramm via STFT."""
@@ -255,7 +255,7 @@ class BWReconstructorPlugin:
         # Normalisierung auf [0, 1]
         mel_norm = np.clip((mel_db + 80.0) / 80.0, 0.0, 1.0)
 
-        return mel_norm.astype(np.float32)
+        return mel_norm.astype(np.float32)  # type: ignore[no-any-return]
 
     def _mel_to_audio(self, mel_norm: np.ndarray) -> np.ndarray:
         """Griffin-Lim: Rekonstruiert Audio aus Mel-Spektrogramm via iterative Phasenschätzung."""
@@ -365,7 +365,7 @@ class BWReconstructorPlugin:
         finally:
             self._set_plm_active(False)
 
-        return result[0, 0, :, :]
+        return result[0, 0, :, :]  # type: ignore[no-any-return]
 
     def _set_plm_active(self, active: bool) -> None:
         """Teilt dem Plugin Lifecycle Manager den aktiven Inferenz-Status mit."""
@@ -375,7 +375,7 @@ class BWReconstructorPlugin:
             plm = get_plugin_lifecycle_manager()
             plm.set_active(self._BUDGET_NAME, active)
         except Exception as _e:
-            logger.debug("%s: non-critical exception: %s", __name__, _e)
+            logger.debug("%s: unkritisch exception: %s", __name__, _e)
 
     def _estimate_cutoff(self, audio: np.ndarray, sr: int, threshold_db: float = -60.0) -> float:
         """Schätzt die Bandbreitengrenze via FFT-Energie-Abfall."""
@@ -496,9 +496,9 @@ class BWReconstructorStage:
         cutoff = kwargs.get("cutoff_hz", self.cutoff_hz)
         blend = kwargs.get("blend_strength", self.blend_strength)
 
-        reconstructed = self._plugin.reconstruct(audio, sr, cutoff_hz=cutoff, blend_strength=blend)
+        reconstructed = self._plugin.reconstruct(audio, sr, cutoff_hz=cutoff, blend_strength=blend)  # type: ignore[union-attr]
 
-        estimated_cutoff = self._plugin._estimate_cutoff(audio.squeeze(), sr)
+        estimated_cutoff = self._plugin._estimate_cutoff(audio.squeeze(), sr)  # type: ignore[union-attr]
 
         return {
             "audio": reconstructed,

@@ -26,8 +26,8 @@ PLATFORMS = {
 
 def export_for(audio: np.ndarray, sr: int, platform: str = "spotify") -> np.ndarray:
     preset = PLATFORMS.get(platform.lower(), PLATFORMS["spotify"])
-    target_lufs = float(preset["target_lufs"])
-    max_tp = float(preset["max_true_peak"])
+    target_lufs = float(preset["target_lufs"])  # type: ignore[arg-type]
+    max_tp = float(preset["max_true_peak"])  # type: ignore[arg-type]
 
     mono = np.mean(audio, axis=-1) if audio.ndim > 1 else np.asarray(audio, dtype=np.float32)
     rms = float(np.sqrt(np.mean(mono**2))) + 1e-10

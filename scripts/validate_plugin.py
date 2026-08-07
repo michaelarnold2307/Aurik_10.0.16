@@ -89,6 +89,30 @@ def validate_plugin_dir(plugin_dir: Path, strict: bool = False) -> tuple[bool, l
     return ok, messages
 
 
+def validate_all_plugins(plugins_dir: Path | None = None) -> tuple[int, int]:
+    """Validiert alle Plugin-Verzeichnisse unter `plugins/` (Aurik10/ui/plugin_manager.py).
+
+    Returns:
+        (total, failed) — Anzahl geprüfter Plugins und Anzahl davon fehlgeschlagen.
+    """
+    base_dir = plugins_dir or (_PROJECT_ROOT / "plugins")
+    if not base_dir.is_dir():
+        return 0, 0
+
+    total = 0
+    failed = 0
+    for item in sorted(base_dir.iterdir()):
+        if not item.is_dir() or item.name.startswith("_") or item.name.startswith(".") or item.name == "sdk":
+            continue
+        if not (item / "manifest.json").exists():
+            continue
+        total += 1
+        ok, _messages = validate_plugin_dir(item, strict=False)
+        if not ok:
+            failed += 1
+    return total, failed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Aurik Plugin-Validator")
     parser.add_argument("plugin_dir", type=Path, help="Pfad zum Plugin-Verzeichnis")

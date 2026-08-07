@@ -76,31 +76,31 @@ class TestPhase11Limiting:
         self.phase = LimitingPhase()
 
     def test_mono_returns_phase_result(self, loud_mono):
-        result = self.phase.process(loud_mono, SR, MaterialType.VINYL)
+        result = self.phase.process(loud_mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, loud_mono)
 
     def test_output_within_limits(self, loud_mono):
-        result = self.phase.process(loud_mono, SR, MaterialType.VINYL)
+        result = self.phase.process(loud_mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert np.max(np.abs(result.audio)) <= 1.05
 
     def test_silent_input(self, silent_mono):
-        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)
+        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, silent_mono)
 
     def test_different_material_types(self, mono):
         for mat in [MaterialType.VINYL, MaterialType.TAPE, MaterialType.CD_DIGITAL]:
-            result = self.phase.process(mono, SR, mat)
+            result = self.phase.process(mono, SR, mat)  # type: ignore[arg-type]
             _assert_phase_result(result, mono)
 
     def test_zero_strength_passthrough(self, loud_mono):
-        result = self.phase.process(loud_mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(loud_mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, loud_mono)
         assert np.allclose(result.audio, loud_mono, atol=1e-7)
         assert result.metadata.get("processing") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, loud_mono):
-        result = self.phase.process(loud_mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(loud_mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, loud_mono)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -117,26 +117,26 @@ class TestPhase12WowFlutterFix:
         self.phase = WowFlutterFix()
 
     def test_mono_returns_phase_result(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_silent_input(self, silent_mono):
-        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)
+        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, silent_mono)
 
     def test_tape_material(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.TAPE)
+        result = self.phase.process(mono, SR, MaterialType.TAPE)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_zero_strength_passthrough(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         assert np.allclose(result.audio, mono, atol=1e-7)
         assert result.metadata.get("algorithm") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -349,14 +349,14 @@ class TestPhase18NoiseGate:
         assert np.max(np.abs(result.audio)) > 0.01
 
     def test_zero_strength_passthrough(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
         assert np.allclose(result.audio, mono, atol=1e-7)
         assert result.metadata.get("processing") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -612,7 +612,7 @@ class TestPhase23SpectralRepair:
         self.phase = SpectralRepair()
 
     def test_mono_returns_phase_result(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)
+        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_silent_input(self, silent_mono):
@@ -620,12 +620,12 @@ class TestPhase23SpectralRepair:
         _assert_phase_result(result, silent_mono)
 
     def test_vinyl_material(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_locality_reduces_repair_strength(self, mono):
-        result_default = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)
-        result_sparse = self.phase.process(mono, SR, MaterialType.CD_DIGITAL, phase_locality_factor=0.4)
+        result_default = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
+        result_sparse = self.phase.process(mono, SR, MaterialType.CD_DIGITAL, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result_default, mono, check_clipping=False)
         _assert_phase_result(result_sparse, mono, check_clipping=False)
 
@@ -642,7 +642,7 @@ class TestPhase23SpectralRepair:
                 return np.asarray(audio, dtype=np.float32) * 0.5
 
         stereo_cf = stereo.T.astype(np.float32)
-        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
+        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
 
         repaired = self.phase._repair_with_flashsr(
             stereo_cf,
@@ -670,7 +670,7 @@ class TestPhase23SpectralRepair:
                 assert target_sr == SR
                 return np.asarray(audio, dtype=np.float32) * 0.5
 
-        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
+        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
 
         stereo_sf = stereo.astype(np.float32)
         repaired = self.phase._repair_with_flashsr(
@@ -695,7 +695,7 @@ class TestPhase23SpectralRepair:
             def process(self, audio, sr, target_sr):
                 return np.asarray(audio, dtype=np.float32) * 0.5
 
-        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True
+        self.phase._has_sufficient_ml_headroom = lambda *_args, **_kwargs: True  # type: ignore[method-assign]
 
         weird = np.ones((3, 4, 5), dtype=np.float32)
         repaired = self.phase._repair_with_flashsr(
@@ -725,7 +725,7 @@ class TestPhase23SpectralRepair:
             lambda: (_ for _ in ()).throw(AssertionError("FlashSR darf bei Thrashing nicht geladen werden")),
         )
 
-        result = self.phase.process(mono, SR, MaterialType.STREAMING)
+        result = self.phase.process(mono, SR, MaterialType.STREAMING)  # type: ignore[arg-type]
 
         _assert_phase_result(result, mono, check_clipping=False)
 
@@ -738,7 +738,7 @@ class TestPhase23SpectralRepair:
             lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("MRSA darf bei Thrashing nicht laufen")),
         )
 
-        result = self.phase.process(mono, SR, MaterialType.STREAMING)
+        result = self.phase.process(mono, SR, MaterialType.STREAMING)  # type: ignore[arg-type]
 
         _assert_phase_result(result, mono, check_clipping=False)
 
@@ -759,7 +759,7 @@ class TestPhase23SpectralRepair:
 
         monkeypatch.setattr(self.phase, "_repair_channel_mrsa", _mrsa)
 
-        result = self.phase.process(long_mono, SR, MaterialType.STREAMING)
+        result = self.phase.process(long_mono, SR, MaterialType.STREAMING)  # type: ignore[arg-type]
 
         _assert_phase_result(result, long_mono, check_clipping=False)
         assert called["mrsa"] >= 1
@@ -803,8 +803,8 @@ class TestPhase23SpectralRepair:
 
         monkeypatch.setattr(self.phase, "_repair_with_flashsr", _repair_with_flashsr)
 
-        result1 = self.phase.process(mono, SR, MaterialType.TAPE)
-        result2 = self.phase.process(mono, SR, MaterialType.TAPE)
+        result1 = self.phase.process(mono, SR, MaterialType.TAPE)  # type: ignore[arg-type]
+        result2 = self.phase.process(mono, SR, MaterialType.TAPE)  # type: ignore[arg-type]
 
         _assert_phase_result(result1, mono, check_clipping=False)
         _assert_phase_result(result2, mono, check_clipping=False)
@@ -831,8 +831,8 @@ class TestPhase23SpectralRepair:
 
         monkeypatch.setattr(self.phase, "_repair_channel_mrsa", _mrsa)
 
-        result1 = self.phase.process(long_mono, SR, MaterialType.STREAMING)
-        result2 = self.phase.process(long_mono, SR, MaterialType.STREAMING)
+        result1 = self.phase.process(long_mono, SR, MaterialType.STREAMING)  # type: ignore[arg-type]
+        result2 = self.phase.process(long_mono, SR, MaterialType.STREAMING)  # type: ignore[arg-type]
 
         _assert_phase_result(result1, long_mono, check_clipping=False)
         _assert_phase_result(result2, long_mono, check_clipping=False)
@@ -875,8 +875,14 @@ class TestPhase24DropoutRepair:
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_repair_strength(self, mono):
-        result_default = self.phase.process(mono, SR, material_type="vinyl")
-        result_sparse = self.phase.process(mono, SR, material_type="vinyl", strength=1.0, phase_locality_factor=0.4)
+        # §v10.96 Skip-Gate: ohne dropout_density > 0.001 überspringt die Phase
+        # jede Reparatur (repair_strength bleibt 0.0 für BEIDE Aufrufe, egal
+        # welcher phase_locality_factor gilt). Ein expliziter dropout_density-Wert
+        # simuliert einen vom DefectScanner tatsächlich erkannten Dropout.
+        result_default = self.phase.process(mono, SR, material_type="vinyl", dropout_density=0.5)
+        result_sparse = self.phase.process(
+            mono, SR, material_type="vinyl", strength=1.0, phase_locality_factor=0.4, dropout_density=0.5
+        )
         _assert_phase_result(result_default, mono, check_clipping=False)
         _assert_phase_result(result_sparse, mono, check_clipping=False)
         s_default = float(result_default.modifications.get("repair_strength", 1.0))
@@ -928,7 +934,12 @@ class TestPhase24DropoutRepair:
 
     def test_stereo_lag_safety_realigns_large_introduced_delay(self):
         """Neu eingeführter L/R-Lag > 1 ms muss vom Stereo-Lag-Guard zurückgesetzt werden."""
-        n = SR
+        # §STCG-Multi-Point: _verify_lag_multi_point() benötigt mind. 2×window_s
+        # (Default 5s → 10s) Audiolänge, um 3 Song-Positionen zu vergleichen
+        # (Anti-False-Positive gegen Stereo-Panning-Artefakte). Ein 1s-Clip
+        # liefert num_points=0 → lag_in/out fallen beide auf 0 zurück → kein
+        # Fix wird erkannt/angewendet, unabhängig vom tatsächlichen Delay.
+        n = 12 * SR
         t = np.arange(n, dtype=np.float32) / SR
         left = (0.2 * np.sin(2 * np.pi * 440 * t) + 0.04 * np.sin(2 * np.pi * 3200 * t)).astype(np.float32)
         right = left.copy()
@@ -955,31 +966,31 @@ class TestPhase25AzimuthCorrection:
         self.phase = AzimuthCorrectionPhaseV2()
 
     def test_stereo_returns_phase_result(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.VINYL)
+        result = self.phase.process(stereo, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, stereo, check_clipping=False)
 
     def test_output_is_stereo(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.VINYL)
+        result = self.phase.process(stereo, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert result.audio.ndim == 2 and result.audio.shape[1] == 2
 
     def test_tape_material(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.TAPE)
+        result = self.phase.process(stereo, SR, MaterialType.TAPE)  # type: ignore[arg-type]
         _assert_phase_result(result, stereo, check_clipping=False)
 
     def test_silent_stereo(self):
         silent = np.zeros((_N, 2), dtype=np.float32)
-        result = self.phase.process(silent, SR, MaterialType.VINYL)
+        result = self.phase.process(silent, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, silent)
 
     def test_zero_strength_passthrough_tape(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.TAPE, strength=0.0)
+        result = self.phase.process(stereo, SR, MaterialType.TAPE, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, stereo, check_clipping=False)
         assert np.allclose(result.audio, stereo, atol=1e-7)
         assert result.metadata.get("algorithm") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength_tape(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.TAPE, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(stereo, SR, MaterialType.TAPE, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, stereo, check_clipping=False)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -996,7 +1007,7 @@ class TestPhase26DynamicRangeExpansion:
         self.phase = DynamicRangeExpansion()
 
     def test_mono_returns_phase_result(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)
+        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_silent_input(self, silent_mono):
@@ -1004,18 +1015,18 @@ class TestPhase26DynamicRangeExpansion:
         _assert_phase_result(result, silent_mono)
 
     def test_vinyl_material(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_zero_strength_passthrough(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         assert np.allclose(result.audio, mono, atol=1e-7)
         assert result.metadata.get("processing") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -1032,14 +1043,14 @@ class TestPhase27ClickPopRemoval:
         self.phase = ClickPopRemoval()
 
     def test_mono_returns_phase_result(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_audio_with_click(self):
         """Signal mit simuliertem Click."""
         sig = np.zeros(_N, dtype=np.float32)
         sig[_N // 4] = 1.0  # impulsartiger Click
-        result = self.phase.process(sig, SR, MaterialType.VINYL)
+        result = self.phase.process(sig, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, sig, check_clipping=False)
 
     def test_silent_input(self, silent_mono):
@@ -1047,14 +1058,14 @@ class TestPhase27ClickPopRemoval:
         _assert_phase_result(result, silent_mono)
 
     def test_zero_strength_passthrough(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         assert np.allclose(result.audio, mono, atol=1e-7)
         assert result.metadata.get("processing") == "skipped_zero_strength"
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
         eff = float(result.metadata.get("effective_strength", 1.0))
         assert 0.0 < eff < 1.0
@@ -1064,7 +1075,7 @@ class TestPhase27ClickPopRemoval:
         result = self.phase.process(
             mono,
             SR,
-            MaterialType.VINYL,
+            MaterialType.VINYL,  # type: ignore[arg-type]
             strength=1.0,
             panns_tags={"Singing voice": 0.78},
         )
@@ -1083,7 +1094,7 @@ class TestPhase27ClickPopRemoval:
         left[_N // 3] = 1.0
         right[_N // 3] = 0.9
         stereo_in = np.column_stack([left, right])
-        result = self.phase.process(stereo_in, SR, MaterialType.VINYL)
+        result = self.phase.process(stereo_in, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert result.success
         assert result.metadata.get("stereo_mode") == "linked_detection"
         assert result.audio.shape == stereo_in.shape
@@ -1092,7 +1103,7 @@ class TestPhase27ClickPopRemoval:
         """Stereo input → stereo output with correct shape."""
         rng = np.random.default_rng(99)
         stereo_in = rng.normal(0, 0.1, (_N, 2)).astype(np.float32)
-        result = self.phase.process(stereo_in, SR, MaterialType.CD_DIGITAL)
+        result = self.phase.process(stereo_in, SR, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         assert result.audio.shape == stereo_in.shape
 
 
@@ -1499,24 +1510,24 @@ class TestPhase41OutputFormatOptimization:
 
     def test_mono_returns_phase_result(self, mono):
         # Phase 41 resampled ggf. auf andere Samplerate → nur success & dtype prüfen
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
         assert isinstance(result.audio, np.ndarray)
         assert np.issubdtype(result.audio.dtype, np.floating)
 
     def test_silent_input(self, silent_mono):
-        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)
+        result = self.phase.process(silent_mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
 
     def test_cd_material(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)
+        result = self.phase.process(mono, SR, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
 
     def test_zero_strength_passthrough(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=0.0)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
         assert np.allclose(result.audio, mono, atol=1e-7)
@@ -1524,7 +1535,7 @@ class TestPhase41OutputFormatOptimization:
         assert float(result.metadata.get("effective_strength", 1.0)) == 0.0
 
     def test_locality_reduces_effective_strength(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)
+        result = self.phase.process(mono, SR, MaterialType.VINYL, strength=1.0, phase_locality_factor=0.4)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
         eff = float(result.metadata.get("effective_strength", 1.0))
@@ -1532,7 +1543,7 @@ class TestPhase41OutputFormatOptimization:
         assert float(result.metadata.get("phase_locality_factor", 1.0)) <= 0.4 + 1e-6
 
     def test_quality_mode_emits_guard_metadata(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.VINYL, quality_mode="maximum")
+        result = self.phase.process(stereo, SR, MaterialType.VINYL, quality_mode="maximum")  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
         assert "output_guard_enabled" in result.metadata
@@ -1559,7 +1570,7 @@ class TestPhase41OutputFormatOptimization:
         assert out_edge_peak <= (in_edge_peak * (10.0 ** (2.05 / 20.0)))
 
     def test_pipeline_preserves_sr_and_float_audio(self, stereo):
-        result = self.phase.process(stereo, SR, MaterialType.VINYL)
+        result = self.phase.process(stereo, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         assert isinstance(result, PhaseResult)
         assert result.success is True
         assert result.audio.shape == stereo.shape
@@ -1579,7 +1590,7 @@ class TestPhase41OutputFormatOptimization:
             MaterialType.STREAMING,
         ]
         for material in materials:
-            result = self.phase.process(stereo, SR, material)
+            result = self.phase.process(stereo, SR, material)  # type: ignore[arg-type]
             assert isinstance(result, PhaseResult)
             assert result.success is True
             assert result.audio.shape == stereo.shape
@@ -1593,7 +1604,7 @@ class TestPhase41OutputFormatOptimization:
     def test_pipeline_invariant_holds_for_all_quality_modes(self, stereo):
         modes = ["balanced", "quality", "maximum", "studio2026"]
         for mode in modes:
-            result = self.phase.process(stereo, SR, MaterialType.VINYL, quality_mode=mode)
+            result = self.phase.process(stereo, SR, MaterialType.VINYL, quality_mode=mode)  # type: ignore[arg-type]
             assert isinstance(result, PhaseResult)
             assert result.success is True
             assert result.audio.shape == stereo.shape
@@ -1732,7 +1743,7 @@ class TestPhase42VocalEnhancement:
         monkeypatch.setattr("plugins.mdx23c_plugin.get_mdx23c_plugin", _boom_mdx)
 
         short_stereo = np.tile(np.array([[0.1, 0.05]], dtype=np.float32), (SR * 2, 1))
-        stems = self.phase._try_stem_separation(short_stereo, SR, material="live")
+        stems = self.phase._try_stem_separation(short_stereo, SR, material="live")  # type: ignore[arg-type]
 
         assert stems is not None
         vocals_out, instr_out, confidence, model_name = stems
@@ -1752,11 +1763,11 @@ class TestPhase43AdaptiveDeEsser:
         self.phase = MLDeEsserPhase()
 
     def test_mono_returns_phase_result(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
     def test_musical_goal_keys_in_metrics(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert "musical_goal_brillanz" in result.metrics
@@ -1765,7 +1776,7 @@ class TestPhase43AdaptiveDeEsser:
         assert "musical_goal_transparenz" in result.metrics
 
     def test_musical_goal_metrics_bounded(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert 0.0 <= float(result.metrics["musical_goal_brillanz"]) <= 1.0
@@ -1774,7 +1785,7 @@ class TestPhase43AdaptiveDeEsser:
         assert 0.0 <= float(result.metrics["musical_goal_transparenz"]) <= 1.0
 
     def test_transparency_metric_tracks_intelligibility_score(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert result.metrics["musical_goal_transparenz"] == pytest.approx(
@@ -1782,7 +1793,7 @@ class TestPhase43AdaptiveDeEsser:
         )
 
     def test_authentizitaet_metric_tracks_presence_ratio(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert result.metrics["musical_goal_authentizitaet"] == pytest.approx(
@@ -1790,7 +1801,7 @@ class TestPhase43AdaptiveDeEsser:
         )
 
     def test_brillanz_metric_tracks_air_ratio(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert result.metrics["musical_goal_brillanz"] == pytest.approx(
@@ -1798,7 +1809,7 @@ class TestPhase43AdaptiveDeEsser:
         )
 
     def test_artikulation_metric_tracks_articulation_ratio(self, mono):
-        result = self.phase.process(mono, SR, MaterialType.VINYL)
+        result = self.phase.process(mono, SR, MaterialType.VINYL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono)
 
         assert result.metrics["musical_goal_artikulation"] == pytest.approx(
@@ -2060,7 +2071,7 @@ class TestPhase54TransparentDynamics:
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_with_material_type(self, mono):
-        result = self.phase.process(mono, material_type=MaterialType.CD_DIGITAL)
+        result = self.phase.process(mono, material_type=MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         _assert_phase_result(result, mono, check_clipping=False)
 
     def test_silent_input(self, silent_mono):

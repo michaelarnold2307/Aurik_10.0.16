@@ -452,11 +452,12 @@ class HarmonicRestorationPhase(PhaseInterface):
             _pim = apply_pim_intensity(
                 kwargs, "harmonic_restore", default_nr=0.35, default_de_ess=0.15, default_comp=1.0
             )
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_07_harmonic_restoration.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_07_harmonic_restoration.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         audio, _p07_transposed = to_channels_last(audio)
         start_time = time.time()
@@ -471,7 +472,7 @@ class HarmonicRestorationPhase(PhaseInterface):
         _calib_cap = kwargs.get("phase07_strength_cap")
         if _calib_cap is not None:
             _effective_strength = min(_effective_strength, float(_calib_cap))
-            logger.debug("phase_07 §CALIB: strength capped at %.3f", float(_calib_cap))
+            logger.debug("Verarbeitungsschritt_07 §CALIB: strength capped at %.3f", float(_calib_cap))
 
         # §2.54 FlashSR post-processing guard: when FlashSR (phase_23) has already
         # extended the bandwidth + synthesised harmonics, additional harmonic
@@ -483,7 +484,7 @@ class HarmonicRestorationPhase(PhaseInterface):
         if _flashsr_applied:
             _effective_strength = float(np.clip(_effective_strength * 0.25, 0.0, 1.0))
             logger.debug(
-                "phase_07: flashsr_applied=True → strength scaled to %.3f (post-FlashSR guard)",
+                "Verarbeitungsschritt_07: flashsr_angewendet=True → strength scaled to %.3f (post-FlashSR guard)",
                 _effective_strength,
             )
 
@@ -517,26 +518,30 @@ class HarmonicRestorationPhase(PhaseInterface):
                 _rms_vocal = float(np.sqrt(np.mean(_vocal_band**2)) + 1e-12)
                 _vocal_ratio = _rms_vocal / max(_rms_total, 1e-12)
                 if _rms_total < 1e-6:
-                    logger.info("phase_07: Silence detected (RMS=%.1e) → Passthrough", _rms_total)
+                    logger.info("Verarbeitungsschritt_07: Silence erkannt (RMS=%.1e) → Passthrough", _rms_total)
                     _effective_strength = 0.0
                 elif _vocal_ratio < 0.15 and _rms_total < 1e-3:
                     logger.info(
-                        "phase_07: No vocal content (ratio=%.3f, RMS=%.1e) → Passthrough", _vocal_ratio, _rms_total
+                        "Verarbeitungsschritt_07: No vocal content (Verhaeltnis=%.3f, RMS=%.1e) → Passthrough",
+                        _vocal_ratio,
+                        _rms_total,
                     )
                     _effective_strength = 0.0
             except Exception:
-                logger.debug("phase_07_harmonic_restoration.py:527: Silent exception absorbed", exc_info=True)
+                logger.debug(
+                    "Verarbeitungsschritt_07_harmonic_restoration.py:527: Silent exception absorbed", exc_info=True
+                )
         if _is_fc_pass:
             try:
                 _h2h1_fc = self._measure_h2_ratio(audio, sample_rate)
                 if _h2h1_fc >= 0.35:
                     logger.info(
-                        "phase_07 §v10.118 FC-Awareness: H2/H1=%.3f ≥ 0.35 im zweiten Durchlauf → Passthrough",
+                        "Verarbeitungsschritt_07 §v10.118 FC-Awareness: H2/H1=%.3f ≥ 0.35 im zweiten Durchlauf → Passthrough",
                         _h2h1_fc,
                     )
                     _effective_strength = 0.0
             except Exception as _fc_exc_1:
-                logger.debug("phase_07 FC-Awareness H2/H1 (non-blocking): %s", _fc_exc_1)
+                logger.debug("Verarbeitungsschritt_07 FC-Awareness H2/H1 (nicht blockierend): %s", _fc_exc_1)
         if _effective_strength > 0.05:
             try:
                 _h2h1_07 = self._measure_h2_ratio(audio, sample_rate)
@@ -549,7 +554,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _h2h1_reduction = float(np.clip(1.0 - (_h2h1_07 - 0.50) * 1.5, 0.05, 1.0))
                     _effective_strength = float(np.clip(_effective_strength * _h2h1_reduction, 0.0, 0.10))
                     logger.info(
-                        "phase_07: H2/H1=%.3f ≥ %.2f (depth=%d) → strength auf %.3f gedrosselt",
+                        "Verarbeitungsschritt_07: H2/H1=%.3f ≥ %.2f (depth=%d) → strength auf %.3f gedrosselt",
                         _h2h1_07,
                         _h2h1_threshold,
                         _td_h2h1,
@@ -559,12 +564,12 @@ class HarmonicRestorationPhase(PhaseInterface):
                     # Frühwarn-Schwelle: Obertongehalt bereits hoch → sanft drosseln
                     _effective_strength = float(np.clip(_effective_strength * 0.50, 0.0, 1.0))
                     logger.debug(
-                        "phase_07: H2/H1=%.3f ≥ 0.35 → strength auf %.3f gedrosselt (FeedbackChain-Frühwarn)",
+                        "Verarbeitungsschritt_07: H2/H1=%.3f ≥ 0.35 → strength auf %.3f gedrosselt (FeedbackChain-Frühwarn)",
                         _h2h1_07,
                         _effective_strength,
                     )
             except Exception as _h2_exc:
-                logger.debug("phase_07 H2/H1-Messung (non-blocking): %s", _h2_exc)
+                logger.debug("Verarbeitungsschritt_07 H2/H1-Messung (nicht blockierend): %s", _h2_exc)
 
         # §V41 ForwardMaskingGuard: Stärke in post-transienten Masking-Fenstern erhöhen.
         _panns_s_07 = float(kwargs.get("panns_singing", 0.0))
@@ -583,13 +588,13 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _boost_07 = _zone_frac_07 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_07, 0.0, 1.0))
                     logger.debug(
-                        "Phase07 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt07 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_07,
                         _boost_07,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_07:  # pylint: disable=broad-except
-                logger.debug("Phase07 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_07)
+                logger.debug("Verarbeitungsschritt07 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_07)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -641,7 +646,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 )
                 _harmonic_density_p07 = np.clip(_peaks_p07 / max(len(_spec_p07) * 0.05, 1), 0.0, 1.0)
             except Exception:
-                _harmonic_density_p07 = 0.3  # konservativer Default
+                _harmonic_density_p07 = np.float64(0.3)  # konservativer Default
 
             _p07_sat_scale = 1.0
             if _p07_soft_sat_sev > 0.35:
@@ -665,7 +670,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 _drive_adaptive = 1.2
             params["drive"] = float(np.clip(params.get("drive", _drive_adaptive) * max(_p07_sat_scale, 0.5), 0.6, 1.8))
             logger.debug(
-                "Phase 07 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f "
+                "Verarbeitungsschritt 07 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f "
                 "(strength=%.3f blend=%.3f drive=%.2f)",
                 _p07_soft_sat_sev,
                 _p07_soft_sat_preserve,
@@ -717,7 +722,9 @@ class HarmonicRestorationPhase(PhaseInterface):
                 _smp = get_medium_profile(_mat_p07)
                 _harm_limit = int(getattr(_smp, "harmonic_max_order", 64))
             except Exception:
-                logger.debug("Phase_07: SourceMediumProfile nicht verfügbar — verwende Default harmonic_max_order=64")
+                logger.debug(
+                    "Verarbeitungsschritt_07: SourceMediumProfile nicht verfügbar — verwende Default harmonic_max_order=64"
+                )
             _ddsp_audio, _ddsp_inharmonicity = _ddsp_harmonic_inversion(
                 _mono, sample_rate, f0_info, n_harmonics=_harm_limit, material_type=str(material_type)
             )
@@ -731,7 +738,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     audio = np.clip(audio + _ddsp_wet * (_ddsp_audio - audio), -1.0, 1.0)
                 _mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio  # re-derive mono
         except Exception as _ddsp_exc:
-            logger.debug("§C5 DDSP-Inversion skipped (non-blocking): %s", _ddsp_exc)
+            logger.debug("§C5 DDSP-Inversion uebersprungen (nicht blockierend): %s", _ddsp_exc)
 
         # Step 2: Apply multi-mode saturation — §2.51 M/S: harmonics only on Mid channel.
         if audio.ndim == 2:
@@ -830,7 +837,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 restored = np.clip(restored, -1.0, 1.0)
                 _tilt_capped_p07 = True
                 logger.info(
-                    "phase_07 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
+                    "Verarbeitungsschritt_07 §2.46b tilt-cap: before=%.2f after=%.2f dev=%.2f tol=%.2f cap=%.2f",
                     _tb07,
                     _ta07,
                     _dev07,
@@ -838,7 +845,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _cap07,
                 )
         except Exception as _tc07:
-            logger.debug("phase_07 §2.46b tilt-cap skipped (graceful): %s", _tc07)
+            logger.debug("Verarbeitungsschritt_07 §2.46b tilt-cap uebersprungen (graceful): %s", _tc07)
 
         # §4.1 Harmonic-Lattice-Coherence (Fletcher 1964): enforce post-synthesis
         # coherence on the final signal to avoid inharmonic partial drift.
@@ -861,7 +868,7 @@ class HarmonicRestorationPhase(PhaseInterface):
             restored = np.clip(restored, -1.0, 1.0)
             _lattice_enforced = True
         except Exception as _lat_exc:
-            logger.debug("phase_07 harmonic lattice coherence skipped (graceful): %s", _lat_exc)
+            logger.debug("Verarbeitungsschritt_07 harmonic lattice coherence uebersprungen (graceful): %s", _lat_exc)
 
         # §2.47 PMGG-Retry: phase_locality_factor als finaler Wet/Dry-Regler
         if _effective_strength < 1.0:
@@ -902,9 +909,9 @@ class HarmonicRestorationPhase(PhaseInterface):
                 else:
                     restored = _sosfiltfilt07(_sos_lp07, restored).astype(np.float32)
                 restored = np.clip(restored, -1.0, 1.0)
-                logger.debug("§6.2c phase_07 BW-Ceiling Hard-Cap: %s ≤ %.0f Hz", _mat_key_07, _bw_cap_07)
+                logger.debug("§6.2c Verarbeitungsschritt_07 BW-Ceiling Hard-Cap: %s ≤ %.0f Hz", _mat_key_07, _bw_cap_07)
             except Exception as _bw07_exc:
-                logger.debug("§6.2c phase_07 BW-Ceiling (non-blocking): %s", _bw07_exc)
+                logger.debug("§6.2c Verarbeitungsschritt_07 BW-Ceiling (nicht blockierend): %s", _bw07_exc)
 
         # §2.46e Hallucination-Guard: Harmonik-Rekonstruktion kann HF-Halluzinationen erzeugen
         try:
@@ -938,18 +945,18 @@ class HarmonicRestorationPhase(PhaseInterface):
             )
             if _hg_result07.requires_rollback:
                 logger.warning(
-                    "§2.46e phase_07 Hallucination-Guard rollback: spectral_novelty=%.3f",
+                    "§2.46e Verarbeitungsschritt_07 Hallucination-Guard rollback: spectral_novelty=%.3f",
                     _hg_result07.spectral_novelty,
                 )
                 restored = audio.copy()
             if _hg_result07.score_penalty > 0:
                 logger.info(
-                    "§2.46e phase_07 score_penalty=%.1f (spectral_novelty=%.3f)",
+                    "§2.46e Verarbeitungsschritt_07 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_result07.score_penalty,
                     _hg_result07.spectral_novelty,
                 )
         except Exception as _hg07_exc:
-            logger.debug("§2.46e phase_07 Hallucination-Guard (non-blocking): %s", _hg07_exc)
+            logger.debug("§2.46e Verarbeitungsschritt_07 Hallucination-Guard (nicht blockierend): %s", _hg07_exc)
 
         # §TonalReference: era/genre/material recording-chain ceiling (Eargle 2004)
         try:
@@ -979,14 +986,14 @@ class HarmonicRestorationPhase(PhaseInterface):
                 steering_strength=0.25,
             )
             logger.debug(
-                "Phase 07 TonalReference: era=%s genre=%s mat=%s conf=%.2f",
+                "Verarbeitungsschritt 07 TonalReference: era=%s genre=%s mat=%s conf=%.2f",
                 _era_d_07,
                 _genre_07 or "?",
                 _mat_key_07,
                 _tonal_curve_07.confidence,
             )
         except Exception as _tc07_exc:
-            logger.debug("Phase 07 TonalReference ceiling (non-blocking): %s", _tc07_exc)
+            logger.debug("Verarbeitungsschritt 07 TonalReference ceiling (nicht blockierend): %s", _tc07_exc)
 
         # §ERA_HARMONIC H2-Target-Steering: blend wenn gemessenes H2/H1-Ratio
         # vom era-authentischen Soll abweicht (Spec §04, _ERA_HARMONIC_PROFILE).
@@ -1016,7 +1023,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 }
                 _h2_target_07 = _MATERIAL_H2_FALLBACK.get(_mat_for_h2, _h2_target_07)
                 logger.info(
-                    "§ERA_HARMONIC phase_07: era=None, material=%s → h2_target=%.4f (material-adaptiv)",
+                    "§ERA_HARMONIC Verarbeitungsschritt_07: era=None, material=%s → h2_target=%.4f (material-adaptiv)",
                     _mat_for_h2,
                     _h2_target_07,
                 )
@@ -1047,7 +1054,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                             _h2_blend_07 = 1.0  # Voll-Dry: Synthese komplett deaktiviert
                             logger.info(
                                 "§v10.131 Depth-Echo-Kill (depth=%d, corr=%.3f > %.2f): "
-                                "harmonic synthesis fully disabled",
+                                "harmonic synthesis fully deaktiviert",
                                 _td_echo_p07,
                                 _echo_peak_07,
                                 _echo_kill_p07,
@@ -1060,14 +1067,16 @@ class HarmonicRestorationPhase(PhaseInterface):
                                 _h2_blend_07,
                             )
                 except Exception:
-                    logger.debug("phase_07_harmonic_restoration.py:1052: Silent exception absorbed", exc_info=True)
+                    logger.debug(
+                        "Verarbeitungsschritt_07_harmonic_restoration.py:1052: Silent exception absorbed", exc_info=True
+                    )
                 restored = np.clip(
                     (1.0 - _h2_blend_07) * restored + _h2_blend_07 * audio,
                     -1.0,
                     1.0,
                 ).astype(np.float32)
                 logger.info(
-                    "§ERA_HARMONIC phase_07: era=%s h2_target=%.4f h2_actual=%.4f excess → blend=%.2f",
+                    "§ERA_HARMONIC Verarbeitungsschritt_07: era=%s h2_target=%.4f h2_actual=%.4f excess → blend=%.2f",
                     _era_d_07,
                     _h2_target_07,
                     _h2_actual_07,
@@ -1084,14 +1093,14 @@ class HarmonicRestorationPhase(PhaseInterface):
                         1.0,
                     ).astype(np.float32)
                     logger.info(
-                        "§ERA_HARMONIC phase_07 Studio: era=%s h2_target=%.4f h2_actual=%.4f deficit → boost=%.2f",
+                        "§ERA_HARMONIC Verarbeitungsschritt_07 Studio: era=%s h2_target=%.4f h2_actual=%.4f deficit → boost=%.2f",
                         _era_d_07,
                         _h2_target_07,
                         _h2_actual_07,
                         _h2_boost_07,
                     )
         except Exception as _h2_exc:
-            logger.debug("§ERA_HARMONIC phase_07 H2-Target (non-blocking): %s", _h2_exc)
+            logger.debug("§ERA_HARMONIC Verarbeitungsschritt_07 H2-Target (nicht blockierend): %s", _h2_exc)
 
         # §Gap5 Console-Character (Studio 2026 only — §0a).
         # Applies a subtle EQ coloration matching a classic studio console fingerprint
@@ -1127,13 +1136,13 @@ class HarmonicRestorationPhase(PhaseInterface):
                     else:
                         _console_applied = True
                         logger.info(
-                            "§Gap5 Console-Character applied: console=%s str=%.2f novel=%.3f",
+                            "§Gap5 Console-Character angewendet: console=%s str=%.2f novel=%.3f",
                             _console_type_07,
                             _console_str_07,
                             _hall_con.spectral_novelty,
                         )
             except Exception as _con_exc:
-                logger.debug("§Gap5 Console-Character (non-blocking): %s", _con_exc)
+                logger.debug("§Gap5 Console-Character (nicht blockierend): %s", _con_exc)
 
         restored = restore_layout(restored, _p07_transposed)
 
@@ -1171,7 +1180,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     _blend_07,
                 )
         except Exception as _v22_07_exc:
-            logger.debug("§V22 phase_07 transient_guard non-blocking: %s", _v22_07_exc)
+            logger.debug("§V22 Verarbeitungsschritt_07 transient_guard nicht blockierend: %s", _v22_07_exc)
 
         # §2.71 Strength-Envelope: Chirurgische Harmonic-Restoration
         _strength_env = kwargs.get("strength_envelope")
@@ -1189,10 +1198,11 @@ class HarmonicRestorationPhase(PhaseInterface):
                 )
                 if float(np.mean(np.abs(restored - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 07: Δ=%.4f RMS", float(np.mean(np.abs(restored - _env_pre)))
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 07: Δ=%.4f RMS",
+                        float(np.mean(np.abs(restored - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         # §v10.114 Post-Synthesis RMS-Guard: Wenn die harmonische Synthese
         # auf bereits sauberem Audio Stille produziert (FeedbackChain),
@@ -1204,7 +1214,7 @@ class HarmonicRestorationPhase(PhaseInterface):
             _rms_drop_db = float(20.0 * np.log10(_output_rms / _input_rms)) if _input_rms > 1e-12 else 0.0
             if _rms_drop_db < -30.0:
                 logger.warning(
-                    "phase_07: RMS-Drop %.1f dB → Rollback auf Eingangs-Audio (FeedbackChain-Silence-Guard)",
+                    "Verarbeitungsschritt_07: RMS-Drop %.1f dB → Rollback auf Eingangs-Audio (FeedbackChain-Silence-Guard)",
                     _rms_drop_db,
                 )
                 restored = np.asarray(audio, dtype=np.float32)
@@ -1761,7 +1771,7 @@ class HarmonicRestorationPhase(PhaseInterface):
             result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)
             return np.clip(result, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("phase_07_harmonic_restoration.py::_apply_mono fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_07_harmonic_restoration.py::_anwenden_mono Ersatzpfad: %s", e)
             return audio
 
     @staticmethod
@@ -1820,7 +1830,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                 return 0.0
             return float(np.mean(h2_vals)) / max(float(np.mean(h1_vals)), 1e-10)
         except Exception as e:
-            logger.warning("phase_07_harmonic_restoration.py::_measure_h2_ratio fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_07_harmonic_restoration.py::_measure_h2_Verhaeltnis Ersatzpfad: %s", e)
             return 0.0
 
     def supports_material(self, _material_type: str) -> bool:
@@ -1832,7 +1842,7 @@ if __name__ == "__main__":
     # Test Professional Harmonic Restoration Phase.
 
     logger.debug("=" * 80)
-    logger.debug("Professional Harmonic Restoration Phase v2.0 - Test")
+    logger.debug("Professional Harmonic Restoration Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio (pure sine - no harmonics)
@@ -1861,17 +1871,17 @@ if __name__ == "__main__":
         _result = _phase.process(_audio.copy(), material_type=_material)
 
         if _result.success and _result.modifications.get("harmonic_restored"):
-            logger.debug("\u2705 Processing Complete!")
+            logger.debug("\u2705 Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2f\u00d7 realtime)",
                 _result.metadata["execution_time_seconds"],
                 _result.metadata["execution_time_seconds"] / _duration,
             )
-            logger.debug("   Saturation Mode: %s", _result.modifications["saturation_mode"])
+            logger.debug("   Saturation Betriebsart: %s", _result.modifications["saturation_mode"])
             logger.debug("   Drive: %.1f\u00d7", _result.modifications["drive"])
             logger.debug("   Blend: %.2f", _result.modifications["blend"])
             logger.debug(
-                "   Even/Odd Ratio: %.1f/%.1f",
+                "   Even/Odd Verhaeltnis: %.1f/%.1f",
                 _result.modifications["even_harmonic_ratio"],
                 _result.modifications["odd_harmonic_ratio"],
             )
@@ -1881,15 +1891,15 @@ if __name__ == "__main__":
             logger.debug("   Target Range: %s Hz", _result.metadata["target_range_hz"])
             logger.debug("   Warnings: %s", _result.warnings if _result.warnings else "None")
         else:
-            logger.debug("\u23ed\ufe0f  Harmonic Restoration Skipped")
+            logger.debug("\u23ed\ufe0f  Harmonic Restoration uebersprungen")
             logger.debug("   Reason: %s", _result.modifications.get("reason", "unknown"))
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("\u2705 Professional Harmonic Restoration v2.0 Test Complete!")
+    logger.debug("\u2705 Professional Harmonic Restoration v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     logger.debug("Algorithm: %s", _result.metadata.get("algorithm", "N/A"))  # type: ignore[possibly-undefined]
     logger.debug(  # type: ignore[possibly-undefined]
-        "Scientific Reference: %s", _result.metadata.get("scientific_ref", "N/A")
+        "Scientific Referenz: %s", _result.metadata.get("scientific_ref", "N/A")
     )
     logger.debug("Benchmark: %s", _result.metadata.get("benchmark", "N/A"))  # type: ignore[possibly-undefined]
     logger.debug("Quality Impact: 0.94 (Professional-Grade)")

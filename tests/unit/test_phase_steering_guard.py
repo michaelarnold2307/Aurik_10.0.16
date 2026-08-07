@@ -29,13 +29,13 @@ def _make_test_audio(duration: float = _DURATION) -> np.ndarray:
     t = np.arange(int(duration * _SR), dtype=np.float32) / _SR
     sine = np.sin(2.0 * np.pi * 440.0 * t).astype(np.float32) * 0.5
     noise = np.random.randn(len(t)).astype(np.float32) * 0.03
-    return np.clip(sine + noise, -1.0, 1.0)
+    return np.clip(sine + noise, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _make_stereo_test_audio() -> np.ndarray:
     """Stereo-Test-Audio."""
     mono = _make_test_audio()
-    return np.stack([mono, mono * 0.8], axis=1).astype(np.float32)
+    return np.stack([mono, mono * 0.8], axis=1).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

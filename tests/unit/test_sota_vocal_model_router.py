@@ -9,7 +9,7 @@ import numpy as np
 
 def _audio(sr: int = 48000, duration: float = 1.0) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (0.2 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)
+    return (0.2 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit
@@ -362,7 +362,7 @@ def test_router_score_routing_selects_better_candidate(monkeypatch):
     )
     assert result.success is True
     assert result.model_used == "mdx23c"
-    assert float(result.metadata.get("route_score", 0.0)) > 0.0
+    assert float(result.metadata.get("route_score", 0.0)) > 0.0  # type: ignore[arg-type]
     assert result.metadata.get("route_score_selected") is True
 
 
@@ -467,7 +467,7 @@ def test_demucs_native_call_contract_router_phase42(monkeypatch):
     phase42_result = VocalEnhancement()._try_stem_separation(  # pylint: disable=protected-access
         np.tile(np.array([[0.1, 0.05]], dtype=np.float32), (48000, 1)),
         48000,
-        material="live",
+        material="live",  # type: ignore[arg-type]
     )
     assert phase42_result is not None
     assert phase42_result[3] == "demucs_v4_htdemucs"

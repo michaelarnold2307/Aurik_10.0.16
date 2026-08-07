@@ -167,13 +167,13 @@ class BlindInternalReference:
             result.global_snr_proxy_db = float(np.median([c.snr_proxy_db for c in candidates]))
 
             logger.info(
-                "BlindInternalReference: best_score=%.3f snr_proxy=%.1fdB top=%d",
+                "BlindInternalReference: best_Wert=%.3f snr_proxy=%.1fdB top=%d",
                 result.best_score,
                 result.global_snr_proxy_db,
                 len(result.segments),
             )
         except Exception as exc:
-            logger.debug("BlindInternalReference non-blocking: %s", exc)
+            logger.debug("BlindInternalReference nicht blockierend: %s", exc)
         return result
 
     @staticmethod
@@ -233,7 +233,7 @@ def get_blind_internal_reference() -> BlindInternalReference:
         with _lock:
             if _instance is None:
                 _instance = BlindInternalReference()
-                logger.info("BlindInternalReference initialized (§Gap5)")
+                logger.info("BlindInternalReference initialisiert (§Gap5)")
     return _instance
 
 

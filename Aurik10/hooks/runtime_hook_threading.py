@@ -34,5 +34,5 @@ try:
 
     _torch.set_num_interop_threads(4)
 except Exception:
-    logger.warning("runtime_hook_threading.py::unknown fallback", exc_info=True)
+    logger.warning("runtime_hook_threading.py::unknown Ersatzpfad", exc_info=True)
     pass  # torch optional at hook time (not yet imported)

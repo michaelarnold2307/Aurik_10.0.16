@@ -678,7 +678,7 @@ class SemanticGoalsEngine:
         self.instrument_detector = self._load_instrument_detector(instrument_detector_path)
         self.structure_analyzer = self._load_structure_analyzer(structure_analyzer_path)
 
-        logger.info("SemanticGoalsEngine initialized")
+        logger.info("SemanticGoalsEngine initialisiert")
 
     def _load_instrument_detector(self, model_path: Path | None) -> Any | None:
         """
@@ -692,7 +692,7 @@ class SemanticGoalsEngine:
         """
         if model_path is None or not model_path.exists():
             if not self._instrument_fallback_logged:
-                logger.info("SemanticGoals: Instrument-ML nicht gebündelt — akustischer Offline-Fallback aktiv")
+                logger.info("SemanticGoals: Instrument-ML nicht gebündelt — akustischer Offline-Ersatzpfad aktiv")
                 self._instrument_fallback_logged = True
             return None
 
@@ -703,18 +703,18 @@ class SemanticGoalsEngine:
             model = AutoModel.from_pretrained(str(model_path), local_files_only=True)  # nosec B615 — local_files_only=True, kein Download
             feature_extractor = AutoFeatureExtractor.from_pretrained(str(model_path), local_files_only=True)  # nosec B615 — local_files_only=True, kein Download
 
-            logger.info("Instrument detector loaded from %s", model_path)
+            logger.info("Instrument detector geladen from %s", model_path)
             return (model, feature_extractor)
 
         except ImportError:
             if not self._instrument_fallback_logged:
                 logger.warning(
-                    "⚠️ SOTA SemanticGoals: transformers nicht verfügbar — akustischer Offline-Fallback aktiv"
+                    "⚠️ SOTA SemanticGoals: transformers nicht verfügbar — akustischer Offline-Ersatzpfad aktiv"
                 )
                 self._instrument_fallback_logged = True
             return None
         except Exception as e:
-            logger.warning("Failed to load instrument detector: %s", e)
+            logger.warning("konnte nicht laden instrument detector: %s", e)
             return None
 
     def _load_structure_analyzer(self, model_path: Path | None) -> Any | None:
@@ -730,12 +730,12 @@ class SemanticGoalsEngine:
         try:
             import madmom  # type: ignore[import-untyped]
 
-            logger.info("madmom structure analyzer loaded")
+            logger.info("madmom structure analyzer geladen")
             return madmom
         except ImportError:
             if not self._structure_fallback_logged:
                 logger.warning(
-                    "⚠️ SOTA SemanticGoals: madmom nicht gebündelt — heuristische Struktur-Analyse aktiv (librosa Fallback)"
+                    "⚠️ SOTA SemanticGoals: madmom nicht gebündelt — heuristische Struktur-Analyse aktiv (librosa Ersatzpfad)"
                 )
                 self._structure_fallback_logged = True
             return None
@@ -782,7 +782,7 @@ class SemanticGoalsEngine:
             return dominant, all_instruments, confidence
 
         except Exception as e:
-            logger.warning("Instrument detection failed: %s", e)
+            logger.warning("Instrument detection fehlgeschlagen: %s", e)
             return self._detect_instruments_fallback(audio, sr)
 
     def _detect_instruments_fallback(
@@ -851,7 +851,7 @@ class SemanticGoalsEngine:
             return segments
 
         except Exception as e:
-            logger.warning("Structure analysis failed: %s", e)
+            logger.warning("Structure Analyse fehlgeschlagen: %s", e)
             return self._analyze_structure_fallback(audio, sr)
 
     def _analyze_structure_fallback(self, audio: np.ndarray, sr: int) -> list[tuple[float, float, SegmentType]]:
@@ -943,7 +943,7 @@ class SemanticGoalsEngine:
             )
 
         logger.debug(
-            f"Adjusted goals for {context.dominant_instrument.value} / {context.segment_type.value}: {adjusted}"
+            f"angepasst goals for {context.dominant_instrument.value} / {context.segment_type.value}: {adjusted}"
         )
 
         return adjusted

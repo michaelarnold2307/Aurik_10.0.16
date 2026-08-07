@@ -1,0 +1,16 @@
+# docker-compose.yml — §v10.700 K3: Aurik mit gemountetem Audio-Verzeichnis.
+#
+# Nutzung:
+#   mkdir -p audio output
+#   docker-compose run aurik restore /audio/mein_song.wav -o /output/
+
+version: "3.8"
+
+services:
+  aurik:
+    build: .
+    image: aurik/aurik:10.14.0
+    volumes:
+      - ./audio:/audio
+      - ./output:/output
+    entrypoint: ["python", "-m", "cli.aurik_cli"]

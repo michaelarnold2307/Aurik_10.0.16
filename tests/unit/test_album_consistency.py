@@ -40,7 +40,7 @@ SR = 48000
 def _sine(freq: float, dur: float = 2.0, amp: float = 0.2, sr: int = SR) -> np.ndarray:
     """Mono sine wave."""
     t = np.linspace(0, dur, int(sr * dur), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _white(dur: float = 2.0, amp: float = 0.1, sr: int = SR) -> np.ndarray:

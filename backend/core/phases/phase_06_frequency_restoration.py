@@ -385,11 +385,12 @@ class FrequencyRestorationPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "freq_restore", default_nr=0.4, default_de_ess=0.2, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_06_frequency_restoration.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_06_frequency_restoration.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         start_time = time.time()
 
@@ -401,7 +402,7 @@ class FrequencyRestorationPhase(PhaseInterface):
 
             _get_plm_evict06().evict_for_phase("phase_06_frequency_restoration")
         except Exception as e:
-            logger.warning("phase_06_frequency_restoration.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_06_frequency_restoration.py::verarbeiten Ersatzpfad: %s", e)
 
         # §2.47 PMGG-Retry: locality_factor skaliert finale Intensität bei Retries.
         # §Cross-Goal-Recovery override: Frequenz-Restaurierung ist ein GLOBALER Eingriff
@@ -434,13 +435,13 @@ class FrequencyRestorationPhase(PhaseInterface):
                     _boost_06 = _zone_frac_06 * 0.15
                     _effective_strength = float(np.clip(_effective_strength + _boost_06, 0.0, 1.0))
                     logger.debug(
-                        "Phase06 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
+                        "Verarbeitungsschritt06 §V41 ForwardMasking: zone_frac=%.2f boost=%.3f → eff_str=%.3f",
                         _zone_frac_06,
                         _boost_06,
                         _effective_strength,
                     )
             except Exception as _fmg_exc_06:  # pylint: disable=broad-except
-                logger.debug("Phase06 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_06)
+                logger.debug("Verarbeitungsschritt06 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_06)
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -554,8 +555,8 @@ class FrequencyRestorationPhase(PhaseInterface):
                     },
                 )
             logger.info(
-                "Phase 06: Cross-Goal-Recovery override — forcing HF restoration "
-                "despite no detected rolloff (rolloff_db=%.1f < 6.0, brillanz recovery required)",
+                "Verarbeitungsschritt 06: Cross-Goal-Wiederherstellung override — forcing HF restoration "
+                "despite no erkannt rolloff (rolloff_db=%.1f < 6.0, brillanz Wiederherstellung required)",
                 measured_rolloff_db,
             )
 
@@ -569,7 +570,7 @@ class FrequencyRestorationPhase(PhaseInterface):
             # um Harmonik-Erosion bei SBR/FlashSR zu verhindern
             params["max_boost_db"] = float(params.get("max_boost_db", 8.0)) - 6.0
             params["max_boost_db"] = max(0.0, params["max_boost_db"])
-            logger.debug("§0j energy_bias -6 dB: phase_06 Vokal (panns_singing=%.2f)", _panns_singing_06)
+            logger.debug("§0j energy_bias -6 dB: Verarbeitungsschritt_06 Vokal (panns_singing=%.2f)", _panns_singing_06)
 
         # §2.46g soft_saturation-Guard: Frequenz-Restaurierung bei gesättigtem Material begrenzen.
         # Soft_saturation erzeugt HF-Artefakte im Oberton-Profil — zusätzlicher Spektral-Boost
@@ -585,7 +586,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 _p06_sat_scale = 0.55
             params["max_boost_db"] = float(params.get("max_boost_db", 8.0)) * _p06_sat_scale
             logger.debug(
-                "Phase 06 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (max_boost_db=%.2f dB)",
+                "Verarbeitungsschritt 06 soft_saturation guard: severity=%.2f preserve=%s → scale=%.2f (max_boost_db=%.2f dB)",
                 _p06_soft_sat_sev,
                 _p06_soft_sat_preserve,
                 _p06_sat_scale,
@@ -612,7 +613,7 @@ class FrequencyRestorationPhase(PhaseInterface):
             if _term in _EXTREME_ANALOG:
                 use_ml_hybrid = False
                 logger.info(
-                    "§v10.200 Phase_06 depth=%d terminal=%s → DSP-only (NVSR/FlashSR skipped — tonal_center safety)",
+                    "§v10.200 Verarbeitungsschritt_06 depth=%d terminal=%s → DSP-only (NVSR/FlashSR uebersprungen — tonal_center safety)",
                     _td_p06,
                     _term,
                 )
@@ -621,7 +622,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 _prev_cap = float(kwargs.get("ml_strength_cap", 1.0))
                 kwargs["ml_strength_cap"] = min(_prev_cap, 0.50)
                 logger.info(
-                    "§v10.300 Phase_06 depth=%d terminal=%s → ML mit strength-cap=%.2f (statt %.2f)",
+                    "§v10.300 Verarbeitungsschritt_06 depth=%d terminal=%s → ML mit strength-cap=%.2f (statt %.2f)",
                     _td_p06,
                     _term,
                     kwargs["ml_strength_cap"],
@@ -692,7 +693,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                         "cap_factor": round(_cap_factor, 3),
                     }
                     logger.debug(
-                        "Phase 06 §2.46b tilt-cap: post=%.2f era=%.2f dev=%.2f tol=%.2f cap=%.2f",
+                        "Verarbeitungsschritt 06 §2.46b tilt-cap: post=%.2f era=%.2f dev=%.2f tol=%.2f cap=%.2f",
                         _era_tilt_post,
                         _era_tilt_target,
                         _tilt_deviation,
@@ -700,7 +701,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                         _cap_factor,
                     )
             except Exception as _tc_ex:
-                logger.debug("Phase 06 tilt-cap failed (graceful skip): %s", _tc_ex)
+                logger.debug("Verarbeitungsschritt 06 tilt-cap fehlgeschlagen (graceful ueberspringen): %s", _tc_ex)
 
         # NaN/Inf-Guard + Clip (§3.1 Pflicht)
         restored = np.nan_to_num(restored, nan=0.0, posinf=0.0, neginf=0.0)
@@ -734,7 +735,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 _eq_str = float(min((_sfr_recon_strength_06 * _sfr_conf_06) ** 0.5, 0.70))
                 restored = _eq_proc.apply(restored, sample_rate, target=_sfr_target_06, strength=_eq_str)
             except Exception as _sfr_exc:
-                logger.debug("Phase 06: SourceFidelityEQ übersprungen: %s", _sfr_exc)
+                logger.debug("Verarbeitungsschritt 06: SourceFidelityEQ übersprungen: %s", _sfr_exc)
 
         # §0a / §6.2c BW-Ceiling Hard-Cap: Additive HF-Energie darf das physikalische
         # Trägerlimit niemals überschreiten (Shellac ≤ 8 kHz, Vinyl ≤ 16 kHz, WaxCyl ≤ 5 kHz).
@@ -769,7 +770,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     restored = _sosfiltfilt06(_sos_lp06, restored).astype(np.float32)
                 logger.debug("§6.2c BW-Ceiling Hard-Cap: %s ≤ %.0f Hz angewandt", _mat_key_06, _bw_cap_hz)
             except Exception as _bw_exc:
-                logger.debug("§6.2c BW-Ceiling fallback (non-blocking): %s", _bw_exc)
+                logger.debug("§6.2c BW-Ceiling Ersatzpfad (nicht blockierend): %s", _bw_exc)
 
         # NaN/Inf-Guard final + §2.47 PMGG-Retry locality blend
         restored = np.nan_to_num(restored, nan=0.0, posinf=0.0, neginf=0.0)
@@ -803,7 +804,7 @@ class FrequencyRestorationPhase(PhaseInterface):
             )
             if _hg_result06.requires_rollback:
                 logger.warning(
-                    "§2.46e Phase-06 Hallucination-Rollback: spectral_novelty=%.3f ceiling=%s Hz",
+                    "§2.46e Verarbeitungsschritt-06 Hallucination-Rollback: spectral_novelty=%.3f ceiling=%s Hz",
                     _hg_result06.spectral_novelty,
                     f"{_bw_cap_hz:.0f}" if _bw_cap_hz is not None else "n/a",
                 )
@@ -831,19 +832,21 @@ class FrequencyRestorationPhase(PhaseInterface):
                                 if not _hg_nvsr.requires_rollback:
                                     restored = _nvsr_f32_06
                                     _nvsr_applied = True
-                                    logger.info("§Gap10 Phase-06: NVSR-Fallback erfolgreich nach FlashSR-Hallucination")
+                                    logger.info(
+                                        "§Gap10 Verarbeitungsschritt-06: NVSR-Ersatzpfad erfolgreich nach FlashSR-Hallucination"
+                                    )
                 except Exception as _nvsr_exc:
-                    logger.debug("§Gap10 Phase-06 NVSR-Fallback non-blocking: %s", _nvsr_exc)
+                    logger.debug("§Gap10 Verarbeitungsschritt-06 NVSR-Ersatzpfad nicht blockierend: %s", _nvsr_exc)
                 if not _nvsr_applied:
                     restored = audio.copy()
             if _hg_result06.score_penalty > 0:
                 logger.info(
-                    "§2.46e Phase-06 score_penalty=%.1f (spectral_novelty=%.3f)",
+                    "§2.46e Verarbeitungsschritt-06 Wert_penalty=%.1f (spectral_novelty=%.3f)",
                     _hg_result06.score_penalty,
                     _hg_result06.spectral_novelty,
                 )
         except Exception as _hg_exc:
-            logger.debug("Phase 06 HallucinationGuard (non-blocking): %s", _hg_exc)
+            logger.debug("Verarbeitungsschritt 06 HallucinationGuard (nicht blockierend): %s", _hg_exc)
 
         # §TonalReference: era/genre/material recording-chain ceiling + target steering
         try:
@@ -881,7 +884,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 steering_strength=_str_06,
             )
             logger.debug(
-                "Phase 06 TonalReference: era=%s genre=%s mat=%s conf=%.2f str=%.2f",
+                "Verarbeitungsschritt 06 TonalReference: era=%s genre=%s mat=%s conf=%.2f str=%.2f",
                 _era_d_06,
                 _genre_06 or "?",
                 _mat_key_06,
@@ -889,7 +892,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 _str_06,
             )
         except Exception as _tc06_exc:
-            logger.debug("Phase 06 TonalReference ceiling (non-blocking): %s", _tc06_exc)
+            logger.debug("Verarbeitungsschritt 06 TonalReference ceiling (nicht blockierend): %s", _tc06_exc)
 
         # §6.4a [RELEASE_MUST] Historisches Mikrofon-EQ-Profil für Vintage-Ären
         _mic6_era = kwargs.get("decade") or kwargs.get("era_decade")
@@ -960,7 +963,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                                 restored = np.clip(restored * (1 - _m6_wet) + _r6_eq * _m6_wet, -1.0, 1.0)
                             logger.info("§6.4a Mikrofon-EQ angewendet era=%d wet=%.2f", int(_mic6_era), _m6_wet)
             except Exception as _mic6_exc:
-                logger.debug("§6.4a MicrophoneResponseLibrary non-blocking: %s", _mic6_exc)
+                logger.debug("§6.4a MicrophoneResponseLibrary nicht blockierend: %s", _mic6_exc)
 
         # §Gap5 Console Character — Studio 2026 only (§0a: NEVER in restoration mode).
         # Applies a subtle classic-console EQ fingerprint (Neve/SSL/API) to add
@@ -1017,7 +1020,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                         restored = np.clip(restored * (1.0 - _c06_wet) + _c06_eq * _c06_wet, -1.0, 1.0)
                     logger.info("§Gap5 Console-Character Studio 2026: %s wet=%.2f", _console_type_06, _c06_wet)
             except Exception as _c06_exc:
-                logger.debug("§Gap5 ConsoleCharacter non-blocking: %s", _c06_exc)
+                logger.debug("§Gap5 ConsoleCharacter nicht blockierend: %s", _c06_exc)
 
         # §V22 Pre-Echo-Prevention — Additive BW-Extension auf Transient-Shifts prüfen (§2.73, non-blocking)
         try:
@@ -1040,12 +1043,12 @@ class FrequencyRestorationPhase(PhaseInterface):
                 _wet_ts_06 = max(0.0, 1.0 - _ts_06.blend_reduction)
                 restored = (_wet_ts_06 * restored + (1.0 - _wet_ts_06) * audio).astype(np.float32)
                 logger.warning(
-                    "§V22 phase_06: onset_shift=%.2f ms → blend_reduction=%.2f",
+                    "§V22 Verarbeitungsschritt_06: onset_shift=%.2f ms → blend_reduction=%.2f",
                     _ts_06.max_shift_ms,
                     _ts_06.blend_reduction,
                 )
         except Exception as _v22_06_exc:
-            logger.debug("§V22 phase_06 transient_guard non-blocking: %s", _v22_06_exc)
+            logger.debug("§V22 Verarbeitungsschritt_06 transient_guard nicht blockierend: %s", _v22_06_exc)
 
         # §2.71 Strength-Envelope: Chirurgische BW-Extension
         _strength_env = kwargs.get("strength_envelope")
@@ -1063,10 +1066,11 @@ class FrequencyRestorationPhase(PhaseInterface):
                 )
                 if float(np.mean(np.abs(restored - _env_pre))) > 0.001:
                     logger.info(
-                        "§2.71 Envelope-Blending Phase 06: Δ=%.4f RMS", float(np.mean(np.abs(restored - _env_pre)))
+                        "§2.71 Envelope-Blending Verarbeitungsschritt 06: Δ=%.4f RMS",
+                        float(np.mean(np.abs(restored - _env_pre))),
                     )
             except Exception as _se_exc:
-                logger.debug("§2.71 Envelope non-blocking: %s", _se_exc)
+                logger.debug("§2.71 Envelope nicht blockierend: %s", _se_exc)
 
         return create_phase_result(
             audio=restored,
@@ -1169,7 +1173,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     else getattr(_nvsr_result, "hf_energy_added_db", 0.0)
                 )
                 logger.info(
-                    "Phase 06: NVSR-SBR aktiv (rolloff=%.0f Hz → %.0f Hz, strength=%.2f, hf_added=%.1f dB)",
+                    "Verarbeitungsschritt 06: NVSR-SBR aktiv (rolloff=%.0f Hz → %.0f Hz, strength=%.2f, hf_added=%.1f dB)",
                     _rolloff_hz_routing,
                     _nv_target,
                     _nvsr_strength,
@@ -1182,7 +1186,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 except (TypeError, KeyError):
                     # SegResult namedtuple → extract by index/attr
                     try:
-                        _nvsr_audio = _nvsr_result[0] if hasattr(_nvsr_result, "__getitem__") else _nvsr_result.audio
+                        _nvsr_audio = _nvsr_result[0] if hasattr(_nvsr_result, "__getitem__") else _nvsr_result.audio  # type: ignore[index, attr-defined]
                     except Exception:
                         _nvsr_audio = dsp_restored  # fallback to DSP
                 if not isinstance(_nvsr_audio, np.ndarray):
@@ -1203,7 +1207,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     else getattr(_nvsr_result, "hf_energy_added_db", 0.0),
                 }
             except Exception as _nvsr_exc:
-                logger.warning("Phase 06: NVSR-Fehler → FlashSR-Fallback: %s", _nvsr_exc)
+                logger.warning("Verarbeitungsschritt 06: NVSR-Fehler → FlashSR-Ersatzpfad: %s", _nvsr_exc)
 
         # ── FlashSR-Pfad (0–8 kHz: Shellac/Wax oder NVSR-Fallback) ──────────
         if _get_flashsr_plugin is None:
@@ -1255,7 +1259,7 @@ class FrequencyRestorationPhase(PhaseInterface):
         # always fire; quality_mode controls _min_dur threshold, not guard activation.
         if audio_dur_s < _min_dur:
             logger.info(
-                "Phase 06: FlashSR skipped for short clip (%.2fs < %.2fs) — DSP-only aktiv",
+                "Verarbeitungsschritt 06: FlashSR uebersprungen for short clip (%.2fs < %.2fs) — DSP-only aktiv",
                 audio_dur_s,
                 _min_dur,
             )
@@ -1292,13 +1296,13 @@ class FrequencyRestorationPhase(PhaseInterface):
             if _avail_gb < _needed_total:
                 _sr_headroom_ok = False
                 _sr_guard_msg = f"RAM {_avail_gb:.1f}GB < {_needed_total:.1f}GB needed — defer to KMV"
-                logger.info("§Phase-06: FlashSR Guard triggered (%s)", _sr_guard_msg)
+                logger.info("§Verarbeitungsschritt-06: FlashSR Guard triggered (%s)", _sr_guard_msg)
         except Exception as _p06_guard_exc:
-            logger.debug("Phase-06 Headroom Guard fehlgeschlagen (psutil?): %s", _p06_guard_exc)
+            logger.debug("Verarbeitungsschritt-06 Headroom Guard fehlgeschlagen (psutil?): %s", _p06_guard_exc)
 
         # Wenn Headroom nicht OK: DSP-Fallback statt OOM
         if not _sr_headroom_ok:
-            logger.warning("§Phase-06: FlashSR übersprungen — %s", _sr_guard_msg)
+            logger.warning("§Verarbeitungsschritt-06: FlashSR übersprungen — %s", _sr_guard_msg)
             return dsp_restored, {
                 "ml_hybrid_available": False,
                 "quality_mode": quality_mode,
@@ -1314,7 +1318,9 @@ class FrequencyRestorationPhase(PhaseInterface):
             from plugins.flashsr_plugin import has_flashsr_ml_failed as _has_flashsr_failed  # pylint: disable=import-outside-toplevel  # noqa: I001
 
             if _has_flashsr_failed():
-                logger.info("Phase 06: FlashSR ML previously failed (sentinel) — skipping ML thread, using DSP-only")
+                logger.info(
+                    "Verarbeitungsschritt 06: FlashSR ML previously fehlgeschlagen (sentinel) — skipping ML thread, using DSP-only"
+                )
                 return dsp_restored, {
                     "ml_hybrid_available": False,
                     "quality_mode": quality_mode,
@@ -1322,13 +1328,13 @@ class FrequencyRestorationPhase(PhaseInterface):
                     "ml_reason": "flashsr_ml_failed_sentinel",
                 }
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         try:
             from backend.core.ml_memory_budget import is_system_thrashing as _is_thrashing  # pylint: disable=import-outside-toplevel  # noqa: I001
 
             if _is_thrashing():
-                logger.warning("Phase 06: FlashSR wegen System-Thrashing übersprungen — DSP-only aktiv")
+                logger.warning("Verarbeitungsschritt 06: FlashSR wegen System-Thrashing übersprungen — DSP-only aktiv")
                 return dsp_restored, {
                     "ml_hybrid_available": False,
                     "quality_mode": quality_mode,
@@ -1336,7 +1342,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     "ml_reason": "flashsr_thrashing_guard",
                 }
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         import queue  # pylint: disable=import-outside-toplevel
         import threading  # pylint: disable=import-outside-toplevel
@@ -1396,7 +1402,9 @@ class FrequencyRestorationPhase(PhaseInterface):
                 # Blend only high-frequency delta (around rolloff and above) to keep timbre stable.
                 # §Guard: FlashSR NaN/Inf output → DSP-only fallback before blend (§0 Primum non nocere)
                 if not np.isfinite(ml_restored).all():
-                    logger.warning("Phase 06: FlashSR NaN/Inf output detected — falling back to DSP-only")
+                    logger.warning(
+                        "Verarbeitungsschritt 06: FlashSR NaN/Inf Ausgabe erkannt — falling back to DSP-only"
+                    )
                     return dsp_restored, {
                         "ml_hybrid_available": True,
                         "quality_mode": quality_mode,
@@ -1413,7 +1421,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 try:
                     touch_plugin("FlashSR")
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
                 return hybrid, {
                     "ml_hybrid_available": True,
                     "quality_mode": quality_mode,
@@ -1426,7 +1434,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 }
             if not ml_error_queue.empty():
                 exc = ml_error_queue.get()
-                logger.warning("Phase 06 ML-Hybrid fehlgeschlagen (%s) — DSP-only aktiv", exc)
+                logger.warning("Verarbeitungsschritt 06 ML-Hybrid fehlgeschlagen (%s) — DSP-only aktiv", exc)
                 return dsp_restored, {
                     "ml_hybrid_available": True,
                     "quality_mode": quality_mode,
@@ -1435,7 +1443,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     "ml_watchdog": f"error_{timeout_s}s",
                 }
 
-            logger.warning("Phase 06 ML-Hybrid TIMEOUT nach %ss — DSP-only aktiv", timeout_s)
+            logger.warning("Verarbeitungsschritt 06 ML-Hybrid Zeitlimit nach %ss — DSP-only aktiv", timeout_s)
             return dsp_restored, {
                 "ml_hybrid_available": True,
                 "quality_mode": quality_mode,
@@ -1448,7 +1456,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                 try:
                     _plm.set_active("FlashSR", False)
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _detect_rolloff_professional(self, audio: np.ndarray, params: dict[str, Any]) -> tuple[bool, float, float]:
         """
@@ -1586,13 +1594,13 @@ class FrequencyRestorationPhase(PhaseInterface):
             if rms_mrsa < rms_sbr * 0.95:
                 # MRSA degraded the SBR extension band → return SBR output unchanged
                 logger.debug(
-                    "MRSA HF degradation detected (%.1f%% drop) — using SBR output",
+                    "MRSA HF degradation erkannt (%.1f%% drop) — using SBR Ausgabe",
                     (1.0 - rms_mrsa / rms_sbr) * 100,
                 )
                 return audio_out
             return mrsa_result
         except Exception as _mrsa_safe_exc:
-            logger.debug("_mrsa_gain_refinement_sbr_safe fallback: %s", _mrsa_safe_exc)
+            logger.debug("_mrsa_gain_refinement_sbr_safe Ersatzpfad: %s", _mrsa_safe_exc)
             return audio_out
 
     def _mrsa_gain_refinement(self, audio_in: np.ndarray, audio_out: np.ndarray, sr: int) -> np.ndarray:
@@ -1705,7 +1713,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     w_acc[k] += w
 
             except Exception as zone_exc:
-                logger.warning("MRSA Phase 06 zone '%s' failed: %s", zone_name, zone_exc)
+                logger.warning("MRSA Verarbeitungsschritt 06 zone '%s' fehlgeschlagen: %s", zone_name, zone_exc)
                 continue
 
         # Compose final gain: zone-optimal where available, reference ratio elsewhere
@@ -1822,7 +1830,7 @@ class FrequencyRestorationPhase(PhaseInterface):
             )
             restored = np.real(restored).astype(np.float32)
         except Exception as _istft_p06_exc:
-            logger.debug("phase_06 istft failed (non-critical): %s", _istft_p06_exc)
+            logger.debug("Verarbeitungsschritt_06 istft fehlgeschlagen (unkritisch): %s", _istft_p06_exc)
             restored = channel.astype(np.float32)
 
         # Match length
@@ -2127,7 +2135,7 @@ class FrequencyRestorationPhase(PhaseInterface):
 def _run_test() -> None:  # pragma: no cover
     # Test Professional Frequency Restoration Phase.
     logger.debug("=" * 80)
-    logger.debug("Professional Frequency Restoration Phase v2.0 - Test")
+    logger.debug("Professional Frequency Restoration Verarbeitungsschritt v2.0 - Test")
     logger.debug("=" * 80)
 
     # Generate test audio with much more HF content
@@ -2167,7 +2175,7 @@ def _run_test() -> None:  # pragma: no cover
         _result = _phase.process(_audio_rolled_off.copy(), material_type=_material)
 
         if _result.success and _result.modifications.get("frequency_restored"):
-            logger.debug("Processing Complete!")
+            logger.debug("Processing vollstaendig!")
             logger.debug(
                 "   Execution Time: %.3fs (%.2fx realtime)",
                 _result.metadata["execution_time_seconds"],
@@ -2177,7 +2185,7 @@ def _run_test() -> None:  # pragma: no cover
             logger.debug("   Extension Range: %s Hz", _result.modifications["extension_range_hz"])
             logger.debug("   HF Boost: %.1f dB", _result.modifications["hf_boost_db"])
             logger.debug("   Restoration Strength: %.2f", _result.modifications["restoration_strength"])
-            logger.debug("   SBR Enabled: %s", _result.modifications["sbr_enabled"])
+            logger.debug("   SBR aktiviert: %s", _result.modifications["sbr_enabled"])
             logger.debug(
                 "   Measured Rolloff: %.1f dB at %.0f Hz",
                 _result.metadata["measured_rolloff_db"],
@@ -2186,7 +2194,7 @@ def _run_test() -> None:  # pragma: no cover
             logger.debug("   LPC Order: %s", _result.metadata["lpc_order"])
             logger.debug("   Warnings: %s", _result.warnings if _result.warnings else "None")
         else:
-            logger.debug("Frequency Restoration Skipped")
+            logger.debug("Frequency Restoration uebersprungen")
             logger.debug("   Reason: %s", _result.modifications.get("reason", "unknown"))
             if "measured_rolloff_db" in _result.metadata:
                 logger.debug(
@@ -2196,11 +2204,11 @@ def _run_test() -> None:  # pragma: no cover
                 )
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("Professional Frequency Restoration v2.0 Test Complete!")
+    logger.debug("Professional Frequency Restoration v2.0 Test vollstaendig!")
     logger.debug("%s", "=" * 80)
     if _result is not None:
         logger.debug("Algorithm: %s", _result.metadata.get("algorithm", "N/A"))
-        logger.debug("Scientific Reference: %s", _result.metadata.get("scientific_ref", "N/A"))
+        logger.debug("Scientific Referenz: %s", _result.metadata.get("scientific_ref", "N/A"))
         logger.debug("Benchmark: %s", _result.metadata.get("benchmark", "N/A"))
     logger.debug("Quality Impact: 0.91 (Professional-Grade)")
 

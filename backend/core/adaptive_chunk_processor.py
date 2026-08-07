@@ -91,7 +91,7 @@ def _estimate_beat_times(audio_mono: np.ndarray, sr: int) -> list[float]:
         _beats = DBNBeatTrackingProcessor(fps=100)(_proc)
         return sorted(float(b) for b in _beats)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     try:
         import librosa
@@ -99,7 +99,7 @@ def _estimate_beat_times(audio_mono: np.ndarray, sr: int) -> list[float]:
         _, beat_frames = librosa.beat.beat_track(y=audio_mono, sr=sr, units="time")  # type: ignore[attr-defined]
         return sorted(float(b) for b in beat_frames)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     return []
 
@@ -195,7 +195,7 @@ def _find_safe_boundary(
                 )
                 return candidate
     except Exception as _exc:
-        logger.debug("_find_safe_boundary: onset detection skipped (%s)", _exc)
+        logger.debug("_find_safe_boundary: onset detection uebersprungen (%s)", _exc)
 
     return pos_samples
 
@@ -267,13 +267,13 @@ def process_in_adaptive_chunks(
         beat_times_s = _estimate_beat_times(audio_mono, sr)
         if beat_times_s:
             logger.debug(
-                "AdaptiveChunk: beat-sync enabled, %d beats detected (%.1f–%.1f s)",
+                "AdaptiveChunk: beat-sync aktiviert, %d beats erkannt (%.1f–%.1f s)",
                 len(beat_times_s),
                 beat_times_s[0],
                 beat_times_s[-1],
             )
         else:
-            logger.debug("AdaptiveChunk: beat-sync requested but no beats detected — using fixed boundaries")
+            logger.debug("AdaptiveChunk: beat-sync requested but no beats erkannt — using fixed boundaries")
 
     # If audio fits in a single chunk, skip chunking overhead
     if duration_s <= chunk_s + crossfade_s:
@@ -356,7 +356,7 @@ def process_in_adaptive_chunks(
                             )
             except Exception as _acp_xcorr_exc:
                 logger.debug(
-                    "adaptive_chunk_processor: chunk cross-correlation failed (non-critical): %s", _acp_xcorr_exc
+                    "adaptive_chunk_processor: chunk cross-correlation fehlgeschlagen (unkritisch): %s", _acp_xcorr_exc
                 )
 
         # Build weight envelope for this chunk

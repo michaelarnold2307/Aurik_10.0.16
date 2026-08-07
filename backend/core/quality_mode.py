@@ -104,7 +104,7 @@ def validate_mode(mode: Any, fallback: str = MODE_FALLBACK) -> str:
     """
     if mode is None or not isinstance(mode, str):
         logger.warning(
-            "QualityMode: invalid type %s, fallback to '%s'",
+            "QualityMode: invalid type %s, Ersatzpfad to '%s'",
             type(mode).__name__ if mode is not None else "None",
             fallback,
         )
@@ -122,7 +122,7 @@ def validate_mode(mode: Any, fallback: str = MODE_FALLBACK) -> str:
     for known in QUALITY_MODES:
         if mode_lower in known or known in mode_lower:
             logger.warning(
-                "QualityMode: '%s' is not a valid mode. Did you mean '%s'? Falling back to '%s'.",
+                "QualityMode: '%s' is not a valid Betriebsart. Did you mean '%s'? Falling back to '%s'.",
                 mode,
                 known,
                 fallback,
@@ -130,7 +130,7 @@ def validate_mode(mode: Any, fallback: str = MODE_FALLBACK) -> str:
             return fallback
 
     logger.warning(
-        "QualityMode: '%s' is not a valid mode. Valid: %s. Fallback to '%s'.",
+        "QualityMode: '%s' is not a valid Betriebsart. Valid: %s. Ersatzpfad to '%s'.",
         mode,
         sorted(QUALITY_MODES),
         fallback,

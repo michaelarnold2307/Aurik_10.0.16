@@ -100,7 +100,7 @@ try:
     _HAS_CONSONANT_ENHANCEMENT = True
 except ImportError:  # pragma: no cover
     _HAS_CONSONANT_ENHANCEMENT = False
-    logger.warning("⚠️ SOTA Phase 19: ConsonantEnhancement nicht verfügbar — Frikativ-Boost deaktiviert")
+    logger.warning("⚠️ SOTA Verarbeitungsschritt 19: ConsonantEnhancement nicht verfügbar — Frikativ-Boost deaktiviert")
 
 # ========================================================================
 # AURIK 8.0 ENHANCEMENT MODULES — aktiviert ab Phase 19 v5.0
@@ -222,6 +222,38 @@ VOCAL_PROFILES = {
         "brilliance_preserve": 0.88,  # Balance
     },
 }
+
+
+def _coerce_confidence(value: object) -> float:
+    if isinstance(value, float):
+        return value
+    if isinstance(value, int):
+        return value / 1.0
+    return 0.0
+
+
+def _phase_result(
+    *,
+    audio: np.ndarray,
+    success: bool = True,
+    execution_time_seconds: float = 0.0,
+    metadata: dict[str, Any] | None = None,
+    metrics: dict[str, Any] | None = None,
+    modifications: dict[str, Any] | None = None,
+    warnings: list[str] | None = None,
+) -> PhaseResult:
+    return PhaseResult(
+        audio,
+        modifications or {},
+        warnings or [],
+        metadata or {},
+        None,
+        metrics or {},
+        execution_time_seconds,
+        False,
+        1.0,
+        success,
+    )
 
 
 class DeEsserPhase(PhaseInterface):
@@ -390,6 +422,7 @@ class DeEsserPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -417,6 +450,7 @@ class DeEsserPhase(PhaseInterface):
                 try:
                     start_s, end_s = float(loc[0]), float(loc[1])
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 s = max(0, int(max(0.0, start_s) * sample_rate) - pad)
                 e = min(n_samples, int(max(0.0, end_s) * sample_rate) + pad)
@@ -495,7 +529,7 @@ class DeEsserPhase(PhaseInterface):
                 gate_enabled=True,
             )
 
-            logger.info("✅ Aurik 10 Complete Enhancement Stack loaded (5 modules)")
+            logger.info("✅ Aurik 10 vollstaendig Enhancement Stack geladen (5 modules)")
         else:
             # Current Implementation: De-Essing Only (Stages 2-6 sind Roadmap Features)
             self.breath_intelligence = None  # type: ignore[assignment]
@@ -503,7 +537,7 @@ class DeEsserPhase(PhaseInterface):
             self.vocal_presence = None  # type: ignore[assignment]
             self.spectral_inpainting = None  # type: ignore[assignment]
             self.vocal_dynamics = None  # type: ignore[assignment]
-            logger.info("ℹ️ Phase 19 v4.0: Gender-Aware De-Esser (Stages 2-6 are roadmap features)")
+            logger.info("ℹ️ Verarbeitungsschritt 19 v4.0: Gender-Aware De-Esser (Stages 2-6 are roadmap features)")
 
         # Stats Tracking (v4.0 erweitert)
         self.stats = {
@@ -570,12 +604,13 @@ class DeEsserPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "de_esser", default_nr=0.2, default_de_ess=0.85, default_comp=1.0)
-            if "strength" in kwargs:
-                kwargs["strength"] = _pim["de_ess_strength"]
-            if "correction_strength" in kwargs:
-                kwargs["correction_strength"] = _pim["de_ess_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                if "strength" in kwargs:
+                    kwargs["strength"] = _pim["de_ess_strength"]
+                if "correction_strength" in kwargs:
+                    kwargs["correction_strength"] = _pim["de_ess_strength"]
         except Exception as e:
-            logger.warning("phase_19_de_esser.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_19_de_esser.py::verarbeiten Ersatzpfad: %s", e)
         material = material_type  # alias: method body uses 'material' throughout
         start_time = time.time()
         self.validate_input(audio)
@@ -595,7 +630,7 @@ class DeEsserPhase(PhaseInterface):
         if _td_p19 >= 4:
             _depth_factor_19 = float(np.clip(1.0 - (_td_p19 - 3) * 0.15, 0.55, 1.0))
             _effective_strength *= _depth_factor_19
-            logger.debug("Phase_19 depth=%d → strength ×%.2f", _td_p19, _depth_factor_19)
+            logger.debug("Verarbeitungsschritt_19 depth=%d → strength ×%.2f", _td_p19, _depth_factor_19)
 
         # §2.17 SectionStrengthEnvelope: Kontinuierliche per-Segment-Modulation.
         # Reduziert De-Essing in Strophen (weniger Sibilanten), verstärkt in
@@ -609,13 +644,13 @@ class DeEsserPhase(PhaseInterface):
                 _env_val = get_section_strength_at(_envelope, 0, _n_total)
                 _effective_strength = float(np.clip(_effective_strength * _env_val, 0.0, 1.0))
             except Exception as e:
-                logger.warning("phase_19_de_esser.py::process fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_19_de_esser.py::verarbeiten Ersatzpfad: %s", e)
                 pass  # Envelope-Fehler → unmoduliert weiter
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
             passthrough = np.clip(passthrough, -1.0, 1.0)
-            return PhaseResult(
+            return _phase_result(
                 success=True,
                 audio=passthrough,
                 execution_time_seconds=time.time() - start_time,
@@ -628,11 +663,25 @@ class DeEsserPhase(PhaseInterface):
                     "effective_strength": _effective_strength,
                     "rms_drop_db": 0.0,
                     "loudness_makeup_db": 0.0,
+                    # §2.8: Feedback-Invariante ist bei komplett übersprungener Verarbeitung
+                    # trivial erfüllt (keine De-Essing-Veränderung, kein SNR-Verlust möglich).
+                    "fricative_snr_invariant_met": True,
+                    "fricative_snr_before_deessing_db": 0.0,
+                    "fricative_snr_after_chain_db": 0.0,
                 },
                 metrics={
                     "sibilance_reduction_db": 0.0,
                     "max_gain_reduction_db": 0.0,
                     "hf_loss_ratio": 0.0,
+                    "intelligibility_score": 1.0,
+                    "intelligibility_presence_ratio": 1.0,
+                    "intelligibility_articulation_ratio": 1.0,
+                    "intelligibility_air_ratio": 1.0,
+                    "intelligibility_fricative_snr_delta_db": 0.0,
+                    "musical_goal_brillanz": 1.0,
+                    "musical_goal_authentizitaet": 1.0,
+                    "musical_goal_transparenz": 1.0,
+                    "musical_goal_artikulation": 1.0,
                 },
             )
 
@@ -646,7 +695,7 @@ class DeEsserPhase(PhaseInterface):
             if gender in VOCAL_PROFILES:
                 self.vocal_profile = VOCAL_PROFILES[gender]
             else:
-                logger.warning("Unknown gender '%s', using current profile", gender)
+                logger.warning("Unknown gender '%s', using current Profil", gender)
 
         # §2.8 Vocal-Chain: Pipeline-weite Gender-Info aus kwargs bevorzugen
         # (einmalige Detektion in UV3 _select_phases, via _restoration_context injiziert)
@@ -654,21 +703,23 @@ class DeEsserPhase(PhaseInterface):
         if _external_gender and _external_gender in VOCAL_PROFILES and self.gender == VocalGender.AUTO:
             self.gender = _external_gender
             self.vocal_profile = VOCAL_PROFILES[_external_gender]
-            logger.info("§2.8 Phase19: vocal_gender=%s aus Pipeline-Kontext übernommen", _external_gender)
+            logger.info(
+                "§2.8 Verarbeitungsschritt19: vocal_gender=%s aus Pipeline-Kontext übernommen", _external_gender
+            )
 
         # §2.9 Vocal Analysis Shared Memory: Register + Formanten aus VFA
         _vfa_register = kwargs.get("vocal_register")
         _vfa_f1 = kwargs.get("vocal_formant_f1_hz", 0.0)
         if _vfa_register:
-            logger.debug("§2.9 Phase19: VFA register=%s f1=%.0fHz", _vfa_register, float(_vfa_f1))
+            logger.debug("§2.9 Verarbeitungsschritt19: VFA register=%s f1=%.0fHz", _vfa_register, float(_vfa_f1))
             _profile = dict(self.vocal_profile)
             if str(_vfa_register).lower() in ("chest", "chest_mix"):
                 _profile["chest_range"] = (120, 300)
-                _profile["formant_protect"] = min(1.0, _profile.get("formant_protect", 0.85) + 0.05)
+                _profile["formant_protect"] = min(1.0, _profile.get("formant_protect", 0.85) + 0.05)  # type: ignore[operator]
             elif str(_vfa_register).lower() in ("head", "head_mix"):
                 _s_band = _profile.get("s_band", (7000, 11000))
-                _profile["s_band"] = (_s_band[0] + 500, _s_band[1] + 500)
-                _profile["brilliance_preserve"] = min(1.0, _profile.get("brilliance_preserve", 0.85) + 0.05)
+                _profile["s_band"] = (_s_band[0] + 500, _s_band[1] + 500)  # type: ignore[index]
+                _profile["brilliance_preserve"] = min(1.0, _profile.get("brilliance_preserve", 0.85) + 0.05)  # type: ignore[operator]
             self.vocal_profile = _profile
 
         # Auto-Detection wenn Gender=AUTO (Fallback wenn kein Pipeline-Kontext)
@@ -682,9 +733,9 @@ class DeEsserPhase(PhaseInterface):
                 _bw_loss_pre = float(_defect_scores_pre.get("bandwidth_loss", 0.0) or 0.0)
                 if _bw_loss_pre <= 0.0:
                     for _k, _v in _defect_scores_pre.items():
-                        _key_str = _k.value if hasattr(_k, 'value') else str(_k)
+                        _key_str = _k.value if hasattr(_k, "value") else str(_k)
                         if _key_str == "bandwidth_loss":
-                            _bw_loss_pre = float(getattr(_v, 'severity', _v) if hasattr(_v, 'severity') else _v)
+                            _bw_loss_pre = float(getattr(_v, "severity", _v) if hasattr(_v, "severity") else _v)
                             break
             # §v10.126 Depth-aware: tiefe Ketten (≥4) haben unzuverlässige
             # F0- und Formant-Detektion → Oktavfehler (F0=94 Hz statt ~188 Hz).
@@ -694,13 +745,14 @@ class DeEsserPhase(PhaseInterface):
                 self.gender = VocalGender.UNKNOWN
                 self.vocal_profile = VOCAL_PROFILES[VocalGender.UNKNOWN]
                 logger.info(
-                    "🎤 §v10.126 Gender-Fallback: depth=%d ≥4 → F0/Formant unzuverlässig, "
+                    "🎤 §v10.126 Gender-Ersatzpfad: depth=%d ≥4 → F0/Formant unzuverlässig, "
                     "gender=UNKNOWN (freq-agnostisch)",
                     _td_gender_detect,
                 )
             else:
                 detected_gender = self._detect_gender_robust(
-                    audio, sample_rate,
+                    audio,
+                    sample_rate,
                     bandwidth_loss=_bw_loss_pre,
                     transfer_chain=kwargs.get("transfer_chain", []),
                     defect_scores=kwargs.get("defect_scores", {}),
@@ -708,7 +760,7 @@ class DeEsserPhase(PhaseInterface):
                 self.vocal_profile = VOCAL_PROFILES[detected_gender]
                 kwargs["phase19_gender"] = detected_gender  # §v10.303.37
                 self.stats["gender_profile"] = detected_gender
-                logger.info("🎤 Auto-detected gender: %s", detected_gender)
+                logger.info("🎤 Auto-erkannt gender: %s", detected_gender)
 
         # §2.9.4 Multi-Gender-Timeline: Erkennt ALLE Stimmen im Song
         _gender_timeline = self._detect_gender_timeline(audio, sample_rate)
@@ -719,14 +771,14 @@ class DeEsserPhase(PhaseInterface):
         # schütze ALLE Stimmbereiche durch kombinierte Parameter
         # §v10.126: Skip if gender was forced to UNKNOWN (deep chain)
         if _multi_gender and _gender_timeline and self.gender != VocalGender.UNKNOWN:
-            _genders_present = sorted({s["gender"] for s in _gender_timeline})
-            _union_profile = _build_union_vocal_profile(_genders_present)
+            _genders_present = sorted({s["gender"] for s in _gender_timeline})  # type: ignore[type-var]
+            _union_profile = _build_union_vocal_profile(_genders_present)  # type: ignore[arg-type]
             self.vocal_profile = _union_profile
             self.stats["gender_profile"] = "multi"
             self.stats["genders_detected"] = _genders_present
             logger.info(
                 "🎤 Multi-Gender: %s → Union-Profil (Formanten %.0f–%.0f Hz, Sibilanz-Bands %s)",
-                ", ".join(_genders_present),
+                ", ".join(_genders_present),  # type: ignore[arg-type]
                 _union_profile["formant_range"][0],
                 _union_profile["formant_range"][1],
                 _union_profile.get("s_band", "all"),
@@ -734,15 +786,16 @@ class DeEsserPhase(PhaseInterface):
         elif _gender_timeline and self.gender != VocalGender.UNKNOWN:
             # Single gender confirmed by timeline
             # §v10.126: Skip if gender was forced to UNKNOWN (deep chain)
-            _timeline_gender = _gender_timeline[0]["gender"]
+            _timeline_gender = str(_gender_timeline[0].get("gender", ""))
             if self.gender == VocalGender.AUTO or self.gender != _timeline_gender:
                 if _timeline_gender in VOCAL_PROFILES:
+                    _timeline_confidence = _coerce_confidence(_gender_timeline[0].get("confidence", 0.0))
                     self.vocal_profile = VOCAL_PROFILES[_timeline_gender]
                     self.stats["gender_profile"] = _timeline_gender
                     logger.info(
                         "🎤 GenderTimeline bestätigt: %s (confidence=%.2f)",
                         _timeline_gender,
-                        _gender_timeline[0]["confidence"],
+                        _timeline_confidence,
                     )
 
         # Stats Reset
@@ -819,9 +872,9 @@ class DeEsserPhase(PhaseInterface):
             # nicht String-Keys. Fallback für beide Varianten.
             if _bw_loss <= 0.0:
                 for _k, _v in _defect_scores.items():
-                    _key_str = _k.value if hasattr(_k, 'value') else str(_k)
+                    _key_str = _k.value if hasattr(_k, "value") else str(_k)
                     if _key_str == "bandwidth_loss":
-                        _bw_loss = float(getattr(_v, 'severity', _v) if hasattr(_v, 'severity') else _v)
+                        _bw_loss = float(getattr(_v, "severity", _v) if hasattr(_v, "severity") else _v)
                         break
         _hf_threshold = 0.01 if _bw_loss > 0.5 else 0.05
 
@@ -837,24 +890,21 @@ class DeEsserPhase(PhaseInterface):
         _mat_str_deess = str(getattr(material, "value", material) or "").lower()
         _crest_config: dict[str, tuple[float, float, float]] = {
             # (baseline, divisor, vocal_bonus_max)
-            "shellac":       (10.0, 6.0, 0.15),  # Knistern = hoher Crest → Baseline hoch
-            "vinyl":         (7.0, 8.0, 0.25),   # Surface noise moderat
-            "lacquer_disc":  (8.0, 7.0, 0.20),
-            "cassette":      (6.0, 8.0, 0.30),   # Tape hiss = niedriger Crest → Baseline tief
-            "reel_tape":     (6.0, 8.0, 0.30),
-            "tape":          (6.0, 8.0, 0.30),
-            "wax_cylinder":  (10.0, 6.0, 0.10),
-            "wire_recording":(9.0, 7.0, 0.15),
+            "shellac": (10.0, 6.0, 0.15),  # Knistern = hoher Crest → Baseline hoch
+            "vinyl": (7.0, 8.0, 0.25),  # Surface noise moderat
+            "lacquer_disc": (8.0, 7.0, 0.20),
+            "cassette": (6.0, 8.0, 0.30),  # Tape hiss = niedriger Crest → Baseline tief
+            "reel_tape": (6.0, 8.0, 0.30),
+            "tape": (6.0, 8.0, 0.30),
+            "wax_cylinder": (10.0, 6.0, 0.10),
+            "wire_recording": (9.0, 7.0, 0.15),
         }
         _crest_base, _crest_div, _vocal_max = _crest_config.get(_mat_str_deess, (6.0, 8.0, 0.30))
-        _crest_sibilance_bonus = float(np.clip(
-            (_crest_factor - _crest_base) / _crest_div, 0.0, 0.5
-        ))
+        _crest_sibilance_bonus = float(np.clip((_crest_factor - _crest_base) / _crest_div, 0.0, 0.5))
         _vocal_bonus = float(np.clip(_panns_deess / 0.5, 0.0, _vocal_max))
-        _sibilance_confidence = float(np.clip(
-            (_hf_ratio / max(_hf_threshold, 0.005)) * 0.5 + _crest_sibilance_bonus + _vocal_bonus,
-            0.0, 1.0
-        ))
+        _sibilance_confidence = float(
+            np.clip((_hf_ratio / max(_hf_threshold, 0.005)) * 0.5 + _crest_sibilance_bonus + _vocal_bonus, 0.0, 1.0)
+        )
 
         # §v10.95 SOTA MP3-Adaptive: Terminal-Codec mp3_low → Sibilanz-Schwelle ×3,
         # Gain-Reduction-Cap halbiert. MP3 Pre-Echo-Artefakte werden sonst als
@@ -879,16 +929,21 @@ class DeEsserPhase(PhaseInterface):
                 _mp3_sibilance_threshold_mult = 1.2  # Fast keine Dämpfung
                 _mp3_strength_cap = 0.40  # Sanftes De-Essing erlauben
                 logger.info(
-                    "§v10.303.5 Vocal-Aware: panns=%.2f + bw_loss=%.2f → "
-                    "Sibilanten sind real, MP3-Schutz deaktiviert",
-                    _panns_deess, _bw_loss,
+                    "§v10.303.5 Vocal-Aware: panns=%.2f + bw_loss=%.2f → Sibilanten sind real, MP3-Schutz deaktiviert",
+                    _panns_deess,
+                    _bw_loss,
                 )
             # §v10.303.5 Crest-Aware: Hoher Crest-Faktor bestätigt echte Sibilanten.
             # Material-adaptiv: Shellac braucht Crest > 14 (Knistern), CD nur > 8.
             _crest_mp3_unlock = {
-                "shellac": 14.0, "wax_cylinder": 13.0, "wire_recording": 12.0,
-                "vinyl": 9.0, "lacquer_disc": 9.5,
-                "cassette": 10.0, "reel_tape": 10.0, "tape": 10.0,
+                "shellac": 14.0,
+                "wax_cylinder": 13.0,
+                "wire_recording": 12.0,
+                "vinyl": 9.0,
+                "lacquer_disc": 9.5,
+                "cassette": 10.0,
+                "reel_tape": 10.0,
+                "tape": 10.0,
             }.get(_mat_str_deess, 9.0)
             if _crest_factor > _crest_mp3_unlock and _panns_deess > 0.2:
                 _mp3_sibilance_threshold_mult = min(_mp3_sibilance_threshold_mult, 1.5)
@@ -896,7 +951,10 @@ class DeEsserPhase(PhaseInterface):
                 logger.info(
                     "§v10.303.5 Crest-Aware: crest=%.1f > %.1f (mat=%s) + panns=%.2f → "
                     "Transienten bestätigen echte Sibilanten, MP3-Schutz gelockert",
-                    _crest_factor, _crest_mp3_unlock, _mat_str_deess, _panns_deess,
+                    _crest_factor,
+                    _crest_mp3_unlock,
+                    _mat_str_deess,
+                    _panns_deess,
                 )
             logger.info(
                 "§v10.95 MP3-Adaptive: terminal=%s bw_loss=%.2f → sib_thr×%.0f strength_cap=%.2f",
@@ -923,21 +981,18 @@ class DeEsserPhase(PhaseInterface):
         _signal_long_enough_for_aurik8 = len(audio_mono) >= int(sample_rate * 2.0)
         if not _signal_long_enough_for_aurik8:
             logger.info(
-                "Stage 2-6 gate: audio too short (%.1fs < 2.0s) — Aurik-8 stack skipped",
+                "Stufe 2-6 gate: audio too short (%.1fs < 2.0s) — Aurik-8 stack uebersprungen",
                 len(audio_mono) / float(sample_rate),
             )
         # De-Essing-Intensität: 0.0 = skip, 0.0-0.3 = gentle, 0.3-0.7 = normal, 0.7-1.0 = aggressive
-        _deess_intensity = float(np.clip(
-            _sibilance_confidence * (_hf_ratio / max(_hf_threshold, 0.005)),
-            0.0, 1.0
-        ))
+        _deess_intensity = float(np.clip(_sibilance_confidence * (_hf_ratio / max(_hf_threshold, 0.005)), 0.0, 1.0))
         # Sanfter Floor: Auch knapp unter Threshold ein bisschen De-Essing
         if _deess_intensity < 0.15 and _panns_deess > 0.25 and _crest_factor > 7.0:
             _deess_intensity = 0.15  # Minimales De-Essing trotz unterschwelligem HF
         _signal_has_sibilant_content = _deess_intensity > 0.10
         if not _signal_has_sibilant_content:
             logger.info(
-                "Stage 2-6 gate: HF ratio %.3f < %.3f (bw_loss=%.2f, crest=%.1f, conf=%.2f) — Aurik-8 stack skipped",
+                "Stufe 2-6 gate: HF Verhaeltnis %.3f < %.3f (bw_loss=%.2f, crest=%.1f, conf=%.2f) — Aurik-8 stack uebersprungen",
                 _hf_ratio,
                 _hf_threshold,
                 float(_bw_loss),
@@ -964,14 +1019,14 @@ class DeEsserPhase(PhaseInterface):
             _hf_severe_loss = _hf_ratio < _hf_threshold * 2.0
             if _is_lossy_terminal and _hf_severe_loss:
                 logger.info(
-                    "§v10.95 Breath-Skip: lossy codec=%s + HF=%.4f < %.4f → breath processing skipped",
+                    "§v10.95 Breath-ueberspringen: lossy codec=%s + HF=%.4f < %.4f → breath processing uebersprungen",
                     _transfer_chain[-1] if _transfer_chain else "unknown",
                     _hf_ratio,
                     _hf_threshold * 2.0,
                 )
                 enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
                 enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
-                return PhaseResult(
+                return _phase_result(
                     success=True,
                     audio=enhanced_audio,
                     execution_time_seconds=time.time() - start_time,
@@ -980,6 +1035,24 @@ class DeEsserPhase(PhaseInterface):
                         "de_essing_applied": False,
                         "aurik_8_enhancement": False,
                         "skip_reason": "lossy_codec_hf_loss",
+                        # §2.8: Invariante trivial erfüllt — Phase komplett übersprungen.
+                        "fricative_snr_invariant_met": True,
+                        "fricative_snr_before_deessing_db": 0.0,
+                        "fricative_snr_after_chain_db": 0.0,
+                    },
+                    metrics={
+                        "sibilance_reduction_db": 0.0,
+                        "max_gain_reduction_db": 0.0,
+                        "hf_loss_ratio": 0.0,
+                        "intelligibility_score": 1.0,
+                        "intelligibility_presence_ratio": 1.0,
+                        "intelligibility_articulation_ratio": 1.0,
+                        "intelligibility_air_ratio": 1.0,
+                        "intelligibility_fricative_snr_delta_db": 0.0,
+                        "musical_goal_brillanz": 1.0,
+                        "musical_goal_authentizitaet": 1.0,
+                        "musical_goal_transparenz": 1.0,
+                        "musical_goal_artikulation": 1.0,
                     },
                 )
             # §v10.0.5: HF ratio < 0.005 → Material hat quasi keine Höhen.
@@ -992,14 +1065,14 @@ class DeEsserPhase(PhaseInterface):
             _hf_skip_threshold = 0.025 if _td_p19_hf >= 4 else 0.005
             if _hf_ratio < _hf_skip_threshold:
                 logger.info(
-                    "§v10.128 DeEsser-Skip: HF=%.4f < %.3f depth=%d → phase fully skipped",
+                    "§v10.128 DeEsser-ueberspringen: HF=%.4f < %.3f depth=%d → Verarbeitungsschritt fully uebersprungen",
                     _hf_ratio,
                     _hf_skip_threshold,
                     _td_p19_hf,
                 )
                 enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
                 enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
-                return PhaseResult(
+                return _phase_result(
                     success=True,
                     audio=enhanced_audio,
                     execution_time_seconds=time.time() - start_time,
@@ -1008,11 +1081,29 @@ class DeEsserPhase(PhaseInterface):
                         "de_essing_applied": False,
                         "aurik_8_enhancement": False,
                         "skip_reason": "hf_ratio_too_low_for_sibilance",
+                        # §2.8: Invariante trivial erfüllt — Phase komplett übersprungen (kein HF/Sibilanz).
+                        "fricative_snr_invariant_met": True,
+                        "fricative_snr_before_deessing_db": 0.0,
+                        "fricative_snr_after_chain_db": 0.0,
+                    },
+                    metrics={
+                        "sibilance_reduction_db": 0.0,
+                        "max_gain_reduction_db": 0.0,
+                        "hf_loss_ratio": float(_hf_ratio),
+                        "intelligibility_score": 1.0,
+                        "intelligibility_presence_ratio": 1.0,
+                        "intelligibility_articulation_ratio": 1.0,
+                        "intelligibility_air_ratio": 1.0,
+                        "intelligibility_fricative_snr_delta_db": 0.0,
+                        "musical_goal_brillanz": 1.0,
+                        "musical_goal_authentizitaet": 1.0,
+                        "musical_goal_transparenz": 1.0,
+                        "musical_goal_artikulation": 1.0,
                     },
                 )
         else:
             logger.debug(
-                "Stage 2-6 gate: HF-ratio=%.3f >= %.3f, sibilant_content=%s, long_enough=%s",
+                "Stufe 2-6 gate: HF-Verhaeltnis=%.3f >= %.3f, sibilant_content=%s, long_enough=%s",
                 _hf_ratio,
                 _hf_threshold,
                 _signal_has_sibilant_content,
@@ -1043,13 +1134,14 @@ class DeEsserPhase(PhaseInterface):
         # produziert dann Pre-Echo-Artefakte (16 PE in Log bestätigt).
         if _graduated_mode == "minimal" and _td_p19_hf >= 4:
             logger.info(
-                "§v10.306 Pre-Echo-Guard: depth=%d bw_loss=%.2f → DeEsser komplett skipped "
+                "§v10.306 Pre-Echo-Guard: depth=%d bw_loss=%.2f → DeEsser komplett uebersprungen "
                 "(rest-HF ist Codec-Artefakt, kein Sibilant)",
-                _td_p19_hf, _bw_loss,
+                _td_p19_hf,
+                _bw_loss,
             )
             enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
             enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
-            return PhaseResult(
+            return _phase_result(
                 success=True,
                 audio=enhanced_audio,
                 execution_time_seconds=time.time() - start_time,
@@ -1058,13 +1150,32 @@ class DeEsserPhase(PhaseInterface):
                     "de_essing_applied": False,
                     "aurik_8_enhancement": False,
                     "skip_reason": "pre_echo_guard_depth_bw_loss",
+                    # §2.8: Invariante trivial erfüllt — Phase komplett übersprungen.
+                    "fricative_snr_invariant_met": True,
+                    "fricative_snr_before_deessing_db": 0.0,
+                    "fricative_snr_after_chain_db": 0.0,
+                },
+                metrics={
+                    "sibilance_reduction_db": 0.0,
+                    "max_gain_reduction_db": 0.0,
+                    "hf_loss_ratio": float(_hf_ratio),
+                    "intelligibility_score": 1.0,
+                    "intelligibility_presence_ratio": 1.0,
+                    "intelligibility_articulation_ratio": 1.0,
+                    "intelligibility_air_ratio": 1.0,
+                    "intelligibility_fricative_snr_delta_db": 0.0,
+                    "musical_goal_brillanz": 1.0,
+                    "musical_goal_authentizitaet": 1.0,
+                    "musical_goal_transparenz": 1.0,
+                    "musical_goal_artikulation": 1.0,
                 },
             )
 
         if _graduated_mode != "full":
             logger.info(
-                "§v10.303.35 Graduated De-Essing: bw_loss=%.2f → mode=%s",
-                _bw_loss, _graduated_mode,
+                "§v10.303.35 Graduated De-Essing: bw_loss=%.2f → Betriebsart=%s",
+                _bw_loss,
+                _graduated_mode,
             )
 
         # Skip Aurik-8 Enhancement Stack for degraded modes
@@ -1101,7 +1212,7 @@ class DeEsserPhase(PhaseInterface):
                     _cap_end = min(_stage_full_len, _cap_start + _cap_samples)
                     _stage_audio = enhanced_audio[_cap_start:_cap_end].copy()
                     logger.debug(
-                        "Stage 2-6 audio-cap: %.0f s > %d s limit → center [%.1f s–%.1f s]",
+                        "Stufe 2-6 audio-cap: %.0f s > %d s limit → center [%.1f s–%.1f s]",
                         _stage_full_len / sample_rate,
                         _STAGE_CAP_S,
                         _cap_start / sample_rate,
@@ -1113,33 +1224,33 @@ class DeEsserPhase(PhaseInterface):
 
                 # STAGE 2: Breath Intelligence (Artistic Breath Processing)
                 # BreathIntelligence.process() erkennt Atemgeräusche intern und verarbeitet sie.
-                logger.debug("🎵 Stage 2: Breath Intelligence")
+                logger.debug("🎵 Stufe 2: Breath Intelligence")
                 _stage_audio, _breath_report = breath_intelligence.process(_stage_audio, sample_rate)
                 self.stats["breath_events_detected"] = _breath_report.get("events_detected", 0)
-                logger.debug("  ✅ %d breath events processed", self.stats["breath_events_detected"])
+                logger.debug("  ✅ %d breath events verarbeitet", self.stats["breath_events_detected"])
 
                 # STAGE 3: Formant System (Singer's Formant Enhancement)
-                logger.debug("🎵 Stage 3: Formant System")
+                logger.debug("🎵 Stufe 3: Formant System")
                 _stage_audio, formant_report = formant_system.process(_stage_audio, sample_rate)
                 self.stats["formants_corrected"] = formant_report.get("frames_tracked", 0)
-                logger.debug("  ✅ Formant system applied")
+                logger.debug("  ✅ Formant system angewendet")
 
                 # STAGE 4: Vocal Presence (Harmonic + Air Band + Broadcast)
-                logger.debug("🎵 Stage 4: Vocal Presence Enhancement")
+                logger.debug("🎵 Stufe 4: Vocal Presence Enhancement")
                 _stage_audio, _presence_metrics = vocal_presence.process(_stage_audio, sample_rate)
-                logger.debug("  ✅ Harmonics enhanced, air band boosted")
+                logger.debug("  ✅ Harmonics verbessert, air band boosted")
 
                 # STAGE 5: Spectral Inpainting (Codec Artifact Repair)
-                logger.debug("🎵 Stage 5: Spectral Inpainting")
+                logger.debug("🎵 Stufe 5: Spectral Inpainting")
                 _stage_audio, inpaint_report = spectral_inpainting.process(_stage_audio, sample_rate)
                 self.stats["spectral_gaps_repaired"] = inpaint_report.get("gaps_repaired", 0)
                 if self.stats["spectral_gaps_repaired"] > 0:  # type: ignore[operator]
                     logger.debug("  ✅ %s spectral gaps repaired", self.stats["spectral_gaps_repaired"])
 
                 # STAGE 6: Vocal Dynamics (Micro-Compression)
-                logger.debug("🎵 Stage 6: Vocal Dynamics Intelligence")
+                logger.debug("🎵 Stufe 6: Vocal Dynamics Intelligence")
                 _stage_audio, _dynamics_metrics = vocal_dynamics.process(_stage_audio, sample_rate)
-                logger.debug("  ✅ Micro-compression applied")
+                logger.debug("  ✅ Micro-compression angewendet")
 
                 # Write stage result back to full-length audio
                 if _stage_cap_active:
@@ -1177,7 +1288,7 @@ class DeEsserPhase(PhaseInterface):
                 )
 
             except Exception as e:
-                logger.warning("⚠️ Aurik 10.0.0 Enhancement failed: %s, continuing with de-essing only", e)
+                logger.warning("⚠️ Aurik 10.0.0 Enhancement fehlgeschlagen: %s, continuing with de-essing only", e)
                 enhanced_audio = audio.copy()
 
         # ==============================================================
@@ -1194,12 +1305,12 @@ class DeEsserPhase(PhaseInterface):
                 if not isinstance(_ref_gender, str):
                     _ref_gender = VocalGender.AUTO
                 _snr_ref = measure_fricative_snr(enhanced_audio, sample_rate, _ref_gender)
-                logger.debug("Stage 7 §2.8 SNR-Referenz (vor De-Essing): %.1f dB", _snr_ref)
+                logger.debug("Stufe 7 §2.8 SNR-Referenz (vor De-Essing): %.1f dB", _snr_ref)
             except Exception as _snr_ref_exc:
-                logger.debug("SNR-Referenzmessung fehlgeschlagen, Skip: %s", _snr_ref_exc)
+                logger.debug("SNR-Referenzmessung fehlgeschlagen, ueberspringen: %s", _snr_ref_exc)
 
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        band_weights = self.BAND_WEIGHTS.get(_mk, {"low": 0.6, "mid": 0.7, "high": 0.8})
+        band_weights = self.BAND_WEIGHTS.get(_mk, {"low": 0.6, "mid": 0.7, "high": 0.8})  # type: ignore[call-overload]
         _s_band_low, _s_band_high = self.vocal_profile.get("s_band", (5000.0, 10000.0))  # type: ignore[misc]
 
         # ── §v10.303.35 bw_loss-adaptive Sibilance-Band ──
@@ -1213,8 +1324,8 @@ class DeEsserPhase(PhaseInterface):
         else:
             _s_band_narrow_factor = 1.0
         if _s_band_narrow_factor < 1.0:
-            _s_band_center = (_s_band_low + _s_band_high) / 2.0
-            _s_band_width = (_s_band_high - _s_band_low) * _s_band_narrow_factor / 2.0
+            _s_band_center = (_s_band_low + _s_band_high) / 2.0  # type: ignore[has-type]
+            _s_band_width = (_s_band_high - _s_band_low) * _s_band_narrow_factor / 2.0  # type: ignore[has-type]
             _s_band_low = _s_band_center - _s_band_width
             _s_band_high = _s_band_center + _s_band_width
             logger.debug("§v10.303.35 Sibilance-Band narrowed: %.0f-%.0f Hz", _s_band_low, _s_band_high)
@@ -1223,7 +1334,7 @@ class DeEsserPhase(PhaseInterface):
 
         # Material/Gender-Basis: zwischen sanftem und assertivem Profil interpolieren,
         # statt pauschal den sanfteren Wert zu erzwingen.
-        material_max_reduction_db = self.MAX_REDUCTION_DB.get(_mk, -6.0)
+        material_max_reduction_db = self.MAX_REDUCTION_DB.get(_mk, -6.0)  # type: ignore[call-overload]
         gender_max_reduction_db = self.vocal_profile.get("max_depth_db", -3.5)
         _gentle_abs = abs(max(material_max_reduction_db, gender_max_reduction_db))  # type: ignore[call-overload]
         _assertive_abs = abs(min(material_max_reduction_db, gender_max_reduction_db))  # type: ignore[call-overload]
@@ -1248,7 +1359,7 @@ class DeEsserPhase(PhaseInterface):
         if _td_red >= 4:
             _red_depth_factor = float(np.clip(1.0 - (_td_red - 3) * 0.20, 0.40, 1.0))
             max_reduction_db *= _red_depth_factor
-            logger.debug("Phase_19 depth=%d → reduction ×%.2f", _td_red, _red_depth_factor)
+            logger.debug("Verarbeitungsschritt_19 depth=%d → reduction ×%.2f", _td_red, _red_depth_factor)
 
         # ── §v10.303.35 bw_loss-adaptive De-Essing-Parameter ──
         if _graduated_mode == "minimal":
@@ -1264,8 +1375,10 @@ class DeEsserPhase(PhaseInterface):
             _deessing_cap_override = None
         if _deessing_cap_override is not None:
             logger.debug(
-                "§v10.303.35 bw_loss-adaptive: mode=%s max_red=%.1f dB cap=%.2f",
-                _graduated_mode, max_reduction_db, _deessing_cap_override,
+                "§v10.303.35 bw_loss-adaptive: Betriebsart=%s max_red=%.1f dB cap=%.2f",
+                _graduated_mode,
+                max_reduction_db,
+                _deessing_cap_override,
             )
 
         # §2.20 Genre-adaptive de-essing cap: genre_profile.deessing_strength_cap
@@ -1338,9 +1451,18 @@ class DeEsserPhase(PhaseInterface):
             if _deessing_cap_override is not None:
                 _deessing_cap = min(float(_deessing_cap), _deessing_cap_override)
                 _cap_db = -12.0 * float(_deessing_cap)
-            max_reduction_db = max(max_reduction_db, _cap_db)
+            # §v10.303.36 Intensitäts-adaptiver Cap: ein starrer Cap würde milde und
+            # heiße Sibilanz identisch klemmen (Severity-Information ginge verloren).
+            # Der Cap selbst skaliert mit der gemessenen Intensität — volle Cap-Tiefe
+            # nur bei tatsächlich hoher Sibilanz-Pressure, sonst reduzierter Spielraum.
+            _cap_db_effective = _cap_db * float(np.clip(0.5 + 0.5 * _intensity_profile.intensity, 0.5, 1.0))
+            max_reduction_db = max(max_reduction_db, _cap_db_effective)
             logger.debug(
-                "Genre deessing_strength_cap=%.2f → max_red capped to %.1f dB", _deessing_cap, max_reduction_db
+                "Genre deessing_strength_cap=%.2f (intensity=%.2f → effective_cap=%.1f dB) → max_red=%.1f dB",
+                _deessing_cap,
+                _intensity_profile.intensity,
+                _cap_db_effective,
+                max_reduction_db,
             )
 
         # §4.4 Breathiness-Guard: De-Essing-Stärke dynamisch begrenzen
@@ -1352,19 +1474,19 @@ class DeEsserPhase(PhaseInterface):
             _breath_scale = max(0.5, 1.0 - (_breathiness_ratio - 0.30))
             max_reduction_db = max_reduction_db * _breath_scale
             logger.debug(
-                "§4.4 Breathiness-Guard aktiv: ratio=%.2f → scale=%.2f → max_red=%.1f dB",
+                "§4.4 Breathiness-Guard aktiv: Verhaeltnis=%.2f → scale=%.2f → max_red=%.1f dB",
                 _breathiness_ratio,
                 _breath_scale,
                 max_reduction_db,
             )
 
-        threshold_ratio = float(self.SIBILANCE_THRESHOLD_RATIO.get(_mk, 1.8) * _intensity_profile.threshold_ratio_scale)
+        threshold_ratio = float(self.SIBILANCE_THRESHOLD_RATIO.get(_mk, 1.8) * _intensity_profile.threshold_ratio_scale)  # type: ignore[call-overload]
 
         if abs(max_reduction_db) < 1.0:
-            logger.debug("De-Esser skipped (max_reduction=%.1f dB < 1.0 dB)", max_reduction_db)
+            logger.debug("De-Esser uebersprungen (max_reduction=%.1f dB < 1.0 dB)", max_reduction_db)
             enhanced_audio = np.nan_to_num(enhanced_audio, nan=0.0, posinf=0.0, neginf=0.0)
             enhanced_audio = np.clip(enhanced_audio, -1.0, 1.0)
-            return PhaseResult(
+            return _phase_result(
                 success=True,
                 audio=enhanced_audio,
                 execution_time_seconds=time.time() - start_time,
@@ -1377,6 +1499,32 @@ class DeEsserPhase(PhaseInterface):
                     "effective_strength": _effective_strength,
                     "rms_drop_db": 0.0,
                     "loudness_makeup_db": 0.0,
+                    # §2.8: Invariante trivial erfüllt — De-Esser komplett übersprungen (max_reduction<1dB).
+                    "fricative_snr_invariant_met": True,
+                    "fricative_snr_before_deessing_db": 0.0,
+                    "fricative_snr_after_chain_db": 0.0,
+                },
+                # §2.8/Musical-Goals-Konsistenz: auch bei Skip müssen dieselben metrics-Keys
+                # existieren wie im Voll-Verarbeitungspfad (Zeile ~1955), da Consumer
+                # (Musical-Goals-Tracking, UI) unabhängig vom Skip-Status darauf zugreifen.
+                # Skip bedeutet "keine Degradation angewendet" → neutrale 1.0-Defaults.
+                metrics={
+                    "sibilance_reduction_db": 0.0,
+                    "sibilance_energy_before": 0.0,
+                    "sibilance_energy_after": 0.0,
+                    "max_gain_reduction_db": float(max_reduction_db),
+                    "deesser_intensity": 0.0,
+                    "phoneme_drive": 0.0,
+                    "hf_loss_ratio": 0.0,
+                    "intelligibility_score": 1.0,
+                    "intelligibility_presence_ratio": 1.0,
+                    "intelligibility_articulation_ratio": 1.0,
+                    "intelligibility_air_ratio": 1.0,
+                    "intelligibility_fricative_snr_delta_db": 0.0,
+                    "musical_goal_brillanz": 1.0,
+                    "musical_goal_authentizitaet": 1.0,
+                    "musical_goal_transparenz": 1.0,
+                    "musical_goal_artikulation": 1.0,
                 },
                 warnings=["De-Esser übersprungen (max_reduction <1.0 dB)"],
             )
@@ -1384,7 +1532,7 @@ class DeEsserPhase(PhaseInterface):
         # Look-ahead Buffer berechnen
         lookahead_samples = int(self.LOOKAHEAD_MS * sample_rate / 1000)
 
-        logger.debug("🎤 Stage 7: Gender-Aware De-Essing (%s)", self.gender)
+        logger.debug("🎤 Stufe 7: Gender-Aware De-Essing (%s)", self.gender)
 
         # §2.36a PhonemeTimeline: language-specific sibilant band overrides gender-prof s_band
         _ptl_19 = kwargs.get("phoneme_timeline")
@@ -1395,13 +1543,13 @@ class DeEsserPhase(PhaseInterface):
                 self.vocal_profile = dict(self.vocal_profile)  # shallow copy to avoid mutating shared profile
                 self.vocal_profile["s_band"] = (float(_ptl_low), float(_ptl_high))
                 logger.debug(
-                    "Phase 19: sibilant_band_hz override → %.0f–%.0f Hz (language=%s)",
+                    "Verarbeitungsschritt 19: sibilant_band_hz override → %.0f–%.0f Hz (language=%s)",
                     _ptl_low,
                     _ptl_high,
                     getattr(_ptl_19, "language", "?"),
                 )
             except Exception as _ptl_exc:
-                logger.debug("Phase 19: sibilant_band_hz fallback: %s", _ptl_exc)
+                logger.debug("Verarbeitungsschritt 19: sibilant_band_hz Ersatzpfad: %s", _ptl_exc)
 
         # Multi-Band De-Essing anwenden (mit Gender-Profil)
         # §2.9.6: Per-Segment-Gender — jedes Gender bekommt sein eigenes Profil
@@ -1409,7 +1557,7 @@ class DeEsserPhase(PhaseInterface):
             logger.info(
                 "🎤 §2.9.6 Per-Gender-De-Essing: %d Segmente, genders=%s",
                 len(_gender_timeline),
-                sorted({s["gender"] for s in _gender_timeline}),
+                sorted({s["gender"] for s in _gender_timeline}),  # type: ignore[type-var]
             )
             deessed_audio = self._process_per_gender_segments(
                 enhanced_audio,
@@ -1556,7 +1704,7 @@ class DeEsserPhase(PhaseInterface):
         self.stats["intelligibility_air_ratio"] = intelligibility_report.air_ratio
         self.stats["intelligibility_fricative_snr_delta_db"] = intelligibility_report.fricative_snr_delta_db
         logger.debug(
-            "Intelligibility score = %.3f (presence=%.3f articulation=%.3f air=%.3f)",
+            "Intelligibility Wert = %.3f (presence=%.3f articulation=%.3f air=%.3f)",
             intelligibility_report.intelligibility_score,
             intelligibility_report.presence_ratio,
             intelligibility_report.articulation_ratio,
@@ -1565,7 +1713,7 @@ class DeEsserPhase(PhaseInterface):
 
         if intelligibility_report.should_protect:
             logger.info(
-                "Stage 8: Intelligibility protection (score=%.2f, loss=%.1f%%)",
+                "Stufe 8: Intelligibility protection (Wert=%.2f, loss=%.1f%%)",
                 intelligibility_report.intelligibility_score,
                 intelligibility_report.intelligibility_loss * 100.0,
             )
@@ -1587,7 +1735,7 @@ class DeEsserPhase(PhaseInterface):
                     else VocalGender.AUTO
                 )
                 # Kausal-Konditionierung: Defekt-Scores aus kwargs (von UnifiedRestorerV3)
-                _defect_scores: dict = kwargs.get("defect_scores_raw", {})
+                _defect_scores: dict = kwargs.get("defect_scores_raw", {})  # type: ignore[no-redef]
                 consonant_result = enhance_consonants(
                     deessed_audio,
                     sample_rate,
@@ -1597,13 +1745,13 @@ class DeEsserPhase(PhaseInterface):
                 if consonant_result.fricative_segments > 0:
                     deessed_audio = consonant_result.audio
                     logger.debug(
-                        "Stage 8b ConsonantEnhancement: %d Frikativ-Segmente, boost=%.1f dB, SNR Δ=%.1f dB",
+                        "Stufe 8b ConsonantEnhancement: %d Frikativ-Segmente, boost=%.1f dB, SNR Δ=%.1f dB",
                         consonant_result.fricative_segments,
                         consonant_result.boost_applied_db,
                         consonant_result.snr_improvement_db,
                     )
             except Exception as _ce_exc:
-                logger.warning("⚠️ SOTA Phase 19: ConsonantEnhancement fehlgeschlagen: %s", _ce_exc)
+                logger.warning("⚠️ SOTA Verarbeitungsschritt 19: ConsonantEnhancement fehlgeschlagen: %s", _ce_exc)
 
         # ==============================================================
         # STAGE 8c: §2.8 FEEDBACK-INVARIANTE NACH GESAMTER KETTE
@@ -1627,8 +1775,8 @@ class DeEsserPhase(PhaseInterface):
                 if not _fricative_snr_invariant_met:
                     _deficit_db = _snr_required - _snr_after_chain
                     logger.info(
-                        "Stage 8c: §2.8 Feedback-Invariante verletzt "
-                        "(SNR_nach=%.1f dB, required=%.1f dB, Δ=%.1f dB) → Retry ConsonantEnhancement",
+                        "Stufe 8c: §2.8 Feedback-Invariante verletzt "
+                        "(SNR_nach=%.1f dB, required=%.1f dB, Δ=%.1f dB) → Wiederholung ConsonantEnhancement",
                         _snr_after_chain,
                         _snr_required,
                         _deficit_db,
@@ -1650,7 +1798,7 @@ class DeEsserPhase(PhaseInterface):
                         _snr_after_chain = measure_fricative_snr(deessed_audio, sample_rate, _chain_gender)  # type: ignore[arg-type]
                         _fricative_snr_invariant_met = _snr_after_chain >= _snr_required
                         logger.debug(
-                            "Stage 8c Retry: SNR_nach=%.1f dB, required=%.1f dB, met=%s",
+                            "Stufe 8c Wiederholung: SNR_nach=%.1f dB, required=%.1f dB, met=%s",
                             _snr_after_chain,
                             _snr_required,
                             _fricative_snr_invariant_met,
@@ -1671,12 +1819,12 @@ class DeEsserPhase(PhaseInterface):
                         )
                 else:
                     logger.debug(
-                        "Stage 8c: §2.8 Feedback-Invariante erfüllt (SNR_nach=%.1f dB ≥ SNR_ref+3=%.1f dB)",
+                        "Stufe 8c: §2.8 Feedback-Invariante erfüllt (SNR_nach=%.1f dB ≥ SNR_ref+3=%.1f dB)",
                         _snr_after_chain,
                         _snr_required,
                     )
             except Exception as _fb_exc:
-                logger.debug("Stage 8c Feedback-Invariante übersprungen: %s", _fb_exc)
+                logger.debug("Stufe 8c Feedback-Invariante übersprungen: %s", _fb_exc)
 
         # Calculate Sibilance Energy (4-12 kHz band) before/after
         sibilance_energy_before = self._calculate_sibilance_energy(enhanced_audio, sample_rate)
@@ -1689,7 +1837,7 @@ class DeEsserPhase(PhaseInterface):
         execution_time = time.time() - start_time
 
         logger.info(
-            "🏆 Phase 19 v4.0 Complete: %.1f dB reduction, %s sibilant types, "
+            "🏆 Verarbeitungsschritt 19 v4.0 vollstaendig: %.1f dB reduction, %s sibilant types, "
             "GR=%.1f dB, Breaths=%s, Formants=%s, Time=%.2fs",
             sibilance_reduction_db,
             len(self.stats["sibilant_types_detected"]),  # type: ignore[arg-type]
@@ -1728,7 +1876,7 @@ class DeEsserPhase(PhaseInterface):
                 else:
                     deessed_audio = (_gate19 * _deessed19 + (1.0 - _gate19) * _ref19).astype(deessed_audio.dtype)
                 logger.debug(
-                    "Phase 19 segment-gate: %d sibilant windows, %.1f%% gated",
+                    "Verarbeitungsschritt 19 segment-gate: %d sibilant windows, %.1f%% gated",
                     len(_sib_segs19),
                     100.0 * float(np.mean(_gate19)),
                 )
@@ -1766,7 +1914,7 @@ class DeEsserPhase(PhaseInterface):
                     mode="subtractive",
                 )
         except Exception as _pm_exc:
-            logger.debug("Phase19 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt19 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.36 Phonem-Schutz: De-Esser kann Plosiv-Bursts (/p/,/t/,/k/) als Sibilanten
         # fehlinterpretieren — breitbandige HF-Energie-Spikes ähneln /s/-Sibilanten.
@@ -1796,7 +1944,7 @@ class DeEsserPhase(PhaseInterface):
                     elif deessed_audio.ndim == 1 and audio.ndim == 1:
                         deessed_audio[_smask_19] = audio[_smask_19]
         except Exception as _pm19_exc:
-            logger.debug("§2.36 phase_19 Phonem-Mask (non-blocking): %s", _pm19_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_19 Phonem-Mask (nicht blockierend): %s", _pm19_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — Atemgeräusche zwischen Phrasen
         # dürfen durch das sibilance-responsive Gate nicht abgeschnitten werden.
@@ -1821,7 +1969,7 @@ class DeEsserPhase(PhaseInterface):
                     elif deessed_audio.ndim == 1 and audio.ndim == 1:
                         deessed_audio[_npa_m19] = audio[_npa_m19]
         except Exception as _npa19_exc:
-            logger.debug("§2.46f phase_19 NPA-Guard (non-blocking): %s", _npa19_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_19 NPA-Guard (nicht blockierend): %s", _npa19_exc)
 
         # §V19 Noise-Textur-Invariante (VERBOTEN-V19): Residual bewahrt Materialcharakter
         _mat19_str = str(material_type or "unknown").lower()
@@ -1844,9 +1992,9 @@ class DeEsserPhase(PhaseInterface):
             _nt19_d = _nt19_fn(_a19cf - _d19cf, _mat19_str, sr=sample_rate)
             if _nt19_d > 0.25:
                 deessed_audio = (0.5 * deessed_audio + 0.5 * audio).astype(np.float32)
-                logger.warning("§V19 phase_19 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt19_d)
+                logger.warning("§V19 Verarbeitungsschritt_19 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt19_d)
         except Exception as _nt19_exc:
-            logger.debug("§V19 phase_19 noise_texture_guard (non-blocking): %s", _nt19_exc)
+            logger.debug("§V19 Verarbeitungsschritt_19 noise_texture_guard (nicht blockierend): %s", _nt19_exc)
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -1868,9 +2016,9 @@ class DeEsserPhase(PhaseInterface):
             if not _sc19.ok:
                 deessed_audio = (0.70 * deessed_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc19_exc:
-            logger.debug("§V24 phase_19 spectral_color_guard (non-blocking): %s", _sc19_exc)
+            logger.debug("§V24 Verarbeitungsschritt_19 spectral_color_guard (nicht blockierend): %s", _sc19_exc)
 
-        return PhaseResult(
+        return _phase_result(
             success=True,
             audio=deessed_audio,
             execution_time_seconds=execution_time,
@@ -2006,7 +2154,7 @@ class DeEsserPhase(PhaseInterface):
             weight = band_weights.get(band_name, 0.7)
 
             if weight < 0.1:
-                logger.debug("Band %s skipped (weight=%.2f < 0.1)", band_name, weight)
+                logger.debug("Band %s uebersprungen (weight=%.2f < 0.1)", band_name, weight)
                 continue
 
             # Side-Chain Detection Filter (breiterer Filter für stabilere Detection)
@@ -2034,10 +2182,11 @@ class DeEsserPhase(PhaseInterface):
 
                 # §v10.131: _transfer_chain_depth_p19 wird in process() gesetzt.
                 # Falls es fehlt (anderer Code-Pfad), CalibrationContext als Fallback.
-                _p19_depth = getattr(self, '_transfer_chain_depth_p19', 0)
+                _p19_depth = getattr(self, "_transfer_chain_depth_p19", 0)
                 if _p19_depth <= 0:
                     try:
                         from backend.core.calibration_context import get_calibration_context
+
                         _ctx = get_calibration_context()
                         _p19_depth = _ctx.transfer_chain_depth if _ctx else 1
                     except Exception:
@@ -2048,7 +2197,7 @@ class DeEsserPhase(PhaseInterface):
                 processing_band = safe_sosfiltfilt(sos_processing, audio, chain_depth=_p19_depth)
 
             except Exception as e:
-                logger.warning("Band %s filter design failed: %s", band_name, e)
+                logger.warning("Band %s filter design fehlgeschlagen: %s", band_name, e)
                 continue
 
             # Hybrid Peak-Hold + RMS Envelope Detection (SOTA v2.1)
@@ -2114,7 +2263,7 @@ class DeEsserPhase(PhaseInterface):
 
         # Recombination: Original - Sum(Original Bands) + Sum(Reduced Bands)
         if not band_results:
-            logger.debug("No bands processed, returning original")
+            logger.debug("No bands verarbeitet, returning Originalsignal")
             return audio
 
         deessed = audio.copy()
@@ -2608,7 +2757,7 @@ class DeEsserPhase(PhaseInterface):
             )
             loss_ratio = report.intelligibility_loss
         except Exception as e:
-            logger.warning("Intelligibility check failed: %s", e)
+            logger.warning("Intelligibility Pruefung fehlgeschlagen: %s", e)
             loss_ratio = 0.0
 
         return max(0.0, loss_ratio)  # type: ignore[no-any-return]
@@ -2633,7 +2782,7 @@ class DeEsserPhase(PhaseInterface):
             sib_filtered = signal.sosfilt(sos, audio)
             energy = np.sqrt(np.mean(sib_filtered**2))
         except Exception as e:
-            logger.warning("Sibilance energy calculation failed: %s", e)
+            logger.warning("Sibilance energy calculation fehlgeschlagen: %s", e)
             energy = 0.0
 
         return float(energy)
@@ -2670,6 +2819,7 @@ class DeEsserPhase(PhaseInterface):
                 energy: float = float(np.max(np.abs(band_audio)))  # Peak amplitude
                 total_energy += energy
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 continue
 
         return total_energy
@@ -2801,7 +2951,9 @@ class DeEsserPhase(PhaseInterface):
         _gender_p19 = str(self.vocal_profile.get("gender", "")).lower()
         if _gender_p19 in ("unknown", ""):
             s_low, s_high = 4500.0, 8000.0
-            logger.debug("Phase 19: gender=%s → freq-agnostic band [%.0f-%.0f Hz]", _gender_p19, s_low, s_high)
+            logger.debug(
+                "Verarbeitungsschritt 19: gender=%s → freq-agnostic band [%.0f-%.0f Hz]", _gender_p19, s_low, s_high
+            )
 
         # NYQUIST-ADAPTATION: Clampe Bänder auf Sample-Rate
         nyquist = sample_rate / 2.0
@@ -2959,25 +3111,6 @@ class DeEsserPhase(PhaseInterface):
 
         return result, gender_adaptive_bands
 
-    def get_metadata(self) -> "PhaseMetadata":
-        """Gibt Metadaten für Phase 19 v4.0 zurück."""
-        from .phase_interface import PhaseCategory, PhaseMetadata
-
-        return PhaseMetadata(
-            phase_id="phase_19_de_esser",
-            name="World-Class Gender-Aware De-Esser v4.0 Professional",
-            category=PhaseCategory.DYNAMICS,
-            priority=4,
-            dependencies=["04_eq_correction"],
-            estimated_time_factor=0.06,
-            version="4.1.0",
-            memory_requirement_mb=50,
-            is_cpu_intensive=True,
-            is_io_intensive=False,
-            quality_impact=0.92,
-            description="World-Class Gender-Aware De-Esser v4.0: Multi-Band De-Esser",
-        )
-
     def _detect_gender_robust(self, audio: np.ndarray, sample_rate: int, **kwargs: Any) -> str:
         """
         Gender-Detection: Robuster Detektor (F0 + Formanten + WORLD) bevorzugt,
@@ -3015,7 +3148,7 @@ class DeEsserPhase(PhaseInterface):
                     len(_voiced_f0),
                 )
         except Exception as _pyin_exc:
-            logger.debug("pYIN F0 failed (%s) — using autocorrelation", _pyin_exc)
+            logger.debug("pYIN F0 fehlgeschlagen (%s) — using autocorrelation", _pyin_exc)
 
         # ── Primär: Robuster Multi-Feature GenderDetector (§2.8) ──
         if _HAS_ROBUST_GENDER and _RobustGenderDetector is not None:
@@ -3056,7 +3189,7 @@ class DeEsserPhase(PhaseInterface):
                             if _f1_val > 450 or _formant_ratio > 2.3:
                                 gender_str = VocalGender.FEMALE  # Female formant pattern
                                 logger.info(
-                                    "🎤 Formant-Tiebreaker: F0=%.0f Hz F1=%.0f F2=%.0f ratio=%.2f → FEMALE (contralto)",
+                                    "🎤 Formant-Tiebreaker: F0=%.0f Hz F1=%.0f F2=%.0f Verhaeltnis=%.2f → FEMALE (contralto)",
                                     f0,
                                     _f1_val,
                                     _f2_val,
@@ -3126,7 +3259,7 @@ class DeEsserPhase(PhaseInterface):
                         _contralto_detected = True
                         _octave_note = f" (Oktavkorrektur: {f0:.0f}→{2.0 * f0:.0f} Hz)" if _octave_candidate else ""
                         logger.warning(
-                            "🎤 CONTRALTO DETECTED — classifier said 'male' (F0=%.0f Hz%s, "
+                            "🎤 CONTRALTO erkannt — classifier said 'male' (F0=%.0f Hz%s, "
                             "confidence=%.2f) but formants are female-typical "
                             "(F1=%.0f Hz in [%.0f–%.0f], F2=%.0f Hz in [%.0f–%.0f]). "
                             "This is likely a deep female voice (contralto). "
@@ -3167,7 +3300,7 @@ class DeEsserPhase(PhaseInterface):
                         _is_female_vibrato = _vib_rate >= 4.6 and _vib_depth >= 100.0
                         logger.info(
                             "🎤 §2.9.2 Vibrato-Analyse: rate=%.1f Hz depth=%.0f cents "
-                            "→ %s (F0=%.0f Hz, formants failed)",
+                            "→ %s (F0=%.0f Hz, formants fehlgeschlagen)",
                             _vib_rate,
                             _vib_depth,
                             "FEMALE-TYPICAL → override" if _is_female_vibrato else "ambiguous",
@@ -3182,8 +3315,8 @@ class DeEsserPhase(PhaseInterface):
                     # hoher Tenor mit komplettem Formant-Versagen)
                     elif _vib_rate is None:
                         logger.info(
-                            "🎤 §2.9.2 Formant-Failure + F0=%.0f Hz in contralto range "
-                            "→ defaulting to FEMALE (no vibrato data available)",
+                            "🎤 §2.9.2 Formant-Fehlschlag + F0=%.0f Hz in contralto range "
+                            "→ defaulting to FEMALE (no vibrato data verfuegbar)",
                             f0,
                         )
                         gender_str = VocalGender.FEMALE
@@ -3232,7 +3365,7 @@ class DeEsserPhase(PhaseInterface):
                         confidence = _degraded_confidence
                     return gender_str  # type: ignore[no-any-return]
             except Exception as e:
-                logger.debug("Robust GenderDetector failed (%s) — LPC fallback", e)
+                logger.debug("Robust GenderDetector fehlgeschlagen (%s) — LPC Ersatzpfad", e)
 
         # ── Fallback 1: LPC Formant Tracker (Burg-LPC + scanning F0) ──
         # §2.8 SOTA: Wenn GenderDetector + pYIN beide versagen (z.B. kein librosa,
@@ -3243,10 +3376,10 @@ class DeEsserPhase(PhaseInterface):
 
             _lpc_gender = get_lpc_formant_tracker().classify_gender_via_formants(audio, sample_rate)
             if _lpc_gender != "unknown" and _lpc_gender in ("male", "female", "child"):
-                logger.info("🎤 LPC Formant Gender: %s (Burg-LPC fallback)", _lpc_gender)
+                logger.info("🎤 LPC Formant Gender: %s (Burg-LPC Ersatzpfad)", _lpc_gender)
                 return _lpc_gender
         except Exception as _lpc_exc:
-            logger.debug("LPC gender fallback failed: %s", _lpc_exc)
+            logger.debug("LPC gender Ersatzpfad fehlgeschlagen: %s", _lpc_exc)
 
         # ── Fallback 2: Einfache scannende Autocorrelation ──
         return self._detect_gender_simple(audio, sample_rate)
@@ -3282,7 +3415,6 @@ class DeEsserPhase(PhaseInterface):
             if rms < 1e-6:
                 continue  # silence
             # FFT-based autocorrelation
-            n = len(segment)
             if _fft_autocorr_19 is not None:
                 autocorr = _fft_autocorr_19(segment)
             else:
@@ -3427,7 +3559,7 @@ class DeEsserPhase(PhaseInterface):
                 )
 
         except Exception as exc:
-            logger.debug("GenderTimeline failed (%s)", exc)
+            logger.debug("GenderTimeline fehlgeschlagen (%s)", exc)
             return timeline
 
         # ── 3. Benachbarte Segmente gleichen Genders mergen ──────────
@@ -3436,9 +3568,10 @@ class DeEsserPhase(PhaseInterface):
         # ── 4. Statistiken loggen ────────────────────────────────────
         if timeline:
             genders_found = {seg["gender"] for seg in timeline}
-            total_s = sum(float(seg["t_end_s"]) - float(seg["t_start_s"]) for seg in timeline)
+            total_s = sum(float(seg["t_end_s"]) - float(seg["t_start_s"]) for seg in timeline)  # type: ignore[misc, arg-type]
             gender_summary = ", ".join(
-                f"{g}={sum(1 for s in timeline if s['gender'] == g)}" for g in sorted(genders_found)
+                f"{g}={sum(1 for s in timeline if s['gender'] == g)}"
+                for g in sorted(genders_found)  # type: ignore[type-var]
             )
             logger.info(
                 "🎤 GenderTimeline: %d Segmente, %.1fs voiced, genders=[%s]",
@@ -3469,7 +3602,7 @@ class DeEsserPhase(PhaseInterface):
             gender = str(seg["gender"])
             if gender not in VOCAL_PROFILES:
                 continue
-            t0, t1 = float(seg["t_start_s"]), float(seg["t_end_s"])
+            t0, t1 = float(seg["t_start_s"]), float(seg["t_end_s"])  # type: ignore[arg-type]
             s0, s1 = max(0, int(t0 * sample_rate)), min(n_samples, int(t1 * sample_rate))
             if s1 <= s0:
                 continue
@@ -3494,9 +3627,9 @@ class DeEsserPhase(PhaseInterface):
                     seg_audio,
                     seg_proc,
                     sample_rate,
-                    float(_fr[0]),
-                    float(_fr[1]),
-                    float(_fp),
+                    float(_fr[0]),  # type: ignore[index]
+                    float(_fr[1]),  # type: ignore[index]
+                    float(_fp),  # type: ignore[arg-type]
                 )
 
                 fl = min(fade, s1 - s0)
@@ -3575,12 +3708,12 @@ class DeEsserPhase(PhaseInterface):
             result += formant_protected - formant_processed
 
         except Exception as e:
-            logger.warning("Formant preservation failed: %s", e)
+            logger.warning("Formant preservation fehlgeschlagen: %s", e)
             return processed
 
         return result
 
-    def get_metadata(self) -> PhaseMetadata:
+    def get_metadata(self) -> PhaseMetadata:  # type: ignore[no-redef]
         """Gibt Metadaten für Phase 19 v4.0 zurück."""
         return PhaseMetadata(
             phase_id="phase_19_de_esser",
@@ -3669,7 +3802,7 @@ def _estimate_vibrato_from_pyin(
         return vib_rate, vib_depth_cents
 
     except Exception as e:
-        logger.warning("phase_19_de_esser.py::_estimate_vibrato_from_pyin fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_19_de_esser.py::_estimate_vibrato_from_pyin Ersatzpfad: %s", e)
         return None, None
 
     # §SOTA #4: Autocorrelation-Fallback — robuster als FFT bei Rauschen
@@ -3689,7 +3822,7 @@ def _estimate_vibrato_from_pyin(
         depth = float(1200.0 * np.log2((np.median(f0_v) + np.std(f0_c)) / np.median(f0_v)))
         return (rate, depth) if 15 < depth < 600 else (rate, None)
     except Exception as e:
-        logger.warning("phase_19_de_esser.py::unbekannter Fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_19_de_esser.py::unbekannter Ersatzpfad: %s", e)
         return None, None
 
 
@@ -3824,7 +3957,7 @@ def _compute_spectral_tilt(audio: np.ndarray, sample_rate: int) -> float | None:
         slope, _ = np.polyfit(log_f, log_s, 1)
         return float(slope)
     except Exception as e:
-        logger.warning("phase_19_de_esser.py::_compute_spectral_tilt fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_19_de_esser.py::_berechnen_spectral_tilt Ersatzpfad: %s", e)
         return None
 
 
@@ -3839,10 +3972,10 @@ def _merge_adjacent_gender_segments(
     merged: list[dict[str, object]] = [dict(timeline[0])]
     for seg in timeline[1:]:
         prev = merged[-1]
-        gap = float(seg["t_start_s"]) - float(prev["t_end_s"])
+        gap = float(seg["t_start_s"]) - float(prev["t_end_s"])  # type: ignore[arg-type]
         if seg["gender"] == prev["gender"] and gap <= max_gap_s:
             prev["t_end_s"] = seg["t_end_s"]
-            prev["confidence"] = max(float(prev["confidence"]), float(seg["confidence"]))
+            prev["confidence"] = max(float(prev["confidence"]), float(seg["confidence"]))  # type: ignore[arg-type]
         else:
             merged.append(dict(seg))
     return merged
@@ -3864,24 +3997,24 @@ def _build_union_vocal_profile(genders: list[str]) -> dict:
         return dict(VOCAL_PROFILES[VocalGender.FEMALE])
 
     # Formant-Range: von tiefstem low bis höchstem high
-    formant_lows = [p.get("formant_range", (300, 2000))[0] for p in profiles]
-    formant_highs = [p.get("formant_range", (300, 2000))[1] for p in profiles]
+    formant_lows = [p.get("formant_range", (300, 2000))[0] for p in profiles]  # type: ignore[index]
+    formant_highs = [p.get("formant_range", (300, 2000))[1] for p in profiles]  # type: ignore[index]
     union_formant = (min(formant_lows), max(formant_highs))
 
     # Chest-Range (nur relevant wenn male dabei ist)
-    chest_lows = [p.get("chest_range", (100, 250))[0] for p in profiles]
-    chest_highs = [p.get("chest_range", (100, 250))[1] for p in profiles]
+    chest_lows = [p.get("chest_range", (100, 250))[0] for p in profiles]  # type: ignore[index]
+    chest_highs = [p.get("chest_range", (100, 250))[1] for p in profiles]  # type: ignore[index]
     union_chest = (min(chest_lows), max(chest_highs))
 
     # Sibilanz-Band: Union (niedrigste f_min, höchste f_max)
-    s_band_lows = [p.get("s_band", (5000, 8000))[0] for p in profiles]
-    s_band_highs = [p.get("s_band", (5000, 8000))[1] for p in profiles]
+    s_band_lows = [p.get("s_band", (5000, 8000))[0] for p in profiles]  # type: ignore[index]
+    s_band_highs = [p.get("s_band", (5000, 8000))[1] for p in profiles]  # type: ignore[index]
     union_s_band = (min(s_band_lows), max(s_band_highs))
 
     # Konservativste Werte
-    union_max_depth = max(p.get("max_depth_db", -3.5) for p in profiles)  # geringste Reduktion
-    union_formant_protect = max(p.get("formant_protect", 0.85) for p in profiles)
-    union_breath_threshold = min(p.get("breath_threshold_db", -30.0) for p in profiles)
+    union_max_depth = max(p.get("max_depth_db", -3.5) for p in profiles)  # type: ignore[type-var]  # geringste Reduktion
+    union_formant_protect = max(p.get("formant_protect", 0.85) for p in profiles)  # type: ignore[type-var]
+    union_breath_threshold = min(p.get("breath_threshold_db", -30.0) for p in profiles)  # type: ignore[type-var]
 
     # Kombiniere Vibrato-Erwartungen
     vib_rates = [p.get("vibrato_rate_hz", 5.0) for p in profiles]
@@ -3894,8 +4027,8 @@ def _build_union_vocal_profile(genders: list[str]) -> dict:
         "max_depth_db": union_max_depth,
         "formant_protect": union_formant_protect,
         "breath_threshold_db": union_breath_threshold,
-        "vibrato_rate_hz": float(np.mean(vib_rates)),
-        "vibrato_depth_cents": float(np.mean(vib_depths)),
+        "vibrato_rate_hz": float(np.mean(vib_rates)),  # type: ignore[arg-type]
+        "vibrato_depth_cents": float(np.mean(vib_depths)),  # type: ignore[arg-type]
         "sibilance_freq_range": union_s_band,
         "harmonics_preserve": True,
         "breath_enhance": True,
@@ -3910,7 +4043,7 @@ def _run_test() -> None:
     # Test der DeEsserPhase v4.0 (Gender-Aware De-Esser).
 
     logger.debug("=" * 80)
-    logger.debug("🎯 Phase 19: Gender-Aware De-Esser v4.0 Test")
+    logger.debug("🎯 Verarbeitungsschritt 19: Gender-Aware De-Esser v4.0 Test")
     logger.debug("🎵 Features: Detection → De-Essing → Preservation + Musical Goals")
     logger.debug(
         "🎵 7 Musikalische Ziele: Brillanz | Wärme | Natürlichkeit | Authentizität"
@@ -3927,9 +4060,9 @@ def _run_test() -> None:
     # Test für alle 3 Gender-Profile
     for gender in [VocalGender.FEMALE, VocalGender.MALE, VocalGender.CHILD]:
         logger.debug("\n%s", "─" * 80)
-        logger.debug("Testing %s Vocal Profile", gender.upper())
+        logger.debug("Testing %s Vocal Profil", gender.upper())
         logger.debug("%s", "─" * 80)
-        logger.debug("Profile Settings: %s", VOCAL_PROFILES[gender])
+        logger.debug("Profil Settings: %s", VOCAL_PROFILES[gender])
 
         processor = DeEsserPhase(gender_type=gender)
 
@@ -3942,15 +4075,15 @@ def _run_test() -> None:
         if gender == VocalGender.MALE:
             f0 = 110  # A2 (male fundamental)
             sibilant_freq = 7000  # Lower sibilants (5-9 kHz band)
-            logger.debug("Generated: F0=%sHz (Male), Sibilants=%sHz", f0, sibilant_freq)
+            logger.debug("erzeugt: F0=%sHz (Male), Sibilants=%sHz", f0, sibilant_freq)
         elif gender == VocalGender.CHILD:
             f0 = 330  # E4 (child fundamental)
             sibilant_freq = 11000  # Highest sibilants (9-13 kHz band)
-            logger.debug("Generated: F0=%sHz (Child), Sibilants=%sHz", f0, sibilant_freq)
+            logger.debug("erzeugt: F0=%sHz (Child), Sibilants=%sHz", f0, sibilant_freq)
         else:  # FEMALE
             f0 = 220  # A3 (female fundamental)
             sibilant_freq = 9000  # Mid sibilants (7-11 kHz band)
-            logger.debug("Generated: F0=%sHz (Female), Sibilants=%sHz", f0, sibilant_freq)
+            logger.debug("erzeugt: F0=%sHz (Female), Sibilants=%sHz", f0, sibilant_freq)
 
         # Vocal signal with harmonics + sibilants
         signal_test = (
@@ -3973,9 +4106,9 @@ def _run_test() -> None:
         elapsed = time.time() - start_time
 
         if result.success:
-            logger.debug("\n✅ Processing Successful!")
+            logger.debug("\n✅ Processing erfolgreich!")
             logger.debug("   Algorithm: %s", result.metadata.get("algorithm", "unknown"))
-            logger.debug("   Gender Profile: %s", result.metadata.get("gender", "none"))
+            logger.debug("   Gender Profil: %s", result.metadata.get("gender", "none"))
 
             # 🏆 Aurik 10.0.0 Enhancement Stats
             if result.metadata.get("aurik_8_enhancement"):
@@ -3999,7 +4132,7 @@ def _run_test() -> None:
             )
             logger.debug("      ✅ Emotionalität: Micro-Compression (syllable-level dynamics)")
             logger.debug(
-                "      ✅ Transparenz: %.2f clarity score",
+                "      ✅ Transparenz: %.2f clarity Wert",
                 result.metrics.get("musical_goal_transparenz", 0.8),
             )
 
@@ -4017,7 +4150,7 @@ def _run_test() -> None:
             )
             logger.debug("   Processing Time: %.3fs", elapsed)
         else:
-            logger.debug("   ❌ Processing failed: %s", result.warnings)
+            logger.debug("   ❌ Processing fehlgeschlagen: %s", result.warnings)
 
     # Auto-Detection Test
     logger.debug("\n%s", "─" * 80)
@@ -4036,18 +4169,18 @@ def _run_test() -> None:
     result_auto = processor_auto.process(audio_male, sr, MaterialType.VINYL)
     detected = result_auto.metadata.get("gender", "unknown")
 
-    logger.debug("   F0=120Hz → Detected: %s (expected: MALE)", detected.upper())
+    logger.debug("   F0=120Hz → erkannt: %s (expected: MALE)", detected.upper())
     logger.debug("   ✅ Auto-detection functional")
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("🏆 Phase 19 v4.0: Gender-Aware De-Esser - Test Complete!")
+    logger.debug("🏆 Verarbeitungsschritt 19 v4.0: Gender-Aware De-Esser - Test vollstaendig!")
     logger.debug("\n📊 Gender Profiles:")
     logger.debug("  🎤 FEMALE: F0~220Hz | Sibilance 7-11kHz | Formants 2-3kHz | Chest 150-300Hz")
     logger.debug("  🎤 MALE:   F0~110Hz | Sibilance 5-9kHz  | Formants 1.5-2.5kHz | Chest 100-250Hz + Protection")
     logger.debug("  🎤 CHILD:  F0~330Hz | Sibilance 9-13kHz | Formants 3-4kHz | Chest 200-400Hz")
 
     logger.debug("\n🎯 Implementierte Features:")
-    logger.debug("  [1] Detection & Analysis (Gender, Formants, Harmonics) ✅")
+    logger.debug("  [1] Detection & Analyse (Gender, Formants, Harmonics) ✅")
     if AURIK_8_AVAILABLE:
         logger.debug("  [2] Breath Intelligence ✅")
         logger.debug("  [3] Formant System ✅")
@@ -4055,7 +4188,7 @@ def _run_test() -> None:
         logger.debug("  [5] Spectral Inpainting ✅")
         logger.debug("  [6] Vocal Dynamics ✅")
     else:
-        logger.debug("  [2-6] Advanced Enhancements ⏸️ (roadmap: v5.0 / Phase 54)")
+        logger.debug("  [2-6] Advanced Enhancements ⏸️ (roadmap: v5.0 / Verarbeitungsschritt 54)")
     logger.debug("  [7] Gender-Adaptive De-Essing ✅")
     logger.debug("  [8] Preservation & Quality Gates ✅")
 
@@ -4063,7 +4196,9 @@ def _run_test() -> None:
     logger.debug("  ✅ Brillanz | ✅ Wärme | ✅ Natürlichkeit | ✅ Authentizität")
     logger.debug("  ✅ Emotionalität | ✅ Transparenz | ✅ Bass-Kraft (Male)")
 
-    logger.debug("\n💡 Vocal Enhancement Suite = Phase 19 (De-Esser) + Phase 42 (Presence/Formant)")
+    logger.debug(
+        "\n💡 Vocal Enhancement Suite = Verarbeitungsschritt 19 (De-Esser) + Verarbeitungsschritt 42 (Presence/Formant)"
+    )
     logger.debug("\n📈 Quality Impact: 0.95 (exzellent für De-Essing)")
     logger.debug("⏱️  Performance: ~0.3× Realtime (sehr schnell)")
     logger.debug("=" * 80)

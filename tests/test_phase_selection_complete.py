@@ -42,7 +42,7 @@ def test_all_material_types():
 
         # Defect Scan
         t0 = time.perf_counter()
-        defects = scanner.scan(test_audio, material)
+        defects = scanner.scan(test_audio, material)  # type: ignore[arg-type]
         scan_time = time.perf_counter() - t0
 
         # Phase Selection
@@ -89,7 +89,7 @@ def test_severe_defects():
     # Audio mit hohen Defekt-Werten
     test_audio = np.random.randn(44100 * 30, 2) * 0.5  # Höherer Noise-Level
 
-    defects = scanner.scan(test_audio, MaterialType.SHELLAC)
+    defects = scanner.scan(test_audio, MaterialType.SHELLAC)  # type: ignore[arg-type]
 
     # Erhöhe manuell alle Severity-Werte
     for defect_type in DefectType:

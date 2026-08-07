@@ -24,7 +24,7 @@ from backend.core.lyrics_guided_enhancement import (
 def _make_audio(sr: int = 48_000, seconds: float = 1.0) -> np.ndarray:
     t = np.linspace(0.0, seconds, int(sr * seconds), endpoint=False, dtype=np.float32)
     audio = 0.2 * np.sin(2.0 * np.pi * 220.0 * t)
-    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+    return np.clip(audio, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

@@ -236,7 +236,7 @@ def mr_stft_loss(pred_wave, target_wave):
             # Spectral convergence + magnitude loss
             sc_loss = (pred_spec - target_spec).abs().pow(2).sum() / (target_spec.abs().pow(2).sum() + 1e-8)
             mag_loss = F.l1_loss(pred_spec.abs(), target_spec.abs())
-            loss += sc_loss + mag_loss
+            loss += sc_loss + mag_loss  # type: ignore[assignment]
     return loss / 6.0  # Average over 6 combinations
 
 

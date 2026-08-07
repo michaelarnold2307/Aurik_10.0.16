@@ -11,6 +11,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+import numpy as np
+
 
 @dataclass
 class DegradedOutput:
@@ -26,7 +28,7 @@ class DegradedOutput:
         _is_degraded:     True wenn die Phase fehlgeschlagen ist und degradiert wurde.
     """
 
-    audio: np.ndarray  # noqa: F821 — numpy ist in Aurik immer verfügbar
+    audio: np.ndarray
     sample_rate: int
     warnings: list[str] = field(default_factory=list)
     metrics: dict[str, float] = field(default_factory=dict)

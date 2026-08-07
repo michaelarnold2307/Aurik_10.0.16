@@ -38,9 +38,9 @@ def test_chunked_runtime_budget_triggers_fallback_for_remaining_audio() -> None:
         fallback_calls.append(len(tail))
         return np.zeros_like(tail, dtype=np.float32)
 
-    plugin._get_available_ram_gb = _fast_ram
-    plugin._enhance_torchscript = _slow_torch
-    plugin._wpe_fallback = _fallback
+    plugin._get_available_ram_gb = _fast_ram  # type: ignore[method-assign]
+    plugin._enhance_torchscript = _slow_torch  # type: ignore[assignment]
+    plugin._wpe_fallback = _fallback  # type: ignore[assignment]
 
     mono = np.ones(4000, dtype=np.float32) * 0.1
     out = plugin._enhance_chunked(mono, sigma=0.5, max_runtime_s=0.001)

@@ -149,7 +149,9 @@ class FallbackAuditor:
                             _auditor.record(comp, gold, fallb, keyword.lower().replace(" ", "_")[:50])
                             break  # one match per message
                 except Exception as _fa_emit_exc:
-                    logger.debug("fallback_auditor: log record processing failed (non-critical): %s", _fa_emit_exc)
+                    logger.debug(
+                        "Ersatzpfad_auditor: log aufzeichnen processing fehlgeschlagen (unkritisch): %s", _fa_emit_exc
+                    )
 
         # An Root-Logger hängen — fängt ALLE Logs ab
         root = logging.getLogger()

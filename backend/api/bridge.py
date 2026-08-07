@@ -503,7 +503,7 @@ def cache_defect_result(file_path: str, result: object) -> None:
     """
     key = content_cache_key(file_path)
     _defect_lru.put(key, result, path_alias=file_path)
-    logger.debug("bridge: DefectScan cached for '%s' (key=%.8s…)", file_path, key)
+    logger.debug("bridge: DefectScan zwischengespeichert for '%s' (key=%.8s…)", file_path, key)
 
 
 def get_cached_defect_result(file_path: str) -> object | None:
@@ -544,7 +544,7 @@ def cache_era_genre_result(
         {"era_result": era_result, "genre_result": genre_result},
         path_alias=file_path,
     )
-    logger.debug("bridge: Era/Genre cached for '%s' (key=%.8s…)", file_path, key)
+    logger.debug("bridge: Era/Genre zwischengespeichert for '%s' (key=%.8s…)", file_path, key)
 
 
 def get_cached_era_genre_result(file_path: str) -> dict[str, object] | None:
@@ -578,7 +578,7 @@ def cache_medium_result(file_path: str, result: object) -> None:
     """Cache a MediumClassifier result for *file_path*."""
     key = content_cache_key(file_path)
     _medium_lru.put(key, result, path_alias=file_path)
-    logger.debug("bridge: Medium cached for '%s' (key=%.8s…)", file_path, key)
+    logger.debug("bridge: Medium zwischengespeichert for '%s' (key=%.8s…)", file_path, key)
 
 
 def get_cached_medium_result(file_path: str) -> object | None:
@@ -594,12 +594,12 @@ def clear_medium_cache(file_path: str | None = None) -> None:
     """Invalidate medium cache entry for *file_path*, or entire cache when ``None``."""
     if file_path is None:
         _medium_lru.clear()
-        logger.debug("bridge: Medium-Cache vollst\u00e4ndig geleert.")
+        logger.debug("bridge: Medium-Zwischenspeicher vollst\u00e4ndig geleert.")
     else:
         key = content_cache_key(file_path)
         _medium_lru.remove(key)
         _medium_lru.remove(file_path)  # remove() handles path-alias too
-        logger.debug("bridge: Medium-Cache f\u00fcr '%s' geleert.", file_path)
+        logger.debug("bridge: Medium-Zwischenspeicher f\u00fcr '%s' geleert.", file_path)
 
 
 # ---------------------------------------------------------------------------
@@ -611,7 +611,7 @@ def cache_restorability_result(file_path: str, result: object) -> None:
     """Cache a RestorabilityEstimator result for *file_path*."""
     key = content_cache_key(file_path)
     _restorability_lru.put(key, result, path_alias=file_path)
-    logger.debug("bridge: Restorability cached for '%s' (key=%.8s…)", file_path, key)
+    logger.debug("bridge: Restorability zwischengespeichert for '%s' (key=%.8s…)", file_path, key)
 
 
 def get_cached_restorability_result(file_path: str) -> object | None:
@@ -664,7 +664,7 @@ def normalize_user_mode(mode: str | None) -> str:
         "fast": "Restoration",
         "balanced": "Restoration",
         "quality": "Restoration",
-        "maximum": "Restoration",  # §v10.80: Maximum = höchste Qualität im gewählten Modus, nicht Studio-Zwang
+        "maximum": "Studio 2026",  # Canonical Contract: maximum ist Legacy-Alias für Studio 2026
         "studio2026": "Studio 2026",
         "studio": "Studio 2026",
         "preview": "Preview",  # §3.5: 30s preview before full restoration
@@ -868,7 +868,7 @@ def get_audio_exporter_class() -> type | None:
             _audio_exporter_status["available"] = False
             _audio_exporter_status["failures"] = int(_audio_exporter_status.get("failures", 0)) + 1
             _audio_exporter_status["last_error"] = _err
-        logger.warning("bridge: AudioExporter nicht verfügbar — sf.write als Fallback (%s)", _err)
+        logger.warning("bridge: AudioExporter nicht verfügbar — sf.write als Ersatzpfad (%s)", _err)
         return None
 
 
@@ -955,7 +955,7 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
         try:
             vf = float(v)
         except Exception:
-            logger.warning("bridge.py::_safe01 fallback", exc_info=True)
+            logger.warning("bridge.py::_safe01 Ersatzpfad", exc_info=True)
             return 0.0
         if not np.isfinite(vf):
             return 0.0
@@ -965,7 +965,7 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
         try:
             vf = float(v)
         except Exception:
-            logger.warning("bridge.py::_safe_float fallback", exc_info=True)
+            logger.warning("bridge.py::_safe_float Ersatzpfad", exc_info=True)
             return float(default)
         if not np.isfinite(vf):
             return float(default)
@@ -1293,7 +1293,7 @@ def record_goal_feedback(
         )
         get_feedback_store().record_feedback(entry)
     except Exception as _fb_exc:
-        logger.warning("§C10 record_goal_feedback failed: %s", _fb_exc)
+        logger.warning("§C10 aufzeichnen_goal_feedback fehlgeschlagen: %s", _fb_exc)
 
 
 def get_reflective_listening_pass():
@@ -1308,7 +1308,7 @@ def apply_reflective_listening(audio, sr, *, original_audio=None, artistic_inten
     from backend.core.reflective_listening_pass import ReflectiveListeningPass
 
     rlp = ReflectiveListeningPass()
-    return rlp.process(audio, sr, original_audio=original_audio, artistic_intent=artistic_intent, material=material)
+    return rlp.process(audio, sr, original_audio=original_audio, artistic_intent=artistic_intent, material=material)  # type: ignore[attr-defined]
 
 
 def get_album_consistency_pass():
@@ -1421,7 +1421,7 @@ def get_perceptual_quality_scorer():
         MCD (dB)           ≤ 8.0
         Spectral Coherence ≥ 0.60
 
-    ABSOLUT VERBOTEN als Musikmetrik: PESQ, DNSMOS, NISQA, STOI, CDPAM.
+    ABSOLUT VERBOTEN als Musikmetrik: klassische Sprachqualitaets-Metriken und CDPAM.
 
     Verwendung::
 
@@ -1500,7 +1500,7 @@ def get_ml_memory_budget_status() -> dict:
             _ml_memory_budget_import_status["available"] = False
             _ml_memory_budget_import_status["failures"] = int(_ml_memory_budget_import_status.get("failures", 0)) + 1
             _ml_memory_budget_import_status["last_error"] = _err
-        logger.warning("bridge: ml_memory_budget.get_status() nicht verfügbar: %s", _err)
+        logger.warning("bridge: ml_memory_Grenze.get_status() nicht verfügbar: %s", _err)
         return {"max_gb": 0.0, "allocated_gb": 0.0, "free_gb": 0.0, "models": {}}
 
 
@@ -1553,7 +1553,9 @@ def get_export_transparency(
     from pathlib import Path
 
     _report: dict[str, Any] = {
-        "resample_chain": f"{original_sr} Hz → {output_sr} Hz" if original_sr != output_sr else f"{original_sr} Hz (kein Resampling)",
+        "resample_chain": f"{original_sr} Hz → {output_sr} Hz"
+        if original_sr != output_sr
+        else f"{original_sr} Hz (kein Resampling)",
         "resample_method": "Lanczos-4 (scipy.signal.resample_poly)" if original_sr != output_sr else "—",
         "export_format": export_format,
         "export_bit_depth": export_bit_depth,
@@ -1564,6 +1566,7 @@ def get_export_transparency(
     if output_audio is not None:
         try:
             from backend.core.audio_exporter import _approx_true_peak
+
             _tp_db = float(_approx_true_peak(output_audio, output_sr))
             _report["true_peak_dbtp"] = round(_tp_db, 2)
             _report["true_peak_ok"] = _tp_db <= -1.0  # EBU R128: ≤ -1 dBTP
@@ -1607,7 +1610,7 @@ def validate_export_quality(result: object) -> tuple[bool, list[str]]:
 
         return _veq(result)  # type: ignore[no-any-return]
     except Exception as exc:
-        logger.warning("validate_export_quality unavailable -> fail-closed: %s", exc)
+        logger.warning("validieren_Ausgabe_quality nicht verfuegbar -> fail-closed: %s", exc)
         return False, ["Bridge-Export-Gate nicht verfügbar (fail-closed)"]
 
 
@@ -1855,7 +1858,7 @@ def build_export_quality_gate_payload(result: object) -> dict[str, Any]:
                 "export_quality_gate_payload": payload,
             }
     except Exception as exc:
-        logger.debug("build_export_quality_gate_payload mirror skipped: %s", exc)
+        logger.debug("build_Ausgabe_quality_gate_payload mirror uebersprungen: %s", exc)
 
     return payload
 
@@ -1895,7 +1898,7 @@ def build_export_metadata(result: object, **tag_kwargs):
 
                     out[k] = 0.0 if isinstance(v, float) and (math.isnan(v) or math.isinf(v)) else v
                 except Exception:
-                    logger.warning("bridge.py::_safe_guard fallback", exc_info=True)
+                    logger.warning("bridge.py::_safe_guard Ersatzpfad", exc_info=True)
             elif isinstance(v, (list, tuple)):
                 out[k] = [str(x) for x in v]
         return out or None
@@ -1966,7 +1969,7 @@ def warmup_models_background() -> None:
         ("plugins.mert_plugin", "get_mert_plugin"),  # ~1.2 GB (async)
     ]
 
-    logger.info("bridge: warmup started (%d+%d plugins) …", len(_plugins_tier1), len(_plugins_tier2))
+    logger.info("bridge: warmup gestartet (%d+%d plugins) …", len(_plugins_tier1), len(_plugins_tier2))
     _loaded = 0
     _failed = 0
     _deferred = 0
@@ -2035,7 +2038,7 @@ def warmup_models_background() -> None:
                     )
                     _mert_thread.start()
                     _loaded += 1
-                    logger.info("bridge: MERT async warmup started")
+                    logger.info("bridge: MERT async warmup gestartet")
                 except Exception:
                     _failed += 1
             else:
@@ -2056,7 +2059,7 @@ def warmup_models_background() -> None:
             _deferred += 1
             logger.info("bridge: %s deferred — RAM zu knapp", _mod.split(".")[-1])
 
-    logger.info("bridge: warmup complete — %d geladen, %d fehlgeschlagen, %d deferred", _loaded, _failed, _deferred)
+    logger.info("bridge: warmup vollstaendig — %d geladen, %d fehlgeschlagen, %d deferred", _loaded, _failed, _deferred)
     # §v10.305 G73: Validiere alle Plugin-Zugriffsnamen (einmal pro Prozess)
     if _failed > 0:
         logger.warning(
@@ -2076,7 +2079,7 @@ def warmup_rocm() -> None:
 
         _wup()
     except Exception as _exc:
-        logger.debug("bridge.warmup_rocm: non-critical: %s", _exc)
+        logger.debug("bridge.warmup_rocm: unkritisch: %s", _exc)
 
 
 # ---------------------------------------------------------------------------
@@ -2359,7 +2362,7 @@ def get_startup_check_result():
             _startup_check_status["available"] = False
             _startup_check_status["failures"] = int(_startup_check_status.get("failures", 0)) + 1
             _startup_check_status["last_error"] = _err
-        logger.warning("bridge: startup_model_check nicht verfügbar (%s)", _err)
+        logger.warning("bridge: Start_model_Pruefung nicht verfügbar (%s)", _err)
         return None
 
 
@@ -2489,7 +2492,7 @@ def run_album_consistency_pass(
     from backend.core.album_consistency import get_album_consistency_pass as _get
 
     _pass = _get()
-    _report = _pass.process_output_files(output_files, sr=sr, dry_run=dry_run)
+    _report = _pass.process_output_files(output_files, sr=sr, dry_run=dry_run)  # type: ignore[attr-defined]
 
     songs_out = []
     for _sp in _report.songs:
@@ -2619,7 +2622,7 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
         try:
             era_decade = int(float(str(_era_raw)))
         except (ValueError, TypeError):
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     defects = list(_pre.get("defects", []) or _meta.get("defects", []) or [])
     if not defects:
         _defect_scores = _coerce_dict_str_any(_meta.get("defect_scores", {}))
@@ -2630,7 +2633,7 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
         try:
             restorability = float(str(_rest_raw))
         except (ValueError, TypeError):
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ── Session-Deduplication (kein Satz 2× in derselben Session) ───────────
     _session_key = f"_layman_dedup_{id(result)}"
@@ -3063,7 +3066,7 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
         lufs_target = _exp_meta.get("target_lufs")
         lufs_actual = _exp_meta.get("integrated_lufs_after") or _exp_meta.get("output_integrated_lufs")
     except Exception as _e:
-        logger.debug("bridge: non-critical exception: %s", _e)
+        logger.debug("bridge: unkritisch exception: %s", _e)
         pass
 
     # ── ML-Status ────────────────────────────────────────────────────────────
@@ -3088,7 +3091,7 @@ def get_layman_summary(result: Any) -> dict[str, Any]:
         _narrator_ls = _get_narrator_ls()
         chain_summary = _narrator_ls.chain_summary()
     except Exception as _e:
-        logger.debug("bridge: non-critical exception: %s", _e)
+        logger.debug("bridge: unkritisch exception: %s", _e)
 
     return {
         "headline": headline,
@@ -3157,7 +3160,7 @@ def limit_quiet_edge_boost(
             max_edge_boost_db=max_edge_boost_db,
         )
     except Exception as _e:
-        logger.debug("limit_quiet_edge_boost bridge fallback: %s", _e)
+        logger.debug("limit_quiet_edge_boost bridge Ersatzpfad: %s", _e)
         return candidate_audio
 
 
@@ -3238,7 +3241,7 @@ def get_pipeline_ab_snapshots(*, include_audio: bool = True, max_duration_s: flo
 
         return snippets
     except Exception:
-        logger.warning("bridge.py::get_pipeline_ab_snapshots fallback", exc_info=True)
+        logger.warning("bridge.py::get_pipeline_ab_snapshots Ersatzpfad", exc_info=True)
         return []
 
 
@@ -3260,7 +3263,7 @@ def get_phase_display_formatter_fns() -> dict[str, object]:
             "get_phase_display": get_phase_display,
         }
     except Exception:
-        logger.warning("bridge.py::get_phase_display_formatter_fns fallback", exc_info=True)
+        logger.warning("bridge.py::get_Verarbeitungsschritt_display_formatter_fns Ersatzpfad", exc_info=True)
         return {}
 
 
@@ -3284,10 +3287,11 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
             return None
 
         from backend.file_import import load_audio_file
-        audio, sr = load_audio_file(_path)
+
+        audio, sr = load_audio_file(_path)  # type: ignore[misc]
         n_total = len(audio)
-        start = max(0, min(int(seek_s * sr), n_total - 1))
-        end = min(start + int(duration_s * sr), n_total)
+        start = max(0, min(int(seek_s * sr), n_total - 1))  # type: ignore[operator]
+        end = min(start + int(duration_s * sr), n_total)  # type: ignore[operator]
         snippet = audio[start:end]
 
         buf = io.BytesIO()
@@ -3297,9 +3301,9 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
         return {
             "audio_b64": base64.b64encode(buf.read()).decode("ascii"),
             "sample_rate": sr,
-            "duration_s": float(len(snippet) / sr),
+            "duration_s": float(len(snippet) / sr),  # type: ignore[operator]
             "seek_s": float(seek_s),
-            "total_s": float(n_total / sr),
+            "total_s": float(n_total / sr),  # type: ignore[operator]
         }
     except Exception:
         return None
@@ -3313,8 +3317,49 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
 def get_donation_reminder() -> dict[str, str]:
     """Liefert PayPal-Email + Spenden-URL für die GUI."""
     try:
-        from backend.core.donation_reminder import PAYPAL_EMAIL, DONATION_URL
+        from backend.core.donation_reminder import DONATION_URL, PAYPAL_EMAIL
+
         return {"paypal_email": PAYPAL_EMAIL, "donation_url": DONATION_URL}
+    except ImportError:
+        return {}
+
+
+def should_show_donation_reminder() -> bool:
+    """§V4: Bridge-Wrapper für donation_reminder.should_show_reminder()."""
+    try:
+        from backend.core.donation_reminder import should_show_reminder
+
+        return should_show_reminder()
+    except ImportError:
+        return False
+
+
+def mark_donation_reminder_shown() -> None:
+    """§V4: Bridge-Wrapper für donation_reminder.mark_reminder_shown()."""
+    try:
+        from backend.core.donation_reminder import mark_reminder_shown
+
+        mark_reminder_shown()
+    except ImportError:
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
+
+
+def open_donation_reminder_link() -> bool:
+    """§V4: Bridge-Wrapper für donation_reminder.open_donation_link()."""
+    try:
+        from backend.core.donation_reminder import open_donation_link
+
+        return open_donation_link()
+    except ImportError:
+        return False
+
+
+def get_donation_reminder_info() -> dict:
+    """§V4: Bridge-Wrapper für donation_reminder.get_donation_info()."""
+    try:
+        from backend.core.donation_reminder import get_donation_info
+
+        return get_donation_info()
     except ImportError:
         return {}
 
@@ -3328,6 +3373,19 @@ def inject_cd_noise_profile(audio, sample_rate: int, material_type: str = "vinyl
     """Injiziert CD-Rauschprofil. Wrapper für backend.core.cd_noise_profile."""
     try:
         from backend.core.cd_noise_profile import inject_cd_noise_profile as _inject
-        return _inject(audio, sample_rate, material_type)
+
+        return _inject(audio, sample_rate, material_type)  # type: ignore[misc]
     except ImportError:
         return audio
+
+
+# ---------------------------------------------------------------------------
+# Plugin-Registry — via bridge (§V4 Bridge-Bypass-Verbot)
+# ---------------------------------------------------------------------------
+
+
+def get_plugin_registry():
+    """Gibt die globale PluginRegistry-Instanz zurück (Aurik10/ui/plugin_manager.py)."""
+    from backend.core.plugin_registry import get_plugin_registry as _get_plugin_registry
+
+    return _get_plugin_registry()

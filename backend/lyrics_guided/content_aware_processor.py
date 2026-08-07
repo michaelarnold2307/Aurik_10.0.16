@@ -36,7 +36,7 @@ try:
     PHONEME_CLASSIFIER_AVAILABLE = True
 except ImportError:
     PHONEME_CLASSIFIER_AVAILABLE = False
-    PhonemeClassifier = None
+    PhonemeClassifier = None  # type: ignore[assignment, misc]
 
 logger = logging.getLogger(__name__)
 
@@ -153,14 +153,14 @@ class LyricsAligner:
 
         if self.use_phoneme_classifier and PhonemeClassifier is not None:
             self.phoneme_classifier = PhonemeClassifier()
-            logger.info("LyricsAligner initialized with phoneme classification")
+            logger.info("LyricsAligner initialisiert with phoneme classification")
         else:
-            self.phoneme_classifier = None
-            logger.info("LyricsAligner initialized without phoneme classification")
+            self.phoneme_classifier = None  # type: ignore[assignment]
+            logger.info("LyricsAligner initialisiert without phoneme classification")
 
         # Check Whisper availability
         if not WHISPER_AVAILABLE:
-            logger.warning("Whisper not available. Install with: pip install openai-whisper")
+            logger.warning("Whisper not verfuegbar. Install with: pip install openai-whisper")
 
     def align(
         self,
@@ -182,7 +182,7 @@ class LyricsAligner:
             List of LyricsSegment with word-level timestamps
         """
         if not WHISPER_AVAILABLE:
-            logger.warning("Whisper not available - returning empty segments")
+            logger.warning("Whisper not verfuegbar - returning empty segments")
             return []
 
         # Convert to mono
@@ -264,7 +264,7 @@ class LyricsAligner:
             logger.warning("Whisper not installed — falling back to energy-based segmentation")
             segments = self._energy_based_segmentation(audio, sr)
         except Exception as e:
-            logger.warning("Whisper transcription failed: %s — using energy-based fallback", e)
+            logger.warning("Whisper transcription fehlgeschlagen: %s — using energy-based Ersatzpfad", e)
             segments = self._energy_based_segmentation(audio, sr)
 
         logger.info("Aligned %d vocal segments", len(segments))
@@ -317,7 +317,7 @@ class LyricsAligner:
     ) -> list[LyricsSegment]:
         """Fügt hinzu: phoneme information from Week 7-9 classifier."""
         if self.phoneme_classifier is None:
-            logger.debug("PhonemeClassifier not available — skipping phoneme annotation")
+            logger.debug("PhonemeClassifier not verfuegbar — skipping phoneme annotation")
             return segments
 
         for segment in segments:
@@ -327,7 +327,7 @@ class LyricsAligner:
                 continue
             segment_audio = audio[start_idx:end_idx]
             try:
-                result = self.phoneme_classifier.classify(segment_audio, sr)
+                result = self.phoneme_classifier.classify(segment_audio, sr)  # type: ignore[call-arg, arg-type]
                 if hasattr(result, "phonemes"):
                     segment.phonemes = result.phonemes
                 elif isinstance(result, list):
@@ -335,7 +335,7 @@ class LyricsAligner:
                 else:
                     segment.phonemes = [str(result)]
             except Exception as e:
-                logger.debug("Phoneme classification failed for segment '%s': %s", segment.text, e)
+                logger.debug("Phoneme classification fehlgeschlagen for segment '%s': %s", segment.text, e)
                 segment.phonemes = []
 
         return segments
@@ -357,7 +357,7 @@ class ContentAwareProcessor:
     def __init__(self):
         """Initialisiert content-aware processor."""
         self.lyrics_aligner = LyricsAligner()
-        logger.info("ContentAwareProcessor initialized")
+        logger.info("ContentAwareProcessor initialisiert")
 
     def create_processing_timeline(
         self,
@@ -384,7 +384,7 @@ class ContentAwareProcessor:
         duration = len(audio_mono) / sr
 
         aurik_mode = _normalize_aurik_mode(aurik_mode)
-        logger.info("Creating processing timeline (%s mode, %.2fs)", aurik_mode, duration)
+        logger.info("Creating processing timeline (%s Betriebsart, %.2fs)", aurik_mode, duration)
 
         # 1. Get lyrics alignment
         lyrics_segments = self.lyrics_aligner.align(audio_mono, sr, language)
@@ -483,7 +483,7 @@ class ContentAwareProcessor:
                     end_time=duration,
                     processing_intent=ProcessingIntent.NO_PROCESSING,
                     notes="Instrumental outro",
-                )
+                )  # type: ignore[misc]
                 content_segments.append(outro)
         else:
             # No vocals detected - entire track is instrumental
@@ -613,7 +613,7 @@ def create_lyrics_guided_timeline(
         >>>
         >>> # Get processing at specific timestamp
         >>> processing = timeline.get_processing_at_time(2.5)  # 2.5 seconds
-        >>> print(f"Process at 2.5s: {processing.value}")
+        >>> print(f"Process at 2.5s: {processing.value}")  # type: ignore[misc]
     """
     processor = ContentAwareProcessor()
     return processor.create_processing_timeline(audio, sr, aurik_mode, language)

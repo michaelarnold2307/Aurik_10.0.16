@@ -197,6 +197,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -225,6 +226,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
                     s = int(max(0.0, float(loc[0])) * sample_rate)
                     e = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if e <= s:
                     continue
@@ -457,7 +459,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
 
         if not needs_correction:
             logger.debug(
-                "No significant azimuth error (max phase shift = %.1f samples, HF loss = %.1f dB)",
+                "No significant azimuth error (max Verarbeitungsschritt shift = %.1f samples, HF loss = %.1f dB)",
                 max_phase_shift,
                 hf_loss_db,
             )
@@ -525,7 +527,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
         execution_time = time.time() - start_time
 
         logger.info(
-            "Azimuth correction: Phase shift %.1f → %.1f samples (reduced %.1f samples), HF loss %.1f → %.1f dB",
+            "Azimuth correction: Verarbeitungsschritt shift %.1f → %.1f samples (reduced %.1f samples), HF loss %.1f → %.1f dB",
             max_phase_shift,
             max_phase_shift_after,
             phase_shift_reduction,
@@ -561,7 +563,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
                 _sc_wet_25 = 0.70  # Phase-Strength −30 % (§V24)
                 corrected_audio = (_sc_wet_25 * corrected_audio + (1.0 - _sc_wet_25) * audio).astype(np.float32)
         except Exception as _sc_exc_25:
-            logger.debug("§V24 phase_25 spectral_color non-blocking: %s", _sc_exc_25)
+            logger.debug("§V24 Verarbeitungsschritt_25 spectral_color nicht blockierend: %s", _sc_exc_25)
 
         # V26 Onset-Guard (§2.77): Transient-Fenster nach Azimuth-Korrektur schützen (non-blocking)
         try:
@@ -571,12 +573,12 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
 
             corrected_audio = _opg25(audio, corrected_audio, None, max_delta_db=1.5)
         except Exception as _on25_exc:
-            logger.debug("Phase25 V26 Onset-Guard (non-blocking): %s", _on25_exc)
+            logger.debug("Verarbeitungsschritt25 V26 Onset-Guard (nicht blockierend): %s", _on25_exc)
 
         corrected_audio, _env_guard_stats = self._limit_envelope_modulation(audio, corrected_audio, sample_rate)
         if float(_env_guard_stats.get("envelope_guard_applied", 0.0)) > 0.0:
             logger.info(
-                "phase_25 Envelope-Guard: max_delta=%.2f dB min_wet=%.2f",
+                "Verarbeitungsschritt_25 Envelope-Guard: max_delta=%.2f dB min_wet=%.2f",
                 float(_env_guard_stats.get("max_envelope_delta_db", 0.0)),
                 float(_env_guard_stats.get("min_wet", 1.0)),
             )
@@ -874,7 +876,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
             left_hf = signal.sosfilt(sos_hf, left)
             right_hf = signal.sosfilt(sos_hf, right)
         except Exception as e:
-            logger.warning("phase_25_azimuth_correction.py::_measure_hf_loss fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_25_azimuth_correction.py::_measure_hf_loss Ersatzpfad: %s", e)
             return 0.0
 
         # Measure HF energy per channel
@@ -928,7 +930,9 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
 
             return restored  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("phase_25_azimuth_correction.py::_restore_hf_content fallback: %s", e)
+            logger.warning(
+                "Verarbeitungsschritt_25_azimuth_correction.py::_wiederherstellen_hf_content Ersatzpfad: %s", e
+            )
             return corrected_audio
 
     def _recombine_multiband(self, bands: list[np.ndarray]) -> np.ndarray:
@@ -997,7 +1001,7 @@ def _run_standalone_test() -> None:
         demo_azimuth_error_samples / demo_sample_rate * 1000,
     )
     logger.debug("Simulates: Tape head azimuth misalignment")
-    logger.debug("Note: HF loss occurs automatically via phase cancellation")
+    logger.debug("Note: HF loss occurs automatically via Verarbeitungsschritt cancellation")
 
     # Test with TAPE (primary target)
     phase = AzimuthCorrectionPhaseV2()
@@ -1009,20 +1013,26 @@ def _run_standalone_test() -> None:
     result = phase.process(demo_audio, demo_sample_rate, MaterialType.TAPE)  # type: ignore[arg-type]
 
     if result.success:
-        logger.debug("✅ Processing Complete!")
+        logger.debug("✅ Processing vollstaendig!")
         logger.debug(
             "   Execution Time: %.3fs (%.2fx realtime)",
             result.execution_time_seconds,
             result.execution_time_seconds / demo_duration,
         )
-        logger.debug("   Correction Applied: %s", result.metadata["azimuth_correction_applied"])
+        logger.debug("   Correction angewendet: %s", result.metadata["azimuth_correction_applied"])
         if result.metadata.get("azimuth_correction_applied"):
-            logger.debug("   Phase Shift Before: %.1f samples", result.metrics["phase_shift_before_samples"])
-            logger.debug("   Phase Shift After: %.1f samples", result.metrics["phase_shift_after_samples"])
-            logger.debug("   Phase Shift Reduction: %.1f samples", result.metrics["phase_shift_reduction_samples"])
+            logger.debug(
+                "   Verarbeitungsschritt Shift Before: %.1f samples", result.metrics["phase_shift_before_samples"]
+            )
+            logger.debug(
+                "   Verarbeitungsschritt Shift After: %.1f samples", result.metrics["phase_shift_after_samples"]
+            )
+            logger.debug(
+                "   Verarbeitungsschritt Shift Reduction: %.1f samples", result.metrics["phase_shift_reduction_samples"]
+            )
             logger.debug("   HF Loss Before: %.2f dB", result.metrics["hf_loss_before_db"])
             logger.debug("   HF Loss After: %.2f dB", result.metrics["hf_loss_after_db"])
-            logger.debug("\n   Per-Band Phase Shifts (Before → After):")
+            logger.debug("\n   Per-Band Verarbeitungsschritt Shifts (Before → After):")
             logger.debug(
                 "     Band 0 (Bass):  %.1f → %.1f samples",
                 result.metrics["band_0_phase_shift_before_samples"],
@@ -1038,12 +1048,12 @@ def _run_standalone_test() -> None:
                 result.metrics["band_2_phase_shift_before_samples"],
                 result.metrics["band_2_phase_shift_after_samples"],
             )
-            logger.debug("   HF Restoration Applied: %s", result.modifications["hf_restoration_applied"])
+            logger.debug("   HF Restoration angewendet: %s", result.modifications["hf_restoration_applied"])
         else:
             logger.debug("   Reason: %s", result.metadata.get("reason", "unknown"))
             if "max_phase_shift_samples" in result.metadata:
                 logger.debug(
-                    "   Max Phase Shift: %.1f samples (below threshold)",
+                    "   Max Verarbeitungsschritt Shift: %.1f samples (below Schwelle)",
                     result.metadata["max_phase_shift_samples"],
                 )
             if "hf_loss_db" in result.metadata:
@@ -1051,22 +1061,22 @@ def _run_standalone_test() -> None:
 
     # Test with VINYL (should skip)
     logger.debug("\n%s", "─" * 80)
-    logger.debug("Testing with material: VINYL (should skip)")
+    logger.debug("Testing with material: VINYL (should ueberspringen)")
     logger.debug("%s", "─" * 80)
 
     result_vinyl = phase.process(demo_audio, demo_sample_rate, MaterialType.VINYL)  # type: ignore[arg-type]
 
     if result_vinyl.success:
-        logger.debug("✅ As expected: Azimuth Correction skipped for VINYL")
-        logger.debug("   Correction Applied: %s", result_vinyl.metadata["azimuth_correction_applied"])
+        logger.debug("✅ As expected: Azimuth Correction uebersprungen for VINYL")
+        logger.debug("   Correction angewendet: %s", result_vinyl.metadata["azimuth_correction_applied"])
         logger.debug("   Reason: %s", result_vinyl.metadata.get("reason", "unknown"))
         logger.debug("   Execution Time: %.3fs", result_vinyl.execution_time_seconds)
 
     logger.debug("\n%s", "=" * 80)
-    logger.debug("✅ Professional Azimuth Correction v2.0 Test Complete!")
+    logger.debug("✅ Professional Azimuth Correction v2.0 Test vollstaendig!")
     logger.debug("=" * 80)
-    logger.debug("Algorithm: multiband_phase_alignment_v2")
-    logger.debug("Scientific Reference: Camras (1988), Nakajima et al. (1983),")
+    logger.debug("Algorithm: multiband_Verarbeitungsschritt_alignment_v2")
+    logger.debug("Scientific Referenz: Camras (1988), Nakajima et al. (1983),")
     logger.debug("                     Begault (1994), Rumsey (2001), AES28-2008")
     logger.debug("Benchmark: iZotope RX, Cedar Azimuth Corrector, Waves X-Click,")
     logger.debug("           Steinberg SpectraLayers, Sonic Solutions NoNOISE")

@@ -349,7 +349,7 @@ class TestQualityGates:
         reconstructed = sum(stems.values())
 
         # Calculate correlation with original
-        correlation = np.corrcoef(mixed_audio.flatten(), reconstructed.flatten())[0, 1]
+        correlation = np.corrcoef(mixed_audio.flatten(), reconstructed.flatten())[0, 1]  # type: ignore[union-attr]
 
         # Should have reasonable correlation (>0.5)
         # Note: Perfect reconstruction not expected for spectral method

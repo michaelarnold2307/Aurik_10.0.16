@@ -12,13 +12,12 @@ import hashlib
 import sys
 from pathlib import Path
 
-
 FORBIDDEN_DEFAULTS: dict[str, list[str]] = {
     "transfer_chain_depth": [
         "transfer_chain_depth: int = 1",
         "transfer_chain_depth: int=1",
-        'transfer_chain_depth: int = 1,',
-        'transfer_chain_depth: int=1,',
+        "transfer_chain_depth: int = 1,",
+        "transfer_chain_depth: int=1,",
     ],
 }
 
@@ -125,10 +124,14 @@ def test_calibration_context_linter_no_new_violations() -> None:
 
     if fixed_violations:
         import logging
+
         logger = logging.getLogger(__name__)
         for path, lines in sorted(fixed_violations.items()):
-            logger.warning("§G86 Behoben: %s (Zeilen %s) — Baseline sollte aktualisiert werden",
-                           path, ",".join(str(l) for l in lines))
+            logger.warning(
+                "§G86 Behoben: %s (Zeilen %s) — Baseline sollte aktualisiert werden",
+                path,
+                ",".join(str(l) for l in lines),
+            )
 
     if new_violations:
         msg_parts = [f"\n§G86 LINTER: {sum(len(v) for v in new_violations.values())} NEUE verbotene Defaults!\n"]
@@ -155,10 +158,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="CalibrationContext Linter")
-    parser.add_argument("--update-baseline", action="store_true",
-                        help="Baseline-Datei aus aktuellem Scan generieren")
-    parser.add_argument("--show", action="store_true",
-                        help="Alle aktuellen Verstöße anzeigen")
+    parser.add_argument("--update-baseline", action="store_true", help="Baseline-Datei aus aktuellem Scan generieren")
+    parser.add_argument("--show", action="store_true", help="Alle aktuellen Verstöße anzeigen")
     args = parser.parse_args()
 
     current = _scan_all()

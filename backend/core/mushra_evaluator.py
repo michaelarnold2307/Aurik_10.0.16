@@ -283,7 +283,7 @@ class MushraEvaluator:
         grade, itu_grade = self._grade(mushra_score)
 
         logger.info(
-            "🎯 MUSHRA: Score=%.1f (%s) | NSIM=%.3f MCD=%.1fdB LUFS-Δ=%.1fLU | Anchor=%.1f",
+            "🎯 MUSHRA: Wert=%.1f (%s) | NSIM=%.3f MCD=%.1fdB LUFS-Δ=%.1fLU | Anchor=%.1f",
             mushra_score,
             grade,
             nsim,
@@ -385,7 +385,7 @@ class MushraEvaluator:
             nsim = (2 * mu_r * mu_t + C1) * (2 * sig_rt + C2) / ((mu_r**2 + mu_t**2 + C1) * (sig_r**2 + sig_t**2 + C2))
             return float(np.clip(nsim, 0.0, 1.0))
         except Exception as exc:
-            logger.debug("NSIM Fallback (Fehler: %s)", exc)
+            logger.debug("NSIM Ersatzpfad (Fehler: %s)", exc)
             return float(np.clip(1.0 - np.sqrt(np.mean((ref - test) ** 2)), 0.0, 1.0))
 
     def _compute_mcd(self, ref: np.ndarray, test: np.ndarray, sr: int) -> float:
@@ -423,7 +423,7 @@ class MushraEvaluator:
             # Sane cap: CMVN MCD range 0–40 dB (>40 = completely different timbre, maps to 0 score anyway).
             return float(np.clip(mcd, 0.0, 40.0))
         except Exception as exc:
-            logger.debug("MCD Fallback: %s", exc)
+            logger.debug("MCD Ersatzpfad: %s", exc)
             return 5.0
 
     def _compute_lufs_diff(self, ref: np.ndarray, test: np.ndarray, sr: int) -> float:
@@ -440,7 +440,7 @@ class MushraEvaluator:
                 lufs_ref = float(meter.integrated_loudness(ref))
                 lufs_test = float(meter.integrated_loudness(test))
             except Exception as exc:
-                logger.debug("LUFS-BS.1770 Fallback auf RMS (Fehler: %s)", exc)
+                logger.debug("LUFS-BS.1770 Ersatzpfad auf RMS (Fehler: %s)", exc)
                 rms_ref = float(np.sqrt(np.mean(ref**2) + 1e-12))
                 rms_test = float(np.sqrt(np.mean(test**2) + 1e-12))
                 lufs_ref = 20.0 * math.log10(rms_ref)
@@ -451,7 +451,7 @@ class MushraEvaluator:
             # clipped signal; the score already clips to 0 at |12| LU anyway.
             return float(np.clip(diff, -60.0, 60.0))
         except Exception as e:
-            logger.warning("mushra_evaluator.py::_compute_lufs_diff fallback: %s", e)
+            logger.warning("mushra_evaluator.py::_berechnen_lufs_diff Ersatzpfad: %s", e)
             return 0.0
 
     def _compute_spectral_corr(self, ref: np.ndarray, test: np.ndarray, sr: int) -> float:
@@ -472,7 +472,7 @@ class MushraEvaluator:
             corr = corr_raw if np.isfinite(corr_raw) else 0.5
             return float(np.clip(corr, 0.0, 1.0))
         except Exception as e:
-            logger.warning("mushra_evaluator.py::_compute_spectral_corr fallback: %s", e)
+            logger.warning("mushra_evaluator.py::_berechnen_spectral_corr Ersatzpfad: %s", e)
             return 0.5
 
     def _quick_score(self, ref: np.ndarray, test: np.ndarray, sr: int) -> float:
@@ -535,7 +535,7 @@ class MushraEvaluator:
             anchor = sosfilt(sos, audio).astype(np.float32)
             return np.clip(anchor, -1.0, 1.0)  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("Anchor-Erzeugung Fallback: %s", exc)
+            logger.debug("Anchor-Erzeugung Ersatzpfad: %s", exc)
             # Einfacher Bandpass als Fallback
             return audio * 0.3  # type: ignore[no-any-return]  # starke Abschwächung ≈ schlechte Qualität
 

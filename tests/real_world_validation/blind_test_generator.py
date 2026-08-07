@@ -16,6 +16,7 @@ import json
 import logging
 import random
 from pathlib import Path
+from typing import Any
 
 import librosa
 import soundfile as sf
@@ -30,7 +31,7 @@ class BlindTestGenerator:
     def __init__(self, output_dir: Path):
         self.output_dir = output_dir
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.test_protocol = []
+        self.test_protocol: list[Any] = []
 
     def generate_ab_tests(self, baseline_dir: Path, test_dir: Path, count: int = 10):
         """
@@ -338,13 +339,13 @@ Thank you for your participation!
         # Add placeholders for each test
         for test in self.test_protocol:
             if test["type"] == "ab":
-                results["ab_results"].append(
+                results["ab_results"].append(  # type: ignore[attr-defined]
                     {"test_id": test["test_id"], "preference": "A or B", "confidence": "1-5", "notes": ""}
                 )
             elif test["type"] == "abx":
-                results["abx_results"].append({"test_id": test["test_id"], "x_matches": "A or B", "notes": ""})
+                results["abx_results"].append({"test_id": test["test_id"], "x_matches": "A or B", "notes": ""})  # type: ignore[attr-defined]
             elif test["type"] == "rating":
-                results["rating_results"].append(
+                results["rating_results"].append(  # type: ignore[attr-defined]
                     {
                         "test_id": test["test_id"],
                         "overall_quality": "1-5",

@@ -93,7 +93,7 @@ class TransientDecoupledProcessing:
                 h = np.pad(h, (0, max(0, n - len(h))))[:n]
                 p = np.pad(p, (0, max(0, n - len(p))))[:n]
             except Exception as exc:
-                logger.debug("HPSS-Fallback: %s", exc)
+                logger.debug("HPSS-Ersatzpfad: %s", exc)
                 p = x * 0.5
                 h = x * 0.5
             p = np.nan_to_num(p.astype(np.float32))
@@ -147,7 +147,7 @@ class TransientDecoupledProcessing:
                     orig = np.nan_to_num(np.asarray(orig_p, dtype=np.float32))
                     orig = np.pad(orig, (0, max(0, n - len(orig))))[:n]
                     mix_local = orig + h
-                    logger.debug("GrooveMetric DTW %.2f ms > 8 ms -- original_perc uebernommen", dtw_ms)
+                    logger.debug("GrooveMetric DTW %.2f ms > 8 ms -- Originalsignal_perc uebernommen", dtw_ms)
             mix_local = np.nan_to_num(mix_local)
             return np.clip(mix_local, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
@@ -206,7 +206,7 @@ class TransientDecoupledProcessing:
             dtw_ms = float(np.sqrt(np.mean(diff_ms**2)))
             return dtw_ms > 8.0, dtw_ms
         except Exception as e:
-            logger.warning("transient_decoupled_processor.py::_grove_violated_ex fallback: %s", e)
+            logger.warning("transient_decoupled_processor.py::_grove_violated_ex Ersatzpfad: %s", e)
             return False, 0.0
 
 

@@ -156,7 +156,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception as _p40_zone_exc:
-                    logger.debug("Phase 40: zone parse failed (non-critical): %s", _p40_zone_exc)
+                    logger.debug("Verarbeitungsschritt 40: zone parse fehlgeschlagen (unkritisch): %s", _p40_zone_exc)
                     continue
         return zones
 
@@ -184,7 +184,9 @@ class LoudnessNormalizationPhase(PhaseInterface):
                 try:
                     start_s, end_s = float(loc[0]), float(loc[1])
                 except Exception as _p40_loc_exc:
-                    logger.debug("Phase 40: location parse failed (non-critical): %s", _p40_loc_exc)
+                    logger.debug(
+                        "Verarbeitungsschritt 40: location parse fehlgeschlagen (unkritisch): %s", _p40_loc_exc
+                    )
                     continue
                 s = int(max(0.0, start_s) * sample_rate)
                 e = int(max(0.0, end_s) * sample_rate)
@@ -254,18 +256,25 @@ class LoudnessNormalizationPhase(PhaseInterface):
             import pyloudnorm as _pyln
 
             _p0_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
-            _p0_lufs = float(_pyln.measure_loudness(_p0_mono.astype(np.float64), sample_rate))
+            _p0_meter = _pyln.Meter(sample_rate)
+            _p0_lufs = float(_p0_meter.integrated_loudness(_p0_mono.astype(np.float64)))
             if abs(_p0_lufs - (-14.0)) < 3.0:
                 logger.info(
-                    "§v10.303.36 Loudness-Skip: LUFS=%.1f (Δ%.1f LU) → bereits optimal",
-                    _p0_lufs, abs(_p0_lufs + 14.0),
+                    "§v10.303.36 Loudness-ueberspringen: LUFS=%.1f (Δ%.1f LU) → bereits optimal",
+                    _p0_lufs,
+                    abs(_p0_lufs + 14.0),
                 )
                 return PhaseResult(
-                    success=True, audio=audio, execution_time_seconds=0.0,
+                    success=True,
+                    audio=audio,
+                    execution_time_seconds=0.0,
                     metadata={"algorithm": "skipped_near_target", "integrated_lufs": _p0_lufs},
                 )
         except ImportError:
             pass
+        except Exception as _p0_skip_exc:
+            # z.B. zu kurzes Audio (< 400 ms Block-Size) — Fast-Path einfach überspringen.
+            logger.debug("§v10.303.36 Loudness-ueberspringen-Messung übersprungen: %s", _p0_skip_exc)
 
         # ── §ISO-226: Lautstärke-Kompensation für Ziel-Hörpegel ──
         # Ohne Kompensation klingt eine auf 80 phon gemasterte Aufnahme
@@ -283,14 +292,16 @@ class LoudnessNormalizationPhase(PhaseInterface):
                 if audio_lc is not None and np.all(np.isfinite(audio_lc)):
                     audio = audio_lc.astype(np.float32)
                     logger.debug(
-                        "Phase40 §ISO-226: loudness compensated target=%.0f phon ref=%.0f phon", _iso_target, _iso_ref
+                        "Verarbeitungsschritt40 §ISO-226: loudness compensated target=%.0f phon ref=%.0f phon",
+                        _iso_target,
+                        _iso_ref,
                     )
             except Exception as _iso_exc:
-                logger.debug("Phase40 §ISO-226 non-blocking: %s", _iso_exc)
+                logger.debug("Verarbeitungsschritt40 §ISO-226 nicht blockierend: %s", _iso_exc)
 
         if _effective_strength <= 0.0:
             logger.info(
-                "Phase 40: skipped — effective_strength=%.3f (no normalization applied; measuring actual LUFS)",
+                "Verarbeitungsschritt 40: uebersprungen — effective_strength=%.3f (no normalization angewendet; measuring actual LUFS)",
                 _effective_strength,
             )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -298,7 +309,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
             peak_db = float(20.0 * np.log10(np.percentile(np.abs(audio), 99.9) + 1e-10))
             # §5/5 §G-5/5: Echte LUFS-Messung auch bei Skip — keine Dummy-Werte mehr
             try:
-                _actual_lufs, _actual_lra, _actual_momentary, _actual_st = self._measure_full_loudness(
+                _actual_lufs, _actual_lra, _actual_momentary, _actual_st = self._measure_full_loudness(  # type: ignore[attr-defined]
                     audio, sample_rate
                 )
             except Exception:
@@ -339,7 +350,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
             preset_name = preset["name"]
         else:
             _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-            target_lufs = float(self.MATERIAL_TARGETS.get(_mk, self.MATERIAL_TARGETS[MaterialType.STREAMING]))
+            target_lufs = float(self.MATERIAL_TARGETS.get(_mk, self.MATERIAL_TARGETS[MaterialType.STREAMING]))  # type: ignore[call-overload]
             max_true_peak_db = -1.0
             preset_name = None
 
@@ -435,12 +446,12 @@ class LoudnessNormalizationPhase(PhaseInterface):
                     _drift_correction_applied = True
                     _drift_gain_range_db = float(_total_correction_db)
                     logger.info(
-                        "Phase 40: AMPLITUDE_DRIFT correction applied: slope=%.2f dB/min, total_correction=%.1f dB",
+                        "Verarbeitungsschritt 40: AMPLITUDE_DRIFT correction angewendet: slope=%.2f dB/min, total_correction=%.1f dB",
                         _drift_slope,
                         _total_correction_db,
                     )
             except Exception as _drift_exc:
-                logger.warning("Phase 40: AMPLITUDE_DRIFT correction failed: %s", _drift_exc)
+                logger.warning("Verarbeitungsschritt 40: AMPLITUDE_DRIFT correction fehlgeschlagen: %s", _drift_exc)
 
         # Measure current loudness (ITU-R BS.1770-4)
         integrated_lufs, lra, momentary_max, short_term_max = self._measure_loudness_full(audio, sample_rate)
@@ -460,7 +471,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         _genre_target = _genre_targets.get(_genre_lufs)
         if _genre_target is not None:
             target_lufs = _genre_target
-            logger.debug("Phase 40: genre=%s → LUFS target=%.0f", _genre_lufs, target_lufs)
+            logger.debug("Verarbeitungsschritt 40: genre=%s → LUFS target=%.0f", _genre_lufs, target_lufs)
         gain_db = (target_lufs - integrated_lufs) * _effective_strength
 
         # §v10.0.0: §8.2 Restoration/balanced — LUFS-Δ ≤ 1 LU (archive material retains original loudness)
@@ -496,7 +507,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         max_safe_gain_db = max_true_peak_db - 20.0 * np.log10(current_peak) + 2.0
         if gain_db > max_safe_gain_db:
             logger.debug(
-                "Phase 40: Headroom-capping gain %.1f -> %.1f dB (peak=%.1f dBFS, tp_limit=%.1f dBTP)",
+                "Verarbeitungsschritt 40: Headroom-capping gain %.1f -> %.1f dB (peak=%.1f dBFS, tp_limit=%.1f dBTP)",
                 gain_db,
                 max_safe_gain_db,
                 20.0 * np.log10(current_peak),
@@ -517,7 +528,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
             if _is_analog_vocal:
                 # Uniformer Gain — keine Gate-Artefakte auf analogem Material
                 normalized = audio * gain_linear
-                logger.debug("Phase 40: uniform gain applied (analog+vocal, no gate envelope)")
+                logger.debug("Verarbeitungsschritt 40: uniform gain angewendet (analog+vocal, no gate envelope)")
             else:
                 # §2.45a-II v10.0.0: reference_for_gate=audio → signal-relative gate (P15+9 dB)
                 # §v10.128 FIX: crossfade_ms 10.0→200.0 — Spec §2.45a-II schreibt 200 ms
@@ -931,7 +942,7 @@ if __name__ == "__main__":
     # Manual smoke test for LoudnessNormalizationPhase.
 
     logger.debug("=" * 80)
-    logger.debug("Phase 40: Professional Loudness Normalization v2.0")
+    logger.debug("Verarbeitungsschritt 40: Professional Loudness Normalization v2.0")
     logger.debug("=" * 80)
 
     demo_sr = 44100
@@ -1006,7 +1017,7 @@ if __name__ == "__main__":
             logger.debug("     Compliance: %s", "✅" if m["peak_compliance"] else "❌")
 
             logger.debug("\n   Processing:")
-            logger.debug("     Gain Applied: %.2f dB", m["gain_applied_db"])
+            logger.debug("     Gain angewendet: %.2f dB", m["gain_applied_db"])
             logger.debug(
                 "     Time: %.3fs (%.2fx realtime)",
                 demo_result.execution_time_seconds,

@@ -21,7 +21,7 @@ def _long_base_audio(duration_s: float = 70.0) -> np.ndarray:
     t = np.arange(int(duration_s * SR), dtype=np.float64) / SR
     # Keep base signal low and stable so injected defects dominate detection.
     audio = 0.10 * np.sin(2.0 * np.pi * 440.0 * t)
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.slow

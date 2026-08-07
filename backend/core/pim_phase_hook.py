@@ -130,7 +130,7 @@ def compute_per_band_nr_mask(
 
     gain_db = gaussian_filter1d(gain_db.astype(np.float64), sigma=1.5).astype(np.float32)
 
-    return gain_db
+    return gain_db  # type: ignore[no-any-return]
 
 
 def apply_per_band_mask(
@@ -170,7 +170,7 @@ def apply_per_band_mask(
             reconstructed = reconstructed[: len(ch)]
         elif len(reconstructed) < len(ch):
             reconstructed = np.pad(reconstructed, (0, len(ch) - len(reconstructed)))
-        return reconstructed
+        return reconstructed  # type: ignore[no-any-return]
 
     if arr.ndim == 2 and arr.shape[1] <= 2:
         processed = np.zeros_like(arr)

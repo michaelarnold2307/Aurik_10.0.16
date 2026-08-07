@@ -30,7 +30,7 @@ def _scanner(material: MaterialType = MaterialType.MP3_LOW) -> DefectScanner:
 
 def _sine(freq: float, duration_s: float, sr: int = SR, amp: float = 0.5) -> np.ndarray:
     t = np.arange(int(duration_s * sr)) / sr
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(duration_s: float, sr: int = SR, amp: float = 0.1) -> np.ndarray:
@@ -69,7 +69,7 @@ def _inject_brickwall(audio: np.ndarray, sr: int = SR, cutoff_hz: float = 16000.
     cutoff_hz = min(cutoff_hz, nyq * 0.85)
     cutoff_norm = cutoff_hz / nyq
     sos = butter(8, cutoff_norm, btype="low", output="sos")
-    return sosfilt(sos, audio).astype(np.float32)
+    return sosfilt(sos, audio).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _inject_energy_drops(audio: np.ndarray, sr: int = SR) -> np.ndarray:

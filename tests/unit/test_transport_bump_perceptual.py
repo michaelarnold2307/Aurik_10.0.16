@@ -38,7 +38,7 @@ def _make_dip_audio(dip_depth_db: float = 12.0, dip_dur_s: float = 0.2) -> np.nd
     ramp_up = np.linspace(10 ** (-dip_depth_db / 20), 1.0, dip_samples // 3, dtype=np.float32)
     env[dip_start:dip_end] = np.concatenate([ramp_down, dip_floor, ramp_up])[:dip_samples]
     audio = audio * env
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_bump_audio(bump_start_s: float = 1.0) -> np.ndarray:
@@ -58,7 +58,7 @@ def _make_bump_audio(bump_start_s: float = 1.0) -> np.ndarray:
     thump_t = np.arange(thump_dur, dtype=np.float32) / SR
     audio[thump_start : thump_start + thump_dur] += 0.15 * np.sin(2 * np.pi * 80 * thump_t)
 
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ── Detection Tests ────────────────────────────────────────────────────────

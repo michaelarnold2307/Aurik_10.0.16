@@ -26,7 +26,7 @@ def _clean_mono(snr_db: float = 50.0) -> np.ndarray:
     noise_power = signal_power / (10 ** (snr_db / 10.0))
     noise_amp = float(np.sqrt(noise_power))
     noise = rng.normal(0.0, noise_amp, size=signal.shape).astype(np.float32)
-    return (signal + noise).clip(-1.0, 1.0)
+    return (signal + noise).clip(-1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _noisy_mono(snr_db: float = 10.0) -> np.ndarray:

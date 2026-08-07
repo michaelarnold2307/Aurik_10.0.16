@@ -110,7 +110,7 @@ class SibilanceMaxRepair:
                 # §AF Dynamics-Check
                 result = self._dynamics.match_envelope(result, sr, 0, min(result.shape[-1], result.shape[-1]))
             except Exception as e:
-                logger.debug("Phase-19 De-Esser: %s", e)
+                logger.debug("Verarbeitungsschritt-19 De-Esser: %s", e)
 
         # ── 3. Phase-43 ML De-Esser (Feinpass, nur bei Rest-Sibilance) ──
         sibilance_energy_mid = self._measure_sibilance_energy(result, sr, s_range[0], s_range[1])
@@ -124,7 +124,7 @@ class SibilanceMaxRepair:
                 # §AF Dynamics-Check
                 result = self._dynamics.match_envelope(result, sr, 0, min(result.shape[-1], result.shape[-1]))
             except Exception as e:
-                logger.debug("Phase-43 ML De-Esser: %s", e)
+                logger.debug("Verarbeitungsschritt-43 ML De-Esser: %s", e)
 
         # ── 4. Post-Verifikation ──
         sibilance_energy_after = self._measure_sibilance_energy(result, sr, s_range[0], s_range[1])

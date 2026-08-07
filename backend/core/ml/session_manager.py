@@ -108,7 +108,7 @@ class InferenceSessionManager:
             if model_name in self._cache:
                 session, size_mb, _ = self._cache[model_name]
                 self._touch(model_name)
-                logger.debug("Session-Cache-Hit: %s (%.1f MB)", model_name, size_mb)
+                logger.debug("Sitzung-Zwischenspeicher-Hit: %s (%.1f MB)", model_name, size_mb)
                 return session
 
             # ── Cache voll? LRU-Eviction ──────────────────────────────────
@@ -125,14 +125,14 @@ class InferenceSessionManager:
             total_mb = self._total_memory_mb()
             if total_mb > self.memory_limit_mb:
                 logger.warning(
-                    "ONNX-Session-Memory > %.0f MB: %.1f MB (Modelle: %s). Erwäge max_sessions zu reduzieren.",
+                    "ONNX-Sitzung-Memory > %.0f MB: %.1f MB (Modelle: %s). Erwäge max_sessions zu reduzieren.",
                     self.memory_limit_mb,
                     total_mb,
                     list(self._cache.keys()),
                 )
 
             logger.info(
-                "Session geladen: %s (%.1f MB) [%d/%d Sessions, %.1f MB total]",
+                "Sitzung geladen: %s (%.1f MB) [%d/%d Sessions, %.1f MB total]",
                 model_name,
                 size_mb,
                 len(self._cache),
@@ -189,7 +189,7 @@ class InferenceSessionManager:
             del self._cache[model_name]
             if model_name in self._access_order:
                 self._access_order.remove(model_name)
-            logger.debug("Session evictet: %s (%.1f MB freigegeben)", model_name, size_mb)
+            logger.debug("Sitzung evictet: %s (%.1f MB freigegeben)", model_name, size_mb)
 
     @staticmethod
     def _load_session(model_path: Path) -> tuple[Any, float]:

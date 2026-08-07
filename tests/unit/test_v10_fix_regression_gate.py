@@ -37,7 +37,7 @@ def test_v10_95_phaseresult_tuple_to_ndarray():
 
     # Tuple-Input (2 Kanäle, je 100 Samples) → erstes ndarray wird extrahiert
     data_tuple = (np.zeros(100, dtype=np.float32), np.zeros(100, dtype=np.float32))
-    result = PhaseResult(audio=data_tuple)
+    result = PhaseResult(audio=data_tuple)  # type: ignore[arg-type]
 
     assert isinstance(result.audio, np.ndarray), (
         "§v10.95 REGRESSION: PhaseResult.audio ist kein ndarray! "
@@ -319,14 +319,14 @@ class TestV10FixRuntimeHardening:
         from backend.core.phases.phase_interface import PhaseResult
 
         data = (np.array([1.0, 2.0]), np.array([3.0, 4.0]))
-        result = PhaseResult(audio=data, metadata={"key": "value"})
+        result = PhaseResult(audio=data, metadata={"key": "value"})  # type: ignore[arg-type]
         assert result.metadata == {"key": "value"}
         assert isinstance(result.audio, np.ndarray)
 
     def test_psychoacoustics_noverlap_clamp_runtime(self):
         """psychoacoustics: noverlap-Clamp funktioniert mit kurzem Audio."""
         try:
-            from backend.core.dsp.psychoacoustics import compute_bark_spectrum
+            from backend.core.dsp.psychoacoustics import compute_bark_spectrum  # type: ignore[attr-defined]
         except ImportError:
             pytest.skip("compute_bark_spectrum nicht importierbar")
 

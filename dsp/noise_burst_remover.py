@@ -194,7 +194,7 @@ class NoiseBurstRemover:
             rms = np.sqrt(np.mean(window**2))
             rms_envelope.append(rms)
 
-        rms_envelope = np.array(rms_envelope)
+        rms_envelope = np.array(rms_envelope)  # type: ignore[assignment]
 
         # Compute threshold: median RMS + threshold_db
         median_rms = np.median(rms_envelope)

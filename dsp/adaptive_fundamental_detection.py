@@ -74,7 +74,7 @@ class AdaptiveFundamentalDetection:
                 # TorchScript-Modell (Platzhalter)
                 # model = torch.jit.load('fundamental_detector.pt')
                 # freq = float(model(torch.from_numpy(x).float().unsqueeze(0)).item())
-                logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                 fallback_used = True
                 freq = self._detect_classic(x)
             else:
@@ -85,7 +85,7 @@ class AdaptiveFundamentalDetection:
             freq = 0.0
 
         if audit_log:
-            logger.info("AdaptiveFundamentalDetection: freq=%.2f Hz, fallback_used=%s", freq, fallback_used)
+            logger.info("AdaptiveFundamentalDetection: freq=%.2f Hz, Ersatzpfad_used=%s", freq, fallback_used)
         return freq
 
     def _detect_classic(self, x: np.ndarray) -> float:
@@ -96,7 +96,7 @@ class AdaptiveFundamentalDetection:
         corr = corr[len(corr) // 2 :]
         peak = np.argmax(corr[1:]) + 1
         freq = self.sr / peak if peak > 0 else 0.0
-        return freq
+        return freq  # type: ignore[return-value]
 
     def auto_optimize(self, x: np.ndarray) -> None:
         """
@@ -117,4 +117,4 @@ class AdaptiveFundamentalDetection:
             self.sr = 22050  # Mittlerer Bereich
         else:
             self.sr = 16000  # Sprache / schmalbandiges Signal
-        logger.info("auto_optimize (FundamentalDetection): HF-Ratio=%.3f → sr=%s", hf_ratio, self.sr)
+        logger.info("auto_optimieren (FundamentalDetection): HF-Verhaeltnis=%.3f → sr=%s", hf_ratio, self.sr)

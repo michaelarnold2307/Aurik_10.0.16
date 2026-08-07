@@ -112,7 +112,7 @@ class TestFileImportZeroLag:
         from backend.file_import import load_audio_file
 
         result = load_audio_file(str(filename), target_sr=SR)
-        audio_out = np.asarray(result["audio"], dtype=np.float32)
+        audio_out = np.asarray(result["audio"], dtype=np.float32)  # type: ignore[index]
 
         # Kein NaN/Inf
         assert np.all(np.isfinite(audio_out)), "Import produziert NaN/Inf"

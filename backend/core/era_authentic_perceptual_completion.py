@@ -154,7 +154,7 @@ class EraAuthenticPerceptualCompletion:
                         _pad = int(mono.shape[-1] - anchor_mono.shape[-1])
                         anchor_mono = np.pad(anchor_mono, (0, _pad), mode="edge")
             except Exception as exc:
-                logger.debug("EAPC Anchor-Normalisierung fehlgeschlagen (non-blocking): %s", exc)
+                logger.debug("EAPC Anchor-Normalisierung fehlgeschlagen (nicht blockierend): %s", exc)
                 anchor_mono = None
 
         src_bw = self._estimate_bandwidth(mono, sr)
@@ -295,7 +295,7 @@ class EraAuthenticPerceptualCompletion:
                         _guide_alpha = 0.35
                         extended_mag[_hf_idx] = (1.0 - _guide_alpha) * extended_mag[_hf_idx] + _guide_alpha * _target
             except Exception as exc:
-                logger.debug("EAPC Anchor-Guidance fehlgeschlagen (non-blocking): %s", exc)
+                logger.debug("EAPC Anchor-Guidance fehlgeschlagen (nicht blockierend): %s", exc)
 
         # Phase beibehalten (PGHI-Naherung)
         new_spec = extended_mag * np.exp(1j * phase)

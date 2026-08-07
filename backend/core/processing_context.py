@@ -203,7 +203,7 @@ class ProcessingContext:
 
         # Logger
         self.logger = logging.getLogger(__name__)
-        logger.info("ProcessingContext initialized: %s", session_id)
+        logger.info("ProcessingContext initialisiert: %s", session_id)
 
     # === Core State Management ===
 
@@ -371,7 +371,7 @@ class ProcessingContext:
 
             self._trigger_event("module_failed", {"module": module_name, "error": error})
 
-            logger.error("Module failed: %s - %s", module_name, error)
+            logger.error("Module fehlgeschlagen: %s - %s", module_name, error)
 
     def get_module_info(self, module_name: str) -> ModuleInfo | None:
         """
@@ -414,7 +414,7 @@ class ProcessingContext:
             old_phase = self._phase
             self._phase = phase
             self._trigger_event("phase_changed", {"old_phase": old_phase, "new_phase": phase})
-            logger.info("Phase changed: %s → %s", old_phase.value, phase.value)
+            logger.info("Verarbeitungsschritt changed: %s → %s", old_phase.value, phase.value)
 
     def get_phase(self) -> ProcessingPhase:
         """Gibt zurück: current processing phase."""
@@ -567,7 +567,7 @@ class ProcessingContext:
             with open(save_path, "w") as f:
                 json.dump(summary, f, indent=2)
 
-            logger.info("Context saved: %s", save_path)
+            logger.info("Context gespeichert: %s", save_path)
             return save_path
 
     @classmethod
@@ -629,7 +629,7 @@ class ProcessingContext:
             if self.persistent_storage:
                 self.save()
 
-            logger.info("Session finalized: %s", self.session_id)
+            logger.info("Sitzung finalized: %s", self.session_id)
 
     # === Module Cooperation & Over-Processing Prevention ===
 
@@ -939,7 +939,7 @@ class ContextManager:
             )
             self._contexts[session_id] = context
 
-            logger.info("Context created: %s", session_id)
+            logger.info("Context erstellt: %s", session_id)
             return context
 
     def get_context(self, session_id: str) -> ProcessingContext | None:

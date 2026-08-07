@@ -106,7 +106,7 @@ class Limiter:
         ceiling_lin = 10 ** (self.ceiling_db / 20)
         if maxval > ceiling_lin:
             out = out * (ceiling_lin / maxval)
-        return out.astype(audio.dtype)
+        return out.astype(audio.dtype)  # type: ignore[no-any-return]
 
         # Audit: Contract-Infos loggen (optional)
         import logging

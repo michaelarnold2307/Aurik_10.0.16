@@ -37,7 +37,7 @@ def _to_float(value: Any, default: float = 0.0) -> float:
             return float(default)
         return float(value)
     except Exception as e:
-        logger.warning("innovation_superiority_orchestrator.py::_to_float fallback: %s", e)
+        logger.warning("innovation_superiority_orchestrator.py::_to_float Ersatzpfad: %s", e)
         return float(default)
 
 

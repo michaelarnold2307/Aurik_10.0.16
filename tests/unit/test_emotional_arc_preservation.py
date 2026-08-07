@@ -32,7 +32,7 @@ SR = 48000
 
 def _sine(freq: float, secs: float = 30.0) -> np.ndarray:
     t = np.linspace(0, secs, int(SR * secs), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float32)
+    return np.sin(2 * np.pi * freq * t).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(secs: float = 30.0, amp: float = 0.1) -> np.ndarray:
@@ -49,7 +49,7 @@ def _dynamic_signal(secs: float = 60.0) -> np.ndarray:
     n = int(SR * secs)
     t = np.linspace(0, secs, n, endpoint=False)
     envelope = np.linspace(0.1, 1.0, n)
-    return (np.sin(2 * np.pi * 440 * t) * envelope).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * envelope).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -226,13 +226,13 @@ def _crescendo_decrescendo(secs: float = 60.0) -> np.ndarray:
     n = int(SR * secs)
     t = np.linspace(0, secs, n, endpoint=False)
     envelope = np.sin(np.pi * t / secs)  # Spitze in der Mitte
-    return (np.sin(2 * np.pi * 440 * t) * envelope * 0.8).astype(np.float32)
+    return (np.sin(2 * np.pi * 440 * t) * envelope * 0.8).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _flatten_dynamics(audio: np.ndarray, factor: float = 0.4) -> np.ndarray:
     """Simuliert NR-induzierte Dynamik-Abflachung: Amplitude → Mittelwert ziehen."""
     rms = np.sqrt(np.mean(audio**2) + 1e-12)
-    return (audio * (1 - factor) + np.sign(audio) * rms * factor).astype(np.float32)
+    return (audio * (1 - factor) + np.sign(audio) * rms * factor).astype(np.float32)  # type: ignore[no-any-return]
 
 
 class TestCorrectArc:

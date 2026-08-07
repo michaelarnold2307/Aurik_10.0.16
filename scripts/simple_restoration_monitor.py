@@ -81,13 +81,13 @@ class SimpleRestorationMonitor:
             return False
         return True
 
-    def start(self) -> int:
+    def start(self) -> int:  # type: ignore[return]
         """Startet Monitor und Frontend."""
         logger.info("=" * 100)
         logger.info("AURIK 9 — VEREINFACHTER RESTAURIERUNGS-MONITOR")
         logger.info("=" * 100)
         logger.info(f"Audio:    {self.audio_path}")
-        logger.info("Mode:     Restoration (Standard)")
+        logger.info("Betriebsart:     Restoration (Standard)")
         logger.info(f"Headless: {self.headless}")
         logger.info("")
 
@@ -118,29 +118,29 @@ class SimpleRestorationMonitor:
         pre_existing_gui_pid = self._find_running_gui_pid()
 
         try:
-            self.gui_process = subprocess.Popen(
+            self.gui_process = subprocess.Popen(  # type: ignore[assignment]
                 ["bash", str(gui_script)],
                 cwd=str(_WORKSPACE_ROOT),
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
-            logger.info(f"✓ Frontend gestartet (PID: {self.gui_process.pid})")
+            logger.info(f"✓ Frontend gestartet (PID: {self.gui_process.pid})")  # type: ignore[attr-defined]
 
             # In VS Code detached run_aurik.sh exits immediately after writing the real GUI PID.
             # Wait briefly for the pid file and switch monitoring to the actual GUI process.
             for _ in range(20):
-                if self.gui_process.poll() is None:
+                if self.gui_process.poll() is None:  # type: ignore[attr-defined]
                     break
                 time.sleep(0.1)
 
             pid_file_mtime_after = pid_file.stat().st_mtime if pid_file.exists() else None
             post_launch_gui_pid = self._find_running_gui_pid()
-            if self.gui_process.poll() is not None and pid_file_mtime_after != pid_file_mtime_before:
+            if self.gui_process.poll() is not None and pid_file_mtime_after != pid_file_mtime_before:  # type: ignore[attr-defined]
                 self.gui_pid = self._read_gui_pid_file()
                 self.gui_pid_owned = self._pid_running(self.gui_pid)
                 if self.gui_pid_owned:
                     logger.info(f"✓ Frontend detached aktiv (GUI-PID: {self.gui_pid})")
-            elif self.gui_process.poll() is not None and self._pid_running(post_launch_gui_pid):
+            elif self.gui_process.poll() is not None and self._pid_running(post_launch_gui_pid):  # type: ignore[attr-defined]
                 self.gui_pid = post_launch_gui_pid
                 self.gui_pid_owned = bool(
                     post_launch_gui_pid is not None and post_launch_gui_pid != pre_existing_gui_pid
@@ -154,11 +154,11 @@ class SimpleRestorationMonitor:
 
     def _start_export_monitor(self) -> None:
         """Startet Export-Monitor im Hintergrund."""
-        logger.info("Starte Export-Monitor...")
+        logger.info("Starte Ausgabe-Monitor...")
         monitor_script = _WORKSPACE_ROOT / "scripts" / "pegelexplosion_monitor.py"
 
         try:
-            self.monitor_process = subprocess.Popen(
+            self.monitor_process = subprocess.Popen(  # type: ignore[assignment]
                 [
                     sys.executable,
                     str(monitor_script),
@@ -173,7 +173,7 @@ class SimpleRestorationMonitor:
                 text=True,
                 bufsize=1,
             )
-            logger.info(f"✓ Export-Monitor gestartet (PID: {self.monitor_process.pid})")
+            logger.info(f"✓ Ausgabe-Monitor gestartet (PID: {self.monitor_process.pid})")  # type: ignore[attr-defined]
 
             # Output-Streaming in Thread
             Thread(target=self._stream_monitor_output, daemon=True).start()
@@ -190,7 +190,7 @@ class SimpleRestorationMonitor:
                 if line:
                     logger.info(f"[MONITOR] {line.rstrip()}")
         except Exception as e:
-            logger.debug(f"Monitor output stream beendet: {e}")
+            logger.debug(f"Monitor Ausgabe stream beendet: {e}")
 
     def _run_monitoring(self) -> None:
         """Monitoring-Loop."""
@@ -198,7 +198,7 @@ class SimpleRestorationMonitor:
         logger.info("=" * 100)
         logger.info("MONITORING AKTIV — Frontend läuft")
         logger.info("=" * 100)
-        logger.info("Beobachte Export-Verzeichnis auf Pegelexplosionen...")
+        logger.info("Beobachte Ausgabe-Verzeichnis auf Pegelexplosionen...")
         logger.info("Drücke Ctrl+C zum Beenden")
         logger.info("")
 
@@ -240,13 +240,13 @@ class SimpleRestorationMonitor:
         if self.gui_pid_owned and self._pid_running(self.gui_pid):
             try:
                 logger.info("Beende Frontend...")
-                os.kill(self.gui_pid, signal.SIGTERM)
+                os.kill(self.gui_pid, signal.SIGTERM)  # type: ignore[arg-type]
                 for _ in range(50):
                     if not self._pid_running(self.gui_pid):
                         break
                     time.sleep(0.1)
                 if self._pid_running(self.gui_pid):
-                    os.kill(self.gui_pid, signal.SIGKILL)
+                    os.kill(self.gui_pid, signal.SIGKILL)  # type: ignore[arg-type]
                     logger.warning("✗ Frontend force-kill")
                 else:
                     logger.info("✓ Frontend beendet")
@@ -267,7 +267,7 @@ class SimpleRestorationMonitor:
         # Monitor
         if self.monitor_process:
             try:
-                logger.info("Beende Export-Monitor...")
+                logger.info("Beende Ausgabe-Monitor...")
                 self.monitor_process.terminate()
                 self.monitor_process.wait(timeout=5)
                 logger.info("✓ Monitor beendet")
@@ -282,7 +282,7 @@ class SimpleRestorationMonitor:
         logger.info("Monitoring beendet")
         logger.info("")
         logger.info("Ergebnisse:")
-        logger.info("  - Audio-Exports:  output_audio/")
+        logger.info("  - Audio-Exports:  Ausgabe_audio/")
         logger.info("  - Analyse-Logs:   *.log")
         logger.info("=" * 100)
         logger.info("")

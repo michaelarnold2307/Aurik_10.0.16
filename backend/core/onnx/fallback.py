@@ -130,7 +130,7 @@ class FallbackManager:
 
         # Log event
         if self.log_fallbacks:
-            logger.warning("Fallback triggered: %s (%s) - %s", model_name, reason.value, error_message)
+            logger.warning("Ersatzpfad triggered: %s (%s) - %s", model_name, reason.value, error_message)
             logger.info("Falling back to PyTorch for %s", model_name)
 
     def record_recovery(self, model_name: str) -> None:
@@ -149,7 +149,7 @@ class FallbackManager:
             self.stats.active_fallbacks = len(self.active_fallbacks)
 
             if self.log_fallbacks:
-                logger.info("✓ Recovery: %s back to ONNX", model_name)
+                logger.info("✓ Wiederherstellung: %s back to ONNX", model_name)
 
     def is_fallback_active(self, model_name: str) -> bool:
         """
@@ -201,7 +201,7 @@ class FallbackManager:
             return True
 
         except Exception as e:
-            logger.warning("Health check failed for %s: %s", model_name, e)
+            logger.warning("Health Pruefung fehlgeschlagen for %s: %s", model_name, e)
 
             # Record fallback if not already active
             if model_name not in self.active_fallbacks:
@@ -243,7 +243,7 @@ class FallbackManager:
     def print_summary(self) -> None:
         """Gibt aus: fallback summary."""
         logger.debug("\n" + "=" * 60)
-        logger.debug("FALLBACK MANAGER SUMMARY")
+        logger.debug("Ersatzpfad MANAGER SUMMARY")
         logger.debug("=" * 60)
 
         logger.debug("Total Fallbacks: %s", self.stats.total_fallbacks)
@@ -348,7 +348,7 @@ class ONNXModelWithFallback:
 
         except Exception as e:
             # Fallback to PyTorch
-            logger.warning("ONNX inference failed for %s: %s", self.name, e)
+            logger.warning("ONNX inference fehlgeschlagen for %s: %s", self.name, e)
             self.fallback_manager.record_fallback(
                 model_name=self.name, reason=FallbackReason.INFERENCE_ERROR, error_message=str(e)
             )

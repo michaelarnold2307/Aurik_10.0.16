@@ -262,7 +262,7 @@ def detect_dolby_encoding(
         )
 
     logger.info(
-        "DolbyNR detect: material=%s detected=%s conf=%.2f hf_excess=%.1f dB era=%s",
+        "DolbyNR erkennen: material=%s erkannt=%s conf=%.2f hf_excess=%.1f dB era=%s",
         mat,
         best_type,
         best_conf,

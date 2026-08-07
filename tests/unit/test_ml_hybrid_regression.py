@@ -110,9 +110,9 @@ def _audio_from_result(result) -> np.ndarray:
     if isinstance(result, np.ndarray):
         return result
     if hasattr(result, "audio"):
-        return result.audio
+        return result.audio  # type: ignore[no-any-return]
     if hasattr(result, "processed_audio"):
-        return result.processed_audio
+        return result.processed_audio  # type: ignore[no-any-return]
     raise AttributeError(f"Kein audio-Feld in {type(result)}")
 
 
@@ -120,7 +120,7 @@ def _snr_db(clean: np.ndarray, processed: np.ndarray) -> float:
     """SNR-Verlust in dB (positiv = besser, negativ = Verlust)."""
     clean_p = float(np.mean(clean**2)) + 1e-12
     diff_p = float(np.mean((processed - clean) ** 2)) + 1e-12
-    return 10.0 * np.log10(clean_p / diff_p)
+    return 10.0 * np.log10(clean_p / diff_p)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +160,7 @@ _PHASE_IDS = [
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R01_output_finite(module_name, class_name, audio, kwargs):
     """R-01 — Ausgabe NaN/Inf-frei (§3.1)."""
     cls = _load_phase(module_name, class_name)
@@ -169,7 +169,7 @@ def test_R01_output_finite(module_name, class_name, audio, kwargs):
     assert np.isfinite(out).all(), f"{module_name}: NaN/Inf im Ausgang"
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R02_no_hard_clipping(module_name, class_name, audio, kwargs):
     """R-02 — Kein Hard-Clipping (|audio| ≤ 1.0 + ε)."""
     cls = _load_phase(module_name, class_name)
@@ -178,7 +178,7 @@ def test_R02_no_hard_clipping(module_name, class_name, audio, kwargs):
     assert np.max(np.abs(out)) <= 1.0 + _CLIP_EPS, f"{module_name}: Clipping — max={np.max(np.abs(out)):.4f}"
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R03_shape_preserved(module_name, class_name, audio, kwargs):
     """R-03 — Shape-Erhalt (gleiche Sample-Anzahl)."""
     cls = _load_phase(module_name, class_name)
@@ -192,7 +192,7 @@ def test_R03_shape_preserved(module_name, class_name, audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R04_dsp_fallback_no_crash(module_name, class_name, audio, kwargs):
     """R-04 — Phase funktioniert ohne ML (DSP-Fallback, §3.4)."""
     cls = _load_phase(module_name, class_name)
@@ -209,7 +209,7 @@ def test_R04_dsp_fallback_no_crash(module_name, class_name, audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R05_passthrough_clean_signal(module_name, class_name, audio, kwargs):
     """R-05 — Sauberes Signal (SNR-Verlust ≤ 3 dB) — §8.2 Pass-Through-Invariante."""
     cls = _load_phase(module_name, class_name)
@@ -227,7 +227,7 @@ def test_R05_passthrough_clean_signal(module_name, class_name, audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R06_mono_input(module_name, class_name, _audio, kwargs):
     """R-06a — Mono-Eingang verarbeitet."""
     cls = _load_phase(module_name, class_name)
@@ -236,7 +236,7 @@ def test_R06_mono_input(module_name, class_name, _audio, kwargs):
     assert np.isfinite(out).all()
 
 
-@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R06_stereo_input(module_name, class_name, _audio, kwargs):
     """R-06b — Stereo-Eingang (N, 2) — kein Absturz, Ausgabe endlich."""
     cls = _load_phase(module_name, class_name)
@@ -255,7 +255,7 @@ def test_R06_stereo_input(module_name, class_name, _audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R07_silence_input(module_name, class_name, _audio, kwargs):
     """R-07 — Stille bleibt endlich, kein Absturz (§3.1)."""
     cls = _load_phase(module_name, class_name)
@@ -272,7 +272,7 @@ def test_R07_silence_input(module_name, class_name, _audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,_audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R08_dirac_input(module_name, class_name, _audio, kwargs):
     """R-08 — Dirac-Impuls — kein Absturz, endliche Ausgabe."""
     cls = _load_phase(module_name, class_name)
@@ -286,7 +286,7 @@ def test_R08_dirac_input(module_name, class_name, _audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R09_rt_budget(module_name, class_name, audio, kwargs):
     """R-09 — RT-Budget: Verarbeitung ≤ 5 s für 1 s Audio (§9.5, Desktop-CPU)."""
     cls = _load_phase(module_name, class_name)
@@ -303,7 +303,7 @@ def test_R09_rt_budget(module_name, class_name, audio, kwargs):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)
+@pytest.mark.parametrize("module_name,class_name,audio,kwargs", _HYBRID_PHASES, ids=_PHASE_IDS)  # type: ignore[arg-type]
 def test_R10_phase_result_success(module_name, class_name, audio, kwargs):
     """R-10 — PhaseResult.success = True (keine intern gemeldeten Fehler)."""
     cls = _load_phase(module_name, class_name)

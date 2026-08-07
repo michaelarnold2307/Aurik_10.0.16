@@ -257,7 +257,7 @@ def create_phase_result(
             )
         except Exception as _e:
             logger.debug(
-                "phase_phase_interface: non-critical exception: %s", _e
+                "Verarbeitungsschritt_Verarbeitungsschritt_interface: unkritisch exception: %s", _e
             )  # Fazit-Log ist optional, darf Phase nicht blockieren
 
     return PhaseResult(
@@ -475,7 +475,7 @@ class PhaseInterface(abc.ABC):
                 if isinstance(_rest_ctx, dict) and _rest_ctx.get("_fc_active", False):
                     kwargs["_feedback_chain_pass"] = True
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         try:
             result = self.process(audio, sample_rate, material_type, **kwargs)
         except Exception as exc:
@@ -525,7 +525,7 @@ class PhaseInterface(abc.ABC):
         try:
             _input_rms = float(np.sqrt(np.mean(np.asarray(audio, dtype=np.float32) ** 2)) + 1e-12)
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         if _input_rms is not None:
             # ── Guard 1: Universal RMS-Preservation ─────────────────
@@ -691,7 +691,9 @@ class PhaseInterface(abc.ABC):
                 _n_inf = int(np.sum(np.isinf(_post_audio)))
                 self._logger.warning(
                     "§v10.300 NaN/Inf-Guard: %s Output enthält %d NaN + %d Inf → bereinigt",
-                    phase_id, _n_nan, _n_inf,
+                    phase_id,
+                    _n_nan,
+                    _n_inf,
                 )
                 result.audio = np.nan_to_num(_post_audio, nan=0.0, posinf=0.0, neginf=0.0)
                 result.warnings.append(f"NaN/Inf-Guard: {_n_nan} NaN + {_n_inf} Inf bereinigt")

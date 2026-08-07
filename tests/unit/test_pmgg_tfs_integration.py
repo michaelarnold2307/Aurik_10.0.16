@@ -40,7 +40,7 @@ class _MockPhase:
     def process(self, audio: np.ndarray, **kwargs) -> np.ndarray:
         strength = kwargs.get("strength", 1.0)
         if self._transform is not None:
-            return self._transform(audio, strength)
+            return self._transform(audio, strength)  # type: ignore[no-any-return]
         return audio.copy().astype(np.float32)
 
     def get_metadata(self):

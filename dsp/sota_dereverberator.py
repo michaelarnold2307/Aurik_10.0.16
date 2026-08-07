@@ -46,7 +46,7 @@ class SotaDereverberator:
                 self.conv_tasnet = torch.jit.load(conv_path, map_location="cpu")
                 self.conv_tasnet.eval()
         except ImportError:
-            pass
+            _logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def dereverberate(self, audio: np.ndarray, sr: int) -> np.ndarray:
         """
@@ -76,7 +76,7 @@ class SotaDereverberator:
             if self.conv_tasnet is not None:
                 import torch
 
-                x = torch.from_numpy(audio).float().unsqueeze(0)
+                x = torch.from_numpy(audio).float().unsqueeze(0)  # type: ignore[assignment]
                 with torch.no_grad():
                     out = self.conv_tasnet(x)
                 self._audit_log("success", "Conv-TasNet-Inferenz erfolgreich")

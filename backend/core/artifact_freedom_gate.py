@@ -578,7 +578,7 @@ class ArtifactFreedomGate:
                 if _sharpness_delta > _SHARPNESS_FLAG_ACUM * _adaptive_tol:
                     _rs_penalty -= 0.10
             except Exception as _ex:
-                logger.debug("roughness/sharpness guard failed: %s", _ex)
+                logger.debug("roughness/sharpness guard fehlgeschlagen: %s", _ex)
 
         # Score calculation — §B4 temporal_masking_weight is kept as separate field so
         # that _compute_salience_weight() does not silently overwrite it (bug fix).
@@ -867,7 +867,7 @@ class ArtifactFreedomGate:
                 for art, mw in zip(artifacts, mask_weights):
                     art.temporal_masking_weight = float(mw)
             except Exception as _tm_exc:
-                logger.debug("§B4 temporal-masking (musical_noise) non-blocking: %s", _tm_exc)
+                logger.debug("§B4 temporal-masking (musical_noise) nicht blockierend: %s", _tm_exc)
 
         return artifacts
 
@@ -1230,7 +1230,7 @@ class ArtifactFreedomGate:
                         continue  # near-mono source; processing artifact is inaudible
 
                     logger.debug(
-                        "_detect_phase_cancellation frame=%d orig_compat=%.3f "
+                        "_erkennen_Verarbeitungsschritt_cancellation frame=%d orig_compat=%.3f "
                         "mono_compat=%.3f is_anti=%s delta=%.3f FLAGGED",
                         i,
                         _orig_compat,
@@ -1580,7 +1580,7 @@ class ArtifactFreedomGate:
             roughness = float(am_energy / (_ROUGHNESS_CALIB + 1e-12))
             return max(0.0, min(roughness, 10.0))  # cap at 10 asper
         except Exception as e:
-            logger.warning("artifact_freedom_gate.py::_compute_roughness_zwicker fallback: %s", e)
+            logger.warning("artifact_freedom_gate.py::_berechnen_roughness_zwicker Ersatzpfad: %s", e)
             return 0.0
 
     def _compute_sharpness_bismarck(self, audio: np.ndarray, sr: int) -> float:
@@ -1682,7 +1682,7 @@ class ArtifactFreedomGate:
 
             return max(0.0, min(sharpness, 10.0))  # cap at 10 acum
         except Exception as e:
-            logger.warning("artifact_freedom_gate.py::_g fallback: %s", e)
+            logger.warning("artifact_freedom_gate.py::_g Ersatzpfad: %s", e)
             return 0.0
 
     # ── Salienz-Gewichtung (§2.49) ─────────────────────────────────────────
@@ -1797,7 +1797,7 @@ class ArtifactFreedomGate:
             search = np.concatenate([gcc[n_fft - max_delay :], gcc[: max_delay + 1]])
             return int(np.argmax(np.abs(search))) - max_delay
         except Exception as e:
-            logger.warning("artifact_freedom_gate.py::_estimate_interchannel_lag_samples fallback: %s", e)
+            logger.warning("artifact_freedom_gate.py::_estimate_interchannel_lag_samples Ersatzpfad: %s", e)
             return 0
 
     # ── §2.50 Source Material Baseline ────────────────────────────────────
@@ -1875,8 +1875,8 @@ class ArtifactFreedomGate:
                 if baseline.has_critical_stereo_issue:
                     logger.info(
                         "§2.50 Quellmaterial-Baseline: kritisches Stereo-Feldproblem "
-                        "(ratio=%.2f, mean_compat=%.3f, mean_corr=%.3f, lag=%d, mat=%s) — "
-                        "phase_14/phase_15 werden als Remediation-Phasen aktiviert",
+                        "(Verhaeltnis=%.2f, mean_compat=%.3f, mean_corr=%.3f, lag=%d, mat=%s) — "
+                        "Verarbeitungsschritt_14/Verarbeitungsschritt_15 werden als Remediation-Phasen aktiviert",
                         baseline.phase_cancellation_ratio,
                         baseline.stereo_mono_compat_mean,
                         baseline.stereo_lr_corr_mean,
@@ -1885,7 +1885,7 @@ class ArtifactFreedomGate:
                     )
                 else:
                     logger.debug(
-                        "§2.50 Quellmaterial-Baseline: stereo OK (ratio=%.2f, mean_compat=%.3f, lag=%d, mat=%s)",
+                        "§2.50 Quellmaterial-Baseline: stereo OK (Verhaeltnis=%.2f, mean_compat=%.3f, lag=%d, mat=%s)",
                         baseline.phase_cancellation_ratio,
                         baseline.stereo_mono_compat_mean,
                         baseline.interchannel_lag_samples,

@@ -214,7 +214,7 @@ class MagicRestorePreset:
             if self._user_presets:
                 logger.info("📦 %d User-Presets geladen", len(self._user_presets))
         except Exception as exc:
-            logger.debug("MagicPreset load: %s", exc)
+            logger.debug("MagicPreset laden: %s", exc)
 
     def select(
         self,
@@ -267,7 +267,7 @@ class MagicRestorePreset:
             best = self._self_calibrate_from_defects(best, defect_profile)
 
         logger.info(
-            "🎩 Magic Restore: %s → Preset '%s' (score=%.1f, usage=%d)",
+            "🎩 Magic wiederherstellen: %s → Preset '%s' (Wert=%.1f, usage=%d)",
             f"{material}/{era_val}/{genre}",
             best.name,
             scored[0][0],
@@ -343,7 +343,7 @@ class MagicRestorePreset:
             fpath = _PRESET_DIR / f"{preset.name}.json"
             fpath.write_text(json.dumps(preset.to_dict(), indent=2), encoding="utf-8")
         except Exception as exc:
-            logger.warning("MagicPreset save failed: %s", exc)
+            logger.warning("MagicPreset speichern fehlgeschlagen: %s", exc)
 
     @property
     def all_presets(self) -> list[MagicPreset]:

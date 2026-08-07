@@ -154,13 +154,11 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
             _chain_note = (
                 f"🔗 {_chain_depth}-stufige Transfer-Kette — "
                 "Aurik hat die Restauration an die Mehrfach-Überspielung angepasst."
-                if _chain_depth >= 4 else
-                f"🔗 {_chain_depth}-stufige Transfer-Kette — leichte Anpassung der Restauration."
+                if _chain_depth >= 4
+                else f"🔗 {_chain_depth}-stufige Transfer-Kette — leichte Anpassung der Restauration."
             )
             _depth_label = QtWidgets.QLabel(_chain_note)
-            _depth_label.setStyleSheet(
-                "font-size: 10pt; color: #8894A8; padding: 4px 8px;"
-            )
+            _depth_label.setStyleSheet("font-size: 10pt; color: #8894A8; padding: 4px 8px;")
             _depth_label.setWordWrap(True)
             layout.addWidget(_depth_label)
 
@@ -318,6 +316,37 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
         return widget
 
 
+def interpret_mushra_score(mushra_score: float) -> str:
+    """§v10.207: Laienverständliche Einordnung des MUSHRA-Klangqualitäts-Scores (0-100).
+
+    Skala nach ITU-R BS.1534: 80-100 exzellent, 60-80 gut, 40-60 mittel, <40 schwach.
+    """
+    if mushra_score >= 90:
+        return "🏆 Weltklasse-Klangqualität — auf dem Niveau professioneller Studio-Restaurierung."
+    if mushra_score >= 80:
+        return "✨ Sehr gute Klangqualität — kaum von einer professionellen Restaurierung zu unterscheiden."
+    if mushra_score >= 50:
+        return "🎧 Hörbar verbesserte Klangqualität — die Restaurierung ist deutlich wahrnehmbar."
+    return (
+        "🛡️ Das System ist vorsichtshalber in einen sicheren Checkpoint zurückgekehrt, "
+        "um keine hörbare Verschlechterung zu riskieren."
+    )
+
+
+def interpret_hpi_score(hpi_score: float) -> str:
+    """§v10.207: Laienverständliche Einordnung des HPI (Health/Pipeline-Integrity-Index, 0-1).
+
+    Bildet ab, wie sicher sich die Pipeline bei ihren eigenen Entscheidungen war.
+    """
+    if hpi_score >= 0.85:
+        return "✅ Die Restaurierung wurde mit hoher Sicherheit durchgeführt."
+    if hpi_score >= 0.65:
+        return "👍 Das Ergebnis ist vertrauenswürdig — die Pipeline war sich ihrer Entscheidungen sicher."
+    if hpi_score >= 0.45:
+        return "🤔 Die Pipeline ist an einigen Stellen vorsichtig vorgegangen, um Risiken zu vermeiden."
+    return "🛡️ Die Pipeline lief größtenteils im Schutzmodus, um das Original nicht zu gefährden."
+
+
 def build_results_data(
     *,
     file_name: str = "",
@@ -348,6 +377,8 @@ def build_results_data(
     _reverted = bool((_rmeta.get("do_no_harm") or {}).get("reverted", False))
     _phases = int(_rmeta.get("phases_total", 0))
     _dnh_reason = str((_rmeta.get("do_no_harm") or {}).get("reason", ""))
+    _phases_skipped = getattr(restoration_result, "phases_skipped", None) or []
+    _deferred_phases = getattr(restoration_result, "deferred_phases", None) or []
     return {
         "file_name": file_name,
         "duration_seconds": duration_seconds,
@@ -374,4 +405,11 @@ def build_results_data(
         "joy_index": 0.0,
         "fatigue_index": 0.0,
         "recommendations": [],
+        # §v10.202: Degradations-/Countdown-Transparenz für die GUI
+        "degradation_status": _rmeta.get("degradation_status", ""),
+        "fail_reason": _rmeta.get("fail_reason", ""),
+        "no_effect_phase_count": int(_rmeta.get("no_effect_phase_count", 0)),
+        "residual_audible_defects": int((_rmeta.get("defect_countdown") or {}).get("remaining_audible", 0)),
+        "phases_skipped": len(_phases_skipped),
+        "deferred_phase_count": len(_deferred_phases),
     }

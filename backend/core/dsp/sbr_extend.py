@@ -133,7 +133,7 @@ def _sbr_extend(audio: np.ndarray, sr: int) -> np.ndarray:
         return np.asarray(y, dtype=np.float32)
 
     except Exception as e:
-        logger.warning("sbr_extend.py::_sbr_extend fallback: %s", e)
+        logger.warning("sbr_extend.py::_sbr_extend Ersatzpfad: %s", e)
         return audio
 
 

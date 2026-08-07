@@ -32,7 +32,7 @@ class PerceptualQualityGates:
         # Nur ViSQOL --audio (nicht --speech!) ist erlaubt.
         self.thresholds: dict[str, float] = {"ViSQOL": 3.5}
         self.reprocess_callback = reprocess_callback
-        logger.info("PerceptualQualityGates initialized with thresholds: %s", self.thresholds)
+        logger.info("PerceptualQualityGates initialisiert with thresholds: %s", self.thresholds)
 
     def evaluate(self, metrics: dict[str, float]) -> bool:
         """Evaluiert Metriken gegen Schwellwerte.
@@ -52,7 +52,7 @@ class PerceptualQualityGates:
 
         failed = [k for k, v in metrics_clean.items() if k in self.thresholds and v < self.thresholds[k]]
         if failed:
-            logger.warning("Quality Gate FAILED: %s", failed)
+            logger.warning("Quality Gate fehlgeschlagen: %s", failed)
             self.reprocess_callback()
             return False
         logger.info("Quality Gate PASSED")

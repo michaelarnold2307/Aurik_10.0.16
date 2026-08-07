@@ -11,11 +11,14 @@ abhaengigkeiten: [numpy, onnxruntime]
 ---
 """
 
+import logging
 import os
 
 import numpy as np
 
 from dsp._memory_budget_guard import check_budget
+
+logger = logging.getLogger(__name__)
 
 MODEL_PATH = "../../models/hifi_gan/hifi_gan.onnx"
 
@@ -35,7 +38,7 @@ class SotaSpeechSuperRes:
                 if check_budget("speech_superres_diffwave", 0.2):
                     self.diffwave_session = ort.InferenceSession(diffwave_path, providers=["CPUExecutionProvider"])
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         # HiFi-GAN-ONNX laden
         try:
             import onnxruntime as ort
@@ -45,7 +48,7 @@ class SotaSpeechSuperRes:
                 if check_budget("speech_superres_hifigan", 0.15):
                     self.hifigan_session = ort.InferenceSession(hifigan_path, providers=["CPUExecutionProvider"])
         except ImportError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     def super_resolve(self, audio: np.ndarray, sr: int) -> np.ndarray:
         # Priorität: DiffWave > HiFi-GAN > Fallback

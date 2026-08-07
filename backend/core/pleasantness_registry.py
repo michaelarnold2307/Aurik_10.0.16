@@ -110,11 +110,11 @@ class PleasantnessRegistry:
             with cls._lock:
                 if cls._instance is None:
                     cls._instance = super().__new__(cls)
-                    cls._instance._initialized = False
+                    cls._instance._initialized = False  # type: ignore[has-type]
         return cls._instance
 
     def __init__(self) -> None:
-        if self._initialized:
+        if self._initialized:  # type: ignore[has-type]
             return
         self._initialized = True
         self._rw_lock = threading.RLock()
@@ -162,7 +162,7 @@ class PleasantnessRegistry:
             self._current = pleasantness
             self._best = pleasantness
             self._epoch = 0
-            self._record(0.0, "Baseline", "baseline", pleasantness, label, {"goosebumps": goosebumps})
+            self._record(0.0, "Baseline", "baseline", pleasantness, label, {"goosebumps": goosebumps})  # type: ignore[arg-type]
             logger.info(
                 "Registry: Baseline P=%.3f (%s) | Target P=%.3f | Goosebumps=%.3f",
                 pleasantness,
@@ -240,7 +240,7 @@ class PleasantnessRegistry:
                 try:
                     cb(snap)
                 except Exception as e:
-                    logger.warning("pleasantness_registry.py::report_post fallback: %s", e)
+                    logger.warning("pleasantness_registry.py::report_post Ersatzpfad: %s", e)
 
             return snap
 
@@ -292,7 +292,7 @@ class PleasantnessRegistry:
             self._inviting_issues = issues
             if not passed:
                 logger.warning(
-                    "Registry: Einladender-Klang-Check NICHT BESTANDEN: %s",
+                    "Registry: Einladender-Klang-Pruefung NICHT BESTANDEN: %s",
                     "; ".join(issues),
                 )
 
@@ -327,7 +327,7 @@ class PleasantnessRegistry:
             self._steering_active = False
             self._inviting_passed = True
             self._inviting_issues.clear()
-            logger.info("Registry: Reset — bereit für neue Pipeline.")
+            logger.info("Registry: zurueckgesetzt — bereit für neue Pipeline.")
 
     def current_pleasantness(self) -> float:
         """Gibt die aktuelle Pleasantness zurück (lock-frei für schnelle Reads)."""

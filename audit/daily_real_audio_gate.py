@@ -36,7 +36,7 @@ def _safe_int(value: Any, default: int = 0) -> int:
     try:
         return int(value)
     except Exception:
-        logger.warning("daily_real_audio_gate.py::_safe_int fallback", exc_info=True)
+        logger.warning("daily_real_audio_gate.py::_safe_int Ersatzpfad", exc_info=True)
         return default
 
 
@@ -47,15 +47,15 @@ def _safe_ts(value: Any) -> datetime:
     try:
         return datetime.fromisoformat(text.replace("Z", "+00:00"))
     except Exception:
-        logger.warning("daily_real_audio_gate.py::_safe_ts fallback", exc_info=True)
+        logger.warning("daily_real_audio_gate.py::_safe_ts Ersatzpfad", exc_info=True)
         return datetime.min
 
 
 def _load_json(path: Path) -> dict[str, Any] | None:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
     except Exception as exc:
-        logger.debug("skip unreadable UAT result file %s: %s", path, exc)
+        logger.debug("ueberspringen unreadable UAT Ergebnis file %s: %s", path, exc)
         return None
 
 
@@ -92,9 +92,9 @@ def build_daily_points(runs: list[tuple[Path, dict[str, Any]]]) -> list[DailyGat
     points: list[DailyGatePoint] = []
     for source_path, payload in runs:
         summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
-        gates_passed = _safe_int(summary.get("gates_passed", 0), 0)
-        gates_total = _safe_int(summary.get("gates_total", 0), 0)
-        recommendation = str(summary.get("recommendation", "UNKNOWN") or "UNKNOWN")
+        gates_passed = _safe_int(summary.get("gates_passed", 0), 0)  # type: ignore[union-attr]
+        gates_total = _safe_int(summary.get("gates_total", 0), 0)  # type: ignore[union-attr]
+        recommendation = str(summary.get("recommendation", "UNKNOWN") or "UNKNOWN")  # type: ignore[union-attr]
 
         r_passed, r_total = _extract_r5_r12_pass_counts(payload)
         rate = (float(r_passed) / float(r_total)) if r_total > 0 else 0.0
@@ -184,8 +184,8 @@ def _markdown_from_status(status: dict[str, Any]) -> str:
                 f"- Date: {latest.get('date', '')}",
                 f"- Source: {latest.get('source_file', '')}",
                 f"- Recommendation: {latest.get('recommendation', 'UNKNOWN')}",
-                f"- Gates: {_safe_int(gates.get('passed', 0))}/{_safe_int(gates.get('total', 0))}",
-                f"- R5-R12: {_safe_int(rset.get('passed', 0))}/{_safe_int(rset.get('total', 0))}",
+                f"- Gates: {_safe_int(gates.get('passed', 0))}/{_safe_int(gates.get('total', 0))}",  # type: ignore[union-attr]
+                f"- R5-R12: {_safe_int(rset.get('passed', 0))}/{_safe_int(rset.get('total', 0))}",  # type: ignore[union-attr]
                 "",
             ]
         )
@@ -200,7 +200,7 @@ def _markdown_from_status(status: dict[str, Any]) -> str:
     )
 
     trend = status.get("trend") if isinstance(status.get("trend"), list) else []
-    for entry in trend:
+    for entry in trend:  # type: ignore[union-attr]
         if not isinstance(entry, dict):
             continue
         lines.append(

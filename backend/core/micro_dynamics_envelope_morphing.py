@@ -122,7 +122,7 @@ class MicroDynamicsEnvelopeMorphing:
                     for _fi in range(max(0, _f_start), _f_end):
                         _stressed_frames.add(_fi)
             except Exception as _sv_exc:
-                logger.debug("MDEM stressed_vowel_segments failed: %s", _sv_exc)
+                logger.debug("MDEM stressed_vowel_segments fehlgeschlagen: %s", _sv_exc)
 
         # §Frisson: pre-compute frame set where downward gain is capped at -1.0 LU
         # (Blood & Zatorre 2001: expectation-violation peaks must not be attenuated away).
@@ -141,7 +141,7 @@ class MicroDynamicsEnvelopeMorphing:
                 if _frisson_frame_set:
                     logger.debug("MDEM §Frisson: %d Frames in Schutzzone", len(_frisson_frame_set))
             except Exception as _friz_exc:
-                logger.debug("MDEM Frisson-Frame-Set fehlgeschlagen (non-blocking): %s", _friz_exc)
+                logger.debug("MDEM Frisson-Frame-Set fehlgeschlagen (nicht blockierend): %s", _friz_exc)
                 _frisson_frame_set = set()
 
         res = np.nan_to_num(np.asarray(restored, dtype=np.float32))
@@ -465,7 +465,7 @@ class MicroDynamicsEnvelopeMorphing:
 
         if r < self.PEARSON_TARGET and max_gain < self.MAX_GAIN_LU:
             _retry_gain = min(max(max_gain * 1.5, 4.0), self.MAX_GAIN_LU)  # §2.54: mindestens 4.0, max MAX_GAIN_LU
-            logger.debug("MDEM Retry mit erweitertem MAX_GAIN=%.1f dB (aktuell r=%.3f)", _retry_gain, r)
+            logger.debug("MDEM Wiederholung mit erweitertem MAX_GAIN=%.1f dB (aktuell r=%.3f)", _retry_gain, r)
             # Einmaliger Retry mit erweitertem Gain — kein weiterer rekursiver Aufruf
             out2 = self._morph_internal(res_mono, orig_mono, max_gain=_retry_gain)
             out2 = np.nan_to_num(out2, nan=0.0, posinf=1.0, neginf=-1.0)
@@ -524,7 +524,7 @@ class MicroDynamicsEnvelopeMorphing:
                     _delta,
                 )
             else:
-                logger.info("§8.2 MDEM Micro-Dynamics pearson=%.4f ≥ 0.92 (retry, r_before=%.4f)", r_final, r)
+                logger.info("§8.2 MDEM Micro-Dynamics pearson=%.4f ≥ 0.92 (Wiederholung, r_before=%.4f)", r_final, r)
             return final  # type: ignore[no-any-return]
 
         # §8.2 Observability: log final pearson (universal guarantee ≥ 0.92)

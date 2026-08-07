@@ -28,7 +28,7 @@ def _make_audio(duration_s: float = 2.0, amplitude: float = 0.3) -> np.ndarray:
 
     b, a = butter(4, 8000 / (SR / 2), btype="low")
     filtered = filtfilt(b, a, sig).astype(np.float32)
-    return filtered
+    return filtered  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

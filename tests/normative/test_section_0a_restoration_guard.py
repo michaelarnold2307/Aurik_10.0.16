@@ -168,7 +168,7 @@ def _parse_cause_to_phases_dict(dict_node: ast.Dict) -> dict[str, list[str]]:
             for elt in val_node.elts:
                 if isinstance(elt, ast.Constant) and isinstance(elt.value, str):
                     phases.append(elt.value)
-        result[cause_key] = phases
+        result[cause_key] = phases  # type: ignore[index]
     return result
 
 

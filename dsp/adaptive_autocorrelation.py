@@ -56,7 +56,7 @@ class AdaptiveAutocorrelation:
         result = result[mid : mid + max_lag] if max_lag is not None else result[mid:]
         if self.normalize:
             result = result / np.max(np.abs(result))
-        return result
+        return result  # type: ignore[no-any-return]
 
     def auto_optimize(self, y: np.ndarray) -> None:
         """

@@ -29,7 +29,7 @@ SR = 48000
 def _make_tone(freq: float = 440.0, duration_s: float = 3.0, sr: int = SR) -> np.ndarray:
     """Generate a clean sine tone."""
     t = np.linspace(0, duration_s, int(sr * duration_s), endpoint=False)
-    return np.sin(2 * np.pi * freq * t).astype(np.float64)
+    return np.sin(2 * np.pi * freq * t).astype(np.float64)  # type: ignore[no-any-return]
 
 
 def _make_stereo(mono: np.ndarray) -> np.ndarray:
@@ -43,7 +43,7 @@ def _make_noisy(tone: np.ndarray, snr_db: float = 20.0) -> np.ndarray:
     noise = rng.normal(0, 1, len(tone))
     signal_power = np.mean(tone**2)
     noise_power = signal_power / (10 ** (snr_db / 10))
-    return tone + noise * np.sqrt(noise_power)
+    return tone + noise * np.sqrt(noise_power)  # type: ignore[no-any-return]
 
 
 def _make_transient_signal(sr: int = SR, duration_s: float = 3.0) -> np.ndarray:

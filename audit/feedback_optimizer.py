@@ -60,6 +60,25 @@ def integrate_feedback_in_policy(suggestions, policy_path="policy/policy_engine.
             print(f"- {s}")
 
 
+def optimize_feedback(feedback_data: dict | None = None) -> dict:
+    """Composite-Einstiegspunkt für `PolicyEngine.integrate_feedback()`.
+
+    Verkettet die drei Einzelschritte dieses Moduls (Audit-Log analysieren →
+    Vorschläge generieren → in Policy-Engine integrieren). ``feedback_data``
+    wird zusätzlich zum Audit-Log-basierten Kern-Feedback im Ergebnis-Dict
+    zurückgegeben (z. B. für externe Nutzerbewertungen des Aufrufers).
+    """
+    audit_data = analyze_audit_log()
+    suggestions = generate_feedback_report(audit_data)
+    integrate_feedback_in_policy(suggestions)
+    return {
+        "status": "ok" if audit_data else "no_audit_data",
+        "n_entries": len(audit_data),
+        "suggestions": suggestions,
+        "extra_feedback": feedback_data or {},
+    }
+
+
 def main():
     audit_data = analyze_audit_log()
     suggestions = generate_feedback_report(audit_data)

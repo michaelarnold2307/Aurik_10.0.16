@@ -1,0 +1,85 @@
+{
+  "advisory_reasons": [],
+  "autonomy": {
+    "allowed_user_decisions": [
+      "mode_selection"
+    ],
+    "manual_action_required": false,
+    "runtime_user_prompts": false,
+    "strict_mode_available": true
+  },
+  "blocking_reasons": [],
+  "corpus": {
+    "audio_entries": 72,
+    "conditions": {
+      "clean": 18,
+      "damaged": 36,
+      "unknown": 18
+    },
+    "entries_total": 72,
+    "exists": true,
+    "files_missing_count": 0,
+    "files_present": 72,
+    "malformed_manifest_count": 0,
+    "malformed_manifests": [],
+    "manifest_count": 6,
+    "materials_with_entries": [
+      "cassette",
+      "digital",
+      "reel_tape",
+      "shellac",
+      "tape",
+      "vinyl"
+    ],
+    "materials_with_entries_count": 6,
+    "missing_attribution_count": 0,
+    "missing_files": [],
+    "missing_license_count": 0,
+    "ready": true,
+    "root": "corpus",
+    "synthetic_entries": 72,
+    "thresholds": {
+      "min_entries": 20,
+      "min_materials": 4,
+      "min_vocal_entries": 1
+    },
+    "vocal_entries": 27
+  },
+  "generated_at": "2026-08-04T16:28:30.092916+00:00",
+  "mushra_calibration": {
+    "artifact": "/home/michael/.aurik/mushra_calibration.json",
+    "calibration_stage": 3,
+    "candidate_paths": [
+      "/home/michael/.aurik/mushra_calibration.json",
+      "reports/mushra_calibration.json",
+      "reports/mushra_calibration_v2.json"
+    ],
+    "confidence": 0.82,
+    "ready": true,
+    "status": "ready",
+    "weights_count": 26
+  },
+  "next_automated_actions": [],
+  "quality_benchmark": {
+    "aggregate": {
+      "avg_lsd": 3.44,
+      "avg_si_sdr_db": 10.68,
+      "avg_si_sdr_vs_baseline": -89.32,
+      "avg_snr_db": 12.69,
+      "avg_snr_vs_baseline": -87.31,
+      "files_better_than_baseline": 0
+    },
+    "aurik_pipeline_fallbacks": 0,
+    "aurik_pipeline_ok": 72,
+    "coverage_ratio": 1.0,
+    "files_failed": 0,
+    "files_ok": 72,
+    "files_total": 72,
+    "has_pipeline_telemetry": true,
+    "latest_report": "benchmarks/quality/results/benchmark_20260804_182723.json",
+    "ready": true,
+    "results_dir": "benchmarks/quality/results",
+    "status": "ready"
+  },
+  "status": "ready"
+}

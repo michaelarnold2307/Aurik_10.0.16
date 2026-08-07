@@ -145,7 +145,7 @@ def _estimate_interchannel_lag_samples(audio: np.ndarray, sr: int, max_seconds: 
             return 0  # Disagreement — neither estimator can be trusted
         return _gcc_lag
     except Exception:
-        logger.warning("file_import.py::_estimate_interchannel_lag_samples fallback", exc_info=True)
+        logger.warning("file_import.py::_estimate_interchannel_lag_samples Ersatzpfad", exc_info=True)
         return 0
 
 
@@ -384,9 +384,9 @@ def load_audio_file(
             try:
                 sf.info(filepath)
                 _sf_unsupported = False
-                logger.debug("load_audio_file: soundfile capability probe passed for %s", _ext)
+                logger.debug("laden_audio_file: soundfile capability probe passed for %s", _ext)
             except Exception:
-                logger.warning("file_import.py::load_audio_file fallback", exc_info=True)
+                logger.warning("file_import.py::laden_audio_file Ersatzpfad", exc_info=True)
 
         # ── Metadata ─────────────────────────────────────────────────────────
         # soundfile.info() is fast and reliable for lossless formats.
@@ -401,7 +401,7 @@ def load_audio_file(
                 _extra_info = getattr(_info, "extra_info", "") or ""
                 result["meta"] = {"extra_info": str(_extra_info)} if _extra_info else {}
             except Exception as _meta_exc:
-                logger.debug("load_audio_file: sf.info metadata failed (%s) — using extension", _meta_exc)
+                logger.debug("laden_audio_file: sf.info metadata fehlgeschlagen (%s) — using extension", _meta_exc)
                 result["format"] = _ext[1:].upper()
         else:
             result["format"] = _ext[1:].upper()
@@ -415,9 +415,9 @@ def load_audio_file(
             # Stufe 1: soundfile — WAV, FLAC, OGG, AIFF, ALAC, CAF …
             try:
                 audio, sr = _load_with_sf(filepath, always_2d=False)
-                logger.debug("load_audio_file: soundfile OK (%s)", filepath)
+                logger.debug("laden_audio_file: soundfile OK (%s)", filepath)
             except Exception as _e1:
-                logger.debug("load_audio_file: soundfile failed (%s) — trying pedalboard", _e1)
+                logger.debug("laden_audio_file: soundfile fehlgeschlagen (%s) — trying pedalboard", _e1)
 
         if audio is None and _sf_unsupported:
             # Stufe 2 (lossy primary): pedalboard/FFmpeg — stabiler als pydub für in-process.
@@ -444,10 +444,11 @@ def load_audio_file(
                 if _raw.ndim == 2:
                     _raw = _raw.T
                 audio = _raw.astype(np.float32)
-                logger.debug("load_audio_file: pedalboard/FFmpeg OK for lossy (%s)", filepath)
+                logger.debug("laden_audio_file: pedalboard/FFmpeg OK for lossy (%s)", filepath)
             except Exception as _e_pb_lossy:
                 logger.debug(
-                    "load_audio_file: pedalboard failed for lossy (%s) — pydub subprocess fallback", _e_pb_lossy
+                    "laden_audio_file: pedalboard fehlgeschlagen for lossy (%s) — pydub subprocess Ersatzpfad",
+                    _e_pb_lossy,
                 )
 
         if audio is None and _sf_unsupported:
@@ -492,7 +493,7 @@ def load_audio_file(
                     _d = json.loads(_proc.stdout.strip())
                     audio = np.load(_tmp.name).astype(np.float32)
                     sr = int(_d["sr"])
-                    logger.debug("load_audio_file: pydub subprocess OK (%s)", filepath)
+                    logger.debug("laden_audio_file: pydub subprocess OK (%s)", filepath)
                 else:
                     raise RuntimeError(_proc.stderr[:500] or f"returncode={_proc.returncode}")
             except Exception as _e2:
@@ -502,7 +503,7 @@ def load_audio_file(
                 try:
                     os.unlink(_tmp.name)
                 except Exception:
-                    logger.warning("file_import.py::unknown fallback", exc_info=True)
+                    logger.warning("file_import.py::unknown Ersatzpfad", exc_info=True)
 
         if audio is None and not _sf_unsupported:
             # Stufe 2/3: pedalboard (FFmpeg backend) — preferred for lossless fallback,
@@ -527,7 +528,7 @@ def load_audio_file(
                 if _raw.ndim == 2:
                     _raw = _raw.T
                 audio = _raw.astype(np.float32)
-                logger.debug("load_audio_file: pedalboard/FFmpeg OK (%s)", filepath)
+                logger.debug("laden_audio_file: pedalboard/FFmpeg OK (%s)", filepath)
             except Exception as _e3:
                 result["error"] = f"Audio read error: soundfile + pedalboard failed. Last: {_e3}"
                 return result
@@ -548,7 +549,7 @@ def load_audio_file(
         if audio_work.ndim == 2 and audio_work.shape[-1] > 2:
             n_ch = audio_work.shape[-1]
             logger.warning(
-                "load_audio_file: %d Kanäle erkannt (nur Mono/Stereo unterstützt) — "
+                "laden_audio_file: %d Kanäle erkannt (nur Mono/Stereo unterstützt) — "
                 "Downmix auf Stereo L/R (Energie-gewichtet).",
                 n_ch,
             )
@@ -568,7 +569,7 @@ def load_audio_file(
                 # 3 o.ä. → Mono-Downmix
                 audio_work = np.average(audio_work, axis=-1, weights=_weights).astype(np.float32)
             logger.info(
-                "load_audio_file: Downmix %d→%d-Kanal abgeschlossen.",
+                "laden_audio_file: Downmix %d→%d-Kanal abgeschlossen.",
                 n_ch,
                 1 if audio_work.ndim == 1 else audio_work.shape[-1],
             )
@@ -632,12 +633,12 @@ def load_audio_file(
                     audio_work = np.asarray(np.clip(audio_work, -1.0, 1.0), dtype=np.float32)
                     _import_lag_after = _estimate_interchannel_lag_samples(audio_work, sr)
                     logger.info(
-                        "load_audio_file: import lag corrected %d -> %d samples",
+                        "laden_audio_file: import lag corrected %d -> %d samples",
                         _import_lag_before,
                         _import_lag_after,
                     )
                 except Exception as _lag_fix_exc:
-                    logger.debug("load_audio_file: import lag correction skipped: %s", _lag_fix_exc)
+                    logger.debug("laden_audio_file: import lag correction uebersprungen: %s", _lag_fix_exc)
 
         result["audio"] = audio_work
         result["sr"] = sr

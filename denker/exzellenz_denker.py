@@ -30,8 +30,8 @@ try:
         UnifiedVocalAIEnhancer,
     )
 except Exception:  # ImportError, AttributeError, etc.
-    UnifiedVocalAIEnhancer = None  # type: ignore[assignment]
-    EmotionPreservationMode = None  # type: ignore[assignment]
+    UnifiedVocalAIEnhancer = None  # type: ignore[misc, assignment]
+    EmotionPreservationMode = None  # type: ignore[misc, assignment]
 
 _3X_RT_LIMIT: float = 32.0  # Maximaler RT-Faktor (Spec §9.5)
 
@@ -288,7 +288,7 @@ class ExzellenzDenker:
                 _mert_analysis = _mert.analyze(_mono_mert, sr)
                 versa_mos = float(_mert_analysis.naturalness_score) * 5.0  # MERT [0,1] → MOS-Skala
                 logger.info(
-                    "ExzellenzDenker MERT-Proxy MOS=%.3f (VERSA unavailable, §2.44 fallback)",
+                    "ExzellenzDenker MERT-Proxy MOS=%.3f (VERSA nicht verfuegbar, §2.44 Ersatzpfad)",
                     versa_mos,
                 )
                 _metadata["mert_proxy_used"] = True  # §2.44 VERBOTEN-Invariante
@@ -496,7 +496,7 @@ class ExzellenzDenker:
                     raw = _fut_mz.result(timeout=120.0)
                 except _cf_mz.TimeoutError:
                     logger.warning(
-                        "ExzellenzDenker: messe_ziele() Timeout (120 s) — "
+                        "ExzellenzDenker: messe_ziele() Zeitlimit (120 s) — "
                         "leeres Dict zurückgegeben (Goal-Messung abgebrochen)"
                     )
                     return {}
@@ -508,7 +508,7 @@ class ExzellenzDenker:
 
     def _get_surgical_zones(self, ctx: dict) -> list:
         """§2.59: Bereits chirurgisch behandelte Zonen — nicht erneut anfassen."""
-        return ctx.get("surgical_defect_types", [])
+        return ctx.get("surgical_defect_types", [])  # type: ignore[no-any-return]
 
     def messe_und_repariere(
         self,
@@ -707,8 +707,11 @@ class ExzellenzDenker:
         def _prune_stalled(_violations: set[str]) -> set[str]:
             _stalled = {k for k, c in _goal_stall_count.items() if c >= _STALL_LIMIT}
             if _stalled:
-                logger.info("ExzellenzDenker: %d Goals inapplicable (3× stagniert): %s",
-                            len(_stalled), ", ".join(sorted(_stalled)))
+                logger.info(
+                    "ExzellenzDenker: %d Goals inapplicable (3× stagniert): %s",
+                    len(_stalled),
+                    ", ".join(sorted(_stalled)),
+                )
             return _violations - _stalled
 
         # P3-P5 violations with meaningful deficit (avoids micro-adjustments on borderline goals)
@@ -748,7 +751,7 @@ class ExzellenzDenker:
         _best_goals: dict[str, float] = dict(goals_initial)
         _best_passed: int = _passed_initial
 
-        def _is_improvement(candidate_goals: dict[str, float]) -> bool:
+        def _is_improvement(candidate_goals: dict[str, float]) -> bool:  # type: ignore[return]
             """Accept if net improvement OR no goal regresses beyond tolerance (§v10.306 recalibrated).
 
             §v10.306: Vorher _max_drop=0.01/0.015/0.02 war innerhalb Messrauschen
@@ -892,7 +895,7 @@ class ExzellenzDenker:
         if _needs_p12_blend and _repair_attempts < _MAX_REPAIR_ATTEMPTS:
             _repair_attempts += 1
             try:
-                _ref_f32_p12 = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+                _ref_f32_p12 = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[union-attr]
                 for _alpha_p12 in (0.98, 0.96):
                     _p12_blended = np.clip(
                         _alpha_p12 * _best_audio + (1.0 - _alpha_p12) * _ref_f32_p12,
@@ -938,7 +941,7 @@ class ExzellenzDenker:
                     and float(_best_goals.get(_g, 1.0)) < float(_thresholds.get(_g, _FALLBACK_MIN))
                 }
                 if _rescue_targets:
-                    _ref_f32_local = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+                    _ref_f32_local = np.nan_to_num(reference_audio.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)  # type: ignore[union-attr]
                     _best_local_def = _deficit_sum(_best_goals, focus=frozenset(_rescue_targets))
                     _waerme_focus = "waerme" in _rescue_targets
                     _spa_now = float(_best_goals.get("spatial_depth", 1.0))

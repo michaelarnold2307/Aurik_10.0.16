@@ -360,6 +360,11 @@ ignore_errors = true
 module = "backend.core.phases.phase_19_de_esser"
 disable_error_code = ["override"]
 
+# Workaround für mypy 2.1.0 crash bei _pytest.nodes.Directory (mypy-Bug)
+[[tool.mypy.overrides]]
+module = "tests.unit.test_defect_detection_quality_gate"
+ignore_errors = true
+
 # =============================================================================
 # PYLINT — Erweiterte statische Analyse
 # =============================================================================

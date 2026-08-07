@@ -111,7 +111,7 @@ class TestDetectProductionSignature:
 
     def _make_sine(self, freq: float = 440.0, duration: float = 5.0, sr: int = 48000) -> np.ndarray:
         t = np.linspace(0, duration, int(duration * sr), dtype=np.float32)
-        return (np.sin(2 * np.pi * freq * t) * 0.3).astype(np.float32)
+        return (np.sin(2 * np.pi * freq * t) * 0.3).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_returns_production_signature(self) -> None:
         from backend.core.recording_production_kb import detect_production_signature
@@ -316,7 +316,7 @@ class TestClassifySingerSchool:
             "vibrato_zones": [],
         }
         defaults.update(kwargs)
-        return VFAResult(**defaults)
+        return VFAResult(**defaults)  # type: ignore[arg-type]
 
     def test_classical_profile(self) -> None:
         from backend.core.vocal_focus_analyzer import VocalFocusAnalyzer

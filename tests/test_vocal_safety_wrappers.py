@@ -146,7 +146,7 @@ def dummy_deesser(audio: np.ndarray, sr: int, profile: str = "female", depth_db:
     lows = audio - highs
     result = lows + attenuated_highs
 
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def dummy_declipper(audio: np.ndarray, sr: int, severity: float = 0.5) -> np.ndarray:

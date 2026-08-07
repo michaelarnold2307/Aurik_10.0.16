@@ -38,7 +38,7 @@ def run_audit():
         for k in path:
             if not isinstance(cur, dict):
                 return default
-            cur = cur.get(k)
+            cur = cur.get(k)  # type: ignore[assignment]
             if cur is None:
                 return default
         return cur

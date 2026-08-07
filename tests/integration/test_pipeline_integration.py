@@ -467,7 +467,7 @@ class TestSongCalibrationIntegration:
 
         profile = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=None,
-            mode=QualityMode.BALANCED,
+            mode=QualityMode.BALANCED,  # type: ignore[arg-type]
             restorability_score=70.0,
             input_snr_db=25.0,
             max_defect_severity=0.3,
@@ -498,7 +498,7 @@ class TestSongCalibrationIntegration:
 
         profile = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=None,
-            mode=QualityMode.BALANCED,
+            mode=QualityMode.BALANCED,  # type: ignore[arg-type]
             restorability_score=50.0,
             input_snr_db=15.0,
             max_defect_severity=0.6,
@@ -526,8 +526,8 @@ class TestSongCalibrationIntegration:
             "pipeline_confidence": 0.85,
             "era_decade": 1975,
         }
-        p1 = UnifiedRestorerV3._build_song_calibration_profile(**kwargs)
-        p2 = UnifiedRestorerV3._build_song_calibration_profile(**kwargs)
+        p1 = UnifiedRestorerV3._build_song_calibration_profile(**kwargs)  # type: ignore[arg-type]
+        p2 = UnifiedRestorerV3._build_song_calibration_profile(**kwargs)  # type: ignore[arg-type]
 
         assert p1["global_scalar"] == p2["global_scalar"]
         for fam in p1["family_scalars"]:
@@ -549,11 +549,11 @@ class TestSongCalibrationIntegration:
         }
         p_shellac = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=MaterialType.SHELLAC,
-            **base,
+            **base,  # type: ignore[arg-type]
         )
         p_cd = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=MaterialType.CD_DIGITAL,
-            **base,
+            **base,  # type: ignore[arg-type]
         )
 
         # Different materials should produce different scalars
@@ -581,11 +581,11 @@ class TestSongCalibrationIntegration:
 
         profile_material_only = UnifiedRestorerV3._build_song_calibration_profile(
             transfer_chain=None,
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
         profile_with_chain = UnifiedRestorerV3._build_song_calibration_profile(
             transfer_chain=["vinyl", "tape", "mp3_low"],
-            **kwargs,
+            **kwargs,  # type: ignore[arg-type]
         )
 
         assert (
@@ -1176,7 +1176,7 @@ class TestCrossModuleDataFlow:
 
         profile = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=defect_result.material_type,
-            mode=QualityMode.BALANCED,
+            mode=QualityMode.BALANCED,  # type: ignore[arg-type]
             restorability_score=rest_result.restorability_score,
             input_snr_db=rest_result.snr_db,
             max_defect_severity=max_sev,
@@ -1248,7 +1248,7 @@ class TestCrossModuleDataFlow:
 
         profile = UnifiedRestorerV3._build_song_calibration_profile(
             material_type=defect_result.material_type,
-            mode=QualityMode.BALANCED,
+            mode=QualityMode.BALANCED,  # type: ignore[arg-type]
             restorability_score=65.0,
             input_snr_db=20.0,
             max_defect_severity=0.4,

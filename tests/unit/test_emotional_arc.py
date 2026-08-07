@@ -18,7 +18,7 @@ np.random.seed(42)
 
 def _audio(dur: float = 5.0, amp: float = 0.3, freq: float = 440.0) -> np.ndarray:
     t = np.linspace(0, dur, int(dur * SR), endpoint=False)
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(dur: float = 5.0) -> np.ndarray:
@@ -31,7 +31,7 @@ def _dynamic_audio(dur: float = 40.0) -> np.ndarray:
     t = np.linspace(0, dur, n, endpoint=False)
     envelope = np.sin(np.pi * t / dur)  # Peaking in the middle
     signal = np.sin(2 * np.pi * 440 * t).astype(np.float32)
-    return (signal * envelope * 0.8).astype(np.float32)
+    return (signal * envelope * 0.8).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ─── Tests ────────────────────────────────────────────────────────────────────

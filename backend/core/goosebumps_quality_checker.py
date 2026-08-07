@@ -598,7 +598,7 @@ def _measure_artifact_penalty(original: np.ndarray, restored: np.ndarray, sr: in
         residual_ratio = residual_energy / original_energy
         residual_score = min(1.0, residual_ratio * 5.0)  # 20% added energy = max penalty
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     # Combined penalty (weighted)
     penalty = 0.35 * pre_echo_score + 0.35 * gap_noise_score + 0.30 * residual_score
@@ -721,7 +721,7 @@ def measure_goosebumps(
         )
 
     except Exception as exc:
-        logger.warning("GoosebumpsQualityChecker failed — returning neutral score: %s", exc)
+        logger.warning("GoosebumpsQualityChecker fehlgeschlagen — returning neutral Wert: %s", exc)
         return GoosebumpsResult(
             goosebumps_score=0.5,
             transient_integrity=0.5,

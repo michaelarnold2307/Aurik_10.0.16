@@ -52,7 +52,7 @@ def _tone(duration_s: float = 8.0, freq: float = 440.0, amp: float = 0.5) -> np.
     """Synthetischer Sinuston, float32, mono, 48 kHz."""
     np.random.seed(42)
     t = np.linspace(0, duration_s, int(duration_s * SR), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(duration_s: float = 8.0, amp: float = 0.1) -> np.ndarray:

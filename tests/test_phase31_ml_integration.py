@@ -67,7 +67,7 @@ def create_test_audio_with_speed_error(
     envelope[-release:] = np.linspace(1, 0, release)
     audio *= envelope
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit

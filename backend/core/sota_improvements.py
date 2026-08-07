@@ -533,7 +533,7 @@ def export_all_formats(
         if target_sr != sr:
             from scipy import signal as scipy_signal
 
-            g = np.gcd(sr, target_sr)
+            g = np.gcd(sr, target_sr)  # type: ignore[call-overload]
             up, down = target_sr // g, sr // g
             audio_out = scipy_signal.resample_poly(arr, up, down, axis=-1)
         else:
@@ -603,7 +603,7 @@ def validate_singer_identity_post_pipeline(
 
         guard = SpeakerIdentityGuard()
         guard.capture_pre_embedding(pre_pipeline_audio, sr)
-        result = guard.check_phase(post_pipeline_audio, sr, "final")
+        result = guard.check_phase(post_pipeline_audio, sr, "final")  # type: ignore[arg-type]
 
         if result is not None and hasattr(result, "cosine_similarity"):
             sim = float(result.cosine_similarity)

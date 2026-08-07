@@ -692,7 +692,7 @@ class GPParameterOptimizer:
         # Embedding-Vektor als Kontextmerkmal loggen (zukünftige GP-Input-Warping-Erweiterung)
         if embedding_vec is not None:
             logger.debug(
-                "propose: embedding_vec shape=%s (Input-Warping reserviert, nicht im GP-Raum)",
+                "propose: embedding_vec shape=%s (Eingabe-Warping reserviert, nicht im GP-Raum)",
                 getattr(embedding_vec, "shape", type(embedding_vec)),
             )
 
@@ -732,7 +732,7 @@ class GPParameterOptimizer:
                             _lo, _hi, _mode = self._space[_era_k]
                             params[_era_k] = float(np.clip(_era_v_f, _lo, _hi))
                     except (TypeError, ValueError) as _exc:
-                        logger.debug("Operation failed (non-critical): %s", _exc)
+                        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
             params = _apply_context_priors(params, self._space, chain_hint=chain_hint, memory_prior=memory_prior)
             self._iterations[material] = it + 1
             return ParameterProposal(
@@ -832,7 +832,7 @@ class GPParameterOptimizer:
         if len(moo_entries) < n_init:
             # ── Fallback: UCB-Diversitätssampling (bisheriges Verhalten) ──
             logger.debug(
-                "propose_pareto: zu wenig MOO-Daten (%d < %d), UCB-Fallback für '%s'",
+                "propose_pareto: zu wenig MOO-Daten (%d < %d), UCB-Ersatzpfad für '%s'",
                 len(moo_entries),
                 n_init,
                 material,
@@ -1081,7 +1081,7 @@ class GPParameterOptimizer:
         # Validierung Gesamt-Score
         score_f = float(score)
         if not math.isfinite(score_f):
-            logger.warning("GP.update: Nicht-finiter Score wird übersprungen")
+            logger.warning("GP.Aktualisierung: Nicht-finiter Wert wird übersprungen")
             return
 
         # Validierung goal_scores
@@ -1109,7 +1109,7 @@ class GPParameterOptimizer:
         _save_memory(material, memory)
 
         logger.debug(
-            "GP-Update: material=%s score=%.4f goals=%d n_memory=%d",
+            "GP-Aktualisierung: material=%s Wert=%.4f goals=%d n_memory=%d",
             material,
             score,
             len(clean_goals),

@@ -76,7 +76,7 @@ class MetaLearner(nn.Module):
             nn.Linear(hidden_dim // 2, output_dim),
         )
 
-        logger.info("MetaLearner initialized: %s base models, %s features", n_base_models, feature_dim)
+        logger.info("MetaLearner initialisiert: %s base models, %s features", n_base_models, feature_dim)
 
     def forward(self, base_predictions: list[torch.Tensor]) -> torch.Tensor:
         """
@@ -122,7 +122,7 @@ class AttentionWeightPredictor(nn.Module):
         # Output projection
         self.output_proj = nn.Linear(attention_dim, 1)
 
-        logger.info("AttentionWeightPredictor initialized: %s members", n_members)
+        logger.info("AttentionWeightPredictor initialisiert: %s members", n_members)
 
     def forward(self, input_features: torch.Tensor) -> torch.Tensor:
         """
@@ -176,7 +176,7 @@ class DynamicEnsembleSelector(nn.Module):
             nn.Sigmoid(),  # Selection probabilities
         )
 
-        logger.info("DynamicEnsembleSelector initialized: top-%s from %s", k_select, n_members)
+        logger.info("DynamicEnsembleSelector initialisiert: top-%s from %s", k_select, n_members)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         """
@@ -233,7 +233,7 @@ class MixtureOfExperts(nn.Module):
         # Load balancing loss weight
         self.load_balance_weight = 0.01
 
-        logger.info("MixtureOfExperts initialized: %s experts, top-%s active", self.n_experts, k_active)
+        logger.info("MixtureOfExperts initialisiert: %s experts, top-%s active", self.n_experts, k_active)
 
     def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         """
@@ -362,7 +362,7 @@ class AdvancedEnsemble:
                 k_active=max(2, len(ensemble_members) // 3),
             ).to(device)
 
-        logger.info("AdvancedEnsemble initialized: strategy=%s, %s members", strategy, len(ensemble_members))
+        logger.info("AdvancedEnsemble initialisiert: strategy=%s, %s members", strategy, len(ensemble_members))
 
     def predict(self, x: torch.Tensor, return_details: bool = False) -> tuple[torch.Tensor, dict[str, Any] | None]:
         """
@@ -525,7 +525,7 @@ class AdvancedEnsemble:
             if epoch % 5 == 0:
                 logger.info("Epoch %s: Train Loss = %.4f, Val Loss = %.4f", epoch, avg_train_loss, avg_val_loss)
 
-        logger.info("Meta-learner training completed!")
+        logger.info("Meta-learner training abgeschlossen!")
 
     def save(self, path: Path) -> None:
         """Speichert ensemble configuration and learned components."""
@@ -552,7 +552,7 @@ class AdvancedEnsemble:
         with open(path, "w") as f:
             json.dump(save_dict, f, indent=2)
 
-        logger.info("Ensemble saved to %s", path)
+        logger.info("Ensemble gespeichert to %s", path)
 
 
 # Example usage

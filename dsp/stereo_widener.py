@@ -96,7 +96,7 @@ class AdaptiveStereoWidener:
         stereo_wide = np.nan_to_num(stereo_wide, nan=0.0, posinf=0.0, neginf=0.0)
         stereo_wide = np.clip(stereo_wide, -1.0, 1.0)
 
-        logger.info("✓ Stereo widening complete")
+        logger.info("✓ Stereo widening vollstaendig")
 
         return stereo_wide
 
@@ -246,13 +246,13 @@ def select_stereo_widening_strategy(context: dict, goal: dict) -> dict:
     """
     # Regel 1: Speech → KEIN Widening
     if context.get("genre") == "speech" or context.get("has_vocals_only", False):
-        logger.info("Stereo Widening SKIPPED: Speech (mono is appropriate)")
-        return None
+        logger.info("Stereo Widening uebersprungen: Speech (mono is appropriate)")
+        return None  # type: ignore[return-value]
 
     # Regel 2: Already Mono → Kein Widening
     if context.get("channels", 2) == 1:
-        logger.info("Stereo Widening SKIPPED: Mono signal")
-        return None
+        logger.info("Stereo Widening uebersprungen: Mono signal")
+        return None  # type: ignore[return-value]
 
     # Regel 3: User wants transparency → Minimales Widening
     if goal.get("priority") == "transparency":

@@ -16,7 +16,7 @@ def _fricative_noise(sr: int = 48000, duration: float = 0.25) -> np.ndarray:
         from scipy.signal import butter, sosfiltfilt
 
         sos = butter(4, 3000.0, btype="highpass", fs=sr, output="sos")
-        return sosfiltfilt(sos, noise).astype(np.float32)
+        return sosfiltfilt(sos, noise).astype(np.float32)  # type: ignore[no-any-return]
     except Exception:
         logger.warning("test fallback", exc_info=True)
         return noise

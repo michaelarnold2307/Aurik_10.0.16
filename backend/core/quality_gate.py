@@ -125,7 +125,7 @@ class QualityGate:
                         )
                         return False
         except Exception as exc:
-            logger.debug("[QualityGate/%s] SNR-Check übersprungen: %s", context, exc)
+            logger.debug("[QualityGate/%s] SNR-Pruefung übersprungen: %s", context, exc)
 
         return True
 
@@ -277,13 +277,13 @@ class QualityGate:
                     limit = self.MUSICAL_GOAL_MIN.get("authentizitaet", 0.88)
                     if math.isfinite(a) and a < limit:
                         logger.warning(
-                            "[QualityGate/ML] authenticity_score %.3f < %.3f – abgelehnt.",
+                            "[QualityGate/ML] authenticity_Wert %.3f < %.3f – abgelehnt.",
                             a,
                             limit,
                         )
                         return False
                 except (TypeError, ValueError) as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             return True
         except Exception:

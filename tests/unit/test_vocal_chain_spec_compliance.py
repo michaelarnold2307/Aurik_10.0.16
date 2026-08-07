@@ -44,7 +44,7 @@ class TestVocalChainSpec10Steps:
             + 0.15 * np.sin(2 * np.pi * 3 * f0 * t)
             + 0.02 * rng.standard_normal(len(t))
         ).astype(np.float32)
-        return np.clip(audio, -1.0, 1.0)
+        return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     # ======================================================================
     # Step 1: GenderDetector
@@ -355,7 +355,7 @@ class TestVocalChainSpec10Steps:
 
         # Spektrale Vergleich
         orig_spec = np.log(np.abs(np.fft.rfft(synthetic_vocal_2s)) + 1e-9)
-        proc_spec = np.log(np.abs(np.fft.rfft(processed)) + 1e-9)
+        proc_spec = np.log(np.abs(np.fft.rfft(processed)) + 1e-9)  # type: ignore[arg-type]
 
         n = min(len(orig_spec), len(proc_spec))
         corr = np.corrcoef(orig_spec[:n], proc_spec[:n])[0, 1]

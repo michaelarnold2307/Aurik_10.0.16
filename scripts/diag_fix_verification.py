@@ -51,7 +51,7 @@ def _make_vinyl_signal(sr: int = 48000, dur: float = 5.0) -> np.ndarray:
         + 0.03 * np.sin(2 * np.pi * 12000 * t)  # HF — soll NICHT als Spike erkannt werden
         + 0.005 * np.random.default_rng(42).normal(size=len(t)).astype(np.float32)
     )
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _make_heavily_denoised_signal(sr: int = 48000, dur: float = 5.0) -> np.ndarray:
@@ -65,7 +65,7 @@ def _make_heavily_denoised_signal(sr: int = 48000, dur: float = 5.0) -> np.ndarr
     amplitude = 10 ** (-52 / 20)
     sig = amplitude * np.sin(2 * np.pi * 440 * t).astype(np.float32)
     sig += 0.2 * amplitude * np.sin(2 * np.pi * 880 * t).astype(np.float32)
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 def _make_bw_limited_signal(sr: int = 48000, dur: float = 5.0) -> np.ndarray:
@@ -80,7 +80,7 @@ def _make_bw_limited_signal(sr: int = 48000, dur: float = 5.0) -> np.ndarray:
         + 0.15 * np.sin(2 * np.pi * 800 * t)
         + 0.05 * np.sin(2 * np.pi * 1500 * t)
     ).astype(np.float32)
-    return np.clip(sig, -1.0, 1.0)
+    return np.clip(sig, -1.0, 1.0)  # type: ignore[no-any-return]
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -114,7 +114,7 @@ def test_fix1_phase29_gated_rms_fallback() -> None:
         class _FakeMat:
             name = "vinyl"
 
-        result, meta = phase._apply_material_loudness_preservation(original, processed, _FakeMat())
+        result, meta = phase._apply_material_loudness_preservation(original, processed, _FakeMat())  # type: ignore[arg-type]
 
         # Messung: RMS des Outputs vs. Inputs
         rms_in = float(np.sqrt(np.mean(original.astype(np.float64) ** 2)))
@@ -280,7 +280,7 @@ def test_fix4_phase23_hf_protected_bins() -> None:
         from backend.core.phases.phase_23_spectral_repair import SpectralRepair
 
         phase = SpectralRepair()
-        phase._current_material = "vinyl"
+        phase._current_material = "vinyl"  # type: ignore[assignment]
 
         nfft = 4096
         n_bins = nfft // 2 + 1

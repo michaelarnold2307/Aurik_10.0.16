@@ -35,27 +35,27 @@ _BASE_KWARGS = {
 
 def _profile(genre_label: str = "") -> dict:
     """Build calibration profile for given genre label with standard parameters."""
-    return UnifiedRestorerV3._build_song_calibration_profile(genre_label=genre_label, **_BASE_KWARGS)
+    return UnifiedRestorerV3._build_song_calibration_profile(genre_label=genre_label, **_BASE_KWARGS)  # type: ignore[arg-type]
 
 
 def _reverb(genre_label: str = "") -> float:
-    return _profile(genre_label)["family_scalars"]["reverb"]
+    return _profile(genre_label)["family_scalars"]["reverb"]  # type: ignore[no-any-return]
 
 
 def _transient(genre_label: str = "") -> float:
-    return _profile(genre_label)["family_scalars"]["transient"]
+    return _profile(genre_label)["family_scalars"]["transient"]  # type: ignore[no-any-return]
 
 
 def _dynamics(genre_label: str = "") -> float:
-    return _profile(genre_label)["family_scalars"]["dynamics_eq"]
+    return _profile(genre_label)["family_scalars"]["dynamics_eq"]  # type: ignore[no-any-return]
 
 
 def _vocal(genre_label: str = "") -> float:
-    return _profile(genre_label)["family_scalars"]["vocal"]
+    return _profile(genre_label)["family_scalars"]["vocal"]  # type: ignore[no-any-return]
 
 
 def _denoise(genre_label: str = "") -> float:
-    return _profile(genre_label)["family_scalars"]["denoise"]
+    return _profile(genre_label)["family_scalars"]["denoise"]  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

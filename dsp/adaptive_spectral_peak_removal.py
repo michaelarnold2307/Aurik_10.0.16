@@ -55,7 +55,7 @@ adaptive_spectral_peak_removal_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Verlust von Details",
             "expected_when": "threshold zu niedrig",
             "severity": 0.2,
@@ -77,10 +77,10 @@ class AdaptiveSpectralPeakRemoval:
         :param threshold: Schwellenwert für Peak-Entfernung (0.1-1.0)
         """
         if not (0.1 <= threshold <= 1.0):
-            logger.error("Ungültiger threshold: %s. Muss zwischen 0.1 und 1.0 liegen.", threshold)
+            logger.error("Ungültiger Schwelle: %s. Muss zwischen 0.1 und 1.0 liegen.", threshold)
             raise ValueError("threshold muss zwischen 0.1 und 1.0 liegen.")
         self.threshold = threshold
-        logger.info("AdaptiveSpectralPeakRemoval initialisiert mit threshold=%s", self.threshold)
+        logger.info("AdaptiveSpectralPeakRemoval initialisiert mit Schwelle=%s", self.threshold)
 
     def log_contract(self):
         """
@@ -113,7 +113,7 @@ class AdaptiveSpectralPeakRemoval:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._remove_classic(spectrum)
                 else:
@@ -121,7 +121,7 @@ class AdaptiveSpectralPeakRemoval:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('spectral_peak_removal.pt')
                     # output = model(torch.from_numpy(spectrum).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._remove_classic(spectrum)
             else:
@@ -134,7 +134,7 @@ class AdaptiveSpectralPeakRemoval:
         if audit_log:
             peak_suppression = float(np.mean(spectrum - output))
             logger.info(
-                f"AdaptiveSpectralPeakRemoval: peak_suppression={peak_suppression:.6f}, fallback_used={fallback_used}, threshold={self.threshold}"
+                f"AdaptiveSpectralPeakRemoval: peak_suppression={peak_suppression:.6f}, Ersatzpfad_used={fallback_used}, Schwelle={self.threshold}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_spectral_peak_removal_contract))
         return output
@@ -158,4 +158,4 @@ class AdaptiveSpectralPeakRemoval:
             self.threshold = 0.6
         else:
             self.threshold = 0.8
-        logger.info("Threshold auto-optimiert auf %s", self.threshold)
+        logger.info("Schwelle auto-optimiert auf %s", self.threshold)

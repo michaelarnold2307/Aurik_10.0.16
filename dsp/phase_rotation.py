@@ -77,7 +77,7 @@ class PhaseRotator:
         # Check if rotation is needed
         if abs(correlation_before - self.target_correlation) < 0.05:
             logger.info(
-                f"[PhaseRotator] Phase correlation already optimal ({correlation_before:.3f}), skipping rotation."
+                f"[PhaseRotator] Verarbeitungsschritt correlation already optimal ({correlation_before:.3f}), skipping rotation."
             )
             return audio, {
                 "skipped": True,
@@ -151,7 +151,7 @@ class PhaseRotator:
         mid_shifted = self._allpass_filter(mid_band, sr, center_freq=1000, strength=1.0 * direction)
         high_shifted = self._allpass_filter(high_band, sr, center_freq=4000, strength=0.6 * direction)
 
-        return low_shifted + mid_shifted + high_shifted
+        return low_shifted + mid_shifted + high_shifted  # type: ignore[no-any-return]
 
     def _extract_band(self, signal: np.ndarray, sr: int, low_freq: float, high_freq: float) -> np.ndarray:
         """Extrahiert frequency band using bandpass filter."""
@@ -163,7 +163,7 @@ class PhaseRotator:
             return np.zeros_like(signal)
 
         sos = butter(4, [low, high], btype="band", output="sos")
-        return sosfilt(sos, signal)
+        return sosfilt(sos, signal)  # type: ignore[no-any-return]
 
     def _allpass_filter(self, signal: np.ndarray, sr: int, center_freq: float, strength: float) -> np.ndarray:
         """
@@ -186,7 +186,7 @@ class PhaseRotator:
         # Apply filter
         filtered = lfilter(b, a_coeff, signal)
 
-        return filtered
+        return filtered  # type: ignore[no-any-return]
 
     def _measure_phase_correlation(self, left: np.ndarray, right: np.ndarray) -> float:
         """

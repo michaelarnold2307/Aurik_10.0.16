@@ -204,7 +204,7 @@ def compute_f0_stats(audio: np.ndarray, sr: int, fmin: float = 50.0, fmax: float
             return {"f0_mean": 0.0, "f0_std": 0.0, "f0_range": 0.0, "voiced_ratio": 0.0}
 
     except Exception as e:
-        logger.warning("F0 computation failed: %s", e)
+        logger.warning("F0 computation fehlgeschlagen: %s", e)
         return {"f0_mean": 0.0, "f0_std": 0.0, "f0_range": 0.0, "voiced_ratio": 0.0}
 
 
@@ -238,7 +238,7 @@ def compute_hnr(audio: np.ndarray, _sr: int, _f0: np.ndarray | None = None) -> d
         return {"hnr_mean": float(hnr_db), "hnr_std": 0.0}  # Simplified
 
     except Exception as e:
-        logger.warning("HNR computation failed: %s", e)
+        logger.warning("HNR computation fehlgeschlagen: %s", e)
         return {"hnr_mean": 0.0, "hnr_std": 0.0}
 
 
@@ -395,7 +395,7 @@ class PermanentAudioMonitor:
 
         self.module_logs.append(module_log)
         logger.info(
-            "   ✅ Module %s completed: %.1fms, confidence=%.2f, gate=%s",
+            "   ✅ Module %s abgeschlossen: %.1fms, confidence=%.2f, gate=%s",
             self.current_module,
             processing_time_ms,
             confidence,

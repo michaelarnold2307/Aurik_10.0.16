@@ -9,6 +9,7 @@ import sys
 import traceback
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 import librosa
 import numpy as np
@@ -340,7 +341,7 @@ def generate_summary_report(results):
     failed = total_files - successful
 
     # Aggregate improvements by instrument type
-    by_instrument = {}
+    by_instrument: dict[Any, Any] = {}
     for result in results:
         if not result["success"]:
             continue

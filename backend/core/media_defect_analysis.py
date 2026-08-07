@@ -54,7 +54,7 @@ def detect_media_chain_and_defects(file_path):
 
     result = load_audio_file(file_path, do_carrier_analysis=False)
     if result is None or result.get("error") or result["audio"] is None:
-        logger.error("detect_media_chain_and_defects: Audio-Import fehlgeschlagen: %s", file_path)
+        logger.error("erkennen_media_chain_and_defects: Audio-Import fehlgeschlagen: %s", file_path)
         return [], set()
     audio, sr = result["audio"], result["sr"]
     defects = analyze_defects_features(audio, sr)

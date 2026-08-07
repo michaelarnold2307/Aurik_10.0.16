@@ -80,14 +80,14 @@ def _make_music(dur: float = 2.0, sr: int = 48000) -> np.ndarray:
     sig += 0.15 * np.sin(2 * np.pi * 349.23 * t) * str_env  # F4
     sig += 0.10 * np.sin(2 * np.pi * 440.0 * t) * str_env * 0.8  # A4
 
-    return sig.astype(np.float32)
+    return sig.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_noisy(clean: np.ndarray, snr_db: float = 8.0) -> np.ndarray:
     rng = np.random.RandomState(42)
     sp = np.mean(clean**2)
     npwr = sp / (10 ** (snr_db / 10))
-    return clean + np.sqrt(npwr) * rng.randn(len(clean)).astype(np.float32)
+    return clean + np.sqrt(npwr) * rng.randn(len(clean)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_clicky(clean: np.ndarray, cps: float = 10) -> np.ndarray:
@@ -140,7 +140,7 @@ def _artifact_score(clean: np.ndarray, processed: np.ndarray) -> float:
         return 1.0
     orig_hf = np.sum(cs[hf:]) + 1e-10
     proc_hf = np.sum(ps[hf:]) + 1e-10
-    return max(0.0, min(1.0, orig_hf / proc_hf))
+    return max(0.0, min(1.0, orig_hf / proc_hf))  # type: ignore[no-any-return]
 
 
 def compute_perceptual_quality(clean: np.ndarray, restored: np.ndarray) -> float:
@@ -167,7 +167,7 @@ def aurik_mini_pipeline(audio: np.ndarray, sr: int = 48000) -> np.ndarray:
         a = audio.astype(np.float32)
 
         # Phase 01: Click Removal
-        p1 = ClickRemovalPhase(sample_rate=sr)
+        p1 = ClickRemovalPhase(sample_rate=sr)  # type: ignore[call-arg]
         r1 = p1.process(a, sample_rate=sr, material_type="vinyl")
 
         # Phase 03: IMCRA+OMLSA
@@ -180,7 +180,7 @@ def aurik_mini_pipeline(audio: np.ndarray, sr: int = 48000) -> np.ndarray:
         from scipy.signal import butter, filtfilt
 
         b, a = butter(6, 12000 / (sr / 2), btype="low")
-        return filtfilt(b, a, audio.astype(np.float64)).astype(np.float32)
+        return filtfilt(b, a, audio.astype(np.float64)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ── Open-Source Tools ───────────────────────────────────────────────────────

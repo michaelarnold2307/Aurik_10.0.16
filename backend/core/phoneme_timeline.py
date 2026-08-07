@@ -454,6 +454,7 @@ def _detect_language(mono: np.ndarray, sr: int = 16_000) -> tuple[str, float]:
                     coeff = np.concatenate([[1.0], a_lpc])
                     roots = np.roots(coeff)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
 
             if roots is None:
@@ -506,7 +507,7 @@ def _detect_language(mono: np.ndarray, sr: int = 16_000) -> tuple[str, float]:
         return (best_lang, float(np.clip(confidence, 0.0, 1.0)))
 
     except Exception as exc:
-        logger.debug("_detect_language failed: %s", exc)
+        logger.debug("_erkennen_language fehlgeschlagen: %s", exc)
         return ("unknown", 0.0)
 
 

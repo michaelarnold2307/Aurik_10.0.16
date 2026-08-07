@@ -179,7 +179,7 @@ def test_phase12_process_applies_defect_locality_before_timestretch(monkeypatch)
     result = phase.process(
         audio,
         sr,
-        MaterialType.VINYL,
+        MaterialType.VINYL,  # type: ignore[arg-type]
         strength=1.0,
         defect_locations={"wow": [(0.20, 0.35)]},
     )

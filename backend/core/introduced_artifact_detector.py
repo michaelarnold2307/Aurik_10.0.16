@@ -204,7 +204,7 @@ class IntroducedArtifactDetector:
         for s in starts:
             if (time.perf_counter() - _t0) > self.HALLUCINATION_DETECT_BUDGET_S:
                 logger.warning(
-                    "IAD hallucination guard: time budget %.1fs exceeded after %d windows — early stop",
+                    "IAD hallucination guard: time Grenze %.1fs exceeded after %d windows — early stop",
                     self.HALLUCINATION_DETECT_BUDGET_S,
                     len(artifacts),
                 )

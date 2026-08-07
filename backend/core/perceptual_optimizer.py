@@ -190,7 +190,7 @@ class PerceptualOptimizer:
                         result = self._apply_strategy(seg_audio, sr, strategy, material, era)
                         candidates.append(result)
                     except Exception as e:
-                        logger.debug("Strategy %s failed: %s", strategy.name, e)
+                        logger.debug("Strategy %s fehlgeschlagen: %s", strategy.name, e)
 
                 if not candidates:
                     optimized_segments.append(seg_audio)

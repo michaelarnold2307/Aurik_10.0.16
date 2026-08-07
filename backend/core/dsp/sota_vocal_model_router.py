@@ -77,7 +77,7 @@ class SotaVocalModelRouter:
             if _available_mem is not None and _available_mem < _required_roformer:
                 attempts.append(f"bs_roformer:preflight_low_ram_{_available_mem:.1f}GB_req_{_required_roformer:.1f}GB")
                 logger.info(
-                    "§SMR-1 BS-RoFormer preflight skip (available=%.1fGB < required=%.1fGB)",
+                    "§SMR-1 BS-RoFormer preflight ueberspringen (verfuegbar=%.1fGB < required=%.1fGB)",
                     _available_mem,
                     _required_roformer,
                 )
@@ -107,7 +107,7 @@ class SotaVocalModelRouter:
                     if isinstance(stems_obj, dict) and stems_obj:
                         attempts.append(f"bs_roformer:{model_used}")
                         logger.debug(
-                            "§SMR-1 BS/MelBand-RoFormer returned fallback model=%s; trying next separator",
+                            "§SMR-1 BS/MelBand-RoFormer returned Ersatzpfad model=%s; trying next separator",
                             model_used,
                         )
                         raise RuntimeError("roformer_fallback_result")
@@ -115,7 +115,7 @@ class SotaVocalModelRouter:
                 except Exception as exc:  # pylint: disable=broad-except
                     if str(exc) != "roformer_fallback_result":
                         attempts.append(f"bs_roformer:{type(exc).__name__}")
-                    logger.debug("§SMR-1 BS-RoFormer separation unavailable: %s", exc)
+                    logger.debug("§SMR-1 BS-RoFormer separation nicht verfuegbar: %s", exc)
 
         def _try_demucs() -> StemSeparationRouteResult | None:
             _available_mem = self._available_memory_gb()
@@ -123,7 +123,7 @@ class SotaVocalModelRouter:
             if _available_mem is not None and _available_mem < _required_demucs:
                 attempts.append(f"demucs_v4:preflight_low_ram_{_available_mem:.1f}GB_req_{_required_demucs:.1f}GB")
                 logger.info(
-                    "§SMR-1 Demucs preflight skip (available=%.1fGB < required=%.1fGB)",
+                    "§SMR-1 Demucs preflight ueberspringen (verfuegbar=%.1fGB < required=%.1fGB)",
                     _available_mem,
                     _required_demucs,
                 )
@@ -153,7 +153,7 @@ class SotaVocalModelRouter:
                 attempts.append("demucs_v4:empty_stems")
             except Exception as exc:  # pylint: disable=broad-except
                 attempts.append(f"demucs_v4:{type(exc).__name__}")
-                logger.debug("§SMR-1 Demucs separation unavailable: %s", exc)
+                logger.debug("§SMR-1 Demucs separation nicht verfuegbar: %s", exc)
             return None
 
         def _try_mdx23c() -> StemSeparationRouteResult | None:
@@ -162,7 +162,7 @@ class SotaVocalModelRouter:
             if _available_mem is not None and _available_mem < _required_mdx:
                 attempts.append(f"mdx23c:preflight_low_ram_{_available_mem:.1f}GB_req_{_required_mdx:.1f}GB")
                 logger.info(
-                    "§SMR-1 MDX23C preflight skip (available=%.1fGB < required=%.1fGB)",
+                    "§SMR-1 MDX23C preflight ueberspringen (verfuegbar=%.1fGB < required=%.1fGB)",
                     _available_mem,
                     _required_mdx,
                 )
@@ -190,7 +190,7 @@ class SotaVocalModelRouter:
                 attempts.append("mdx23c:empty_stems")
             except Exception as exc:  # pylint: disable=broad-except
                 attempts.append(f"mdx23c:{type(exc).__name__}")
-                logger.debug("§SMR-1 MDX23C separation unavailable: %s", exc)
+                logger.debug("§SMR-1 MDX23C separation nicht verfuegbar: %s", exc)
             return None
 
         if prefer_demucs_native:
@@ -291,7 +291,7 @@ class SotaVocalModelRouter:
             elif swap_pct >= 40.0:
                 factor += 0.10
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         active_ml_plugins = int(max(0, self._active_ml_plugin_count(ctx)))
         if active_ml_plugins >= 4:
@@ -310,7 +310,7 @@ class SotaVocalModelRouter:
             if isinstance(ctx, dict) and "active_ml_plugins" in ctx:
                 return int(max(0, int(ctx.get("active_ml_plugins", 0))))
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         try:
             from backend.core.plugin_lifecycle_manager import (  # pylint: disable=import-outside-toplevel
@@ -322,7 +322,7 @@ class SotaVocalModelRouter:
             if isinstance(entries, dict):
                 return int(sum(1 for entry in entries.values() if bool(getattr(entry, "active", False))))
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         return 0
 
@@ -451,7 +451,7 @@ class SotaVocalModelRouter:
             try:
                 is_productive = bool(methodcaller("is_productive")(miipher))
             except Exception as prod_exc:  # pylint: disable=broad-except
-                logger.debug("§SMR-1 MIIPHER adapter productivity check failed: %s", prod_exc)
+                logger.debug("§SMR-1 MIIPHER adapter productivity Pruefung fehlgeschlagen: %s", prod_exc)
             if not model_loaded and not is_productive:
                 attempts.append("miipher:not_loaded")
                 raise RuntimeError("miipher_model_not_loaded")
@@ -486,7 +486,7 @@ class SotaVocalModelRouter:
         except Exception as exc:  # pylint: disable=broad-except
             if str(exc) not in {"miipher_model_not_loaded", "miipher_adapter_dsp_fallback"}:
                 attempts.append(f"miipher:{type(exc).__name__}")
-            logger.debug("§SMR-1 MIIPHER unavailable: %s", exc)
+            logger.debug("§SMR-1 MIIPHER nicht verfuegbar: %s", exc)
 
         try:
             from plugins.sgmse_plugin import get_sgmse_plugin  # pylint: disable=import-outside-toplevel
@@ -521,7 +521,7 @@ class SotaVocalModelRouter:
             )
         except Exception as exc:  # pylint: disable=broad-except
             attempts.append(f"sgmse_plus:{type(exc).__name__}")
-            logger.debug("§SMR-1 SGMSE+ unavailable: %s", exc)
+            logger.debug("§SMR-1 SGMSE+ nicht verfuegbar: %s", exc)
 
         dfn_result = self.enhance_instrumental(reference, sr, energy_bias_db=energy_bias_db)
         dfn_result.fallback_chain = attempts + dfn_result.fallback_chain
@@ -597,7 +597,7 @@ class SotaVocalModelRouter:
             )
         except Exception as exc:  # pylint: disable=broad-except
             attempts.append(f"deepfilternet_v3_ii:{type(exc).__name__}")
-            logger.debug("§SMR-1 DeepFilterNet unavailable: %s", exc)
+            logger.debug("§SMR-1 DeepFilterNet nicht verfuegbar: %s", exc)
             return EnhancementRouteResult(
                 audio=reference.copy(),
                 success=False,
@@ -615,7 +615,7 @@ class SotaVocalModelRouter:
 
             return dict(get_model_capability_gate().build_report())
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§SMR-1 model capability report unavailable: %s", exc)
+            logger.debug("§SMR-1 model capability report nicht verfuegbar: %s", exc)
             return {}
 
     @staticmethod
@@ -627,7 +627,7 @@ class SotaVocalModelRouter:
                 if isinstance(cap, dict):
                     return str(cap.get("status", "unknown"))
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
         return "unknown"
 
     @classmethod

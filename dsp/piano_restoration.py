@@ -685,7 +685,7 @@ class PianoRestorationSystem:
         report["tonal_balance"] = tonal_report
 
         # Calculate overall metrics
-        report["stages_applied"] = 4
+        report["stages_applied"] = 4  # type: ignore[assignment]
         report["mechanical_noise_db"] = (
             hammer_report.get("hammer_noise_reduction_db", 0.0)
             + pedal_report.get("pedal_noise_reduction_db", 0.0)
@@ -733,7 +733,7 @@ def main():
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Make mono for processing
     audio_mono = np.mean(audio, axis=1) if audio.shape[1] == 2 else audio[:, 0]

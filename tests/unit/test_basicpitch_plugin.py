@@ -24,7 +24,7 @@ SR = 48_000
 
 def _sine(freq: float, dur_s: float = 0.5, sr: int = SR) -> np.ndarray:
     t = np.linspace(0.0, dur_s, int(dur_s * sr), endpoint=False)
-    return (0.4 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)
+    return (0.4 * np.sin(2.0 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _chord(dur_s: float = 0.6, sr: int = SR) -> np.ndarray:
@@ -33,7 +33,7 @@ def _chord(dur_s: float = 0.6, sr: int = SR) -> np.ndarray:
     c = _sine(554.365, dur_s, sr)
     e = _sine(659.255, dur_s, sr)
     x = (a + c + e) / 3.0
-    return np.clip(x, -1.0, 1.0).astype(np.float32)
+    return np.clip(x, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _stereo(dur_s: float = 0.6, sr: int = SR) -> np.ndarray:

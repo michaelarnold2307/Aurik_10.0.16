@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 def extract_features(audio_bytes: bytes) -> dict[str, Any]:
     import io
 
-    result = load_audio_file(io.BytesIO(audio_bytes))
-    audio, sr = result["audio"], result["sr"]
+    result = load_audio_file(io.BytesIO(audio_bytes))  # type: ignore[arg-type]
+    audio, sr = result["audio"], result["sr"]  # type: ignore[index]
     if audio.ndim > 1:
         channels = audio.shape[1]
         audio_mono = np.mean(audio, axis=1)

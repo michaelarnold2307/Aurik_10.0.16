@@ -220,7 +220,7 @@ def _compute_singer_identity_dsp(
         # Altes Formel (cosine − 0.70) / 0.30: raw 0.93 → 0.767 — falscher Rollback bei unveränderter Stimme.
         return float(np.clip((cosine * 8.0 - 1.0) / 7.0, 0.0, 1.0))
     except Exception as exc:
-        logger.debug("singer_identity_dsp failed: %s", exc)
+        logger.debug("singer_identity_dsp fehlgeschlagen: %s", exc)
         return 0.80  # conservatively neutral
 
 
@@ -245,7 +245,7 @@ def _compute_singer_identity(
         cosine = plugin.cosine_similarity(emb_pre, emb_post)
         return float(np.clip(cosine, 0.0, 1.0)), False
     except Exception as exc:
-        logger.debug("Resemblyzer not available (%s) — DSP fallback", exc)
+        logger.debug("Resemblyzer not verfuegbar (%s) — DSP Ersatzpfad", exc)
         return _compute_singer_identity_dsp(vocal_pre, vocal_post, sr), True
 
 
@@ -320,7 +320,7 @@ def _compute_formant_stability(
                     if valid:
                         f1_list.append(valid[0])
                 except Exception as e:
-                    logger.warning("vocal_quality_index.py::_lpc_f1_frames fallback: %s", e)
+                    logger.warning("vocal_quality_index.py::_lpc_f1_frames Ersatzpfad: %s", e)
             return f1_list
 
         f1_pre = _lpc_f1_frames(_pre_bp)
@@ -353,7 +353,7 @@ def _compute_formant_stability(
         score = float(np.clip(1.0 - drift / _max_drift_hz, 0.0, 1.0))
         return score
     except Exception as exc:
-        logger.debug("formant_stability failed: %s", exc)
+        logger.debug("formant_stability fehlgeschlagen: %s", exc)
         return 0.85
 
 
@@ -395,7 +395,7 @@ def _compute_articulation_score(
         # Correlation [0,1] → score (near 1 = onsets preserved)
         return float(np.clip((corr + 1.0) / 2.0, 0.0, 1.0))
     except Exception as exc:
-        logger.debug("articulation_score failed: %s", exc)
+        logger.debug("articulation_Wert fehlgeschlagen: %s", exc)
         return 0.85
 
 
@@ -431,7 +431,7 @@ def _compute_sibilance_naturalness(
         score = float(np.clip(1.0 - abw_db / 6.0, 0.0, 1.0))
         return score
     except Exception as exc:
-        logger.debug("sibilance_naturalness failed: %s", exc)
+        logger.debug("sibilance_naturalness fehlgeschlagen: %s", exc)
         return 0.85
 
 
@@ -529,7 +529,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
     dsp_fallback: bool = False  # initialisiert; wird unten überschrieben
     if skip_singer_identity:
         singer_cosine, dsp_fallback = 0.85, True  # neutral fallback — no rollback trigger
-        logger.debug("§MultiSinger: singer_identity_cosine gate skipped (duet/choir)")
+        logger.debug("§MultiSinger: singer_identity_cosine gate uebersprungen (duet/choir)")
     else:
         # §P1 Artist-Voice-Reference: clean artist recording as a more precise identity anchor
         _id_anchor = orig_m
@@ -545,12 +545,12 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
                         _id_anchor = np.pad(_ref, (0, len(rest_m) - len(_ref)))
                     _reference_audio_used = True
                     logger.debug(
-                        "VQI: reference_audio as singer-identity anchor (§P1 Artist-Voice-Reference, len=%d)",
+                        "VQI: Referenz_audio as singer-identity anchor (§P1 Artist-Voice-Referenz, len=%d)",
                         len(_ref),
                     )
             except Exception as _ref_exc:
                 logger.debug(
-                    "VQI: reference_audio conversion failed — falling back to degraded input: %s",
+                    "VQI: Referenz_audio conversion fehlgeschlagen — falling back to degraded Eingabe: %s",
                     _ref_exc,
                 )
         elif reference_singer_id is not None:
@@ -585,7 +585,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
                         singer_cosine,
                     )
             except Exception as _srl_exc:
-                logger.debug("VQI §SRL-1 non-blocking: %s", _srl_exc)
+                logger.debug("VQI §SRL-1 nicht blockierend: %s", _srl_exc)
         if not _srl_singer_identity_done:
             singer_cosine, dsp_fallback = _compute_singer_identity(_id_anchor, rest_m, sr)
 
@@ -595,7 +595,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
     # Gleiche Gate-Logik wie singer_identity: konservativer Fallback statt Fehlmessung.
     if skip_singer_identity:
         formant_score = 0.85  # neutral fallback — Multi-Singer-Interferenz verhindert valide F1-Analyse
-        logger.debug("§MultiSinger: formant_stability gate skipped (duet/choir) → fallback=0.85")
+        logger.debug("§MultiSinger: formant_stability gate uebersprungen (duet/choir) → Ersatzpfad=0.85")
     else:
         formant_score = _compute_formant_stability(orig_m, rest_m, sr, era_profile=era_profile)
 
@@ -619,7 +619,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
                     singmos_score = float(np.clip((_mos - 1.0) / 4.0, 0.0, 1.0))
                     logger.debug("VQI: SingMOS Pro MOS=%.3f → normiert=%.3f", _mos, singmos_score)
     except Exception as _sm_exc:
-        logger.debug("VQI: SingMOS (VERSA) nicht verfügbar (non-blocking): %s", _sm_exc)
+        logger.debug("VQI: SingMOS (VERSA) nicht verfügbar (nicht blockierend): %s", _sm_exc)
 
     # Component 4: Vocal Proximity (§2.35b) — or SingMOS as substitute
     proximity = 0.85  # default
@@ -633,7 +633,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
             prox_result = compute_vocal_proximity_score(audio_orig, audio_restored, sr, vocal_segments)
             proximity = float(prox_result.get("proximity_score", 0.85))
         except Exception as exc:
-            logger.debug("vocal_proximity import failed: %s", exc)
+            logger.debug("vocal_proximity import fehlgeschlagen: %s", exc)
 
     # Component 5: Sibilance
     sibilance = _compute_sibilance_naturalness(orig_m, rest_m, sr)

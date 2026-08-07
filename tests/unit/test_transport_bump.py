@@ -27,7 +27,7 @@ SR = 48_000
 
 def _sine(sr: int = SR, duration: float = 3.0, freq: float = 440.0, amp: float = 0.3) -> np.ndarray:
     t = np.linspace(0, duration, int(sr * duration), endpoint=False)
-    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)
+    return (np.sin(2 * np.pi * freq * t) * amp).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(sr: int = SR, duration: float = 3.0) -> np.ndarray:
@@ -80,7 +80,7 @@ def _make_bump_audio(
 
     audio[recovery_start:bump_end] = pitched + lf_thump
 
-    return np.clip(audio, -1.0, 1.0).astype(np.float32)
+    return np.clip(audio, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_stereo(mono: np.ndarray) -> np.ndarray:
@@ -116,7 +116,7 @@ def _make_gradual_level_dip_audio(
         env[fade_down + hold :] = np.linspace(linear_depth, 1.0, snap_back)
         audio[start:end] *= env.astype(np.float32)
 
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ---------------------------------------------------------------------------

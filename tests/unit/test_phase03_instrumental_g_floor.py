@@ -19,7 +19,7 @@ def _make_sine(f0: float = 440.0, duration_s: float = 1.0, amplitude: float = 0.
     """Einfaches Sinus-Signal (instrumentaler Oberton-Stellvertreter)."""
     n = int(SR * duration_s)
     t = np.arange(n, dtype=np.float64) / SR
-    return (amplitude * np.sin(2 * np.pi * f0 * t)).astype(np.float32)
+    return (amplitude * np.sin(2 * np.pi * f0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit
@@ -66,7 +66,7 @@ class TestPhase03InstrumentalGFloorBoost:
         from backend.core.phases.phase_03_denoise import DenoisePhase
 
         # Erwarteter Basis-g_floor aus MATERIAL_PARAMS["vinyl"] = 0.12
-        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))
+        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))  # type: ignore[arg-type]
         expected = float(np.clip(base_g_floor + 0.05, 0.10, 0.45))
 
         audio = _make_sine()
@@ -82,7 +82,7 @@ class TestPhase03InstrumentalGFloorBoost:
         """panns_singing=0.30 (vokal) → g_floor unverändert (kein Instrumental-Boost)."""
         from backend.core.phases.phase_03_denoise import DenoisePhase
 
-        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))
+        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))  # type: ignore[arg-type]
 
         audio = _make_sine()
         g_floor_actual = self._captured_params(phase, audio, panns_singing=0.30, material="vinyl", genre="Pop")
@@ -99,7 +99,7 @@ class TestPhase03InstrumentalGFloorBoost:
         """panns_singing=0.10 (Schwelle, nicht < 0.10) → kein Instrumental-Boost."""
         from backend.core.phases.phase_03_denoise import DenoisePhase
 
-        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))
+        base_g_floor = float(DenoisePhase.MATERIAL_PARAMS["vinyl"].get("g_floor", 0.10))  # type: ignore[arg-type]
 
         audio = _make_sine()
         g_floor_actual = self._captured_params(phase, audio, panns_singing=0.10, material="vinyl", genre="Klassik")

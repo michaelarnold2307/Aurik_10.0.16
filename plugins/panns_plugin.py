@@ -132,7 +132,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
 
     def __init__(self) -> None:
         self._session: object | None = None
-        self._torch_model: object | None = None  # PyTorch fallback model
+        self._torch_model: Any | None = None  # PyTorch fallback model
         self._device: str = "cpu"
         self._use_fp16: bool = False
         self._load_onnx()
@@ -161,13 +161,13 @@ class PANNsPlugin(MLPluginBase):  # §A2
                 # Prüfe auf fp16-Unterstützung (ab Compute Capability 5.3 bzw. Volta+)
                 fp16_ok = torch.cuda.get_device_capability(0)[0] >= 7
                 logger.info(
-                    "PANNs GPU: CUDA erkannt (Compute Capability %s), fp16=%s",
+                    "PANNs GPU: CUDA erkannt (berechnen Capability %s), fp16=%s",
                     torch.cuda.get_device_capability(0),
                     fp16_ok,
                 )
                 return device, fp16_ok
         except Exception:
-            logger.warning("panns_plugin.py::_detect_gpu fallback", exc_info=True)
+            logger.warning("panns_plugin.py::_erkennen_gpu Ersatzpfad", exc_info=True)
 
         try:
             import torch  # pylint: disable=import-outside-toplevel
@@ -178,7 +178,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
                 logger.info("PANNs GPU: ROCm/HIP erkannt")
                 return "cuda", True  # ROCm GPUs support fp16 well
         except Exception:
-            logger.warning("panns_plugin.py::_detect_gpu fallback", exc_info=True)
+            logger.warning("panns_plugin.py::_erkennen_gpu Ersatzpfad", exc_info=True)
 
         logger.info("PANNs GPU: Keine GPU erkannt — CPU-Inferenz")
         return "cpu", False
@@ -197,10 +197,10 @@ class PANNsPlugin(MLPluginBase):  # §A2
 
                 budget_gb = 0.66
                 if not _try_alloc("PANNs", size_gb=budget_gb):
-                    logger.warning("PANNs: ML-Budget erschöpft — Spektral-Fallback.")
+                    logger.warning("PANNs: ML-Grenze erschöpft — Spektral-Ersatzpfad.")
                     return
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             # GPU-Provider-Präferenz: CUDA > ROCm > CPU
             device, fp16_ok = self._detect_gpu()
@@ -234,7 +234,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
                 providers=_providers,
             )
             logger.info(
-                "panns_plugin: CNN14 ONNX model loaded (%s, device=%s, fp16=%s, §4.4 primary genre/tagging)",
+                "panns_plugin: CNN14 ONNX model geladen (%s, device=%s, fp16=%s, §4.4 primary genre/tagging)",
                 self._ONNX_PATH.name,
                 self._device,
                 self._use_fp16,
@@ -244,10 +244,10 @@ class PANNsPlugin(MLPluginBase):  # §A2
 
                 _reg_plm("PANNs", size_gb=0.66, unload_fn=lambda s=self: setattr(s, "_session", None))  # type: ignore[misc]
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as exc:
             logger.warning(
-                "PANNs ONNX nicht verfügbar — versuche PyTorch-Fallback: %s",
+                "PANNs ONNX nicht verfügbar — versuche PyTorch-Ersatzpfad: %s",
                 exc,
             )
             self._session = None
@@ -257,7 +257,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
 
                 _rel("PANNs")
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_torch_panns(self) -> None:
         """Versucht PANNs CNN14 als PyTorch-Modell zu laden (GPU-Fallback).
@@ -280,13 +280,13 @@ class PANNsPlugin(MLPluginBase):  # §A2
                 pretrained=True,
                 trust_repo=True,
             )
-            self._torch_model.eval()
+            self._torch_model.eval()  # type: ignore[union-attr]
 
             # Move to GPU if available
             if device == "cuda":
-                self._torch_model = self._torch_model.to(device)
+                self._torch_model = self._torch_model.to(device)  # type: ignore[union-attr]
                 if fp16_ok:
-                    self._torch_model = self._torch_model.half()
+                    self._torch_model = self._torch_model.half()  # type: ignore[union-attr]
                     logger.info("PANNs PyTorch: GPU fp16-Inferenz aktiviert")
                 else:
                     logger.info("PANNs PyTorch: GPU fp32-Inferenz aktiviert")
@@ -417,7 +417,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
         _cache_key = _audio_tags_cache_key(audio, sr)
         with _tags_cache_lock:
             if _cache_key in _tags_cache:
-                logger.debug("PANNs Cache-Hit: %s", _cache_key)
+                logger.debug("PANNs Zwischenspeicher-Hit: %s", _cache_key)
                 return _tags_cache[_cache_key]
 
         _plm_panns = None
@@ -427,7 +427,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
             _plm_panns = _get_plm_fn()
             _plm_panns.set_active("PANNs", True)
         except Exception as _exc:
-            logger.debug("PANNs: PLM set_active failed: %s", _exc)
+            logger.debug("PANNs: PLM set_active fehlgeschlagen: %s", _exc)
 
         try:
             # §PANNs-Multi-Window: Resampled Mono einmal aufbereiten, dann
@@ -520,7 +520,7 @@ class PANNsPlugin(MLPluginBase):  # §A2
                 try:
                     _plm_panns.set_active("PANNs", False)
                 except Exception as _exc:
-                    logger.debug("PANNs: PLM unset_active failed: %s", _exc)
+                    logger.debug("PANNs: PLM unset_active fehlgeschlagen: %s", _exc)
 
     # ------------------------------------------------------------------
     # Backward-Kompatibilität: dateibasierter Aufruf (Legacy-API)
@@ -610,7 +610,7 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) < 2:
-        logger.debug("Verwendung: panns_plugin.py <audio_datei> [output.json]")
+        logger.debug("Verwendung: panns_plugin.py <audio_datei> [Ausgabe.json]")
         sys.exit(1)
 
     from backend.file_import import load_audio_file

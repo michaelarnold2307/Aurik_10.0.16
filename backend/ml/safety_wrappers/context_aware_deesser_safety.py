@@ -31,9 +31,9 @@ try:
 
     _PHONEME_STACK_AVAILABLE = True
 except Exception:
-    PhonemeClassifier = None  # type: ignore[assignment]
-    DetectionConfig = None  # type: ignore[assignment]
-    PhonemeDetector = None  # type: ignore[assignment]
+    PhonemeClassifier = None  # type: ignore[misc, assignment]
+    DetectionConfig = None  # type: ignore[misc, assignment]
+    PhonemeDetector = None  # type: ignore[misc, assignment]
     _PHONEME_STACK_AVAILABLE = False
 
 # Import validation utilities from deesser_safety (which has them inline)
@@ -141,7 +141,7 @@ def detect_phoneme_based_sibilance(
 
         for phoneme_seg in phonemes:
             phoneme_info = classifier.classify(phoneme_seg.phoneme)
-            if phoneme_info.is_sibilant:
+            if phoneme_info.is_sibilant:  # type: ignore[attr-defined]
                 sibilant_count += 1
                 sibilant_duration += phoneme_seg.duration
 
@@ -303,7 +303,7 @@ class ContextAwareDeEsserSafety:
             PreCheckResult with PASS/FAIL/WARN
         """
         issues = []
-        warnings_list = []
+        warnings_list: list[Any] = []
         metrics = {}
         params = params or {}
         if params:
@@ -328,12 +328,12 @@ class ContextAwareDeEsserSafety:
         # Always compute baseline intelligibility so metadata remains complete,
         # even when pre-check exits early (e.g. no sibilance detected).
         baseline_intelligibility = measure_intelligibility(audio_mono, sr)
-        metrics["baseline_intelligibility"] = baseline_intelligibility
+        metrics["baseline_intelligibility"] = baseline_intelligibility  # type: ignore[assignment]
 
         # Check for sibilance
         has_sibilance, sibilance_intensity, sibilance_metrics = detect_phoneme_based_sibilance(audio_mono, sr)
         metrics.update(sibilance_metrics)
-        metrics["sibilance_intensity"] = sibilance_intensity
+        metrics["sibilance_intensity"] = sibilance_intensity  # type: ignore[assignment]
 
         if not has_sibilance:
             issues.append("No sibilance detected in audio. De-essing may not be necessary.")
@@ -355,9 +355,9 @@ class ContextAwareDeEsserSafety:
 
         # Check phoneme detection availability
         if _PHONEME_STACK_AVAILABLE:
-            metrics["phoneme_detection_available"] = True
+            metrics["phoneme_detection_available"] = True  # type: ignore[assignment]
         else:
-            metrics["phoneme_detection_available"] = False
+            metrics["phoneme_detection_available"] = False  # type: ignore[assignment]
             warnings_list.append("Phoneme detection not available. Using frequency-based fallback.")
 
         # All checks passed
@@ -405,9 +405,9 @@ class ContextAwareDeEsserSafety:
         # 1. Check intelligibility preservation
         baseline_intel = pre_check_result.metadata.get("baseline_intelligibility", 0.0)
         after_intel = measure_intelligibility(after_mono, sr)
-        metrics["after_intelligibility"] = after_intel
+        metrics["after_intelligibility"] = after_intel  # type: ignore[assignment]
         # Backward-compatible contract: key is always present for downstream checks/tests.
-        metrics["intelligibility_preservation"] = 1.0
+        metrics["intelligibility_preservation"] = 1.0  # type: ignore[assignment]
 
         if baseline_intel > 0:
             intel_preservation = after_intel / baseline_intel
@@ -421,7 +421,7 @@ class ContextAwareDeEsserSafety:
 
         # 2. Check correlation (detect artifacts)
         correlation = compute_correlation(before_mono, after_mono)
-        metrics["correlation"] = correlation
+        metrics["correlation"] = correlation  # type: ignore[assignment]
 
         if correlation < self.min_correlation:
             issues.append(f"Low correlation ({correlation:.3f}). Possible over-processing or artifacts.")
@@ -430,7 +430,7 @@ class ContextAwareDeEsserSafety:
 
         # 3. Check energy change (gain validation)
         energy_ratio_db = compute_energy_ratio(before_mono, after_mono)
-        metrics["energy_change_db"] = energy_ratio_db
+        metrics["energy_change_db"] = energy_ratio_db  # type: ignore[assignment]
 
         if abs(energy_ratio_db) > self.max_energy_change_db:
             warnings_list.append(
@@ -441,8 +441,8 @@ class ContextAwareDeEsserSafety:
         # 4. Verify sibilance reduction (should be lower after processing)
         _, before_sib_intensity, _ = detect_phoneme_based_sibilance(before_mono, sr)
         _, after_sib_intensity, _ = detect_phoneme_based_sibilance(after_mono, sr)
-        metrics["sibilance_before"] = before_sib_intensity
-        metrics["sibilance_after"] = after_sib_intensity
+        metrics["sibilance_before"] = before_sib_intensity  # type: ignore[assignment]
+        metrics["sibilance_after"] = after_sib_intensity  # type: ignore[assignment]
 
         if after_sib_intensity >= before_sib_intensity * 0.95:
             warnings_list.append(
@@ -456,7 +456,7 @@ class ContextAwareDeEsserSafety:
             if before_sib_intensity > 0
             else 0.0
         )
-        metrics["sibilance_reduction_percent"] = sibilance_reduction_percent
+        metrics["sibilance_reduction_percent"] = sibilance_reduction_percent  # type: ignore[assignment]
 
         # Determine pass/fail
         passed = len(issues) == 0
@@ -466,7 +466,7 @@ class ContextAwareDeEsserSafety:
             quality_score=1.0 if passed else 0.0,
             issues=issues,
             side_effects=warnings_list,
-            metrics=metrics,
+            metrics=metrics,  # type: ignore[arg-type]
         )
 
 

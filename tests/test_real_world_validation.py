@@ -380,7 +380,7 @@ class ValidationMetrics:
             return 60.0  # Very high SNR
 
         snr_db = 20 * np.log10(rms / noise_rms)
-        return max(0.0, min(snr_db, 100.0))  # Clamp
+        return max(0.0, min(snr_db, 100.0))  # Clamp  # type: ignore
 
     @staticmethod
     def compute_thd(audio: np.ndarray, sr: int) -> float:
@@ -404,7 +404,7 @@ class ValidationMetrics:
             return 0.0
 
         thd = np.sqrt(harmonic_power / fundamental_power)
-        return min(thd, 1.0)  # Clamp to [0, 1]
+        return min(thd, 1.0)  # Clamp to [0, 1]  # type: ignore
 
     @staticmethod
     def compute_lufs(audio: np.ndarray, sr: int) -> float:
@@ -414,7 +414,7 @@ class ValidationMetrics:
         if rms < 1e-10:
             return -100.0
         lufs = 20 * np.log10(rms) - 0.691  # Approximation
-        return max(lufs, -100.0)
+        return max(lufs, -100.0)  # type: ignore[no-any-return]
 
 
 class ValidationRunner:
@@ -511,7 +511,7 @@ class ValidationRunner:
         }
 
         for result in self.results:
-            report["results"].append(
+            report["results"].append(  # type: ignore[attr-defined]
                 {
                     "file": str(result.test_file.path),
                     "category": result.test_file.category.value,

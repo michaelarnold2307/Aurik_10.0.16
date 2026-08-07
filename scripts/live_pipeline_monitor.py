@@ -22,12 +22,15 @@ Verwendung:
 from __future__ import annotations
 
 import argparse
+import logging
 import re
 import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # ── ANSI Farben ──────────────────────────────────────────────────────────────
 _RESET = "\033[0m"
@@ -303,7 +306,7 @@ def _alert(stats: RunStats, pattern: Pattern, match: re.Match[str], line: str) -
             if val >= _RMS_DROP_ALERT_DB:
                 return  # RMS-Drop unter 5 dB = kein Alert
         except ValueError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
     elif "HPI SCORE" in lbl and groups:
         stats.last_hpi = f"score={groups[0]}, timbral={groups[1]}"
     elif "EXPORT" in lbl:
@@ -312,7 +315,7 @@ def _alert(stats: RunStats, pattern: Pattern, match: re.Match[str], line: str) -
     # Ausgabe
     detail_parts: list[str] = []
     if pattern.extract and groups:
-        for name, val in zip(pattern.extract, groups):
+        for name, val in zip(pattern.extract, groups):  # type: ignore[assignment]
             detail_parts.append(f"{name}={val}")
     detail = "  " + " | ".join(detail_parts) if detail_parts else ""
 

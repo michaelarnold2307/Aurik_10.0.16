@@ -57,7 +57,7 @@ def _extract_innovation_snapshot(
     """Extrahiert Innovations-Telemetrie; fallback auf aggregierte Goal-Deltas."""
     _meta = meta_root if isinstance(meta_root, dict) else {}
     _phase_meta = _meta.get("phase_metadata", {}) if isinstance(_meta.get("phase_metadata", {}), dict) else {}
-    _innovation = {}
+    _innovation: dict[Any, Any] = {}
     if isinstance(_phase_meta, dict):
         _innovation = _phase_meta.get("innovation_superiority_orchestrator", {}) or {}
     if not _innovation and restorer is not None:

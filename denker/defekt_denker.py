@@ -322,7 +322,7 @@ class DefektDenker:
             name = defect_type.name if hasattr(defect_type, "name") else str(defect_type)
             sev = getattr(defect_score, "severity", defect_score)
             try:
-                sev_float = float(sev)
+                sev_float = float(sev)  # type: ignore[arg-type]
             except (TypeError, ValueError):
                 continue
             if math.isfinite(sev_float):

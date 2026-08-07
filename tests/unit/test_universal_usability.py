@@ -123,7 +123,7 @@ class _FakeEraResult:
 def _make_sine(freq: float = 440.0, sr: int = 48000, dur: float = 2.0) -> np.ndarray:
     """Generate a pure sine tone."""
     t = np.linspace(0, dur, int(sr * dur), endpoint=False, dtype=np.float32)
-    return np.sin(2 * np.pi * freq * t) * 0.5
+    return np.sin(2 * np.pi * freq * t) * 0.5  # type: ignore[no-any-return]
 
 
 def _make_vibrato_signal(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
@@ -132,7 +132,7 @@ def _make_vibrato_signal(sr: int = 48000, dur: float = 2.0) -> np.ndarray:
     # Vibrato: 440 Hz carrier, +-50 Hz vibrato at 5 Hz
     freq = 440.0 + 50.0 * np.sin(2 * np.pi * 5.0 * t)
     phase = np.cumsum(2 * np.pi * freq / sr)
-    return (np.sin(phase) * 0.5).astype(np.float32)
+    return (np.sin(phase) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _make_steady_beat(sr: int = 48000, dur: float = 4.0, bpm: float = 120.0) -> np.ndarray:
@@ -247,47 +247,47 @@ class TestLoudnessWarGuard:
             return False
         _is_modern_era = era_decade is not None and era_decade >= 2000
         _is_digital = material in {
-            MaterialType.CD_DIGITAL,
-            MaterialType.MP3_LOW,
-            MaterialType.MP3_HIGH,
-            MaterialType.AAC,
-            MaterialType.STREAMING,
-            MaterialType.DAT,
+            MaterialType.CD_DIGITAL,  # type: ignore[attr-defined]
+            MaterialType.MP3_LOW,  # type: ignore[attr-defined]
+            MaterialType.MP3_HIGH,  # type: ignore[attr-defined]
+            MaterialType.AAC,  # type: ignore[attr-defined]
+            MaterialType.STREAMING,  # type: ignore[attr-defined]
+            MaterialType.DAT,  # type: ignore[attr-defined]
         }
         return _is_modern_era or _is_digital
 
     def test_modern_digital_high_compression_is_victim(self):
         """Era 2010 + CD + high compression → loudness war victim."""
-        assert self._is_loudness_war_victim(0.40, 2010, MaterialType.CD_DIGITAL)
+        assert self._is_loudness_war_victim(0.40, 2010, MaterialType.CD_DIGITAL)  # type: ignore[attr-defined]
 
     def test_modern_mp3_high_compression_is_victim(self):
         """Era 2000 + MP3 + compression → victim."""
-        assert self._is_loudness_war_victim(0.30, 2000, MaterialType.MP3_HIGH)
+        assert self._is_loudness_war_victim(0.30, 2000, MaterialType.MP3_HIGH)  # type: ignore[attr-defined]
 
     def test_streaming_no_era_is_victim(self):
         """Streaming material (digital) even without era → victim."""
-        assert self._is_loudness_war_victim(0.35, None, MaterialType.STREAMING)
+        assert self._is_loudness_war_victim(0.35, None, MaterialType.STREAMING)  # type: ignore[attr-defined]
 
     def test_low_compression_not_victim(self):
         """Low compression severity → not victim regardless of era/material."""
-        assert not self._is_loudness_war_victim(0.20, 2020, MaterialType.CD_DIGITAL)
+        assert not self._is_loudness_war_victim(0.20, 2020, MaterialType.CD_DIGITAL)  # type: ignore[attr-defined]
 
     def test_old_vinyl_not_victim(self):
         """1970s vinyl with compression → not loudness war (intentional)."""
-        assert not self._is_loudness_war_victim(0.40, 1970, MaterialType.VINYL)
+        assert not self._is_loudness_war_victim(0.40, 1970, MaterialType.VINYL)  # type: ignore[attr-defined]
 
     def test_old_tape_not_victim(self):
         """1960s tape → not loudness war victim."""
-        assert not self._is_loudness_war_victim(0.50, 1960, MaterialType.TAPE)
+        assert not self._is_loudness_war_victim(0.50, 1960, MaterialType.TAPE)  # type: ignore[attr-defined]
 
     def test_threshold_boundary(self):
         """Boundary: comp_sev=0.25 → not victim; 0.26 → maybe."""
-        assert not self._is_loudness_war_victim(0.25, 2020, MaterialType.CD_DIGITAL)
-        assert self._is_loudness_war_victim(0.26, 2020, MaterialType.CD_DIGITAL)
+        assert not self._is_loudness_war_victim(0.25, 2020, MaterialType.CD_DIGITAL)  # type: ignore[attr-defined]
+        assert self._is_loudness_war_victim(0.26, 2020, MaterialType.CD_DIGITAL)  # type: ignore[attr-defined]
 
     def test_modern_era_analog_victim(self):
         """Modern era (2020) + analog (vinyl) → victim because era >= 2000."""
-        assert self._is_loudness_war_victim(0.35, 2020, MaterialType.VINYL)
+        assert self._is_loudness_war_victim(0.35, 2020, MaterialType.VINYL)  # type: ignore[attr-defined]
 
 
 # ═══════════════════════════════════════════════════════════════════════

@@ -29,7 +29,7 @@ class TestHPGEvaluateRestoration:
 
     def _sine(self, sr: int = 48000, dur: float = 1.0, freq: float = 440.0) -> np.ndarray:
         t = np.linspace(0, dur, int(sr * dur), endpoint=False)
-        return (0.5 * np.sin(2 * math.pi * freq * t)).astype(np.float32)
+        return (0.5 * np.sin(2 * math.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_restorability_high_uses_ref_weight_100(self):
         """restorability > 70 → input_weight 0.0, ref_weight 1.0 in detail."""

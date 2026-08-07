@@ -41,7 +41,7 @@ from backend.file_import import load_audio_file
 try:
     from scripts.pegelexplosion_detector import PegelexplosionDetector
 except ImportError:
-    PegelexplosionDetector = None
+    PegelexplosionDetector = None  # type: ignore[assignment, misc]
 
 # ============================================================================
 # DATACLASSES
@@ -93,7 +93,7 @@ class ContinuousDeepAnalyzer:
         self.logger = logging.getLogger(__name__)
         self.checkpoints: list[PhaseCheckpoint] = []
         self.anomalies_detected: list[str] = []
-        self.pegelexplosion_detector = PegelexplosionDetector() if PegelexplosionDetector else None
+        self.pegelexplosion_detector = PegelexplosionDetector() if PegelexplosionDetector else None  # type: ignore[truthy-function]
         self._last_phase_audio = None
         self._final_musical_goals: dict[str, float] = {}
         self._final_vocal_metrics: dict[str, float] = {}
@@ -311,7 +311,7 @@ class ContinuousDeepAnalyzer:
             "wall_time_s": time.monotonic() - _start_t,
             "audio_path": audio_path,
             "mode": mode,
-            "effective_quality_mode": getattr(getattr(restorer, "config", None), "mode", None).value
+            "effective_quality_mode": getattr(getattr(restorer, "config", None), "mode", None).value  # type: ignore[union-attr]
             if "restorer" in locals() and getattr(getattr(restorer, "config", None), "mode", None) is not None
             else None,
             "effective_is_studio_2026": bool(restorer.is_studio_mode()) if "restorer" in locals() else None,
@@ -328,7 +328,7 @@ class ContinuousDeepAnalyzer:
             "summary": self._generate_summary(),
         }
         # §Fix-Blocker4: quality_status auch auf Top-Ebene propagieren (bisher nur in "summary").
-        result_dict["quality_status"] = result_dict["summary"].get("quality_status")
+        result_dict["quality_status"] = result_dict["summary"].get("quality_status")  # type: ignore[union-attr]
 
         result_file = Path(output_dir) / f"analysis_{Path(audio_path).stem}_{mode}_{int(time.time())}.json"
         with open(result_file, "w", encoding="utf-8") as f:
@@ -421,8 +421,8 @@ class ContinuousDeepAnalyzer:
 
             anomalies = self._check_anomalies_from_scores(
                 phase_id,
-                scores_before,
-                scores_after,
+                scores_before,  # type: ignore[arg-type]
+                scores_after,  # type: ignore[arg-type]
                 phase_hpi,
                 phase_afg,
                 pre_result,
@@ -434,7 +434,7 @@ class ContinuousDeepAnalyzer:
             cp = PhaseCheckpoint(
                 phase_id=phase_id,
                 wall_time_s=float(entry.get("timestamp") or time.time()),
-                musical_goals={k: float(v) for k, v in scores_after.items() if isinstance(v, (int, float))},
+                musical_goals={k: float(v) for k, v in scores_after.items() if isinstance(v, (int, float))},  # type: ignore[union-attr]
                 hpi_score=phase_hpi,
                 artifact_freedom=phase_afg,
                 carrier_recovery_ratio=final_ccr,

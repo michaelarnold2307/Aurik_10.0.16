@@ -290,7 +290,7 @@ class PhaseConductor:
                     _gw_mod = float(np.clip((_gw_mean - 1.0) * 0.10, -0.10, 0.10))
                     recommended_strength = float(np.clip(recommended_strength + _gw_mod, 0.0, 1.0))
             except Exception as e:
-                logger.warning("phase_conductor.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_conductor.py::unbekannter Ersatzpfad: %s", e)
                 pass  # Non-blocking: goal_weights integration failure → neutral
 
         # §2.31 Per-Song Studio-Day-Target Stopp-Signal: Phasen über Ziel hinaus verhindern
@@ -345,7 +345,7 @@ class PhaseConductor:
                         state_snapshot=current_state,
                     )
             except Exception as e:
-                logger.warning("phase_conductor.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_conductor.py::unbekannter Ersatzpfad: %s", e)
                 pass  # Non-blocking — Stopp-Signal-Fehler nie pipeline-blockierend
 
         if coalition_continuation:
@@ -375,7 +375,7 @@ class PhaseConductor:
                 f"Conductor: noise_floor={current_state.noise_floor_db:.1f} dBFS, "
                 f"hf={current_state.hf_energy_ratio:.2f} → kaum Restdefekt für {next_phase_id}"
             )
-            logger.debug("PhaseConductor Skip-Empfehlung: %s", skip_reason)
+            logger.debug("PhaseConductor ueberspringen-Empfehlung: %s", skip_reason)
 
         return ConductorRecommendation(
             next_phase_id=next_phase_id,

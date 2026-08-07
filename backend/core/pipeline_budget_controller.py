@@ -93,7 +93,7 @@ class PipelineBudgetController:
         elapsed = time.monotonic() - phase_start_ts
         if elapsed > cap:
             logger.warning(
-                "§v10.15 Phase-Time-Cap: %s elapsed %.0fs > cap %.0fs — recommend skip",
+                "§v10.15 Verarbeitungsschritt-Time-Cap: %s elapsed %.0fs > cap %.0fs — recommend ueberspringen",
                 phase_id,
                 elapsed,
                 cap,
@@ -123,7 +123,7 @@ class PipelineBudgetController:
         scalar = max(0.50, 1.0 - (pressure - 0.80) * 2.5)
         if pressure > 0.80:
             logger.info(
-                "§v10.15 Budget-Pressure: %.0f%% → quality scalar=%.2f",
+                "§v10.15 Grenze-Pressure: %.0f%% → quality scalar=%.2f",
                 pressure * 100,
                 scalar,
             )

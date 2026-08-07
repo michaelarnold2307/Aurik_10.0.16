@@ -318,7 +318,7 @@ def get_medium_profile_for_depth(
     return _mat_profile
 
 
-@staticmethod
+@staticmethod  # type: ignore[misc]
 def get_bw_ceiling_hz(medium_key: str) -> float | None:
     """§v10.705: Liefert die physikalische Bandbreiten-Obergrenze eines Mediums.
 

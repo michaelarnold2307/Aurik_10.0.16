@@ -234,7 +234,7 @@ def _phase_num(pid: str) -> int:
     try:
         return int(pid.split("_")[1])
     except Exception as e:
-        logger.warning("phase_dag.py::_phase_num fallback: %s", e)
+        logger.warning("Verarbeitungsschritt_dag.py::_Verarbeitungsschritt_num Ersatzpfad: %s", e)
         return 999
 
 
@@ -296,7 +296,7 @@ def sort_phases_by_dag(phase_list: list[str]) -> list[str]:
 
     if len(result) < len(phase_list):
         logger.warning(
-            "sort_phases_by_dag: Zyklus in Phase-DAG erkannt — Fallback auf numerische Sortierung. Verbleibend: %s",
+            "sort_phases_by_dag: Zyklus in Verarbeitungsschritt-DAG erkannt — Ersatzpfad auf numerische Sortierung. Verbleibend: %s",
             [norm_to_orig.get(n, n) for n in active_norms if n not in {norm_map[r] for r in result}],
         )
         return sorted(phase_list, key=_phase_num)

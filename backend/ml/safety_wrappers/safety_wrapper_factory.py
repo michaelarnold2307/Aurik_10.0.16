@@ -282,7 +282,7 @@ class SafetyWrapperFactory:
                     processing_mode=self.processing_mode,
                 )
             except Exception as e:
-                logger.warning("Warning: Could not load custom wrapper for %s: %s", module_name, e)
+                logger.warning("Warning: Could not laden custom wrapper for %s: %s", module_name, e)
                 # Fall through to generic wrapper
 
         # Create generic wrapper
@@ -290,7 +290,7 @@ class SafetyWrapperFactory:
             return GenericNoiseReductionSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -298,7 +298,7 @@ class SafetyWrapperFactory:
             return GenericRestorationSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -306,7 +306,7 @@ class SafetyWrapperFactory:
             return GenericDynamicsSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -314,7 +314,7 @@ class SafetyWrapperFactory:
             return GenericSpectralSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -322,7 +322,7 @@ class SafetyWrapperFactory:
             return GenericSpatialSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -331,7 +331,7 @@ class SafetyWrapperFactory:
             return GenericNoiseReductionSafety(
                 module_name=module_name,
                 module_version=module_version,
-                processor_func=processor_func,
+                processor_func=processor_func,  # type: ignore[arg-type]
                 processing_mode=self.processing_mode,
             )
 
@@ -453,12 +453,12 @@ if __name__ == "__main__":
 
     wrapped_modules = wrap_all_modules(ProcessingMode.RESTORATION)
 
-    logger.info("\nSuccessfully wrapped %s modules!", len(wrapped_modules))
+    logger.info("\nerfolgreich wrapped %s modules!", len(wrapped_modules))
     logger.info("\nExample usage:")
     logger.info("  from backend.ml.safety_wrappers.safety_wrapper_factory import wrap_module")
     logger.info("  ")
     logger.info("  dehum = wrap_module('automatic_dehum')")
-    logger.info("  processed, report = dehum.process(audio, sr, strength=0.8)")
+    logger.info("  verarbeitet, report = dehum.verarbeiten(audio, sr, strength=0.8)")
     logger.info("  ")
     logger.info("  if report.decision == ProcessingDecision.ROLLBACK_REQUIRED:")
-    logger.info("      logger.info('Processing aborted - returning original')")
+    logger.info("      logger.info('Processing abgebrochen - returning Originalsignal')")

@@ -120,7 +120,7 @@ class ProgressMonitor:
         try:
             self._callbacks.remove(callback)
         except ValueError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # ── Pipeline-Lifecycle ───────────────────────────────────────────────────
 
@@ -323,7 +323,7 @@ class ProgressMonitor:
         event_type = event.get("event", "unknown")
         if event_type == "phase_end":
             logger.info(
-                "Phase %s: %s (quality=%.2f)",
+                "Verarbeitungsschritt %s: %s (quality=%.2f)",
                 event.get("phase_name", "?"),
                 event.get("status", "?"),
                 event.get("quality_estimate", 0.0),

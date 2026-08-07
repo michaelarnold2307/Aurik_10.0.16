@@ -1,3 +1,5 @@
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -56,7 +58,7 @@ def test_mp_senet_short_input_is_padded_to_fixed_time(monkeypatch):
     monkeypatch.setattr(MpSenetPlugin, "_try_load", lambda self: None)
     plugin = MpSenetPlugin()
 
-    calls = []
+    calls: list[Any] = []
     plugin._session = _build_fake_session(calls)
 
     audio = np.random.randn(144000).astype(np.float32) * 0.01
@@ -74,7 +76,7 @@ def test_mp_senet_long_input_uses_multiple_fixed_chunks(monkeypatch):
     monkeypatch.setattr(MpSenetPlugin, "_try_load", lambda self: None)
     plugin = MpSenetPlugin()
 
-    calls = []
+    calls: list[Any] = []
     plugin._session = _build_fake_session(calls)
 
     # Long enough to create >404 STFT frames and force chunked inference.
@@ -93,7 +95,7 @@ def test_mp_senet_retries_alternate_layout_on_reshape_error(monkeypatch):
     monkeypatch.setattr(MpSenetPlugin, "_try_load", lambda self: None)
     plugin = MpSenetPlugin()
 
-    calls = []
+    calls: list[Any] = []
     plugin._session = _build_retry_layout_session(calls)
 
     audio = np.random.randn(144000).astype(np.float32) * 0.01

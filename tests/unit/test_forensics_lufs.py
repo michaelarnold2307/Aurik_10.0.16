@@ -5,7 +5,7 @@ import numpy as np
 
 def _sine(amplitude: float, sr: int = 48000, duration: float = 1.0) -> np.ndarray:
     t = np.linspace(0.0, duration, int(sr * duration), endpoint=False)
-    return (amplitude * np.sin(2.0 * np.pi * 1000.0 * t)).astype(np.float32)
+    return (amplitude * np.sin(2.0 * np.pi * 1000.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def test_integrated_lufs_increases_with_level():

@@ -71,8 +71,8 @@ class MLDeEsser:
         from backend.file_import import load_audio_file
 
         _res = load_audio_file(audio_path)
-        audio = np.asarray(_res["audio"], dtype=np.float64)
-        sr = int(_res["sr"])
+        audio = np.asarray(_res["audio"], dtype=np.float64)  # type: ignore[index]
+        sr = int(_res["sr"])  # type: ignore[index]
         if audio.ndim == 1:
             audio = audio[np.newaxis, :]  # (1, samples) for always_2d compat
         else:
@@ -113,13 +113,13 @@ class MLDeEsser:
             _, y_out = istft(Zxx_out, fs=sr, window="hann", nperseg=nperseg, noverlap=noverlap)
             n = len(ch)
             if len(y_out) >= n:
-                return y_out[:n]
+                return y_out[:n]  # type: ignore[no-any-return]
             return np.pad(y_out, (0, n - len(y_out)))
 
         try:
             if audio.ndim == 1:
                 return _deess_mono(audio).astype(audio.dtype)
-            return np.stack([_deess_mono(ch) for ch in audio], axis=0).astype(audio.dtype)
+            return np.stack([_deess_mono(ch) for ch in audio], axis=0).astype(audio.dtype)  # type: ignore[no-any-return]
         except Exception:
-            logger.warning("deesser_ml.py::_deess_mono fallback", exc_info=True)
+            logger.warning("deesser_ml.py::_deess_mono Ersatzpfad", exc_info=True)
             return audio

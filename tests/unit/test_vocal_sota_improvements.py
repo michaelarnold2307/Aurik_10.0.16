@@ -38,7 +38,7 @@ SR = 48_000
 
 def _sine(freq_hz: float, n: int = SR, amp: float = 0.4) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / SR
-    return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)
+    return (amp * np.sin(2.0 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _harmonic_voice(f0: float = 200.0, n_harmonics: int = 8, n: int = SR, amp: float = 0.4) -> np.ndarray:

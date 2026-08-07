@@ -11,7 +11,7 @@ import numpy as np
 
 ort: Any | None = None
 try:
-    import onnxruntime as ort
+    import onnxruntime as ort  # type: ignore[no-redef]
 except ImportError:
     ort = None
 
@@ -70,14 +70,14 @@ class PerceptualEQ:
             inp = audio.astype(np.float32)[None, None, :]
             try:
                 out = self.onnx_session.run(None, {self.onnx_session.get_inputs()[0].name: inp})[0]
-                return out.squeeze().astype(audio.dtype)
+                return out.squeeze().astype(audio.dtype)  # type: ignore[no-any-return]
             except Exception as e:
                 _logger.warning("ONNX-Inferenz fehlgeschlagen: %s", e)
         elif self.torch_model is not None and self.backend == "torch" and torch is not None:
             try:
                 inp = torch.from_numpy(audio.astype(np.float32)).unsqueeze(0).unsqueeze(0)
                 out = self.torch_model(inp).detach().cpu().numpy().squeeze()
-                return out.astype(audio.dtype)
+                return out.astype(audio.dtype)  # type: ignore[no-any-return]
             except Exception as e:
                 _logger.warning("Torch-Inferenz fehlgeschlagen: %s", e)
         # Fallback: klassische Filter nach Hörmodell
@@ -122,7 +122,7 @@ class PerceptualEQ:
             rms_in = float(np.sqrt(np.mean(audio**2))) + 1e-12
             rms_out = float(np.sqrt(np.mean(y**2))) + 1e-12
             y = y * (rms_in / rms_out)
-            return np.clip(y, -1.0, 1.0).astype(audio.dtype)
+            return np.clip(y, -1.0, 1.0).astype(audio.dtype)  # type: ignore[no-any-return]
         except Exception:
-            logger.warning("perceptual_eq.py::_perceptual_filter fallback", exc_info=True)
+            logger.warning("perceptual_eq.py::_perceptual_filter Ersatzpfad", exc_info=True)
             return audio

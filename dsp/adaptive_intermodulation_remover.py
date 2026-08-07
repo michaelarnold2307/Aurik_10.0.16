@@ -58,7 +58,7 @@ class AdaptiveIntermodulationRemover:
             return np.asarray(self._mmse_imd_reduction(audio, sr, strength))
         else:
             logger.warning(
-                "Unbekannte IMD-Methode '%s' — Fallback auf Notch-Filter",
+                "Unbekannte IMD-Methode '%s' — Ersatzpfad auf Notch-Filter",
                 self.method,
             )
             return np.asarray(self._notch_harmonics(audio, sr, strength))
@@ -170,7 +170,7 @@ class AdaptiveIntermodulationRemover:
         audio_out = np.nan_to_num(audio_out, nan=0.0, posinf=0.0, neginf=0.0)
         audio_out = np.clip(audio_out, -1.0, 1.0)
 
-        return (1.0 - strength) * audio + strength * audio_out
+        return (1.0 - strength) * audio + strength * audio_out  # type: ignore[no-any-return]
 
     def auto_optimize_params(self, audio, sr, target=None):
         """Optimiert Intermodulations-Parameter via spektraler Energie-Analyse.

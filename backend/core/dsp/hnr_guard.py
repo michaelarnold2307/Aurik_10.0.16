@@ -242,5 +242,5 @@ def apply_hnr_blend(
         )
         return blended, diag
     except Exception as exc:
-        logger.debug("§HNR-Guard: Blend fehlgeschlagen (%s) — NR-Output unverändert", exc)
+        logger.debug("§HNR-Guard: Blend fehlgeschlagen (%s) — NR-Ausgabe unverändert", exc)
         return audio_post, diag

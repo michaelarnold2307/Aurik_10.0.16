@@ -213,7 +213,10 @@ class MultibandCompressionPhase(PhaseInterface):
             _effective_strength = float(min(_effective_strength, 0.30))
 
         if _effective_strength <= 0.0:
-            logger.info("Phase 35: skipped — effective_strength=%.3f (no compression applied)", _effective_strength)
+            logger.info(
+                "Verarbeitungsschritt 35: uebersprungen — effective_strength=%.3f (no compression angewendet)",
+                _effective_strength,
+            )
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             # §5/5: Echte Peak-Messung auch bei Skip
@@ -243,7 +246,7 @@ class MultibandCompressionPhase(PhaseInterface):
         }
         if material_type in _analog_sensitive and _effective_strength < 0.25:
             logger.info(
-                "Phase 35: skipped — effective_strength=%.3f < 0.25 on analog material '%s' (no compression applied)",
+                "Verarbeitungsschritt 35: uebersprungen — effective_strength=%.3f < 0.25 on analog material '%s' (no compression angewendet)",
                 _effective_strength,
                 material_type.name,
             )
@@ -319,7 +322,7 @@ class MultibandCompressionPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase35 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt35 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — MB-Kompressor kann Atemgeräusche
         # in einem Frequenzband gaten wenn die Schwelle zu aggressiv ist.
@@ -348,7 +351,7 @@ class MultibandCompressionPhase(PhaseInterface):
                 elif compressed.ndim == 1 and _orig_35.ndim == 1:
                     compressed[_npa_m35] = _orig_35[_npa_m35]
         except Exception as _npa35_exc:
-            logger.debug("§2.46f phase_35 NPA-Guard (non-blocking): %s", _npa35_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_35 NPA-Guard (nicht blockierend): %s", _npa35_exc)
 
         return PhaseResult(
             success=True,
@@ -386,10 +389,15 @@ class MultibandCompressionPhase(PhaseInterface):
         Nutzt `split_into_bark_bands()` für psychoakustisch korrekte Frequenzaufteilung.
         Jede Gruppe fasst mehrere kritische Bänder zu einem Kompressor-Band zusammen.
         """
+        from backend.core.audio_utils import safe_to_mono, stereo_like
         from backend.core.dsp.bark_lufs_util import split_into_bark_bands
 
         is_stereo = audio.ndim == 2
-        mono = audio if not is_stereo else np.mean(audio, axis=0)
+        # §Fix: safe_to_mono() handles both (N, 2) and (2, N) stereo layouts —
+        # a naive np.mean(audio, axis=0) assumed channels-first (2, N) only and
+        # silently mis-averaged samples-first (N, 2) input into a (2,)-shaped
+        # "mono" array (axis-orientation bug, downstream ValueError on recombine).
+        mono = audio if not is_stereo else safe_to_mono(audio)
         bark_bands = split_into_bark_bands(mono.astype(np.float32), sample_rate)
 
         # Gruppiere 24 Bark-Bänder in 4 perzeptuelle Bänder
@@ -403,8 +411,9 @@ class MultibandCompressionPhase(PhaseInterface):
                 if idx < len(bark_bands):
                     group_signal += bark_bands[idx]
             if is_stereo:
-                # Repliziere Mono-Gruppe auf beide Stereokanäle
-                group_signal = np.column_stack([group_signal, group_signal]).astype(np.float32)
+                # Repliziere Mono-Gruppe auf beide Stereokanäle, in der
+                # ursprünglichen Layout-Orientierung von `audio`.
+                group_signal = stereo_like(group_signal, group_signal, audio).astype(np.float32)
             bands.append(group_signal.astype(np.float32))
 
         return bands
@@ -686,7 +695,7 @@ class MultibandCompressionPhase(PhaseInterface):
 if __name__ == "__main__":
     # Test der MultibandCompressionPhase.
     logger.debug("=" * 80)
-    logger.debug("Phase 35: Professional Multiband Compression v2.0")
+    logger.debug("Verarbeitungsschritt 35: Professional Multiband Compression v2.0")
     logger.debug("=" * 80)
 
     _test_sr: int = 44100
@@ -760,7 +769,7 @@ if __name__ == "__main__":
                 _makeup = _bm["makeup_db"]
                 _upward_str = f", Upward +{_upward:.1f} dB" if _upward > 0.1 else ""
                 logger.debug(
-                    "     %-10s (%-8s): Ratio %.1f:1, Thresh %.1f dB, "
+                    "     %-10s (%-8s): Verhaeltnis %.1f:1, Schwelle %.1f dB, "
                     "Max GR %.1f dB, Avg GR %.1f dB, Makeup +%.1f dB%s",
                     _bn,
                     _char,

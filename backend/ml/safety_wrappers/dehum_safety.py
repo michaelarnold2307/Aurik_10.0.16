@@ -358,9 +358,9 @@ class DeHumSafety(BaseSafetyWrapper):
         has_hum, detected_fundamental, severity, harmonics = detect_hum(audio, sr, fundamental_hz)
 
         metadata["has_hum"] = has_hum
-        metadata["hum_frequency"] = detected_fundamental
-        metadata["hum_severity"] = severity
-        metadata["hum_harmonics"] = harmonics
+        metadata["hum_frequency"] = detected_fundamental  # type: ignore[assignment]
+        metadata["hum_severity"] = severity  # type: ignore[assignment]
+        metadata["hum_harmonics"] = harmonics  # type: ignore[assignment]
 
         if not has_hum:
             return PreCheckResult(passed=False, confidence=0.0, reasons=["No hum detected in audio"])
@@ -375,14 +375,14 @@ class DeHumSafety(BaseSafetyWrapper):
         # Check for bass content
         has_bass, bass_ratio = check_bass_content(audio, sr)
         metadata["has_bass_content"] = has_bass
-        metadata["bass_energy_ratio"] = bass_ratio
+        metadata["bass_energy_ratio"] = bass_ratio  # type: ignore[assignment]
 
         if has_bass:
             warnings.append(f"Significant bass content detected: {bass_ratio:.1%}. Risk of damaging musical low end.")
 
         # Check harmonic series
         harmonic_strength = measure_harmonic_series_strength(audio, sr)
-        metadata["harmonic_series_strength"] = harmonic_strength
+        metadata["harmonic_series_strength"] = harmonic_strength  # type: ignore[assignment]
 
         if harmonic_strength > 0.7:
             warnings.append(
@@ -391,7 +391,7 @@ class DeHumSafety(BaseSafetyWrapper):
 
         # Check phase coherence (if stereo)
         phase_coherence = check_phase_coherence(audio)
-        metadata["phase_coherence_before"] = phase_coherence
+        metadata["phase_coherence_before"] = phase_coherence  # type: ignore[assignment]
 
         if phase_coherence < 0.7:
             warnings.append(f"Low phase coherence: {phase_coherence:.2f}. Stereo image may be fragile.")

@@ -152,9 +152,9 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
             )
             audio_f = np.clip(audio_f, -1.0, 1.0).astype(np.float32)
             processing_applied = True
-            logger.debug("_dsp_restore: shellac path (SNR=%.1f dB, f0=%.0f Hz)", snr_est_db, f0_est)
+            logger.debug("_dsp_wiederherstellen: shellac path (SNR=%.1f dB, f0=%.0f Hz)", snr_est_db, f0_est)
         except Exception as exc:
-            logger.debug("_dsp_restore shellac failed: %s", exc)
+            logger.debug("_dsp_wiederherstellen shellac fehlgeschlagen: %s", exc)
 
     # ── Step 2b: VOCAL path — WOW-Inversion + Harmonic-Aware Wiener + Smoothing ─
     elif not is_low_noise and len(audio_f) >= 2 * sr:
@@ -194,7 +194,7 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                         audio_interp = interp1d(np.arange(n), audio_f.astype(np.float64), kind="linear")
                         audio_f = audio_interp(inv_pos).astype(np.float32)
                         processing_applied = True
-                        logger.debug("_dsp_restore: lineare Drift invertiert (ratio=%.4f)", drift_ratio)
+                        logger.debug("_dsp_wiederherstellen: lineare Drift invertiert (Verhaeltnis=%.4f)", drift_ratio)
                     else:
                         # Sinusoidale WOW-Erkennung via FFT der F0-Kurve (0.1–3 Hz)
                         f0_mean_v = float(np.mean(f0_arr[valid_idx]))
@@ -223,12 +223,12 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                                     )
                                     processing_applied = True
                                     logger.debug(
-                                        "_dsp_restore: sinusoidale WOW invertiert (rate=%.2f Hz, depth=%.1f%%)",
+                                        "_dsp_wiederherstellen: sinusoidale WOW invertiert (rate=%.2f Hz, depth=%.1f%%)",
                                         wow_rate,
                                         wow_depth_est * 100,
                                     )
         except Exception as exc:
-            logger.debug("_dsp_restore vocal WOW: %s", exc)
+            logger.debug("_dsp_wiederherstellen vocal WOW: %s", exc)
         # Wiener-NR mit Temporal Smoothing (5 Frames) — verhindert Musical Noise.
         # Floor=0.65 (uniform, max 35 % NR): bewahrt spektrale Form (NSIM-kritisch).
         # Harmonic-Aware Selective NR ist kontraproduktiv: senkt NSIM für harmonisch
@@ -258,9 +258,9 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                 length=len(audio_f),
             )
             audio_f = np.clip(audio_nr, -1.0, 1.0).astype(np.float32)
-            logger.debug("_dsp_restore: Wiener-NR + Temporal-Smooth (SNR=%.1f dB)", snr_est_db)
+            logger.debug("_dsp_wiederherstellen: Wiener-NR + Temporal-Smooth (SNR=%.1f dB)", snr_est_db)
         except Exception as exc:
-            logger.debug("_dsp_restore Wiener-NR: %s", exc)
+            logger.debug("_dsp_wiederherstellen Wiener-NR: %s", exc)
 
     # ── Step 2c: Low-noise signals (TAPE, VINYL, …) — skip spectral processing ─
     # These signals already score ≥ 80 MUSHRA. Any spectral modification reduces
@@ -305,15 +305,15 @@ def make_restoration_fn(mode: str = "quality"):
         def restore(audio: np.ndarray, sr: int) -> np.ndarray:
             try:
                 result = restorer.restore(audio, sr, mode=mode)
-                return result.audio if hasattr(result, "audio") else result
+                return result.audio if hasattr(result, "audio") else result  # type: ignore[return-value]
             except Exception as exc:
-                logger.debug("Restore-Fehler (DSP-Fallback): %s", exc)
+                logger.debug("wiederherstellen-Fehler (DSP-Ersatzpfad): %s", exc)
                 return _dsp_restore(audio, sr)
 
         return restore
 
     except ImportError as exc:
-        logger.warning("UnifiedRestorerV3 nicht verfügbar (%s) — erweiterter DSP-Fallback", exc)
+        logger.warning("UnifiedRestorerV3 nicht verfügbar (%s) — erweiterter DSP-Ersatzpfad", exc)
         return _dsp_restore
 
 
@@ -360,7 +360,7 @@ def main() -> int:
 
     logger.info("")
     logger.info("━" * 60)
-    logger.info("AMRB Gesamt-Score : %.1f / 100", report.overall_score)
+    logger.info("AMRB Gesamt-Wert : %.1f / 100", report.overall_score)
     logger.info("Szenarien bestanden: %d / %d", report.n_passed, report.n_scenarios)
     logger.info(
         "OS-Führerschaft   : %s", "✅ JA (≥ 84.0 UND ≥ 8/10)" if report.passes_os_leadership_threshold() else "❌ NEIN"

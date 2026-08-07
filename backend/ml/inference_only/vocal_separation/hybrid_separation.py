@@ -69,7 +69,7 @@ class HybridVocalSeparator:
         self.demucs_weight = demucs_weight
         self.sample_rate = sample_rate
 
-        logger.info("HybridVocalSeparator initialized: strategy=%s, device=%s", fusion_strategy, device)
+        logger.info("HybridVocalSeparator initialisiert: strategy=%s, device=%s", fusion_strategy, device)
 
         # Initialize both models
         self.mdx_net = MDXNetSeparator(sample_rate=sample_rate, device=device)
@@ -116,12 +116,12 @@ class HybridVocalSeparator:
         logger.info("Hybrid separation #%s: strategy=%s", self.separation_count, self.fusion_strategy)
 
         # Run both models in parallel (conceptually)
-        logger.info("  Running MDX-Net...")
+        logger.info("  laeuft MDX-Net...")
         mdx_time_start = time.time()
         mdx_stems = self.mdx_net.separate(audio, sr=sr, return_stems=True)
         mdx_time = time.time() - mdx_time_start
 
-        logger.info("  Running Demucs v5...")
+        logger.info("  laeuft Demucs v5...")
         demucs_time_start = time.time()
         demucs_stems = self.demucs.separate(audio, sr=sr, stems=["vocals", "other"])
         demucs_time = time.time() - demucs_time_start
@@ -148,7 +148,9 @@ class HybridVocalSeparator:
         }
         self.fusion_decisions_log.append(fusion_decision)
 
-        logger.info("  Hybrid separation complete: %.2fs (MDX=%.2fs, Demucs=%.2fs)", total_time, mdx_time, demucs_time)
+        logger.info(
+            "  Hybrid separation vollstaendig: %.2fs (MDX=%.2fs, Demucs=%.2fs)", total_time, mdx_time, demucs_time
+        )
 
         # NaN/Inf-Guard für Ausgabe
         vocals_fused = np.nan_to_num(vocals_fused, nan=0.0, posinf=0.0, neginf=0.0)
@@ -341,7 +343,7 @@ class HybridVocalSeparator:
         # But not too extreme
         quality = 1.0 - abs(ratio - 0.3)  # Optimal at 30/70 split
 
-        return max(0.0, quality)
+        return max(0.0, quality)  # type: ignore[no-any-return]
 
     def get_metrics(self) -> dict:
         """

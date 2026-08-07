@@ -154,7 +154,7 @@ class MLMediumDetector:
 
         # Cross-validation
         if verbose:
-            logger.info("   Running %s-fold cross-validation...", cv_folds)
+            logger.info("   laeuft %s-fold cross-Validierung...", cv_folds)
 
         cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=self.random_state)
         rf_cv_scores = cross_val_score(self.rf_model, X_scaled, y_encoded, cv=cv, n_jobs=-1)
@@ -184,7 +184,7 @@ class MLMediumDetector:
 
         if verbose:
             logger.info("   " + "=" * 50)
-            logger.info("   ✅ Training Complete!")
+            logger.info("   ✅ Training vollstaendig!")
             logger.info("   RF Train Accuracy:     %.4f", rf_train_acc)
             logger.info("   GB Train Accuracy:     %.4f", gb_train_acc)
             logger.info("   Ensemble Train Acc:    %.4f", self.training_accuracy)
@@ -406,7 +406,7 @@ class MLMediumDetector:
         with open(filepath, "wb") as f:
             pickle.dump(model_data, f)
 
-        logger.info("✅ Model saved to %s", filepath)
+        logger.info("✅ Model gespeichert to %s", filepath)
 
     def load(self, filepath: Path) -> None:
         """
@@ -429,7 +429,7 @@ class MLMediumDetector:
 
         self.is_trained = True
 
-        logger.info("✅ Model loaded from %s", filepath)
+        logger.info("✅ Model geladen from %s", filepath)
         logger.info("   Version: %s", model_data.get("version", "unknown"))
         logger.info("   Classes: %s", self.n_classes)
         logger.info("   CV Accuracy: %.4f", self.cv_accuracy)
@@ -462,11 +462,11 @@ def train_ml_detector_from_dataset(
     labels = []
 
     if verbose:
-        logger.info("📊 Extracting features from %s samples...", len(dataset["samples"]))
+        logger.info("📊 extrahiere features from %s samples...", len(dataset["samples"]))
 
     for i, sample in enumerate(dataset["samples"]):
         if verbose and (i + 1) % 50 == 0:
-            logger.info("   Processed %s/%s...", i + 1, len(dataset["samples"]))
+            logger.info("   verarbeitet %s/%s...", i + 1, len(dataset["samples"]))
 
         features = extractor.extract_all(sample.audio, sample.sample_rate, verbose=False)
         features_list.append(features)

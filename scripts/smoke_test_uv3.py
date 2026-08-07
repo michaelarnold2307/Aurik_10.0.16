@@ -59,10 +59,10 @@ def test_calibration_profile() -> int:
         uv3 = MagicMock(spec=UnifiedRestorerV3)
         uv3._restoration_context = {"source_fidelity_bandwidth_target_hz": 13006.0}
 
-        profile = UnifiedRestorerV3._build_song_calibration_profile(
+        profile = UnifiedRestorerV3._build_song_calibration_profile(  # type: ignore[misc]
             uv3,
-            material_type="vinyl",
-            mode="restoration",
+            material_type="vinyl",  # type: ignore[arg-type]
+            mode="restoration",  # type: ignore[arg-type]
             restorability_score=63.5,
             input_snr_db=14.3,
             max_defect_severity=0.63,

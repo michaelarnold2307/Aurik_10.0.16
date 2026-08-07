@@ -35,7 +35,7 @@ def repair_file(input_path: str, output_path: str | None = None) -> dict:
         output_path = input_path.replace(".wav", "_repaired.wav").replace(".flac", "_repaired.flac")
 
     sf.write(output_path, result.T if result.ndim == 2 else result, sr)
-    logger.info("Saved: %s", output_path)
+    logger.info("gespeichert: %s", output_path)
     return report
 
 
@@ -134,7 +134,7 @@ class DirectDefectRepair:
                     yi = np.polyval(coeffs, xi)
                     result[ch, s0:s1] = yi.astype(np.float32)
                 except Exception as _e:
-                    logger.debug("direct_defect_repair: non-critical exception: %s", _e)
+                    logger.debug("direct_defect_repair: unkritisch exception: %s", _e)
         return result
 
     def _repair_scratches(self, audio, sr, scratches):

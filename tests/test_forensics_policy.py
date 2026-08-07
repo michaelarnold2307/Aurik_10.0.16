@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 """
@@ -16,7 +18,7 @@ from backend.core.forensics.analysis_and_modules import PolicyManager
 @pytest.mark.unit
 def test_policy_manager_initialization():
     """Test PolicyManager initializes with default escalation levels"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     assert pm.policy == {}
@@ -26,7 +28,7 @@ def test_policy_manager_initialization():
 
 def test_policy_manager_custom_escalation():
     """Test PolicyManager with custom escalation levels"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     custom_levels = {"warn": 2, "bypass": 4, "hard_bypass": 6}
     pm = PolicyManager(policy, escalation_levels=custom_levels)
 
@@ -35,7 +37,7 @@ def test_policy_manager_custom_escalation():
 
 def test_policy_update_single_failure():
     """Test policy update with single gate failure"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     feedback = {"gate1": False}
@@ -49,7 +51,7 @@ def test_policy_update_single_failure():
 
 def test_policy_escalation_warn_level():
     """Test escalation to warn level after 3 failures"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # 3 failures → warn level
@@ -64,7 +66,7 @@ def test_policy_escalation_warn_level():
 
 def test_policy_escalation_bypass_level():
     """Test escalation to bypass level after 5 failures"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # 5 failures → bypass level
@@ -78,7 +80,7 @@ def test_policy_escalation_bypass_level():
 
 def test_policy_escalation_hard_bypass_level():
     """Test escalation to hard_bypass level after 7 failures"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # 7 failures → hard_bypass level
@@ -92,7 +94,7 @@ def test_policy_escalation_hard_bypass_level():
 
 def test_policy_reset_after_success():
     """Test policy resets after success"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # 3 failures → warn
@@ -112,7 +114,7 @@ def test_policy_reset_after_success():
 
 def test_policy_logging():
     """Test policy logs all events"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # Update triggers logging
@@ -126,7 +128,7 @@ def test_policy_logging():
 
 def test_policy_callback_invoked():
     """Test callback is invoked on escalation"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     callback_events = []
 
     def callback(event):
@@ -162,7 +164,7 @@ def test_policy_threshold_adjustment():
 
 def test_policy_reset_policy_method():
     """Test reset_policy() clears all gate states"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # Create some failures
@@ -183,7 +185,7 @@ def test_policy_reset_policy_method():
 
 def test_policy_multiple_gates():
     """Test policy handles multiple gates independently"""
-    policy = {}
+    policy: dict[Any, Any] = {}
     pm = PolicyManager(policy)
 
     # gate1 fails 3 times, gate2 fails 5 times

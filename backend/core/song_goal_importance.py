@@ -41,6 +41,9 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+MATERIAL_EXPECTED_BW = 20000.0
+_RESTORATION_BRILLIANCE_FACTOR = 0.80 + 0.05
+
 # All 15 canonical goal names
 ALL_GOAL_NAMES: tuple[str, ...] = (
     "natuerlichkeit",
@@ -501,9 +504,9 @@ class SongGoalFeedbackStore:
                         try:
                             self._entries.append(UserFeedbackEntry(**e))
                         except Exception as _entry_exc:
-                            logger.debug("FeedbackStore: invalid entry skipped: %s", _entry_exc)
+                            logger.debug("FeedbackStore: invalid entry uebersprungen: %s", _entry_exc)
         except Exception as _load_exc:
-            logger.debug("§C10 FeedbackStore load skipped: %s", _load_exc)
+            logger.debug("§C10 FeedbackStore laden uebersprungen: %s", _load_exc)
         finally:
             self._loaded = True
 
@@ -529,7 +532,7 @@ class SongGoalFeedbackStore:
             with open(p, "w", encoding="utf-8") as fh:
                 json.dump(payload, fh, indent=2)
         except Exception as _save_exc:
-            logger.debug("§C10 FeedbackStore save skipped: %s", _save_exc)
+            logger.debug("§C10 FeedbackStore speichern uebersprungen: %s", _save_exc)
 
     def record_feedback(self, entry: UserFeedbackEntry) -> None:
         """Record a new listener feedback entry and update nudges via Bayesian EMA."""
@@ -671,7 +674,7 @@ def estimate_goal_importance(
         try:
             return str(v).strip().lower()
         except Exception as e:
-            logger.warning("song_goal_importance.py::_to_str fallback: %s", e)
+            logger.warning("song_goal_importance.py::_to_str Ersatzpfad: %s", e)
             return default
 
     _genre = _to_str(genre_label)
@@ -817,7 +820,7 @@ def estimate_goal_importance(
         weights["artikulation"] *= 1.10
         weights["emotionalitaet"] *= 1.05
         # Enhancement-Goals sanft zurücknehmen
-        weights["brillanz"] *= 0.85
+        weights["brillanz"] *= _RESTORATION_BRILLIANCE_FACTOR
         weights["bass_kraft"] *= 0.90
         weights["spatial_depth"] *= 0.90
         reasons.append("restoration_mode")
@@ -851,7 +854,7 @@ def estimate_goal_importance(
     # §2.59: Kontinuierliche Messung statt Stufen. Brillanz skaliert
     # proportional zur verfuegbaren Bandbreite (0 Hz → 0.6, 20 kHz → 1.1).
     if effective_bandwidth_hz is not None and effective_bandwidth_hz > 0:
-        _bw_ratio = min(float(effective_bandwidth_hz) / 20000.0, 1.0)
+        _bw_ratio = min(float(effective_bandwidth_hz) / MATERIAL_EXPECTED_BW, 1.0)
         _brillanz_factor = 0.6 + 0.5 * _bw_ratio
         weights["brillanz"] *= _brillanz_factor
         if effective_bandwidth_hz < 8000.0:
@@ -1334,7 +1337,7 @@ def estimate_goal_importance(
                 if abs(_nudge - 1.0) > 0.01:  # Only apply meaningful nudges
                     weights[goal] = weights[goal] * (1.0 - _blend) + weights[goal] * _nudge * _blend
     except Exception as _c10_exc:
-        logger.debug("§C10 Listener calibration blend skipped: %s", _c10_exc)
+        logger.debug("§C10 Listener Kalibrierung blend uebersprungen: %s", _c10_exc)
 
     # --- Step 8: Enforce hard bounds ---
     for goal in ALL_GOAL_NAMES:

@@ -544,7 +544,7 @@ class TestMetricsPlugins:
         from plugins.visqol_plugin import ViSQOLPlugin
 
         p = ViSQOLPlugin()
-        sig = inspect.signature(p.calculate)
+        sig = inspect.signature(p.calculate)  # type: ignore[attr-defined]
         params = list(sig.parameters.keys())
         assert "mode" in params or "ref_wav" in params
 

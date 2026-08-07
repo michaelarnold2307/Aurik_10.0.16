@@ -427,31 +427,31 @@ class EnhancedMetrics:
                 breath_ret, _, _ = self.authenticity.compute_breath_retention(original_clean, restored, sr)
                 breath_retention = breath_ret
             except Exception as e:
-                logger.debug("Breath retention (improvement) failed: %s", e)
+                logger.debug("Breath retention (improvement) fehlgeschlagen: %s", e)
 
             try:
                 trans_pres, _, _ = self.authenticity.compute_transient_preservation(original_clean, restored, sr)
                 transient_preservation = trans_pres
             except Exception as e:
-                logger.debug("Transient preservation (improvement) failed: %s", e)
+                logger.debug("Transient preservation (improvement) fehlgeschlagen: %s", e)
 
             try:
                 plos_ret, _, _ = self.authenticity.compute_plosive_retention(original_clean, restored, sr)
                 plosive_retention = plos_ret
             except Exception as e:
-                logger.debug("Plosive retention (improvement) failed: %s", e)
+                logger.debug("Plosive retention (improvement) fehlgeschlagen: %s", e)
 
             try:
                 sib_ret, _, _ = self.authenticity.compute_sibilance_retention(original_clean, restored, sr)
                 sibilance_retention = sib_ret
             except Exception as e:
-                logger.debug("Sibilance retention (improvement) failed: %s", e)
+                logger.debug("Sibilance retention (improvement) fehlgeschlagen: %s", e)
 
             try:
                 room_ret, _, _ = self.authenticity.compute_room_tone_retention(original_clean, restored, sr)
                 room_tone_retention = room_ret
             except Exception as e:
-                logger.debug("Room tone retention (improvement) failed: %s", e)
+                logger.debug("Room tone retention (improvement) fehlgeschlagen: %s", e)
 
         return QualityMetricsResult(
             snr_db=snr_restored,

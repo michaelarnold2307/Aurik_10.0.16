@@ -543,10 +543,10 @@ class TestPhase06EQIntegration:
         audio = (0.3 * np.sin(2 * np.pi * 2000 * t)).astype(np.float32)
 
         kwargs = {"song_calibration_profile": sfr_cal or {}}
-        result = phase.process(audio, sr, strength=0.70, **kwargs)
+        result = phase.process(audio, sr, strength=0.70, **kwargs)  # type: ignore[arg-type]
         if hasattr(result, "audio"):
             return result.audio
-        return result
+        return result  # type: ignore[return-value]
 
     def test_no_sfr_cal_does_not_crash(self):
         audio_out = self._run_phase_06(sfr_cal={})

@@ -53,7 +53,7 @@ adaptive_omlsa_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Fehlanpassung bei falschem Noise-Floor",
             "expected_when": "noise_floor zu hoch",
             "severity": 0.2,
@@ -156,5 +156,5 @@ class AdaptiveOMLSA:
         self.noise_floor = float(np.clip(1e-6 / (snr + 1.0), 1e-8, 1e-5))
 
         logger.info(
-            f"adaptive_omlsa.auto_optimize: SNR={snr:.2f} → alpha={self.alpha:.4f}, noise_floor={self.noise_floor:.2e}"
+            f"adaptive_omlsa.auto_optimieren: SNR={snr:.2f} → alpha={self.alpha:.4f}, noise_floor={self.noise_floor:.2e}"
         )

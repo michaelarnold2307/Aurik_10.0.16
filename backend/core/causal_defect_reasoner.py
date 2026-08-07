@@ -3408,7 +3408,7 @@ class CausalDefectReasoner:
         codec_contamination: dict[str, float] | None = None,
     ) -> RestorationPlan:
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        priors = MATERIAL_PRIORS.get(_mk, MATERIAL_PRIORS.get(MaterialType.UNKNOWN, {}))
+        priors = MATERIAL_PRIORS.get(_mk, MATERIAL_PRIORS.get(MaterialType.UNKNOWN, {}))  # type: ignore[call-overload]
         posteriors: dict[str, float] = {}
 
         # §CODEC: Adjustiere Bayesian-Priors für analoge Ursachen wenn Codec-Contamination vorliegt.
@@ -3519,7 +3519,7 @@ class CausalDefectReasoner:
             if _excluded:
                 ordered_phases = [_p for _p in ordered_phases if _p not in _mat_exclusions]
                 logger.info(
-                    "§6.2b Material-Phase-Exclusion: material=%s hat %d Phase(n) blockiert: %s",
+                    "§6.2b Material-Verarbeitungsschritt-Exclusion: material=%s hat %d Verarbeitungsschritt(n) blockiert: %s",
                     material,
                     len(_excluded),
                     _excluded,

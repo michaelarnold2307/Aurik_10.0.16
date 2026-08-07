@@ -149,34 +149,37 @@ class HybridSpeedPitch:
             from plugins.fcpe_plugin import get_fcpe_plugin
 
             self.crepe = get_fcpe_plugin()  # type: ignore[assignment]
-            logger.info("FCPE plugin loaded for Phase 31 speed/pitch detection (model=%s)", self.crepe.model_used)  # type: ignore[attr-defined]
+            logger.info(
+                "FCPE plugin geladen for Verarbeitungsschritt 31 speed/pitch detection (model=%s)",
+                self.crepe.model_used,
+            )  # type: ignore[attr-defined]
             return
         except Exception as e:
-            logger.debug("FCPE nicht verfügbar (%s) — RMVPE-Fallback (§4.4 Tier-2)", e)
+            logger.debug("FCPE nicht verfügbar (%s) — RMVPE-Ersatzpfad (§4.4 Tier-2)", e)
         # Tier-2: RMVPE — before CREPE per §4.4 (30 % lower pitch error, Wei ICASSP 2023)
         try:
             from plugins.rmvpe_plugin import get_rmvpe_plugin
 
             self.crepe = get_rmvpe_plugin()  # type: ignore[assignment]
-            logger.info("RMVPE plugin loaded for Phase 31 speed/pitch detection (§4.4 Tier-2)")
+            logger.info("RMVPE plugin geladen for Verarbeitungsschritt 31 speed/pitch detection (§4.4 Tier-2)")
             return
         except Exception as e:
-            logger.debug("RMVPE nicht verfügbar (%s) — CREPE-Fallback (§4.4 Tier-3)", e)
+            logger.debug("RMVPE nicht verfügbar (%s) — CREPE-Ersatzpfad (§4.4 Tier-3)", e)
         # Tier-3: PESTO
         try:
             from plugins.pesto_plugin import get_pesto_plugin  # pylint: disable=no-name-in-module
 
             self.crepe = get_pesto_plugin()  # type: ignore[assignment]
-            logger.info("PESTO plugin loaded for Phase 31 speed/pitch detection (§4.4 Tier-3)")
+            logger.info("PESTO plugin geladen for Verarbeitungsschritt 31 speed/pitch detection (§4.4 Tier-3)")
             return
         except Exception as e:
-            logger.debug("PESTO nicht verfügbar (%s) — CREPE-Legacy-Fallback (§4.4 Tier-4)", e)
+            logger.debug("PESTO nicht verfügbar (%s) — CREPE-Legacy-Ersatzpfad (§4.4 Tier-4)", e)
         # Tier-4: CREPE (legacy — only if PESTO unavailable)
         try:
             from plugins.crepe_plugin import CREPEPlugin
 
             self.crepe = CREPEPlugin()  # type: ignore[assignment]
-            logger.info("CREPE plugin loaded for Phase 31 speed/pitch detection (§4.4 Tier-4 legacy)")
+            logger.info("CREPE plugin geladen for Verarbeitungsschritt 31 speed/pitch detection (§4.4 Tier-4 legacy)")
         except Exception as e:
             logger.warning("Kein Pitch-ML-Plugin verfügbar: %s", e)
             self.crepe = None
@@ -263,7 +266,8 @@ class HybridSpeedPitch:
                     crepe_pitch, crepe_confidence = HybridSpeedPitch._last_valid_crepe
                     logger.info(
                         "CREPE Null-Ergebnis → letztes gültiges übernommen: pitch=%.2f Hz, conf=%.3f",
-                        crepe_pitch, crepe_confidence,
+                        crepe_pitch,
+                        crepe_confidence,
                     )
                 else:
                     logger.info("CREPE Null-Ergebnis — kein vorheriges gültiges Ergebnis, verwerfe")
@@ -331,8 +335,8 @@ class HybridSpeedPitch:
         try:
             f0, voiced_flag, voiced_probs = librosa.pyin(
                 segment,
-                fmin=librosa.note_to_hz("C2"),  # ~65 Hz
-                fmax=librosa.note_to_hz("C7"),  # ~2093 Hz
+                fmin=librosa.note_to_hz("C2"),  # type: ignore[arg-type]  # ~65 Hz
+                fmax=librosa.note_to_hz("C7"),  # type: ignore[arg-type]  # ~2093 Hz
                 sr=sample_rate,
                 frame_length=2048,
                 hop_length=512,
@@ -360,7 +364,7 @@ class HybridSpeedPitch:
                     return 0.0, 0.0
                 return float(np.median(valid)), 0.35  # Feste niedrige Konfidenz
             except Exception as e:
-                logger.warning("hybrid_speed_pitch_ml.py::_apply_pyin_global fallback: %s", e)
+                logger.warning("hybrid_speed_pitch_ml.py::_anwenden_pyin_global Ersatzpfad: %s", e)
                 return 0.0, 0.0
 
     def _apply_crepe_global(self, audio: np.ndarray, sample_rate: int) -> tuple[float, float]:
@@ -375,7 +379,7 @@ class HybridSpeedPitch:
             (global_pitch, confidence)
         """
         if self.crepe is None:
-            logger.warning("ML-Pitch-Plugin nicht verfügbar, Fallback auf pYIN")
+            logger.warning("ML-Pitch-Plugin nicht verfügbar, Ersatzpfad auf pYIN")
             return self._apply_pyin_global(audio, sample_rate)
 
         try:
@@ -404,7 +408,7 @@ class HybridSpeedPitch:
             return float(global_pitch), float(global_confidence)
 
         except Exception as e:
-            logger.error("ML pitch processing failed: %s", e)
+            logger.error("ML pitch processing fehlgeschlagen: %s", e)
             return 0.0, 0.0
 
     def _combine_estimates(

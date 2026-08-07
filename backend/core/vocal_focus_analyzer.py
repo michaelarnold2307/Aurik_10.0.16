@@ -320,7 +320,7 @@ class VocalFocusAnalyzer:
                         sum(1 for e in result.intonation_events if not e.pitch_correction_allowed),
                     )
             except Exception as _ie_exc:
-                logger.debug("VFA step 12 IntonationClassifier: non-blocking fallback — %s", _ie_exc)
+                logger.debug("VFA step 12 IntonationClassifier: nicht blockierend Ersatzpfad — %s", _ie_exc)
 
         # 13. §Lücke-F Breath Emotion Classification: Atemgeräusche kategorisieren
         # Emotionale Atemgeräusche (EMOTIONAL_TENSION) sind Frisson-Vorboten → G_floor 0.85
@@ -339,7 +339,7 @@ class VocalFocusAnalyzer:
                     _n_tension,
                 )
         except Exception as _bec_exc:
-            logger.debug("VFA step 13 BreathEmotionClassifier: non-blocking fallback — %s", _bec_exc)
+            logger.debug("VFA step 13 BreathEmotionClassifier: nicht blockierend Ersatzpfad — %s", _bec_exc)
 
         elapsed = time.perf_counter() - _t0
         logger.info(
@@ -435,7 +435,7 @@ class VocalFocusAnalyzer:
             try:
                 confidence = max(confidence, float(panns_vocals_confidence or 0.0))
             except (TypeError, ValueError):
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         if music_conf >= 0.40 and raw_vocals > 0.08 and speech_conf < 0.30:
             confidence = max(confidence, 0.35)
@@ -483,7 +483,7 @@ class VocalFocusAnalyzer:
             register, bias = _detect_vocal_register_fn(mono, sr, panns_singing)  # type: ignore[misc]
             return register, bias
         except Exception as exc:
-            logger.debug("VFA._detect_register fallback: %s", exc)
+            logger.debug("VFA._erkennen_register Ersatzpfad: %s", exc)
             return "chest", -6.0
 
     @staticmethod
@@ -500,7 +500,7 @@ class VocalFocusAnalyzer:
                     result.append((float(z[0]), float(z[1])))
             return result
         except Exception as exc:
-            logger.debug("VFA._detect_frisson fallback: %s", exc)
+            logger.debug("VFA._erkennen_frisson Ersatzpfad: %s", exc)
             return []
 
     def _analyze_formants(self, mono: np.ndarray, sr: int) -> tuple[float, float, bool]:
@@ -550,13 +550,13 @@ class VocalFocusAnalyzer:
                 else:
                     f1_mean = f1_mean if f1_mean > 0 else 600.0
                     f2_mean = f2_mean if f2_mean > 0 else 1800.0
-                logger.debug("VFA formant fallback: F0=%.0f → F1=%.0f F2=%.0f", _f0_est, f1_mean, f2_mean)
+                logger.debug("VFA formant Ersatzpfad: F0=%.0f → F1=%.0f F2=%.0f", _f0_est, f1_mean, f2_mean)
             # Stabilität: F1-Standardabweichung < 15 % des Mittelwerts → stabil (Opera)
             f1_std = float(np.std(f1_vals)) if len(f1_vals) >= 4 else 0.0
             is_stable = (f1_std < f1_mean * 0.15) if f1_mean > 0 else True
             return f1_mean, f2_mean, is_stable
         except Exception as exc:
-            logger.debug("VFA._analyze_formants fallback: %s", exc)
+            logger.debug("VFA._analyze_formants Ersatzpfad: %s", exc)
             return 0.0, 0.0, True
 
     @staticmethod
@@ -583,8 +583,8 @@ class VocalFocusAnalyzer:
                 mono_f = mono_f[:_max_samp]
             f0, voiced_flag, _ = _librosa.pyin(  # type: ignore[union-attr]
                 mono_f,
-                fmin=_librosa.note_to_hz("C2"),  # type: ignore[union-attr]
-                fmax=_librosa.note_to_hz("C7"),  # type: ignore[union-attr]
+                fmin=_librosa.note_to_hz("C2"),  # type: ignore[arg-type]
+                fmax=_librosa.note_to_hz("C7"),  # type: ignore[arg-type]
                 sr=_pyin_sr,
                 frame_length=2048,
                 hop_length=hop,
@@ -623,7 +623,7 @@ class VocalFocusAnalyzer:
                 zones.append((zone_start, float(times[-1])))
             return zones
         except Exception as exc:
-            logger.debug("VFA._detect_passaggio fallback: %s", exc)
+            logger.debug("VFA._erkennen_passaggio Ersatzpfad: %s", exc)
             return []
 
     @staticmethod
@@ -650,7 +650,7 @@ class VocalFocusAnalyzer:
                     result.append((float(z[0]), float(z[1])))
             return result
         except Exception as exc:
-            logger.debug("VFA._detect_vibrato fallback: %s", exc)
+            logger.debug("VFA._erkennen_vibrato Ersatzpfad: %s", exc)
             return []
 
     # ------------------------------------------------------------------
@@ -716,7 +716,7 @@ class VocalFocusAnalyzer:
 
             return zones
         except Exception as exc:
-            logger.debug("VFA._detect_tension_zones fallback: %s", exc)
+            logger.debug("VFA._erkennen_tension_zones Ersatzpfad: %s", exc)
             return []
 
     @staticmethod
@@ -760,7 +760,7 @@ class VocalFocusAnalyzer:
                     merged.append((s, e))
             return merged
         except Exception as exc:
-            logger.debug("VFA._detect_release_zones fallback: %s", exc)
+            logger.debug("VFA._erkennen_release_zones Ersatzpfad: %s", exc)
             return []
 
     @staticmethod
@@ -822,7 +822,7 @@ class VocalFocusAnalyzer:
 
             return zones
         except Exception as exc:
-            logger.debug("VFA._detect_whisper_zones fallback: %s", exc)
+            logger.debug("VFA._erkennen_whisper_zones Ersatzpfad: %s", exc)
             return []
 
     @staticmethod
@@ -858,7 +858,7 @@ class VocalFocusAnalyzer:
             # Viele Tension-Zonen mit kurzer Frisson = peak
             return "peak"
         except Exception as exc:
-            logger.debug("VFA._detect_climax_type fallback: %s", exc)
+            logger.debug("VFA._erkennen_climax_type Ersatzpfad: %s", exc)
             return "none"
 
     @staticmethod
@@ -936,7 +936,7 @@ class VocalFocusAnalyzer:
             return "pop", _RELAXED
 
         except Exception as exc:
-            logger.debug("VFA._classify_singer_school fallback: %s", exc)
+            logger.debug("VFA._classify_singer_school Ersatzpfad: %s", exc)
             return "unknown", _STANDARD
 
     @staticmethod
@@ -953,7 +953,7 @@ class VocalFocusAnalyzer:
             sid_result = detector.analyze(mono, sr)
             return list(sid_result.style_intent_zones), float(sid_result.style_confidence)
         except Exception as exc:
-            logger.debug("VFA._detect_style_intent fallback: %s", exc)
+            logger.debug("VFA._erkennen_style_intent Ersatzpfad: %s", exc)
             return [], 0.0
 
 
@@ -978,7 +978,7 @@ def _estimate_f0_simple(audio: np.ndarray, sr: int) -> float:
         peak_idx = np.argmax(autocorr[min_lag:max_lag]) + min_lag
         return float(sr / peak_idx)
     except Exception as e:
-        logger.warning("vocal_focus_analyzer.py::_estimate_f0_simple fallback: %s", e)
+        logger.warning("vocal_focus_analyzer.py::_estimate_f0_simple Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -990,5 +990,5 @@ def get_vocal_focus_analyzer() -> VocalFocusAnalyzer:
         with _lock:
             if _instance is None:
                 _instance = VocalFocusAnalyzer()
-                logger.info("VocalFocusAnalyzer initialized (§0p)")
+                logger.info("VocalFocusAnalyzer initialisiert (§0p)")
     return _instance

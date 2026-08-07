@@ -22,7 +22,7 @@ SR = 48_000
 def _sine(f0: float, dur: float = 0.5, sr: int = SR) -> np.ndarray:
     """Pure sine at f0 Hz, normalized."""
     t = np.linspace(0, dur, int(sr * dur), endpoint=False)
-    return (np.sin(2 * np.pi * f0 * t) * 0.5).astype(np.float32)
+    return (np.sin(2 * np.pi * f0 * t) * 0.5).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _harmonic(f0: float, dur: float = 0.5, sr: int = SR, n_harmonics: int = 6) -> np.ndarray:

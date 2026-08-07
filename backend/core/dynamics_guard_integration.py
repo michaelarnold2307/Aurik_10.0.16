@@ -97,7 +97,7 @@ class DynamicsGuardIntegration:
             try:
                 guard_wisdom.record(phase_id, "dynamics_guard", wisdom_metrics, verdict)
             except Exception:
-                logger.debug("integrate_phase_result: silent except suppressed", exc_info=True)
+                logger.debug("integrate_Verarbeitungsschritt_Ergebnis: silent except suppressed", exc_info=True)
             report.wisdom_strength_mod = getattr(guard_wisdom, "_strength_mod", 1.0)
 
         # 3. GoalBudget: Dynamics-Budget abbuchen
@@ -115,7 +115,7 @@ class DynamicsGuardIntegration:
                             goal_budget.record_delta(budget_key, delta)
                 report.budget_remaining = {g: goal_budget.fraction_left(g) for g in ["waerme", "brillanz", "punch"]}
             except Exception:
-                logger.debug("integrate_phase_result: silent except suppressed", exc_info=True)
+                logger.debug("integrate_Verarbeitungsschritt_Ergebnis: silent except suppressed", exc_info=True)
 
         # 4. CrossGuardCoordinator: dynamics_arc Kategorie
         if cross_guard_coordinator is not None:
@@ -132,7 +132,7 @@ class DynamicsGuardIntegration:
                     evaluation = cross_guard_coordinator.evaluate()
                     report.cross_guard_verdict = evaluation.get("verdict", "ok")
             except Exception:
-                logger.debug("integrate_phase_result: silent except suppressed", exc_info=True)
+                logger.debug("integrate_Verarbeitungsschritt_Ergebnis: silent except suppressed", exc_info=True)
 
         # 5. EmotionalArcPreserver: Arousal/Valence prüfen
         if emotional_arc_preserver is not None:
@@ -149,7 +149,7 @@ class DynamicsGuardIntegration:
                                 f"EmotionalArc degraded: arousal_corr={arousal_corr:.3f}, valence_corr={valence_corr:.3f}"
                             )
             except Exception:
-                logger.debug("integrate_phase_result: silent except suppressed", exc_info=True)
+                logger.debug("integrate_Verarbeitungsschritt_Ergebnis: silent except suppressed", exc_info=True)
 
         # 6. PMGG: Dynamics-Score aktualisieren
         if pmgg_instance is not None:
@@ -159,7 +159,7 @@ class DynamicsGuardIntegration:
                 if hasattr(pmgg_instance, "_set_dynamics_score"):
                     pmgg_instance._set_dynamics_score(pmgg_score)
             except Exception:
-                logger.debug("integrate_phase_result: silent except suppressed", exc_info=True)
+                logger.debug("integrate_Verarbeitungsschritt_Ergebnis: silent except suppressed", exc_info=True)
 
         # 7. restoration_context injizieren
         if isinstance(restoration_context, dict):

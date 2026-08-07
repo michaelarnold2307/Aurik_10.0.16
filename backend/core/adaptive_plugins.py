@@ -439,7 +439,7 @@ class LanguageNet:
                 mfcc = librosa.feature.mfcc(y=mono.astype(np.float32), sr=sr, n_mfcc=n_mfcc)
                 return np.mean(mfcc, axis=1)  # type: ignore[no-any-return]
             except Exception as _exc:
-                logger.debug("Operation failed (non-critical): %s", _exc)
+                logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
         # DCT fallback on log Mel power spectrum
         try:
             n_fft = min(2048, len(mono))
@@ -465,5 +465,5 @@ class LanguageNet:
                 dct_out[c] = np.sum(log_mel * np.cos(math.pi * c * (np.arange(n_mel) + 0.5) / n_mel))
             return dct_out.astype(np.float32)  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("adaptive_plugins.py::_compute_mfcc_mean fallback: %s", e)
+            logger.warning("adaptive_plugins.py::_berechnen_mfcc_mean Ersatzpfad: %s", e)
             return None

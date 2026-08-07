@@ -390,12 +390,12 @@ def _load_model_any(pt_path: Path) -> tuple[str, Any] | tuple[None, None]:
         jit.eval()
         return "torchscript", jit
     except Exception:
-        logger.warning("fetch_and_export_core_models.py::_load_model_any fallback", exc_info=True)
+        logger.warning("holen_and_Ausgabe_core_models.py::_laden_model_any Ersatzpfad", exc_info=True)
 
     try:
         obj = torch.load(str(pt_path), map_location="cpu")  # nosec B614
     except Exception:
-        logger.warning("fetch_and_export_core_models.py::_load_model_any fallback", exc_info=True)
+        logger.warning("holen_and_Ausgabe_core_models.py::_laden_model_any Ersatzpfad", exc_info=True)
         return None, None
 
     if isinstance(obj, nn.Module):
@@ -554,7 +554,7 @@ def _try_export_beats_checkpoint(pt_path: Path, out_onnx: Path) -> tuple[bool, s
                 logits = self.m.predictor(x)
                 return torch.sigmoid(logits.mean(dim=1))
 
-            return x
+            return x  # type: ignore[no-any-return]
 
     out_onnx.parent.mkdir(parents=True, exist_ok=True)
     wrapped = BeatsWrapper(model)
@@ -562,7 +562,7 @@ def _try_export_beats_checkpoint(pt_path: Path, out_onnx: Path) -> tuple[bool, s
     try:
         torch.onnx.export(
             wrapped,
-            dummy,
+            (dummy,),
             str(out_onnx),
             input_names=["fbank"],
             output_names=["output"],
@@ -638,11 +638,11 @@ def _install_rmvpe_import_stubs() -> None:
             return np.pad(arr, (left, right))
 
         def _tiny(_x: np.ndarray) -> float:
-            return np.finfo(np.float32).tiny
+            return np.finfo(np.float32).tiny  # type: ignore[return-value]
 
-        util.normalize = _normalize
-        util.pad_center = _pad_center
-        util.tiny = _tiny
+        util.normalize = _normalize  # type: ignore[attr-defined]
+        util.pad_center = _pad_center  # type: ignore[attr-defined]
+        util.tiny = _tiny  # type: ignore[attr-defined]
 
         def _mel(
             sr: int,
@@ -659,10 +659,10 @@ def _install_rmvpe_import_stubs() -> None:
             n_freq = (n_fft // 2) + 1
             return np.ones((n_mels, n_freq), dtype=dtype)
 
-        filters.mel = _mel
+        filters.mel = _mel  # type: ignore[attr-defined]
 
-        librosa.util = util
-        librosa.filters = filters
+        librosa.util = util  # type: ignore[attr-defined]
+        librosa.filters = filters  # type: ignore[attr-defined]
         sys.modules["librosa"] = librosa
         sys.modules["librosa.util"] = util
         sys.modules["librosa.filters"] = filters
@@ -683,8 +683,8 @@ def _install_rmvpe_import_stubs() -> None:
                 return np.hanning(win_length).astype(np.float32)
             return np.ones(win_length, dtype=np.float32)
 
-        signal.get_window = _get_window
-        scipy.signal = signal
+        signal.get_window = _get_window  # type: ignore[attr-defined]
+        scipy.signal = signal  # type: ignore[attr-defined]
         sys.modules["scipy.signal"] = signal
 
 
@@ -733,7 +733,7 @@ def _try_export_rmvpe_checkpoint(pt_path: Path, out_onnx: Path) -> tuple[bool, s
     try:
         torch.onnx.export(
             model,
-            dummy_mel,
+            (dummy_mel,),
             str(out_onnx),
             input_names=["mel"],
             output_names=["salience"],
@@ -795,7 +795,7 @@ def _load_sgmse_checkpoint_raw(pt_path: Path) -> tuple[dict[str, Any] | None, st
         class SpecsDataModule:
             pass
 
-        stub.SpecsDataModule = SpecsDataModule
+        stub.SpecsDataModule = SpecsDataModule  # type: ignore[attr-defined]
         sys.modules[stub_mod_name] = stub
         created_stub = True
 
@@ -880,7 +880,7 @@ def _try_export_sgmse_checkpoint(pt_path: Path, out_onnx: Path) -> tuple[bool, s
 
         def forward(self, x_t: torch.Tensor, y: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
             if self.bb_name == "ncsnpp_v2":
-                return self.m(x_t, y, t)
+                return self.m(x_t, y, t)  # type: ignore[no-any-return]
             # ncsnpp/ncsnpp_48k expect complex spectrogram channels [x_t, y].
             x_complex = torch.complex(x_t[:, 0], x_t[:, 1])
             y_complex = torch.complex(y[:, 0], y[:, 1])
@@ -906,7 +906,7 @@ def _try_export_sgmse_checkpoint(pt_path: Path, out_onnx: Path) -> tuple[bool, s
 
     torch.tensor = _safe_tensor_ctor
     try:
-        export_args = {
+        export_args: dict[str, Any] = {
             "input_names": ["x_t", "y", "t"],
             "output_names": ["score"],
             "dynamic_axes": {
@@ -998,7 +998,7 @@ def _try_export_sgmse_torchscript_checkpoint(pt_path: Path, out_ts: Path) -> tup
 
         def forward(self, x_t: torch.Tensor, y: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
             if self.bb_name == "ncsnpp_v2":
-                return self.m(x_t, y, t)
+                return self.m(x_t, y, t)  # type: ignore[no-any-return]
             x_complex = torch.complex(x_t[:, 0], x_t[:, 1])
             y_complex = torch.complex(y[:, 0], y[:, 1])
             dnn_input = torch.stack([x_complex, y_complex], dim=1)

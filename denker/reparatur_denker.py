@@ -232,7 +232,7 @@ class ReparaturDenker:
             self._CLIP_THRESHOLD = profile["clip_threshold"]
             self._HUM_DETECT_DB = profile["hum_detect_db"]
             logger.debug(
-                "ReparaturDenker: material-profile '%s' applied: iqr=%.1f, hum_db=%.0f",
+                "ReparaturDenker: material-Profil '%s' angewendet: iqr=%.1f, hum_db=%.0f",
                 mat_key,
                 self._CLICK_IQR_MULTIPLIER,
                 self._HUM_DETECT_DB,
@@ -597,6 +597,7 @@ class ReparaturDenker:
                     try:
                         sos = tf2sos(b, a)
                     except Exception:
+                        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                         continue
                     if result.ndim > 1:
                         for ch in range(result.shape[0]):

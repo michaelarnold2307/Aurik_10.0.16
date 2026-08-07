@@ -219,7 +219,7 @@ def _compute_mel_spectrum(mono: np.ndarray, sr: int) -> np.ndarray:
             fmax=_MEL_FMAX_HZ,
         ).astype(np.float32)
     except Exception:  # pylint: disable=broad-except
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # DSP fallback
     from scipy.signal import get_window  # pylint: disable=import-outside-toplevel
@@ -257,7 +257,7 @@ def _estimate_f0_dsp(mono: np.ndarray, sr: int) -> np.ndarray:
             f0[~voiced] = 0.0
         return f0  # type: ignore[no-any-return]
     except Exception:  # pylint: disable=broad-except
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     # DSP fallback: autocorrelation pitch per hop frame
     frame_len = min(len(mono), int(0.04 * sr))
@@ -329,7 +329,7 @@ def _estimate_formants_lpc(audio: np.ndarray, sr: int) -> dict[str, float]:
         a = _burg_lpc(frame, _LPC_ORDER)
         return _lpc_to_formants(a, _LPC_ANALYSIS_SR)
     except Exception as exc:  # pylint: disable=broad-except
-        logger.debug("_estimate_formants_lpc failed: %s", exc)
+        logger.debug("_estimate_formants_lpc fehlgeschlagen: %s", exc)
         return {"F1": 0.0, "F2": 0.0, "F3": 0.0, "F4": 0.0}
 
 
@@ -422,7 +422,7 @@ class SingerVoiceModel:
         try:
             return self._build_impl(audio, sample_rate, panns_singing, vfa_result)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("SingerVoiceModel.build_from_audio failed: %s", exc)
+            logger.warning("SingerVoiceModel.build_from_audio fehlgeschlagen: %s", exc)
             return None
 
     # ------------------------------------------------------------------
@@ -456,7 +456,7 @@ class SingerVoiceModel:
         try:
             return self._reconstruct_impl(audio_segment, sample_rate, model, damage_mask)
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("SingerVoiceModel.reconstruct_damaged_vocal failed: %s", exc)
+            logger.warning("SingerVoiceModel.reconstruct_damaged_vocal fehlgeschlagen: %s", exc)
             return audio_segment
 
     # ------------------------------------------------------------------

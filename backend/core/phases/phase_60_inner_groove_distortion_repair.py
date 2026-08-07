@@ -58,6 +58,7 @@ def _collect_protected_zones(kwargs: dict) -> list[tuple[float, float, float]]:
         try:
             protected_zones.append((float(zone[0]), float(zone[1]), 0.20))
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
     for zone in kwargs.get("frisson_zones") or []:
         try:
@@ -65,16 +66,19 @@ def _collect_protected_zones(kwargs: dict) -> list[tuple[float, float, float]]:
             end_s = float(getattr(zone, "end_s", None) or zone[1])
             protected_zones.append((start_s, end_s, 0.30))
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
     for zone in kwargs.get("whisper_zones") or []:
         try:
             protected_zones.append((float(zone[0]), float(zone[1]), 0.25))
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
     for zone in kwargs.get("passaggio_zones") or []:
         try:
             protected_zones.append((float(zone[0]), float(zone[1]), 0.35))
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
     return protected_zones
 
@@ -137,7 +141,7 @@ def apply(
     if defect_scores is not None:
         igd_score = float(defect_scores.get("inner_groove_distortion", 0.0))
         if igd_score < min_igd_score:
-            logger.debug("Phase 60: IGD score %.3f < %.3f — skipped", igd_score, min_igd_score)
+            logger.debug("Verarbeitungsschritt 60: IGD Wert %.3f < %.3f — uebersprungen", igd_score, min_igd_score)
             return np.clip(audio, -1.0, 1.0)  # type: ignore[no-any-return]
 
     stereo = audio.ndim == 2
@@ -322,7 +326,7 @@ class InnerGrooveDistortionRepairPhase(PhaseInterface):
                     _zone_frac_60 = float(np.clip(_zone_s_60 / max(1, _n_s_60), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_60 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_60:
-                logger.debug("Phase60 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_60)
+                logger.debug("Verarbeitungsschritt60 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_60)
 
         _profile_60 = self._compute_igd_profile(
             str(material_type or kwargs.get("material") or "unknown"),
@@ -375,7 +379,7 @@ class InnerGrooveDistortionRepairPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm60_exc:
-            logger.debug("Phase60 masking clamp non-blocking: %s", _pm60_exc)
+            logger.debug("Verarbeitungsschritt60 masking clamp nicht blockierend: %s", _pm60_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — THD-Reduktion darf Atemgeräusche
         # und Vibrato-Zonen nicht modifizieren (Notch-Filtering trifft harmonische
@@ -404,7 +408,7 @@ class InnerGrooveDistortionRepairPhase(PhaseInterface):
                 elif result_audio.ndim == 1 and audio.ndim == 1:
                     result_audio[_npa_m60] = audio[_npa_m60]
         except Exception as _npa60_exc:
-            logger.debug("§2.46f phase_60 NPA-Guard (non-blocking): %s", _npa60_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_60 NPA-Guard (nicht blockierend): %s", _npa60_exc)
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

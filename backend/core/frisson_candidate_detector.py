@@ -109,7 +109,7 @@ class FrissonCandidateDetector:
         try:
             return self._detect_safe(audio, sr, max_zones)
         except Exception as exc:
-            logger.debug("FrissonCandidateDetector.detect() failed (non-blocking): %s", exc)
+            logger.debug("FrissonCandidateDetector.erkennen() fehlgeschlagen (nicht blockierend): %s", exc)
             return []
 
     # ------------------------------------------------------------------ #

@@ -63,7 +63,7 @@ class AdaptiveMMSESTSA:
         gain = np.clip(gain, 0.0, 1.0)
 
         clean_mag = gain * noisy_mag
-        return clean_mag
+        return clean_mag  # type: ignore[no-any-return]
 
     def auto_optimize(self, noisy_mag: np.ndarray, noise_mag: np.ndarray) -> None:
         """Adapt alpha based on signal dynamics.
@@ -80,7 +80,7 @@ class AdaptiveMMSESTSA:
         self.alpha = float(np.clip(0.85 + 0.0065 * snr_db, 0.80, 0.99))
 
         logger.debug(
-            "AdaptiveMMSESTSA.auto_optimize: SNR=%.1f dB → alpha=%.4f",
+            "AdaptiveMMSESTSA.auto_optimieren: SNR=%.1f dB → alpha=%.4f",
             snr_db,
             self.alpha,
         )

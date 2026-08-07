@@ -161,6 +161,7 @@ class PhaseCorrection(PhaseInterface):
                     if end_s > start_s:
                         zones.append((start_s, end_s, cap))
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
         return zones
 
@@ -188,6 +189,7 @@ class PhaseCorrection(PhaseInterface):
                     start = int(max(0.0, float(loc[0])) * sample_rate)
                     end = int(max(0.0, float(loc[1])) * sample_rate)
                 except Exception:
+                    logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                     continue
                 if end <= start:
                     continue
@@ -356,8 +358,8 @@ class PhaseCorrection(PhaseInterface):
         _WIDE_STEREO_CORR_CAP = 0.20
         if all(c < _WIDE_STEREO_CORR_CAP for c in correlations_before):
             logger.debug(
-                "phase_14: all bands near-zero corr (max=%.3f < %.2f) — natural wide stereo, "
-                "no azimuth error, returning input unchanged",
+                "Verarbeitungsschritt_14: all bands near-zero corr (max=%.3f < %.2f) — natural wide stereo, "
+                "no azimuth error, returning Eingabe unchanged",
                 max(correlations_before),
                 _WIDE_STEREO_CORR_CAP,
             )
@@ -394,7 +396,7 @@ class PhaseCorrection(PhaseInterface):
         # Returning original audio avoids ~0.29 regression floor from non-alias-free reconstruction.
         if not any_band_corrected:
             logger.debug(
-                "phase_14: all bands corr >= threshold (%.2f) — no correction needed, returning input unchanged",
+                "Verarbeitungsschritt_14: all bands corr >= Schwelle (%.2f) — no correction needed, returning Eingabe unchanged",
                 threshold,
             )
             overall_corr = float(np.mean(correlations_before))
@@ -473,9 +475,9 @@ class PhaseCorrection(PhaseInterface):
                     max_rotation_deg=30.0,
                     strength=0.15,
                 )
-                logger.debug("§PHROT-1: Phase-Rotator applied (mp3, 20-200Hz, ≤30°)")
+                logger.debug("§PHROT-1: Verarbeitungsschritt-Rotator angewendet (mp3, 20-200Hz, ≤30°)")
             except Exception as _prot_exc:
-                logger.debug("§PHROT-1: Phase-Rotator skipped (%s)", _prot_exc)
+                logger.debug("§PHROT-1: Verarbeitungsschritt-Rotator uebersprungen (%s)", _prot_exc)
 
         return PhaseResult(
             success=True,
@@ -701,7 +703,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
     logger.debug("=" * 80)
-    logger.debug("Phase 14: Professional Phase Correction v2.0")
+    logger.debug("Verarbeitungsschritt 14: Professional Verarbeitungsschritt Correction v2.0")
     logger.debug("=" * 80)
     logger.debug("")
 
@@ -731,9 +733,9 @@ if __name__ == "__main__":
 
     test_audio = np.column_stack([test_left, test_right])
 
-    logger.debug("Generated %ss test audio @ %s Hz", duration, test_sample_rate)
+    logger.debug("erzeugt %ss test audio @ %s Hz", duration, test_sample_rate)
     logger.debug(
-        "Phase error: Right delayed by %s samples (~%.2fms)",
+        "Verarbeitungsschritt error: Right delayed by %s samples (~%.2fms)",
         delay_bass,
         delay_bass * 1000 / test_sample_rate,
     )
@@ -755,7 +757,7 @@ if __name__ == "__main__":
         phase = PhaseCorrection()
         result = phase.process(test_audio, test_sample_rate, test_material)
 
-        logger.debug("✅ Professional Phase Correction:")
+        logger.debug("✅ Professional Verarbeitungsschritt Correction:")
         logger.debug("   Correlation Before: %.4f", result.metrics["correlation_before"])
         logger.debug("   Correlation After: %.4f", result.metrics["correlation_after"])
         logger.debug("   Improvement: %.4f", result.metrics["correlation_improvement"])
@@ -775,5 +777,5 @@ if __name__ == "__main__":
         logger.debug("")
 
     logger.debug("=" * 80)
-    logger.debug("Test completed")
+    logger.debug("Test abgeschlossen")
     logger.debug("=" * 80)

@@ -97,7 +97,7 @@ def _repair_wow_flutter(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
                 gain = np.where(envelope > 1e-10, smoothed / (envelope + 1e-10), 1.0)
                 result[ch] = result[ch] * np.clip(gain, 1.0 / _range, _range)
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_wow_flutter fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_wow_flutter Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -131,7 +131,7 @@ def _repair_hiss(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
                 spec = spec * np.clip(gain, 0.1, 1.0)
                 result[ch] = np.fft.irfft(spec, n=len(result[ch]))
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_hiss fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_hiss Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -208,7 +208,7 @@ def _repair_clicks(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_clicks fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_clicks Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -262,7 +262,7 @@ def _repair_crackle(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             for ch in range(result.shape[0]):
                 pass  # already modified in-place via ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_crackle fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_crackle Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -332,7 +332,7 @@ def _repair_dropouts(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_dropouts fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_dropouts Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -384,7 +384,7 @@ def _repair_pre_echo(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_pre_echo fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_pre_echo Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -435,7 +435,7 @@ def _repair_groove_echo(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_groove_echo fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_groove_echo Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -502,7 +502,7 @@ def _repair_mpeg_frame_loss(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_mpeg_frame_loss fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_mpeg_frame_loss Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -560,7 +560,7 @@ def _repair_tape_head_clog(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_tape_head_clog fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_tape_head_clog Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -621,7 +621,7 @@ def _repair_sticky_shed(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_sticky_shed fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_sticky_shed Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -691,7 +691,7 @@ def _repair_inner_groove_distortion(audio: np.ndarray, sr: int, **kwargs) -> np.
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_inner_groove_distortion fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_inner_groove_distortion Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -742,7 +742,7 @@ def _repair_motor_interference(audio: np.ndarray, sr: int, **kwargs) -> np.ndarr
                         result[ch_idx] = ch_data
                 break  # Nur eine Netzfrequenz behandeln
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_motor_interference fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_motor_interference Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -815,7 +815,7 @@ def _repair_sibilance(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_sibilance fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_sibilance Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -864,7 +864,7 @@ def _repair_transient_smearing(audio: np.ndarray, sr: int, **kwargs) -> np.ndarr
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::_repair_transient_smearing fallback: %s", e)
+        logger.warning("surgical_repair.py::_repair_transient_smearing Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -951,7 +951,7 @@ def _repair_tape_splice(audio: np.ndarray, sr: int, **kwargs) -> np.ndarray:
             else:
                 result[ch_idx] = ch_data
     except Exception as e:
-        logger.warning("surgical_repair.py::unbekannter Fallback: %s", e)
+        logger.warning("surgical_repair.py::unbekannter Ersatzpfad: %s", e)
     result = _safety_clamp(result, audio)
     return result.astype(np.float32)
 
@@ -1092,7 +1092,9 @@ class SurgicalRepair:
                 if isinstance(repaired_segment, np.ndarray):
                     segment = repaired_segment
             except Exception as _repair_exc:
-                logger.debug("CHIRURGIE-SKIP: %s @ %.3fs — %s", inst.defect_type, inst.start_s, str(_repair_exc)[:80])
+                logger.debug(
+                    "CHIRURGIE-ueberspringen: %s @ %.3fs — %s", inst.defect_type, inst.start_s, str(_repair_exc)[:80]
+                )
                 skipped += 1
                 continue
 
@@ -1217,5 +1219,5 @@ class SurgicalRepair:
         rms_orig = np.sqrt(np.mean(original**2)) + 1e-10
         rms_rep = np.sqrt(np.mean(repaired**2)) + 1e-10
         if abs(rms_rep - rms_orig) / rms_orig > 0.01:  # >1% Abweichung
-            return repaired * (rms_orig / rms_rep)
+            return repaired * (rms_orig / rms_rep)  # type: ignore[no-any-return]
         return repaired

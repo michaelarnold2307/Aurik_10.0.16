@@ -108,7 +108,7 @@ class ModelQuantizer:
 
             # Original model size
             original_size = model_path.stat().st_size / (1024 * 1024)  # MB
-            logger.info("Original size: %.2f MB", original_size)
+            logger.info("Originalsignal size: %.2f MB", original_size)
 
             # Perform quantization
             if self.config.quantization_type == QuantizationType.DYNAMIC:
@@ -138,7 +138,7 @@ class ModelQuantizer:
 
                 if not quality_ok:
                     logger.warning(
-                        f"Quality validation failed! Degradation exceeds {self.config.max_quality_loss_percent}%"
+                        f"Quality Validierung fehlgeschlagen! Degradation exceeds {self.config.max_quality_loss_percent}%"
                     )
                     # Note: We don't fail entirely, just warn
 
@@ -150,15 +150,15 @@ class ModelQuantizer:
                 + size_reduction
             ) / self.quantization_stats["successful_quantizations"]
 
-            logger.info("✓ Quantization successful")
+            logger.info("✓ Quantization erfolgreich")
             return True
 
         except ImportError as e:
-            logger.error("onnxruntime.quantization not available: %s", e)
+            logger.error("onnxruntime.quantization not verfuegbar: %s", e)
             logger.error("Install with: pip install onnxruntime")
             return False
         except Exception as e:
-            logger.error("Quantization failed: %s", e)
+            logger.error("Quantization fehlgeschlagen: %s", e)
             self.quantization_stats["failed_quantizations"] += 1
             self.quantization_stats["total_quantizations"] += 1
             return False
@@ -218,23 +218,22 @@ class ModelQuantizer:
             # Assume audio is in range [-1, 1], so max possible value is 1
             quality_loss_percent = (avg_diff / 1.0) * 100
 
-            logger.info("Quality validation:")
+            logger.info("Quality Validierung:")
             logger.info("  Average difference: %.6f", avg_diff)
             logger.info("  Max difference: %.6f", max_diff)
             logger.info("  Quality loss: %.3f%%", quality_loss_percent)
 
             if quality_loss_percent > self.config.max_quality_loss_percent:
                 logger.warning(
-                    f"Quality loss {quality_loss_percent:.3f}% exceeds "
-                    f"threshold {self.config.max_quality_loss_percent}%"
+                    f"Quality loss {quality_loss_percent:.3f}% exceeds Schwelle {self.config.max_quality_loss_percent}%"
                 )
                 return False
 
-            logger.info("✓ Quality validation passed")
+            logger.info("✓ Quality Validierung passed")
             return True
 
         except Exception as e:
-            logger.warning("Quality validation failed: %s", e)
+            logger.warning("Quality Validierung fehlgeschlagen: %s", e)
             return True  # Don't fail quantization due to validation issues
 
     def quantize_batch(
@@ -266,7 +265,7 @@ class ModelQuantizer:
             success = self.quantize(model_path=model_path, output_path=output_path, validate_quality=validate_quality)
 
             results[name] = success
-            logger.info("Result: %s", "✓ SUCCESS" if success else "❌ FAILED")
+            logger.info("Ergebnis: %s", "✓ SUCCESS" if success else "❌ FAILED")
 
         # Summary
         logger.info("\n%s", "=" * 60)
@@ -274,8 +273,8 @@ class ModelQuantizer:
         logger.info("%s", "=" * 60)
         successful = sum(1 for v in results.values() if v)
         logger.info("Total: %s", len(results))
-        logger.info("Successful: %s", successful)
-        logger.info("Failed: %s", len(results) - successful)
+        logger.info("erfolgreich: %s", successful)
+        logger.info("fehlgeschlagen: %s", len(results) - successful)
 
         if self.quantization_stats["successful_quantizations"] > 0:
             logger.info("Average size reduction: %.1f%%", self.quantization_stats["average_size_reduction"])
@@ -335,7 +334,7 @@ class ModelQuantizer:
             return speedup
 
         except Exception as e:
-            logger.error("Speedup estimation failed: %s", e)
+            logger.error("Speedup estimation fehlgeschlagen: %s", e)
             return 1.0
 
     def get_stats(self) -> dict[str, Any]:

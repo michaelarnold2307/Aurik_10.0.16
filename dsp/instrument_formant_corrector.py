@@ -157,7 +157,7 @@ def _dtw_distance_and_path(seq_a: np.ndarray, seq_b: np.ndarray) -> tuple[float,
             (i - 1, j): dp[i - 1, j],
             (i, j - 1): dp[i, j - 1],
         }
-        best = min(candidates, key=candidates.get)
+        best = min(candidates, key=candidates.get)  # type: ignore[arg-type]
         i, j = best
     path.reverse()
 
@@ -170,7 +170,7 @@ def _downsample_trajectory(traj: np.ndarray, max_pts: int) -> np.ndarray:
     if n <= max_pts:
         return traj
     idx = np.linspace(0, n - 1, max_pts, dtype=int)
-    return traj[idx]
+    return traj[idx]  # type: ignore[no-any-return]
 
 
 # ── EQ helper (reuses formant_system._apply_peak_eq_frame pattern) ────────────
@@ -202,7 +202,7 @@ def _peak_eq(audio: np.ndarray, sr: int, freq: float, bandwidth_hz: float, gain_
     a0 = 1.0 + alpha / A
     b = np.array([b0 / a0, b1 / a0, b2 / a0])
     a = np.array([1.0, -2.0 * np.cos(w0) / a0, (1.0 - alpha / A) / a0])
-    return sig.lfilter(b, a, audio)
+    return sig.lfilter(b, a, audio)  # type: ignore[no-any-return]
 
 
 # ── Core class ────────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ class InstrumentFormantDriftCorrector:
         if self._tracker is None:
             from dsp.formant_system import FormantTracker
 
-            self._tracker = FormantTracker(n_formants=5)
+            self._tracker = FormantTracker(n_formants=5)  # type: ignore[assignment]
         return self._tracker
 
     # ── Internal: formant tracking ────────────────────────────────────────────
@@ -250,9 +250,9 @@ class InstrumentFormantDriftCorrector:
             f1 = formant_freqs[:, 0].copy()
             # Zero-out unreliable frames (tracker outputs 0 for silent frames)
             f1 = np.where(f1 > 50.0, f1, 0.0)
-            return f1
+            return np.asarray(f1, dtype=np.float64)
         except Exception as exc:
-            logger.debug("_track_f1 failed: %s", exc)
+            logger.debug("_track_f1 fehlgeschlagen: %s", exc)
             return np.array([])
 
     # ── Internal: drift detection via DTW ─────────────────────────────────────

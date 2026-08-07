@@ -25,7 +25,7 @@ def guard_phase_input(audio: np.ndarray, sample_rate: int, phase_id: str) -> np.
     if not isinstance(audio, np.ndarray):
         if isinstance(audio, (tuple, list)):
             logger.error(
-                "PhaseContract [%s]: received %s instead of ndarray — extracting",
+                "PhaseContract [%s]: received %s instead of ndarray — extrahiere",
                 phase_id,
                 type(audio).__name__,
             )
@@ -72,20 +72,22 @@ def guard_phase_output(result, audio_in: np.ndarray, phase_id: str) -> PhaseResu
                 _min_len = min(_out_len, _in_len)
                 if result.audio.ndim == 2:
                     result = PhaseResult(
-                        audio=result.audio[..., :_min_len].copy() if _out_len > _in_len
-                        else np.pad(result.audio, ((0,0), (0,_in_len-_out_len))),
+                        audio=result.audio[..., :_min_len].copy()
+                        if _out_len > _in_len
+                        else np.pad(result.audio, ((0, 0), (0, _in_len - _out_len))),
                         modifications=result.modifications,
                         warnings=result.warnings + [f"Shape normalized: {_out_len}→{_in_len}"],
                     )
                 else:
                     result = PhaseResult(
-                        audio=result.audio[:_min_len].copy() if _out_len > _in_len
-                        else np.pad(result.audio, (0, _in_len-_out_len)),
+                        audio=result.audio[:_min_len].copy()
+                        if _out_len > _in_len
+                        else np.pad(result.audio, (0, _in_len - _out_len)),
                         modifications=result.modifications,
                         warnings=result.warnings + [f"Shape normalized: {_out_len}→{_in_len}"],
                     )
 
-    return result
+    return result  # type: ignore[no-any-return]
 
 
 def guard_phase_shape_consistency(audio_out: np.ndarray, audio_in: np.ndarray, phase_id: str) -> None:
@@ -97,7 +99,7 @@ def guard_phase_shape_consistency(audio_out: np.ndarray, audio_in: np.ndarray, p
     delta_pct = abs(len_out - len_in) / max(len_in, 1) * 100
     if delta_pct > 0.1:
         logger.warning(
-            "PhaseContract [%s]: output length %d differs from input %d by %.2f%%",
+            "PhaseContract [%s]: Ausgabe length %d differs from Eingabe %d by %.2f%%",
             phase_id,
             len_out,
             len_in,

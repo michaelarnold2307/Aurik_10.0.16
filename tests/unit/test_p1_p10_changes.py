@@ -41,7 +41,7 @@ MANIFEST_PATH = Path(__file__).parent.parent.parent / "models" / "manifest.json"
 
 def _sine(freq: float = 440.0, dur_s: float = 1.0, sr: int = _SR) -> np.ndarray:
     t = np.linspace(0, dur_s, int(sr * dur_s), endpoint=False)
-    return (0.4 * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (0.4 * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _noise(dur_s: float = 1.0, sr: int = _SR, amp: float = 0.2) -> np.ndarray:
@@ -54,7 +54,7 @@ def _silence(dur_s: float = 0.5, sr: int = _SR) -> np.ndarray:
 
 def _load_manifest() -> dict:
     with MANIFEST_PATH.open() as fh:
-        return json.load(fh)
+        return json.load(fh)  # type: ignore[no-any-return]
 
 
 def _manifest_by_name() -> dict[str, dict]:

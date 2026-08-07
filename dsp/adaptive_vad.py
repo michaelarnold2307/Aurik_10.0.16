@@ -59,7 +59,7 @@ adaptive_vad_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Fehlklassifikation", "expected_when": "energy_thresh zu niedrig", "severity": 0.2}],
+    side_effects=[{"risk": "Fehlklassifikation", "expected_when": "energy_thresh zu niedrig", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["vad_accuracy"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -85,10 +85,10 @@ class AdaptiveVAD:
             logger.error("Ungültiges hop_length: %s. Muss zwischen 16 und 4096 liegen.", hop_length)
             raise ValueError("hop_length muss zwischen 16 und 4096 liegen.")
         if not (0.001 <= energy_thresh <= 0.1):
-            logger.error("Ungültiges energy_thresh: %s. Muss zwischen 0.001 und 0.1 liegen.", energy_thresh)
+            logger.error("Ungültiges energy_Schwelle: %s. Muss zwischen 0.001 und 0.1 liegen.", energy_thresh)
             raise ValueError("energy_thresh muss zwischen 0.001 und 0.1 liegen.")
         if not (0.01 <= zcr_thresh <= 0.5):
-            logger.error("Ungültiges zcr_thresh: %s. Muss zwischen 0.01 und 0.5 liegen.", zcr_thresh)
+            logger.error("Ungültiges zcr_Schwelle: %s. Muss zwischen 0.01 und 0.5 liegen.", zcr_thresh)
             raise ValueError("zcr_thresh muss zwischen 0.01 und 0.5 liegen.")
         self.frame_length = frame_length
         self.hop_length = hop_length
@@ -96,7 +96,7 @@ class AdaptiveVAD:
         self.zcr_thresh = zcr_thresh
         self.center = center
         logger.info(
-            f"AdaptiveVAD initialisiert mit frame_length={self.frame_length}, hop_length={self.hop_length}, energy_thresh={self.energy_thresh}, zcr_thresh={self.zcr_thresh}, center={self.center}"
+            f"AdaptiveVAD initialisiert mit frame_length={self.frame_length}, hop_length={self.hop_length}, energy_Schwelle={self.energy_thresh}, zcr_Schwelle={self.zcr_thresh}, center={self.center}"
         )
 
     def log_contract(self):
@@ -132,7 +132,7 @@ class AdaptiveVAD:
         try:
             if use_deep_learning:
                 if not _TORCH_AVAILABLE:
-                    logger.warning("PyTorch nicht verfügbar, fallback auf klassische Methode.")
+                    logger.warning("PyTorch nicht verfügbar, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._vad_classic(y, frame_length, hop_length, energy_thresh, zcr_thresh, center)
                 else:
@@ -140,7 +140,7 @@ class AdaptiveVAD:
                     # TorchScript-Modell (Platzhalter)
                     # model = torch.jit.load('vad.pt')
                     # output = model(torch.from_numpy(y).float().unsqueeze(0)).squeeze(0).numpy()
-                    logger.warning("TorchScript-Modell nicht implementiert, fallback auf klassische Methode.")
+                    logger.warning("TorchScript-Modell nicht implementiert, Ersatzpfad auf klassische Methode.")
                     fallback_used = True
                     output = self._vad_classic(y, frame_length, hop_length, energy_thresh, zcr_thresh, center)
             else:
@@ -153,7 +153,7 @@ class AdaptiveVAD:
         if audit_log:
             vad_accuracy = float(np.mean(output)) if output is not None else float("nan")
             logger.info(
-                f"AdaptiveVAD: vad_accuracy={vad_accuracy:.4f}, fallback_used={fallback_used}, frame_length={frame_length}, energy_thresh={energy_thresh}, zcr_thresh={zcr_thresh}"
+                f"AdaptiveVAD: vad_accuracy={vad_accuracy:.4f}, Ersatzpfad_used={fallback_used}, frame_length={frame_length}, energy_Schwelle={energy_thresh}, zcr_Schwelle={zcr_thresh}"
             )
             logger.info("[DSPContract] %s", asdict(adaptive_vad_contract))
         return output
@@ -185,5 +185,5 @@ class AdaptiveVAD:
             self.hop_length = 512
             self.energy_thresh = 0.02
         logger.info(
-            f"VAD-Parameter auto-optimiert: frame_length={self.frame_length}, hop_length={self.hop_length}, energy_thresh={self.energy_thresh}"
+            f"VAD-Parameter auto-optimiert: frame_length={self.frame_length}, hop_length={self.hop_length}, energy_Schwelle={self.energy_thresh}"
         )

@@ -67,7 +67,7 @@ def create_test_signal(duration: float = 2.0, sample_rate: int = 44100) -> np.nd
         if pos < len(audio):
             audio[pos] += 0.5 * np.sign(np.random.randn())
 
-    return audio
+    return audio  # type: ignore[no-any-return]
 
 
 def test_quality_mode_system():
@@ -80,7 +80,7 @@ def test_quality_mode_system():
     for mode in [QualityMode.FAST, QualityMode.BALANCED]:
         QualityModeConfig.set_mode(mode)
         current = QualityModeConfig.get_mode()
-        perf = QualityModeConfig.get_expected_performance()
+        perf = QualityModeConfig.get_expected_performance()  # type: ignore[attr-defined]
 
         print(f"\n{mode.value.upper()} Mode:")
         print(f"  Configured: {current == mode}")
@@ -116,7 +116,7 @@ def test_phase_23_spectral_repair():
     for mode in [QualityMode.FAST, QualityMode.BALANCED]:
         QualityModeConfig.set_mode(mode)
 
-        result = phase.process(audio, 44100, MaterialType.STREAMING)
+        result = phase.process(audio, 44100, MaterialType.STREAMING)  # type: ignore[arg-type]
         results[mode.value] = {
             "success": result.success,
             "rt_factor": result.metadata.get("rt_factor", 0),
@@ -145,7 +145,7 @@ def test_phase_18_noise_gate():
     for mode in [QualityMode.FAST, QualityMode.BALANCED]:
         QualityModeConfig.set_mode(mode)
 
-        result = phase.process(audio, 44100, MaterialType.CD_DIGITAL)
+        result = phase.process(audio, 44100, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         results[mode.value] = {
             "success": result.success,
             "rt_factor": result.metadata.get("rt_factor", 0),
@@ -211,8 +211,8 @@ def test_performance_comparison():
         QualityModeConfig.set_mode(mode)
 
         start = time.time()
-        r23 = phase_23.process(audio, 44100, MaterialType.STREAMING)
-        r18 = phase_18.process(audio, 44100, MaterialType.CD_DIGITAL)
+        r23 = phase_23.process(audio, 44100, MaterialType.STREAMING)  # type: ignore[arg-type]
+        r18 = phase_18.process(audio, 44100, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
         r9 = phase_9.process(audio, material_type="vinyl")
         total_time = time.time() - start
 

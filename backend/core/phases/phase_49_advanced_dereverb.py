@@ -259,11 +259,12 @@ class AdvancedDereverbPhase(PhaseInterface):
             from backend.core.pim_phase_hook import apply_pim_intensity
 
             _pim = apply_pim_intensity(kwargs, "adv_dereverb", default_nr=0.5, default_de_ess=0.3, default_comp=1.0)
-            for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
-                if _key in kwargs:
-                    kwargs[_key] = _pim["nr_strength"]
+            if kwargs.get("pim_intensity_map") is not None:
+                for _key in ("noise_reduction_strength", "nr_strength", "strength", "wet"):
+                    if _key in kwargs:
+                        kwargs[_key] = _pim["nr_strength"]
         except Exception as e:
-            logger.warning("phase_49_advanced_dereverb.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_49_advanced_dereverb.py::verarbeiten Ersatzpfad: %s", e)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
         self.validate_input(audio)
         # §2.51 Stereo-Kohärenz: normalize to channels-last (N,2) so all M/S
@@ -279,7 +280,7 @@ class AdvancedDereverbPhase(PhaseInterface):
 
             _get_plm_evict49().evict_for_phase("phase_49_advanced_dereverb")
         except Exception as e:
-            logger.warning("phase_49_advanced_dereverb.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_49_advanced_dereverb.py::verarbeiten Ersatzpfad: %s", e)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -295,7 +296,7 @@ class AdvancedDereverbPhase(PhaseInterface):
             _nmr_result_49 = _nmr_fn_49(audio, sample_rate)
             if not _nmr_result_49.ok:
                 logger.warning(
-                    "Phase49 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
+                    "Verarbeitungsschritt49 §V40 NMR: nmr_above_masking → §2.45 Minimal-Intervention prüfen",
                 )
             effective_strength = float(
                 np.clip(
@@ -305,12 +306,12 @@ class AdvancedDereverbPhase(PhaseInterface):
                 )
             )
             logger.debug(
-                "Phase49 §V40 NMR: delta=%.3f → eff_str=%.3f",
+                "Verarbeitungsschritt49 §V40 NMR: delta=%.3f → eff_str=%.3f",
                 _nmr_result_49.recommended_nr_strength_delta,
                 effective_strength,
             )
         except Exception as _nmr_exc_49:  # pylint: disable=broad-except
-            logger.debug("Phase49 §V40 NMR non-blocking: %s", _nmr_exc_49)
+            logger.debug("Verarbeitungsschritt49 §V40 NMR nicht blockierend: %s", _nmr_exc_49)
 
         if effective_strength <= 1e-6:
             dry = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -346,9 +347,9 @@ class AdvancedDereverbPhase(PhaseInterface):
                     )
                 if _reverb_sev_49 < 0.15:
                     logger.info(
-                        "Phase 49: Reverb-Presence Gate → SKIP "
+                        "Verarbeitungsschritt 49: Reverb-Presence Gate → ueberspringen "
                         "(reverb_sev=%.3f < 0.15, dur=%.1fs) "
-                        "— DefectScanner finds no significant reverb, WPE would create artifacts",
+                        "— DefectScanner finds no significant reverb, WPE would erstellen artifacts",
                         _reverb_sev_49,
                         _dur_s_49,
                     )
@@ -365,12 +366,14 @@ class AdvancedDereverbPhase(PhaseInterface):
                         metrics={"reverb_severity": float(_reverb_sev_49)},
                     )
                 logger.debug(
-                    "Phase 49: Reverb-Presence Gate → PROCEED (reverb_sev=%.3f, dur=%.1fs)",
+                    "Verarbeitungsschritt 49: Reverb-Presence Gate → PROCEED (reverb_sev=%.3f, dur=%.1fs)",
                     _reverb_sev_49,
                     _dur_s_49,
                 )
             except Exception as _rp_gate_err:
-                logger.debug("Phase 49: Reverb-Presence Gate failed (non-blocking): %s", _rp_gate_err)
+                logger.debug(
+                    "Verarbeitungsschritt 49: Reverb-Presence Gate fehlgeschlagen (nicht blockierend): %s", _rp_gate_err
+                )
 
         strength = effective_strength
         _quality_mode_49 = str(kwargs.get("quality_mode", "quality")).strip().lower()
@@ -400,31 +403,31 @@ class AdvancedDereverbPhase(PhaseInterface):
                     float(_get_lfc_49().track(_ft_in_49.astype(np.float32), sample_rate).get("f1_mean", 0.0)) or None
                 )
             except Exception as e:
-                logger.warning("phase_49_advanced_dereverb.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_49_advanced_dereverb.py::unbekannter Ersatzpfad: %s", e)
 
         # §2.20 Genre-adaptive dereverb hardcap (defense-in-depth — SongCal is primary guard).
         _genre_label_49 = str(kwargs.get("genre_label", ""))
         if _genre_label_49 == "Reggae":
             strength = min(strength, 0.20)  # Dub/Echo-Reverb = genre-definierend
-            logger.debug("Phase 49: Genre=Reggae → strength capped to %.2f", strength)
+            logger.debug("Verarbeitungsschritt 49: Genre=Reggae → strength capped to %.2f", strength)
         elif _genre_label_49 == "Gospel":
             strength = min(strength, 0.30)  # Kirchenhall = Authentizität
-            logger.debug("Phase 49: Genre=Gospel → strength capped to %.2f", strength)
+            logger.debug("Verarbeitungsschritt 49: Genre=Gospel → strength capped to %.2f", strength)
         elif _genre_label_49 in ("Klassik", "Oper"):
             strength = min(strength, 0.25)  # Konzerthall = integraler Klanganteil
-            logger.debug("Phase 49: Genre=%s → strength capped to %.2f", _genre_label_49, strength)
+            logger.debug("Verarbeitungsschritt 49: Genre=%s → strength capped to %.2f", _genre_label_49, strength)
         elif _genre_label_49 == "Folk":
             strength = min(strength, 0.40)  # Natürlicher Kleiner-Raum-Klang
-            logger.debug("Phase 49: Genre=Folk → strength capped to %.2f", strength)
+            logger.debug("Verarbeitungsschritt 49: Genre=Folk → strength capped to %.2f", strength)
         elif _genre_label_49 == "Jazz":
             strength = min(strength, 0.35)  # Club-Atmosphäre bewahren
-            logger.debug("Phase 49: Genre=Jazz → strength capped to %.2f", strength)
+            logger.debug("Verarbeitungsschritt 49: Genre=Jazz → strength capped to %.2f", strength)
 
         if _vocal_detected_49:
             _vocal_cap_49 = float(np.clip(0.36 - 0.10 * _vocal_conf_49, 0.26, 0.36))
             if strength > _vocal_cap_49:
                 logger.debug(
-                    "Phase 49: vocal guard active (conf=%.2f) → strength %.2f -> %.2f",
+                    "Verarbeitungsschritt 49: vocal guard active (conf=%.2f) → strength %.2f -> %.2f",
                     _vocal_conf_49,
                     strength,
                     _vocal_cap_49,
@@ -437,7 +440,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         _raf_cap_49 = float(_raf_49.get("dereverb_strength_cap", 1.0))
         if _raf_cap_49 < 1.0 and strength > _raf_cap_49:
             logger.debug(
-                "Phase 49 §2.46f RoomAcoustics guard: rt60=%.2fs room=%s → strength %.2f → %.2f",
+                "Verarbeitungsschritt 49 §2.46f RoomAcoustics guard: rt60=%.2fs room=%s → strength %.2f → %.2f",
                 float(_raf_49.get("rt60_s", 0.0)),
                 _raf_49.get("room_type", "?"),
                 strength,
@@ -465,7 +468,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                         _era_ceil = 0.15
                     if strength > _era_ceil:
                         logger.debug(
-                            "Phase 49 §Lücke5 Era-Ceiling: era=%d → strength %.2f → %.2f (rt60=%.2fs)",
+                            "Verarbeitungsschritt 49 §Lücke5 Era-Ceiling: era=%d → strength %.2f → %.2f (rt60=%.2fs)",
                             _era_decade_49,
                             strength,
                             _era_ceil,
@@ -493,7 +496,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         _sgmse_skipped_short = _audio_dur_mono_s < _sgmse_min_dur_s
         if _sgmse_skipped_short:
             logger.debug(
-                "Phase 49: SGMSE+ übersprungen (Signaldauer %.2fs < %.1fs Mindest) → WPE-DSP",
+                "Verarbeitungsschritt 49: SGMSE+ übersprungen (Signaldauer %.2fs < %.1fs Mindest) → WPE-DSP",
                 _audio_dur_mono_s,
                 _sgmse_min_dur_s,
             )
@@ -541,7 +544,9 @@ class AdvancedDereverbPhase(PhaseInterface):
                         try:
                             _plm49.touch_plugin("SGMSE+")  # type: ignore[attr-defined]
                         except Exception as e:
-                            logger.warning("phase_49_advanced_dereverb.py::unbekannter Fallback: %s", e)
+                            logger.warning(
+                                "Verarbeitungsschritt_49_advanced_dereverb.py::unbekannter Ersatzpfad: %s", e
+                            )
                     _sgmse_result = _sgmse_factory_49().enhance(
                         audio,
                         sample_rate,
@@ -552,7 +557,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                     _sgmse_used = True
                     _ml_model_name = f"SGMSE+ ({_sgmse_result.model_used})"
                     logger.info(
-                        "Phase 49: Tier-0 SGMSE+ OK (sigma=%.2f, model=%s, budget=%.1fs)",
+                        "Verarbeitungsschritt 49: Tier-0 SGMSE+ OK (sigma=%.2f, model=%s, Grenze=%.1fs)",
                         _sigma,
                         _sgmse_result.model_used,
                         _ml_runtime_budget_s,
@@ -561,7 +566,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                         _progress_sub_cb(80.0, "Nachhall-Entfernung (SGMSE+-Nachbearbeitung)", 0.0)
                 except Exception as _sgmse_err:
                     logger.info(
-                        "Phase 49: SGMSE+ enhance fehlgeschlagen (%s) → WPE DSP-Fallback",
+                        "Verarbeitungsschritt 49: SGMSE+ verbessern fehlgeschlagen (%s) → WPE DSP-Ersatzpfad",
                         _sgmse_err,
                     )
                 finally:
@@ -569,10 +574,12 @@ class AdvancedDereverbPhase(PhaseInterface):
                         try:
                             _plm49.set_active("SGMSE+", False)
                         except Exception as e:
-                            logger.warning("phase_49_advanced_dereverb.py::unbekannter Fallback: %s", e)
+                            logger.warning(
+                                "Verarbeitungsschritt_49_advanced_dereverb.py::unbekannter Ersatzpfad: %s", e
+                            )
                     _release_49("SGMSE+_phase49")
         except Exception as _imp_err:
-            logger.debug("Phase 49: SGMSE+-Import nicht verfügbar (%s) → WPE DSP-Fallback", _imp_err)
+            logger.debug("Verarbeitungsschritt 49: SGMSE+-Import nicht verfügbar (%s) → WPE DSP-Ersatzpfad", _imp_err)
 
         if not _sgmse_used:
             is_stereo = audio.ndim == 2
@@ -647,7 +654,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         if delta_c80 < _c80_down_lim:
             # C80 degraded — full rollback to original dry signal
             logger.warning(
-                "Phase 49 C80-guard: ΔC80=%.2f dB below %.2f dB → rollback to dry",
+                "Verarbeitungsschritt 49 C80-guard: ΔC80=%.2f dB below %.2f dB → rollback to dry",
                 delta_c80,
                 _c80_down_lim,
             )
@@ -662,7 +669,7 @@ class AdvancedDereverbPhase(PhaseInterface):
             wet_mix *= _c80_scale
             c80_guard_triggered = True
             logger.info(
-                "Phase 49 C80-guard: ΔC80=%.2f dB > %.2f dB → wet_mix scaled to %.3f",
+                "Verarbeitungsschritt 49 C80-guard: ΔC80=%.2f dB > %.2f dB → wet_mix scaled to %.3f",
                 delta_c80,
                 _c80_hard_lim,
                 wet_mix,
@@ -683,7 +690,10 @@ class AdvancedDereverbPhase(PhaseInterface):
                 _e = min(_early_win, len(_proc64))
                 _proc64[:_e] = (1.0 - _alpha) * _proc64[:_e] + _alpha * _orig64[:_e]
             processed = _proc64.astype(np.float32)
-            logger.info("Phase 49 C80-guard: ΔC80=%.2f dB — early-reflection blend 35 %% applied (50 ms)", delta_c80)
+            logger.info(
+                "Verarbeitungsschritt 49 C80-guard: ΔC80=%.2f dB — early-reflection blend 35 %% angewendet (50 ms)",
+                delta_c80,
+            )
 
         # §4.5c D50 secondary guard: adaptive ΔD50 limit
         if abs(delta_d50) > _d50_lim and not c80_guard_triggered:
@@ -692,7 +702,7 @@ class AdvancedDereverbPhase(PhaseInterface):
             )
             wet_mix *= _d50_scale
             logger.info(
-                "Phase 49 D50-guard: ΔD50=%.3f > %.3f → wet_mix scaled to %.3f",
+                "Verarbeitungsschritt 49 D50-guard: ΔD50=%.3f > %.3f → wet_mix scaled to %.3f",
                 delta_d50,
                 _d50_lim,
                 wet_mix,
@@ -721,7 +731,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         rms_change_db = rms_after_db - rms_before_db if rms_before_db > -80.0 else 0.0
 
         logger.info(
-            "Phase 49 WPE-Dereverb: strength=%.2f, RMS-Δ=%.2f dB, t=%.2fs",
+            "Verarbeitungsschritt 49 WPE-Dereverb: strength=%.2f, RMS-Δ=%.2f dB, t=%.2fs",
             strength,
             rms_change_db,
             elapsed,
@@ -744,7 +754,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 mode="subtractive",
             )
         except Exception as _pm_exc:
-            logger.debug("Phase49 masking clamp non-blocking: %s", _pm_exc)
+            logger.debug("Verarbeitungsschritt49 masking clamp nicht blockierend: %s", _pm_exc)
 
         # §2.46f Natural-Performance-Artifacts-Guard — Dereverb darf Atemgeräusche
         # zwischen Phrasen und Early-Reflections des Aufnahmestudios nicht tilgen.
@@ -773,7 +783,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 elif processed.ndim == 1 and _npa_orig49.ndim == 1:
                     processed[_npa_m49] = _npa_orig49[_npa_m49]
         except Exception as _npa49_exc:
-            logger.debug("§2.46f phase_49 NPA-Guard (non-blocking): %s", _npa49_exc)
+            logger.debug("§2.46f Verarbeitungsschritt_49 NPA-Guard (nicht blockierend): %s", _npa49_exc)
 
         # §2.36 Phonem-Schutz: Dereverb-Nass-Anteil kann Konsonanten-Burst-Transienten
         # glätten wenn Hüllkurven-Schätzer plosive Einsätze als Reverb-Onset klassifiziert.
@@ -806,7 +816,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 elif processed.ndim == 1 and audio.ndim == 1:
                     processed[_smask_49] = audio[_smask_49]
         except Exception as _pm49_exc:
-            logger.debug("§2.36 phase_49 Phonem-Mask (non-blocking): %s", _pm49_exc)
+            logger.debug("§2.36 Verarbeitungsschritt_49 Phonem-Mask (nicht blockierend): %s", _pm49_exc)
 
         # §0p HNR-Blend nach ML-Dereverb (RELEASE_MUST §0p): ΔHNR > 3 dB → Dry-Wet-Blend
         _p49_panns = float(kwargs.get("panns_singing", kwargs.get("panns_singing_confidence", _vocal_conf_49)))
@@ -822,7 +832,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 if _hnr_diag_p49.get("over_cleaned"):
                     processed = _hnr_blended_p49
             except Exception as _hnr_exc_p49:
-                logger.debug("§0p HNR-Blend phase_49 (non-blocking): %s", _hnr_exc_p49)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_49 (nicht blockierend): %s", _hnr_exc_p49)
 
         # §0p Formant-Integrity post-check — rollback if F1 shifted >±15%
         if _f1_pre_49 is not None:
@@ -837,14 +847,14 @@ class AdvancedDereverbPhase(PhaseInterface):
                 )
                 if _f1_post_49 > 0 and abs(_f1_post_49 - _f1_pre_49) > _f1_pre_49 * 0.15:
                     logger.warning(
-                        "§0p Formant drift phase_49 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
+                        "§0p Formant drift Verarbeitungsschritt_49 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
                         _f1_pre_49,
                         _f1_post_49,
                         abs(_f1_post_49 - _f1_pre_49),
                     )
                     processed = audio.copy()
             except Exception as e:
-                logger.warning("phase_49_advanced_dereverb.py::unbekannter Fallback: %s", e)
+                logger.warning("Verarbeitungsschritt_49_advanced_dereverb.py::unbekannter Ersatzpfad: %s", e)
 
         # §Gap3 PhraseBoundaryGuard — taper artifacts at phrase transitions (§0p Vocal-Supremacy)
         try:
@@ -865,9 +875,9 @@ class AdvancedDereverbPhase(PhaseInterface):
                 else:
                     processed = audio + (processed - audio) * _pbg_env_49[:, np.newaxis]
                 processed = np.clip(np.nan_to_num(processed, nan=0.0), -1.0, 1.0).astype(np.float32)
-                logger.debug("§Gap3 PhraseBoundaryGuard phase_49: %d boundaries", len(_pbg_bounds_49))
+                logger.debug("§Gap3 PhraseBoundaryGuard Verarbeitungsschritt_49: %d boundaries", len(_pbg_bounds_49))
         except Exception as _pbg_exc_49:
-            logger.debug("PhraseBoundaryGuard phase_49 (non-blocking): %s", _pbg_exc_49)
+            logger.debug("PhraseBoundaryGuard Verarbeitungsschritt_49 (nicht blockierend): %s", _pbg_exc_49)
 
         # §2.46f [RELEASE_MUST] Atemgeräusch-Schutz — dereverb-Algorithmen greifen diffuse
         # Spektralanteile an (Early-Reflections, Raum-Rauschen), die Atemgeräusche
@@ -904,7 +914,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 if _blended_p49:
                     processed = np.clip(np.nan_to_num(_result_blend_p49.astype(np.float32), nan=0.0), -1.0, 1.0)
                     logger.debug(
-                        "§2.46f BreathGuard phase_49: %d Atemzonen geschützt (dry_ratio=%.2f)",
+                        "§2.46f BreathGuard Verarbeitungsschritt_49: %d Atemzonen geschützt (dry_Verhaeltnis=%.2f)",
                         len(
                             [
                                 s
@@ -915,7 +925,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                         _g_fl_p49 if _breath_segs_p49 else 0.0,
                     )
             except Exception as _breath_exc_p49:
-                logger.debug("§2.46f BreathGuard phase_49 (non-blocking): %s", _breath_exc_p49)
+                logger.debug("§2.46f BreathGuard Verarbeitungsschritt_49 (nicht blockierend): %s", _breath_exc_p49)
 
         # §0p [RELEASE_MUST] VQI per-Phase Gate — vokal-beeinflussende Phasen (phases.instructions.md):
         # Dereverb verändert diffuse Spektralanteile und kann Stimmqualität degradieren.
@@ -950,7 +960,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                     _vqi_floor_49 = 0.72  # konservativ für unbekanntes Material
                 if _vqi_p49 < _vqi_floor_49:
                     logger.info(
-                        "phase_49: VQI per-phase rollback (vqi=%.3f < %.2f [%s], panns=%.2f) — Dereverb zurückgesetzt",
+                        "Verarbeitungsschritt_49: VQI per-Verarbeitungsschritt rollback (vqi=%.3f < %.2f [%s], panns=%.2f) — Dereverb zurückgesetzt",
                         _vqi_p49,
                         _vqi_floor_49,
                         _mat_49,
@@ -958,7 +968,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                     )
                     processed = audio  # Rollback auf Phase-Input
             except Exception as _vqi_exc_p49:
-                logger.debug("phase_49 VQI-Gate (non-blocking): %s", _vqi_exc_p49)
+                logger.debug("Verarbeitungsschritt_49 VQI-Gate (nicht blockierend): %s", _vqi_exc_p49)
 
         # §V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach Advanced Dereverb (RELEASE_MUST §0p V19-V26)
         _mat49_guards = str(self._current_material or "unknown").lower()
@@ -972,9 +982,11 @@ class AdvancedDereverbPhase(PhaseInterface):
                 _nt49_d = _nt49_dist_fn(_nt49_residual, _mat49_guards, sr=sample_rate)
                 if _nt49_d > 0.25:
                     processed = (0.5 * processed + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 phase_49: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt49_d)
+                    logger.warning(
+                        "§V19 Verarbeitungsschritt_49: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt49_d
+                    )
         except Exception as _nt49_exc:
-            logger.debug("§V19 phase_49 noise_texture non-blocking: %s", _nt49_exc)
+            logger.debug("§V19 Verarbeitungsschritt_49 noise_texture nicht blockierend: %s", _nt49_exc)
 
         if _p49_panns >= 0.25:
             try:
@@ -990,9 +1002,11 @@ class AdvancedDereverbPhase(PhaseInterface):
                     _need49 = float(kwargs.get("mikrodynamik_global_need", kwargs.get("global_need", 0.0)) or 0.0)
                     _wet49 = _recommend_mkk_wet(_corr49, _p49_panns, global_need=_need49)
                     processed = (_wet49 * processed + (1.0 - _wet49) * audio).astype(np.float32)
-                    logger.warning("§V20 phase_49: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr49, _wet49)
+                    logger.warning(
+                        "§V20 Verarbeitungsschritt_49: mikrodynamik_corr=%.4f < 0.97 → wet=%.3f", _corr49, _wet49
+                    )
             except Exception as _v20_49_exc:
-                logger.debug("§V20 phase_49 mikrodynamik non-blocking: %s", _v20_49_exc)
+                logger.debug("§V20 Verarbeitungsschritt_49 mikrodynamik nicht blockierend: %s", _v20_49_exc)
 
         if any(x in _mat49_guards for x in ("shellac", "vinyl", "tape", "analog")):
             try:
@@ -1002,7 +1016,7 @@ class AdvancedDereverbPhase(PhaseInterface):
 
                 processed = _nfmin49(processed, sample_rate, _mat49_guards, original_audio=audio)
             except Exception as _v21_49_exc:
-                logger.debug("§V21 phase_49 noise_floor non-blocking: %s", _v21_49_exc)
+                logger.debug("§V21 Verarbeitungsschritt_49 noise_floor nicht blockierend: %s", _v21_49_exc)
 
         # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
@@ -1015,7 +1029,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 _sc_wet_49 = 0.70  # Phase-Strength −30 % (§V24)
                 processed = (_sc_wet_49 * processed + (1.0 - _sc_wet_49) * audio).astype(np.float32)
         except Exception as _sc_exc_49:  # pylint: disable=broad-except
-            logger.debug("§V24 phase_49 spectral_color non-blocking: %s", _sc_exc_49)
+            logger.debug("§V24 Verarbeitungsschritt_49 spectral_color nicht blockierend: %s", _sc_exc_49)
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel
@@ -1024,7 +1038,7 @@ class AdvancedDereverbPhase(PhaseInterface):
 
             processed = _opm49(audio, processed, None, max_delta_db=1.5)
         except Exception as _v26_49_exc:
-            logger.debug("§V26 phase_49 onset_guard non-blocking: %s", _v26_49_exc)
+            logger.debug("§V26 Verarbeitungsschritt_49 onset_guard nicht blockierend: %s", _v26_49_exc)
 
         if _p49_panns >= 0.25:
             try:
@@ -1036,11 +1050,11 @@ class AdvancedDereverbPhase(PhaseInterface):
                 if not _vibr49.ok:
                     processed = (0.5 * processed + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§2.72 phase_49: vibrato_reduction=%.1f%% → 50%% dry-blend",
+                        "§2.72 Verarbeitungsschritt_49: vibrato_reduction=%.1f%% → 50%% dry-blend",
                         _vibr49.depth_reduction_pct,
                     )
             except Exception as _vib49_exc:
-                logger.debug("§2.72 phase_49 vibrato non-blocking: %s", _vib49_exc)
+                logger.debug("§2.72 Verarbeitungsschritt_49 vibrato nicht blockierend: %s", _vib49_exc)
 
         return PhaseResult(
             success=True,
@@ -1162,7 +1176,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         t60 = self._estimate_t60_schroeder(audio, sample_rate)
         if t60 < 0.15:
             logger.info(
-                "Phase 49 WPE: T60=%.3fs < 0.15s — kein signifikanter Nachhall, WPE übersprungen (Kanal %d Samples)",
+                "Verarbeitungsschritt 49 WPE: T60=%.3fs < 0.15s — kein signifikanter Nachhall, WPE übersprungen (Kanal %d Samples)",
                 t60,
                 n_orig,
             )
@@ -1199,7 +1213,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         # §C2: DRR-adaptive iteration count — anechoic signal (DRR > 15 dB) → 1 iteration enough
         _iterations = 1 if _drr_db > 15.0 else self._WPE_ITERATIONS
         logger.debug(
-            "Phase 49 Schroeder T60=%.2fs + §C2 predelay=%dframes → WPE D=%d K=%d iter=%d (t60_frames=%d)",
+            "Verarbeitungsschritt 49 Schroeder T60=%.2fs + §C2 predelay=%dframes → WPE D=%d K=%d iter=%d (t60_frames=%d)",
             t60,
             _predelay_frames,
             D,
@@ -1236,8 +1250,8 @@ class AdvancedDereverbPhase(PhaseInterface):
                     _wpe_elapsed = time.monotonic() - _wpe_channel_start_t
                     if _wpe_elapsed > _wpe_max_runtime_s:
                         logger.warning(
-                            "Phase 49 WPE: budget %.1fs exhausted at bin %d/%d "
-                            "(elapsed=%.1fs, audio=%.1fs) — partial WPE result used",
+                            "Verarbeitungsschritt 49 WPE: Grenze %.1fs exhausted at bin %d/%d "
+                            "(elapsed=%.1fs, audio=%.1fs) — partial WPE Ergebnis used",
                             _wpe_max_runtime_s,
                             f,
                             F,
@@ -1353,7 +1367,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 result["drr_db"] = float(np.clip(ddRR, -20.0, 30.0))
 
         except Exception as _rir_exc:
-            logger.debug("§C2 Blind RIR estimation non-blocking: %s", _rir_exc)
+            logger.debug("§C2 Blind RIR estimation nicht blockierend: %s", _rir_exc)
         return result
 
     @staticmethod
@@ -1517,7 +1531,7 @@ class AdvancedDereverbPhase(PhaseInterface):
         _, _, Zxx = safe_stft(
             audio,
             fs=1,  # normierte Frequenzachse — absolute Werte nicht benötigt
-            window=window,
+            window=window,  # type: ignore[arg-type]
             nperseg=self._WINDOW_SIZE,
             noverlap=self._WINDOW_SIZE - self._HOP_SIZE,
             boundary="even",

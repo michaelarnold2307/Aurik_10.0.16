@@ -125,16 +125,16 @@ def patterns(entries: list[dict]):
 
     agg = ExceptionAggregator()
     for e in entries:
-        agg.add_raw(e)
+        agg.add_raw(e)  # type: ignore[attr-defined]
 
     report = agg.aggregate()
-    miner = PatternMiner()
-    discoveries = miner.mine(report)
+    miner = PatternMiner()  # type: ignore[call-arg]
+    discoveries = miner.mine(report)  # type: ignore[attr-defined]
 
     print(f"\n{'=' * 70}")
     print("  🧠 Pattern-Mining — §v10.115")
     print(f"{'=' * 70}")
-    print(f"  Bekannte Patterns: {len(miner.KNOWN_PATTERNS)}")
+    print(f"  Bekannte Patterns: {len(miner.KNOWN_PATTERNS)}")  # type: ignore[attr-defined]
     print(f"  Neue Entdeckungen: {len(discoveries)}")
     print()
 
@@ -148,7 +148,7 @@ def patterns(entries: list[dict]):
 
 def qscore_correlation(entries: list[dict]):
     """Q-Score-Korrelation: misst ob Fixes den Score verbessern."""
-    from backend.core.exception_forensics import QScoreMonitor
+    from backend.core.exception_forensics import QScoreMonitor  # type: ignore[attr-defined]
 
     monitor = QScoreMonitor()
 

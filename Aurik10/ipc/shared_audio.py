@@ -108,27 +108,27 @@ class SharedAudioRing:
             self._shm = SharedMemory(name=self._name, create=False)
             self._shm.close()
             self._shm = SharedMemory(name=self._name, create=False)
-            self._buf = memoryview(self._shm.buf)
+            self._buf = memoryview(self._shm.buf)  # type: ignore[arg-type]
             self._owned = False
             logger.info("SharedAudioRing: bestehendes Segment '%s' geöffnet", self._name)
             self._validate()
             return
         except FileNotFoundError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         self._shm = SharedMemory(name=self._name, create=True, size=TOTAL_SIZE)
-        self._buf = memoryview(self._shm.buf)
+        self._buf = memoryview(self._shm.buf)  # type: ignore[arg-type]
         self._init_header()
         logger.info("SharedAudioRing: Segment '%s' erstellt (%d bytes, %d frames)", self._name, TOTAL_SIZE, RING_SIZE)
 
     def _open_segment(self) -> None:
         self._shm = SharedMemory(name=self._name, create=False)
-        self._buf = memoryview(self._shm.buf)
+        self._buf = memoryview(self._shm.buf)  # type: ignore[arg-type]
         self._validate()
         logger.info("SharedAudioRing: Segment '%s' geöffnet", self._name)
 
     def _validate(self) -> None:
-        magic = struct.unpack_from("<I", self._buf, 0)[0]
+        magic = struct.unpack_from("<I", self._buf, 0)[0]  # type: ignore[arg-type]
         if magic != MAGIC:
             raise RuntimeError(f"SharedAudioRing: Magic 0x{magic:08X} != 0x{MAGIC:08X}. Segment korrupt?")
 
@@ -148,11 +148,20 @@ class SharedAudioRing:
         phase_id: bytes,
     ) -> None:
         META_STRUCT.pack_into(
-            self._buf, offset, magic, sr, write_idx, read_idx, status, frame_count, channels, phase_id
+            self._buf,
+            offset,
+            magic,
+            sr,
+            write_idx,
+            read_idx,
+            status,
+            frame_count,
+            channels,
+            phase_id,  # type: ignore[arg-type]
         )
 
     def _unpack(self, offset: int = 0):
-        return META_STRUCT.unpack_from(self._buf, offset)
+        return META_STRUCT.unpack_from(self._buf, offset)  # type: ignore[arg-type]
 
     # ── Feld-Accessoren (direkt im Shared-Memory) ──────────────────────────────
 
@@ -160,7 +169,7 @@ class SharedAudioRing:
     def sample_rate(self) -> int:
         if self._buf is None:
             return SAMPLE_RATE_DEFAULT
-        return struct.unpack_from("<I", self._buf, 4)[0]
+        return struct.unpack_from("<I", self._buf, 4)[0]  # type: ignore[no-any-return]
 
     @sample_rate.setter
     def sample_rate(self, v: int) -> None:
@@ -171,7 +180,7 @@ class SharedAudioRing:
     def write_idx(self) -> int:
         if self._buf is None:
             return 0
-        return struct.unpack_from("<I", self._buf, 8)[0]
+        return struct.unpack_from("<I", self._buf, 8)[0]  # type: ignore[no-any-return]
 
     @write_idx.setter
     def write_idx(self, v: int) -> None:
@@ -182,7 +191,7 @@ class SharedAudioRing:
     def read_idx(self) -> int:
         if self._buf is None:
             return 0
-        return struct.unpack_from("<I", self._buf, 12)[0]
+        return struct.unpack_from("<I", self._buf, 12)[0]  # type: ignore[no-any-return]
 
     @read_idx.setter
     def read_idx(self, v: int) -> None:
@@ -193,7 +202,7 @@ class SharedAudioRing:
     def status(self) -> int:
         if self._buf is None:
             return 0
-        return struct.unpack_from("<I", self._buf, 16)[0]
+        return struct.unpack_from("<I", self._buf, 16)[0]  # type: ignore[no-any-return]
 
     @status.setter
     def status(self, v: int) -> None:
@@ -204,7 +213,7 @@ class SharedAudioRing:
     def frame_count(self) -> int:
         if self._buf is None:
             return 0
-        return struct.unpack_from("<I", self._buf, 20)[0]
+        return struct.unpack_from("<I", self._buf, 20)[0]  # type: ignore[no-any-return]
 
     @frame_count.setter
     def frame_count(self, v: int) -> None:
@@ -215,7 +224,7 @@ class SharedAudioRing:
     def channels_field(self) -> int:
         if self._buf is None:
             return CHANNELS
-        return struct.unpack_from("<I", self._buf, 24)[0]
+        return struct.unpack_from("<I", self._buf, 24)[0]  # type: ignore[no-any-return]
 
     @property
     def phase_id(self) -> str:
@@ -396,7 +405,7 @@ class SharedAudioRing:
             shm.close()
             shm.unlink()
         except FileNotFoundError:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 
 # ── Testing ────────────────────────────────────────────────────────────────────

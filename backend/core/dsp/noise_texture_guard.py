@@ -139,5 +139,5 @@ def compute_noise_texture_distance(
         return float(np.nan_to_num(normalized, nan=0.0))
 
     except Exception as exc:
-        logger.debug("compute_noise_texture_distance non-blocking: %s", exc)
+        logger.debug("berechnen_noise_texture_distance nicht blockierend: %s", exc)
         return 0.0

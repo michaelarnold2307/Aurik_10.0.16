@@ -171,7 +171,7 @@ class AuthenticityMetrics:
         # Change in dB
         tilt_change_db = 20 * np.log10(tilt_enhanced / (tilt_original + 1e-10))
 
-        return abs(tilt_change_db)
+        return abs(tilt_change_db)  # type: ignore[no-any-return]
 
     @staticmethod
     def measure_stereo_image_change(audio_original: np.ndarray, audio_enhanced: np.ndarray) -> float:
@@ -203,7 +203,7 @@ class AuthenticityMetrics:
 
         width_change = abs(width_enhanced - width_original) / (width_original + 1e-10)
 
-        return width_change
+        return width_change  # type: ignore[no-any-return]
 
     @staticmethod
     def authenticity_check(
@@ -282,7 +282,7 @@ class AuthenticityMetrics:
         is_authentic = len(warnings) == 0
 
         if verbose and not is_authentic:
-            logger.warning("Authenticity Check WARNINGS:")
+            logger.warning("Authenticity Pruefung WARNINGS:")
             for warning in warnings:
                 logger.warning("  %s", warning)
 

@@ -59,7 +59,7 @@ class RuleBasedGenderDetector:
             gender = "unknown"
         # Logging für Audit
         logger.debug(
-            f"[GenderDetection] f0={f0:.1f}Hz, f1={f1:.1f}Hz, f2={f2:.1f}Hz, voiced={voiced_ratio:.2f}, uncertainty={uncertainty:.2f}, result={gender}"
+            f"[GenderDetection] f0={f0:.1f}Hz, f1={f1:.1f}Hz, f2={f2:.1f}Hz, voiced={voiced_ratio:.2f}, uncertainty={uncertainty:.2f}, Ergebnis={gender}"
         )
         return gender
 
@@ -100,7 +100,7 @@ class RuleBasedGenderDetector:
                 roots = np.roots(A)
             except (np.linalg.LinAlgError, ValueError):
                 continue
-            roots = [r for r in roots if np.imag(r) >= 0.01]
+            roots = [r for r in roots if np.imag(r) >= 0.01]  # type: ignore[assignment]
             angz = np.arctan2(np.imag(roots), np.real(roots))
             formants = sorted(angz * (sr / (2 * np.pi)))
             if len(formants) >= 2:

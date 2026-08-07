@@ -64,7 +64,7 @@ class MaterialAdaptiveLearner:
             try:
                 opt.update(action, reward)
             except Exception as e:
-                logger.warning("MaterialAdaptiveLearner record: %s", e)
+                logger.warning("MaterialAdaptiveLearner aufzeichnen: %s", e)
 
     def suggest_strength(self, material: str, default: float = 0.5) -> float:
         """Schlägt optimale Stärke vor basierend auf Lernhistorie."""
@@ -80,7 +80,7 @@ class MaterialAdaptiveLearner:
         opt = self._get_optimizer(material)
         if opt is not None and hasattr(opt, "get_stats"):
             try:
-                return opt.get_stats()
+                return opt.get_stats()  # type: ignore[no-any-return]
             except Exception as e:
                 logger.warning("MaterialAdaptiveLearner stats: %s", e)
         return {}

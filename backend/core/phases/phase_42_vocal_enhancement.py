@@ -284,7 +284,7 @@ class VocalEnhancement(PhaseInterface):
                 self._formant_system = _FormantSystemCls(
                     n_formants=5, correction_strength=0.5, enhance_singers_formant=True
                 )
-                logger.debug("FormantSystem (LPC) für Phase 42 initialisiert")
+                logger.debug("FormantSystem (LPC) für Verarbeitungsschritt 42 initialisiert")
             except Exception as _e:
                 logger.debug("FormantSystem-Init fehlgeschlagen: %s", _e)
 
@@ -345,7 +345,7 @@ class VocalEnhancement(PhaseInterface):
 
             _get_plm_evict42().evict_for_phase("phase_42_vocal_enhancement")
         except Exception as e:
-            logger.warning("phase_42_vocal_enhancement.py::process fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::verarbeiten Ersatzpfad: %s", e)
 
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
@@ -367,7 +367,7 @@ class VocalEnhancement(PhaseInterface):
                     _zone_frac_42 = float(np.clip(_zone_s_42 / max(1, _n_s_42), 0.0, 1.0))
                     _effective_strength = float(np.clip(_effective_strength + _zone_frac_42 * 0.15, 0.0, 1.0))
             except Exception as _fmg_exc_42:
-                logger.debug("Phase42 §V41 ForwardMaskingGuard non-blocking: %s", _fmg_exc_42)
+                logger.debug("Verarbeitungsschritt42 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_42)
 
         # ── §SVM-1 SingerVoiceModel: Stimmtyp-adaptives Vocal Enhancement ──
         _svm_42 = kwargs.get("singer_voice_model")
@@ -390,14 +390,14 @@ class VocalEnhancement(PhaseInterface):
                     kwargs["preserve_vibrato"] = True
                     kwargs["vibrato_depth_cents"] = _svm_vd
                 logger.debug(
-                    "Phase42 §SVM-1 SVM: hnr=%.1fdB tilt=%.1f vibrato=%.1f → eff=%.3f",
+                    "Verarbeitungsschritt42 §SVM-1 SVM: hnr=%.1fdB tilt=%.1f vibrato=%.1f → eff=%.3f",
                     _svm_hnr,
                     _svm_tilt,
                     _svm_vd,
                     _effective_strength,
                 )
             except Exception as _svm_exc_42:
-                logger.debug("Phase42 §SVM-1 non-blocking: %s", _svm_exc_42)
+                logger.debug("Verarbeitungsschritt42 §SVM-1 nicht blockierend: %s", _svm_exc_42)
 
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
@@ -419,7 +419,7 @@ class VocalEnhancement(PhaseInterface):
 
         is_stereo = audio.ndim == 2
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
-        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))
+        config = dict(self.ENHANCEMENT_CONFIG.get(_mk, self.ENHANCEMENT_CONFIG[MaterialType.CD_DIGITAL]))  # type: ignore[call-overload]
         config["deess_reduction_db"] = float(config["deess_reduction_db"] * _effective_strength)
         config["presence_gain_db"] = float(config["presence_gain_db"] * _effective_strength)
         config["formant_gain_db"] = float(config["formant_gain_db"] * _effective_strength)
@@ -437,14 +437,16 @@ class VocalEnhancement(PhaseInterface):
             config["presence_gain_db"] = float(config["presence_gain_db"] * _sat_scale_p42)
             config["formant_gain_db"] = float(config["formant_gain_db"] * _sat_scale_p42)
             config["chest_gain_db"] = float(config["chest_gain_db"] * _sat_scale_p42)
-            logger.debug("Phase42 §2.46g soft_saturation_preserve hard-cap 0.35: scale=%.3f", _sat_scale_p42)
+            logger.debug(
+                "Verarbeitungsschritt42 §2.46g soft_saturation_preserve hard-cap 0.35: scale=%.3f", _sat_scale_p42
+            )
         elif _p42_sat_sev > 0.3:
             _sat_scale_p42 = float(np.clip(1.0 - (_p42_sat_sev - 0.3) * 1.2, 0.16, 1.0))
             config["presence_gain_db"] = float(config["presence_gain_db"] * _sat_scale_p42)
             config["formant_gain_db"] = float(config["formant_gain_db"] * _sat_scale_p42)
             config["chest_gain_db"] = float(config["chest_gain_db"] * _sat_scale_p42)
             logger.debug(
-                "Phase42 §2.46g soft_saturation_severity=%.3f → scale=%.3f (presence/formant/chest geschützt)",
+                "Verarbeitungsschritt42 §2.46g soft_saturation_severity=%.3f → scale=%.3f (presence/formant/chest geschützt)",
                 _p42_sat_sev,
                 _sat_scale_p42,
             )
@@ -474,13 +476,13 @@ class VocalEnhancement(PhaseInterface):
                     # Modern digital: potentially harsh sibilance
                     config["deess_threshold_db"] = float(config["deess_threshold_db"] - 2.0)
                 logger.debug(
-                    "Phase42 era-adaptive de-esser: era=%d → threshold=%.1f dB, reduction=%.1f dB",
+                    "Verarbeitungsschritt42 era-adaptive de-esser: era=%d → Schwelle=%.1f dB, reduction=%.1f dB",
                     _era_int,
                     config["deess_threshold_db"],
                     config["deess_reduction_db"],
                 )
             except (TypeError, ValueError):
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # §2.36 + §9.1c: Salience-aware vocal shaping.
         # Hohe Frikativ-/Sibilanz-Salienz => weniger aggressives De-Essern
@@ -549,7 +551,7 @@ class VocalEnhancement(PhaseInterface):
                     config["formant_gain_db"] = float(config["formant_gain_db"] * _fs)
                     config["chest_gain_db"] = float(config["chest_gain_db"] * _ches)
                     logger.info(
-                        "Phase42 age-adaptive: age_group=%s "
+                        "Verarbeitungsschritt42 age-adaptive: age_group=%s "
                         "breath_red×%.2f comp×%.2f formant×%.2f chest×%.2f breath_pres=%.2f",
                         _detected_age_group_value,
                         _brs,
@@ -559,7 +561,7 @@ class VocalEnhancement(PhaseInterface):
                         _age_breath_preservation,
                     )
             except Exception as _age_err:
-                logger.debug("Phase42 age-detection non-blocking: %s", _age_err)
+                logger.debug("Verarbeitungsschritt42 age-detection nicht blockierend: %s", _age_err)
 
         # §4.10-VintageVoice: Bei Vintage-Material ohne erkannte Altersgruppe ist der
         # Fallback breath_preservation=0.70 zu aggressiv für historische Stimmcharaktere
@@ -625,13 +627,13 @@ class VocalEnhancement(PhaseInterface):
                     config["presence_gain_db"] = float(config["presence_gain_db"] * _lyrics_presence_scale)
                     _lyrics_adaptation_active = True
                     logger.info(
-                        "Phase42 lyrics-saliency adaptation: avg_sal=%.2f presence_scale=%.2f q_scale=%.2f",
+                        "Verarbeitungsschritt42 lyrics-saliency adaptation: avg_sal=%.2f presence_scale=%.2f q_scale=%.2f",
                         _avg_sal,
                         _lyrics_presence_scale,
                         _lyrics_formant_q_scale,
                     )
             except Exception as _lsa_exc:
-                logger.debug("Phase42 lyrics-saliency non-blocking: %s", _lsa_exc)
+                logger.debug("Verarbeitungsschritt42 lyrics-saliency nicht blockierend: %s", _lsa_exc)
 
         # §P2 Style-Intent-Guard: intentionale Pitch-Abweichungen in style_intent_zones schützen.
         # In Stil-Zonen (Blue Notes, Microtonal Bends, Culture-Specific Tuning) wird
@@ -650,7 +652,7 @@ class VocalEnhancement(PhaseInterface):
                 _style_formant_scale = 1.0 - 0.70 * _style_coverage  # bis -70 %
                 config["formant_gain_db"] = float(config["formant_gain_db"] * max(_style_formant_scale, 0.30))
                 logger.info(
-                    "Phase42 §P2 style-intent-guard: %d Zonen, coverage=%.1f%% → formant_gain×%.2f",
+                    "Verarbeitungsschritt42 §P2 style-intent-guard: %d Zonen, coverage=%.1f%% → formant_gain×%.2f",
                     len(_style_intent_zones),
                     _style_coverage * 100,
                     max(_style_formant_scale, 0.30),
@@ -682,7 +684,7 @@ class VocalEnhancement(PhaseInterface):
                 config["formant_gain_db"] = float(config["formant_gain_db"] * _p42_passaggio_scale)
                 config["presence_gain_db"] = float(config["presence_gain_db"] * _p42_passaggio_scale)
                 logger.info(
-                    "Phase42 §0p passaggio-guard: %d Zonen, coverage=%.1f%% → formant/presence×%.2f",
+                    "Verarbeitungsschritt42 §0p passaggio-guard: %d Zonen, coverage=%.1f%% → formant/presence×%.2f",
                     len(_passaggio_zones_p42),
                     _passaggio_coverage * 100,
                     _p42_passaggio_scale,
@@ -693,7 +695,7 @@ class VocalEnhancement(PhaseInterface):
         _intimacy_pre = self._measure_vocal_intimacy(audio, sample_rate)
 
         if not has_vocals:
-            logger.info("No vocal content detected - skipping vocal enhancement")
+            logger.info("No vocal content erkannt - skipping vocal enhancement")
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
             return PhaseResult(
@@ -728,7 +730,7 @@ class VocalEnhancement(PhaseInterface):
             if "unexpected keyword argument" not in str(_stem_sep_sig_exc):
                 raise
             logger.debug(
-                "Phase42 Stem-Sep fallback auf Legacy-Signatur ohne quality kwargs: %s",
+                "Verarbeitungsschritt42 Stem-Sep Ersatzpfad auf Legacy-Signatur ohne quality kwargs: %s",
                 _stem_sep_sig_exc,
             )
             try:
@@ -737,7 +739,7 @@ class VocalEnhancement(PhaseInterface):
                 if "unexpected keyword argument" not in str(_stem_sep_material_exc):
                     raise
                 logger.debug(
-                    "Phase42 Stem-Sep fallback auf Legacy-Signatur ohne material kwargs: %s",
+                    "Verarbeitungsschritt42 Stem-Sep Ersatzpfad auf Legacy-Signatur ohne material kwargs: %s",
                     _stem_sep_material_exc,
                 )
                 stem_result = self._try_stem_separation(audio, sample_rate)
@@ -745,7 +747,7 @@ class VocalEnhancement(PhaseInterface):
 
         if stem_result is not None:
             vocals_stem, instr_stem, vocal_weight, stem_model_used = stem_result
-            logger.debug("Phase42: Stem-Sep via %s — verarbeite Vocal-Stem", stem_model_used)
+            logger.debug("Verarbeitungsschritt42: Stem-Sep via %s — verarbeite Vocal-Stem", stem_model_used)
 
             # §2.28 HPG on vocal stem: HarmonicPreservationGuard info is lost
             # after Stem-Sep because UV3 runs HPG on full mix.  Re-extract
@@ -762,9 +764,9 @@ class VocalEnhancement(PhaseInterface):
                 _hpg_vocal_mask, _hpg_vocal_href = _hpg_v.extract_harmonic_mask(
                     _v_mono.astype(np.float32), sample_rate, instrument_tag="vocals"
                 )
-                logger.debug("Phase42 HPG: vocal-stem harmonic mask extracted")
+                logger.debug("Verarbeitungsschritt42 HPG: vocal-stem harmonic mask extracted")
             except Exception as _hpg_v_err:
-                logger.debug("Phase42 HPG auf Vocal-Stem nicht verfügbar: %s", _hpg_v_err)
+                logger.debug("Verarbeitungsschritt42 HPG auf Vocal-Stem nicht verfügbar: %s", _hpg_v_err)
 
             # §G58 Vocal Repair: detect and fix damaged vocals before enhancement
             try:
@@ -775,12 +777,12 @@ class VocalEnhancement(PhaseInterface):
                 if _v_damage.get("needs_repair"):
                     vocals_stem = apply_vocal_repair(vocals_stem, sample_rate, damage=_v_damage)
                     logger.info(
-                        "Phase42 VocalRepair: damage detected (bw=%.0fHz crest=%.1fdB) — repaired",
+                        "Verarbeitungsschritt42 VocalRepair: damage erkannt (bw=%.0fHz crest=%.1fdB) — repaired",
                         _v_damage.get("bandwidth_hz", 0),
                         _v_damage.get("crest_factor_db", 0),
                     )
             except Exception as _vr_exc:
-                logger.debug("Phase42 VocalRepair skipped: %s", _vr_exc)
+                logger.debug("Verarbeitungsschritt42 VocalRepair uebersprungen: %s", _vr_exc)
 
             # Enhance only the vocal stem
             if vocals_stem.ndim == 2:
@@ -827,9 +829,9 @@ class VocalEnhancement(PhaseInterface):
                         enhanced_vocals = enhanced_vocals * _gain[:, np.newaxis]
                     else:
                         enhanced_vocals = _corrected.astype(enhanced_vocals.dtype)
-                    logger.debug("Phase42 HPG: harmonic correction applied to vocal stem")
+                    logger.debug("Verarbeitungsschritt42 HPG: harmonic correction angewendet to vocal stem")
                 except Exception as _hpg_corr_err:
-                    logger.debug("Phase42 HPG Korrektur fehlgeschlagen: %s", _hpg_corr_err)
+                    logger.debug("Verarbeitungsschritt42 HPG Korrektur fehlgeschlagen: %s", _hpg_corr_err)
 
             # §8.3 Vocal-Stem MDEM: Recover micro-dynamics ON THE VOCAL STEM ITSELF
             # (before remix, so instrumental doesn't dominate the LUFS profile).
@@ -848,7 +850,9 @@ class VocalEnhancement(PhaseInterface):
                     enhanced_vocals, vocals_stem, sample_rate, stem_label="vocals_enhanced"
                 )
             except Exception as _stcg_err:
-                logger.debug("STCG Stem-Align phase_42 fehlgeschlagen (non-blocking): %s", _stcg_err)
+                logger.debug(
+                    "STCG Stem-Align Verarbeitungsschritt_42 fehlgeschlagen (nicht blockierend): %s", _stcg_err
+                )
 
             # StemRemixBalancer: LUFS-korrekter Re-Mix (§1.4 Spec)
             try:
@@ -864,7 +868,7 @@ class VocalEnhancement(PhaseInterface):
                 enhanced_audio = (enhanced_vocals[:n] + instr_stem[:n]) * 0.5
         else:
             # Fallback: process full audio without stem separation
-            logger.debug("Phase42: Kein Stem-Sep — Vollbild-Verarbeitung")
+            logger.debug("Verarbeitungsschritt42: Kein Stem-Sep — Vollbild-Verarbeitung")
 
             # §2.35c Shellac/WaxCylinder: DeepFormants (§4.4 primär) → LPC-Burg-Fallback.
             # Formant-Enhancement via plugins/formant_tracker.py (DeepFormants CNN ONNX).
@@ -895,7 +899,7 @@ class VocalEnhancement(PhaseInterface):
                         if _lfc_result is not None and np.isfinite(_lfc_result).all():
                             enhanced_audio = np.clip(_lfc_result, -1.0, 1.0).astype(np.float32)
                             logger.debug(
-                                "§2.35c phase_42 FormantTracker(DeepFormants→LPC) aktiv "
+                                "§2.35c Verarbeitungsschritt_42 FormantTracker(DeepFormants→LPC) aktiv "
                                 "(material=%s, F1=%.0f Hz, conf=%.2f)",
                                 material,
                                 _ft_result.formants[0] if _ft_result.formants else 0.0,
@@ -910,7 +914,7 @@ class VocalEnhancement(PhaseInterface):
                             f"/ {len(_ft_result.formants)} Formanten — kein Boost"
                         )
                 except Exception as _lfc_exc:
-                    logger.debug("§2.35c FormantTracker fehlgeschlagen → _enhance_channel: %s", _lfc_exc)
+                    logger.debug("§2.35c FormantTracker fehlgeschlagen → _verbessern_channel: %s", _lfc_exc)
                     # Fallback auf Standard-Vollbild-Enhancement
                     enhanced_audio = self._enhance_channel(
                         audio[:, 0] if audio.ndim == 2 and audio.shape[0] > 2 else audio,
@@ -962,14 +966,14 @@ class VocalEnhancement(PhaseInterface):
                     enhanced_audio = _vai_result.audio
                     _vocal_ai_applied = True
                     logger.debug(
-                        "Phase42 VocalAI: formant_pres=%.2f emotion_pres=%.2f quality_impr=%.3f",
+                        "Verarbeitungsschritt42 VocalAI: formant_pres=%.2f emotion_pres=%.2f quality_impr=%.3f",
                         _vai_result.formant_preservation_score,
                         _vai_result.emotion_preservation_score,
                         _vai_result.quality_improvement,
                     )
                 else:
                     logger.debug(
-                        "Phase42 VocalAI: abgelehnt (formant_pres=%.2f < 0.85 — Identitätsschutz)",
+                        "Verarbeitungsschritt42 VocalAI: abgelehnt (formant_pres=%.2f < 0.85 — Identitätsschutz)",
                         _vai_result.formant_preservation_score,
                     )
             except Exception as _vai_err:
@@ -999,7 +1003,7 @@ class VocalEnhancement(PhaseInterface):
             )
             if _hg_result.requires_rollback:
                 logger.warning(
-                    "phase_42 §2.46e Hallucination-Guard: spectral_novelty=%.3f → Rollback (mode=%s, material=%s)",
+                    "Verarbeitungsschritt_42 §2.46e Hallucination-Guard: spectral_novelty=%.3f → Rollback (Betriebsart=%s, material=%s)",
                     _hg_result.spectral_novelty,
                     _p42_mode,
                     material.value if hasattr(material, "value") else str(material),
@@ -1007,13 +1011,13 @@ class VocalEnhancement(PhaseInterface):
                 enhanced_audio = audio.copy()
             elif _hg_result.score_penalty > 0.0:
                 logger.info(
-                    "phase_42 §2.46e Hallucination-Guard: spectral_novelty=%.3f → Score-Penalty %.1f (mode=%s)",
+                    "Verarbeitungsschritt_42 §2.46e Hallucination-Guard: spectral_novelty=%.3f → Wert-Penalty %.1f (Betriebsart=%s)",
                     _hg_result.spectral_novelty,
                     _hg_result.score_penalty,
                     _p42_mode,
                 )
         except Exception as _hg_exc_p42:
-            logger.debug("phase_42 Hallucination-Guard (non-blocking): %s", _hg_exc_p42)
+            logger.debug("Verarbeitungsschritt_42 Hallucination-Guard (nicht blockierend): %s", _hg_exc_p42)
 
         if 0.0 < _effective_strength < 1.0:
             enhanced_audio = audio + _effective_strength * (enhanced_audio - audio)
@@ -1024,8 +1028,8 @@ class VocalEnhancement(PhaseInterface):
         _intimacy_delta = float(_intimacy_post - _intimacy_pre)
         _intimacy_gate_triggered = False
         _intimacy_rescue_mix = 0.0
-        _intimacy_max_drop = float(self._INTIMACY_MAX_DROP_BY_MATERIAL.get(_mk, 0.04))
-        _intimacy_rescue_max = float(self._INTIMACY_RESCUE_MAX_BY_MATERIAL.get(_mk, 0.45))
+        _intimacy_max_drop = float(self._INTIMACY_MAX_DROP_BY_MATERIAL.get(_mk, 0.04))  # type: ignore[call-overload]
+        _intimacy_rescue_max = float(self._INTIMACY_RESCUE_MAX_BY_MATERIAL.get(_mk, 0.45))  # type: ignore[call-overload]
         if _intimacy_delta < -_intimacy_max_drop:
             _intimacy_gate_triggered = True
             # Mehr Rescue bei größerem Abfall, aber begrenzt um Effekt zu bewahren.
@@ -1054,7 +1058,7 @@ class VocalEnhancement(PhaseInterface):
 
                 enhanced_audio, _ = _hnr_blend_p42(audio, enhanced_audio, sample_rate)
             except Exception as _hnr_exc_p42:
-                logger.debug("§0p HNR-Blend phase_42 (non-blocking): %s", _hnr_exc_p42)
+                logger.debug("§0p HNR-Blend Verarbeitungsschritt_42 (nicht blockierend): %s", _hnr_exc_p42)
 
         # §0p [RELEASE_MUST] Formant-Gate v10.0.0 — F1–F4 dürfen max. ±2 dB verschoben werden.
         # `check_formant_shift_db()` misst Spektral-Energie an F1–F4-Formantfrequenzen pre/post.
@@ -1082,16 +1086,16 @@ class VocalEnhancement(PhaseInterface):
                 )
                 if _fg_rollback:
                     logger.warning(
-                        "§0p phase_42 Formant-Gate: max_shift=%.1f dB > %.1f dB → Rollback (panns=%.2f)",
+                        "§0p Verarbeitungsschritt_42 Formant-Gate: max_shift=%.1f dB > %.1f dB → Rollback (panns=%.2f)",
                         _fg_max_shift_db,
                         _fg_tol_p42,
                         _p42_panns,
                     )
                     enhanced_audio = audio.copy()
                 else:
-                    logger.debug("§0p phase_42 Formant-Gate OK: max_shift=%.2f dB", _fg_max_shift_db)
+                    logger.debug("§0p Verarbeitungsschritt_42 Formant-Gate OK: max_shift=%.2f dB", _fg_max_shift_db)
             except Exception as _fg_exc:
-                logger.debug("§0p Formant-Gate phase_42 (non-blocking): %s", _fg_exc)
+                logger.debug("§0p Formant-Gate Verarbeitungsschritt_42 (nicht blockierend): %s", _fg_exc)
 
         # §0p [RELEASE_MUST] VQI per-Phase Gate — phase_42 ist die aggressivste Vokal-Phase
         # (Formant-Enhancement, Harshness-Reduction, Stem-Separation). VQI < 0.95 → Rollback
@@ -1114,13 +1118,15 @@ class VocalEnhancement(PhaseInterface):
                 _vqi_p42 = float(_vqi_result_p42.get("vqi", 1.0))
                 if _vqi_p42 < 0.95:
                     logger.info(
-                        "phase_42: VQI per-phase rollback (vqi=%.3f < 0.95, panns=%.2f) — Enhancement zurückgesetzt",
+                        "Verarbeitungsschritt_42: VQI per-Verarbeitungsschritt rollback (vqi=%.3f < 0.95, panns=%.2f) — Enhancement zurückgesetzt",
                         _vqi_p42,
                         _p42_panns,
                     )
                     enhanced_audio = audio.copy()
             except Exception as _vqi_exc_p42:
-                logger.debug("VQI per-phase phase_42 (non-blocking): %s", _vqi_exc_p42)
+                logger.debug(
+                    "VQI per-Verarbeitungsschritt Verarbeitungsschritt_42 (nicht blockierend): %s", _vqi_exc_p42
+                )
 
         return PhaseResult(
             success=True,
@@ -1197,7 +1203,7 @@ class VocalEnhancement(PhaseInterface):
             score = 0.55 * fric_score + 0.45 * plosive_score
             return float(np.clip(score, 0.0, 1.0))
         except Exception as e:
-            logger.warning("phase_42_vocal_enhancement.py::_measure_vocal_intimacy fallback: %s", e)
+            logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::_measure_vocal_intimacy Ersatzpfad: %s", e)
             return 0.5
 
     @staticmethod
@@ -1344,7 +1350,7 @@ class VocalEnhancement(PhaseInterface):
         _depth_p42 = len(_chain_p42) if _chain_p42 else 1
         if _depth_p42 >= 5:
             logger.info(
-                "Phase42 depth=%d → Fast-Path HPSS+Wiener (ML-Stem-Sep übersprungen bei degradiertem Signal)",
+                "Verarbeitungsschritt42 depth=%d → Fast-Path HPSS+Wiener (ML-Stem-Sep übersprungen bei degradiertem Signal)",
                 _depth_p42,
             )
             return self._hpss_wiener_fallback(audio, audio_mono, sr)
@@ -1371,7 +1377,7 @@ class VocalEnhancement(PhaseInterface):
         # ── 1: BSRoFormer (MelBandRoformer, falls Modell verfügbar) ──────────
         if _skip_roformer_reason is not None:
             logger.info(
-                "Phase42 Stem-Sep: bs_roformer übersprungen (%s) — direkter Fallback auf MDX23C/NMF/HPSS",
+                "Verarbeitungsschritt42 Stem-Sep: bs_roformer übersprungen (%s) — direkter Ersatzpfad auf MDX23C/NMF/HPSS",
                 _skip_roformer_reason,
             )
         else:
@@ -1393,13 +1399,15 @@ class VocalEnhancement(PhaseInterface):
                     try:
                         _plm42_rof.touch_plugin("MelBandRoformer")  # type: ignore[attr-defined]
                     except Exception as e:
-                        logger.warning("phase_42_vocal_enhancement.py::_try_stem_separation fallback: %s", e)
+                        logger.warning(
+                            "Verarbeitungsschritt_42_vocal_enhancement.py::_try_stem_separation Ersatzpfad: %s", e
+                        )
                 sep = roformer.separate(audio_mono, sr, stems=["vocals"])
                 if sep is not None and "vocals" in sep.stems:
                     _sdri_db = float(getattr(sep, "sdri_db", 0.0))
                     if _sdri_db < -1.0:
                         logger.warning(
-                            "Phase42 Stem-Sep: bs_roformer SDRi=%.1f dB < -1.0 dB → Fallback auf MDX23C/NMF/HPSS",
+                            "Verarbeitungsschritt42 Stem-Sep: bs_roformer SDRi=%.1f dB < -1.0 dB → Ersatzpfad auf MDX23C/NMF/HPSS",
                             _sdri_db,
                         )
                         raise ValueError(f"bs_roformer_low_sdri:{_sdri_db:.2f}")
@@ -1414,26 +1422,26 @@ class VocalEnhancement(PhaseInterface):
                         instr_out = inst_mono
                     confidence = float(getattr(sep, "confidence", 0.5))
                     logger.debug(
-                        "Phase42 Stem-Sep: bs_roformer confidence=%.2f model=%s (stereo=%s)",
+                        "Verarbeitungsschritt42 Stem-Sep: bs_roformer confidence=%.2f model=%s (stereo=%s)",
                         confidence,
                         sep.model_used,
                         audio.ndim == 2,
                     )
                     return vocals_out, instr_out, confidence, sep.model_used
             except Exception as exc:
-                logger.debug("Phase42 bs_roformer fehlgeschlagen: %s", exc)
+                logger.debug("Verarbeitungsschritt42 bs_roformer fehlgeschlagen: %s", exc)
             finally:
                 if _plm42_rof is not None:
                     try:
                         _plm42_rof.set_active("MelBandRoformer", False)
                     except Exception as e:
-                        logger.warning("phase_42_vocal_enhancement.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::unbekannter Ersatzpfad: %s", e)
 
         # ── 2: HTDemucs 6s fallback (nur live/crowd + native Session) ───────
         if _prefer_demucs_native:
             if _avail_gb is not None and _avail_gb < 5.0:
                 logger.info(
-                    "Phase42 Stem-Sep: demucs_v4 übersprungen (low_ram_%.1fGB) — Fallback auf MDX23C/NMF/HPSS",
+                    "Verarbeitungsschritt42 Stem-Sep: demucs_v4 übersprungen (low_ram_%.1fGB) — Ersatzpfad auf MDX23C/NMF/HPSS",
                     _avail_gb,
                 )
             else:
@@ -1442,7 +1450,7 @@ class VocalEnhancement(PhaseInterface):
 
                     demucs = get_demucs_plugin()
                     if getattr(demucs, "_session", None) is None:
-                        logger.debug("Phase42 demucs_v4 übersprungen: keine native HTDemucs-Session")
+                        logger.debug("Verarbeitungsschritt42 demucs_v4 übersprungen: keine native HTDemucs-Sitzung")
                     else:
                         try:
                             voc_mono, inst_mono = demucs.separate_vocals(audio_mono, sr, prefer_mdx23c=False)
@@ -1459,13 +1467,13 @@ class VocalEnhancement(PhaseInterface):
                             instr_out = np.asarray(inst_mono[:n], dtype=np.float32)
                         return vocals_out, instr_out, 0.60, "demucs_v4_htdemucs"
                 except Exception as exc:
-                    logger.debug("Phase42 demucs_v4 fehlgeschlagen: %s", exc)
+                    logger.debug("Verarbeitungsschritt42 demucs_v4 fehlgeschlagen: %s", exc)
 
         # ── 3: MDX23C fallback (Kim_Vocal_2) ─────────────────────────────────
         _plm42_mdx = None
         if _avail_gb is not None and _avail_gb < 3.0:
             logger.info(
-                "Phase42 Stem-Sep: mdx23c übersprungen (low_ram_%.1fGB) — Fallback auf NMF/HPSS",
+                "Verarbeitungsschritt42 Stem-Sep: mdx23c übersprungen (low_ram_%.1fGB) — Ersatzpfad auf NMF/HPSS",
                 _avail_gb,
             )
         else:
@@ -1496,14 +1504,14 @@ class VocalEnhancement(PhaseInterface):
                         _plm42_mdx.touch_plugin("MDX23C_vocals")  # type: ignore[attr-defined]
                         _plm42_mdx.touch_plugin("MDX23C_inst")  # type: ignore[attr-defined]
                     except Exception as e:
-                        logger.warning("phase_42_vocal_enhancement.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::unbekannter Ersatzpfad: %s", e)
                 voc_mono = mdx.process(audio_mono, sr, stem="vocals")
                 if _plm42_mdx is not None:
                     try:
                         _plm42_mdx.touch_plugin("MDX23C_vocals")  # type: ignore[attr-defined]
                         _plm42_mdx.touch_plugin("MDX23C_inst")  # type: ignore[attr-defined]
                     except Exception as e:
-                        logger.warning("phase_42_vocal_enhancement.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::unbekannter Ersatzpfad: %s", e)
                 inst_mono = mdx.process(audio_mono, sr, stem="inst")
                 n = min(len(audio_mono), len(voc_mono), len(inst_mono))
                 if audio.ndim == 2:
@@ -1514,14 +1522,14 @@ class VocalEnhancement(PhaseInterface):
                     instr_out = inst_mono[:n]
                 return vocals_out, instr_out, 0.65, "mdx23c_kim_vocal_2"
             except Exception as exc:
-                logger.debug("Phase42 mdx23c fehlgeschlagen: %s", exc)
+                logger.debug("Verarbeitungsschritt42 mdx23c fehlgeschlagen: %s", exc)
             finally:
                 if _plm42_mdx is not None:
                     try:
                         _plm42_mdx.set_active("MDX23C_vocals", False)
                         _plm42_mdx.set_active("MDX23C_inst", False)
                     except Exception as e:
-                        logger.warning("phase_42_vocal_enhancement.py::unbekannter Fallback: %s", e)
+                        logger.warning("Verarbeitungsschritt_42_vocal_enhancement.py::unbekannter Ersatzpfad: %s", e)
 
         # ── 4: NMF-β Fallback (§2.47 ML-Failure-Degradationskascade: NMF-β→HPSS) ──
         try:
@@ -1539,7 +1547,7 @@ class VocalEnhancement(PhaseInterface):
             _sdb = float(20.0 * np.log10(_voc_rms / (_inst_rms + 1e-12)))
             if _sdb < 5.0:
                 logger.info(
-                    "Phase42 NMF-β: sdB=%.1f dB < 5 dB → HPSS tertiärer Fallback (§2.47)",
+                    "Verarbeitungsschritt42 NMF-β: sdB=%.1f dB < 5 dB → HPSS tertiärer Ersatzpfad (§2.47)",
                     _sdb,
                 )
                 raise ValueError(f"NMF-β sdB {_sdb:.1f} dB < 5 dB threshold")
@@ -1549,10 +1557,10 @@ class VocalEnhancement(PhaseInterface):
             else:
                 vocals_out = voc_nmf[:n]
                 instr_out = inst_nmf[:n]
-            logger.debug("Phase42 NMF-β Fallback erfolgreich (§2.47) sdB=%.1f dB", _sdb)
+            logger.debug("Verarbeitungsschritt42 NMF-β Ersatzpfad erfolgreich (§2.47) sdB=%.1f dB", _sdb)
             return vocals_out, instr_out, 0.45, "nmf_beta_dsp"
         except Exception as exc:
-            logger.debug("Phase42 NMF-β fehlgeschlagen: %s — HPSS tertiärer Fallback", exc)
+            logger.debug("Verarbeitungsschritt42 NMF-β fehlgeschlagen: %s — HPSS tertiärer Ersatzpfad", exc)
 
         # ── 4: HPSS tertiärer Fallback ────────────────────────────────────────
         try:
@@ -1568,7 +1576,7 @@ class VocalEnhancement(PhaseInterface):
             _audio_dur_s = float(len(mono_in)) / max(1, sr)
             if _audio_dur_s > 120.0:
                 logger.info(
-                    "Phase42 HPSS tertiärer Fallback: audio=%.1fs > 120s — wall-time guard = %.0fs",
+                    "Verarbeitungsschritt42 HPSS tertiärer Ersatzpfad: audio=%.1fs > 120s — wall-time guard = %.0fs",
                     _audio_dur_s,
                     _hpss_max_s,
                 )
@@ -1577,7 +1585,7 @@ class VocalEnhancement(PhaseInterface):
             _hpss_elapsed = time.monotonic() - _t0_hpss
             if _hpss_elapsed > _hpss_max_s:
                 logger.warning(
-                    "Phase42 HPSS wall-time überschritten (%.0fs > %.0fs) — Ergebnis verworfen",
+                    "Verarbeitungsschritt42 HPSS wall-time überschritten (%.0fs > %.0fs) — Ergebnis verworfen",
                     _hpss_elapsed,
                     _hpss_max_s,
                 )
@@ -1588,10 +1596,12 @@ class VocalEnhancement(PhaseInterface):
             else:
                 vocals_out = harmonic_mono[:n]
                 instr_out = np.clip(audio_mono[:n] - harmonic_mono[:n], -1.0, 1.0)
-            logger.debug("Phase42 HPSS tertiärer Fallback erfolgreich (§2.47) elapsed=%.1fs", _hpss_elapsed)
+            logger.debug(
+                "Verarbeitungsschritt42 HPSS tertiärer Ersatzpfad erfolgreich (§2.47) elapsed=%.1fs", _hpss_elapsed
+            )
             return vocals_out, instr_out, 0.30, "hpss_tertiary"
         except Exception as exc:
-            logger.debug("Phase42 HPSS Fallback fehlgeschlagen: %s", exc)
+            logger.debug("Verarbeitungsschritt42 HPSS Ersatzpfad fehlgeschlagen: %s", exc)
 
         return None
 
@@ -1615,10 +1625,10 @@ class VocalEnhancement(PhaseInterface):
             else:
                 vocals_out = harmonic_mono[:n]
                 instr_out = np.clip(audio_mono[:n] - harmonic_mono[:n], -1.0, 1.0)
-            logger.debug("Phase42 HPSS+Wiener Fast-Path: n=%d samples", n)
+            logger.debug("Verarbeitungsschritt42 HPSS+Wiener Fast-Path: n=%d samples", n)
             return vocals_out, instr_out, 0.35, "hpss_wiener_fastpath"
         except Exception as exc:
-            logger.debug("Phase42 HPSS+Wiener Fast-Path fehlgeschlagen: %s", exc)
+            logger.debug("Verarbeitungsschritt42 HPSS+Wiener Fast-Path fehlgeschlagen: %s", exc)
             return None
 
     def _detect_vocals(self, audio: np.ndarray, sample_rate: int) -> bool:
@@ -1692,7 +1702,7 @@ class VocalEnhancement(PhaseInterface):
             reduction = min(harshness_severity * 0.8, 0.9)  # up to 90% reduction
             adapted_config["presence_gain_db"] = config["presence_gain_db"] * (1.0 - reduction)
             logger.debug(
-                "Phase42: Harshness %.2f → presence_gain reduced %.1f→%.1f dB",
+                "Verarbeitungsschritt42: Harshness %.2f → presence_gain reduced %.1f→%.1f dB",
                 harshness_severity,
                 config["presence_gain_db"],
                 adapted_config["presence_gain_db"],
@@ -1804,7 +1814,9 @@ class VocalEnhancement(PhaseInterface):
                     rms = float(np.sqrt(np.mean(band**2) + 1e-12))
                     return float(20.0 * np.log10(rms + 1e-12))
                 except Exception as e:
-                    logger.warning("phase_42_vocal_enhancement.py::_formant_energy_dbfs fallback: %s", e)
+                    logger.warning(
+                        "Verarbeitungsschritt_42_vocal_enhancement.py::_formant_energy_dbfs Ersatzpfad: %s", e
+                    )
                     return -80.0
 
             def _bell_eq_sos(center_hz: float, gain_db: float, q: float) -> np.ndarray:
@@ -1869,7 +1881,7 @@ class VocalEnhancement(PhaseInterface):
             return result.astype(audio.dtype)  # type: ignore[no-any-return]
 
         except Exception as _cfd_exc:
-            logger.debug("§Hebel-4 _restore_carrier_formant_decay fehlgeschlagen (ignoriert): %s", _cfd_exc)
+            logger.debug("§Hebel-4 _wiederherstellen_carrier_formant_decay fehlgeschlagen (ignoriert): %s", _cfd_exc)
             return audio
 
     @staticmethod
@@ -2044,7 +2056,7 @@ class VocalEnhancement(PhaseInterface):
 
         actual_reduction = float(-np.mean(smoothed[smoothed < -0.1])) if np.any(smoothed < -0.1) else 0.0
         logger.info(
-            "Phase42 harshness reduction: severity=%.2f max_reduction=%.1fdB actual_mean=%.1fdB",
+            "Verarbeitungsschritt42 harshness reduction: severity=%.2f max_reduction=%.1fdB actual_mean=%.1fdB",
             severity,
             max_reduction_db,
             actual_reduction,
@@ -2122,12 +2134,12 @@ class VocalEnhancement(PhaseInterface):
                         if _pd_result.phonemes:
                             _phoneme_segments = list(zip(_pd_result.phonemes, _pd_result.timestamps_ms))
                             logger.debug(
-                                "Phase42 PhonemeDetector: %d Segmente (confidence=%.2f)",
+                                "Verarbeitungsschritt42 PhonemeDetector: %d Segmente (confidence=%.2f)",
                                 len(_pd_result.phonemes),
                                 _pd_result.confidence,
                             )
                     except Exception as _pd_err:
-                        logger.debug("PhonemeDetector fehlgeschlagen (F1/F2-Fallback): %s", _pd_err)
+                        logger.debug("PhonemeDetector fehlgeschlagen (F1/F2-Ersatzpfad): %s", _pd_err)
 
                 # Stage 2: phoneme-guided per-vowel formant steering
                 # Uses real phoneme segments + pipeline-detected gender
@@ -2147,7 +2159,7 @@ class VocalEnhancement(PhaseInterface):
                     enhanced = np.nan_to_num(enhanced, nan=0.0, posinf=0.0, neginf=0.0)
                     enhanced = np.clip(enhanced, -1.0, 1.0)
                     logger.debug(
-                        "Phase42 phoneme_guided_enhance: vowel_frames=%d/%d gender=%s",
+                        "Verarbeitungsschritt42 phoneme_guided_verbessern: vowel_frames=%d/%d gender=%s",
                         _pg_report.get("vowel_segments_processed", 0),
                         _pg_report.get("total_frames", 0),
                         vocal_gender,
@@ -2189,7 +2201,7 @@ class VocalEnhancement(PhaseInterface):
                                 enhanced = _pre_formant + _formant_weight * _diff
                                 enhanced = np.clip(enhanced, -1.0, 1.0)
                                 logger.debug(
-                                    "Phase42 LyricsGuided formant-steering: %d words, "
+                                    "Verarbeitungsschritt42 LyricsGuided formant-steering: %d words, "
                                     "confidence=%.2f, mean_weight=%.2f",
                                     len(_lge_result.words),
                                     _lge_result.overall_confidence,
@@ -2197,15 +2209,15 @@ class VocalEnhancement(PhaseInterface):
                                 )
                         except Exception as _lge_err:
                             logger.debug(
-                                "Phase42 LyricsGuided formant-steering fehlgeschlagen (ignoriert): %s",
+                                "Verarbeitungsschritt42 LyricsGuided formant-steering fehlgeschlagen (ignoriert): %s",
                                 _lge_err,
                             )
                 except Exception as _pg_err:
-                    logger.debug("phoneme_guided_enhance fehlgeschlagen (ignoriert): %s", _pg_err)
+                    logger.debug("phoneme_guided_verbessern fehlgeschlagen (ignoriert): %s", _pg_err)
 
                 return enhanced.astype(audio.dtype)  # type: ignore[no-any-return]
             except Exception as _fs_err:
-                logger.debug("FormantSystem fehlgeschlagen, Bell-EQ-Fallback: %s", _fs_err)
+                logger.debug("FormantSystem fehlgeschlagen, Bell-EQ-Ersatzpfad: %s", _fs_err)
 
         # DSP-Fallback: Multi-Formant Bell-EQ chain (v10.0.0)
         # Replaces single 1.5 kHz bell with 4-band formant chain derived from
@@ -2327,12 +2339,12 @@ class VocalEnhancement(PhaseInterface):
                         if vibrato_ratio > 0.15:
                             vibrato_attenuation = max(0.5, 1.0 - vibrato_ratio)
                             logger.debug(
-                                "Phase42 vibrato detected: ratio=%.2f → presence attenuation=%.2f",
+                                "Verarbeitungsschritt42 vibrato erkannt: Verhaeltnis=%.2f → presence attenuation=%.2f",
                                 vibrato_ratio,
                                 vibrato_attenuation,
                             )
         except Exception as _exc:
-            logger.debug("Operation failed (non-critical): %s", _exc)  # Vibrato detection failure is non-critical
+            logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)  # Vibrato detection failure is non-critical
 
         final_gain_db = adapted_gain_db * vibrato_attenuation
         if abs(final_gain_db) < 0.01:
@@ -2438,7 +2450,7 @@ class VocalEnhancement(PhaseInterface):
                             )
                         controlled[_s:_e] *= gain
                     logger.debug(
-                        "Phase42 BreathDetector: %d Segmente reduziert (%.1f dB), confidence=%.2f",
+                        "Verarbeitungsschritt42 BreathDetector: %d Segmente reduziert (%.1f dB), confidence=%.2f",
                         len(_bd_result.breath_positions),
                         reduction_db,
                         _bd_result.confidence,
@@ -2447,7 +2459,7 @@ class VocalEnhancement(PhaseInterface):
                 # No breath segments found — return unchanged
                 return audio
             except Exception as _bd_err:
-                logger.debug("BreathDetector fehlgeschlagen, Bandpass-Fallback: %s", _bd_err)
+                logger.debug("BreathDetector fehlgeschlagen, Bandpass-Ersatzpfad: %s", _bd_err)
 
         # DSP-Fallback: Static 8-12 kHz bandpass reduction
         # §2.51 Anti-Zeitversatz: sosfiltfilt — Band wird mit (breath_reduced - breath)
@@ -2575,7 +2587,7 @@ class VocalEnhancement(PhaseInterface):
                 out = enhanced_vocals.copy()
                 out[: morphed.shape[0]] = morphed
                 return out
-            logger.debug("Phase42 Vocal-Stem MDEM: micro-dynamics recovered on vocal stem")
+            logger.debug("Verarbeitungsschritt42 Vocal-Stem MDEM: micro-dynamics recovered on vocal stem")
             return morphed  # type: ignore[no-any-return]
         except Exception as _mdem_err:
             logger.debug("Vocal-Stem MDEM nicht verfügbar (ignoriert): %s", _mdem_err)

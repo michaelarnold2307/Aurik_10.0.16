@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """
 Unit-Tests für die 4 neuen DSP-Lücken-Module (v10.0.0.x)
 =========================================================
@@ -15,6 +13,9 @@ Abgedeckt:
 - era_carrier_target        (Lücke EraTarget)
 """
 
+from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
 import pytest
@@ -29,7 +30,7 @@ SR = 48_000
 
 def _sine(freq_hz: float, dur_s: float = 1.0, sr: int = SR, amp: float = 0.3) -> np.ndarray:
     t = np.arange(int(sr * dur_s)) / sr
-    return (amp * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _silence(dur_s: float = 0.5, sr: int = SR) -> np.ndarray:
@@ -47,14 +48,14 @@ def _voiced(dur_s: float = 2.0, sr: int = SR, f0: float = 180.0) -> np.ndarray:
     sig = np.zeros_like(t)
     for k in range(1, 9):
         sig += (1.0 / k) * np.sin(2 * np.pi * f0 * k * t)
-    return (sig * 0.2 / np.max(np.abs(sig) + 1e-6)).astype(np.float32)
+    return (sig * 0.2 / np.max(np.abs(sig) + 1e-6)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _vibrato(dur_s: float = 2.0, sr: int = SR, f0: float = 220.0, rate: float = 5.5, depth: float = 0.03) -> np.ndarray:
     """Stimme mit Vibrato (4–7 Hz Pitch-Modulation)."""
     t = np.arange(int(sr * dur_s)) / sr
     phase = 2 * np.pi * f0 * t + depth * np.cumsum(np.sin(2 * np.pi * rate * t)) / sr * 2 * np.pi
-    return (0.2 * np.sin(phase)).astype(np.float32)
+    return (0.2 * np.sin(phase)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ===========================================================================
@@ -186,7 +187,7 @@ class TestVocalHarmonicDecomp:
         mask = build_vocal_harmonic_mask(audio, SR)
         if mask is None:
             pytest.skip("VocalHarmonicMask returned None (CREPE/ZCPA fallback)")
-        result = mask.apply_g_floor_adjustment(g_floor_map=None, harm_g_floor=0.35, nonharm_g_floor=0.10)
+        result = mask.apply_g_floor_adjustment(g_floor_map=None, harm_g_floor=0.35, nonharm_g_floor=0.10)  # type: ignore[arg-type]
         if result is not None:
             assert result.shape == mask.harmonic_mask().shape
             # Harmonische Bins (mask > 0.5) sollten höhere Werte haben
@@ -772,7 +773,7 @@ class TestCheckFormantShiftDb:
     def _sine_audio(self, freq_hz: float, dur_s: float = 3.0) -> np.ndarray:
         """Mono sine at given frequency, 3 seconds."""
         t = np.linspace(0, dur_s, int(SR * dur_s), endpoint=False)
-        return (0.5 * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)
+        return (0.5 * np.sin(2 * np.pi * freq_hz * t)).astype(np.float32)  # type: ignore[no-any-return]
 
     def _voiced_audio(self, dur_s: float = 3.0) -> np.ndarray:
         """Synthetic voiced signal: fundamental + 3 harmonics for LPC formant detection."""
@@ -785,7 +786,7 @@ class TestCheckFormantShiftDb:
             + 0.10 * np.sin(2 * np.pi * 800.0 * t)  # F1 region
             + 0.08 * np.sin(2 * np.pi * 1200.0 * t)  # F2 region
         )
-        return (sig / (np.max(np.abs(sig)) + 1e-8)).astype(np.float32)
+        return (sig / (np.max(np.abs(sig)) + 1e-8)).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_identical_audio_no_rollback(self):
         """Identische Signale → kein Rollback, shift ≈ 0 dB."""
@@ -912,7 +913,7 @@ class TestBreathSegmentProtection:
 
     def test_empty_breath_segs_no_op(self):
         """Leere breath_segments → kein Blend-Vorgang."""
-        segs = []
+        segs: list[Any] = []
         blended = False
         for _ in segs:
             blended = True
@@ -1039,7 +1040,7 @@ class TestVocalStyleProfiler:
             + 0.2 * np.sin(2 * np.pi * f0_hz * 2 * t)
             + 0.1 * np.sin(2 * np.pi * f0_hz * 3 * t)
         )
-        return sig.astype(np.float32)
+        return sig.astype(np.float32)  # type: ignore[no-any-return]
 
     def test_profile_returns_valid_on_sufficient_audio(self):
         """Genug Audio → .valid == True."""
@@ -1152,7 +1153,7 @@ class TestEmotionalArcPlanner:
 
     def _make_audio(self, dur_s: float = 10.0) -> np.ndarray:
         t = np.linspace(0, dur_s, int(SR * dur_s), endpoint=False)
-        return (0.3 * np.sin(2 * np.pi * 250.0 * t)).astype(np.float32)
+        return (0.3 * np.sin(2 * np.pi * 250.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
     def test_plan_returns_arc_plan(self):
         """plan() gibt ein ArcPlan-Objekt zurück."""

@@ -210,8 +210,8 @@ def _compute_roughness(mono: np.ndarray, sr: int) -> float:
         chunk = mono[i : i + win]
         rms_vals.append(float(np.sqrt(np.mean(chunk**2))))
 
-    rms_vals = np.array(rms_vals)
-    rms_db = 20.0 * np.log10(rms_vals + 1e-12)
+    rms_vals = np.array(rms_vals)  # type: ignore[assignment]
+    rms_db = 20.0 * np.log10(rms_vals + 1e-12)  # type: ignore[operator]
     rms_range = float(np.max(rms_db) - np.min(rms_db))
 
     # Dynamik > 20dB = sehr lebendig, > 10dB = normal, < 3dB = flach
@@ -302,8 +302,8 @@ def _compute_fluctuation_strength(mono: np.ndarray, sr: int) -> float:
         crest = peak / rms if rms > 0 else 1.0
         return float(np.clip(crest / 15.0, 0.30, 0.70))
 
-    rms_timeline = np.array(rms_timeline)
-    rms_db = 20.0 * np.log10(rms_timeline + 1e-12)
+    rms_timeline = np.array(rms_timeline)  # type: ignore[assignment]
+    rms_db = 20.0 * np.log10(rms_timeline + 1e-12)  # type: ignore[operator]
 
     # Fluktuation = Varianz des RMS über 1-Sekunden-Blöcke
     fluctuation = float(np.clip(np.std(rms_db) / 3.0, 0.1, 5.0))

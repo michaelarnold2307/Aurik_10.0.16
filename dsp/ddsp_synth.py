@@ -383,7 +383,7 @@ class DdspSynthesizer:
             target_bw_hz,
             ceiling,
         )
-        return hf_audio
+        return hf_audio  # type: ignore[no-any-return]
 
     def model_instrument_resonance(
         self,
@@ -496,7 +496,7 @@ class DdspSynthesizer:
         if peak > 1e-8:
             audio = audio * (0.8 / peak)
 
-        return audio.astype(np.float32)
+        return audio.astype(np.float32)  # type: ignore[no-any-return]
 
     def _filtered_noise(
         self,

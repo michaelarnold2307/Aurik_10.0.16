@@ -62,8 +62,8 @@ except Exception:  # pragma: no cover
 try:
     from transformers import AutoModel, Wav2Vec2FeatureExtractor  # type: ignore[import]
 except Exception:  # pragma: no cover
-    AutoModel = None  # type: ignore[assignment]
-    Wav2Vec2FeatureExtractor = None  # type: ignore[assignment]
+    AutoModel = None  # type: ignore[misc]
+    Wav2Vec2FeatureExtractor = None  # type: ignore[misc]
 
 logger = logging.getLogger(__name__)
 
@@ -434,7 +434,7 @@ class MertPlugin:
                 if _unload_fn is not None:
                     register_plugin("MERT", size_gb=3.7, unload_fn=_unload_fn)
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_hf_330m(self) -> None:
         """Lädt MERT-v1-330M aus models/mert-v1-330m/ via HuggingFace transformers.
@@ -452,17 +452,18 @@ class MertPlugin:
             if not ml_budget_try_allocate("MERT-330M-HF", 1.2):
                 return  # Budget erschöpft → nächste Priorität
         except Exception as _exc:
-            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         try:
             if AutoModel is None or Wav2Vec2FeatureExtractor is None:
                 return
             _mert_device = get_torch_device("MERT-330M-HF")
-            self._processor = Wav2Vec2FeatureExtractor.from_pretrained(
+            self._processor = Wav2Vec2FeatureExtractor.from_pretrained(  # nosec B615 — hf_dir ist lokaler Modellpfad
                 str(hf_dir), trust_remote_code=True, local_files_only=True
             )
             # §v10.306: Unterdrücke Legacy-weight_norm-Logmeldungen.
             # transformers loggt diese als WARNING, aber sie sind harmlos.
             import logging as _mert_logging
+
             _tf_logger = _mert_logging.getLogger("transformers.modeling_utils")
             _prev_level = _tf_logger.level
             _tf_logger.setLevel(_mert_logging.ERROR)
@@ -489,7 +490,7 @@ class MertPlugin:
             try:
                 ml_budget_release("MERT-330M-HF")
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_fairseq_330m(self) -> None:
         """Lädt MERT-v1-330M als fairseq-Checkpoint.
@@ -516,7 +517,7 @@ class MertPlugin:
         except Exception as _exc:
             # §OOM-Guard fail-safe: Exception im Budget-Check → Laden verweigern.
             logger.warning(
-                "MERT-330M-fairseq: Budget-Check fehlgeschlagen (%s) — Laden verweigert (OOM-Fail-safe).",
+                "MERT-330M-fairseq: Grenze-Pruefung fehlgeschlagen (%s) — Laden verweigert (OOM-Fail-safe).",
                 _exc,
             )
             return
@@ -540,7 +541,7 @@ class MertPlugin:
             try:
                 ml_budget_release("MERT-330M-fairseq")
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_hf(self) -> None:
         """Lädt MERT-v1-95M aus models/mert-95m/ via HuggingFace transformers.
@@ -590,12 +591,12 @@ class MertPlugin:
                 try:
                     ml_budget_release("MERT-95M-fairseq")
                 except Exception:
-                    logger.warning("mert_plugin.py::_try_load_fairseq fallback", exc_info=True)
+                    logger.warning("mert_plugin.py::_try_laden_fairseq Ersatzpfad", exc_info=True)
                 if not ml_budget_try_allocate("MERT-95M-fairseq", 0.40):
-                    logger.warning("MERT fairseq: ML-Budget erschöpft — DSP-Fallback")
+                    logger.warning("MERT fairseq: ML-Grenze erschöpft — DSP-Ersatzpfad")
                     return
         except Exception as _exc:
-            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         try:
             if torch is None:
                 return
@@ -614,25 +615,25 @@ class MertPlugin:
             try:
                 ml_budget_release("MERT-95M-fairseq")
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
             logger.debug("MERT fairseq Ladefehler: %s → weiter", e)
 
     def _try_load_onnx(self) -> None:
         onnx_path = self._model_dir / "mert.onnx"
         if not onnx_path.exists():
-            logger.debug("MERT ONNX nicht gefunden (%s) → DSP-Fallback", onnx_path)
+            logger.debug("MERT ONNX nicht gefunden (%s) → DSP-Ersatzpfad", onnx_path)
             return
         try:
             if not ml_budget_try_allocate("MERT-ONNX", size_gb=0.18):
                 try:
                     ml_budget_release("MERT-ONNX")
                 except Exception:
-                    logger.warning("mert_plugin.py::_try_load_onnx fallback", exc_info=True)
+                    logger.warning("mert_plugin.py::_try_laden_onnx Ersatzpfad", exc_info=True)
                 if not ml_budget_try_allocate("MERT-ONNX", size_gb=0.18):
-                    logger.warning("MERT ONNX: ML-Budget erschöpft — DSP-Fallback")
+                    logger.warning("MERT ONNX: ML-Grenze erschöpft — DSP-Ersatzpfad")
                     return
         except Exception as _exc:
-            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         try:
             if ort is None:
                 return
@@ -651,17 +652,17 @@ class MertPlugin:
                     unload_fn=_unload_mert_model,
                 )
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as e:
-            logger.debug("MERT ONNX Ladefehler: %s → DSP-Fallback", e)
+            logger.debug("MERT ONNX Ladefehler: %s → DSP-Ersatzpfad", e)
             try:
                 ml_budget_release("MERT-ONNX")
             except Exception as _exc:
-                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_local_dsp(self) -> None:
         """Lokaler DSP-Fallback — kein Netzwerkzugriff, kein Modell-Download."""
-        logger.info("MERT: Kein lokales ONNX-Modell gefunden — DSP-Fallback aktiv.")
+        logger.info("MERT: Kein lokales ONNX-Modell gefunden — DSP-Ersatzpfad aktiv.")
 
     @property
     def model_available(self) -> bool:
@@ -748,7 +749,7 @@ class MertPlugin:
                 _plm_mert_hf = get_plugin_lifecycle_manager()
                 _plm_mert_hf.set_active("MERT-330M-HF", True)
             except Exception:
-                logger.warning("mert_plugin.py::_analyze_hf fallback", exc_info=True)
+                logger.warning("mert_plugin.py::_analyze_hf Ersatzpfad", exc_info=True)
             try:
                 with torch.no_grad():
                     # Request only the final hidden state to keep metric inference bounded.
@@ -758,7 +759,7 @@ class MertPlugin:
                     try:
                         _plm_mert_hf.set_active("MERT-330M-HF", False)
                     except Exception:
-                        logger.warning("mert_plugin.py::_analyze_hf fallback", exc_info=True)
+                        logger.warning("mert_plugin.py::_analyze_hf Ersatzpfad", exc_info=True)
             last_hidden = outputs.last_hidden_state  # (batch, time, dim)
             # NAT-Score aus L2-Norm der Embeddings (Proxy für tonale Stärke)
             embedding_norm = float(torch.norm(last_hidden, dim=-1).mean().item())
@@ -772,9 +773,9 @@ class MertPlugin:
         except Exception as e:
             _msg = str(e)
             if "Kernel size can't be greater than actual input size" in _msg:
-                logger.warning("MERT HF Kontext zu kurz trotz Padding (%s) → DSP-Fallback", _msg)
+                logger.warning("MERT HF Kontext zu kurz trotz Padding (%s) → DSP-Ersatzpfad", _msg)
             else:
-                logger.warning("MERT HF Inferenz fehlgeschlagen: %s → DSP-Fallback", e)
+                logger.warning("MERT HF Inferenz fehlgeschlagen: %s → DSP-Ersatzpfad", e)
             return _dsp_analyze(audio, self._target_sr)
 
     def _analyze_fairseq(self, audio: np.ndarray) -> MertAnalysis:
@@ -804,7 +805,7 @@ class MertPlugin:
             dsp.model_used = "mert_fairseq"
             return dsp
         except Exception as e:
-            logger.warning("MERT fairseq Inferenz fehlgeschlagen: %s → DSP-Fallback", e)
+            logger.warning("MERT fairseq Inferenz fehlgeschlagen: %s → DSP-Ersatzpfad", e)
             return _dsp_analyze(audio, self._target_sr)
 
     def _analyze_onnx(self, audio: np.ndarray) -> MertAnalysis:
@@ -821,7 +822,7 @@ class MertPlugin:
                 _plm_mert_onnx = get_plugin_lifecycle_manager()
                 _plm_mert_onnx.set_active("MERT-ONNX", True)
             except Exception:
-                logger.warning("mert_plugin.py::_analyze_onnx fallback", exc_info=True)
+                logger.warning("mert_plugin.py::_analyze_onnx Ersatzpfad", exc_info=True)
             try:
                 result = self._model.run(None, feed)[0]  # (1, time, dim) oder (1, dim)
             finally:
@@ -829,7 +830,7 @@ class MertPlugin:
                     try:
                         _plm_mert_onnx.set_active("MERT-ONNX", False)
                     except Exception:
-                        logger.warning("mert_plugin.py::_analyze_onnx fallback", exc_info=True)
+                        logger.warning("mert_plugin.py::_analyze_onnx Ersatzpfad", exc_info=True)
             score = float(np.clip(np.mean(np.abs(result)) / 10.0, 0.0, 1.0))
             dsp = _dsp_analyze(audio, self._target_sr)
             # §Lücke10: MERT-Kalibrierung Guard (Pearson r=0.74 vs. DSP-Proxy, Li et al. 2023)
@@ -839,8 +840,8 @@ class MertPlugin:
             _delta = abs(score - dsp.naturalness_score)
             if _delta > _ANOMALY_THRESH:
                 logger.warning(
-                    "MERT ONNX score %.3f deviates from DSP naturalness %.3f"
-                    " (|delta|=%.3f > anomaly_thresh=%.3f, Pearson r=%.2f) —"
+                    "MERT ONNX Wert %.3f deviates from DSP naturalness %.3f"
+                    " (|delta|=%.3f > anomaly_Schwelle=%.3f, Pearson r=%.2f) —"
                     " blending 50/50 instead of 60/40",
                     score,
                     dsp.naturalness_score,
@@ -854,7 +855,7 @@ class MertPlugin:
             dsp.model_used = "mert_onnx"
             return dsp
         except Exception as e:
-            logger.warning("MERT ONNX Inferenz fehlgeschlagen: %s → DSP-Fallback", e)
+            logger.warning("MERT ONNX Inferenz fehlgeschlagen: %s → DSP-Ersatzpfad", e)
             return _dsp_analyze(audio, self._target_sr)
 
     def enhance_naturalness(
@@ -879,7 +880,7 @@ class MertPlugin:
 
         if analysis.naturalness_score >= 0.80:
             # Kein Enhancement bei bereits hohem NAT-Score
-            logger.debug("MERT: NAT-Score %.3f ≥ 0.80 → kein Enhancement", analysis.naturalness_score)
+            logger.debug("MERT: NAT-Wert %.3f ≥ 0.80 → kein Enhancement", analysis.naturalness_score)
             return audio
 
         enhanced = _dsp_enhance(audio, sample_rate, analysis)
@@ -982,5 +983,5 @@ def unload_mert() -> None:
             for key in ("MERT-330M-HF", "MERT-330M-fairseq", "MERT-95M-HF"):
                 ml_budget_release(key)
         except Exception as _exc:
-            logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         logger.info("MERT: Modell entladen (%s), RAM freigegeben.", model_type)

@@ -148,7 +148,7 @@ def export(model_id: str) -> Path:
     sha = sha256_of_file(int8_path)
     print(f"      SHA-256: {sha}")
     print(f"\n✅  MERT-{model_id.upper()} ONNX saved → {int8_path}")
-    return int8_path, sha
+    return int8_path, sha  # type: ignore[return-value]
 
 
 # ---------------------------------------------------------------------------

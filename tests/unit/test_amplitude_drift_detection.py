@@ -22,7 +22,7 @@ def _make_scanner(material: MaterialType = MaterialType.VINYL) -> DefectScanner:
 def _sine(freq: float, duration_s: float, sr: int = SR, amp: float = 0.5) -> np.ndarray:
     """Mono-Sinussignal."""
     t = np.arange(int(duration_s * sr)) / sr
-    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)
+    return (amp * np.sin(2 * np.pi * freq * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _rising_signal(duration_s: float = 60.0, sr: int = SR) -> np.ndarray:
@@ -33,7 +33,7 @@ def _rising_signal(duration_s: float = 60.0, sr: int = SR) -> np.ndarray:
     amp_env = np.linspace(0.1, 0.6, n).astype(np.float32)
     # 440 Hz Sinussignal mit aufsteigender Hüllkurve
     signal = amp_env * np.sin(2 * np.pi * 440.0 * t).astype(np.float32)
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 def _crescendo_with_onsets(duration_s: float = 60.0, sr: int = SR) -> np.ndarray:
@@ -50,14 +50,14 @@ def _crescendo_with_onsets(duration_s: float = 60.0, sr: int = SR) -> np.ndarray
         pulse_amp = float(progress * 0.3)
         pulse_len = min(int(0.02 * sr), n - i)
         signal[i : i + pulse_len] += np.random.uniform(-pulse_amp, pulse_amp, pulse_len).astype(np.float32)
-    return signal
+    return signal  # type: ignore[no-any-return]
 
 
 def _flat_signal(duration_s: float = 60.0, sr: int = SR) -> np.ndarray:
     """Gleichbleibender Pegel — kein Trend."""
     n = int(duration_s * sr)
     t = np.arange(n) / sr
-    return (0.3 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)
+    return (0.3 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)  # type: ignore[no-any-return]
 
 
 # ── Tests ──────────────────────────────────────────────────────────────────

@@ -205,7 +205,7 @@ class HFTextureDataset(Dataset[tuple[torch.Tensor, torch.Tensor]]):
         targets_list: list[npt.NDArray[np.float32]] = []
         for path in audio_files:
             _res = load_audio_file(path, target_sr=SR, mono=True)
-            audio = np.asarray(_res["audio"], dtype=np.float32)
+            audio = np.asarray(_res["audio"], dtype=np.float32)  # type: ignore[index]
             x, y = build_dataset(audio)
             if len(x) > 0:
                 inputs_list.append(x)

@@ -21,6 +21,7 @@ import argparse
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -233,7 +234,7 @@ def benchmark_cython():
     print("-" * 80)
 
     def python_peak_finder(audio, threshold, min_distance):
-        peaks = []
+        peaks: list[Any] = []
         for i in range(1, len(audio) - 1):
             if audio[i] > threshold:
                 if audio[i] >= audio[i - 1] and audio[i] >= audio[i + 1]:

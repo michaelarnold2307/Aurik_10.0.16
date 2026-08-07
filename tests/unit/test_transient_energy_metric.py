@@ -14,7 +14,7 @@ import pytest
 def _make_stable_audio(n: int = 48000) -> np.ndarray:
     """Kontinuierliches Sinus-Signal ohne klare Onsets."""
     t = np.linspace(0, 1.0, n, dtype=np.float32)
-    return 0.3 * np.sin(2 * np.pi * 440 * t)
+    return 0.3 * np.sin(2 * np.pi * 440 * t)  # type: ignore[no-any-return]
 
 
 def _make_audio_with_onsets(sr: int = 48000, n_onsets: int = 5) -> np.ndarray:

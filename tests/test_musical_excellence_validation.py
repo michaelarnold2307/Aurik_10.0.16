@@ -1,3 +1,5 @@
+from typing import Any
+
 import pytest
 
 """
@@ -241,10 +243,10 @@ def measure_musical_goal(audio_before, audio_after, goal_key, sample_rate=44100)
         audio_after = np.mean(audio_after, axis=1)
 
     # Frequency-based goals
-    if goal["frequency_range"]:
+    if goal["frequency_range"]:  # type: ignore[index]
         from scipy import signal as sp_signal
 
-        f_low, f_high = goal["frequency_range"]
+        f_low, f_high = goal["frequency_range"]  # type: ignore[index]
         nyquist = sample_rate / 2.0
 
         # Band energy before/after
@@ -327,12 +329,12 @@ def measure_musical_goal(audio_before, audio_after, goal_key, sample_rate=44100)
         score = max(0.0, corr)  # 1.0 = perfect correlation
 
         details["correlation"] = float(corr)
-        details["interpretation"] = "high_correlation_good" if corr > 0.8 else "low_correlation_bad"
+        details["interpretation"] = "high_correlation_good" if corr > 0.8 else "low_correlation_bad"  # type: ignore[assignment]
 
     else:
         # Default: Passthrough is good
         score = 1.0
-        details["method"] = "default_passthrough"
+        details["method"] = "default_passthrough"  # type: ignore[assignment]
 
     return score, details
 
@@ -346,7 +348,7 @@ def validate_all_phases_for_musical_excellence():
 
     print("7 Musikalische Ziele:")
     for goal_key, goal in MUSICAL_GOALS.items():
-        print(f"  • {goal['name']}: {goal['target']}")
+        print(f"  • {goal['name']}: {goal['target']}")  # type: ignore[index]
     print()
 
     # Test setup
@@ -354,7 +356,7 @@ def validate_all_phases_for_musical_excellence():
 
     # Results tracking
     phase_results = {}
-    goal_coverage = {key: [] for key in MUSICAL_GOALS}
+    goal_coverage: Any = {key: [] for key in MUSICAL_GOALS}
 
     # All phases to test
     phases = [
@@ -425,7 +427,7 @@ def validate_all_phases_for_musical_excellence():
 
             # Process
             try:
-                processed = phase.process(audio, sample_rate, MaterialType.CD_DIGITAL)
+                processed = phase.process(audio, sample_rate, MaterialType.CD_DIGITAL)  # type: ignore[arg-type]
             except TypeError:
                 processed = phase.process(audio, sample_rate)
 
@@ -435,7 +437,7 @@ def validate_all_phases_for_musical_excellence():
             elif isinstance(processed, tuple):
                 processed_audio = processed[0]
             else:
-                processed_audio = processed
+                processed_audio = processed  # type: ignore[assignment]
 
             # Measure each goal
             phase_scores = {}
@@ -449,7 +451,7 @@ def validate_all_phases_for_musical_excellence():
             status = "✓" if avg_score > 0.7 else "⚠" if avg_score > 0.5 else "✗"
 
             goals_str = ", ".join(
-                [f"{MUSICAL_GOALS[g]['name'].split('(')[0].strip()}: {phase_scores[g]:.2f}" for g in goals_for_phase]
+                [f"{MUSICAL_GOALS[g]['name'].split('(')[0].strip()}: {phase_scores[g]:.2f}" for g in goals_for_phase]  # type: ignore[index]
             )
 
             print(f"{status} {phase_name}: {goals_str} (Ø {avg_score:.2f})")
@@ -472,10 +474,10 @@ def validate_all_phases_for_musical_excellence():
             phase_list = [f"{p}" for p, _ in phases_for_goal]
             status = "✅" if avg_score > 0.7 else "⚠️" if avg_score > 0.5 else "❌"
 
-            print(f"{status} {goal['name']}")
+            print(f"{status} {goal['name']}")  # type: ignore[index]
             print(f"   Phasen: {', '.join(phase_list)}")
             print(f"   Durchschnitt: {avg_score:.2f}")
-            print(f"   Critical Phases: {goal['critical_phases']}")
+            print(f"   Critical Phases: {goal['critical_phases']}")  # type: ignore[index]
             print()
 
     # Overall assessment

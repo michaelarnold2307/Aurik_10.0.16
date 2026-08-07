@@ -37,7 +37,7 @@ def invalidate_ml_readiness(model_id: str) -> None:
         del _FAILURE_CACHE[k]
         _FAILURE_CACHE_TIMESTAMPS.pop(k, None)
     if to_delete:
-        logger.debug("ml_model_readiness: invalidated %d cache entries for '%s'", len(to_delete), model_id)
+        logger.debug("ml_model_readiness: invalidated %d Zwischenspeicher entries for '%s'", len(to_delete), model_id)
 
 
 # Flood control: after first failed check, cache result to avoid log spam
@@ -82,7 +82,7 @@ def check_ml_model_ready(model_id: str, phase_name: str = "") -> bool:
 
     check_fn = _MODEL_CHECKS.get(model_id)
     if check_fn is None:
-        logger.debug("ML model '%s' has no registered readiness check", model_id)
+        logger.debug("ML model '%s' has no registered readiness Pruefung", model_id)
         return True
 
     try:
@@ -104,7 +104,7 @@ def check_ml_model_ready(model_id: str, phase_name: str = "") -> bool:
 
     if not ready:
         logger.info(
-            "ML-Modell '%s' ist nicht verfügbar (nicht geladen / Budget erschöpft)%s",
+            "ML-Modell '%s' ist nicht verfügbar (nicht geladen / Grenze erschöpft)%s",
             model_id,
             f" — Phase {phase_name}" if phase_name else "",
         )
@@ -273,11 +273,17 @@ def _register_all() -> None:
 
     # --- Perceptual Quality ---
     def _ast_ready() -> bool:
-        try:
-            from backend.core.musical_goals.perceptual_validator import get_perceptual_validator
+        """Peekt den Singleton OHNE ihn zu konstruieren (§Selbsttest-Anti-Pattern).
 
-            pv = get_perceptual_validator()
-            return pv is not None and getattr(pv, "_model_loaded", False)
+        `get_perceptual_validator()` würde beim ersten Aufruf ein echtes ML-Modell
+        laden (ml_memory_budget-Allokation) — ein reiner Readiness-Self-Test darf
+        das nicht als Nebenwirkung auslösen (analog `is_ast_loaded()`-Fix).
+        """
+        try:
+            from backend.core.musical_goals import perceptual_validator as _pv_mod
+
+            _instance = getattr(_pv_mod, "_validator", None)
+            return _instance is not None and _instance.is_loaded()
         except ImportError:
             return False
 

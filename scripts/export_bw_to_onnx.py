@@ -109,7 +109,7 @@ def export_to_onnx(checkpoint_path: str, output_path: str, dynamic_batch: bool =
     print(f"Exportiere nach ONNX: {output_path}")
     torch.onnx.export(
         model,
-        dummy_input,
+        (dummy_input,),
         output_path,
         export_params=True,
         opset_version=17,

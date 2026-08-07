@@ -112,7 +112,7 @@ class BreathDetector:
         self._energy_threshold_dbfs = float(energy_threshold_dbfs)
         self._crossfade_ms = float(crossfade_ms)
         logger.debug(
-            "BreathDetector initialized: zcr_threshold=%.2f, energy_dbfs=%.1f",
+            "BreathDetector initialisiert: zcr_Schwelle=%.2f, energy_dbfs=%.1f",
             self._zcr_threshold,
             self._energy_threshold_dbfs,
         )
@@ -309,7 +309,7 @@ class BreathDetector:
             from scipy.signal import resample_poly
 
             g = gcd(dst_sr, src_sr)
-            return resample_poly(audio, dst_sr // g, src_sr // g).astype(np.float32)
+            return resample_poly(audio, dst_sr // g, src_sr // g).astype(np.float32)  # type: ignore[no-any-return]
         except ImportError:
             # Minimal linear interpolation fallback
             orig_len = len(audio)

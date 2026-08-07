@@ -312,7 +312,7 @@ class MetadataAggregator:
                         )
                     )
         except Exception as exc:
-            logger.debug("Freq improvement computation failed: %s", exc)
+            logger.debug("Freq improvement computation fehlgeschlagen: %s", exc)
 
     # ── Feld 6: Processing Story ────────────────────────────────────
 
@@ -365,7 +365,7 @@ class MetadataAggregator:
 
     def compute_benchmark(self) -> dict[str, Any]:
         """Vergleicht mit historischen Restaurationen."""
-        _key = hashlib.md5(f"{self.material}:{self.era or 0}".encode()).hexdigest()[:8]
+        _key = hashlib.md5(f"{self.material}:{self.era or 0}".encode(), usedforsecurity=False).hexdigest()[:8]
 
         _this_hpe = self._final_hpe or (self.phase_hpe_deltas[-1].hpe_after if self.phase_hpe_deltas else 0.7)
 
@@ -377,7 +377,7 @@ class MetadataAggregator:
                 _data = json.loads(_path.read_text())
                 _history = _data.get("hpe_scores", [])
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
         # Perzentil berechnen
         if _history:
@@ -392,7 +392,7 @@ class MetadataAggregator:
         # Aktuellen Score speichern
         try:
             _path = _BENCHMARK_DIR / f"{self.material}.json"
-            _data: dict = {}
+            _data: dict = {}  # type: ignore[no-redef]
             if _path.exists():
                 _data = json.loads(_path.read_text())
             _scores = _data.get("hpe_scores", [])
@@ -403,7 +403,7 @@ class MetadataAggregator:
             _data["last_updated"] = time.strftime("%Y-%m-%d %H:%M:%S")
             _path.write_text(json.dumps(_data, indent=2))
         except Exception as exc:
-            logger.debug("Benchmark save failed: %s", exc)
+            logger.debug("Benchmark speichern fehlgeschlagen: %s", exc)
 
         return {
             "percentile": _percentile,

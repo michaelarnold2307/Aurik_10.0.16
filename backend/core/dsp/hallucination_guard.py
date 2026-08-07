@@ -160,7 +160,7 @@ def check_hallucination(
                     if _ceiling_ratio < 8.0 * _ceiling_factor:
                         harmonic_ceiling_violation = False
                         logger.info(
-                            "§v10.122 Ceiling-Veto aufgehoben: ratio=%.1f < %.1f (depth-factor=%.2f)",
+                            "§v10.122 Ceiling-Veto aufgehoben: Verhaeltnis=%.1f < %.1f (depth-factor=%.2f)",
                             _ceiling_ratio,
                             8.0 * _ceiling_factor,
                             _ceiling_factor,
@@ -169,15 +169,17 @@ def check_hallucination(
                 meta["bw_ceiling_hz"] = material_bw_ceiling_hz
                 meta["harmonic_ceiling_violation"] = harmonic_ceiling_violation
             except Exception as exc:
-                logger.debug("check_harmonic_ceiling_violation failed (non-critical): %s", exc)
+                logger.debug("Pruefung_harmonic_ceiling_violation fehlgeschlagen (unkritisch): %s", exc)
 
     except ImportError:
         # DSP fallback: simple spectral energy delta
-        logger.debug("hallucination_guard primary import failed; using DSP fallback.")
+        logger.debug("hallucination_guard primary import fehlgeschlagen; using DSP Ersatzpfad.")
         spectral_novelty, meta = _compute_spectral_novelty_dsp(pre_arr, post_arr, sr)
 
     except Exception as exc:
-        logger.warning("check_hallucination: primary computation failed (%s) — returning safe defaults.", exc)
+        logger.warning(
+            "Pruefung_hallucination: primary computation fehlgeschlagen (%s) — returning safe defaults.", exc
+        )
         spectral_novelty = 0.0
         meta["error"] = str(exc)
 
@@ -200,7 +202,7 @@ def check_hallucination(
             _bw_idx = int(np.searchsorted(_cumsum, 0.95 * _total))
             _pre_bw = float(_bw_idx * sr / len(_pre_fft))
         except Exception as _e:
-            logger.debug("hallucination_guard: non-critical exception: %s", _e)
+            logger.debug("hallucination_guard: unkritisch exception: %s", _e)
     if _pre_bw < 1000.0:
         _base_rollback_threshold = max(_base_rollback_threshold, 0.30)
     elif _pre_bw < 4000.0:
@@ -238,7 +240,7 @@ def check_hallucination(
             requires_rollback = True
         score_penalty = 0.3
         logger.warning(
-            "§2.46e HallucinationGuard: spectral_novelty=%.3f > %.2f (mode=%s) → %s, score_penalty=%.1f",
+            "§2.46e HallucinationGuard: spectral_novelty=%.3f > %.2f (Betriebsart=%s) → %s, Wert_penalty=%.1f",
             spectral_novelty,
             _effective_rollback_threshold,
             mode,
@@ -248,7 +250,7 @@ def check_hallucination(
     elif spectral_novelty > _get_adaptive_penalty_threshold():
         score_penalty = 0.3
         logger.debug(
-            "§2.46e HallucinationGuard: spectral_novelty=%.3f > %.2f → score_penalty=%.1f",
+            "§2.46e HallucinationGuard: spectral_novelty=%.3f > %.2f → Wert_penalty=%.1f",
             spectral_novelty,
             _get_adaptive_penalty_threshold(),
             score_penalty,
@@ -297,5 +299,5 @@ def _compute_spectral_novelty_dsp(
         novelty = float(np.clip(E_novel / E_total, 0.0, 1.0))
         return novelty, {"method": "dsp_fallback"}
     except Exception as exc:
-        logger.debug("_compute_spectral_novelty_dsp failed: %s", exc)
+        logger.debug("_berechnen_spectral_novelty_dsp fehlgeschlagen: %s", exc)
         return 0.0, {"error": str(exc), "method": "dsp_fallback_failed"}

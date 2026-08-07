@@ -528,7 +528,7 @@ class ReflectiveListeningPass:
             rms = np.sqrt(np.mean(chunk**2)) + 1e-12
             st_vals.append(20.0 * np.log10(rms))
         if len(st_vals) >= 4:
-            st_vals = np.array(st_vals)
+            st_vals = np.array(st_vals)  # type: ignore[assignment]
             gate = np.max(st_vals) - 20
             gated = st_vals[st_vals > gate]
             if len(gated) >= 4:
@@ -547,7 +547,7 @@ class ReflectiveListeningPass:
         for i in range(0, len(mono) - win, win):
             chunk = mono[i : i + win]
             rms_vals.append(20.0 * np.log10(np.sqrt(np.mean(chunk**2)) + 1e-12))
-        rms_vals = np.array(rms_vals)
+        rms_vals = np.array(rms_vals)  # type: ignore[assignment]
         # Nur leise Abschnitte betrachten
         quiet_mask = rms_vals < (np.mean(rms_vals) - 6)
         if quiet_mask.sum() >= 4:
@@ -589,7 +589,7 @@ class ReflectiveListeningPass:
         # return np.array([[b0/a0, b1/a0, b2/a0, 1.0, a1/a0, a2/a0]])
 
     # Simplified: just use butter-based shelves
-    @staticmethod
+    @staticmethod  # type: ignore[no-redef]
     def _make_high_shelf(sr: int, freq: float, gain_db: float):
         from scipy import signal as scipy_signal
 
@@ -609,7 +609,7 @@ class ReflectiveListeningPass:
         sos = scipy_signal.butter(2, freq, "lowpass", fs=sr, output="sos")
         filtered = scipy_signal.sosfiltfilt(sos, audio, axis=0)
         mix = 1.0 - strength * 0.8  # Max 40% Mix des gefilterten Signals
-        return audio * mix + filtered * (1.0 - mix)
+        return audio * mix + filtered * (1.0 - mix)  # type: ignore[no-any-return]
 
     @staticmethod
     def _gentle_hf_noise_reduction(audio: np.ndarray, sr: int, freq: float, strength: float) -> np.ndarray:
@@ -619,7 +619,7 @@ class ReflectiveListeningPass:
         sos = scipy_signal.butter(2, freq, "lowpass", fs=sr, output="sos")
         filtered = scipy_signal.sosfiltfilt(sos, audio, axis=0)
         mix = 1.0 - strength  # Sanftes Blending
-        return audio * mix + filtered * (1.0 - mix)
+        return audio * mix + filtered * (1.0 - mix)  # type: ignore[no-any-return]
 
 
 # Singleton

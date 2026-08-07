@@ -122,7 +122,7 @@ class UnifiedForensicAnalyzer:
         """
         if verbose:
             logger.info("=" * 60)
-            logger.info("   Unified Forensic Analysis")
+            logger.info("   Unified Forensic Analyse")
             logger.info("=" * 60)
 
         results = {}
@@ -185,7 +185,7 @@ class UnifiedForensicAnalyzer:
                 if detected:
                     logger.info("         Defects: %s", ", ".join(detected))
                 else:
-                    logger.info("         Defects: None detected")
+                    logger.info("         Defects: None erkannt")
         else:
             # Default values
             results["defects"] = DefectDetectionResult(  # type: ignore[assignment]
@@ -199,7 +199,7 @@ class UnifiedForensicAnalyzer:
 
         # 4. Cross-Validation & Consistency Checks
         if verbose:
-            logger.info("\n   Cross-Validation:")
+            logger.info("\n   Cross-Validierung:")
 
         consistency_score = self._check_consistency(results, verbose)
 
@@ -219,7 +219,7 @@ class UnifiedForensicAnalyzer:
 
         if verbose:
             logger.info("\n   Overall Confidence: %.1f", overall_confidence)
-            logger.info("   Analysis Quality: %s", analysis_quality)
+            logger.info("   Analyse Quality: %s", analysis_quality)
             logger.info("=" * 60)
 
         # Build unified result
@@ -507,17 +507,17 @@ class UnifiedForensicAnalyzer:
         if medium_model_path:
             self.medium_detector = MLMediumDetector()
             self.medium_detector.load(medium_model_path)  # type: ignore[arg-type]
-            logger.info("Loaded Medium Detector from %s", medium_model_path)
+            logger.info("geladen Medium Detector from %s", medium_model_path)
 
         if era_model_path:
             self.era_detector = MLEraDetector()
             self.era_detector.load(era_model_path)  # type: ignore[arg-type]
-            logger.info("Loaded Era Detector from %s", era_model_path)
+            logger.info("geladen Era Detector from %s", era_model_path)
 
         if defect_model_path:
             self.defect_detector = MLDefectDetector()
             self.defect_detector.load(defect_model_path)
-            logger.info("Loaded Defect Detector from %s", defect_model_path)
+            logger.info("geladen Defect Detector from %s", defect_model_path)
 
     def is_ready(self) -> bool:
         """Prüft if analyzer is ready (at least one detector loaded)."""

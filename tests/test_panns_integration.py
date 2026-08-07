@@ -42,15 +42,15 @@ def test_panns_integration():
     from backend.core.forensics.analysis_and_modules import AnalysisEngineAdapter
 
     adapter = AnalysisEngineAdapter()
-    profile = adapter.analyze(audio, sr, test_audio)
+    profile = adapter.analyze(audio, sr, test_audio)  # type: ignore[arg-type]
     # Genre
-    genre = profile.musical_context.genre
-    genre_conf = profile.musical_context.genre_confidence
+    genre = profile.musical_context.genre  # type: ignore[attr-defined]
+    genre_conf = profile.musical_context.genre_confidence  # type: ignore[attr-defined]
     # Vocals
-    has_vocals = profile.vocal_analysis.has_vocals
-    _ = profile.vocal_analysis.vocal_confidence
+    has_vocals = profile.vocal_analysis.has_vocals  # type: ignore[attr-defined]
+    _ = profile.vocal_analysis.vocal_confidence  # type: ignore[attr-defined]
     # Instruments
-    instruments = profile.musical_context.dominant_instruments
+    instruments = profile.musical_context.dominant_instruments  # type: ignore[attr-defined]
     # Assertions für pytest
     assert genre is not None, "Genre wurde nicht erkannt."
     assert genre_conf > 0.1, "Genre Confidence zu niedrig."

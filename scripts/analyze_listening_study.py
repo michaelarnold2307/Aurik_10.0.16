@@ -189,7 +189,7 @@ def analyze_results(results_path: Path) -> AnalysisResult:
         anova_significant=anova_sig,
         pairwise_comparisons=pairwise,
         icc=round(icc_val, 3),
-        anchor_valid=anchor_valid,
+        anchor_valid=anchor_valid,  # type: ignore[arg-type]
         metadata={
             "total_participants": len({r.get("participant_id", "") for r in results}),
             "total_trials": len(results),

@@ -38,7 +38,12 @@ def _collect_corpus_files() -> list[tuple[str, Path]]:
                 continue
             abs_path = mf.parent / fp
             if abs_path.exists() and abs_path.suffix.lower() in (
-                ".wav", ".flac", ".mp3", ".ogg", ".aiff", ".aif",
+                ".wav",
+                ".flac",
+                ".mp3",
+                ".ogg",
+                ".aiff",
+                ".aif",
             ):
                 files.append((f"{mat}/{fp}", abs_path))
     return files
@@ -48,6 +53,7 @@ def _load_audio(path: Path) -> tuple[np.ndarray, int]:
     """Lädt eine Audiodatei via scipy oder soundfile."""
     try:
         import soundfile as sf
+
         audio, sr = sf.read(str(path), dtype="float32", always_2d=False)
         return audio, int(sr)
     except ImportError:
@@ -65,7 +71,7 @@ def _load_audio(path: Path) -> tuple[np.ndarray, int]:
 
 def _run_mini_pipeline(audio: np.ndarray, sr: int) -> dict:
     """Führt die minimale Aurik-Pipeline aus (mode=smoke) und gibt Metadaten zurück."""
-    from backend.core.audio_utils import normalize_audio
+    from backend.core.audio_utils import normalize_audio  # type: ignore[attr-defined]
     from backend.core.defect_scanner import DefectScanner
     from backend.core.perceptual_quality_scorer import PerceptualQualityScorer
 
@@ -77,10 +83,9 @@ def _run_mini_pipeline(audio: np.ndarray, sr: int) -> dict:
         if audio.ndim == 1:
             audio = resample_poly(audio.astype(np.float64), 48000, sr)
         else:
-            audio = np.column_stack([
-                resample_poly(audio[:, ch].astype(np.float64), 48000, sr)
-                for ch in range(audio.shape[1])
-            ])
+            audio = np.column_stack(
+                [resample_poly(audio[:, ch].astype(np.float64), 48000, sr) for ch in range(audio.shape[1])]
+            )
         audio = audio[:target_len].astype(np.float32)
         sr = 48000
 
@@ -94,24 +99,24 @@ def _run_mini_pipeline(audio: np.ndarray, sr: int) -> dict:
     try:
         defects = scanner.scan(audio, sr)
     except Exception:
-        defects = []
+        defects = []  # type: ignore[assignment]
 
     # PQS-Score
     pqs = PerceptualQualityScorer()
     try:
-        score = pqs.score(audio, sr)
+        score = pqs.score(audio, sr)  # type: ignore[call-arg]
     except Exception:
-        score = 0.0
+        score = 0.0  # type: ignore[assignment]
 
     return {
-        "defects_found": len(defects) if defects else 0,
-        "pqs_score": float(score),
+        "defects_found": len(defects) if defects else 0,  # type: ignore[arg-type]
+        "pqs_score": float(score),  # type: ignore[arg-type]
         "sample_rate": int(sr),
         "duration_s": len(audio) / sr,
         "peak": float(np.max(np.abs(audio))),
         "has_nan": bool(np.any(np.isnan(audio))),
         "has_inf": bool(np.any(np.isinf(audio))),
-        "rms": float(np.sqrt(np.mean(audio ** 2))),
+        "rms": float(np.sqrt(np.mean(audio**2))),
     }
 
 

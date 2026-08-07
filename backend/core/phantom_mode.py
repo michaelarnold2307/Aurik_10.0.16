@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
@@ -47,7 +48,7 @@ class PhantomDetector:
     """
 
     def __init__(self):
-        self._material_profiles = {
+        self._material_profiles: dict[str, dict[str, Any]] = {
             "shellac": {"bw_hz": 5500, "noise_floor_db": -35, "typical_era": (1920, 1955)},
             "vinyl": {"bw_hz": 18000, "noise_floor_db": -55, "typical_era": (1950, 1990)},
             "tape": {"bw_hz": 14000, "noise_floor_db": -50, "typical_era": (1950, 1995)},
@@ -151,9 +152,9 @@ class PhantomDetector:
         best_score = 0.0
 
         for mat, profile in self._material_profiles.items():
-            bw_score = 1.0 - min(1.0, abs(bw_hz - profile["bw_hz"]) / profile["bw_hz"])
+            bw_score = 1.0 - min(1.0, abs(bw_hz - profile["bw_hz"]) / profile["bw_hz"])  # type: ignore[operator]
             nf_score = (
-                1.0 - min(1.0, abs(noise_floor - profile["noise_floor_db"]) / abs(profile["noise_floor_db"]))
+                1.0 - min(1.0, abs(noise_floor - profile["noise_floor_db"]) / abs(profile["noise_floor_db"]))  # type: ignore[operator]
                 if profile["noise_floor_db"] != 0
                 else 0.0
             )
@@ -167,15 +168,15 @@ class PhantomDetector:
     def _estimate_era(self, mono: np.ndarray, sr: int, material: str) -> tuple[int, float]:
         """Schätzt Aufnahmejahr via spektrale Charakteristik."""
         profile = self._material_profiles.get(material, self._material_profiles["digital"])
-        era_min, era_max = profile["typical_era"]
+        era_min, era_max = profile["typical_era"]  # type: ignore[misc]
 
         # Stereo-Breite als Ära-Indikator (Mono = älter)
         if material in ("vinyl", "tape"):
             # Einfach: Mitte des typischen Bereichs
-            era = int((era_min + era_max) / 2)
+            era = int((era_min + era_max) / 2)  # type: ignore[has-type]
             return era, 0.6
 
-        era = int(era_max)
+        era = int(era_max)  # type: ignore[has-type]
         return era, 0.8
 
     def _detect_defects(self, mono: np.ndarray, sr: int, material: str) -> tuple[list[str], dict[str, float]]:

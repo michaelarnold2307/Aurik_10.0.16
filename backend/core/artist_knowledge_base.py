@@ -141,7 +141,7 @@ class ArtistKnowledgeBase:
             self._conn = conn
             logger.debug("§AKB-1 ArtistKnowledgeBase: DB ready at %s", self._db_path)
         except Exception as exc:
-            logger.debug("§AKB-1 DB init failed (non-blocking): %s", exc)
+            logger.debug("§AKB-1 DB init fehlgeschlagen (nicht blockierend): %s", exc)
             self._conn = None
 
     def _get_conn(self) -> sqlite3.Connection | None:
@@ -195,7 +195,7 @@ class ArtistKnowledgeBase:
             try:
                 return self._lookup_impl(conn, era, material, label_hint, artist_hash, genre, mode)
             except Exception as exc:
-                logger.debug("§AKB-1 lookup_prior failed: %s", exc)
+                logger.debug("§AKB-1 lookup_prior fehlgeschlagen: %s", exc)
                 return AKBPrior()
 
     def record_outcome(
@@ -231,7 +231,7 @@ class ArtistKnowledgeBase:
         """
         if vqi < MIN_VQI_RECORD or oqs < MIN_OQS_RECORD:
             logger.debug(
-                "§AKB-1 record_outcome skipped: vqi=%.3f oqs=%.1f below min thresholds",
+                "§AKB-1 aufzeichnen_outcome uebersprungen: vqi=%.3f oqs=%.1f below min thresholds",
                 vqi,
                 oqs,
             )
@@ -245,7 +245,7 @@ class ArtistKnowledgeBase:
                     conn, era, material, label_hint, artist_hash, phase_strengths, vqi, oqs, genre, mode
                 )
             except Exception as exc:
-                logger.debug("§AKB-1 record_outcome failed: %s", exc)
+                logger.debug("§AKB-1 aufzeichnen_outcome fehlgeschlagen: %s", exc)
 
     @staticmethod
     def make_artist_hash(artist_name: str) -> str:
@@ -270,7 +270,7 @@ class ArtistKnowledgeBase:
                 row = cur.fetchone()
                 return int(row[0]) if row else 0
             except Exception as e:
-                logger.warning("artist_knowledge_base.py::get_record_count fallback: %s", e)
+                logger.warning("artist_knowledge_base.py::get_aufzeichnen_count Ersatzpfad: %s", e)
                 return 0
 
     # ------------------------------------------------------------------
@@ -453,7 +453,7 @@ class ArtistKnowledgeBase:
         )
         conn.commit()
         logger.debug(
-            "§AKB-1 record_outcome: era=%d mat=%s vqi=%.3f oqs=%.1f stored",
+            "§AKB-1 aufzeichnen_outcome: era=%d mat=%s vqi=%.3f oqs=%.1f stored",
             era,
             material,
             vqi,

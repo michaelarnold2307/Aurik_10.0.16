@@ -105,7 +105,7 @@ def phase_error_guard(
                 if input_audio is None:
                     # Kein Input-Audio verfügbar → leeres Array als Notlösung
                     logger.error(
-                        "Phase '%s': Kein Input-Audio für Fallback verfügbar. Leeres Array zurückgegeben (1 s Stille).",
+                        "Verarbeitungsschritt '%s': Kein Eingabe-Audio für Ersatzpfad verfügbar. Leeres Array zurückgegeben (1 s Stille).",
                         name,
                     )
                     input_audio = np.zeros(input_sr, dtype=np.float32)
@@ -123,7 +123,7 @@ def phase_error_guard(
                 )
 
                 logger.warning(
-                    "Phase '%s': Graceful Degradation aktiviert. Audio unverändert durchgereicht. Fehler: %s",
+                    "Verarbeitungsschritt '%s': Graceful Degradation aktiviert. Audio unverändert durchgereicht. Fehler: %s",
                     name,
                     error_msg,
                 )

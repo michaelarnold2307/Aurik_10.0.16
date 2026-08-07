@@ -329,7 +329,7 @@ class SpectralRepair:
         phase = np.angle(Zxx)
         Zxx_smoothed = mag_smoothed * np.exp(1j * phase)
 
-        return Zxx_smoothed
+        return Zxx_smoothed  # type: ignore[no-any-return]
 
     def get_metrics(self) -> dict[str, Any]:
         """
@@ -393,7 +393,7 @@ if __name__ == "__main__":
     a = np.asarray(butter_coeffs[1], dtype=np.float64)
     signal_compressed = scipy.signal.lfilter(b, a, signal)
 
-    logger.info("\nInput:")
+    logger.info("\nEingabe:")
     logger.info("  - Sample Rate: %s Hz", sr)
     logger.info("  - Duration: 1.0 seconds")
     logger.info("  - Content: Multi-harmonic signal (440 Hz fundamental, 10 harmonics)")
@@ -406,7 +406,7 @@ if __name__ == "__main__":
     metrics = processor.get_metrics()
 
     logger.info("\nSpectral Repair Results:")
-    logger.info("  - Holes Detected: %s", metrics["holes_detected"])
+    logger.info("  - Holes erkannt: %s", metrics["holes_detected"])
     logger.info("  - Holes Repaired: %s", metrics["holes_repaired"])
     if metrics["frequency_ranges"]:
         logger.info("  - Frequency Ranges:")
@@ -414,4 +414,4 @@ if __name__ == "__main__":
             logger.info("    * %.0f - %.0f Hz", start_hz, end_hz)
     logger.info("  - Artifacts Smoothed: %s bins", metrics["artifacts_smoothed"])
 
-    logger.info("\n✅ Spectral Repair Demo Complete")
+    logger.info("\n✅ Spectral Repair Demo vollstaendig")

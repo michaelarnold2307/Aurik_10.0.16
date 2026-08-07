@@ -157,7 +157,7 @@ def compute_roughness_asper(audio: np.ndarray, sr: int) -> float:
         return asper
 
     except Exception as exc:
-        logger.debug("compute_roughness_asper non-blocking: %s", exc)
+        logger.debug("berechnen_roughness_asper nicht blockierend: %s", exc)
         return 0.0
 
 
@@ -234,7 +234,7 @@ def compute_fluctuation_strength_vacil(audio: np.ndarray, sr: int) -> float:
         return vacil
 
     except Exception as exc:
-        logger.debug("compute_fluctuation_strength_vacil non-blocking: %s", exc)
+        logger.debug("berechnen_fluctuation_strength_vacil nicht blockierend: %s", exc)
         return 0.0
 
 
@@ -317,5 +317,5 @@ def check_roughness_regression(
         )
 
     except Exception as exc:
-        logger.debug("check_roughness_regression non-blocking: %s", exc)
+        logger.debug("Pruefung_roughness_regression nicht blockierend: %s", exc)
         return ZwickerMetricsResult()

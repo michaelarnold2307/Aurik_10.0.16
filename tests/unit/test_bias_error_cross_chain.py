@@ -59,7 +59,7 @@ def _over_biased_tape_audio(duration: float = 6.0, sr: int = SR) -> np.ndarray:
     for h, amp in [(1000, 0.40), (2000, 0.20), (3000, 0.08), (4000, 0.02), (6000, 0.002), (8000, 0.0005)]:
         audio += amp * np.sin(2 * np.pi * h * t)
     audio += rng.standard_normal(n) * 0.002  # tiny noise floor
-    return (audio / (np.max(np.abs(audio)) + 1e-9)).astype(np.float32) * 0.5
+    return (audio / (np.max(np.abs(audio)) + 1e-9)).astype(np.float32) * 0.5  # type: ignore[no-any-return]
 
 
 def _near_nyquist_aliasing_audio(duration: float = 5.0, sr: int = SR) -> np.ndarray:
@@ -75,7 +75,7 @@ def _near_nyquist_aliasing_audio(duration: float = 5.0, sr: int = SR) -> np.ndar
     alias_freq = nyq * 0.91  # 91% Nyquist
     audio = rng.standard_normal(n).astype(np.float64) * 0.05
     audio += 0.30 * np.sin(2 * np.pi * alias_freq * t)
-    return (audio / (np.max(np.abs(audio)) + 1e-9)).astype(np.float32) * 0.4
+    return (audio / (np.max(np.abs(audio)) + 1e-9)).astype(np.float32) * 0.4  # type: ignore[no-any-return]
 
 
 class _FakeFMDResult:

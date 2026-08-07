@@ -19,7 +19,12 @@ SCHEMA_PATH = CORPUS_ROOT / "MANIFEST_SCHEMA.yaml"
 MATERIAL_DIRS = ["shellac", "vinyl", "tape", "reel_tape", "cassette", "digital"]
 CONDITION_DIRS = ["clean", "damaged", "restored"]
 REQUIRED_MANIFEST_FIELDS = [
-    "file", "duration_s", "sample_rate", "material", "era_year", "genre",
+    "file",
+    "duration_s",
+    "sample_rate",
+    "material",
+    "era_year",
+    "genre",
 ]
 
 
@@ -39,7 +44,7 @@ def _load_manifest(path: Path) -> dict:
         data = yaml.safe_load(f)
     if data is None:
         pytest.fail(f"{path}: manifest.yaml ist leer oder kein gültiges YAML")
-    return data
+    return data  # type: ignore[no-any-return]
 
 
 @pytest.fixture(scope="module")
@@ -92,9 +97,7 @@ class TestManifestIntegrity:
             data = _load_manifest(mf)
             mat = data.get("material")
             assert mat is not None, f"{mf}: material fehlt"
-            assert mat in MATERIAL_DIRS, (
-                f"{mf}: material '{mat}' nicht in {MATERIAL_DIRS}"
-            )
+            assert mat in MATERIAL_DIRS, f"{mf}: material '{mat}' nicht in {MATERIAL_DIRS}"
 
     def test_manifest_has_entries(self, manifests: list[Path]):
         for mf in manifests:
@@ -108,9 +111,7 @@ class TestManifestIntegrity:
             data = _load_manifest(mf)
             for idx, entry in enumerate(data.get("entries", [])):
                 for field in REQUIRED_MANIFEST_FIELDS:
-                    assert field in entry, (
-                        f"{mf} Eintrag {idx}: required field '{field}' fehlt"
-                    )
+                    assert field in entry, f"{mf} Eintrag {idx}: required field '{field}' fehlt"
 
     def test_entries_have_valid_condition(self, manifests: list[Path]):
         for mf in manifests:
@@ -118,8 +119,7 @@ class TestManifestIntegrity:
             for idx, entry in enumerate(data.get("entries", [])):
                 if "condition" in entry:
                     assert entry["condition"] in CONDITION_DIRS, (
-                        f"{mf} Eintrag {idx}: condition '{entry['condition']}' "
-                        f"nicht in {CONDITION_DIRS}"
+                        f"{mf} Eintrag {idx}: condition '{entry['condition']}' nicht in {CONDITION_DIRS}"
                     )
 
     def test_entries_have_valid_era_year(self, manifests: list[Path]):
@@ -128,21 +128,15 @@ class TestManifestIntegrity:
             for idx, entry in enumerate(data.get("entries", [])):
                 if "era_year" in entry:
                     yr = entry["era_year"]
-                    assert isinstance(yr, int), (
-                        f"{mf} Eintrag {idx}: era_year muss int sein"
-                    )
-                    assert 1877 <= yr <= 2026, (
-                        f"{mf} Eintrag {idx}: era_year {yr} außerhalb 1877–2026"
-                    )
+                    assert isinstance(yr, int), f"{mf} Eintrag {idx}: era_year muss int sein"
+                    assert 1877 <= yr <= 2026, f"{mf} Eintrag {idx}: era_year {yr} außerhalb 1877–2026"
 
     def test_entries_file_path_relative(self, manifests: list[Path]):
         for mf in manifests:
             data = _load_manifest(mf)
             for idx, entry in enumerate(data.get("entries", [])):
                 fp = entry.get("file", "")
-                assert not fp.startswith("/"), (
-                    f"{mf} Eintrag {idx}: file '{fp}' darf kein absoluter Pfad sein"
-                )
+                assert not fp.startswith("/"), f"{mf} Eintrag {idx}: file '{fp}' darf kein absoluter Pfad sein"
 
 
 @pytest.mark.corpus
@@ -162,10 +156,7 @@ class TestCorpusFileAvailability:
                 if fp is None:
                     continue
                 abs_path = manifest_dir / fp
-                assert abs_path.exists(), (
-                    f"{mf} Eintrag {idx}: Datei '{fp}' existiert nicht "
-                    f"(erwartet: {abs_path})"
-                )
+                assert abs_path.exists(), f"{mf} Eintrag {idx}: Datei '{fp}' existiert nicht (erwartet: {abs_path})"
 
     def test_checksums_match_when_present(self, manifests: list[Path]):
         for mf in manifests:
@@ -194,8 +185,7 @@ class TestCorpusFileAvailability:
             for idx, entry in enumerate(data.get("entries", [])):
                 license_val = entry.get("license")
                 assert license_val is not None, (
-                    f"{mf} Eintrag {idx}: license fehlt — "
-                    f"alle Corpus-Dateien MÜSSEN eine Lizenz haben"
+                    f"{mf} Eintrag {idx}: license fehlt — alle Corpus-Dateien MÜSSEN eine Lizenz haben"
                 )
 
     def test_source_attribution_present(self, manifests: list[Path]):
@@ -203,9 +193,7 @@ class TestCorpusFileAvailability:
             data = _load_manifest(mf)
             for idx, entry in enumerate(data.get("entries", [])):
                 attr = entry.get("source_attribution")
-                assert attr is not None, (
-                    f"{mf} Eintrag {idx}: source_attribution fehlt"
-                )
+                assert attr is not None, f"{mf} Eintrag {idx}: source_attribution fehlt"
 
 
 @pytest.mark.corpus
@@ -218,8 +206,7 @@ class TestCorpusMinimumRequirements:
             data = _load_manifest(mf)
             total += len(data.get("entries", []))
         assert total >= 1, (
-            f"Nur {total} Einträge im gesamten Corpus — "
-            "Ziel: ≥ 20 Public-Domain-Aufnahmen in ≥ 4 Material-Kategorien"
+            f"Nur {total} Einträge im gesamten Corpus — Ziel: ≥ 20 Public-Domain-Aufnahmen in ≥ 4 Material-Kategorien"
         )
 
     def test_minimum_material_categories(self, manifests: list[Path]):
@@ -228,9 +215,7 @@ class TestCorpusMinimumRequirements:
             data = _load_manifest(mf)
             if data.get("entries"):
                 categories.add(data.get("material", mf.parent.name))
-        assert len(categories) >= 1, (
-            f"Nur {len(categories)} Material-Kategorien — Ziel: ≥ 4"
-        )
+        assert len(categories) >= 1, f"Nur {len(categories)} Material-Kategorien — Ziel: ≥ 4"
 
     def test_vocal_recordings_present(self, manifests: list[Path]):
         vocal_count = 0

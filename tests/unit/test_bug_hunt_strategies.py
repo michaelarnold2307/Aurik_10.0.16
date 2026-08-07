@@ -10,12 +10,15 @@ Gemeinsam decken sie die häufigsten Fehlerklassen ab.
 from __future__ import annotations
 
 import ast
+import logging
 import sys
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
 
+logger = logging.getLogger(__name__)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # STRATEGIE 1: Cross-Module-Contract-Validator
@@ -26,14 +29,20 @@ import pytest
 
 def _find_unused_params(filepath: Path) -> list[str]:
     """Findet Funktionsparameter, die CalibrationContext-typisch sind aber ungenutzt."""
-    violations = []
+    violations: list[Any] = []
     try:
         tree = ast.parse(filepath.read_text())
     except Exception:
         return violations
 
-    calib_params = {'transfer_chain_depth', 'restorability_score', 'material_type',
-                    'chain_depth', 'snr_db', 'bandwidth_hz'}
+    calib_params = {
+        "transfer_chain_depth",
+        "restorability_score",
+        "material_type",
+        "chain_depth",
+        "snr_db",
+        "bandwidth_hz",
+    }
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.FunctionDef):
@@ -100,7 +109,7 @@ _BRIDGE_FILES = {"backend/api/bridge.py"}
 
 def _check_import_boundaries(filepath: Path, is_frontend: bool) -> list[str]:
     """Prüft ob eine Datei die Import-Grenze verletzt."""
-    violations = []
+    violations: list[Any] = []
     try:
         source = filepath.read_text()
     except Exception:
@@ -117,7 +126,7 @@ def _check_import_boundaries(filepath: Path, is_frontend: bool) -> list[str]:
             continue
         if is_frontend:
             # Frontend darf NUR backend.api.bridge importieren (Brücken-Modul)
-            if ("from backend" in stripped or "import backend" in stripped):
+            if "from backend" in stripped or "import backend" in stripped:
                 if ".api.bridge" not in stripped and "backend.api.bridge" not in stripped:
                     violations.append(f"{rel}:{lineno_1} FRONTEND→BACKEND: {stripped[:100]}")
         else:
@@ -199,7 +208,7 @@ def test_no_dead_calibration_code():
             if prop in source:
                 used.add(prop)
 
-    unused = set(properties) - used - {'to_dict', 'from_context'}  # to_dict und from_context sind intern
+    unused = set(properties) - used - {"to_dict", "from_context"}  # to_dict und from_context sind intern
 
     if unused:
         print(f"\nStrategie 3: {len(unused)} Properties nicht in bridge.py verwendet:")
@@ -237,11 +246,12 @@ def test_log_pattern_miner_known_patterns():
     if not logs_dir.exists():
         pytest.skip("Kein logs/-Verzeichnis — Produktions-Test übersprungen")
 
-    found = {}
+    found: dict[Any, Any] = {}
     for log_file in sorted(logs_dir.glob("*.log"))[-3:]:  # Nur letzte 3 Logs
         try:
             content = log_file.read_text()
         except Exception:
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
             continue
         for name, pattern in FIXED_PATTERNS.items():
             matches = pattern.findall(content)
@@ -249,7 +259,7 @@ def test_log_pattern_miner_known_patterns():
                 found.setdefault(name, []).append((log_file.name, len(matches)))
 
     if found:
-        print(f"\nStrategie 4: Behobene Patterns noch in Logs gefunden:")
+        print("\nStrategie 4: Behobene Patterns noch in Logs gefunden:")
         for name, occurrences in found.items():
             for fname, count in occurrences:
                 print(f"  {name}: {count}× in {fname}")
@@ -271,8 +281,8 @@ def test_differential_depth_not_identical():
     Wenn depth=1 und depth=4 IDENTISCHE Schwellwerte liefern,
     ist die Depth-Adaption nicht verdrahtet (Bug-Klasse von Fix 1-3).
     """
-    from backend.core.calibration_context import CalibrationContext
     from backend.core.calibrated_constants import get_constants
+    from backend.core.calibration_context import CalibrationContext
 
     ctx1 = CalibrationContext(restorability_score=50.0, transfer_chain_depth=1, material_type="cassette")
     ctx4 = CalibrationContext(restorability_score=50.0, transfer_chain_depth=4, material_type="cassette")
@@ -282,11 +292,11 @@ def test_differential_depth_not_identical():
 
     # Properties die UNTERSCHIEDLICH sein MÜSSEN
     must_differ = {
-        'chain_factor': (c1.chain_factor, c4.chain_factor),
-        'artifact_freedom_min': (c1.artifact_freedom_min, c4.artifact_freedom_min),
-        'hg_base_threshold': (c1.hg_base_threshold, c4.hg_base_threshold),
-        'gdd_chain_factor': (c1.gdd_chain_factor, c4.gdd_chain_factor),
-        'echo_corr_threshold': (c1.echo_corr_threshold, c4.echo_corr_threshold),
+        "chain_factor": (c1.chain_factor, c4.chain_factor),
+        "artifact_freedom_min": (c1.artifact_freedom_min, c4.artifact_freedom_min),
+        "hg_base_threshold": (c1.hg_base_threshold, c4.hg_base_threshold),
+        "gdd_chain_factor": (c1.gdd_chain_factor, c4.gdd_chain_factor),
+        "echo_corr_threshold": (c1.echo_corr_threshold, c4.echo_corr_threshold),
     }
 
     identical = []
@@ -300,9 +310,9 @@ def test_differential_depth_not_identical():
 
     # Properties die PROPORTIONAL sein müssen (depth=4 >= depth=1 für Toleranzen)
     must_increase = {
-        'regression_threshold': (c1.regression_threshold, c4.regression_threshold),
-        'drift_tolerance': (c1.drift_tolerance, c4.drift_tolerance),
-        'max_rollbacks': (c1.max_rollbacks, c4.max_rollbacks),
+        "regression_threshold": (c1.regression_threshold, c4.regression_threshold),
+        "drift_tolerance": (c1.drift_tolerance, c4.drift_tolerance),
+        "max_rollbacks": (c1.max_rollbacks, c4.max_rollbacks),
     }
 
     decreased = []

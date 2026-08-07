@@ -47,7 +47,7 @@ class PhaseIntegrationTest:
         t = np.arange(int(self.sr * self.duration_s), dtype=np.float32) / self.sr
         audio = (0.5 * np.sin(2 * np.pi * 1000 * t)).astype(np.float32)
         audio += np.random.RandomState(42).randn(len(audio)).astype(np.float32) * 0.001
-        return audio
+        return audio  # type: ignore[no-any-return]
 
     def _get_phase(self) -> Any:
         mod = importlib.import_module(self.phase_module)

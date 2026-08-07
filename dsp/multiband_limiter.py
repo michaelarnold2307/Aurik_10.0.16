@@ -104,7 +104,7 @@ class MultibandLimiter:
                 if maxval > 1.0:
                     out = np.clip(out, -1.0, 1.0)
                 self._audit_log({"bands": self.bands, "shape": out.shape, "success": True})
-                return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)
+                return np.clip(np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0).astype(orig_dtype)  # type: ignore[no-any-return]
             else:
                 self._audit_log({"bands": self.bands, "error": "No bands processed"})
                 return audio.astype(orig_dtype)
@@ -190,4 +190,4 @@ class MultibandLimiter:
             else:
                 env[i] = release_coeff * env[i - 1] + (1 - release_coeff) * gain_lin[i]
         out = audio * env
-        return out
+        return out  # type: ignore[no-any-return]

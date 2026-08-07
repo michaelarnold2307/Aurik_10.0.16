@@ -35,6 +35,33 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+
+def _tune_glibc_malloc_mmap_threshold() -> None:
+    """§v10.307 1.1: Arena-Bloat-Fix — arrays > 2 MB via mmap statt Heap-Arena.
+
+    Ohne diesen Tune hält glibc `malloc` freigegebene Pages großer numpy-Arrays im
+    Prozess-Heap zurück (Default `M_MMAP_THRESHOLD=128KB` ist für Audio-Buffer im
+    MB-Bereich ungeeignet) — Arena fragmentiert über Stunden bis VMS explodiert.
+    Ab 2 MB werden Allokationen stattdessen per `mmap` bedient und geben bei `del`
+    sofort via `munmap` an das OS zurück. Best-effort, nur Linux/glibc.
+    """
+    try:
+        import ctypes
+        import platform
+
+        if platform.system() != "Linux":
+            return
+        _M_MMAP_THRESHOLD = -3
+        _TWO_MB = 2 * 1024 * 1024
+        libc = ctypes.CDLL("libc.so.6")
+        if not libc.mallopt(ctypes.c_int(_M_MMAP_THRESHOLD), ctypes.c_int(_TWO_MB)):
+            logger.debug("ml_memory_Grenze: mallopt(M_MMAP_Schwelle) nicht blockierend: glibc lehnte Wert ab")
+    except Exception as _mallopt_exc:
+        logger.debug("ml_memory_Grenze: mallopt-Tuning nicht blockierend: %s", _mallopt_exc)
+
+
+_tune_glibc_malloc_mmap_threshold()
+
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -147,8 +174,8 @@ def _calibrate_guard_thresholds() -> dict[str, float]:
     )
 
     logger.info(
-        "ml_memory_budget: guard thresholds calibrated for %.1f GB RAM — "
-        "heavy_avail_ratio=%.2f, heavy_swap_early=%.0f%%, heavy_swap=%.0f%%, "
+        "ml_memory_Grenze: guard thresholds kalibriert for %.1f GB RAM — "
+        "heavy_avail_Verhaeltnis=%.2f, heavy_swap_early=%.0f%%, heavy_swap=%.0f%%, "
         "min_free_mb=%.0f, margin_base=%.2f, margin_min=%.2f",
         _total_gb,
         _heavy_avail_ratio_max,
@@ -183,7 +210,7 @@ def _log_system_profile() -> None:
         cpu_count = _psutil.cpu_count(logical=True)
         cpu_phys = _psutil.cpu_count(logical=False)
         logger.info(
-            "ml_memory_budget: Systemprofil — RAM total=%.1f GB, available=%.1f GB (%.0f%%), "
+            "ml_memory_Grenze: Systemprofil — RAM total=%.1f GB, verfuegbar=%.1f GB (%.0f%%), "
             "swap total=%.1f GB, used=%.0f%%, CPU=%d logical/%d physical",
             vm.total / (1024**3),
             vm.available / (1024**3),
@@ -194,7 +221,7 @@ def _log_system_profile() -> None:
             cpu_phys or 0,
         )
     except Exception as _e:
-        logger.debug("ml_memory_budget: non-critical exception: %s", _e)
+        logger.debug("ml_memory_Grenze: unkritisch exception: %s", _e)
 
 
 _log_system_profile()
@@ -278,7 +305,7 @@ def _swap_io_rate_mb_per_s(swap_obj: object) -> float:
         _last_swap_sout = sout
         return float(rate_mb_s)
     except Exception as e:
-        logger.warning("ml_memory_budget.py::_swap_io_rate_mb_per_s fallback: %s", e)
+        logger.warning("ml_memory_Grenze.py::_swap_io_rate_mb_per_s Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -328,8 +355,8 @@ def is_system_thrashing() -> bool:
                     _last_thrash_warn_time = _now
             if _emit:
                 logger.warning(
-                    "ml_memory_budget: swap thrashing detected — swap %.0f %% used (%.1f GB), "
-                    "swap I/O %.1f MB/s, RAM available %.1f %% (%.1f GB) — ML loads will be blocked",
+                    "ml_memory_Grenze: swap thrashing erkannt — swap %.0f %% used (%.1f GB), "
+                    "swap I/O %.1f MB/s, RAM verfuegbar %.1f %% (%.1f GB) — ML loads will be blocked",
                     swap_used_pct,
                     swap.used / (1024**3),
                     swap_io_rate_mb_s,
@@ -338,14 +365,14 @@ def is_system_thrashing() -> bool:
                 )
         elif swap_used_pct > 80.0 and swap_io_rate_mb_s <= 8.0:
             logger.debug(
-                "ml_memory_budget: high swap occupancy without active paging (swap %.0f %%, I/O %.1f MB/s) "
+                "ml_memory_Grenze: high swap occupancy without active paging (swap %.0f %%, I/O %.1f MB/s) "
                 "— no thrashing block",
                 swap_used_pct,
                 swap_io_rate_mb_s,
             )
         return thrashing
     except Exception as e:
-        logger.warning("ml_memory_budget.py::is_system_thrashing fallback: %s", e)
+        logger.warning("ml_memory_Grenze.py::is_system_thrashing Ersatzpfad: %s", e)
         return False
 
 
@@ -376,7 +403,7 @@ def _allow_lightweight_under_pressure(model_name: str, size_gb: float) -> bool:
             )
         if (_tiny_allocated + float(size_gb)) > _PRESSURE_LIGHT_MODEL_TOTAL_GB_CAP:
             logger.warning(
-                "ML-Budget: '%s' (%.2f GB) pressure soft-allow abgelehnt — tiny-budget cap erreicht (%.2f/%.2f GB)",
+                "ML-Grenze: '%s' (%.2f GB) pressure soft-allow abgelehnt — tiny-Grenze cap erreicht (%.2f/%.2f GB)",
                 model_name,
                 size_gb,
                 _tiny_allocated,
@@ -385,7 +412,7 @@ def _allow_lightweight_under_pressure(model_name: str, size_gb: float) -> bool:
             return False
         if avail_ratio >= _PRESSURE_LIGHT_MODEL_MIN_AVAIL_RATIO and swap_pct < _PRESSURE_LIGHT_MODEL_MAX_SWAP_PCT:
             logger.warning(
-                "ML-Budget: '%s' (%.2f GB) soft-allowed under pressure window "
+                "ML-Grenze: '%s' (%.2f GB) soft-allowed under pressure window "
                 "(RAM %.1f %%, swap %.1f %%, tiny-cap %.2f/%.2f GB)",
                 model_name,
                 size_gb,
@@ -396,7 +423,7 @@ def _allow_lightweight_under_pressure(model_name: str, size_gb: float) -> bool:
             )
             return True
     except Exception as e:
-        logger.warning("ml_memory_budget.py::_allow_lightweight_under_pressure fallback: %s", e)
+        logger.warning("ml_memory_Grenze.py::_allow_lightweight_under_pressure Ersatzpfad: %s", e)
         return False
     return False
 
@@ -486,9 +513,9 @@ def _should_block_heavy_ml_load(size_gb: float) -> bool:
         should_block = (elevated_swap and (active_paging or low_headroom)) or (early_swap and low_headroom)
         if should_block:
             logger.warning(
-                "ML-Budget: preemptive heavy-load block (model %.1f GB, safe-threshold %.1f GB) — "
-                "swap %.0f %%, swap-I/O %.1f MB/s, RAM available %.1f %% (%.1f GB) "
-                "→ DSP fallback before thrashing escalation",
+                "ML-Grenze: preemptive heavy-laden block (model %.1f GB, safe-Schwelle %.1f GB) — "
+                "swap %.0f %%, swap-I/O %.1f MB/s, RAM verfuegbar %.1f %% (%.1f GB) "
+                "→ DSP Ersatzpfad before thrashing escalation",
                 size_gb,
                 _model_safe_gb,
                 swap_pct,
@@ -498,7 +525,7 @@ def _should_block_heavy_ml_load(size_gb: float) -> bool:
             )
         return should_block
     except Exception as e:
-        logger.warning("ml_memory_budget.py::_should_block_heavy_ml_load fallback: %s", e)
+        logger.warning("ml_memory_Grenze.py::_should_block_heavy_ml_laden Ersatzpfad: %s", e)
         return False
 
 
@@ -557,15 +584,15 @@ def _preflight_system_memory(required_mb: float) -> bool:
 
         evict_stale_plugins(required_mb=required_with_margin)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
     available_after_evict_mb = _available_memory_mb()
     if available_after_evict_mb >= required_with_margin:
         return True
 
     logger.warning(
-        "ml_memory_budget: physical RAM too low — required %.0f MB (incl. safety margin), "
-        "available %.0f MB. ML load blocked, DSP fallback active.",
+        "ml_memory_Grenze: physical RAM too low — required %.0f MB (incl. safety margin), "
+        "verfuegbar %.0f MB. ML laden blocked, DSP Ersatzpfad active.",
         required_with_margin,
         available_after_evict_mb,
     )
@@ -574,7 +601,7 @@ def _preflight_system_memory(required_mb: float) -> bool:
         import traceback as _tb  # pylint: disable=import-outside-toplevel
 
         logger.warning(
-            "ml_memory_budget §DEBUG: suspekt große Anfrage (%.0f MB) — Stack-Trace:\n%s",
+            "ml_memory_Grenze §DEBUG: suspekt große Anfrage (%.0f MB) — Stack-Trace:\n%s",
             required_with_margin,
             "".join(_tb.format_stack()),
         )
@@ -604,7 +631,7 @@ def _attempt_quality_preserving_pressure_recovery(model_name: str, size_gb: floa
 
             evicted = int(evict_stale_plugins(required_mb=required_mb))
         except Exception as _exc:
-            logger.debug("ML-Budget: pressure recovery eviction failed (non-fatal): %s", _exc)
+            logger.debug("ML-Grenze: pressure Wiederherstellung eviction fehlgeschlagen (non-fatal): %s", _exc)
             evicted = 0
 
         if _PRESSURE_RECOVERY_SLEEP_S > 0.0:
@@ -616,8 +643,8 @@ def _attempt_quality_preserving_pressure_recovery(model_name: str, size_gb: floa
             # §v10.306: Nur akzeptieren wenn tatsächlich RAM freigeworden ist
             if evicted > 0:
                 logger.warning(
-                    "ML-Budget: pressure recovery succeeded for '%s' after %d/%d attempt(s) "
-                    "(evicted=%d) — ML load retry statt DSP-fallback.",
+                    "ML-Grenze: pressure Wiederherstellung succeeded for '%s' after %d/%d Versuch(s) "
+                    "(evicted=%d) — ML laden Wiederholung statt DSP-Ersatzpfad.",
                     model_name,
                     attempt,
                     attempts,
@@ -626,12 +653,12 @@ def _attempt_quality_preserving_pressure_recovery(model_name: str, size_gb: floa
                 return True
             # Kein Plugin evicted → Druck nur transient gesunken → DSP-Fallback sicherer
             logger.warning(
-                "ML-Budget: pressure recovery transient for '%s' (evicted=0) — DSP-Fallback statt Risiko.",
+                "ML-Grenze: pressure Wiederherstellung transient for '%s' (evicted=0) — DSP-Ersatzpfad statt Risiko.",
                 model_name,
             )
 
         logger.warning(
-            "ML-Budget: pressure recovery %d/%d for '%s' insufficient (evicted=%d, thrashing=%s, heavy_block=%s)",
+            "ML-Grenze: pressure Wiederherstellung %d/%d for '%s' insufficient (evicted=%d, thrashing=%s, heavy_block=%s)",
             attempt,
             attempts,
             model_name,
@@ -671,7 +698,7 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
             pass
         else:
             logger.warning(
-                "ML-Budget: '%s' (%.1f GB) blockiert — System-Thrashing erkannt, DSP-Fallback aktiv.",
+                "ML-Grenze: '%s' (%.1f GB) blockiert — System-Thrashing erkannt, DSP-Ersatzpfad aktiv.",
                 model_name,
                 size_gb,
             )
@@ -682,7 +709,7 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
     if _should_block_heavy_ml_load(float(max(size_gb, 0.0))):
         if not _attempt_quality_preserving_pressure_recovery(model_name, size_gb):
             logger.warning(
-                "ML-Budget: '%s' (%.1f GB) präventiv blockiert — erhöhter Swap-Druck, DSP-Fallback aktiv.",
+                "ML-Grenze: '%s' (%.1f GB) präventiv blockiert — erhöhter Swap-Druck, DSP-Ersatzpfad aktiv.",
                 model_name,
                 size_gb,
             )
@@ -697,7 +724,7 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
         remaining = ML_MAX_GB - _total_gb
         if size_gb > remaining:
             logger.warning(
-                "ml_memory_budget: '%s' needs %.1f GB, only %.1f GB of %.1f GB free — DSP fallback active.",
+                "ml_memory_Grenze: '%s' needs %.1f GB, only %.1f GB of %.1f GB free — DSP Ersatzpfad active.",
                 model_name,
                 size_gb,
                 remaining,
@@ -707,7 +734,7 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
         _allocated[model_name] = size_gb
         _total_gb += size_gb
         logger.info(
-            "ml_memory_budget: '%s' allocated %.1f GB  →  total %.1f / %.1f GB used.",
+            "ml_memory_Grenze: '%s' allocated %.1f GB  →  total %.1f / %.1f GB used.",
             model_name,
             size_gb,
             _total_gb,
@@ -723,7 +750,7 @@ def try_allocate(model_name: str, size_gb: float) -> bool:
 
         invalidate_ml_readiness(model_name)
     except Exception as _e:
-        logger.debug("ml_memory_budget: non-critical exception: %s", _e)
+        logger.debug("ml_memory_Grenze: unkritisch exception: %s", _e)
     return True
 
 
@@ -738,12 +765,49 @@ def release(model_name: str) -> None:
         _total_gb = max(0.0, _total_gb - freed)
         if freed:
             logger.info(
-                "ml_memory_budget: '%s' released (%.1f GB)  →  total %.1f / %.1f GB used.",
+                "ml_memory_Grenze: '%s' released (%.1f GB)  →  total %.1f / %.1f GB used.",
                 model_name,
                 freed,
                 _total_gb,
                 ML_MAX_GB,
             )
+
+
+def _aggressive_memory_reclaim() -> None:
+    """§OOM-SwapGuard: Erzwingt sofortige Speicher-Freigabe an das Betriebssystem.
+
+    Aufgerufen wenn Swap-Nutzung kritisch ist (§v10.307 Pre-Pipeline-Drain,
+    §OOM-SwapGuard vor jeder Phase). Drei Stufen, jede best-effort:
+        1. Python GC über alle Generationen (löst zyklische Referenzen z. B.
+           in ML-Tensor-Graphen, die sonst erst spät kollektiert würden).
+        2. Torch-GPU-Cache leeren (CUDA/ROCm) — PyTorch hält freigegebene
+           GPU-Buffer standardmäßig in einem internen Cache-Allocator zurück.
+        3. glibc `malloc_trim(0)` (Linux) — gibt vom Python-Heap freigegebene,
+           aber vom Allocator zurückgehaltene Pages tatsächlich an das OS zurück;
+           ohne diesen Schritt bleibt RSS trotz gc.collect() oft hoch.
+    """
+    import gc
+
+    for _gen in range(3):
+        gc.collect(_gen)
+
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            torch.cuda.ipc_collect()
+    except Exception as _torch_exc:
+        logger.debug("ml_memory_Grenze: Torch-Zwischenspeicher-Reclaim nicht blockierend: %s", _torch_exc)
+
+    try:
+        import ctypes
+        import platform
+
+        if platform.system() == "Linux":
+            ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception as _trim_exc:
+        logger.debug("ml_memory_Grenze: malloc_trim nicht blockierend: %s", _trim_exc)
 
 
 def get_status() -> dict:
@@ -773,7 +837,7 @@ def set_budget(max_gb: float, guard_overrides: dict[str, float] | None = None) -
     global ML_MAX_GB  # pylint: disable=global-statement
     with _lock:
         ML_MAX_GB = float(max_gb)
-        logger.info("ml_memory_budget: max budget set to %.1f GB.", ML_MAX_GB)
+        logger.info("ml_memory_Grenze: max Grenze set to %.1f GB.", ML_MAX_GB)
 
     if guard_overrides:
         _valid_keys = {
@@ -791,7 +855,7 @@ def set_budget(max_gb: float, guard_overrides: dict[str, float] | None = None) -
                 applied.append(f"{target}={val}")
         if applied:
             logger.info(
-                "ml_memory_budget: guard thresholds overridden — %s",
+                "ml_memory_Grenze: guard thresholds overridden — %s",
                 ", ".join(applied),
             )
 
@@ -813,7 +877,7 @@ def _reconcile_on_startup() -> None:
     with _lock:
         _allocated.clear()
         _total_gb = 0.0
-    logger.info("ml_memory_budget: startup reconciliation — budget reset to 0.0 GB")
+    logger.info("ml_memory_Grenze: Start reconciliation — Grenze zurueckgesetzt to 0.0 GB")
 
 
 # Run reconciliation exactly once at module import (= new process start).

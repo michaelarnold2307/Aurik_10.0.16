@@ -65,7 +65,7 @@ deesser_contract = DSPContract(
         "compute_cost": 0.1,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "over-smoothing|formant_shift",
             "expected_when": "profile.max_depth_db < -4.0",
             "severity": 0.3,
@@ -106,7 +106,7 @@ def write_audit_log(data: dict[str, Any], log_path: str = "audit/music_vocal_pip
         with open(log_path, "w") as f:
             json.dump(logs, f, indent=2)
     except Exception as _exc:
-        logger.debug("Operation failed (non-critical): %s", _exc)  # Fail silently to not interrupt processing
+        logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)  # Fail silently to not interrupt processing
 
 
 # Optional: Gender Detection Modul (Fallback auf spektrale Analyse)
@@ -115,9 +115,9 @@ try:
 
     GENDER_DETECTION_AVAILABLE = True
 except ImportError:
-    GenderDetector = None
+    GenderDetector = None  # type: ignore[assignment, misc]
     GENDER_DETECTION_AVAILABLE = False
-    logger.info("[Info] gender_detection Modul nicht verfügbar - verwende spektrale Analyse als Fallback")
+    logger.info("[Info] gender_detection Modul nicht verfügbar - verwende spektrale Analyse als Ersatzpfad")
 
 
 @dataclass(frozen=True)
@@ -145,17 +145,17 @@ def analyze_track(audio: npt.NDArray[np.float32], sr: int = 48000, gender: str |
         nyq = sr / 2
 
         s_band = (
-            max(1.0, min(p["s_band"][0], nyq - 1)),
-            max(1.0, min(p["s_band"][1], nyq - 1)),
+            max(1.0, min(p["s_band"][0], nyq - 1)),  # type: ignore[index]
+            max(1.0, min(p["s_band"][1], nyq - 1)),  # type: ignore[index]
         )
         # s_band sortieren, falls Reihenfolge falsch
 
         s_band = tuple(sorted(s_band))
         return VocalProfile(
             s_band=s_band,
-            max_depth_db=p["max_depth_db"],
-            avg_burst_ms=p["avg_burst_ms"],
-            allow_ml=p["allow_ml"],
+            max_depth_db=p["max_depth_db"],  # type: ignore[arg-type]
+            avg_burst_ms=p["avg_burst_ms"],  # type: ignore[arg-type]
+            allow_ml=p["allow_ml"],  # type: ignore[arg-type]
         )
     # Fallback: bisherige spektrale Analyse
     n_fft = 4096
@@ -200,7 +200,7 @@ def pass1_fir_deess(
         max(1.0, min(profile.s_band[0], nyq - 1)),
         max(1.0, min(profile.s_band[1], nyq - 1)),
     )
-    s_band = tuple(sorted(s_band))
+    s_band = tuple(sorted(s_band))  # type: ignore[assignment]
     taps: npt.NDArray[np.float64] = firwin(257, [s_band[0] / nyq, s_band[1] / nyq], pass_zero=True)
     filtered_raw = lfilter(taps, 1.0, audio)
     if isinstance(filtered_raw, tuple):
@@ -243,7 +243,7 @@ class HFTextureModel:
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            return self.model(x)
+            return self.model(x)  # type: ignore[no-any-return]
 
 
 def pass3_hf_texture_ml(

@@ -71,7 +71,7 @@ def test_uv3_afg_soft_backoff_keeps_strongest_passing_wet():
     )
 
     assert wet == 0.35
-    assert result.artifact_freedom == 1.0
+    assert result.artifact_freedom == 1.0  # type: ignore[union-attr]
     assert gate.wets == [0.75, 0.55, 0.35]
     assert candidate is not None
     assert candidate.dtype == np.float32

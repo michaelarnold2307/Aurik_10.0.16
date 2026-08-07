@@ -11,8 +11,16 @@ Prüft vor jedem Commit:
 Usage: python3 scripts/pre_commit_sota_guard.py [file ...]
 Exit 0 wenn sauber, Exit 1 bei Verstößen.
 """
-import ast, os, re, sys, importlib
+
+import ast
+import importlib
+import logging
+import os
+import re
+import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 VIOLATIONS: list[str] = []
@@ -33,7 +41,7 @@ def _find_files(paths: list[str]) -> list[Path]:
 def check_torch_zeros_cuda(filepath: Path) -> None:
     """§SC-G79: torch.zeros(..., device=\"cuda\") nur in warmup_rocm erlaubt."""
     content = filepath.read_text()
-    if 'torch.zeros' not in content and 'torch.ones' not in content and 'torch.empty' not in content:
+    if "torch.zeros" not in content and "torch.ones" not in content and "torch.empty" not in content:
         return
     lines = content.split("\n")
     in_warmup = False
@@ -43,9 +51,13 @@ def check_torch_zeros_cuda(filepath: Path) -> None:
         if in_warmup and line.strip() and not line.startswith(" ") and not line.startswith("\t"):
             if "def warmup_rocm" not in line:
                 in_warmup = False
-        if ('torch.zeros' in line or 'torch.ones' in line or 'torch.empty' in line) and 'device="cuda"' in line.replace("'", '"'):
+        if ("torch.zeros" in line or "torch.ones" in line or "torch.empty" in line) and 'device="cuda"' in line.replace(
+            "'", '"'
+        ):
             if not in_warmup and "_ROCM_WARMUP" not in line:
-                VIOLATIONS.append(f"{filepath}:{i}: torch.zeros/ones/empty(\"cuda\") ausserhalb warmup_rocm() VERBOTEN (§SC-G79)")
+                VIOLATIONS.append(
+                    f'{filepath}:{i}: torch.zeros/ones/empty("cuda") ausserhalb warmup_rocm() VERBOTEN (§SC-G79)'
+                )
 
 
 def check_hardcoded_strings(filepath: Path) -> None:
@@ -66,7 +78,7 @@ def check_hardcoded_strings(filepath: Path) -> None:
             while j < len(lines) and (")" not in after.split("setText")[-1] if "setText" in after else True):
                 j += 1
                 if j < len(lines):
-                    after += " " + lines[j-1]
+                    after += " " + lines[j - 1]
             if "t(" not in after and 'setText(""' not in after:
                 VIOLATIONS.append(f"{filepath}:{i}: self.xxx.setText() ohne t() — MUSS t() verwenden (§SC-G84)")
 
@@ -85,14 +97,17 @@ def check_lock_during_import(filepath: Path) -> None:
         if lock_indent is not None and current_indent <= lock_indent and stripped:
             lock_indent = None
         # Detect start of with _lock block
-        if re.search(r'with\s+(self\.)?_lock\s*:', stripped):
+        if re.search(r"with\s+(self\.)?_lock\s*:", stripped):
             lock_indent = current_indent
             continue
         # Check for import inside active lock
         if lock_indent is not None and current_indent > lock_indent:
-            if re.search(r'^\s*(from\s+\S+\s+import|import\s+\S+)', line):
+            if re.search(r"^\s*(from\s+\S+\s+import|import\s+\S+)", line):
                 # Exempt standard library imports and common exceptions
-                if not re.search(r'(onnxruntime|torch|subprocess|sys|os|logging|threading|collections|json|pathlib|typing|dataclasses)', line):
+                if not re.search(
+                    r"(onnxruntime|torch|subprocess|sys|os|logging|threading|collections|json|pathlib|typing|dataclasses)",
+                    line,
+                ):
                     VIOLATIONS.append(f"{filepath}:{i}: import innerhalb with _lock: VERBOTEN (§SC-G72)")
 
 
@@ -112,7 +127,7 @@ def check_os_environ_import(filepath: Path) -> None:
         elif isinstance(node, ast.ImportFrom):
             if node.module == "os":
                 has_os_import = True
-    if not has_os_import and 'import os as' not in content:
+    if not has_os_import and "import os as" not in content:
         VIOLATIONS.append(f"{filepath}: os.environ/os.getenv verwendet aber 'import os' fehlt (§SC-G78)")
 
 
@@ -121,7 +136,7 @@ def check_warmup_accessors(filepath: Path) -> None:
     if "bridge.py" not in str(filepath):
         return
     content = filepath.read_text()
-    plugins_match = re.search(r'_plugins\s*=\s*\[(.*?)\]', content, re.DOTALL)
+    plugins_match = re.search(r"_plugins\s*=\s*\[(.*?)\]", content, re.DOTALL)
     if not plugins_match:
         return
     plugins_block = plugins_match.group(1)
@@ -135,7 +150,9 @@ def check_warmup_accessors(filepath: Path) -> None:
         # Statische Prüfung: Modul-Datei finden und Accessor-Name darin suchen
         mod_path = mod_name.replace(".", "/") + ".py"
         for base in [ROOT, ROOT / "backend", ROOT / "plugins"]:
-            candidate = base / mod_path.split("/")[-1] if "/" not in mod_path else base / "/".join(mod_path.split("/")[1:])
+            candidate = (
+                base / mod_path.split("/")[-1] if "/" not in mod_path else base / "/".join(mod_path.split("/")[1:])
+            )
             if not candidate.exists():
                 candidate = ROOT / mod_path
             if candidate.exists():
@@ -151,7 +168,7 @@ def check_warmup_accessors(filepath: Path) -> None:
             if f"def {accessor}" not in mod_content:
                 VIOLATIONS.append(f"{filepath}: Warmup-Accessor '{accessor}' nicht in {candidate.name} (§SC-G73)")
         except Exception:
-            pass
+            logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 
 def main():

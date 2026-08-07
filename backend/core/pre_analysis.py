@@ -160,7 +160,7 @@ def _resample_for_restorability(audio_native: np.ndarray, sr_native: int) -> tup
         ).astype(np.float32)
         return audio_48, 48_000
     except Exception as exc:
-        logger.warning("pre_analysis: resample for restorability failed (%s) — using native SR", exc)
+        logger.warning("pre_Analyse: resample for restorability fehlgeschlagen (%s) — using native SR", exc)
         return audio_native, sr_native
 
 
@@ -220,7 +220,7 @@ def run_pre_analysis(
         if _cached_result is not None:
             _cached_result.elapsed_seconds = time.monotonic() - t0
             _cb(100, "Voranalyse aus Cache geladen.")
-            logger.info("pre_analysis: cache-hit for %s (%.3fs)", file_path, _cached_result.elapsed_seconds)
+            logger.info("pre_Analyse: Zwischenspeicher-hit for %s (%.3fs)", file_path, _cached_result.elapsed_seconds)
             return _cached_result
 
     file_ext = os.path.splitext(file_path)[1].lower() if file_path else ""
@@ -240,7 +240,7 @@ def run_pre_analysis(
     _medium_result = _cached_parts.get("medium")
     if _medium_result is not None:
         result.medium = _medium_result
-        logger.debug("pre_analysis: medium aus Cache geladen")
+        logger.debug("pre_Analyse: medium aus Zwischenspeicher geladen")
 
     _medium_primary_error: str | None = None
     if _medium_result is None:
@@ -252,14 +252,14 @@ def run_pre_analysis(
             _medium_result_any = cast(Any, _medium_result)
 
             logger.info(
-                "pre_analysis: medium=%s conf=%.2f chain=%s",
+                "pre_Analyse: medium=%s conf=%.2f chain=%s",
                 _medium_result_any.primary_material,
                 _medium_result_any.confidence,
                 _medium_result_any.chain_label,
             )
         except Exception as exc:
             _medium_primary_error = str(exc)
-            logger.warning("pre_analysis: primary medium detection failed (%s)", exc)
+            logger.warning("pre_Analyse: primary medium detection fehlgeschlagen (%s)", exc)
 
     # Strict detector-only policy:
     # - Primary detector exactly once
@@ -270,7 +270,7 @@ def run_pre_analysis(
         else:
             result.errors["medium"] = "medium_detection_failed; no_legacy_fallback=true"
         logger.warning(
-            "pre_analysis: medium detection unavailable; continuing without medium result (legacy fallback disabled)"
+            "pre_Analyse: medium detection nicht verfuegbar; continuing without medium Ergebnis (legacy Ersatzpfad deaktiviert)"
         )
 
     _cb(20, "Tonträger erkannt — analysiere Ära, Genre und Defekte…")
@@ -324,25 +324,25 @@ def run_pre_analysis(
     _step_fns: dict[str, Callable[[], object]] = {}
     if _cached_parts.get("era") is not None:
         result.era = _cached_parts["era"]
-        logger.debug("pre_analysis: step=era aus Cache geladen")
+        logger.debug("pre_Analyse: step=era aus Zwischenspeicher geladen")
     else:
         _step_fns["era"] = _run_era
 
     if _cached_parts.get("genre") is not None:
         result.genre = _cached_parts["genre"]
-        logger.debug("pre_analysis: step=genre aus Cache geladen")
+        logger.debug("pre_Analyse: step=genre aus Zwischenspeicher geladen")
     else:
         _step_fns["genre"] = _run_genre
 
     if _cached_parts.get("defects") is not None:
         result.defects = _cached_parts["defects"]
-        logger.debug("pre_analysis: step=defects aus Cache geladen")
+        logger.debug("pre_Analyse: step=defects aus Zwischenspeicher geladen")
     else:
         _step_fns["defects"] = _run_defects
 
     if _cached_parts.get("restorability") is not None:
         result.restorability = _cached_parts["restorability"]
-        logger.debug("pre_analysis: step=restorability aus Cache geladen")
+        logger.debug("pre_Analyse: step=restorability aus Zwischenspeicher geladen")
     else:
         _step_fns["restorability"] = _run_restorability
 
@@ -366,10 +366,10 @@ def run_pre_analysis(
                         continue
                     try:
                         setattr(result, _name, _clap_steps[_name]())
-                        logger.info("pre_analysis: step=%s done (async)", _name)
+                        logger.info("pre_Analyse: step=%s done (async)", _name)
                     except Exception as _exc:
                         result.errors[_name] = str(_exc)
-                        logger.warning("pre_analysis: step=%s failed (%s)", _name, _exc)
+                        logger.warning("pre_Analyse: step=%s fehlgeschlagen (%s)", _name, _exc)
                     # Update progress via callback
                     nonlocal _done_steps
                     _done_steps += 1
@@ -401,21 +401,21 @@ def run_pre_analysis(
                         setattr(result, name, fut.result(timeout=0.0))
                     except Exception as exc:
                         result.errors[name] = str(exc)
-                        logger.warning("pre_analysis: step=%s failed (%s)", name, exc)
+                        logger.warning("pre_Analyse: step=%s fehlgeschlagen (%s)", name, exc)
                     _done_steps += 1
                     _step_pct = 75 + int((_done_steps / max(_total_steps, 1)) * 15)
                     _cb(_step_pct, f"Analyse: {name} abgeschlossen ({_done_steps}/{_total_steps})…")
-                    logger.info("pre_analysis: step=%s done (%d/%d)", name, _done_steps, _total_steps)
+                    logger.info("pre_Analyse: step=%s done (%d/%d)", name, _done_steps, _total_steps)
             except (_cf.TimeoutError, TimeoutError):
                 for fut, name in _other_futs.items():
                     if not fut.done():
                         result.errors[name] = f"timeout_after={_SUBSTEP_TIMEOUT_S:.1f}s"
                         fut.cancel()
-                        logger.warning("pre_analysis: step=%s timed out", name)
+                        logger.warning("pre_Analyse: step=%s timed out", name)
             finally:
                 _pool.shutdown(wait=False, cancel_futures=True)
     else:
-        logger.debug("pre_analysis: steps 2-5 vollständig aus Cache geladen")
+        logger.debug("pre_Analyse: steps 2-5 vollständig aus Zwischenspeicher geladen")
 
     _cb(90, "Analyse abgeschlossen — Ergebnisse werden gespeichert…")
 
@@ -466,7 +466,7 @@ def run_pre_analysis(
                     _genre_label,
                     _lang_code or "?",
                 )
-                _md_val.transfer_chain = _refined_chain
+                _md_val.transfer_chain = _refined_chain  # type: ignore[attr-defined]
         except Exception as _bv_exc:
             logger.debug("Bidirektionale Validierung uebersprungen: %s", _bv_exc)
 
@@ -505,14 +505,16 @@ def run_pre_analysis(
                         else:
                             _cv_agreements.append(f"Genre({_genre_label})")
                     except Exception as _cv_exc:
-                        logger.debug("pre_analysis: genre-chain cross-validation failed (non-critical): %s", _cv_exc)
+                        logger.debug(
+                            "pre_Analyse: genre-chain cross-Validierung fehlgeschlagen (unkritisch): %s", _cv_exc
+                        )
 
             # Factor 3: Defect scanner material vs chain
             if result.defects is not None:
                 _def_mat_raw = getattr(result.defects, "material_type", None)
                 # §v10.304.16: Enum.value statt str(Enum) → "mp3_high" statt "MaterialType.MP3_HIGH"
                 if hasattr(_def_mat_raw, "value"):
-                    _def_mat = str(_def_mat_raw.value)
+                    _def_mat = str(_def_mat_raw.value)  # type: ignore[union-attr]
                 else:
                     _def_mat = str(_def_mat_raw or getattr(result.defects, "auto_detected_material", "") or "")
                 if _def_mat and _def_mat != "unknown":
@@ -527,7 +529,7 @@ def run_pre_analysis(
             # Die Post-Injection-Cross-Validation (unten) prüft die finale Kette.
             if _cv_conflicts:
                 logger.info(
-                    "Cross-Validation (pre-injection): %d Konflikt(e) — %s. Übereinstimmungen: %s. Confidence=%.2f",
+                    "Cross-Validierung (pre-injection): %d Konflikt(e) — %s. Übereinstimmungen: %s. Confidence=%.2f",
                     len(_cv_conflicts),
                     ", ".join(_cv_conflicts),
                     ", ".join(_cv_agreements) if _cv_agreements else "keine",
@@ -537,14 +539,14 @@ def run_pre_analysis(
                 # Boost confidence when multiple independent factors agree
                 _boost = min(0.15, len(_cv_agreements) * 0.05)
                 logger.info(
-                    "Cross-Validation: %d Faktoren stimmen überein (%s). Confidence %.2f → %.2f",
+                    "Cross-Validierung: %d Faktoren stimmen überein (%s). Confidence %.2f → %.2f",
                     len(_cv_agreements),
                     ", ".join(_cv_agreements),
                     _cv_confidence,
                     min(1.0, _cv_confidence + _boost),
                 )
         except Exception as _cv_exc:
-            logger.debug("Cross-Validation uebersprungen: %s", _cv_exc)
+            logger.debug("Cross-Validierung uebersprungen: %s", _cv_exc)
 
     _cb(96, "Kette wird rekonstruiert…")
 
@@ -598,7 +600,7 @@ def run_pre_analysis(
                     _adm_mapped = _defmap.get(_adm)
                     if _adm_mapped and _adm_mapped != _defect_material:
                         logger.info(
-                            "pre_analysis: DefectScanner auto-detected %s (overrides hint %s)",
+                            "pre_Analyse: DefectScanner auto-erkannt %s (overrides hint %s)",
                             _adm_mapped,
                             _defect_material or "none",
                         )
@@ -693,7 +695,7 @@ def run_pre_analysis(
             for _src in _defect_inferred_carriers:
                 if _src and _src not in _analog and _src not in _digital_defect_carriers:
                     _digital_defect_carriers.append(_src)
-            for _src in [_defect_material]:
+            for _src in [_defect_material]:  # type: ignore[assignment]
                 if _src and _src in _analog and _src not in _chain and _src not in _chain_injected:
                     _chain_injected.append(_src)
             for _ps_mat, _ps_conf in _physical:
@@ -737,12 +739,12 @@ def run_pre_analysis(
                 if _has_reel and _has_cassette and not _has_vinyl and _vinyl_era:
                     _vi = _chain.index("cassette")
                     _chain.insert(_vi, "vinyl")
-                    logger.info("pre_analysis: Vinyl-Inference — reel_tape+cassette+vinyl-era → vinyl eingefügt")
+                    logger.info("pre_Analyse: Vinyl-Inference — reel_tape+cassette+vinyl-era → vinyl eingefügt")
 
-                _md.is_multi_generation = len(_chain) > 1
+                _md.is_multi_generation = len(_chain) > 1  # type: ignore[attr-defined]
                 _analog_in = [m for m in _chain if m in _analog]
                 if _analog_in:
-                    _md.primary_material = _analog_in[-1]
+                    _md.primary_material = _analog_in[-1]  # type: ignore[attr-defined]
                 # Chronological sort after all injections (§v10.306: robust, kein Singleton-Try)
                 # 1930+++++1950+++++1960+++++1980+++++1990+++++++++2000++
                 # MUST run BEFORE _md.transfer_chain assignment — §v10.307 Bugfix:
@@ -768,7 +770,7 @@ def run_pre_analysis(
                     }
                     _sorted = sorted(_chain, key=lambda m: _TIMELINE.get(m, 99))
                     if _sorted != _chain:
-                        logger.info("pre_analysis: chain sorted: %s → %s", " → ".join(_chain), " → ".join(_sorted))
+                        logger.info("pre_Analyse: chain sorted: %s → %s", " → ".join(_chain), " → ".join(_sorted))
                         _chain = _sorted
 
                 # §v10.307: Digitale Defekt-Träger am Kettenende einsetzen.
@@ -777,9 +779,9 @@ def run_pre_analysis(
                 if _digital_defect_carriers and _chain and _chain[-1] == "unknown":
                     _digital = _digital_defect_carriers[0]
                     _chain[-1] = _digital
-                    logger.info("pre_analysis: 'unknown' → '%s' (aus DefectScanner)", _digital)
+                    logger.info("pre_Analyse: 'unknown' → '%s' (aus DefectScanner)", _digital)
 
-                _md.transfer_chain = _chain  # §v10.307: NACH dem Sort setzen
+                _md.transfer_chain = _chain  # type: ignore  # §v10.307: NACH dem Sort setzen
 
                 # §v10.712: Chain-Depth-Confidence-Guard.
                 # Wenn der MediumDetector nur geringe Konfidenz hat (z.B. 0.41),
@@ -793,8 +795,7 @@ def run_pre_analysis(
                 if len(_chain) > _max_chain_depth:
                     _trimmed = _chain[:_max_chain_depth]
                     logger.info(
-                        "§v10.712 Chain-Depth-Cap: confidence=%.2f → "
-                        "chain von %d auf %d Träger gekürzt (%s → %s)",
+                        "§v10.712 Chain-Depth-Cap: confidence=%.2f → chain von %d auf %d Träger gekürzt (%s → %s)",
                         _md_confidence,
                         len(_chain),
                         len(_trimmed),
@@ -802,17 +803,17 @@ def run_pre_analysis(
                         " → ".join(_trimmed),
                     )
                     _chain = _trimmed
-                    _md.transfer_chain = _chain
+                    _md.transfer_chain = _chain  # type: ignore[attr-defined]
 
                 logger.info(
-                    "pre_analysis: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
+                    "pre_Analyse: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
                     " → ".join(_chain),
                     ",".join(_injected) if _injected else "none",
                     _era_material or "none",
                     _defect_material or "none",
                 )
         except Exception as _inj_exc:
-            logger.debug("Deep-Transfer-Chain-Injection skipped: %s", _inj_exc)
+            logger.debug("Deep-Transfer-Chain-Injection uebersprungen: %s", _inj_exc)
 
     # ── §v10.304.13: Era-Re-Klassifikation mit angereicherter Chain ────────
     # Wenn die Deep-Transfer-Chain-Injection die Kette erweitert hat (depth≥3),
@@ -895,13 +896,13 @@ def run_pre_analysis(
             _genre_label = str(getattr(result.genre, "genre_label", "") or "")
             if _era_material and _era_material != "unknown" and _era_material not in _final_chain:
                 logger.info(
-                    "pre_analysis: Post-Injection-Era-Check — era=%s now in chain=%s ✓",
+                    "pre_Analyse: Post-Injection-Era-Pruefung — era=%s now in chain=%s ✓",
                     _era_material,
                     " → ".join(_final_chain),
                 )
         except Exception:
-            logger.debug("pre_analysis.py:879: Silent exception absorbed", exc_info=True)
-    logger.info("pre_analysis: complete in %.1fs (errors=%s)", result.elapsed_seconds, list(result.errors))
+            logger.debug("pre_Analyse.py:879: Silent exception absorbed", exc_info=True)
+    logger.info("pre_Analyse: vollstaendig in %.1fs (errors=%s)", result.elapsed_seconds, list(result.errors))
 
     # Free DefectScanner STFT/spectral intermediate arrays (30 defect types × full audio).
     # Vollstaendiges GC ist hier sicher; malloc_trim(0) bleibt bewusst deaktiviert,
@@ -949,9 +950,9 @@ def _store_in_cache(file_path: str, result: PreAnalysisResult) -> None:
         if result.restorability is not None:
             cache_restorability_result(file_path, result.restorability)
 
-        logger.debug("pre_analysis: bridge cache updated for %s", file_path)
+        logger.debug("pre_Analyse: bridge Zwischenspeicher updated for %s", file_path)
     except Exception as exc:
-        logger.warning("pre_analysis: bridge cache store failed (%s)", exc)
+        logger.warning("pre_Analyse: bridge Zwischenspeicher store fehlgeschlagen (%s)", exc)
 
 
 def _load_cached_parts(file_path: str) -> dict[str, object | None]:
@@ -985,7 +986,7 @@ def _load_cached_parts(file_path: str) -> dict[str, object | None]:
             "restorability": get_cached_restorability_result(file_path),
         }
     except Exception as exc:
-        logger.debug("pre_analysis: cache part load non-blocking (%s)", exc)
+        logger.debug("pre_Analyse: Zwischenspeicher part laden nicht blockierend (%s)", exc)
         return {}
 
 
@@ -998,7 +999,7 @@ def _load_from_cache(file_path: str, sr_native: int) -> PreAnalysisResult | None
         _parts = _load_cached_parts(file_path)
         return _build_result_from_cached_parts(_parts, sr_native=sr_native, file_path=file_path)
     except Exception as exc:
-        logger.debug("pre_analysis: cache load non-blocking (%s)", exc)
+        logger.debug("pre_Analyse: Zwischenspeicher laden nicht blockierend (%s)", exc)
         return None
 
 

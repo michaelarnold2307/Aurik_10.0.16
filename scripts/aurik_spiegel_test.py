@@ -118,7 +118,7 @@ def main():
     try:
         from backend.core.defect_scanner import DefectScanner, MaterialType
 
-        scanner = DefectScanner(MaterialType.VINYL)
+        scanner = DefectScanner(MaterialType.VINYL)  # type: ignore[arg-type]
         start = time.time()
         scan_result = scanner.scan(mono_damaged, SR)
         elapsed = time.time() - start

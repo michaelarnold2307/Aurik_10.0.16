@@ -24,7 +24,7 @@ def validate_before_export(audio: np.ndarray, sr: int, is_studio_2026: bool = Fa
         # 1. ExportQualityGate
         check = ExportQualityGate.check(audio, sr, is_studio_2026=is_studio_2026)
         if check.errors:
-            logger.error("PreExportValidator: %d kritische Fehler — Export BLOCKIERT", len(check.errors))
+            logger.error("PreExportValidator: %d kritische Fehler — Ausgabe BLOCKIERT", len(check.errors))
             return False, check.errors
         if check.warnings:
             warnings.extend(check.warnings)
@@ -32,7 +32,7 @@ def validate_before_export(audio: np.ndarray, sr: int, is_studio_2026: bool = Fa
         # 2. FallbackAuditor — zu viele Degradationen?
         fa = get_fallback_auditor()
         if fa.should_block_pipeline if hasattr(fa, "should_block_pipeline") else False:
-            logger.error("PreExportValidator: Fallback-Kaskadenlimit überschritten — Export BLOCKIERT")
+            logger.error("PreExportValidator: Ersatzpfad-Kaskadenlimit überschritten — Ausgabe BLOCKIERT")
             return False, warnings + ["fallback_cascade_exceeded"]
 
         # 3. Audio-Sanity
@@ -46,5 +46,5 @@ def validate_before_export(audio: np.ndarray, sr: int, is_studio_2026: bool = Fa
         return True, warnings
 
     except Exception as e:
-        logger.warning("PreExportValidator fehlgeschlagen: %s — Export NICHT blockiert", e)
+        logger.warning("PreExportValidator fehlgeschlagen: %s — Ausgabe NICHT blockiert", e)
         return True, warnings  # Nicht blockieren wenn Validator selbst fehlschlägt

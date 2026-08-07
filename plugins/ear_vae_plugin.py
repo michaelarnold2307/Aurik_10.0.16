@@ -72,7 +72,7 @@ def _load_session(path: Path, name: str):
             import onnxruntime as ort
 
             session = ort.InferenceSession(str(path), providers=["CPUExecutionProvider"])
-            logger.info("EAR_VAE %s ONNX loaded (%s)", name, path)
+            logger.info("EAR_VAE %s ONNX geladen (%s)", name, path)
 
             if name == "encoder":
                 _encoder_session = session
@@ -80,7 +80,7 @@ def _load_session(path: Path, name: str):
                 _decoder_session = session
             return session
         except Exception as exc:
-            logger.warning("EAR_VAE %s ONNX load failed: %s", name, exc)
+            logger.warning("EAR_VAE %s ONNX laden fehlgeschlagen: %s", name, exc)
             _sessions_failed = True
             return None
 
@@ -130,9 +130,9 @@ class EarVAEPlugin:
             # ONNX expects (batch=1, 2, N)
             inp = audio[np.newaxis, :, :].astype(np.float32)
             latent = self._enc.run(None, {"audio": inp})[0]
-            return latent[0].astype(np.float32)  # (128 or 64, T')
+            return latent[0].astype(np.float32)  # type: ignore  # (128 or 64, T')
         except Exception as exc:
-            logger.debug("EAR_VAE encode failed: %s", exc)
+            logger.debug("EAR_VAE encode fehlgeschlagen: %s", exc)
             return None
 
     def decode(self, latent: np.ndarray) -> np.ndarray | None:
@@ -154,9 +154,9 @@ class EarVAEPlugin:
                 latent = latent[0]  # strip extra dim
             audio = self._dec.run(None, {"latent": latent})[0]
             result = audio[0].astype(np.float32)  # (2, N)
-            return np.clip(result, -1.0, 1.0)
+            return np.clip(result, -1.0, 1.0)  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("EAR_VAE decode failed: %s", exc)
+            logger.debug("EAR_VAE decode fehlgeschlagen: %s", exc)
             return None
 
     def process(self, audio: np.ndarray, sample_rate: int = 48000) -> np.ndarray | None:

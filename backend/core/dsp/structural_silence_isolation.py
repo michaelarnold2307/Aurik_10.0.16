@@ -82,7 +82,7 @@ def _get_structural_silence_zones(
     # Versuch 3: eigenständige Berechnung (Fallback)
     logger.debug(
         "SSIP: structural_silence_zones nicht in context — "
-        "eigenständige Berechnung aus original_audio (Fallback, non-blocking)"
+        "eigenständige Berechnung aus Originalsignal_audio (Ersatzpfad, nicht blockierend)"
     )
     isolator = get_structural_silence_isolator()
     return isolator.detect_structural_silence_zones(audio_original, sr, material_key)
@@ -284,7 +284,7 @@ class StructuralSilenceIsolator:
                         zones.append((silence_start, silence_end))
 
             logger.debug(
-                "SSIP.detect_structural_silence_zones: %d Zone(n) (material=%s, threshold=%.1f dBFS)",
+                "SSIP.erkennen_structural_silence_zones: %d Zone(n) (material=%s, Schwelle=%.1f dBFS)",
                 len(zones),
                 material_key,
                 threshold_dbfs,
@@ -292,7 +292,7 @@ class StructuralSilenceIsolator:
             return zones
 
         except Exception as exc:
-            logger.warning("SSIP.detect_structural_silence_zones fehlgeschlagen (non-blocking): %s", exc)
+            logger.warning("SSIP.erkennen_structural_silence_zones fehlgeschlagen (nicht blockierend): %s", exc)
             return []
 
     def split_at_silence_boundaries(
@@ -536,7 +536,7 @@ class StructuralSilenceIsolator:
 
             if n_resets > 0:
                 logger.info(
-                    "SSIP.post_inpainting_silence_audit: %d Zone(n) auf Original-Samples zurückgesetzt",
+                    "SSIP.post_inpainting_silence_audit: %d Zone(n) auf Originalsignal-Samples zurückgesetzt",
                     n_resets,
                 )
 

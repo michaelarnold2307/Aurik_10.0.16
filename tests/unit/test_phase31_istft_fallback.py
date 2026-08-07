@@ -1,11 +1,11 @@
-from __future__ import annotations
-
-import pytest
-
 """Regression-Tests fuer phase_31 iSTFT-Notfallpfad."""
 
+from __future__ import annotations
+
+from typing import Any
 
 import numpy as np
+import pytest
 
 from backend.core.phases.phase_31_speed_pitch_correction import SpeedPitchCorrectionPhase
 
@@ -14,7 +14,7 @@ SR = 48_000
 
 def _sine(freq: float = 440.0, dur: float = 1.2, sr: int = SR) -> np.ndarray:
     t = np.linspace(0.0, dur, int(dur * sr), endpoint=False, dtype=np.float64)
-    return (0.45 * np.sin(2.0 * np.pi * freq * t)).astype(np.float64)
+    return (0.45 * np.sin(2.0 * np.pi * freq * t)).astype(np.float64)  # type: ignore[no-any-return]
 
 
 @pytest.mark.unit
@@ -105,7 +105,7 @@ def test_phase31_phase_vocoder_uses_75pct_overlap(monkeypatch):
     phase = SpeedPitchCorrectionPhase()
     audio = np.column_stack([_sine(dur=0.6), _sine(freq=330.0, dur=0.6)]).astype(np.float64)
 
-    captured = {"noverlap": []}
+    captured: Any = {"noverlap": []}
 
     def _capture(_audio, _ratio, _nperseg, _noverlap):
         captured["noverlap"].append(_noverlap)

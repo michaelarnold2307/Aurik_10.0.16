@@ -171,7 +171,7 @@ def _build_sos(curve_key: str, sr: int, invert: bool) -> np.ndarray:
     k_d /= abs(H_at_1k)
 
     sos = zpk2sos(z_d, p_d, k_d)
-    return sos.astype(np.float64)
+    return sos.astype(np.float64)  # type: ignore[no-any-return]
 
 
 def _auto_detect_curve(audio: np.ndarray, sr: int) -> str:
@@ -230,21 +230,21 @@ def _auto_detect_curve(audio: np.ndarray, sr: int) -> str:
     # Decision heuristics
     # Columbia/AES shellac pressings: heavy bass tilt (> 8 dB) AND narrow BW (< 9 kHz)
     if tilt_db > 8.0 and hf_cutoff_hz < 9000.0:
-        logger.info("RIAA auto-detect: columbia_1938 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
+        logger.info("RIAA auto-erkennen: columbia_1938 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
         return "columbia_1938"
 
     # FFRR shellac (slightly less tilt, narrower HF)
     if tilt_db > 5.0 and hf_cutoff_hz < 7000.0:
-        logger.info("RIAA auto-detect: ffrr_1953 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
+        logger.info("RIAA auto-erkennen: ffrr_1953 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
         return "ffrr_1953"
 
     # AES 1951 early LP: moderate tilt, moderate BW
     if tilt_db > 3.0 and hf_cutoff_hz < 14000.0:
-        logger.info("RIAA auto-detect: aes_1951 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
+        logger.info("RIAA auto-erkennen: aes_1951 (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
         return "aes_1951"
 
     # Default: standard RIAA (most vinyl)
-    logger.info("RIAA auto-detect: riaa (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
+    logger.info("RIAA auto-erkennen: riaa (tilt=%.1f dB, bw=%.0f Hz)", tilt_db, hf_cutoff_hz)
     return "riaa"
 
 
@@ -331,7 +331,7 @@ class RIAAEqualizer:
         out = np.clip(out, -1.0, 1.0)
 
         logger.info(
-            "RIAAEqualizer: mode=%s curve=%s auto_detected=%s sr=%d",
+            "RIAAEqualizer: Betriebsart=%s curve=%s auto_erkannt=%s sr=%d",
             self.mode,
             curve_key,
             auto_detected,

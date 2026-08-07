@@ -626,6 +626,11 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
         # Die geclippten Samples erzeugen künstlich glatte Spektraltäler →
         # nach PCHIP-Rekonstruktion erscheinen echte Täler → false P1.
         "authentizitaet",
+        # §2.55 CIG-Sync: additive Harmonik-Synthese oberhalb der Carrier-Ceiling
+        # ändert das MFCC-Smoothness-Profil vs. bandbreitenbegrenzter Referenz
+        # (§2.44 Reference-Paradox, identisch zu CIG-Rationale) — CIG bereits
+        # excludiert, PMGG nachgezogen.
+        "natuerlichkeit",
     },  # Harmonic restoration + Declipper: H2-H4 waveshaping adds new harmonic partials → onset-sharpness proxy saturates at 1.0 pre-phase (mean_peaks/0.01 clips) then drops after harmonic addition (new spectral energy reshapes attack envelope) → false P2 artikulation catastrophic regression (0.2532 observed, 2026-04-02). timbre_authentizitaet: harmonic synthesis + declipping intentionally changes MFCC-Pearson + spectral-centroid-CV. authentizitaet: Wellenform-Rekonstruktion ändert Roughness-Profil (§v10.18).
     # Click removal: replaces impulse artifacts with interpolated audio.
     # artikulation excluded: clicks are high-amplitude transients in the damaged
@@ -758,7 +763,12 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
     # timbre_authentizitaet: guitar-specific spectral shaping intentionally changes
     # the MFCC-Pearson + centroid-CV profile → false P2 vs. pre-enhancement.
     "phase_44": {
-        "timbre_authentizitaet"
+        "timbre_authentizitaet",
+        # §2.55 CIG-Sync: guitar-spezifisches Spectral-Shaping ändert die
+        # spektrale Hülle → MFCC-Smoothness-Proxy betroffen (identischer
+        # Mechanismus wie timbre_authentizitaet) — CIG bereits excludiert,
+        # PMGG nachgezogen.
+        "natuerlichkeit",
     },  # Guitar enhancement: spectral shaping changes MFCC-Pearson + centroid-CV → false P2 timbre regression
     # Brass enhancement: HP-filtered formant enhancement + spectral shaping.
     # timbre_authentizitaet: brass formant enhancement changes spectral envelope
@@ -849,7 +859,12 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
     # timbre_authentizitaet excluded: multi-band frequency-dependent loudness shaping
     # shifts spectral envelope → MFCC c1-c3 + centroid-CV register false P2.
     "phase_40": {
-        "timbre_authentizitaet"
+        "timbre_authentizitaet",
+        # §2.55 CIG-Sync: multi-band frequency-dependent loudness shaping verändert
+        # die spektrale Hülle → stört auch den MFCC-Smoothness-Proxy (identischer
+        # Mechanismus wie bei timbre_authentizitaet) — CIG bereits excludiert,
+        # PMGG nachgezogen.
+        "natuerlichkeit",
     },  # Loudness normalization: pure LUFS gain is scale-invariant; multi-band frequency shaping changes spectral envelope → timbre_authentizitaet false P2 regression
     # + transient enhancement. Three false-regression root causes on degraded material:
     # micro_dynamics excluded: transient enhancement intentionally reshapes the LUFS
@@ -908,6 +923,14 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
         "micro_dynamics",
         "groove",
         "emotionalitaet",
+        # §2.55 CIG-Sync: Multiband-Kompression glättet spektrale Varianz →
+        # MFCC-Smoothness-Proxy (natuerlichkeit) betroffen; Gain-Änderungen pro
+        # Band verschieben Chroma-Bin-Gewichtung (tonal_center); spektrales
+        # Rebalancing ändert MFCC-Pearson (timbre_authentizitaet) — CIG bereits
+        # excludiert, PMGG nachgezogen.
+        "natuerlichkeit",
+        "tonal_center",
+        "timbre_authentizitaet",
     },  # Multiband parallel compression: envelope modification → groove autocorr[lag_05] disrupted + crest-factor uniformly reduced → false P3 regressions (identical mechanism to phase_17)
     # 4-band limiting: brick-wall limiter is an extreme compressor with ∞:1 ratio.
     # Peaks clipped → crest-factor drops → false P3 emotionalitaet regression.
@@ -917,6 +940,14 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
         "micro_dynamics",
         "groove",
         "emotionalitaet",
+        # §2.55 CIG-Sync: Brickwall-Limiting fügt Harmonik am Threshold hinzu
+        # (spektraler Fingerabdruck ändert sich → natuerlichkeit), Peak-Clipping
+        # verschiebt Chroma-Peak-Verteilung (tonal_center), Transienten werden
+        # absichtlich umgeformt (artikulation) — CIG bereits excludiert, PMGG nachgezogen.
+        "natuerlichkeit",
+        "tonal_center",
+        "artikulation",
+        "timbre_authentizitaet",
     },  # Multi-band limiting: extreme compression (∞:1) → crest-factor drops + RMS-envelope periodicity changes → false P3 regressions (identical mechanism to phase_17 + phase_10)
     # TruePeak limiter: clamps sample peaks above a threshold via 4× oversampling.
     # Aggressive application (near 0 dBFS ceiling) extensively clips transient peaks
@@ -1163,6 +1194,7 @@ PHASE_GOAL_EXCLUSIONS: dict[str, set[str]] = {
     "phase_25": {
         "timbre_authentizitaet",
         "authentizitaet",  # azimuth correction changes stereo HF balance vs. mis-aligned reference → chromagram fingerprint shifts (§2.44 carrier-chain inversion) — CIG sync §2.54
+        "tonal_center",  # §2.55 CIG-Sync: azimuth re-centering shifts K-S chroma template correlation vs. mis-aligned reference (identisch zu phase_12/31) — CIG bereits excludiert, PMGG nachgezogen
     },  # Azimuth correction: fractional-delay + HF spectral restoration changes MFCC higher-order coefficients + centroid-CV vs. azimuth-degraded reference → false P2 timbre regression (identical mechanism to phase_39 air band)
     # Mono-to-stereo (Lauridsen pseudo-stereo + HF harmonics + Schroeder decorrelation):
     # Schroeder reverb structures and comb-filter frequency-dependent phase shifts used
@@ -1289,7 +1321,7 @@ def _get_all_verifier_phases() -> frozenset[str]:
 
         return frozenset(_PHASE_CATEGORIES.keys())
     except Exception as e:
-        logger.warning("per_phase_musical_goals_gate.py::_get_all_verifier_phases fallback: %s", e)
+        logger.warning("per_Verarbeitungsschritt_musical_goals_gate.py::_get_all_verifier_phases Ersatzpfad: %s", e)
         return _CASSETTE_VERIFIER_PHASES
 
 
@@ -1672,7 +1704,7 @@ def _resolve_team_context_policy(phase_id: str, phase_kwargs: dict[str, Any] | N
             if not _policy["reason"]:
                 _policy["reason"] = str(_tp.get("reason", ""))
     except Exception as e:
-        logger.warning("per_phase_musical_goals_gate.py::unbekannter Fallback: %s", e)
+        logger.warning("per_Verarbeitungsschritt_musical_goals_gate.py::unbekannter Ersatzpfad: %s", e)
 
     # Team rule: if prior phases already restored HF content, phase_50 should
     # avoid treating those bins as "damage" via indirect metric pressure.
@@ -1726,7 +1758,9 @@ def _phase20_is_ml_active() -> bool:
 
         return "SGMSE+" in get_status().get("models", {})
     except Exception as e:
-        logger.warning("per_phase_musical_goals_gate.py::_phase20_is_ml_active fallback: %s", e)
+        logger.warning(
+            "per_Verarbeitungsschritt_musical_goals_gate.py::_Verarbeitungsschritt20_is_ml_active Ersatzpfad: %s", e
+        )
         return False  # Safe default: DSP path — must re-run
 
 
@@ -1863,7 +1897,7 @@ def _safe_pearson(a: np.ndarray, b: np.ndarray) -> float:
         r = float(np.dot(_a, _b) / (_na * _nb + 1e-10))
         return r if math.isfinite(r) else 0.0
     except Exception as e:
-        logger.warning("per_phase_musical_goals_gate.py::_safe_pearson fallback: %s", e)
+        logger.warning("per_Verarbeitungsschritt_musical_goals_gate.py::_safe_pearson Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -1934,7 +1968,7 @@ def _get_precise_metric_instances() -> dict[str, Any]:
                         "separation_fidelity": SeparationFidelityMetric(),
                     }
                 except Exception as exc:
-                    logger.debug("PMGG precise metrics unavailable: %s", exc)
+                    logger.debug("PMGG precise metrics nicht verfuegbar: %s", exc)
                     _PRECISE_METRICS = {}
     return _PRECISE_METRICS
 
@@ -2019,7 +2053,7 @@ def _apply_precise_metric_overrides(
             else:
                 refined[goal_name] = float(metric.measure(audio, sr))
         except Exception as exc:
-            logger.debug("PMGG precise metric override failed for %s: %s", goal_name, exc)
+            logger.debug("PMGG precise metric override fehlgeschlagen for %s: %s", goal_name, exc)
 
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
     if elapsed_ms > _PRECISE_OVERRIDE_WARN_MS:
@@ -3283,7 +3317,7 @@ def _content_integrity_penalty(
         _penalty = float(max(_drop_pen, _corr_pen))
         return _penalty, {"rms_drop_db": _rms_drop_db, "corr": _corr}
     except Exception as e:
-        logger.warning("per_phase_musical_goals_gate.py::unbekannter Fallback: %s", e)
+        logger.warning("per_Verarbeitungsschritt_musical_goals_gate.py::unbekannter Ersatzpfad: %s", e)
         return 0.0, {"rms_drop_db": 0.0, "corr": 1.0}
 
 
@@ -3862,14 +3896,17 @@ class PerPhaseMusicalGoalsGate:
         # Validiert Input-Audio vor Phase-Ausführung. NaN/Inf/corrupted
         # audio würde Goal-Scores verfälschen und Phasen crashen lassen.
         if not np.all(np.isfinite(audio)):
-            logger.error("PMGG wrap_phase: Input-Audio enthält NaN/Inf — Phase %s übersprungen", phase_id)
+            logger.error(
+                "PMGG wrap_Verarbeitungsschritt: Eingabe-Audio enthält NaN/Inf — Verarbeitungsschritt %s übersprungen",
+                phase_id,
+            )
             _safe = np.nan_to_num(audio, nan=0.0, posinf=1.0, neginf=-1.0)
             _safe = np.clip(_safe, -1.0, 1.0)
             return (
                 _safe,
                 scores_before or {},
                 PhaseGateLogEntry(
-                    phase_id=phase_id,
+                    phase_id=phase_id,  # type: ignore[arg-type]
                     action="validation_error",
                     goal_regressions={},
                     strength_used=0.0,
@@ -4003,7 +4040,7 @@ class PerPhaseMusicalGoalsGate:
                 # damit Recovery-/Tolerance-Pfade deterministisch bleiben.
                 effective_goals = _effective_goals_before_exclusion
             logger.debug(
-                "PMGG: %s goal exclusions applied: %s → %d goals checked",
+                "PMGG: %s goal exclusions angewendet: %s → %d goals checked",
                 phase_id,
                 sorted(_excluded_goals),
                 len(effective_goals),
@@ -4014,7 +4051,7 @@ class PerPhaseMusicalGoalsGate:
             _old_threshold = threshold
             threshold = min(0.090, float(threshold) * float(_team_threshold_mult))
             logger.debug(
-                "PMGG team-policy: %s threshold %.3f -> %.3f (reason=%s)",
+                "PMGG team-policy: %s Schwelle %.3f -> %.3f (reason=%s)",
                 phase_id,
                 _old_threshold,
                 threshold,
@@ -4237,7 +4274,7 @@ class PerPhaseMusicalGoalsGate:
                 if not _tfs_result.passes_threshold:
                     logger.warning(
                         "PMGG TFS: %s TFS coherence degraded (mean=%.4f < %.2f) — "
-                        "phase may have disrupted temporal fine structure",
+                        "Verarbeitungsschritt may have disrupted temporal fine structure",
                         phase_id,
                         _tfs_result.mean_coherence,
                         _TFS_COHERENCE_THRESHOLD,
@@ -4249,7 +4286,7 @@ class PerPhaseMusicalGoalsGate:
                         _tfs_result.mean_coherence,
                     )
             except Exception as _tfs_exc:
-                logger.debug("PMGG TFS: %s measurement failed: %s", phase_id, _tfs_exc)
+                logger.debug("PMGG TFS: %s measurement fehlgeschlagen: %s", phase_id, _tfs_exc)
 
         elapsed = time.time() - t0
         logger.debug(
@@ -4270,7 +4307,7 @@ class PerPhaseMusicalGoalsGate:
             _w_after_nan = isinstance(_w_after, float) and math.isnan(_w_after)
             _w_delta = _w_after - _w_before if not (_w_before_nan or _w_after_nan) else float("nan")
             logger.info(
-                "PMGG waerme §9.7.14  phase=%s  before=%.4f  after=%.4f  delta=%+.4f  action=%s  strength=%.2f",
+                "PMGG waerme §9.7.14  Verarbeitungsschritt=%s  before=%.4f  after=%.4f  delta=%+.4f  action=%s  strength=%.2f",
                 phase_id,
                 _w_before,
                 _w_after,
@@ -4286,9 +4323,13 @@ class PerPhaseMusicalGoalsGate:
         # §v10.303.18 Artikulations-Wächter: Dynamics-Phasen (Compression,
         # Transient-Shaper) dürfen artikulation NIEMALS verschlechtern.
         _ART_CRITICAL_PHASES = {
-            "phase_10_compression", "phase_11_limiting", "phase_26_dynamic_range_expansion",
-            "phase_35_multiband_compression", "phase_54_transparent_dynamics",
-            "phase_08_transient_preservation", "phase_36_transient_shaper",
+            "phase_10_compression",
+            "phase_11_limiting",
+            "phase_26_dynamic_range_expansion",
+            "phase_35_multiband_compression",
+            "phase_54_transparent_dynamics",
+            "phase_08_transient_preservation",
+            "phase_36_transient_shaper",
         }
         if phase_id in _ART_CRITICAL_PHASES and "artikulation" in effective_goals:
             _a_before = scores_before.get("artikulation", 1.0)
@@ -4301,7 +4342,10 @@ class PerPhaseMusicalGoalsGate:
             if _a_delta < -0.02:
                 logger.warning(
                     "§v10.303.18 Artikulations-Wächter: %s artikulation %.4f→%.4f (Δ=%.4f) → ROLLBACK",
-                    phase_id, _a_before, _a_after, _a_delta,
+                    phase_id,
+                    _a_before,
+                    _a_after,
+                    _a_delta,
                 )
                 action = "rollback"
 
@@ -4547,7 +4591,7 @@ class PerPhaseMusicalGoalsGate:
         # np.array_equal ist exakt + schnell (kein float-Toleranz-Drift).
         if np.array_equal(audio, audio_out):
             logger.debug(
-                "PMGG %s: audio_out identisch mit input (passthrough) — direkt passed, kein Retry",
+                "PMGG %s: audio_out identisch mit Eingabe (passthrough) — direkt passed, kein Wiederholung",
                 phase_id,
             )
             return audio_out, scores_before, "passed", initial_strength
@@ -4588,7 +4632,7 @@ class PerPhaseMusicalGoalsGate:
                 audio_after=audio_out,
                 sr=sr,
             )
-            _decision = _rd.decide(_ctx)
+            _decision = _rd.decide(_ctx)  # type: ignore[attr-defined]
             if _decision.verdict.value in ("override_guard",):
                 regression = max(0.0, regression * 0.3)
                 logger.info("§v10.6 Denker: Guard-Override %s — %s", phase_id, _decision.reason)
@@ -4654,7 +4698,7 @@ class PerPhaseMusicalGoalsGate:
                         _base_jnd = JND_MIN_DELTA.get(g, 0.015)
                         _effective_jnd[g] = _base_jnd * _masking_factor(g)
                 except Exception as _c6_exc:
-                    logger.debug("§C6 Masking JND skipped (non-blocking): %s", _c6_exc)
+                    logger.debug("§C6 Masking JND uebersprungen (nicht blockierend): %s", _c6_exc)
                     _effective_jnd = {g: JND_MIN_DELTA.get(g, 0.015) for g in _applicable_jnd}
 
                 _all_below_jnd = all(d >= 0.0 for d in _deltas.values()) and all(
@@ -4662,7 +4706,7 @@ class PerPhaseMusicalGoalsGate:
                 )
                 if _all_below_jnd:
                     logger.debug(
-                        "PMGG %s: sub_threshold — all %d goal-deltas ≥ 0 and < JND (masking-adjusted), accepting",
+                        "PMGG %s: sub_Schwelle — all %d goal-deltas ≥ 0 and < JND (masking-angepasst), accepting",
                         phase_id,
                         len(_applicable_jnd),
                     )
@@ -4759,7 +4803,7 @@ class PerPhaseMusicalGoalsGate:
             }
             if _localized_accept:
                 logger.info(
-                    "PMGG reconstruction collateral-check: %s localized regression tolerated "
+                    "PMGG reconstruction collateral-Pruefung: %s localized regression tolerated "
                     "(conf=%.3f epistemic=%.3f reason=%s target_coverage=%.3f control_coverage=%.3f "
                     "control_regression=%.4f <= %.4f)",
                     phase_id,
@@ -4773,9 +4817,9 @@ class PerPhaseMusicalGoalsGate:
                 )
                 return audio_out, scores_after, "passed_reconstruction_localized", initial_strength
             logger.info(
-                "PMGG reconstruction collateral-check: %s localized accept rejected "
+                "PMGG reconstruction collateral-Pruefung: %s localized accept rejected "
                 "(conf=%.3f epistemic=%.3f reason=%s target_coverage=%.3f control_coverage=%.3f "
-                "control_regression=%.4f threshold=%.4f)",
+                "control_regression=%.4f Schwelle=%.4f)",
                 phase_id,
                 _localized_conf,
                 _epistemic_confidence,
@@ -4834,7 +4878,7 @@ class PerPhaseMusicalGoalsGate:
             _worst_prio = min(_worst_prio, 2)
             _worst_goal = "content_integrity_guard"
         logger.debug(
-            "PMGG: %s regression=%.4f > threshold=%.3f — worst goal: %s (P%d, before=%.3f after=%.3f)",
+            "PMGG: %s regression=%.4f > Schwelle=%.3f — worst goal: %s (P%d, before=%.3f after=%.3f)",
             phase_id,
             regression,
             threshold,
@@ -4876,7 +4920,7 @@ class PerPhaseMusicalGoalsGate:
             if _net_delta > 0.0 and _all_p1p2_above_floor:
                 logger.info(
                     "PMGG §0l Teamwork-Gate: %s → passed_team_balanced "
-                    "(net_delta=+%.4f, worst_prio=P%d, regression=%.4f ≤ 2.5×threshold=%.4f)",
+                    "(net_delta=+%.4f, worst_prio=P%d, regression=%.4f ≤ 2.5×Schwelle=%.4f)",
                     phase_id,
                     _net_delta,
                     _worst_prio,
@@ -4910,7 +4954,7 @@ class PerPhaseMusicalGoalsGate:
         if _localized_retry_bias != 0:
             _max_retries_for_prio = int(np.clip(_max_retries_for_prio + _localized_retry_bias, 1, 5))
             logger.debug(
-                "PMGG: %s localized retry bias=%d applied → max_retries=%d",
+                "PMGG: %s localized Wiederholung bias=%d angewendet → max_retries=%d",
                 phase_id,
                 _localized_retry_bias,
                 _max_retries_for_prio,
@@ -4948,7 +4992,7 @@ class PerPhaseMusicalGoalsGate:
 
             if _hpe_delta < -0.03:
                 logger.warning(
-                    "§v10 HPE-GATE: Phase %s HPE %+.3f < -0.03 — Phase verworfen, Pre-Phase-Audio wiederhergestellt.",
+                    "§v10 HPE-GATE: Verarbeitungsschritt %s HPE %+.3f < -0.03 — Verarbeitungsschritt verworfen, Pre-Verarbeitungsschritt-Audio wiederhergestellt.",
                     phase_id,
                     _hpe_delta,
                 )
@@ -4957,7 +5001,7 @@ class PerPhaseMusicalGoalsGate:
             if -0.03 <= _hpe_delta < 0.0:
                 _ultra_strength = max(0.03, best_strength * 0.30)
                 logger.info(
-                    "§v10 HPE-GATE: Phase %s HPE %+.3f im neutralen Bereich — "
+                    "§v10 HPE-GATE: Verarbeitungsschritt %s HPE %+.3f im neutralen Bereich — "
                     "akzeptiert mit ultra-reduzierter Stärke %.2f.",
                     phase_id,
                     _hpe_delta,
@@ -4965,7 +5009,7 @@ class PerPhaseMusicalGoalsGate:
                 )
                 return best_audio, best_scores, "hpe_ultra_low", _ultra_strength
         except Exception as e:
-            logger.warning("per_phase_musical_goals_gate.py::unbekannter Fallback: %s", e)
+            logger.warning("per_Verarbeitungsschritt_musical_goals_gate.py::unbekannter Ersatzpfad: %s", e)
 
         # §v10.16 Binary-Search State
         _bs_lo = 0.0
@@ -4990,8 +5034,8 @@ class PerPhaseMusicalGoalsGate:
         )
         if _is_ml_deterministic and phase_id in _TIMING_PHASES:
             logger.info(
-                "PMGG: %s is ML-deterministic timing phase — Wet/Dry retries not applicable, "
-                "using best-effort (regression=%.4f > threshold=%.3f)",
+                "PMGG: %s is ML-deterministic timing Verarbeitungsschritt — Wet/Dry retries not applicable, "
+                "using best-effort (regression=%.4f > Schwelle=%.3f)",
                 phase_id,
                 regression,
                 threshold,
@@ -5029,8 +5073,8 @@ class PerPhaseMusicalGoalsGate:
             _retry_elapsed = time.time() - _retry_t0
             if _retry_elapsed > _RETRY_BUDGET_S:
                 logger.info(
-                    "PMGG: %s retry time budget exceeded (%.0fs > %.0fs) — "
-                    "using best attempt so far (regression=%.4f, attempt=%d)",
+                    "PMGG: %s Wiederholung time Grenze exceeded (%.0fs > %.0fs) — "
+                    "using best Versuch so far (regression=%.4f, Versuch=%d)",
                     phase_id,
                     _retry_elapsed,
                     _RETRY_BUDGET_S,
@@ -5048,7 +5092,7 @@ class PerPhaseMusicalGoalsGate:
             if _is_ml_deterministic:
                 # §2.29a: Wet/Dry-Reblend — keine erneute ML-Inferenz
                 logger.debug(
-                    "PMGG: %s Retry %d mit strength=%.2f (Wet/Dry-Reblend, keine Re-Inferenz)",
+                    "PMGG: %s Wiederholung %d mit strength=%.2f (Wet/Dry-Reblend, keine Re-Inferenz)",
                     phase_id,
                     attempt + 1,
                     strength,
@@ -5059,7 +5103,7 @@ class PerPhaseMusicalGoalsGate:
             else:
                 # DSP-Phase: Neu ausführen mit reduziertem strength
                 logger.debug(
-                    "PMGG: %s Retry %d mit strength=%.2f (DSP Re-Run)",
+                    "PMGG: %s Wiederholung %d mit strength=%.2f (DSP Re-Ausfuehrung)",
                     phase_id,
                     attempt + 1,
                     strength,
@@ -5081,7 +5125,7 @@ class PerPhaseMusicalGoalsGate:
             if _ci_penalty_retry > 0.0:
                 regression_retry = max(regression_retry, threshold + 0.001 + 0.05 * _ci_penalty_retry)
                 logger.debug(
-                    "PMGG Content-Guard retry: %s r%d (rms_drop=%.2f dB corr=%.3f penalty=%.3f)",
+                    "PMGG Content-Guard Wiederholung: %s r%d (rms_drop=%.2f dB corr=%.3f penalty=%.3f)",
                     phase_id,
                     attempt + 1,
                     _ci_meta_retry.get("rms_drop_db", 0.0),
@@ -5123,7 +5167,7 @@ class PerPhaseMusicalGoalsGate:
                 and not _team_still_improving
             ):
                 logger.info(
-                    "PMGG: %s stagnation detected at retry %d "
+                    "PMGG: %s stagnation erkannt at Wiederholung %d "
                     "(Δregression=%.6f, Δteam=%.6f) — skipping remaining retries",
                     phase_id,
                     attempt + 1,
@@ -5148,12 +5192,12 @@ class PerPhaseMusicalGoalsGate:
         # Wenn die Defect-to-Audibility-Engine sagt, der Defekt sei noch hörbar,
         # wird auch mit ERHÖHTER Stärke wiederholt (nicht nur reduziert).
         _EMERGENCY_STRENGTHS = [0.15 * initial_strength, 0.10 * initial_strength]
-        _audibility_boost = float(kwargs.get("audibility_strength", 0.0) or 0.0)
+        _audibility_boost = float((phase_kwargs or {}).get("audibility_strength", 0.0) or 0.0)
         if _audibility_boost > initial_strength * 1.1:
             # Defekt ist noch hörbar — booste Richtung benötigter Stärke
             _EMERGENCY_STRENGTHS = [
                 _audibility_boost * 0.80,  # 80% der benötigten Stärke
-                _audibility_boost,          # Volle benötigte Stärke
+                _audibility_boost,  # Volle benötigte Stärke
             ] + _EMERGENCY_STRENGTHS
         # §0l: Emergency-Retries nur wenn Team netto negativ (oder nahe null) ist.
         # Wenn best_scores bereits Team-Net-Positiv sind und Regression unter
@@ -5246,7 +5290,7 @@ class PerPhaseMusicalGoalsGate:
                     _best_team_net = _net_em
         elif best_regression > _CATASTROPHIC_THRESHOLD and _worst_prio <= 2:
             logger.info(
-                "PMGG: %s catastrophic path skipped by team policy (reason=%s, regression=%.4f, threshold=%.3f)",
+                "PMGG: %s catastrophic path uebersprungen by team policy (reason=%s, regression=%.4f, Schwelle=%.3f)",
                 phase_id,
                 _team_policy.get("reason", "none") if isinstance(_team_policy, dict) else "none",
                 best_regression,
@@ -5298,7 +5342,7 @@ class PerPhaseMusicalGoalsGate:
                 _lag_delta = abs(_lag_after - _lag_before)
                 if _lag_delta > 2:
                     logger.error(
-                        "§v10.17 LAG-GATE [%s]: Phase introduced +%d samples lag — REVERTING to pre-phase audio",
+                        "§v10.17 LAG-GATE [%s]: Verarbeitungsschritt introduced +%d samples lag — REVERTING to pre-Verarbeitungsschritt audio",
                         phase_id,
                         _lag_delta,
                     )
@@ -5309,28 +5353,29 @@ class PerPhaseMusicalGoalsGate:
                             phase_id, "lag_introduced", f"lag delta={_lag_delta} samples", retries=0, severity="error"
                         )
                     except Exception as _e:
-                        logger.debug("per_phase_musical_goals_gate: non-critical exception: %s", _e)
+                        logger.debug("per_Verarbeitungsschritt_musical_goals_gate: unkritisch exception: %s", _e)
                     return audio, effective_scores_before, "lag_rejected", 0.0
         except Exception as _e:
-            logger.debug("per_phase_musical_goals_gate: non-critical exception: %s", _e)
+            logger.debug("per_Verarbeitungsschritt_musical_goals_gate: unkritisch exception: %s", _e)
 
         # §v10.17 PSS-Gate: Perceptual Similarity gegen Original
         try:
             from backend.core.perceptual_reference_validator import get_perceptual_validator
 
             _prv = get_perceptual_validator()
-            if _prv is not None and hasattr(_prv, "_anchor"):
-                _pss_r = _prv.validate(best_audio, 48000, _prv._anchor)
+            _anchor = _prv.get_anchor()
+            if _anchor is not None:
+                _pss_r = _prv.validate(best_audio, 48000, _anchor)
                 if not _pss_r.accepted:
                     logger.warning("§v10.17 PSS-Gate [%s]: PSS=%.4f rejected", phase_id, _pss_r.perceptual_similarity)
                     return audio, effective_scores_before, "pss_rejected", 0.0
         except Exception as _e:
-            logger.debug("per_phase_musical_goals_gate: non-critical exception: %s", _e)
+            logger.debug("per_Verarbeitungsschritt_musical_goals_gate: unkritisch exception: %s", _e)
 
         return best_audio, best_scores, best_action, best_strength
 
-    @staticmethod
     def _run_phase(
+        self,
         phase: Any,
         audio: np.ndarray,
         strength: float,
@@ -5382,11 +5427,13 @@ class PerPhaseMusicalGoalsGate:
             elif isinstance(result, np.ndarray):
                 out = result
             else:
-                logger.debug("PMGG: Phase-Ausgabe kein ndarray/Result-Objekt; fallback auf safe audio")
+                logger.debug(
+                    "PMGG: Verarbeitungsschritt-Ausgabe kein ndarray/Ergebnis-Objekt; Ersatzpfad auf safe audio"
+                )
                 return _safe_audio_fallback(audio)
 
             if out is None or not isinstance(out, np.ndarray):
-                logger.debug("PMGG: Phase-Ausgabe ungueltig (None/Typfehler); fallback auf safe audio")
+                logger.debug("PMGG: Verarbeitungsschritt-Ausgabe ungueltig (None/Typfehler); Ersatzpfad auf safe audio")
                 return _safe_audio_fallback(audio)
 
             out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
@@ -5454,20 +5501,23 @@ class PerPhaseMusicalGoalsGate:
                     out = _aligned
 
             # Wet/Dry-Modulation: strength < 1.0 → blende zwischen Original und Verarbeitet
-            if 0.0 < strength < 1.0:
+            # §strength=0.0-Guard: Phasen ohne eigenes Zero-Strength-Skip (z.B.
+            # CompressionPhase/LimitingPhase/FinalEQ) ignorieren den strength-Kwarg
+            # sonst komplett bei strength=0.0 — 0.0 < strength schloss diesen Fall aus.
+            if strength < 1.0:
                 phase_id = ""
                 try:
                     meta = phase.get_metadata()
                     phase_id = getattr(meta, "phase_id", "")
                 except Exception as _meta_exc:
-                    logger.debug("PMGG: Phase-Metadata-Zugriff fehlgeschlagen: %s", _meta_exc)
+                    logger.debug("PMGG: Verarbeitungsschritt-Metadata-Zugriff fehlgeschlagen: %s", _meta_exc)
                 if phase_id not in _TIMING_PHASES:
                     out = (audio + strength * (out - audio)).astype(np.float32)
                     out = np.clip(out, -1.0, 1.0)
 
             return np.asarray(out)  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("PMGG: Phase-Ausführung fehlgeschlagen: %s", exc)
+            logger.debug("PMGG: Verarbeitungsschritt-Ausführung fehlgeschlagen: %s", exc)
             return _safe_audio_fallback(audio)
 
     @staticmethod
@@ -5532,7 +5582,7 @@ class PerPhaseMusicalGoalsGate:
                 meta = phase.get_metadata()
                 phase_id = getattr(meta, "phase_id", "")
             except Exception as _meta_exc:
-                logger.debug("PMGG: Wet/Dry-Blend Phase-Metadata-Zugriff fehlgeschlagen: %s", _meta_exc)
+                logger.debug("PMGG: Wet/Dry-Blend Verarbeitungsschritt-Metadata-Zugriff fehlgeschlagen: %s", _meta_exc)
         if phase_id in _TIMING_PHASES:
             out = np.clip(wet, -1.0, 1.0).astype(np.float32)
             return out.T if _dry_ch_first and out.ndim == 2 else out  # type: ignore[no-any-return]
@@ -5541,7 +5591,7 @@ class PerPhaseMusicalGoalsGate:
         if dry.ndim == 2 or wet.ndim == 2:
             if dry.ndim != 2 or wet.ndim != 2:
                 logger.debug(
-                    "PMGG Wet/Dry-Blend ndim mismatch dry=%s wet=%s; using linear fallback",
+                    "PMGG Wet/Dry-Blend ndim mismatch dry=%s wet=%s; using linear Ersatzpfad",
                     dry.shape,
                     wet.shape,
                 )
@@ -5555,7 +5605,7 @@ class PerPhaseMusicalGoalsGate:
 
             if dry.shape[1] != wet.shape[1]:
                 logger.debug(
-                    "PMGG Wet/Dry-Blend channel mismatch dry=%s wet=%s; using linear fallback",
+                    "PMGG Wet/Dry-Blend channel mismatch dry=%s wet=%s; using linear Ersatzpfad",
                     dry.shape,
                     wet.shape,
                 )
@@ -5613,7 +5663,7 @@ class PerPhaseMusicalGoalsGate:
                 out = np.clip(out.astype(np.float32), -1.0, 1.0)
                 return out.T if _dry_ch_first and out.ndim == 2 else out  # type: ignore[no-any-return]
             except Exception as _stft_exc:
-                logger.debug("PMGG STFT-Blend fallback to linear: %s", _stft_exc)
+                logger.debug("PMGG STFT-Blend Ersatzpfad to linear: %s", _stft_exc)
 
         out = (dry + strength * (wet - dry)).astype(np.float32)
         out = np.clip(out, -1.0, 1.0)
@@ -5779,7 +5829,9 @@ class PerPhaseMusicalGoalsGate:
             meta = phase.get_metadata()
             return getattr(meta, "phase_id", type(phase).__name__)
         except Exception as e:
-            logger.warning("per_phase_musical_goals_gate.py::_get_phase_id fallback: %s", e)
+            logger.warning(
+                "per_Verarbeitungsschritt_musical_goals_gate.py::_get_Verarbeitungsschritt_id Ersatzpfad: %s", e
+            )
             return type(phase).__name__
 
     @staticmethod

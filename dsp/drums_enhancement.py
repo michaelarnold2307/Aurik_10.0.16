@@ -688,7 +688,7 @@ class DrumsEnhancementSystem:
         report["cymbal"] = cymbal_report
 
         # Calculate overall metrics
-        report["stages_applied"] = 4
+        report["stages_applied"] = 4  # type: ignore[assignment]
         report["transient_energy_change_db"] = (
             kick_report["kick_energy_change_db"] + snare_report["snare_crack_energy_change_db"]
         ) / 2.0
@@ -724,11 +724,11 @@ def main():
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Make mono for processing
     audio_mono = np.mean(audio, axis=1) if audio.shape[1] == 2 else audio[:, 0]
@@ -752,11 +752,11 @@ def main():
     logger.info("\n📊 Processing Report:")
     logger.info("-" * 60)
     logger.info("Kick Drum: %.1f dB", report["kick"]["kick_energy_change_db"])
-    logger.info("  Events detected: %s", report["kick"]["kick_events_detected"])
+    logger.info("  Events erkannt: %s", report["kick"]["kick_events_detected"])
 
     logger.info("\nSnare Crack: %.1f dB", report["snare"]["snare_crack_energy_change_db"])
     logger.info("  Body: %.1f dB", report["snare"]["snare_body_energy_change_db"])
-    logger.info("  Events detected: %s", report["snare"]["snare_events_detected"])
+    logger.info("  Events erkannt: %s", report["snare"]["snare_events_detected"])
 
     logger.info("\nHi-Hat: %.1f dB", report["hihat"]["hihat_energy_change_db"])
     logger.info("  Transient sharpening: %s", "Yes" if report["hihat"]["transient_sharpening_applied"] else "No")
@@ -765,10 +765,10 @@ def main():
     logger.info("  Air enhancement: %s", "Yes" if report["cymbal"]["air_enhancement_applied"] else "No")
 
     logger.info("\nTransient Enhancement: %.1f dB", report["transient_energy_change_db"])
-    logger.info("Stages applied: %s", report["stages_applied"])
+    logger.info("Stages angewendet: %s", report["stages_applied"])
 
     # Save
-    logger.info("\nSaving: %s", args.output)
+    logger.info("\nspeichere: %s", args.output)
     sf.write(args.output, processed, sr)
     logger.info("✓ Done!")
 

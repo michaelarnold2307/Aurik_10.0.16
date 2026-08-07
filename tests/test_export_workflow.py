@@ -7,6 +7,7 @@ import os
 import shutil
 import sys
 import tempfile
+from typing import Any
 
 import numpy as np
 import pytest
@@ -120,7 +121,7 @@ def test_export_audit_log_content(temp_export_dir):
 
 def test_export_audit_log_empty(temp_export_dir):
     """Test audit log export with empty log"""
-    audit_log = []
+    audit_log: list[Any] = []
     filename = "test_empty.log"
 
     log_path = export_audit_log(audit_log, filename)

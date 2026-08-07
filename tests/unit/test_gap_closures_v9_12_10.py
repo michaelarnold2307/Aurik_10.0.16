@@ -141,7 +141,7 @@ class TestPreEchoDetectorFixture(unittest.TestCase):
         audio[pre_idx : pre_idx + 1200] += np.hanning(1200).astype(np.float32) * 0.18
 
         scanner = DefectScanner(sample_rate=sr)
-        scanner.material_type = "mp3_low"
+        scanner.material_type = "mp3_low"  # type: ignore[assignment]
         score = scanner._detect_pre_echo(audio)
 
         self.assertIsNotNone(score)
@@ -172,7 +172,7 @@ class TestPreEchoDetectorFixture(unittest.TestCase):
         audio[main_b : main_b + 2000] += np.hanning(2000).astype(np.float32) * 0.92
 
         scanner = DefectScanner(sample_rate=sr)
-        scanner.material_type = "mp3_low"
+        scanner.material_type = "mp3_low"  # type: ignore[assignment]
         score = scanner._detect_pre_echo(audio)
 
         self.assertGreater(float(score.severity), 0.0)

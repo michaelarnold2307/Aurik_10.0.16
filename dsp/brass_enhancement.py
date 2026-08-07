@@ -583,7 +583,7 @@ class BrassEnhancementSystem:
         report["resonance"] = resonance_report
 
         # Calculate overall metrics
-        report["stages_applied"] = 4
+        report["stages_applied"] = 4  # type: ignore[assignment]
         report["brass_character_db"] = (
             harmonics_report["harmonics_energy_change_db"] + resonance_report["resonance_change_db"]
         ) / 2.0
@@ -616,11 +616,11 @@ def main():
     args = parser.parse_args()
 
     # Load audio
-    logger.info("Loading: %s", args.input)
+    logger.info("lade: %s", args.input)
     from backend.file_import import load_audio_file
 
     _res = load_audio_file(args.input)
-    audio, sr = _res["audio"], int(_res["sr"])
+    audio, sr = _res["audio"], int(_res["sr"])  # type: ignore[index]
 
     # Make mono for processing
     audio_mono = np.mean(audio, axis=1) if audio.shape[1] == 2 else audio[:, 0]
@@ -646,20 +646,20 @@ def main():
     logger.info("Harmonics: %.1f dB", report["harmonics"]["harmonics_energy_change_db"])
     logger.info("  Formant emphasis: %s", "Yes" if report["harmonics"]["formant_emphasis_applied"] else "No")
 
-    logger.info("\nBreath Attacks: %s detected", report["breath"]["breath_attacks_detected"])
+    logger.info("\nBreath Attacks: %s erkannt", report["breath"]["breath_attacks_detected"])
     logger.info("  Attack clarity: %s", "Yes" if report["breath"]["attack_clarity_applied"] else "No")
 
     logger.info("\nValve Clicks: %.1f dB", report["valve"]["valve_click_reduction_db"])
     logger.info("  Realism maintained: %s", "Yes" if report["valve"]["realism_maintained"] else "No")
 
     logger.info("\nResonance: %.1f dB", report["resonance"]["resonance_change_db"])
-    logger.info("  Warmth applied: %s", "Yes" if report["resonance"]["warmth_applied"] else "No")
+    logger.info("  Warmth angewendet: %s", "Yes" if report["resonance"]["warmth_applied"] else "No")
 
     logger.info("\nBrass Character: %.1f dB", report["brass_character_db"])
-    logger.info("Stages applied: %s", report["stages_applied"])
+    logger.info("Stages angewendet: %s", report["stages_applied"])
 
     # Save
-    logger.info("\nSaving: %s", args.output)
+    logger.info("\nspeichere: %s", args.output)
     sf.write(args.output, processed, sr)
     logger.info("✓ Done!")
 

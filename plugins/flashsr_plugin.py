@@ -54,7 +54,7 @@ _instance: FlashSRPlugin | None = None
 # ---------------------------------------------------------------------------
 # Backward-compat aliases for callers that import AudioSRPlugin/get_audiosr_plugin
 # ---------------------------------------------------------------------------
-AudioSRPlugin: type = None  # set after class definition
+AudioSRPlugin: type = None  # type: ignore[assignment]  # set after class definition
 
 
 def _detect_bandwidth(audio: np.ndarray, sr: int) -> float:
@@ -131,7 +131,7 @@ def _run_flashsr_onnx(audio: np.ndarray, sr: int) -> np.ndarray | None:
         _plm = _get_plm()
         _plm.set_active("FlashSR", True)
     except Exception:
-        pass
+        logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
     try:
         mono = audio if audio.ndim == 1 else audio.mean(axis=0)
@@ -199,7 +199,7 @@ def _run_flashsr_onnx(audio: np.ndarray, sr: int) -> np.ndarray | None:
             try:
                 _plm.set_active("FlashSR", False)
             except Exception:
-                pass
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 
 
 def allow_reset_ml_model_failed() -> None:
@@ -207,7 +207,7 @@ def allow_reset_ml_model_failed() -> None:
     global _onnx_failed  # pylint: disable=global-statement
     with _onnx_lock:
         if _onnx_failed:
-            logger.debug("FlashSR: Sentinel reset für Wiederholungsversuch")
+            logger.debug("FlashSR: Sentinel zurueckgesetzt für Wiederholungsversuch")
             _onnx_failed = False
 
 
@@ -224,8 +224,9 @@ def unload_flashsr() -> None:
 
                 _release("FlashSR")
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 pass
-            logger.info("FlashSR: ONNX-Session entladen.")
+            logger.info("FlashSR: ONNX-Sitzung entladen.")
 
 
 # Backward-compat alias
@@ -273,7 +274,7 @@ class FlashSRPlugin:
 
     def __init__(self, **_kwargs: object) -> None:
         logger.debug(
-            "FlashSRPlugin initialisiert (ML-Primär wenn BW < %.0f Hz, DSP-Fallback)",
+            "FlashSRPlugin initialisiert (ML-Primär wenn BW < %.0f Hz, DSP-Ersatzpfad)",
             self.BW_THRESHOLD,
         )
 
@@ -341,7 +342,7 @@ class FlashSRPlugin:
         result = np.stack(out_ch)
         if mono_in:
             result = result[0]
-        return np.clip(np.nan_to_num(result.astype(np.float32), nan=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(result.astype(np.float32), nan=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     def _hf_extend(self, x: np.ndarray, sr: int) -> np.ndarray:
@@ -349,7 +350,7 @@ class FlashSRPlugin:
         try:
             return self._spectral_exciter(x, sr)
         except Exception as exc:
-            logger.debug("HF-Erweiterung fehlgeschlagen: %s – SBR-Fallback aktiv", exc)
+            logger.debug("HF-Erweiterung fehlgeschlagen: %s – SBR-Ersatzpfad aktiv", exc)
             return self._spectral_band_replication(x, sr)
 
     def _spectral_band_replication(self, x: np.ndarray, sr: int) -> np.ndarray:
@@ -398,7 +399,7 @@ class FlashSRPlugin:
 
     def _spectral_exciter(self, x: np.ndarray, sr: int) -> np.ndarray:
         """Harmonische Oberton-Synthese für HF-Erweiterung."""
-        from scipy.signal import butter, sosfilt
+        from scipy.signal import butter, sosfiltfilt
 
         # Hochpass > 4 kHz für harmonische Generierung
         sos = butter(4, 4000, btype="high", fs=sr, output="sos")
@@ -410,7 +411,7 @@ class FlashSRPlugin:
         # Auf Original mischen
         wet = shaped * 0.4
         blend = x + wet
-        return np.clip(np.nan_to_num(blend, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(blend, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     @staticmethod
     def _resample(x: np.ndarray, orig_sr: int, target_sr: int) -> np.ndarray:
@@ -423,7 +424,7 @@ class FlashSRPlugin:
         up = target_sr // g
         down = orig_sr // g
         resampled = _resample_poly(x.astype(np.float64), up, down)
-        return np.clip(np.nan_to_num(resampled.astype(np.float32), nan=0.0), -1.0, 1.0)
+        return np.clip(np.nan_to_num(resampled.astype(np.float32), nan=0.0), -1.0, 1.0)  # type: ignore[no-any-return]
 
     # ------------------------------------------------------------------
     def process_files(self, input_dir: str, output_dir: str, target_sr: int = TARGET_SR) -> None:
@@ -433,13 +434,13 @@ class FlashSRPlugin:
         try:
             import soundfile as sf
         except ImportError:
-            logger.error("soundfile nicht installiert – process_files nicht verfügbar")
+            logger.error("soundfile nicht installiert – verarbeiten_files nicht verfügbar")
             return
 
         try:
             from backend.file_import import load_audio_file
         except ImportError:
-            logger.error("backend.file_import nicht verfügbar – process_files nicht verfügbar")
+            logger.error("backend.file_import nicht verfügbar – verarbeiten_files nicht verfügbar")
             return
 
         _os.makedirs(output_dir, exist_ok=True)
@@ -448,7 +449,11 @@ class FlashSRPlugin:
             in_path = _os.path.join(input_dir, wav_file)
             out_path = _os.path.join(output_dir, wav_file)
             try:
-                audio, file_sr = load_audio_file(in_path)
+                _res = load_audio_file(in_path)
+                if _res is None or _res.get("audio") is None:
+                    raise RuntimeError(f"load_audio_file lieferte kein Audio für {in_path}")
+                audio = np.asarray(_res["audio"], dtype=np.float32)
+                file_sr = int(_res["sr"])
                 result = self.process(audio.T if audio.ndim == 2 else audio, file_sr, target_sr)
                 sf.write(out_path, result if result.ndim == 1 else result.T, target_sr)
                 logger.info("FlashSR: %s → %s verarbeitet", wav_file, out_path)
@@ -479,9 +484,9 @@ def _get_ml_model():
         return _onnx_session
     except Exception as _exc:
         _onnx_failed = True
-        logger.debug("FlashSR: _get_ml_model failed: %s", _exc)
+        logger.debug("FlashSR: _get_ml_model fehlgeschlagen: %s", _exc)
         return None
 
 
 # _model_loaded für ml_model_readiness (NVSR-Check) und andere Abfragen
-FlashSRPlugin._model_loaded = property(lambda self: _onnx_session is not None and not _onnx_failed)
+FlashSRPlugin._model_loaded = property(lambda self: _onnx_session is not None and not _onnx_failed)  # type: ignore[attr-defined]

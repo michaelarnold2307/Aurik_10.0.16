@@ -9,6 +9,7 @@ Date: 8. Februar 2026
 """
 
 import time
+from typing import Any
 
 import numpy as np
 import pytest
@@ -508,7 +509,7 @@ class TestIntegration:
         """Test processing with no modules."""
         audio, sr = sample_audio
 
-        modules = []
+        modules: list[Any] = []
         result = processor.process(audio, sr, modules)
 
         # Should return copy of original audio

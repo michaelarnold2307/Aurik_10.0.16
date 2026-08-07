@@ -27,6 +27,7 @@ Usage:
 import argparse
 import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import soundfile as sf
@@ -37,7 +38,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
-def load_golden_samples(directory: Path, medium_filter: str = None) -> list[tuple[np.ndarray, int, str, str]]:
+def load_golden_samples(directory: Path, medium_filter: str = None) -> list[tuple[np.ndarray, int, str, str]]:  # type: ignore[assignment]
     """
     Load golden samples from directory.
 
@@ -71,7 +72,7 @@ def load_golden_samples(directory: Path, medium_filter: str = None) -> list[tupl
         if medium_filter and medium != medium_filter:
             continue
 
-        logger.info(f"Loading samples from medium: {medium}")
+        logger.info(f"lade samples from medium: {medium}")
 
         for audio_file in medium_dir.glob("*.wav"):
             try:
@@ -82,12 +83,12 @@ def load_golden_samples(directory: Path, medium_filter: str = None) -> list[tupl
                     audio = np.mean(audio, axis=1)
 
                 samples.append((audio, sr, audio_file.name, medium))
-                logger.info(f"  Loaded: {audio_file.name} ({len(audio) / sr:.2f}s)")
+                logger.info(f"  geladen: {audio_file.name} ({len(audio) / sr:.2f}s)")
 
             except Exception as e:
-                logger.error(f"  Failed to load {audio_file.name}: {e}")
+                logger.error(f"  konnte nicht laden {audio_file.name}: {e}")
 
-    logger.info(f"Total samples loaded: {len(samples)}")
+    logger.info(f"Total samples geladen: {len(samples)}")
     return samples
 
 
@@ -123,9 +124,9 @@ def measure_all_samples(samples: list[tuple[np.ndarray, int, str, str]]) -> list
                 logger.debug(f"  {goal_name}: {score:.3f}")
 
         except Exception as e:
-            logger.error(f"  Failed to measure {filename}: {e}")
+            logger.error(f"  konnte nicht measure {filename}: {e}")
 
-    logger.info(f"Measurement complete: {len(results)} samples")
+    logger.info(f"Measurement vollstaendig: {len(results)} samples")
     return results
 
 
@@ -143,10 +144,10 @@ def compute_calibrated_thresholds(
     Returns:
         Dict with calibrated thresholds per medium and overall
     """
-    logger.info(f"Computing calibrated thresholds (percentile={percentile}, margin={safety_margin})...")
+    logger.info(f"berechne kalibriert thresholds (percentile={percentile}, margin={safety_margin})...")
 
     # Group by medium
-    results_by_medium = {}
+    results_by_medium: dict[Any, Any] = {}
     for result in results:
         medium = result["medium"]
         if medium not in results_by_medium:
@@ -188,7 +189,7 @@ def compute_calibrated_thresholds(
                 "n_samples": len(scores),
             }
             logger.info(
-                f"    {goal_name:20s}: threshold={threshold:.3f} "
+                f"    {goal_name:20s}: Schwelle={threshold:.3f} "
                 f"(percentile={percentile_value:.3f}, mean={np.mean(scores):.3f})"
             )
 
@@ -222,7 +223,7 @@ def compute_calibrated_thresholds(
             "n_samples": len(scores),
         }
         logger.info(
-            f"    {goal_name:20s}: threshold={threshold:.3f} "
+            f"    {goal_name:20s}: Schwelle={threshold:.3f} "
             f"(percentile={percentile_value:.3f}, mean={np.mean(scores):.3f})"
         )
 
@@ -240,7 +241,7 @@ def generate_calibration_report(calibrated_thresholds: dict, results: list[dict]
         results: Measurement results
         output_file: Output file path
     """
-    logger.info(f"Generating calibration report: {output_file}")
+    logger.info(f"Generating Kalibrierung report: {output_file}")
 
     report = {
         "calibration_info": {
@@ -266,15 +267,15 @@ def generate_calibration_report(calibrated_thresholds: dict, results: list[dict]
     with open(output_file, "w") as f:
         yaml.dump(report, f, default_flow_style=False, sort_keys=False)
 
-    logger.info(f"Calibration report saved: {output_file}")
+    logger.info(f"Kalibrierung report gespeichert: {output_file}")
 
     # Print summary
     print("\n" + "=" * 70)
     print("CALIBRATION SUMMARY")
     print("=" * 70)
     print(f"Total samples: {len(results)}")
-    print(f"Mediums: {', '.join(report['calibration_info']['mediums'])}")
-    print(f"Method: {report['calibration_info']['method']}")
+    print(f"Mediums: {', '.join(report['calibration_info']['mediums'])}")  # type: ignore[index]
+    print(f"Method: {report['calibration_info']['method']}")  # type: ignore[index]
     print("\nCALIBRATED THRESHOLDS (Overall):")
     for goal_name, values in calibrated_thresholds["overall"].items():
         print(f"  {goal_name:20s}: {values['threshold']:.3f} (mean={values['mean']:.3f}, std={values['std']:.3f})")
@@ -315,14 +316,14 @@ def main():
     if len(samples) < 10:
         logger.warning(
             f"Only {len(samples)} samples found. "
-            f"Recommend at least 30 samples (10 per medium) for accurate calibration."
+            f"Recommend at least 30 samples (10 per medium) for accurate Kalibrierung."
         )
 
     # Measure all samples
     results = measure_all_samples(samples)
 
     if len(results) < 5:
-        logger.error("Too few valid measurements. Aborting calibration.")
+        logger.error("Too few valid measurements. Aborting Kalibrierung.")
         return 1
 
     # Compute calibrated thresholds
@@ -333,7 +334,7 @@ def main():
     # Generate report
     generate_calibration_report(calibrated_thresholds, results, args.output_report)
 
-    logger.info("Calibration complete!")
+    logger.info("Kalibrierung vollstaendig!")
     return 0
 
 

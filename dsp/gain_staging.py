@@ -39,7 +39,7 @@ gain_staging_contract = DSPContract(
         "compute_cost": 0.01,
     },
     side_effects=[
-        {
+        {  # type: ignore[list-item]
             "risk": "Übersteuerung",
             "expected_when": "target_lufs > -10.0",
             "severity": 0.2,
@@ -76,4 +76,4 @@ class GainStaging:
         out = audio * gain
         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
         out = np.clip(out, -1.0, 1.0)
-        return out
+        return out  # type: ignore[no-any-return]

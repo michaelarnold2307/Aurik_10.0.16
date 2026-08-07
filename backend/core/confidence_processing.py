@@ -37,7 +37,7 @@ class ConfidenceBasedProcessing:
         self.rollback_callback = rollback_callback
         self.confidence_threshold = 0.5
         self.max_change = 0.2
-        logger.info("ConfidenceBasedProcessing initialized")
+        logger.info("ConfidenceBasedProcessing initialisiert")
 
     def adjust_strength(self, base_strength: float, confidence: float) -> float:
         """Adjust processing strength based on confidence.
@@ -58,7 +58,7 @@ class ConfidenceBasedProcessing:
 
         if not math.isfinite(base_strength) or not math.isfinite(confidence):
             logger.warning(
-                "confidence_processing: non-finite input base=%.4f conf=%.4f → fallback 0.5",
+                "confidence_processing: non-finite Eingabe base=%.4f conf=%.4f → Ersatzpfad 0.5",
                 float(base_strength) if math.isfinite(base_strength) else float("nan"),
                 float(confidence) if math.isfinite(confidence) else float("nan"),
             )
@@ -75,7 +75,7 @@ class ConfidenceBasedProcessing:
         result = float(np.clip(result, 0.0, 1.0))
         if not math.isfinite(result):
             logger.warning(
-                "confidence_processing: non-finite result=%.4f (base=%.4f conf=%.4f) → fallback 0.5",
+                "confidence_processing: non-finite Ergebnis=%.4f (base=%.4f conf=%.4f) → Ersatzpfad 0.5",
                 float(result) if math.isfinite(result) else float("nan"),
                 float(base_strength),
                 float(confidence),

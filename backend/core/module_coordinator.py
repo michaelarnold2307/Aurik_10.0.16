@@ -223,7 +223,7 @@ class ModuleCoordinator:
         self._recovery_attempts = 0
         self._recovered_modules: list[str] = []
 
-        logger.info("ModuleCoordinator initialized (v2.0.0 Limited Edition)")
+        logger.info("ModuleCoordinator initialisiert (v2.0.0 Limited Edition)")
         if enable_musical_quality_assurance:
             logger.info("  ✓ Adaptive Musical Excellence: ACTIVE (out-of-the-box perfektioniert)")
             logger.info("    → Findet IMMER die beste Lösung")
@@ -406,7 +406,7 @@ class ModuleCoordinator:
         # Check for cycles
         if in_degree:
             remaining = list(in_degree.keys())
-            logger.warning("Dependency cycle detected involving: %s", remaining)
+            logger.warning("Dependency cycle erkannt involving: %s", remaining)
             # Add remaining as final stage
             stages.append(remaining)
 
@@ -571,7 +571,7 @@ class ModuleCoordinator:
 
         # Execute stages
         for stage_idx, stage in enumerate(plan.stages):
-            logger.info("Stage %s/%s: %s", stage_idx + 1, len(plan.stages), [m.name for m in stage])
+            logger.info("Stufe %s/%s: %s", stage_idx + 1, len(plan.stages), [m.name for m in stage])
 
             if strategy == ExecutionStrategy.PARALLEL and len(stage) > 1:
                 # Parallel execution within stage
@@ -602,7 +602,7 @@ class ModuleCoordinator:
                         )
 
                         if not gate_passed:
-                            logger.warning("⚠ Quality gate FAILED after %s: %s", result.module_name, reason)
+                            logger.warning("⚠ Quality gate fehlgeschlagen after %s: %s", result.module_name, reason)
 
                             # === ADAPTIVE MUSICAL EXCELLENCE: Findet IMMER die beste Lösung! ===
                             if self._recovery_system:
@@ -664,7 +664,9 @@ class ModuleCoordinator:
                                     result.warning = f"Best achievable quality reached: {reason}"
                             else:
                                 # No recovery system - fallback to old behavior
-                                logger.warning("  → Rolling back to previous checkpoint (no recovery available)")
+                                logger.warning(
+                                    "  → Rolling back to previous checkpoint (no Wiederherstellung verfuegbar)"
+                                )
                                 current_audio = previous_audio
                                 modules_applied.pop()  # Remove failed module
 
@@ -673,7 +675,7 @@ class ModuleCoordinator:
 
                                 # Stop processing if critical violation
                                 if "character" in reason.lower() or "unnatural" in reason.lower():
-                                    logger.error("  → CRITICAL VIOLATION - Stopping processing")
+                                    logger.error("  → CRITICAL VIOLATION - stoppe processing")
                                     break
                         else:
                             # Quality gate passed - save checkpoint
@@ -733,7 +735,7 @@ class ModuleCoordinator:
         }
 
         logger.info(
-            f"Execution complete: {report['successful_modules']}/{report['num_modules_executed']} modules successful in {total_time:.2f}s"
+            f"Execution vollstaendig: {report['successful_modules']}/{report['num_modules_executed']} modules erfolgreich in {total_time:.2f}s"
         )
         if quality_guaranteed:
             logger.info("✓ Quality Guaranteed: %+.1f improvement", mqa_report.musical_improvement)  # type: ignore[union-attr]
@@ -864,14 +866,14 @@ class ModuleCoordinator:
                 output_audio=output_audio,
             )
 
-            logger.info("✓ %s completed in %.3fs (confidence=%.2f)", descriptor.name, execution_time, confidence)
+            logger.info("✓ %s abgeschlossen in %.3fs (confidence=%.2f)", descriptor.name, execution_time, confidence)
 
             return result
 
         except Exception as e:
             execution_time = time.time() - start_time
 
-            logger.error("❌ %s failed: %s", descriptor.name, e)
+            logger.error("❌ %s fehlgeschlagen: %s", descriptor.name, e)
 
             # Update context
             self.context.fail_module(descriptor.name, str(e))
@@ -989,7 +991,7 @@ class ModuleCoordinator:
             self._thread_pool = None
 
         self._module_instances.clear()
-        logger.info("ModuleCoordinator shutdown")
+        logger.info("ModuleCoordinator Herunterfahren")
 
     def __repr__(self) -> str:
         """String representation."""

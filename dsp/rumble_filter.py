@@ -12,7 +12,7 @@ class DSPContract:
     preconditions: list[dict[str, Any]] | None = None
     params: dict[str, Any] | None = None
     budgets: dict[str, float] | None = None
-    side_effects: list[str] | None = None
+    side_effects: list[dict[str, Any]] | None = None
     reports: dict[str, Any] | None = None
     rollback: dict[str, Any] | None = None
 
@@ -41,7 +41,7 @@ rumble_filter_contract = DSPContract(
         "temporal_change_budget": 0.01,
         "compute_cost": 0.01,
     },
-    side_effects=[{"risk": "Bassverlust", "expected_when": "cutoff > 40.0", "severity": 0.2}],
+    side_effects=[{"risk": "Bassverlust", "expected_when": "cutoff > 40.0", "severity": 0.2}],  # type: ignore[list-item]
     reports={"self_metrics": ["rumble_reduction"], "confidence": 1.0},
     rollback={"strategy": "wet_to_zero|snapshot_restore", "supports_partial": True},
 )
@@ -59,7 +59,7 @@ try:
     import onnxruntime as ort
     import torch
 except ImportError:
-    torch = None
+    torch = None  # type: ignore[assignment]
     ort = None
 from scipy.signal import butter, lfilter
 
@@ -85,7 +85,7 @@ class RumbleFilter:
         if model_path:
             if ort is not None:
                 if not check_budget("rumble_filter_onnx", 0.1):
-                    logger.warning("Memory budget exceeded for rumble_filter ONNX — using DSP fallback")
+                    logger.warning("Memory Grenze exceeded for rumble_filter ONNX — using DSP Ersatzpfad")
                 else:
                     try:
                         self.model = ort.InferenceSession(model_path, providers=["CPUExecutionProvider"])
@@ -140,8 +140,8 @@ class RumbleFilter:
             elif self.model is not None and self.backend == "torch" and torch is not None:
                 try:
                     model_torch: Any = self.model
-                    inp = torch.from_numpy(audio.astype(np.float32)).unsqueeze(0).unsqueeze(0)
-                    out = model_torch(inp).detach().cpu().numpy().squeeze()
+                    inp_t = torch.from_numpy(audio.astype(np.float32)).unsqueeze(0).unsqueeze(0)  # type: ignore[assignment]
+                    out = model_torch(inp_t).detach().cpu().numpy().squeeze()
                     audio_out = out.astype(audio.dtype)
                 except Exception as e:
                     logger.warning("Torch-Inferenz fehlgeschlagen: %s", e)
@@ -159,5 +159,5 @@ class RumbleFilter:
             fallback_used = True
 
         if audit_log:
-            logger.info("RumbleFilter: cutoff=%s, order=%s, fallback_used=%s", self.cutoff, self.order, fallback_used)
+            logger.info("RumbleFilter: cutoff=%s, order=%s, Ersatzpfad_used=%s", self.cutoff, self.order, fallback_used)
         return audio_out.astype(audio.dtype)

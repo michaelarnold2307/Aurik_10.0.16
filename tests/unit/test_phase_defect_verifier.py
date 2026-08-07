@@ -101,14 +101,17 @@ def _add_slow_amplitude_modulation(audio: np.ndarray, rate_hz: float = 6.0, dept
 
 @pytest.mark.unit
 def test_00_import():
-    from backend.core.cassette_defect_verifier import PhaseDefectVerifier, get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import (  # type: ignore[attr-defined]
+        PhaseDefectVerifier,
+        get_phase_defect_verifier,
+    )
 
     assert PhaseDefectVerifier is not None
     assert callable(get_phase_defect_verifier)
 
 
 def test_01_singleton():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     a = get_phase_defect_verifier()
     b = get_phase_defect_verifier()
@@ -118,7 +121,7 @@ def test_01_singleton():
 def test_02_result_dataclass():
     from backend.core.cassette_defect_verifier import DefectVerificationResult
 
-    r = DefectVerificationResult(
+    r = DefectVerificationResult(  # type: ignore[call-arg]
         phase_id="phase_03_denoise",
         targeted_defects=["HIGH_FREQ_NOISE"],
         proxies_before={"HIGH_FREQ_NOISE": 0.5},
@@ -128,7 +131,7 @@ def test_02_result_dataclass():
         rollback_triggered=False,
     )
     assert r.phase_id == "phase_03_denoise"
-    assert not r.rollback_triggered
+    assert not r.rollback_triggered  # type: ignore[attr-defined]
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +140,7 @@ def test_02_result_dataclass():
 
 
 def test_10_proxy_impulse_ratio_clean():
-    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio
+    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio  # type: ignore[attr-defined]
 
     clean = _sine()
     ratio = _proxy_impulse_ratio(clean)
@@ -146,7 +149,7 @@ def test_10_proxy_impulse_ratio_clean():
 
 
 def test_11_proxy_impulse_ratio_with_clicks():
-    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio
+    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio  # type: ignore[attr-defined]
 
     clean = _sine()
     # 200 clicks needed so the top-0.1% (≈96 samples of 96000) is fully within click range
@@ -158,7 +161,7 @@ def test_11_proxy_impulse_ratio_with_clicks():
 
 
 def test_12_proxy_impulse_ratio_stereo():
-    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio
+    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio  # type: ignore[attr-defined]
 
     stereo = _stereo(_sine())
     ratio = _proxy_impulse_ratio(stereo)
@@ -166,7 +169,7 @@ def test_12_proxy_impulse_ratio_stereo():
 
 
 def test_13_proxy_impulse_ratio_zeros():
-    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio
+    from backend.core.cassette_defect_verifier import _proxy_impulse_ratio  # type: ignore[attr-defined]
 
     silence = np.zeros(SR, dtype=np.float32)
     # Should not raise; returns a numeric value
@@ -180,7 +183,7 @@ def test_13_proxy_impulse_ratio_zeros():
 
 
 def test_20_proxy_hf_noise_floor_clean():
-    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor
+    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor  # type: ignore[attr-defined]
 
     clean = _sine()
     val = _proxy_hf_noise_floor(clean, SR)
@@ -188,7 +191,7 @@ def test_20_proxy_hf_noise_floor_clean():
 
 
 def test_21_proxy_hf_noise_floor_noisy_vs_clean():
-    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor
+    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor  # type: ignore[attr-defined]
 
     clean = _sine()
     noisy = _add_hf_noise(clean, level=0.20)
@@ -199,7 +202,7 @@ def test_21_proxy_hf_noise_floor_noisy_vs_clean():
 
 
 def test_22_proxy_hf_noise_floor_stereo():
-    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor
+    from backend.core.cassette_defect_verifier import _proxy_hf_noise_floor  # type: ignore[attr-defined]
 
     stereo = _stereo(_add_hf_noise(_sine()))
     val = _proxy_hf_noise_floor(stereo, SR)
@@ -207,7 +210,7 @@ def test_22_proxy_hf_noise_floor_stereo():
 
 
 def test_22a_psycho_hf_audibility_noisy_vs_clean():
-    from backend.core.cassette_defect_verifier import _compute_hf_noise_audibility
+    from backend.core.cassette_defect_verifier import _compute_hf_noise_audibility  # type: ignore[attr-defined]
 
     clean = _sine()
     noisy = _add_hf_noise(clean, level=0.20)
@@ -219,7 +222,7 @@ def test_22a_psycho_hf_audibility_noisy_vs_clean():
 
 
 def test_22b_psycho_transient_harshness_clicks_vs_clean():
-    from backend.core.cassette_defect_verifier import _compute_transient_harshness
+    from backend.core.cassette_defect_verifier import _compute_transient_harshness  # type: ignore[attr-defined]
 
     clean = _sine()
     clicked = _add_clicks(clean, n=180)
@@ -231,7 +234,7 @@ def test_22b_psycho_transient_harshness_clicks_vs_clean():
 
 
 def test_22c_psycho_quasi_peak_burstiness_clicks_vs_clean():
-    from backend.core.cassette_defect_verifier import _compute_quasi_peak_burstiness
+    from backend.core.cassette_defect_verifier import _compute_quasi_peak_burstiness  # type: ignore[attr-defined]
 
     clean = _sine()
     clicked = _add_clicks(clean, n=180)
@@ -243,7 +246,7 @@ def test_22c_psycho_quasi_peak_burstiness_clicks_vs_clean():
 
 
 def test_22f_psycho_modulation_roughness_modulated_vs_clean():
-    from backend.core.cassette_defect_verifier import _compute_modulation_roughness
+    from backend.core.cassette_defect_verifier import _compute_modulation_roughness  # type: ignore[attr-defined]
 
     clean = _sine()
     modulated = _add_slow_amplitude_modulation(clean, rate_hz=7.0, depth=0.8)
@@ -256,7 +259,7 @@ def test_22f_psycho_modulation_roughness_modulated_vs_clean():
 
 
 def test_22g_psycho_modulation_roughness_short_audio_safe():
-    from backend.core.cassette_defect_verifier import _compute_modulation_roughness
+    from backend.core.cassette_defect_verifier import _compute_modulation_roughness  # type: ignore[attr-defined]
 
     short = np.zeros(32, dtype=np.float32)
     m = _compute_modulation_roughness(short, SR)
@@ -264,7 +267,10 @@ def test_22g_psycho_modulation_roughness_short_audio_safe():
 
 
 def test_22d_frequency_selective_blend_hum_keeps_low_band_closer_to_before():
-    from backend.core.cassette_defect_verifier import _frequency_selective_blend, _proxy_hum_energy
+    from backend.core.cassette_defect_verifier import (  # type: ignore[attr-defined]
+        _frequency_selective_blend,
+        _proxy_hum_energy,
+    )
 
     before = _sine(freq=50.0, amp=0.20)
     after = before + _sine(freq=50.0, amp=0.10)
@@ -281,7 +287,10 @@ def test_22d_frequency_selective_blend_hum_keeps_low_band_closer_to_before():
 
 
 def test_22e_frequency_selective_blend_clicks_reduces_impulse_ratio_vs_global():
-    from backend.core.cassette_defect_verifier import _frequency_selective_blend, _proxy_impulse_ratio
+    from backend.core.cassette_defect_verifier import (  # type: ignore[attr-defined]
+        _frequency_selective_blend,
+        _proxy_impulse_ratio,
+    )
 
     before = _sine()
     after = _add_clicks(before, n=220, amp=0.95)
@@ -302,7 +311,7 @@ def test_22e_frequency_selective_blend_clicks_reduces_impulse_ratio_vs_global():
 
 
 def test_30_proxy_hum_energy_clean():
-    from backend.core.cassette_defect_verifier import _proxy_hum_energy
+    from backend.core.cassette_defect_verifier import _proxy_hum_energy  # type: ignore[attr-defined]
 
     clean = _sine(440.0)
     val = _proxy_hum_energy(clean, SR)
@@ -310,7 +319,7 @@ def test_30_proxy_hum_energy_clean():
 
 
 def test_31_proxy_hum_energy_with_hum():
-    from backend.core.cassette_defect_verifier import _proxy_hum_energy
+    from backend.core.cassette_defect_verifier import _proxy_hum_energy  # type: ignore[attr-defined]
 
     clean = _sine(440.0)
     hummed = _add_hum(clean, f0=50.0)
@@ -321,7 +330,7 @@ def test_31_proxy_hum_energy_with_hum():
 
 
 def test_32_proxy_hum_energy_60hz():
-    from backend.core.cassette_defect_verifier import _proxy_hum_energy
+    from backend.core.cassette_defect_verifier import _proxy_hum_energy  # type: ignore[attr-defined]
 
     clean = _sine(440.0)
     hummed = _add_hum(clean, f0=60.0)
@@ -335,7 +344,7 @@ def test_32_proxy_hum_energy_60hz():
 
 
 def test_40_proxy_low_freq_energy_clean():
-    from backend.core.cassette_defect_verifier import _proxy_low_freq_energy
+    from backend.core.cassette_defect_verifier import _proxy_low_freq_energy  # type: ignore[attr-defined]
 
     clean = _sine()
     val = _proxy_low_freq_energy(clean, SR)
@@ -343,7 +352,7 @@ def test_40_proxy_low_freq_energy_clean():
 
 
 def test_41_proxy_low_freq_energy_with_rumble():
-    from backend.core.cassette_defect_verifier import _proxy_low_freq_energy
+    from backend.core.cassette_defect_verifier import _proxy_low_freq_energy  # type: ignore[attr-defined]
 
     clean = _sine(440.0)
     rumbled = _add_rumble(clean)
@@ -358,7 +367,7 @@ def test_41_proxy_low_freq_energy_with_rumble():
 
 
 def test_50_proxy_dc_offset_clean():
-    from backend.core.cassette_defect_verifier import _proxy_dc_offset
+    from backend.core.cassette_defect_verifier import _proxy_dc_offset  # type: ignore[attr-defined]
 
     clean = _sine()
     val = _proxy_dc_offset(clean)
@@ -366,7 +375,7 @@ def test_50_proxy_dc_offset_clean():
 
 
 def test_51_proxy_dc_offset_with_dc():
-    from backend.core.cassette_defect_verifier import _proxy_dc_offset
+    from backend.core.cassette_defect_verifier import _proxy_dc_offset  # type: ignore[attr-defined]
 
     clean = _sine()
     dc_audio = _add_dc(clean, dc=0.05)
@@ -375,7 +384,7 @@ def test_51_proxy_dc_offset_with_dc():
 
 
 def test_52_proxy_dc_offset_stereo():
-    from backend.core.cassette_defect_verifier import _proxy_dc_offset
+    from backend.core.cassette_defect_verifier import _proxy_dc_offset  # type: ignore[attr-defined]
 
     stereo = _stereo(_add_dc(_sine(), dc=0.05))
     val = _proxy_dc_offset(stereo)
@@ -388,7 +397,7 @@ def test_52_proxy_dc_offset_stereo():
 
 
 def test_60_proxy_dropout_ratio_clean():
-    from backend.core.cassette_defect_verifier import _proxy_dropout_ratio
+    from backend.core.cassette_defect_verifier import _proxy_dropout_ratio  # type: ignore[attr-defined]
 
     clean = _sine()
     val = _proxy_dropout_ratio(clean, SR)
@@ -396,7 +405,7 @@ def test_60_proxy_dropout_ratio_clean():
 
 
 def test_61_proxy_dropout_ratio_with_dropouts():
-    from backend.core.cassette_defect_verifier import _proxy_dropout_ratio
+    from backend.core.cassette_defect_verifier import _proxy_dropout_ratio  # type: ignore[attr-defined]
 
     clean = _sine()
     dropped = _add_dropouts(clean, n=20, gap_ms=20.0)
@@ -411,7 +420,7 @@ def test_61_proxy_dropout_ratio_with_dropouts():
 
 
 def test_70_proxy_mono_compat_coherent_stereo():
-    from backend.core.cassette_defect_verifier import _proxy_mono_compat
+    from backend.core.cassette_defect_verifier import _proxy_mono_compat  # type: ignore[attr-defined]
 
     mono = _sine()
     stereo = np.stack([mono, mono], axis=0)
@@ -420,7 +429,7 @@ def test_70_proxy_mono_compat_coherent_stereo():
 
 
 def test_71_proxy_mono_compat_anti_phase():
-    from backend.core.cassette_defect_verifier import _proxy_mono_compat
+    from backend.core.cassette_defect_verifier import _proxy_mono_compat  # type: ignore[attr-defined]
 
     mono = _sine()
     anti_phase = np.stack([mono, -mono], axis=0)
@@ -429,7 +438,7 @@ def test_71_proxy_mono_compat_anti_phase():
 
 
 def test_72_proxy_mono_compat_mono_input():
-    from backend.core.cassette_defect_verifier import _proxy_mono_compat
+    from backend.core.cassette_defect_verifier import _proxy_mono_compat  # type: ignore[attr-defined]
 
     mono = _sine()
     compat = _proxy_mono_compat(mono)
@@ -442,7 +451,7 @@ def test_72_proxy_mono_compat_mono_input():
 
 
 def test_80_measure_proxies_known_phase():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     proxies = pdv.measure_proxies("phase_03_denoise", _sine(), SR)
@@ -452,7 +461,7 @@ def test_80_measure_proxies_known_phase():
 
 
 def test_81_measure_proxies_unknown_phase():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     proxies = pdv.measure_proxies("phase_99_nonexistent", _sine(), SR)
@@ -460,7 +469,7 @@ def test_81_measure_proxies_unknown_phase():
 
 
 def test_82_measure_proxies_never_raises():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     # Pass garbage audio — must not raise
@@ -475,7 +484,7 @@ def test_82_measure_proxies_never_raises():
 
 
 def test_90_check_unknown_phase_returns_audio_after():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     before = _sine()
@@ -486,7 +495,7 @@ def test_90_check_unknown_phase_returns_audio_after():
 
 def test_91_check_no_rollback_when_defect_improved():
     """If a phase reduced HF noise, audio_after must be kept."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -503,7 +512,7 @@ def test_91_check_no_rollback_when_defect_improved():
 
 def test_92_check_rollback_when_defect_worsened():
     """If a phase INCREASED HF noise, audio_before must be returned."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -525,7 +534,7 @@ def test_92_check_rollback_when_defect_worsened():
 
 def test_93_check_hum_rollback():
     """phase_02_hum_removal: if hum energy increased, rollback."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -543,7 +552,7 @@ def test_93_check_hum_rollback():
 
 def test_94_check_dc_offset_rollback():
     """phase_30_dc_offset_removal: if DC increased, rollback."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -561,7 +570,7 @@ def test_94_check_dc_offset_rollback():
 
 def test_95_check_stereo_audio():
     """check() handles stereo audio for both before and after."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     stereo_before = _stereo(_add_hf_noise(_sine(), level=0.20))
@@ -574,7 +583,7 @@ def test_95_check_stereo_audio():
 
 def test_96_check_metadata_store_populated():
     """check() populates metadata_store when provided."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -595,7 +604,7 @@ def test_96_check_metadata_store_populated():
 
 def test_96a_check_reweight_avoids_rollback_and_sets_metadata(monkeypatch):
     """Bei Proxy-Worsening wird zuerst reweighted; erfolgreicher Blend vermeidet Rollback."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -628,7 +637,7 @@ def test_96a_check_reweight_avoids_rollback_and_sets_metadata(monkeypatch):
 
 def test_96b_check_naturalness_hard_guard_forces_rollback_without_reweight(monkeypatch):
     """Bei Naturalness-Hard-Guard bleibt sofortiger Rollback Pflicht."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -668,7 +677,7 @@ def test_96b_check_naturalness_hard_guard_forces_rollback_without_reweight(monke
 
 def test_96c_check_psycho_hf_guard_strictens_threshold_to_rollback(monkeypatch):
     """Leichter Proxy-Drift kann bei starker Hoerbarkeit trotzdem rollbacken."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -693,7 +702,7 @@ def test_96c_check_psycho_hf_guard_strictens_threshold_to_rollback(monkeypatch):
 
 
 def test_96d_check_metadata_contains_psychoacoustic_payload(monkeypatch):
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -728,7 +737,7 @@ def test_96d_check_metadata_contains_psychoacoustic_payload(monkeypatch):
 
 def test_96e_check_defect_specific_reweight_prefers_click_profile(monkeypatch):
     """CLICKS nutzt eine eigene Reweight-Staffel statt globalem HF-Default."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -767,7 +776,7 @@ def test_96e_check_defect_specific_reweight_prefers_click_profile(monkeypatch):
 
 
 def test_96f_check_hum_uses_frequency_selective_reweight_strategy(monkeypatch):
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -806,7 +815,7 @@ def test_96f_check_hum_uses_frequency_selective_reweight_strategy(monkeypatch):
 
 
 def test_96g_check_clicks_uses_burst_selective_reweight_strategy(monkeypatch):
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -846,7 +855,7 @@ def test_96g_check_clicks_uses_burst_selective_reweight_strategy(monkeypatch):
 
 def test_97_check_never_raises_on_nan_input():
     """check() must return a valid array even on NaN/Inf input."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     nan_audio = np.full(SR, np.nan, dtype=np.float32)
@@ -859,7 +868,7 @@ def test_97_check_never_raises_on_nan_input():
 
 def test_98_check_1_sample_audio():
     """check() handles 1-sample edge case."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     one_sample = np.array([0.5], dtype=np.float32)
@@ -869,7 +878,7 @@ def test_98_check_1_sample_audio():
 
 def test_99_check_zero_length_audio():
     """check() handles empty audio without raising."""
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     empty = np.array([], dtype=np.float32)
@@ -883,7 +892,7 @@ def test_99_check_zero_length_audio():
 
 
 def test_100_session_reset_clears():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     # run a check then reset
@@ -894,7 +903,7 @@ def test_100_session_reset_clears():
 
 
 def test_101_session_summary_structure():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -904,7 +913,7 @@ def test_101_session_summary_structure():
 
 
 def test_102_session_summary_counts_correctly():
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     pdv.reset_session()
@@ -924,7 +933,7 @@ def test_103_thread_safety_reset():
     """Concurrent reset + check must not crash."""
     import threading
 
-    from backend.core.cassette_defect_verifier import get_phase_defect_verifier
+    from backend.core.cassette_defect_verifier import get_phase_defect_verifier  # type: ignore[attr-defined]
 
     pdv = get_phase_defect_verifier()
     errors: list[str] = []

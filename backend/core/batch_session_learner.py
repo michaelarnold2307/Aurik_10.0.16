@@ -110,7 +110,7 @@ class BatchSessionLearner:
                         session_id=session_id,
                         material=material,
                     )
-                    logger.info("📂 BatchSession %s: Neue Session gestartet", session_id)
+                    logger.info("📂 BatchSession %s: Neue Sitzung gestartet", session_id)
         return session_id
 
     def get_warm_start(
@@ -160,7 +160,7 @@ class BatchSessionLearner:
             score:      Qualitäts-Score (z.B. PQS-MOS) dieser Datei
         """
         if not math.isfinite(score):
-            logger.debug("BatchSession %s: Score NaN/Inf, kein Update", session_id)
+            logger.debug("BatchSession %s: Wert NaN/Inf, kein Aktualisierung", session_id)
             return
 
         # Params-Fingerabdruck: NaN entfernen
@@ -191,7 +191,7 @@ class BatchSessionLearner:
             # Max-Dateien-Check
             if state.n_files >= self.MAX_FILES_PER_SESSION:
                 logger.info(
-                    "BatchSession %s: Max-Dateien (%d) erreicht, Session wird beendet",
+                    "BatchSession %s: Max-Dateien (%d) erreicht, Sitzung wird beendet",
                     session_id,
                     self.MAX_FILES_PER_SESSION,
                 )
@@ -236,7 +236,7 @@ class BatchSessionLearner:
                     if obs:
                         existing_best = max(o.get("score", 0.0) for o in obs if math.isfinite(o.get("score", 0.0)))
                 except Exception as _exc:
-                    logger.debug("Operation failed (non-critical): %s", _exc)
+                    logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
             # Nur übernehmen wenn Session besser
             if state.best_score > existing_best:
@@ -268,7 +268,7 @@ class BatchSessionLearner:
                 except Exception as exc:
                     logger.debug("gp_memory-Schreiben fehlgeschlagen: %s", exc)
         except Exception as exc:
-            logger.debug("BatchSession finalize fehlgeschlagen: %s", exc)
+            logger.debug("BatchSession abschliessen fehlgeschlagen: %s", exc)
 
     def _detect_session_id(self, file_paths: list[pathlib.Path]) -> str:
         """SHA256[:8] des gemeinsamen Eltern-Ordnerpfads."""

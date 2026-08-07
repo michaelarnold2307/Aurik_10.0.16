@@ -161,7 +161,7 @@ def apply_glue_stage(
     makeup_db = 20.0 * np.log10(makeup_lin)
 
     logger.debug(
-        "Glue-Stage: ratio=%.1f:1, max_GR=%.1f dB, makeup=%.1f dB, genre=%s",
+        "Glue-Stufe: Verhaeltnis=%.1f:1, max_GR=%.1f dB, makeup=%.1f dB, genre=%s",
         ratio,
         actual_gr_db,
         makeup_db,

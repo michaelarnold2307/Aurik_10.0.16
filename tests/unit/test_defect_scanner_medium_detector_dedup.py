@@ -75,7 +75,7 @@ def test_scan_publishes_chain_override_metadata_for_cacheable_forensic_medium() 
     assert result.metadata["chain_stage_materials"] == ["tape"]
     assert result.metadata["material_confidence"] == 0.93
     assert result.metadata["chain_threshold_override_applied"] is True
-    assert result.metadata["chain_threshold_override_count"] >= 1
+    assert result.metadata["chain_threshold_override_count"] >= 1  # type: ignore[operator]
     assert result.metadata["chain_threshold_overrides"]
 
 

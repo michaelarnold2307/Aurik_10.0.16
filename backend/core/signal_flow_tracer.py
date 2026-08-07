@@ -230,14 +230,14 @@ class SignalFlowTracer:
 
                 self._session_active = True
                 logger.info(
-                    "§SFT begin_session: source=%s material=%s era=%d vocal=%s",
+                    "§SFT begin_Sitzung: source=%s material=%s era=%d vocal=%s",
                     os.path.basename(source_path),
                     material,
                     era_decade,
                     self._is_vocal,
                 )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§SFT begin_session non-blocking exception: %s", exc)
+            logger.debug("§SFT begin_Sitzung nicht blockierend exception: %s", exc)
 
     def set_silence_zones(self, zones: list) -> None:
         """Stille-Zonen nachträglich setzen (falls nach begin_session bekannt)."""
@@ -246,7 +246,7 @@ class SignalFlowTracer:
                 if zones is not None:
                     self._silence_zones = list(zones)
         except Exception:  # pylint: disable=broad-except
-            logger.debug("SFT begin_session nicht-kritischer Fallback, ignoriert", exc_info=True)
+            logger.debug("SFT begin_Sitzung nicht-kritischer Ersatzpfad, ignoriert", exc_info=True)
 
     def capture_pre_phase(self, audio: np.ndarray) -> None:
         """Pre-Phase-Audio für record_phase vormerken (kein Copy — nur Referenz).
@@ -258,7 +258,7 @@ class SignalFlowTracer:
                 # Keine Kopie nötig — UV3 erstellt sowieso eine neue Array nach phase.process()
                 self._pre_audio_ref = audio
         except Exception:  # pylint: disable=broad-except
-            logger.debug("SFT capture_pre_phase nicht-kritisch, ignoriert", exc_info=True)
+            logger.debug("SFT Erfassung_pre_Verarbeitungsschritt nicht-kritisch, ignoriert", exc_info=True)
 
     def record_phase(
         self,
@@ -529,7 +529,7 @@ class SignalFlowTracer:
                 )
 
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§SFT record_phase non-blocking exception (%s): %s", phase_id, exc)
+            logger.debug("§SFT aufzeichnen_Verarbeitungsschritt nicht blockierend exception (%s): %s", phase_id, exc)
 
     def finalize(
         self,
@@ -552,14 +552,14 @@ class SignalFlowTracer:
             self._write_trace()
 
             logger.info(
-                "§SFT finalize: %d Phasen, HPI=%.3f, AF=%.3f, output=%s",
+                "§SFT abschliessen: %d Phasen, HPI=%.3f, AF=%.3f, Ausgabe=%s",
                 len(self._phases),
                 self._hpi or 0.0,
                 self._artifact_freedom or 0.0,
                 os.path.basename(self._output_wav or ""),
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("§SFT finalize non-blocking exception: %s", exc)
+            logger.debug("§SFT abschliessen nicht blockierend exception: %s", exc)
 
     def report(self) -> str:
         """Strukturierter Diagnose-Text der aktuellen (oder letzten) Session.
@@ -588,7 +588,7 @@ class SignalFlowTracer:
             if wav and Path(wav).exists():
                 return wav  # type: ignore[no-any-return]
         except Exception as e:
-            logger.warning("signal_flow_tracer.py::latest_output_wav fallback: %s", e)
+            logger.warning("signal_flow_tracer.py::latest_Ausgabe_wav Ersatzpfad: %s", e)
         # 3. Filesystem-Fallback: neueste WAV in output/
         return _find_latest_output_wav()
 
@@ -691,7 +691,7 @@ def _to_mono(audio: np.ndarray | None) -> np.ndarray | None:
                 a = np.mean(a, axis=1)
         return a.ravel()  # type: ignore[no-any-return]
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_to_mono fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_to_mono Ersatzpfad: %s", e)
         return None
 
 
@@ -703,7 +703,7 @@ def _to_db_peak(audio: np.ndarray) -> float:
             return -120.0
         return float(20.0 * np.log10(np.clip(peak, 1e-9, None)))
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_to_db_peak fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_to_db_peak Ersatzpfad: %s", e)
         return -120.0
 
 
@@ -715,7 +715,7 @@ def _to_db_rms(audio: np.ndarray) -> float:
             return -120.0
         return float(20.0 * np.log10(np.clip(rms, 1e-9, None)))
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_to_db_rms fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_to_db_rms Ersatzpfad: %s", e)
         return -120.0
 
 
@@ -742,7 +742,7 @@ def _compute_psd_fingerprint(audio: np.ndarray, sr: int) -> tuple[np.ndarray | N
         freqs, psd = welch(mono, fs=sr, nperseg=nperseg)
         return psd.astype(np.float32), freqs.astype(np.float32)
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_compute_psd_fingerprint fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_berechnen_psd_fingerprint Ersatzpfad: %s", e)
         return None, None
 
 
@@ -793,7 +793,7 @@ def _compute_spectral_novelty_fast(
         novelty = float(excess_bins) / float(n) if n > 0 else 0.0
         return float(np.clip(novelty, 0.0, 1.0))
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_compute_spectral_novelty_fast fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_berechnen_spectral_novelty_fast Ersatzpfad: %s", e)
         return 0.0
 
 
@@ -841,7 +841,7 @@ def _hnr_fast(audio: np.ndarray, sr: int) -> float | None:
         hnr = 10.0 * np.log10(peak_val / (1.0 - peak_val + 1e-12))
         return float(np.clip(hnr, -20.0, 40.0))
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_hnr_fast fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_hnr_fast Ersatzpfad: %s", e)
         return None
 
 
@@ -896,7 +896,7 @@ def _detect_echo(diff: np.ndarray, sr: int, pre: np.ndarray | None = None) -> tu
 
         return float(np.clip(peak_val, 0.0, 1.0)), lag_ms
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_detect_echo fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_erkennen_echo Ersatzpfad: %s", e)
         return 0.0, 0.0
 
 
@@ -946,7 +946,7 @@ def _check_silence_contamination(
 
         return max_contamination if max_contamination > -100.0 else None
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_slice fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_slice Ersatzpfad: %s", e)
         return None
 
 
@@ -963,7 +963,7 @@ def _find_latest_output_wav() -> str | None:
             return None
         return str(max(candidates, key=lambda p: p.stat().st_mtime))
     except Exception as e:
-        logger.warning("signal_flow_tracer.py::_find_latest_output_wav fallback: %s", e)
+        logger.warning("signal_flow_tracer.py::_find_latest_Ausgabe_wav Ersatzpfad: %s", e)
         return None
 
 
@@ -1103,7 +1103,7 @@ def calibrate_sft_thresholds(
         _HG_BASE_THRESHOLD = 0.20  # shallow chain
     else:
         _HG_BASE_THRESHOLD = 0.15  # studio master (§2.46e normativ)
-    logger.info("§v10.122 HG-Threshold: depth=%d → base=%.2f", _depth, _HG_BASE_THRESHOLD)
+    logger.info("§v10.122 HG-Schwelle: depth=%d → base=%.2f", _depth, _HG_BASE_THRESHOLD)
     # §v10.131 Depth-adaptive Echo: tiefe Ketten erzeugen legitimerweise
     # mehr harmonische Echos durch kaskadierte Filter-Phasen.
     # Phase_07 (Harmonic Restoration) auf depth=4 Kassetten produziert
@@ -1120,6 +1120,7 @@ def calibrate_sft_thresholds(
     # die lokalen Berechnungen (Single Source of Truth, §G76).
     try:
         from backend.core.calibrated_constants import get_constants
+
         _cc = get_constants()
         _ECHO_CORR_THRESH = _cc.echo_corr_threshold
         _HG_BASE_THRESHOLD = _cc.hg_base_threshold
@@ -1127,9 +1128,13 @@ def calibrate_sft_thresholds(
         _WET_CEILING_REPAIR = _cc.sft_wet_ceiling_repair
         _HNR_WARN_DB = _cc.hnr_warn_db
         _HNR_CRIT_DB = _cc.hnr_crit_db
-        logger.debug("§G125 CalibratedConstants applied: echo=%.2f hg=%.2f wet_nr=%.2f wet_r=%.2f",
-                     _ECHO_CORR_THRESH, _HG_BASE_THRESHOLD,
-                     _WET_CEILING_NONREPAIR, _WET_CEILING_REPAIR)
+        logger.debug(
+            "§G125 CalibratedConstants angewendet: echo=%.2f hg=%.2f wet_nr=%.2f wet_r=%.2f",
+            _ECHO_CORR_THRESH,
+            _HG_BASE_THRESHOLD,
+            _WET_CEILING_NONREPAIR,
+            _WET_CEILING_REPAIR,
+        )
     except Exception:
         pass  # Fallback: lokale Berechnungen bleiben aktiv
 

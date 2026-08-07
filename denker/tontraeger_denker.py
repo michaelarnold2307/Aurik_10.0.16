@@ -129,7 +129,7 @@ class TontraegerDenker:
                         logger.info("TontraegerDenker: MediumDetector geladen.")
                     except Exception as exc:
                         logger.warning(
-                            "TontraegerDenker: MediumDetector nicht verfügbar (%s). Fallback auf 'unknown'.",
+                            "TontraegerDenker: MediumDetector nicht verfügbar (%s). Ersatzpfad auf 'unknown'.",
                             exc,
                         )
                         self._detector = None
@@ -208,7 +208,7 @@ class TontraegerDenker:
                     "confidence": float(getattr(raw_result, "confidence", 0.5)),
                 }
         except Exception as exc:
-            logger.warning("TontraegerDenker: detect() fehlgeschlagen (%s). Fallback.", exc)
+            logger.warning("TontraegerDenker: erkennen() fehlgeschlagen (%s). Ersatzpfad.", exc)
             return self._fallback_result()
 
         info = self._struktur(raw)

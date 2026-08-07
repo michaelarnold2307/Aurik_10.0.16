@@ -50,7 +50,7 @@ def _clean_music_like(seconds: float) -> np.ndarray:
         ramp = np.linspace(0.0, 1.0, edge, dtype=np.float32)
         audio[:edge] *= ramp
         audio[-edge:] *= ramp[::-1]
-    return audio.astype(np.float32)
+    return audio.astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _with_clicks(audio: np.ndarray) -> np.ndarray:
@@ -64,7 +64,7 @@ def _with_clicks(audio: np.ndarray) -> np.ndarray:
 
 def _with_hum(audio: np.ndarray) -> np.ndarray:
     t = _timebase(len(audio) / SR)
-    return np.clip(audio + 0.16 * np.sin(2.0 * np.pi * 50.0 * t), -1.0, 1.0).astype(np.float32)
+    return np.clip(audio + 0.16 * np.sin(2.0 * np.pi * 50.0 * t), -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _with_dropout(audio: np.ndarray) -> np.ndarray:
@@ -95,7 +95,7 @@ def _with_quantization_noise(audio: np.ndarray) -> np.ndarray:
     """Apply coarse re-quantization to create granular digital noise."""
     levels = 32.0
     out = np.round(audio * levels) / levels
-    return np.clip(out, -1.0, 1.0).astype(np.float32)
+    return np.clip(out, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _with_jitter(seconds: float) -> np.ndarray:
@@ -106,7 +106,7 @@ def _with_jitter(seconds: float) -> np.ndarray:
     beta = 0.22
     phase = 2.0 * np.pi * carrier_hz * t + beta * np.sin(2.0 * np.pi * jitter_hz * t)
     tone = 0.38 * np.sin(phase)
-    return np.clip(tone, -1.0, 1.0).astype(np.float32)
+    return np.clip(tone, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _with_aliasing(seconds: float) -> np.ndarray:
@@ -117,7 +117,7 @@ def _with_aliasing(seconds: float) -> np.ndarray:
     hf += 0.22 * np.sin(2.0 * np.pi * 22600.0 * t)
     # Small musical bed so ratio is dominated by mirror-zone energy.
     bed = 0.05 * np.sin(2.0 * np.pi * 700.0 * t)
-    return np.clip(hf + bed, -1.0, 1.0).astype(np.float32)
+    return np.clip(hf + bed, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
 
 def _scan_case(
@@ -235,7 +235,7 @@ def run_gate(seconds: float = 1.6) -> tuple[object, list[DefectBenchmarkCaseResu
 def _write_report(path: Path, gate_result: object, cases: list[DefectBenchmarkCaseResult]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "gate": asdict(gate_result),
+        "gate": asdict(gate_result),  # type: ignore[call-overload]
         "cases": [asdict(case) for case in cases],
     }
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -253,13 +253,13 @@ def main() -> int:
     _write_report(Path(args.output), gate_result, cases)
     print(
         "defect_detection_worldclass_gate "
-        f"passed={gate_result.passed} recall={gate_result.recall:.3f} "
-        f"precision={gate_result.precision:.3f} locality={gate_result.locality_recall:.3f} "
-        f"runtime_factor={gate_result.max_runtime_factor:.3f} output={args.output}"
+        f"passed={gate_result.passed} recall={gate_result.recall:.3f} "  # type: ignore[attr-defined]
+        f"precision={gate_result.precision:.3f} locality={gate_result.locality_recall:.3f} "  # type: ignore[attr-defined]
+        f"runtime_factor={gate_result.max_runtime_factor:.3f} output={args.output}"  # type: ignore[attr-defined]
     )
-    if gate_result.fail_reasons:
-        print("fail_reasons=" + ",".join(gate_result.fail_reasons))
-    return 0 if args.no_fail or gate_result.passed else 1
+    if gate_result.fail_reasons:  # type: ignore[attr-defined]
+        print("fail_reasons=" + ",".join(gate_result.fail_reasons))  # type: ignore[attr-defined]
+    return 0 if args.no_fail or gate_result.passed else 1  # type: ignore[attr-defined]
 
 
 if __name__ == "__main__":

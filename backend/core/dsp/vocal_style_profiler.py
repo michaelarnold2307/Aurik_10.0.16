@@ -112,7 +112,7 @@ class VocalStyleProfiler:
             try:
                 return self._profile_impl(audio, sr)
             except Exception as exc:
-                logger.debug("VocalStyleProfiler non-blocking: %s", exc)
+                logger.debug("VocalStyleProfiler nicht blockierend: %s", exc)
                 return VocalStyleProfile(valid=False)
 
     # ------------------------------------------------------------------
@@ -213,7 +213,7 @@ class VocalStyleProfiler:
             # safe_filtfilt → scipy.signal.filtfilt kann in seltenen Fällen
             # (0.3% aller Runs) eine C-Level-Rekursion triggern.
             # Fallback: lfilter (minimum-phase) statt filtfilt (zero-phase).
-            logger.debug("vocal_style_profiler.py::_compute_vibrato recursion → lfilter fallback")
+            logger.debug("vocal_style_profiler.py::_berechnen_vibrato recursion → lfilter Ersatzpfad")
             try:
                 from scipy.signal import lfilter
 
@@ -224,10 +224,11 @@ class VocalStyleProfiler:
                         f0_mean = float(np.mean(f0_arr))
                         return 0.0, float(np.clip(1200.0 * np.log2(1.0 + depth_hz / f0_mean), 0.0, 200.0))
             except Exception:
+                logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
                 pass
             return 0.0, 0.0
         except Exception as e:
-            logger.warning("vocal_style_profiler.py::_compute_vibrato fallback: %s", e)
+            logger.warning("vocal_style_profiler.py::_berechnen_vibrato Ersatzpfad: %s", e)
             return 0.0, 0.0
 
     def _compute_chest_head_ratio(self, mono: np.ndarray, sr: int) -> float:
@@ -256,7 +257,7 @@ class VocalStyleProfiler:
                     ratios.append(e_low / total)
             return float(np.clip(np.mean(ratios) if ratios else 0.5, 0.0, 1.0))
         except Exception as e:
-            logger.warning("vocal_style_profiler.py::_compute_chest_head_ratio fallback: %s", e)
+            logger.warning("vocal_style_profiler.py::_berechnen_chest_head_Verhaeltnis Ersatzpfad: %s", e)
             return 0.5
 
     def _compute_phrase_contour_variance(self, mono: np.ndarray, sr: int) -> float:
@@ -271,7 +272,7 @@ class VocalStyleProfiler:
                 return 0.0
             return float(np.clip(float(np.var(rms_vals)) * 1e4, 0.0, 1000.0))
         except Exception as e:
-            logger.warning("vocal_style_profiler.py::_compute_phrase_contour_variance fallback: %s", e)
+            logger.warning("vocal_style_profiler.py::_berechnen_phrase_contour_variance Ersatzpfad: %s", e)
             return 0.0
 
     def _compute_f1_f2_ratio(self, mono: np.ndarray, sr: int) -> float:
@@ -288,7 +289,7 @@ class VocalStyleProfiler:
                 return float(np.clip(f1 / f2, 0.0, 1.0))
             return 0.0
         except Exception as e:
-            logger.warning("vocal_style_profiler.py::_compute_f1_f2_ratio fallback: %s", e)
+            logger.warning("vocal_style_profiler.py::_berechnen_f1_f2_Verhaeltnis Ersatzpfad: %s", e)
             return 0.0
 
     def _compute_breathiness(self, mono: np.ndarray, sr: int) -> float:
@@ -329,7 +330,7 @@ class VocalStyleProfiler:
                     h1_h2_diffs.append(20.0 * np.log10(h1_amp / h2_amp))
             return float(np.clip(np.mean(h1_h2_diffs) if h1_h2_diffs else 0.0, 0.0, 30.0))
         except Exception as e:
-            logger.warning("vocal_style_profiler.py::_compute_breathiness fallback: %s", e)
+            logger.warning("vocal_style_profiler.py::_berechnen_breathiness Ersatzpfad: %s", e)
             return 0.0
 
 

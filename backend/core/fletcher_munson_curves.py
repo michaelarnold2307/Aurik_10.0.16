@@ -330,7 +330,7 @@ class FletcherMunsonProcessor:
             spls = np.array([spl for _, spl in data])
             self.contours[phon_level] = EqualLoudnessContour(phon_level=phon_level, frequencies=freqs, spl_levels=spls)
 
-        logger.debug("FletcherMunsonProcessor initialized (target=%s phon)", self.config.target_phon)
+        logger.debug("FletcherMunsonProcessor initialisiert (target=%s phon)", self.config.target_phon)
 
     def get_contour(self, phon_level: int) -> EqualLoudnessContour:
         """
@@ -545,7 +545,7 @@ def apply_loudness_compensation(
     else:
         target_phon, reference_phon = level_map.get(listening_level, (60, 80))
 
-    config = FletcherMunsonConfig(target_phon=target_phon, reference_phon=reference_phon)
+    config = FletcherMunsonConfig(target_phon=target_phon, reference_phon=reference_phon)  # type: ignore[arg-type]
     processor = FletcherMunsonProcessor(config)
 
     compensated, _ = processor.apply_compensation(audio, sr)
@@ -606,10 +606,10 @@ if __name__ == "__main__":
     compensated_quiet, _ = processor.apply_compensation(audio, sr, target_phon=40, reference_phon=80)
     compensated_normal, _ = processor.apply_compensation(audio, sr, target_phon=60, reference_phon=80)
 
-    logger.debug("  Original RMS: %.4f", np.sqrt(np.mean(audio**2)))
+    logger.debug("  Originalsignal RMS: %.4f", np.sqrt(np.mean(audio**2)))
     logger.debug("  Quiet (40 phon) RMS: %.4f", np.sqrt(np.mean(compensated_quiet**2)))
     logger.debug("  Normal (60 phon) RMS: %.4f", np.sqrt(np.mean(compensated_normal**2)))
 
     logger.debug("\n" + "=" * 70)
-    logger.debug("Demo complete!")
+    logger.debug("Demo vollstaendig!")
     logger.debug("=" * 70 + "\n")

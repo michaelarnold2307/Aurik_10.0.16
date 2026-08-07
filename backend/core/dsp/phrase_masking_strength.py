@@ -278,5 +278,5 @@ def compute_phrase_strength_map(
         )
 
     except Exception as exc:
-        logger.debug("compute_phrase_strength_map: non-blocking fallback — %s", exc)
+        logger.debug("berechnen_phrase_strength_map: nicht blockierend Ersatzpfad — %s", exc)
         return _empty

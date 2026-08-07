@@ -26,6 +26,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
+import numpy as np
+
 
 @dataclass
 class PluginManifest:
@@ -83,7 +85,7 @@ class PluginResult:
         error:          Fehlermeldung wenn success=False.
     """
 
-    audio: np.ndarray  # noqa: F821
+    audio: np.ndarray  # type: ignore[name-defined]
     sample_rate: int
     warnings: list[str] = field(default_factory=list)
     metrics: dict[str, float] = field(default_factory=dict)
@@ -109,10 +111,10 @@ class AurikPlugin(ABC):
     @abstractmethod
     def process_audio(
         self,
-        audio: np.ndarray,  # noqa: F821
+        audio: np.ndarray,  # type: ignore[name-defined]
         sr: int = 48000,
         **kwargs,
-    ) -> np.ndarray:  # noqa: F821
+    ) -> np.ndarray:  # type: ignore[name-defined]
         """Audio-Verarbeitung — Hauptmethode.
 
         Args:
@@ -128,7 +130,7 @@ class AurikPlugin(ABC):
     @abstractmethod
     def on_phase_start(
         self,
-        audio: np.ndarray,  # noqa: F821
+        audio: np.ndarray,  # type: ignore[name-defined]
         sr: int = 48000,
         phase_name: str = "",
         **kwargs,
@@ -138,7 +140,7 @@ class AurikPlugin(ABC):
     @abstractmethod
     def on_phase_end(
         self,
-        audio: np.ndarray,  # noqa: F821
+        audio: np.ndarray,  # type: ignore[name-defined]
         sr: int = 48000,
         phase_name: str = "",
         **kwargs,
@@ -165,7 +167,7 @@ class AurikPlugin(ABC):
 
     def safe_process(
         self,
-        audio: np.ndarray,  # noqa: F821
+        audio: np.ndarray,  # type: ignore[name-defined]
         sr: int = 48000,
         **kwargs,
     ) -> PluginResult:

@@ -34,7 +34,7 @@ def _get_matplotlib_pyplot():
         try:
             import matplotlib.pyplot as plt
         except ImportError:
-            logger.warning("matplotlib not available, visualization will be disabled")
+            logger.warning("matplotlib not verfuegbar, visualization will be deaktiviert")
             return None
         _plt = plt
     return _plt
@@ -116,7 +116,7 @@ class NSGAII:
         self.population: list[Individual] = []
         self.pareto_front: list[Individual] = []
 
-        logger.info("NSGA-II initialized: %s objectives, pop_size=%s", len(objectives), population_size)
+        logger.info("NSGA-II initialisiert: %s objectives, pop_size=%s", len(objectives), population_size)
 
     def initialize_population(self) -> list[Individual]:
         """Initialisiert random population."""
@@ -132,7 +132,7 @@ class NSGAII:
 
             population.append(Individual(parameters=parameters))
 
-        logger.info("Initialized population of %s individuals", len(population))
+        logger.info("initialisiert population of %s individuals", len(population))
         return population
 
     def evaluate_population(self, population: list[Individual]) -> None:
@@ -365,7 +365,7 @@ class NSGAII:
         final_fronts = self.fast_non_dominated_sort(self.population)
         self.pareto_front = final_fronts[0] if final_fronts else []
 
-        logger.info("Optimization completed! Final Pareto front has %s solutions", len(self.pareto_front))
+        logger.info("Optimization abgeschlossen! Final Pareto front has %s solutions", len(self.pareto_front))
 
         return self.pareto_front
 
@@ -373,7 +373,7 @@ class NSGAII:
         """Visualize Pareto front (2D or 3D)."""
         plt = _get_matplotlib_pyplot()
         if plt is None:
-            logger.warning("matplotlib not available, cannot visualize Pareto front")
+            logger.warning("matplotlib not verfuegbar, cannot visualize Pareto front")
             return
 
         if not self.pareto_front:
@@ -402,7 +402,7 @@ class NSGAII:
             try:
                 pass
             except ImportError:
-                logger.warning("mpl_toolkits.mplot3d not available, cannot create 3D plot")
+                logger.warning("mpl_toolkits.mplot3d not verfuegbar, cannot erstellen 3D plot")
                 return
 
             obj1_name = self.objectives[0].name
@@ -427,7 +427,7 @@ class NSGAII:
 
         if save_path:
             plt.savefig(save_path, dpi=300, bbox_inches="tight")
-            logger.info("Pareto front saved to %s", save_path)
+            logger.info("Pareto front gespeichert to %s", save_path)
         else:
             plt.show()
 
@@ -472,7 +472,7 @@ class NSGAII:
                 best_score = score
                 best_individual = individual
 
-        logger.info("Selected solution with score %.4f", best_score)
+        logger.info("Selected solution with Wert %.4f", best_score)
         return best_individual  # type: ignore[return-value]
 
     def save_pareto_front(self, path: Path):
@@ -492,7 +492,7 @@ class NSGAII:
         with open(path, "w") as f:
             json.dump(pareto_data, f, indent=2)
 
-        logger.info("Pareto front saved to %s", path)
+        logger.info("Pareto front gespeichert to %s", path)
 
 
 # Example: Audio Restoration Multi-Objective Optimization
@@ -593,4 +593,4 @@ if __name__ == "__main__":
     try:
         optimizer.visualize_pareto_front()
     except Exception as e:
-        logger.debug("Visualization skipped: %s", e)
+        logger.debug("Visualization uebersprungen: %s", e)
