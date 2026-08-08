@@ -120,6 +120,7 @@ class AutoBypassOrder:
             self._audit_log("success", "DSP-Order-Entscheidung erfolgreich")
             return order
         except Exception as e:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             self._audit_log("error", f"Fehler bei DSP-Order-Entscheidung: {e}")
             # Fallback: Rückgabe Originalreihenfolge
             return dsp_list

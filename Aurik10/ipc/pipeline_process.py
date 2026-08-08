@@ -414,6 +414,7 @@ def _load_audio_file(path: str) -> tuple[np.ndarray | None, int]:
                 continue
             logger.error("soundfile.read fehlgeschlagen: %s", e)
             return None, 0
+    return None, 0
 
 
 # ═══════════════════════════════════════════════════════════════════════

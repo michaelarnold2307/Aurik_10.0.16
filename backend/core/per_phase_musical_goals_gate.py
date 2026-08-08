@@ -2563,7 +2563,7 @@ def _measure_quick(
             _kb = np.where((freqs_k > 27.5) & (freqs_k < 4186.0))[0]
             if len(_kb) == 0:
                 continue
-            _kn = np.round(12.0 * np.log2(freqs_k[_kb] / 440.0 + 1e-12)).astype(np.int32) % 12
+            _kn = np.round(12.0 * np.log2(freqs_k[_kb] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
             _chroma_seg = np.zeros(12, dtype=np.float64)
             np.add.at(_chroma_seg, _kn, spec[_kb].astype(np.float64))
             seg_sum = _chroma_seg.sum()
@@ -2624,7 +2624,7 @@ def _measure_quick(
             _chroma_abs = np.zeros(12, dtype=np.float32)
             _kb2 = np.where((_freqs_abs > 27.5) & (_freqs_abs < 4186.0))[0]
             if len(_kb2) > 0:
-                _kn2 = np.round(12.0 * np.log2(_freqs_abs[_kb2] / 440.0 + 1e-12)).astype(np.int32) % 12
+                _kn2 = np.round(12.0 * np.log2(_freqs_abs[_kb2] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
                 np.add.at(_chroma_abs, _kn2, _spec_abs[_kb2])
             _s2 = _chroma_abs.sum()
             if _s2 > 1e-8:

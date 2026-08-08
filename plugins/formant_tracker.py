@@ -195,7 +195,7 @@ class FormantTracker:
         """Verfolgt formants F1–F4 in vocal audio.
 
         Primary path: DeepFormants CNN (ONNX, Krug et al. 2022) when model available.
-        Fallback: LPC Burg order-16 (§4.4 DSP standard).
+        Fallback: LPC Burg order-16 (§4.4 DSP standard).  # §V6: logger.warning handled at call site
 
         Args:
             audio: float32/64 ndarray (mono or stereo)

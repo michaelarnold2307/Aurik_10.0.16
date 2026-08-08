@@ -55,6 +55,7 @@ def integrate_feedback_in_policy(suggestions, policy_path="policy/policy_engine.
         for k, v in result.items():
             print(f"  {k}: {v}")
     except Exception as exc:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         print(f"Feedback wird in Policy-Engine integriert (Fallback-Modus, Ursache: {exc}):")
         for s in suggestions:
             print(f"- {s}")

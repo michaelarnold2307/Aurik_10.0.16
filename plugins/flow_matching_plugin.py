@@ -209,6 +209,7 @@ def _inpaint_diffwave_onnx(
         result[gap_start:gap_end] = np.clip(inpainted_chunk, -1.0, 1.0)
         return result
     except Exception as e:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         logger.debug("DiffWave ONNX Fallback fehlgeschlagen: %s", e)
         return None
     finally:

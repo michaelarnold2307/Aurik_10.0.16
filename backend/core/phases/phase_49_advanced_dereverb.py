@@ -579,6 +579,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                             )
                     _release_49("SGMSE+_phase49")
         except Exception as _imp_err:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("Verarbeitungsschritt 49: SGMSE+-Import nicht verfügbar (%s) → WPE DSP-Ersatzpfad", _imp_err)
 
         if not _sgmse_used:

@@ -211,7 +211,12 @@ class FeatureExtractor:
                 y = y_mono
                 if len(y) >= 2048:
                     chroma = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=min(2048, len(y)))
-                    key = librosa.feature.chroma_cqt(y=y, sr=sr)
+                    # §v10.14: chroma_cqt benötigt mindestens n_fft=2048 → pitch_tuning
+                    # schlägt auf sehr kurzen Signalen mit leerem Frequenzsatz fehl.
+                    if len(y) >= 4096:
+                        key = librosa.feature.chroma_cqt(y=y, sr=sr)
+                    else:
+                        key = chroma  # Fallback: chroma_stft statt chroma_cqt
                     tempo, beats = librosa.beat.beat_track(y=y, sr=sr)  # type: ignore[attr-defined]
                     melody = librosa.feature.mfcc(y=y, sr=sr, n_fft=min(2048, len(y)))
                     return {
@@ -299,7 +304,11 @@ class FeatureExtractor:
                 features["chroma_mean"] = float(np.mean(chroma))
                 features["chroma_std"] = float(np.std(chroma))
                 # Key (Tonart, Harmonie)
-                key = librosa.feature.chroma_cqt(y=y, sr=sr)
+                # §v10.14: chroma_cqt benötigt ≥4096 Samples gegen pitch_tuning-Leerfrequenz.
+                if len(y) >= 4096:
+                    key = librosa.feature.chroma_cqt(y=y, sr=sr)
+                else:
+                    key = chroma
                 features["key_chroma_cqt_mean"] = float(np.mean(key))
                 # Beat/Rhythmus
                 tempo, beats = librosa.beat.beat_track(y=y, sr=sr)  # type: ignore[attr-defined]

@@ -126,7 +126,6 @@ def _energy_ratio(clean: np.ndarray, restored: np.ndarray) -> float:
         return 1.0
     ratio = er / ec
     return 1.0 - min(1.0, abs(1.0 - ratio))
-    return max(0.0, 1.0 - abs(1.0 - ratio))
 
 
 def _artifact_score(clean: np.ndarray, processed: np.ndarray) -> float:
@@ -269,8 +268,7 @@ def run_scenario(name, clean, degraded, tool_key, sr=48000):
 
 
 def run(tools=None, dur=1.0):
-    pass
-
+    """Führt alle Benchmark-Szenarien aus."""
     if tools is None:
         tools = list(AVAILABLE_TOOLS)
 

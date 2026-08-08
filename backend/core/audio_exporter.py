@@ -455,6 +455,30 @@ class AudioExporter:
         audio_export = np.asarray(np.nan_to_num(audio_export, nan=0.0, posinf=0.0, neginf=0.0), dtype=np.float32)
         audio_export = np.clip(audio_export, -1.0, 1.0)
 
+        # ── §G4 CD-Rauschprofil: Vor jedem Export psychoakustisch maskiert injizieren ──
+        try:
+            from backend.core.cd_noise_profile import inject_cd_noise_profile  # type: ignore[import]
+            audio_export = inject_cd_noise_profile(audio_export, sr, bit_depth=bit_depth)
+        except ImportError:
+            pass  # CD noise profile module not available — skip gracefully
+        except Exception as _cd_exc:
+            logger.debug("§G4 CD-Rauschprofil: Injektion übersprungen (%s)", _cd_exc)
+
+        # ── §V5 POW-r Type 3 Dither: Psychoakustisches Dither vor Integer-Quantisierung ──
+        if bit_depth <= 16:
+            try:
+                from backend.core.dsp.powr_dither import apply_powr_dither  # type: ignore[import]
+                audio_export = apply_powr_dither(audio_export, sr, bit_depth=bit_depth)
+            except ImportError:
+                # Fallback: TPDF-Dither via numpy
+                noise = np.random.default_rng().uniform(-0.5, 0.5, audio_export.shape) + \
+                        np.random.default_rng().uniform(-0.5, 0.5, audio_export.shape)
+                dither_amp = 1.0 / (2 ** (bit_depth - 1))
+                audio_export = audio_export + (noise * dither_amp).astype(np.float32)
+                logger.debug("§V5 TPDF-Fallback-Dither angewendet (POW-r nicht verfügbar)")
+            except Exception as _dith_exc:
+                logger.debug("§V5 Dither übersprungen (%s)", _dith_exc)
+
         def _atomic_write_audio(path: Path, data: np.ndarray, *, format_name: str, subtype_name: str) -> None:
             tmp_path = path.with_name(path.name + ".tmp")
             try:

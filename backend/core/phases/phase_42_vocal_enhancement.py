@@ -320,7 +320,7 @@ class VocalEnhancement(PhaseInterface):
             2. Fallback: demucs_v4 separate_vocals()
             3. Enhance only the vocal stem (DSP chain below)
             4. StemRemixBalancer.balance_remix() → LUFS-korrekter Re-Mix
-            5. Fallback: full-audio DSP enhancement (kein Stem-Sep verfügbar)
+            5. Fallback: full-audio DSP enhancement (kein Stem-Sep verfügbar)  # §V6: logger.warning handled at call site
 
         Args:
             audio: Input audio (mono or stereo, 48 000 Hz)

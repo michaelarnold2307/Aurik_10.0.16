@@ -121,5 +121,6 @@ def resolve_formant_tolerance_db(
     try:
         tol = max(float(profile.f1_tolerance_db), float(profile.f2_f4_tolerance_db))
     except Exception:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         tol = float(fallback_db)
     return float(max(1.5, min(4.0, tol)))

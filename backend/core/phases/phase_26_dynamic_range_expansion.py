@@ -868,4 +868,5 @@ class DynamicRangeExpansion(PhaseInterface):
             noise_floor_rms = float(np.percentile(rms, 5))
             return float(20.0 * np.log10(max(noise_floor_rms, 1e-12)))
         except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             return -40.0  # safe fallback

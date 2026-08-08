@@ -23,6 +23,7 @@ try:
 
     _DSP_DECISION_AVAILABLE = True
 except ImportError:
+    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     _DSP_DECISION_AVAILABLE = False
 
     class DSPDecisionLogic:  # type: ignore[no-redef]

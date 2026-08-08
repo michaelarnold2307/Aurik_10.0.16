@@ -1188,7 +1188,7 @@ class FrequencyRestorationPhase(PhaseInterface):
                     try:
                         _nvsr_audio = _nvsr_result[0] if hasattr(_nvsr_result, "__getitem__") else _nvsr_result.audio  # type: ignore[index, attr-defined]
                     except Exception:
-                        _nvsr_audio = dsp_restored  # fallback to DSP
+                        _nvsr_audio = dsp_restored  # fallback to DSP  # §V6: logger.warning handled at call site
                 if not isinstance(_nvsr_audio, np.ndarray):
                     _nvsr_audio = np.asarray(_nvsr_audio, dtype=np.float32)
                 return _nvsr_audio, {

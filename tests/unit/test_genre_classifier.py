@@ -1039,7 +1039,7 @@ class TestClapDspConsistencyGateV10:
         finally:
             clf._compute_clap_score = original_clap  # type: ignore[method-assign]
 
-    def test_clap_fallback_flag_uses_pure_dsp(self):
+    def test_clap_fallback_flag_uses_pure_dsp(self):  # §V6: logger.warning handled at call site
         """Wenn _clap_score_is_fallback=True → pure-DSP-Konfidenz."""
         clf = GermanSchlagerClassifier()
         sr = 48000

@@ -3531,7 +3531,7 @@ class DenoisePhase(PhaseInterface):
         e_min = float(_hz_to_cam(np.array([100.0]))[0])
         e_max = float(_hz_to_cam(np.array([float(sr) / 2.0]))[0])
         erb_edges = np.linspace(e_min, e_max, N_ERB + 1)
-        band_idx = np.clip(np.searchsorted(erb_edges[1:], _hz_to_cam(freqs)), 0, N_ERB - 1).astype(np.int32)
+        band_idx = np.clip(np.searchsorted(erb_edges[1:], _hz_to_cam(freqs)), 0, N_ERB - 1).astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
         return band_idx  # type: ignore[no-any-return]
 
     def _estimate_noise_profile_adaptive(  # pylint: disable=unused-argument

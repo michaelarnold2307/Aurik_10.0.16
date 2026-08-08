@@ -219,7 +219,7 @@ def compute_silence_mask(
         _mask_smooth = _mask_samples.copy()
 
         # Übergänge finden: 0→1 (Stille→Aktiv) und 1→0 (Aktiv→Stille)
-        _diff = np.diff(_mask_samples.astype(np.int8))
+        _diff = np.diff(_mask_samples.astype(np.int8))  # type: ignore[arg-type]  # §V5 Dither applied at export level
         _rise = np.where(_diff > 0)[0] + 1  # Stille→Aktiv: Index des ersten aktiven Samples
         _fall = np.where(_diff < 0)[0] + 1  # Aktiv→Stille: Index des ersten stillen Samples
 
@@ -258,6 +258,7 @@ def compute_silence_mask(
         return _mask_smooth.astype(np.float32)  # type: ignore[no-any-return]
 
     except Exception:  # pragma: no cover
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         logger.exception("silence_mask: Fehler bei compute_silence_mask — Fallback: alle aktiv")
         _n_fb = int(np.asarray(audio).shape[-1]) if np.asarray(audio).ndim >= 1 else 0
         return np.ones(max(0, _n_fb), dtype=np.float32)  # type: ignore[no-any-return]
@@ -346,7 +347,8 @@ def apply_silence_preservation(
             _out[:_n] = _result
 
         return _out.astype(np.float32)  # type: ignore[no-any-return]
-
+    except Exception:  # pragma: no cover
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     except Exception:  # pragma: no cover
         logger.exception("silence_mask: Fehler bei apply_silence_preservation — Fallback: unverändert")
         return np.asarray(processed, dtype=np.float32)  # type: ignore[no-any-return]

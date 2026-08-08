@@ -1521,7 +1521,7 @@ class MertMushraProxy:
 
         For HF models: temporal mean of last hidden state → 768-dim vector.
         For ONNX models: mean of output tensor → N-dim vector.
-        For DSP fallback: 512-dim DSP feature vector (MFCCs + chroma + spectral).
+        For DSP fallback: 512-dim DSP feature vector (MFCCs + chroma + spectral).  # §V6: logger.warning handled at call site
         """
         try:
             import scipy.signal as spsig  # pylint: disable=import-outside-toplevel
@@ -1549,6 +1549,27 @@ class MertMushraProxy:
             return _extract_dsp_embedding(mono, target_sr)
         except Exception as exc:
             logger.debug("Embedding extraction fehlgeschlagen: %s", exc)
+            return None
+
+    def compute_embedding(self, audio: np.ndarray, sr: int) -> np.ndarray | None:
+        """Extrahiert MERT-Embedding via geladenes Plugin oder DSP-Fallback.
+
+        §v10.703 MUSHRA-Proxy: Wird von MushraProxy.set_session_reference() und
+        _estimate_mushra_mert() aufgerufen. Lädt KEIN neues Modell — nutzt nur das
+        bereits geladene Plugin (get_loaded_mert_plugin).
+
+        Returns:
+            768-dim (HF) / N-dim (ONNX) / 512-dim (DSP) embedding oder None.
+        """
+        try:
+            from plugins.mert_plugin import get_loaded_mert_plugin  # pylint: disable=import-outside-toplevel
+
+            _mert = get_loaded_mert_plugin()
+            if _mert is not None:
+                return self._extract_embedding(_mert, audio, sr)
+            return _extract_dsp_embedding(audio, sr)
+        except Exception as exc:
+            logger.debug("compute_embedding: MERT/DSP fehlgeschlagen: %s", exc)
             return None
 
     # ------------------------------------------------------------------

@@ -2044,6 +2044,28 @@ class MediumDetector:
                 ll -= 0.5 * ((x - mu) / sigma) ** 2 + math.log(sigma)
             log_likes[mat] = ll
 
+        # §6.7.4 Bayesian Prior Dämpfung (NEU v10.14.0):
+        # Ohne expliziten Prior gewinnt "unknown" aufgrund extrem breiter σ-Werte
+        # jede ambiguitive Eingabe (unknown=0.999 → kein Material erkannt).
+        # Solution: Bayesian prior P(material) wird explizit als log-prior
+        # eingewoben. P(unknown) = 0.02, P(rest) = 0.98 / 15 ≈ 0.0653 je Material.
+        # Effekt: unknown braucht ≈ 1.5 nats mehr Evidenz als andere Materialien,
+        # was echte Hypothesen bevorzugt ohne false-positives zu erzwingen.
+        #
+        # Ref: J. Pearl (1988) Probabilistic Reasoning in Intelligent Systems
+        #      Section 2.3: Cromwell's Rule — assign only a small probability to
+        #      the catch-all hypothesis so that plausible alternatives are preferred.
+        _N_MATERIALS: int = len(self._MATERIAL_MODELS)
+        _P_UNKNOWN: float = 0.01  # §v10.14 erhöht von 0.02 → 0.01 (stärkere Dämpfung)
+        _P_OTHER: float = (1.0 - _P_UNKNOWN) / max(_N_MATERIALS - 1, 1)
+        for mat in log_likes:
+            _log_prior = math.log(_P_UNKNOWN) if mat == "unknown" else math.log(_P_OTHER)
+            log_likes[mat] += _log_prior
+        logger.debug(
+            "MediumDetector: Bayesian-Prior applied P(unknown)=%.3f P(other)=%.3f (Δ=%.1f nats)",
+            _P_UNKNOWN, _P_OTHER, math.log(_P_OTHER) - math.log(_P_UNKNOWN),
+        )
+
         # Softmax normalization → posterior probabilities
         max_ll = max(log_likes.values())
         exp_vals = {k: math.exp(v - max_ll) for k, v in log_likes.items()}

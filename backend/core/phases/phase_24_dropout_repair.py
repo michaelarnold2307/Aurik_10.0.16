@@ -1039,7 +1039,7 @@ class DropoutRepairPhase(PhaseInterface):
                 _mask_mono_p24 = _silence_mask_p24.ravel()[:_n_samples_p24]
                 _is_sil_p24 = _mask_mono_p24 < 0.5
                 if np.any(_is_sil_p24):
-                    _sil_padded = np.concatenate(([False], _is_sil_p24, [False])).astype(np.int8)
+                    _sil_padded = np.concatenate(([False], _is_sil_p24, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 Dither applied at export level
                     _sil_changes = np.diff(_sil_padded)
                     _sil_zone_starts = np.where(_sil_changes == 1)[0].tolist()
                     _sil_zone_ends = np.where(_sil_changes == -1)[0].tolist()

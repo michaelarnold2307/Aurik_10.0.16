@@ -113,7 +113,7 @@ class MushraProxy:
                 from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
                 _mert = _get_mert()
-                self._session_reference_embedding = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
+                self._session_reference_embedding = _mert.compute_embedding(audio, sample_rate)
                 logger.debug(
                     "§v10.703 MUSHRA-Proxy: Sitzung-Referenz-Embedding berechnet (shape=%s)",
                     self._session_reference_embedding.shape
@@ -239,8 +239,8 @@ class MushraProxy:
             from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
-            _emb_a = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
-            _emb_r = _mert.compute_embedding(reference, sample_rate)  # type: ignore[attr-defined]
+            _emb_a = _mert.compute_embedding(audio, sample_rate)
+            _emb_r = _mert.compute_embedding(reference, sample_rate)
 
             if _emb_a is None or _emb_r is None:
                 return 50.0
@@ -264,7 +264,7 @@ class MushraProxy:
             from backend.core.mert_mushra_proxy import get_proxy_evaluator as _get_mert
 
             _mert = _get_mert()
-            _embedding = _mert.compute_embedding(audio, sample_rate)  # type: ignore[attr-defined]
+            _embedding = _mert.compute_embedding(audio, sample_rate)
 
             if _embedding is None or self._session_reference_embedding is None:
                 return 50.0

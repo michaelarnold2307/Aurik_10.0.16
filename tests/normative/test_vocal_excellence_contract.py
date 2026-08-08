@@ -100,7 +100,7 @@ class TestVocalExcellencePipelineWiring:
             in content
         )
         assert (
-            '"singer_id_dsp_fallback": (self._phase_metadata_accumulator or {}).get("singer_id_dsp_fallback")'
+            '"singer_id_dsp_fallback": (self._phase_metadata_accumulator or {}).get("singer_id_dsp_fallback")'  # §V6: logger.warning handled at call site
             in content
         )
         assert '"vqi_tier": (self._phase_metadata_accumulator or {}).get("vqi_tier")' in content

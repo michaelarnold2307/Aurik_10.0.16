@@ -195,6 +195,7 @@ class CrepePlugin:
             except Exception as _exc:
                 logger.debug("Plugin operation failed (non-critical): %s", _exc)
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("CREPE-ONNX nicht verfügbar (%s) — pYIN-Fallback aktiv", exc)
             try:
                 from backend.core.ml_memory_budget import release as _release

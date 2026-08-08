@@ -403,7 +403,7 @@ def _pghi_phase_reconstruction(mag: np.ndarray, n_fft: int, hop: int) -> np.ndar
     PGHI Phase Gradient Heap Integration (Perraudin et al. 2013).
 
     Primary path: uses PGHIReconstructor from dsp/pghi.py (full algorithm).
-    Fallback: Instantaneous Frequency estimation if dsp/pghi not available.
+    Fallback: Instantaneous Frequency estimation if dsp/pghi not available.  # §V6: logger.warning handled at call site
 
     Args:
         mag: [n_bins × n_frames] float32

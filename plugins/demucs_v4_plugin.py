@@ -285,6 +285,7 @@ class DemucsV4Plugin:
                 else:
                     raise ValueError(f"Unerwartetes Output-Shape: {[o.shape for o in outputs]}")
             except Exception as exc:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 logger.debug("Demucs Chunk %d Fehler: %s — DSP.", i, exc)
                 fb = self._hpss_fallback(chunk, _SR)
                 for k, v in fb.items():

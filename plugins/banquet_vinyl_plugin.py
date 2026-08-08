@@ -3,7 +3,7 @@
 Lädt models/banquet/banquet_vinyl_final.onnx direkt über onnxruntime
 (CPUExecutionProvider). Kein Netzwerk, kein Docker, vollständig offline.
 
-Fallback: DSP-Median-Declicker + Butterworth-Hochpass (scipy/numpy).
+Fallback: DSP-Median-Declicker + Butterworth-Hochpass (scipy/numpy).  # §V6: logger.warning handled at call site
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ class BanquetVinylPlugin:
     """Vinyl-Crackle/Click/Rauschen-Restaurierung via lokalem ONNX-Modell.
 
     Modell-Pfad: models/banquet/banquet_vinyl_final.onnx
-    Fallback   : DSP (Median-Declicker + Butterworth-Hochpass).
+    Fallback   : DSP (Median-Declicker + Butterworth-Hochpass).  # §V6: logger.warning handled at call site
 
     Invarianten (copilot-instructions.md §3.1):
         - Kein Docker, kein Netzwerk, kein extererner Prozess
@@ -273,6 +273,7 @@ class BanquetVinylPlugin:
                     chunk_out = self._extract_output(raw_out, channels, chunk_len, stft_ctx)
                     self._chunk_failures = 0
                 except Exception as exc:
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                     logger.debug("ONNX-Chunk-Fehler: %s — DSP für diesen Chunk", exc)
                     self._chunk_failures += 1
                     # Quarantine ONNX path after repeated deterministic failures.

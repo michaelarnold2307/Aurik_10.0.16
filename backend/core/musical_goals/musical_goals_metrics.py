@@ -1157,6 +1157,7 @@ class NatuerlichkeitMetric:
                         raise ImportError("scipy.signal.decimate unavailable")
                     proc_audio = np.asarray(_SCIPY_DECIMATE(audio, _stride, zero_phase=True), dtype=np.float64)
                 except Exception:
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                     proc_audio = audio[::_stride]  # fallback if scipy unavailable
                 proc_sr = max(1, sr // _stride)
 
@@ -1910,6 +1911,7 @@ class EmotionalitaetMetric:
                     score,
                 )
         except Exception as _exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)  # MERT not loaded — DSP-only path
 
         # --- VAT emotion model (Valence-Arousal-Tension, Russell 1980 + Thayer 1990) ---
@@ -4045,7 +4047,7 @@ class ArticulationMetric:
         diff = np.diff(envelope.astype(np.float32))
         thresh = float(np.mean(diff[diff > 0]) + 1e-10) if (diff > 0).any() else 1e-3
         onsets = np.where(diff > thresh)[0]
-        return onsets.astype(np.int32)
+        return onsets.astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
 
     def _attack_time_score(
         self,

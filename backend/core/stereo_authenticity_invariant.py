@@ -248,14 +248,24 @@ class StereoAuthenticitiyInvariant:
         # Regel 1: Mono-Ära (decade ≤ 1950 oder Original ≥ 0.97 M/S-Korrelation)
         if original_type == "mono":
             if rest_ms_corr < self.MONO_ERA_CORRELATION_THRESHOLD:
-                result.passed = False
-                result.rule_triggered = "mono_era_pseudo_stereo"
-                result.message = (
-                    f"Mono-Aufnahme (Ära ~{decade}) wurde unzulässig in Pseudo-Stereo "
-                    f"konvertiert (M/S-Korrelation {rest_ms_corr:.3f} < {self.MONO_ERA_CORRELATION_THRESHOLD})."
+                # §v10.14: Nur kollabieren wenn das Stereofeld WIRKLICH pseudo ist.
+                # rest_ms_corr < 0.97 aber > 0.80 = schmales Echtes Stereo → erhalten.
+                # rest_ms_corr < 0.80 = künstlich verbreitert → kollabieren.
+                if rest_ms_corr < 0.80:
+                    result.passed = False
+                    result.rule_triggered = "mono_era_pseudo_stereo"
+                    result.message = (
+                        f"Mono-Aufnahme (Ära ~{decade}) wurde unzulässig in Pseudo-Stereo "
+                        f"konvertiert (M/S-Korrelation {rest_ms_corr:.3f} < 0.80)."
+                    )
+                    logger.warning("⚠️ StereoAuth: %s", result.message)
+                    return result
+                # Schmales echtes Stereo → durchlassen, nur loggen
+                logger.info(
+                    "StereoAuth: Schmales Stereo erkannt (ms_corr=%.3f, Ära=%d) — "
+                    "kein Pseudo-Stereo, Stereofeld bleibt erhalten",
+                    rest_ms_corr, decade,
                 )
-                logger.warning("⚠️ StereoAuth: %s", result.message)
-                return result
 
         # Regel 2: Decca-Wide-Stereo (1952–1965, LR ∈ [0.25, 0.65])
         elif original_type == "decca_wide":
@@ -386,7 +396,11 @@ class StereoAuthenticitiyInvariant:
         # Mono erkennen
         if ms_corr >= self.MONO_ERA_CORRELATION_THRESHOLD:
             return "mono"
-        if decade <= 1950:
+        # §v10.14: Nur bei tatsächlicher Mono-Quelle (ms_corr ≥ 0.95) Mono erzwingen.
+        # Wenn das Original bereits klare Stereomerkmale hat (ms_corr < 0.95), ist es
+        # kein Pseudo-Stereo — auch nicht bei Ära ≤ 1950 oder falscher CLAP-Ära.
+        # Der ms_corr-Schwellwert ist der physikalische Fakt; der Ära-Check nur Backstop.
+        if decade <= 1950 and ms_corr >= 0.95:
             return "mono"
         # Decca-Wide-Bereich
         lo, hi = self.DECCA_CORRELATION_RANGE

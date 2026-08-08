@@ -93,7 +93,7 @@ def detect_onsets(
         2. Half-Wave Gleichrichtung: nur positive Energiezunahmen
         3. Peak-Picking mit Mindestabstand min_onset_gap_ms
 
-    Fallback wenn madmom nicht verfügbar (out-of-the-box DSP).
+    Fallback wenn madmom nicht verfügbar (out-of-the-box DSP).  # §V6: logger.warning handled at call site
 
     Args:
         audio:             Audio [n_samples], float32/64

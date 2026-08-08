@@ -67,6 +67,11 @@ class PhaseCoherentSTFT:
         a = np.asarray(audio, dtype=np.float64)
         if a.ndim == 2:
             a = a.mean(axis=1)  # Mono-Summe für Phase (Stereo-Phase ist redundant)
+            # §v10.14: Guard — falls a.mean(axis=1) durch channels-first Layout
+            # (shape (2,N)) auf (2,) kollabiert, korrigiere auf Mittelung über axis=0.
+            if a.ndim == 1 and a.shape[0] <= 2:
+                _b = np.asarray(audio, dtype=np.float64)
+                a = _b.mean(axis=0)  # Korrektur: channels-first → axis=0
 
         self._input_shape = np.asarray(audio).shape
 
@@ -124,12 +129,15 @@ class PhaseCoherentSTFT:
             return np.asarray(audio, dtype=np.float32)
 
         a = np.asarray(audio, dtype=np.float64)
-        was_stereo = a.ndim == 2
+        was_stereo = a.ndim == 2 and a.shape[1] >= 2
 
         if was_stereo:
-            # Verarbeite L und R getrennt, nutze gemeinsame Phase
-            L_result = self._restore_channel(a[:, 0], sample_rate)
-            R_result = self._restore_channel(a[:, 1], sample_rate)
+            # §v10.14: Kanäle robust aufsplitten. Bei channels-first Layout
+            # (2, N) → transpose zu (N, 2) vor der Extraktion.
+            if a.shape[0] == 2 and a.shape[1] > 2 and a.shape[1] != 2:
+                a = a.T  # channels-first → channels-last
+            L_result = self._restore_channel(a[:, 0].ravel(), sample_rate)
+            R_result = self._restore_channel(a[:, 1].ravel(), sample_rate)
             restored = np.column_stack([L_result, R_result])
         else:
             restored = self._restore_channel(a, sample_rate)

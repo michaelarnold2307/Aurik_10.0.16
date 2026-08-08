@@ -29,7 +29,7 @@ def _create_test_wav(path: Path, n_samples: int = 4410, sr: int = 44100) -> Path
         wf.setnchannels(1)
         wf.setsampwidth(2)  # 16-bit
         wf.setframerate(sr)
-        data = (np.random.randn(n_samples) * 16000).astype(np.int16)
+        data = (np.random.randn(n_samples) * 16000).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
         wf.writeframes(data.tobytes())
     return path
 

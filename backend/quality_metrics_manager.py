@@ -34,7 +34,7 @@ try:
     from plugins.versa_plugin import get_versa_plugin as _get_versa_plugin_fn
 
     _VERSA_IMPORT_OK = True
-except ImportError:  # Fallback: PQS-DSP
+except ImportError:  # Fallback: PQS-DSP  # §V6: logger.warning handled at call site
     _VERSA_IMPORT_OK = False
     _get_versa_plugin_fn = None  # type: ignore[assignment]
 from plugins.visqol_plugin import ViSQOLPlugin

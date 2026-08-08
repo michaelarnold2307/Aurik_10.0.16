@@ -95,7 +95,7 @@ class MpSenetPlugin:
     """MP-SENet Multi-path Sub-Band Enhancement (ONNX, CPUExecutionProvider).
 
     Verarbeitet Magnitude und Phase separat zur Erhaltung harmonischer Strukturen.
-    Fallback: OMLSA/IMCRA DSP-Rauschunterdrückung (§4.4 Spec).
+    Fallback: OMLSA/IMCRA DSP-Rauschunterdrückung (§4.4 Spec).  # §V6: logger.warning handled at call site
     """
 
     def __init__(self) -> None:
@@ -192,7 +192,7 @@ class MpSenetPlugin:
                 if fail_reason is not None:
                     return enhanced, fail_reason, "omlsa_dsp_fallback"
                 return enhanced, None, "mp_senet_onnx"
-            return self._omlsa_fallback(ch, sr), None, "omlsa_dsp_fallback"
+            return self._omlsa_fallback(ch, sr), None, "omlsa_dsp_fallback"  # §V6: logger.warning handled at call site
 
         if stereo:
             left, fail_left, used_left = process_channel(audio[:, 0])

@@ -2968,6 +2968,48 @@ class DefectScanner:
         self._scan_welch_cache = {}
         return _scan_result
 
+    def scan_defect_presence(
+        self,
+        audio: np.ndarray,
+        sample_rate: int | None = None,
+        material_type: MaterialType | None = None,
+        min_severity: float = 0.05,
+        file_ext: str = "",
+    ) -> set[str]:
+        """Scannt alle Defekttypen im Gesamt-Audio und gibt Präsenz-Menge zurück.
+
+        §B3-Verarbeitungsschritt-2: Leichtgewichtige Defekt-Presence-Erkennung für
+        die Chunk-0-Phasen-Selektion. Nutzt den vollen scan()-Durchlauf (der
+        cache-beschleunigt ist), extrahiert aber nur Defekttypen oberhalb der
+        Schwere-Schwelle und gibt ein schlankes ``set[str]`` zurück.
+
+        Das Ergebnis wird NICHT separat gecached — scan() selbst cached bereits
+        unter _scan_cache, sodass spätere Chunk-0-scans den Cache treffen.
+
+        Args:
+            audio:         Vollständiges Audio (mono oder stereo).
+            sample_rate:   Samplerate (None → Fallback auf self.sample_rate).
+            material_type: Material-Hint für Schwellwert-Anpassung.
+            min_severity:  Mindest-Schwere [0, 1] für Aufnahme ins Ergebnis-Set.
+            file_ext:      Dateiendung (an MediumDetector delegiert).
+
+        Returns:
+            Menge der erkannten Defekttypen-Namen (z.B. {"crackle", "tape_hiss", "wow"}).
+        """
+        _result = self.scan(
+            audio,
+            sample_rate=sample_rate,
+            material_type=material_type,
+            progress_callback=None,
+            file_ext=file_ext,
+            forensic_medium_result=None,
+        )
+        return {
+            _dt.value if hasattr(_dt, "value") else str(_dt)
+            for _dt, _score in _result.scores.items()
+            if getattr(_score, "severity", 0.0) >= min_severity
+        }
+
     def _post_calibrate_scores(
         self,
         *,
@@ -4049,8 +4091,8 @@ class DefectScanner:
             wow_thr = float(max(np.percentile(wow_dev, 80.0), 0.05))  # type: ignore[arg-type]
             wow_mask_frames = wow_dev >= wow_thr
             if np.any(wow_mask_frames):
-                starts = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == 1)[0]
-                ends = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == -1)[0]
+                starts = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * hop) / self.sample_rate - 0.05)
                     t1 = min(float(n) / self.sample_rate, float(e_f * hop + win_len) / self.sample_rate + 0.05)
@@ -4470,8 +4512,8 @@ class DefectScanner:
             flutter_thr = float(max(np.percentile(flutter_dev, 80.0), 0.015))  # type: ignore[arg-type]
             flutter_mask_frames = flutter_dev >= flutter_thr
             if np.any(flutter_mask_frames):
-                starts = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == 1)[0]
-                ends = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == -1)[0]
+                starts = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * hop) / self.sample_rate - 0.02)
                     t1 = min(float(n) / self.sample_rate, float(e_f * hop + win_len) / self.sample_rate + 0.02)
@@ -4688,7 +4730,7 @@ class DefectScanner:
                     clip_locations.append((float(s / self.sample_rate), float(e / self.sample_rate)))
 
         # --- 2) LSB-Granularität / Requantisierung ---
-        audio_int = np.clip(audio * 32767.0, -32768.0, 32767.0).astype(np.int16)
+        audio_int = np.clip(audio * 32767.0, -32768.0, 32767.0).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
         lsb = np.abs(audio_int % 2)
         lsb_randomness = float(np.std(lsb))
         quantization_subscore = float(np.clip((0.42 - lsb_randomness) / 0.22, 0.0, 1.0))
@@ -4881,8 +4923,8 @@ class DefectScanner:
             blk_thr = float(np.percentile(blockiness_frame, 75.0))
             codec_mask = (sfm <= min(0.45, sfm_thr)) & ((blockiness_frame >= max(0.25, blk_thr)) | (sfm <= 0.25))
             if np.any(codec_mask):
-                starts = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == 1)[0]
-                ends = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == -1)[0]
+                starts = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                 frame_half = float(1024.0 / max(1.0, 2.0 * self.sample_rate))
                 max_time = float(len(audio)) / float(self.sample_rate)
                 for s_f, e_f in zip(starts, ends):
@@ -6358,8 +6400,8 @@ class DefectScanner:
                 i_thr = max(float(np.percentile(instability, 80.0)), float(np.median(instability)) * 1.25)
                 jitter_mask = instability >= i_thr
                 if np.any(jitter_mask):
-                    starts = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == 1)[0]
-                    ends = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == -1)[0]
+                    starts = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                    ends = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                     for s_f, e_f in zip(starts, ends):
                         t0 = max(0.0, float(s_f * hop_loc) / self.sample_rate - 0.01)
                         t1 = min(float(n) / self.sample_rate, float(e_f * hop_loc + win_loc) / self.sample_rate + 0.01)
@@ -6465,8 +6507,8 @@ class DefectScanner:
             c_thr = max(float(np.percentile(compressed_indicator, 70.0)), 0.45)
             compressed_mask = compressed_indicator >= c_thr
             if np.any(compressed_mask):
-                starts = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == 1)[0]
-                ends = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == -1)[0]
+                starts = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * loc_hop) / self.sample_rate)
                     t1 = min(float(n) / self.sample_rate, float(e_f * loc_hop + loc_win) / self.sample_rate)
@@ -8259,8 +8301,8 @@ class DefectScanner:
                     _r_thr = float(max(np.percentile(_ratio_t, 75.0), 1.05))  # type: ignore[arg-type]
                     _mask_t = _ratio_t >= _r_thr
                     if np.any(_mask_t):
-                        _starts = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == 1)[0]
-                        _ends = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == -1)[0]
+                        _starts = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                        _ends = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
                         _half = 2048.0 / (2.0 * self.sample_rate)
                         _max_t = float(len(audio)) / float(self.sample_rate)
                         for _s_f, _e_f in zip(_starts, _ends):

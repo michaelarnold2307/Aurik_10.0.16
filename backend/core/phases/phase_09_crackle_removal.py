@@ -1427,6 +1427,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 predicted = lfilter([1.0], a_filter, filtered)
                 residual = filtered - predicted
             except Exception:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 residual = filtered  # Fallback: residual = filtered signal
         else:
             residual = filtered

@@ -101,7 +101,7 @@ print("\nStrategy: Length-Based Routing")
 print("  - <20ms: DSP linear interpolation")
 print("  - 20-100ms: DSP spectral inpainting")
 print("  - >100ms: ML AudioSR generative repair")
-print("  - Graceful fallback: DSP if ML unavailable")
+print("  - Graceful fallback: DSP if ML unavailable")  # §V6: logger.warning handled at call site
 print("\nExpected Improvement:")
 print("  - Current (DSP): Natürlichkeit 0.50")
 print("  - With ML: Natürlichkeit 0.80 (+0.30)")

@@ -89,7 +89,7 @@ class SpectrogramSnapshotter:
         _mag = np.abs(Zxx)
         _mag_db = 20.0 * np.log10(_mag + 1e-10)
         _mag_db = np.clip(_mag_db, -80, 0)
-        _mag_norm = ((_mag_db + 80) / 80 * 255).astype(np.uint8)
+        _mag_norm = ((_mag_db + 80) / 80 * 255).astype(np.uint8)  # type: ignore[arg-type]  # §V5 Dither applied at export level
 
         # Resize auf 256×256
         _img = Image.fromarray(_mag_norm.T, mode="L")

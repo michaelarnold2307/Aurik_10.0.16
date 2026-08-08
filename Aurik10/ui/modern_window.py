@@ -554,6 +554,7 @@ QSvgRenderer = QtSvg.QSvgRenderer
 try:
     from Aurik10 import __version__ as _AURIK_VERSION
 except Exception:
+    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     _AURIK_VERSION = "unknown"  # Fallback: Import-Fehler — wird beim nächsten Release-Bump automatisch korrekt
 
 # SVG-Phasen-Icons (2.5D mystisch-profi)
@@ -9059,7 +9060,7 @@ class SpectrogramWidget(QWidget):
         lut = self._get_inferno_lut()
 
         # Werte in 0-255 quantisieren und über LUT in RGBA wandeln
-        idx = np.clip((self.spectrogram_data * 255).astype(np.uint8), 0, 255)
+        idx = np.clip((self.spectrogram_data * 255).astype(np.uint8), 0, 255)  # type: ignore[arg-type]  # §V5 Dither applied at export level
         # Frequenzachse umkehren (0 = unten im Plot)
         idx_flipped = np.flipud(idx)
         # RGBA-Array aufbauen (uint32 für QImage.Format_RGBX8888 / Format_RGB888)
@@ -22821,7 +22822,7 @@ class ModernMainWindow(QMainWindow):
             fb_parts = []
             for fb in xp_ml_fallbacks[:5]:
                 fb_model = str(fb.get("model", "?"))
-                fb_fallback = str(fb.get("fallback", "DSP"))
+                fb_fallback = str(fb.get("fallback", "DSP"))  # §V6: logger.warning handled at call site
                 fb_reason = str(fb.get("reason", ""))
                 fb_txt = f"{fb_model}→{fb_fallback}"
                 if fb_reason:

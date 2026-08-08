@@ -337,6 +337,22 @@ if "ExcellenceResult" not in globals():
 # ─── Hilfsfunktionen ─────────────────────────────────────────────────────────
 
 
+def _count_onsets(audio: np.ndarray, sr: int) -> int:
+    """Zählt Onsets via spektralem Fluss (Lightweight, keine librosa-Abhängigkeit)."""
+    try:
+        _n_fft = min(2048, max(64, 1 << int(np.floor(np.log2(max(1, len(audio)) // 4 + 1)))))
+        _hop = _n_fft // 4
+        if len(audio) < _n_fft * 2:
+            return 0
+        _spec = np.abs(np.array([np.fft.rfft(audio[i:i+_n_fft] * np.hanning(_n_fft))
+                                  for i in range(0, len(audio)-_n_fft+1, _hop)]))
+        _flux = np.sum(np.maximum(0.0, _spec[1:] - _spec[:-1]), axis=1)
+        _thresh = np.mean(_flux) + 0.5 * np.std(_flux)
+        return int(np.sum(_flux > _thresh))
+    except Exception:
+        return 0
+
+
 def _to_mono(audio: np.ndarray) -> np.ndarray:
     """Konvertiert zu Mono (Mittelkanal); gibt Originalform zurück wenn mono."""
     if audio.ndim == 1:
@@ -926,11 +942,27 @@ class ExcellenceOptimizer:
 
         # 2. Micro-Dynamic Re-injection
         if self.apply_micro_dynamics and ctx.needs_micro_dynamics:
+            # §v10.14 Groove-Pre-Guard: Vor Modulation Onset-Count messen, damit
+            # _inject_micro_dynamics keine Groove-Zerstörung verursacht (onset loss
+            # 180→78 beobachtet → Δ−56%). Skip wenn Onset-Dichte zu gering.
+            _pre_onsets = _count_onsets(_to_mono(out), ctx.sample_rate)
+            _pre_out = out.copy()  # §v10.14: Save pre-modulation for potential revert
             try:
                 out = _inject_micro_dynamics(out, ctx)
-                result.micro_dynamic_injected = True
-                result.applied_steps.append("micro_dynamics")
-                logger.debug("ExcellenceOptimizer: Micro-dynamics injected, CV=%.3f", ctx.dynamic_cv)
+                _post_onsets = _count_onsets(_to_mono(out), ctx.sample_rate)
+                _onset_loss = 1.0 - _post_onsets / max(_pre_onsets, 1)
+                if _onset_loss > 0.35:  # >35% onset loss → too aggressive
+                    logger.warning(
+                        "ExcellenceOptimizer: micro_dynamics onset loss %.0f%% (%d→%d) — "
+                        "ueberspringen, Modulation zu aggressiv",
+                        _onset_loss * 100, _pre_onsets, _post_onsets,
+                    )
+                    out = _pre_out  # Revert: Modulation zu aggressiv
+                else:
+                    result.micro_dynamic_injected = True
+                    result.applied_steps.append("micro_dynamics")
+                    logger.debug("ExcellenceOptimizer: Micro-dynamics injected, CV=%.3f onsets=%d→%d",
+                                 ctx.dynamic_cv, _pre_onsets, _post_onsets)
             except Exception as exc:
                 logger.warning("ExcellenceOptimizer: micro_dynamics fehlgeschlagen: %s", exc)
 

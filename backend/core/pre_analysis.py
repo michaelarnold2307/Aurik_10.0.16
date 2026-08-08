@@ -581,8 +581,14 @@ def run_pre_analysis(
                 _defect_material = _defmap.get(_dm)
                 # §2.46a: Wenn der DefectScanner ein anderes Material auto-detektiert
                 # hat als der Hint, das auto-detektierte Material für die Kette verwenden.
+                # §v10.14: ABER nur wenn der Hint "unknown" ist — MediumDetector ist
+                # autoritativ für Material-Klassifikation, DefectScanner nur supplementär.
+                # Bei digitalem Endformat (mp3_high etc.) ist die DefectScanner-Heuristik
+                # unzuverlässig (Rumble/Noise vom Codec, nicht vom Träger).
+                _chain_primary = _chain[0] if _chain else "unknown"
+                _md_has_material = _chain_primary not in ("unknown", "")
                 _auto_dm = getattr(result.defects, "auto_detected_material", None)
-                if _auto_dm is not None:
+                if _auto_dm is not None and not _md_has_material:
                     _adm = str(_auto_dm).lower()
                     for _suffix in [
                         ".cassette",
@@ -605,6 +611,17 @@ def run_pre_analysis(
                             _defect_material or "none",
                         )
                         _defect_material = _adm_mapped
+
+            # §v10.14 §fix: era/defect scores computed here (previously undefined).
+            _era_decade = int(getattr(result.era, "decade", 0) or 0)
+            _era_confidence = float(getattr(result.era, "confidence", 0.0) or 0.0)
+            # Aggregate defect severity across all detected defects as score.
+            _defect_score: float = 0.0
+            if result.defects is not None and hasattr(result.defects, "scores"):
+                _ds = getattr(result.defects, "scores", {})
+                _sevs = [float(getattr(s, "severity", 0.0))
+                         for s in (_ds.values() if isinstance(_ds, dict) else [])]
+                _defect_score = sum(_sevs) if _sevs else 0.0
 
             _physical = list(getattr(_md, "physical_analog_sources", []) or [])
             _analog = {
@@ -629,6 +646,8 @@ def run_pre_analysis(
             # Tonträger sind. Diese Signale werden genutzt um ZUSÄTZLICHE
             # Träger in der Kette zu inferieren — nicht nur den dominanten.
             _defect_inferred_carriers: list[str] = []
+            # §v10.14: Per-Material Defekt-Severity-Aggregation für Material-Konsens.
+            _defect_carrier_scores: dict[str, float] = {}
             if result.defects is not None and hasattr(result.defects, "scores"):
                 _defect_scores = getattr(result.defects, "scores", {})
                 # Defekt → Träger-Mapping mit Schwellwerten
@@ -665,6 +684,9 @@ def run_pre_analysis(
                                     _sev,
                                     _carrier,
                                 )
+                            # §v10.14: Aggregiere Severity pro Carrier (auch unterhalb der Schwelle,
+                            # für gewichtete Material-Affinitäts-Berechnung im Konsens).
+                            _defect_carrier_scores[_carrier] = _defect_carrier_scores.get(_carrier, 0.0) + _sev
                             break
             if _defect_inferred_carriers:
                 logger.info(
@@ -741,6 +763,16 @@ def run_pre_analysis(
                     _chain.insert(_vi, "vinyl")
                     logger.info("pre_Analyse: Vinyl-Inference — reel_tape+cassette+vinyl-era → vinyl eingefügt")
 
+                # §v10.14 Lacquer-Disc-Inference: Jede Vinylpressung entsteht
+                # aus einer Lackfolie (Schneidstichel → Lack/Alu → Galvanik → Stempel).
+                # Wenn reel_tape UND vinyl in der Kette sind, MUSS lacquer_disc
+                # dazwischen liegen — der physische Zwang des Pressprozesses.
+                _has_lacquer = "lacquer_disc" in _chain
+                if _has_reel and _has_vinyl and not _has_lacquer:
+                    _ld_pos = _chain.index("vinyl")
+                    _chain.insert(_ld_pos, "lacquer_disc")
+                    logger.info("pre_Analyse: Lacquer-Disc-Inference — reel_tape+vinyl → lacquer_disc eingefügt")
+
                 _md.is_multi_generation = len(_chain) > 1  # type: ignore[attr-defined]
                 _analog_in = [m for m in _chain if m in _analog]
                 if _analog_in:
@@ -790,10 +822,54 @@ def run_pre_analysis(
                 # wird sonst zu "reel_tape → lacquer_disc → vinyl → cassette → mp3_low"
                 # aufgebläht — und die aggressive chain_depth=5 zerstört dann
                 # tonal_center und timbre im eigentlich sauberen 320kbps MP3.
+                # §v10.14 Era-Plausibilität: Materialien deren Ära VOR dem Song-Ende
+                # liegt (z.B. Shellack 1890-1950 in einem 1977er Song) werden
+                # ausgefiltert. Verhindert "shellac → reel_tape" bei 1977er Vinyl-Song.
+                _MATERIAL_ERA_END: dict[str, int] = {
+                    "wax_cylinder": 1920,
+                    "shellac": 1955,
+                    "lacquer_disc": 1990,  # §v10.14: Als PRESSWERK-Zwischenträger bis Ende Vinyl-Ära
+                    "wire_recording": 1945,
+                }
+                if _era_decade and _era_decade > 0:
+                    _pre_filter_chain = list(_chain)
+                    _chain = [
+                        m for m in _chain
+                        if _MATERIAL_ERA_END.get(m, 9999) >= _era_decade - 10
+                    ]
+                    _removed = len(_pre_filter_chain) - len(_chain)
+                    if _removed > 0:
+                        logger.info(
+                            "§v10.14 Era-Filter: %d anachronistische Materialien entfernt (Ära=%d): %s",
+                            _removed,
+                            _era_decade,
+                            ", ".join(set(_pre_filter_chain) - set(_chain)),
+                        )
                 _md_confidence = float(getattr(_md, "confidence", 0.5) or 0.5)
                 _max_chain_depth = 2 if _md_confidence < 0.50 else (3 if _md_confidence < 0.60 else 99)
                 if len(_chain) > _max_chain_depth:
-                    _trimmed = _chain[:_max_chain_depth]
+                    # §v10.14: Letzten Eintrag (Endformat, z.B. mp3_high) IMMER behalten.
+                    # Aus den analogen Zwischenträgern den Ära-plausibelsten wählen.
+                    if len(_chain) > 1 and _chain[-1] not in (
+                        "shellac", "wax_cylinder", "vinyl", "cassette",
+                        "reel_tape", "tape", "lacquer_disc", "wire_recording",
+                    ):
+                        _last = [_chain[-1]]
+                        _analog_candidates = _chain[:-1]
+                        # §v10.14: Ära-bewusste Auswahl — Material das zur Ära passt bevorzugen
+                        _MATERIAL_ERA_PEAK: dict[str, int] = {
+                            "shellac": 1930, "wax_cylinder": 1900, "lacquer_disc": 1965,
+                            "wire_recording": 1940, "reel_tape": 1965, "vinyl": 1975,
+                            "cassette": 1985, "tape": 1970,
+                        }
+                        if _era_decade and _era_decade > 0:
+                            _analog_candidates.sort(
+                                key=lambda m: abs(_MATERIAL_ERA_PEAK.get(m, 1970) - _era_decade)
+                            )
+                        _middle = _analog_candidates[:_max_chain_depth - 1]
+                        _trimmed = _middle + _last
+                    else:
+                        _trimmed = _chain[:_max_chain_depth]
                     logger.info(
                         "§v10.712 Chain-Depth-Cap: confidence=%.2f → chain von %d auf %d Träger gekürzt (%s → %s)",
                         _md_confidence,
@@ -812,6 +888,41 @@ def run_pre_analysis(
                     _era_material or "none",
                     _defect_material or "none",
                 )
+
+                # ── §v10.20 Material-Konsens: 3 Detektoren abgleichen + Kette korrigieren ──
+                try:
+                    from backend.core.material_consensus import resolve_material_consensus, validate_material_era_consistency
+
+                    _consensus = resolve_material_consensus(
+                        medium_result={"material": _chain[-1] if _chain else "unknown", "confidence": _md_confidence, "chain": " → ".join(_chain)},
+                        era_result={"material": _era_material, "decade": _era_decade, "confidence": _era_confidence} if _era_material else None,
+                        defect_result={"material": _defect_material, "score": _defect_score,
+                                      "material_scores": _defect_carrier_scores} if _defect_material else None,
+                    )
+
+                    if _consensus["conflict_detected"]:
+                        logger.warning("pre_Analyse: Material-KONFLIKT — gewählter Konsens: %s (%.2f)",
+                                       _consensus["material"], _consensus["confidence"])
+                        # Korrigiere die Kette mit allen Detektor-Ergebnissen
+                        _all_materials = []
+                        for _det, _info in _consensus["all_votes"].items():
+                            _mat = _info.get("material", "unknown")
+                            if _mat and _mat != "unknown" and _mat not in _all_materials:
+                                _all_materials.append(_mat)
+                        if len(_all_materials) > 1:
+                            _era_order = ["shellac", "wax_cylinder", "vinyl", "lacquer_disc", "reel_tape",
+                                         "cassette", "dat", "cd", "minidisc", "mp3", "mp3_low", "mp3_high", "streaming"]
+                            _all_materials.sort(key=lambda m: _era_order.index(m) if m in _era_order else 99)
+                            _chain = _all_materials
+                            _md.transfer_chain = _chain  # type: ignore[attr-defined]
+                            logger.info("pre_Analyse: Kette KORRIGIERT: %s", " → ".join(_chain))
+
+                    # Ära und Kette sind KOMPLEMENTÄR, nicht widersprüchlich.
+                    # Ära = Aufnahmedatum. Kette = gesamte Medien-Historie.
+                    # Ein Song von 1960 kann selbstverständlich als MP3 vorliegen.
+                    # Keine Ära-Korrektur nötig — die Kette enthält bereits alle Infos.
+                except Exception:
+                    pass
         except Exception as _inj_exc:
             logger.debug("Deep-Transfer-Chain-Injection uebersprungen: %s", _inj_exc)
 

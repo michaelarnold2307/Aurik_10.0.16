@@ -566,7 +566,7 @@ def process_audio(
         )
         # §G63: CD-Rauschprofil für Vorschau — Preview klingt jetzt wie Export
         try:
-            from backend.core.cd_noise_profile import inject_cd_noise_profile
+            from backend.api.bridge import inject_cd_noise_profile
 
             result.audio = inject_cd_noise_profile(result.audio, _TARGET_SR, bit_depth=bit_depth)
             logger.info("💿 CD-Rauschprofil für Vorschau angewendet — Vorschau = Export")

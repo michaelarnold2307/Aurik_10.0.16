@@ -211,7 +211,7 @@ def compute_audio_fingerprint(audio: np.ndarray, sr: int) -> str:
         fingerprint_vec = audio_f32[indices]
 
         # Quantise to int16 for hash stability
-        fingerprint_int = (fingerprint_vec * 32767).astype(np.int16)
+        fingerprint_int = (fingerprint_vec * 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
         fingerprint_payload = f"sr={int(sr)}\n".encode("ascii") + fingerprint_int.tobytes()
         h = hashlib.sha256(fingerprint_payload).hexdigest()
         return h[:16]

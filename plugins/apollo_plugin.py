@@ -10,7 +10,7 @@ Referenz:
 
 SOTA-Entscheidungsmatrix (§4.4 Aurik-Spec):
     Primär:   Apollo (ONNX-Mamba, CPUExecutionProvider)
-    Fallback: DSP Spectral Repair (Phase 23/50) + PGHI
+    Fallback: DSP Spectral Repair (Phase 23/50) + PGHI  # §V6: logger.warning handled at call site
 
 Aktivierung (CAUSE_TO_PHASES §7.2):
     "compression_artifacts": ["phase_23_spectral_repair", "phase_50_spectral_repair"]
@@ -255,6 +255,7 @@ class ApolloPlugin:
                 )
                 self._fallback_active = True
         except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("torch nicht verfügbar — Apollo DSP-Ersatzpfad aktiv")
             self._fallback_active = True
             try:

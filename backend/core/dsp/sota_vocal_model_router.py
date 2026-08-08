@@ -113,6 +113,7 @@ class SotaVocalModelRouter:
                         raise RuntimeError("roformer_fallback_result")
                     attempts.append("bs_roformer:empty_stems")
                 except Exception as exc:  # pylint: disable=broad-except
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                     if str(exc) != "roformer_fallback_result":
                         attempts.append(f"bs_roformer:{type(exc).__name__}")
                     logger.debug("§SMR-1 BS-RoFormer separation nicht verfuegbar: %s", exc)
@@ -484,6 +485,7 @@ class SotaVocalModelRouter:
                 },
             )
         except Exception as exc:  # pylint: disable=broad-except
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             if str(exc) not in {"miipher_model_not_loaded", "miipher_adapter_dsp_fallback"}:
                 attempts.append(f"miipher:{type(exc).__name__}")
             logger.debug("§SMR-1 MIIPHER nicht verfuegbar: %s", exc)

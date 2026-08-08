@@ -9,6 +9,8 @@ in except Exception: blocks that have no logging.
 import re
 import sys
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 TARGET = ROOT / "backend" / "core" / "unified_restorer_v3.py"

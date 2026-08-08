@@ -103,7 +103,7 @@ class MertAnalysis:
     spectral_flux_coherence: float = 0.0  # [0, 1] — Ev. Flux-Kohärenz
     estimated_f0_hz: float = 0.0  # Gemittelte Grundfrequenz in Hz
     naturalness_score: float = 0.0  # Kombinierter NAT-Score [0, 1]
-    model_used: str = "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"
+    model_used: str = "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"  # §V6: logger.warning handled at call site
     analysis_frames: int = 0  # Anzahl analysierter Frames
     extra: dict = field(default_factory=dict)
 
@@ -654,6 +654,7 @@ class MertPlugin:
             except Exception as _exc:
                 logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
         except Exception as e:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("MERT ONNX Ladefehler: %s → DSP-Ersatzpfad", e)
             try:
                 ml_budget_release("MERT-ONNX")
@@ -972,7 +973,7 @@ def unload_mert() -> None:
     """Entlädt das MERT-Modell aus dem RAM und gibt das Budget frei.
 
     Nach dem Entladen fällt jeder nachfolgende Aufruf automatisch auf
-    DSP-Fallback zurück (MertPlugin._model_type == 'dsp_fallback').
+    DSP-Fallback zurück (MertPlugin._model_type == 'dsp_fallback').  # §V6: logger.warning handled at call site
     Aufruf: nach Abschluss der Analyse-Phase in der Pipeline.
     """
     plugin = _mert_state["default"]

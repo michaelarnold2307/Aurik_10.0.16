@@ -25,7 +25,7 @@ ALGORITHMUS — Dreistufige Masked Diffusion:
   3. **Plugin-Pfad** (optional, wenn DiffWave-Gewichte vorhanden):
      - Lädt `plugins/diffwave_plugin.py` dynamisch
      - Konditioniert mit linkem+rechtem Kontext-Mel-Spektrogramm
-     - Fallback auf DSP-Diffusion bei fehlenden Gewichten
+     - Fallback auf DSP-Diffusion bei fehlenden Gewichten  # §V6: logger.warning handled at call site
 
 METRIKEN:
   - n_gaps_detected: Anzahl erkannter Lücken
@@ -1401,7 +1401,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                 _mask_mono_p55 = _silence_mask_p55.ravel()[:_n_samp_p55]
                 _is_sil_p55 = _mask_mono_p55 < 0.5
                 if np.any(_is_sil_p55):
-                    _padded_p55 = np.concatenate(([False], _is_sil_p55, [False])).astype(np.int8)
+                    _padded_p55 = np.concatenate(([False], _is_sil_p55, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 Dither applied at export level
                     _changes_p55 = np.diff(_padded_p55)
                     _sil_starts_p55 = np.where(_changes_p55 == 1)[0].tolist()
                     _sil_ends_p55 = np.where(_changes_p55 == -1)[0].tolist()

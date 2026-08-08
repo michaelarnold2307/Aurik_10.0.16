@@ -1,5 +1,13 @@
 """Backend-Paket für Aurik 10.0.0 — DSP, ML-Modelle, Denker und API."""
 
+# §v10.14 ATOMIC CACHE-CLEAR: Löscht ALLE __pycache__-Verzeichnisse
+# rekursiv beim ersten Import. Garantiert dass JEDER Aurik-Start mit
+# frischem Bytecode läuft — kein manuelles find/rm mehr nötig.
+import shutil as _bclear_shutil, pathlib as _bclear_path
+_BACKEND_ROOT = _bclear_path.Path(__file__).parent
+for _bclear_d in _BACKEND_ROOT.rglob("__pycache__"):
+    _bclear_shutil.rmtree(_bclear_d, ignore_errors=True)
+
 # Ermöglicht Import von backend als Paket für Tests
 
 # ── §2.62 STFT Input-Length-Guard (zentral, schützt alle 62+ Aufrufer) ──

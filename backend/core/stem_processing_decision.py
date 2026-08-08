@@ -14,6 +14,8 @@ abhaengigkeiten: [numpy]
 from dataclasses import asdict, dataclass
 
 import numpy as np
+import logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass

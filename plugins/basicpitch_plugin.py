@@ -147,6 +147,7 @@ class BasicPitchPlugin:
             try:
                 return self._analyze_onnx(audio, sr, max_polyphony)
             except Exception as exc:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 logger.debug("BasicPitch ONNX-Inferenz fehlgeschlagen (%s) — DSP-Fallback.", exc)
 
         return self._analyze_dsp(audio, sr, max_polyphony)

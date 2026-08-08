@@ -238,6 +238,7 @@ class FcpePlugin:
                 _FCPE_ONNX_PATH,
             )
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("FCPE ONNX-Init fehlgeschlagen (%s) — CREPE-Fallback", exc)
 
         # Versuch 2: CREPE ONNX als transparente Delegation
@@ -249,6 +250,7 @@ class FcpePlugin:
                 delegate_model,
             )
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("CREPE-Delegation fehlgeschlagen (%s) — pYIN DSP aktiv", exc)
 
     @property

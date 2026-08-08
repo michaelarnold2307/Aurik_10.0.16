@@ -415,6 +415,7 @@ class AestheticProxyCalculator:
                     str(details.get("foundation_model_source", _foundation_source)) + "+mert"
                 )
             except Exception:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 foundation_model_deviation_score = 0.0  # Graceful fallback
         naturalness_from_foundation = 1.0 - foundation_deviation
         details["foundation_model_deviation"] = float(foundation_deviation)

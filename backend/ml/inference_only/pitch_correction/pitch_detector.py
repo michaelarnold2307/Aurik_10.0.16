@@ -12,6 +12,8 @@ from typing import Any
 import numpy as np
 
 from .logging_config import setup_logger
+import logging
+logger = logging.getLogger(__name__)
 
 # FCPE pitch plugin (CREPE ONNX Fallback + pYIN DSP intern)
 try:
@@ -112,6 +114,7 @@ class CREPEPitchDetector:
                 _r = _get_fcpe_plugin().analyze(audio, self.sample_rate)
                 times, f0_hz, confidence = _r.times_s, _r.f0_hz, _r.voiced_prob
             except Exception:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 times, f0_hz, confidence = self._fallback_pitch_detection(audio)
         else:
             # Fallback: Simple autocorrelation-based pitch detection

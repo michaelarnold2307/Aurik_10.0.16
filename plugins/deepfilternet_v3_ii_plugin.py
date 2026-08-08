@@ -354,6 +354,7 @@ class DeepFilterNetV3Plugin:
             spec_filtered = self._apply_df_filter(spec_filtered, coefs_np, alpha_np)
 
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("DeepFilterNet ONNX-Inferenz-Fehler: %s — DSP-Ersatzpfad.", exc)
             return self._omlsa_fallback(mono, _SR)
 

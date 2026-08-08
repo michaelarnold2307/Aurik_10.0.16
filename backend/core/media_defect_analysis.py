@@ -1,5 +1,7 @@
 import numpy as np
 import scipy.signal as signal
+import logging
+logger = logging.getLogger(__name__)
 
 logger = __import__("logging").getLogger(__name__)
 

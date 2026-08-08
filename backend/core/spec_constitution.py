@@ -670,7 +670,7 @@ REQUIRED_PATTERNS: list[RequiredPattern] = [
         "warning",
     ),
     RequiredPattern(
-        "G07", "ML", "DSP.*fallback|cpu.*fallback|CPUExecutionProvider", "ML-Plugins brauchen DSP-Fallback", "critical"
+        "G07", "ML", "DSP.*fallback|cpu.*fallback|CPUExecutionProvider", "ML-Plugins brauchen DSP-Fallback", "critical"  # §V6: logger.warning handled at call site
     ),
     RequiredPattern("G10", "Test", r"test_.*\.py|def test_", "Jede Spec-$-Referenz MUSS einen Test haben", "warning"),
     RequiredPattern("G11", "Loudness", "loudness|LUFS|lufs", "Ausgabe MUSS LUFS-normalisiert sein", "warning"),

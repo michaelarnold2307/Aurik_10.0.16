@@ -147,6 +147,7 @@ class PsolaPitchShifter:
             result_audio, n_epochs = self._psola(audio, f0_hz, ratio, f0_trajectory)
             method = "psola"
         except Exception as e:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("PSOLA Fallback (Phase-Vocoder): %s", e)
             result_audio = self._phase_vocoder_shift(audio, ratio)
             n_epochs = 0

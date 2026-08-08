@@ -155,11 +155,14 @@ class PhaseSteeringEngine:
                 s.consecutive_stable += 1
                 self._update_best(hpe_after, phase_name)
                 if s.consecutive_stable >= s.STOP_STABLE_THRESHOLD and hpe_after > 0.68:
-                    return SteeringDecision(
-                        SteerAction.STOP_GRACEFUL,
-                        f"HPE stabil ({s.consecutive_stable} Phasen) + gut → STOP",
-                        delta_hpe=delta,
-                    )
+                    # §v10.14: Nur stoppen wenn genügend Phasen gelaufen sind.
+                    # Bei 40 geplanten Phasen verhindert dies Stopp nach nur 7.
+                    if s.current_phase_idx >= 12:
+                        return SteeringDecision(
+                            SteerAction.STOP_GRACEFUL,
+                            f"HPE stabil ({s.consecutive_stable} Phasen) + gut → STOP",
+                            delta_hpe=delta,
+                        )
                 return SteeringDecision(SteerAction.CONTINUE, f"HPE stabil (Δ{delta:+.3f})", delta_hpe=delta)
 
             # Case 3: Leichte Verschlechterung → RETRY_LIGHTER

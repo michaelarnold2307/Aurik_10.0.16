@@ -147,6 +147,8 @@ class SharedAudioRing:
         channels: int,
         phase_id: bytes,
     ) -> None:
+        if self._buf is None:
+            raise RuntimeError("SharedAudioRing: Buffer nicht initialisiert")
         META_STRUCT.pack_into(
             self._buf,
             offset,

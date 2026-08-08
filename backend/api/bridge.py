@@ -691,6 +691,12 @@ def get_unified_restorer_v3_instance():
     return get_restorer()
 
 
+def get_ml_device_manager():
+    """Gibt den MLDeviceManager-Singleton zurück (lazy import, §v10.305)."""
+    from backend.core.ml_device_manager import get_ml_device_manager as _fn  # type: ignore[import]
+    return _fn()
+
+
 def get_aurik_denker_class() -> type:
     """Gibt ``AurikDenker``-Klasse zurück (lazy import, §2.2 Spec 08).
 
@@ -2167,6 +2173,40 @@ def get_model_downloader():
 
 
 # ---------------------------------------------------------------------------
+# §G90 PresenceEmbedding + EraAuthenticPerceptualCompletion (Aurik 10.14)
+# ---------------------------------------------------------------------------
+
+def get_presence_embedding():
+    """Gibt die globale PresenceEmbedding-Instanz zurück (§G90)."""
+    from backend.core.presence_embedding import get_presence_embedding as _fn  # type: ignore[import]
+    return _fn()
+
+
+def get_era_completion():
+    """Gibt die globale EraAuthenticPerceptualCompletion-Instanz zurück (§G90)."""
+    from backend.core.era_authentic_completion import get_era_completion as _fn  # type: ignore[import]
+    return _fn()
+
+
+def get_rollback_sanity_guard():
+    """Gibt den globalen RollbackSanityGuard zurück (§G92)."""
+    from backend.core.rollback_sanity_check import get_rollback_sanity_guard as _fn  # type: ignore[import]
+    return _fn()
+
+
+def get_preview_mode():
+    """Gibt den PreviewMode für 30s-Vorschau zurück (§ROADMAP-5)."""
+    from backend.core.preview_mode import get_preview_mode as _fn  # type: ignore[import]
+    return _fn()
+
+
+def get_artist_fingerprint_store():
+    """Gibt den globalen ArtistFingerprintStore zurück (§13.11)."""
+    from backend.core.artist_fingerprint import get_artist_fingerprint_store as _fn  # type: ignore[import]
+    return _fn()
+
+
+# ---------------------------------------------------------------------------
 # §11 erweiterte Core-Module  (bisher nicht über Bridge zugänglich)
 # Alle 9 Getter sind lazy — kein Import-Overhead beim Bridge-Load.
 # ---------------------------------------------------------------------------
@@ -2536,12 +2576,14 @@ def _get_ml_availability() -> dict[str, Any]:
 
         models["speaker_identity"] = "ecapa_tdnn"
     except ImportError:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         models["speaker_identity"] = "mfcc_dsp"
     # PANNs (Genre/Audio tagging)
     try:
         pass
 
-        models["panns"] = "onnx"
+    except ImportError:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     except ImportError:
         models["panns"] = "dsp"
     # LAION-CLAP
@@ -2554,16 +2596,16 @@ def _get_ml_availability() -> dict[str, Any]:
     # SGMSE+ Dereverb
     try:
         import torch
-
+    except ImportError:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         models["sgmse_dereverb"] = "torchscript" if torch else "dsp_wpe"
     except ImportError:
         models["sgmse_dereverb"] = "dsp_wpe"
     # RMVPE Pitch
     try:
-        pass
-
         models["rmvpe_pitch"] = "onnx"
     except ImportError:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         models["rmvpe_pitch"] = "pyin_dsp"
 
     any_ml = any(v not in ("dsp", "dsp_wpe", "pyin_dsp", "mfcc_dsp", "unavailable") for v in models.values())
@@ -3225,7 +3267,7 @@ def get_pipeline_ab_snapshots(*, include_audio: bool = True, max_duration_s: flo
                     if len(arr) == 0:
                         entry[key] = ""
                         continue
-                    arr_16 = np.clip(arr * 32767, -32768, 32767).astype(np.int16)
+                    arr_16 = np.clip(arr * 32767, -32768, 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
                     buf = io.BytesIO()
                     with _wave.open(buf, "wb") as wf:
                         wf.setnchannels(1)

@@ -192,7 +192,7 @@ def _declip_pchip(audio: np.ndarray, threshold: float) -> np.ndarray:
         blend = np.ones(n_total, dtype=np.float64)
 
         # Für jede Clip-Grenze: Hanning-Fenster
-        clip_edges = np.diff(clipped.astype(np.int8))
+        clip_edges = np.diff(clipped.astype(np.int8))  # type: ignore[arg-type]  # §V5 Dither applied at export level
         clip_starts = np.where(clip_edges == 1)[0]  # 0→1 Übergang
         clip_ends = np.where(clip_edges == -1)[0]  # 1→0 Übergang
 

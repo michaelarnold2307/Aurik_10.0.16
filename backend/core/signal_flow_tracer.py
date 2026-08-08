@@ -1136,6 +1136,7 @@ def calibrate_sft_thresholds(
             _WET_CEILING_REPAIR,
         )
     except Exception:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         pass  # Fallback: lokale Berechnungen bleiben aktiv
 
     # §G71 Wet-Ceilings: depth-adaptiv für effektive Phasen-Wirkung ≥ 0.15

@@ -398,13 +398,20 @@ class MicroDynamicsEnvelopeMorphing:
                         out[ch, n_samp:] = res[ch, n_samp:]
             else:
                 n_samp = min(res.shape[0], len(gain_envelope))
-                out[:n_samp, :] = res[:n_samp, :] * gain_envelope[:n_samp, np.newaxis]
+                # §v10.14: Robustheits-Clamp — bei OLA/STFT-Rounding kann
+                # gain_envelope wenige Samples länger sein als res (Bug: Broadcast-Error).
+                _ge = gain_envelope[:n_samp]
+                out[:n_samp, :] = res[:n_samp, :] * _ge[:n_samp, np.newaxis]
                 if n_samp < res.shape[0]:
                     out[n_samp:, :] = res[n_samp:, :]
         else:
             n_samp = min(n, len(gain_envelope))
             out = res.copy()
-            out[:n_samp] = res[:n_samp] * gain_envelope[:n_samp]
+            # §v10.14: Robustheits-Clamp — bei OLA/STFT-Rounding kann
+            # gain_envelope wenige Samples länger sein als res.
+            _ge_mono = gain_envelope[:n_samp]
+            _r_mono = res[:n_samp]
+            out[:n_samp] = _r_mono * _ge_mono
 
         out = np.nan_to_num(out, nan=0.0, posinf=1.0, neginf=-1.0)
 

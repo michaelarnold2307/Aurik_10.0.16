@@ -418,6 +418,7 @@ def export_stems(
     try:
         from dsp.stem_separator import StemSeparator
     except ImportError as e:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         raise RuntimeError("Stem separator not available. Make sure dsp/ module is in your Python path.") from e
 
     logger.debug("Separating stems (backend: %s)...", backend)

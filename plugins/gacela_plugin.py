@@ -3,7 +3,7 @@ plugins/gacela_plugin.py — GACELA ML Audio Inpainting + DSP Fallback
 
 GACELA: GAN-basiertes Inpainting von Spektrogramm-Lücken (≈ 0.74 s).
 Primär: PyTorch-Inferenz mit lokal gebündelten Checkpoints.
-Fallback: harmonischer DSP-Exciter (H2/H4, SOFT_SATURATION-konform).
+Fallback: harmonischer DSP-Exciter (H2/H4, SOFT_SATURATION-konform).  # §V6: logger.warning handled at call site
 
 Modell-Parameter (aus main_realData.py verifiziert):
     Model-SR        : 22 050 Hz
@@ -135,7 +135,7 @@ class GacelaPlugin:
     Primärpfad (ML):
         ``inpaint(left_audio, right_audio, sr)`` → Gap-Audio via GAN-Inferenz.
 
-    Fallback (DSP):
+    Fallback (DSP):  # §V6: logger.warning handled at call site
         ``generate(audio, sr, intensity)`` → harmonische H2/H4-Anreicherung.
 
     Singleton-Zugang via Modul-Ebene ``get_gacela_plugin()``.
@@ -255,6 +255,7 @@ class GacelaPlugin:
                 self._pghi_rec = PghiReconstructor(sr=48000)
                 logger.debug("GACELA: canonical PGHI reconstructor geladen.")
             except Exception as _pghi_exc:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
                 logger.debug("GACELA: dsp.pghi nicht verfuegbar, using inline Ersatzpfad: %s", _pghi_exc)
                 self._pghi_rec = None
 

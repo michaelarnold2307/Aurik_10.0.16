@@ -189,6 +189,7 @@ class ExportQualityGate:
                 return -70.0
             return 20.0 * np.log10(integrated_rms)  # type: ignore[no-any-return]
         except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             return -23.0  # typical music LUFS fallback
 
 

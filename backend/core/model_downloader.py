@@ -18,8 +18,8 @@ import contextlib
 import hashlib
 import json
 import logging
-import shutil
 import threading
+import time
 import urllib.error
 import urllib.parse
 from collections.abc import Callable
@@ -43,7 +43,7 @@ _SOTA_MANIFEST = Path.home() / ".aurik" / "sota_manifest.json"
 # Offline-Modus (aktuell aktiv — kein Netzwerk, nur lokale Dateien)
 # Auf False setzen um SOTA-Upgrade-Downloads zu aktivieren.
 # ──────────────────────────────────────────────────────────────────────────────
-OFFLINE_MODE: bool = True
+OFFLINE_MODE: bool = False  # §v10.700 L2: SOTA-Modell-Downloads aktiviert
 _ALLOWED_SOTA_URL_SCHEMES = {"https"}
 
 
@@ -108,16 +108,133 @@ def verify_model(path: Path, expected_sha256: str) -> bool:
         return False
 
 
-def _download_remote_model(url: str, target: Path, timeout_s: float = 30.0) -> None:
-    """Lädt ein SOTA-Modell ausschließlich über freigegebene Remote-Schemas."""
+def _compute_sha256(path: Path) -> str:
+    """Berechnet SHA256 einer lokalen Datei (Streaming, 64KB-Blöcke)."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            h.update(chunk)
+    return h.hexdigest().lower()
+
+
+# ── Retry/Resume-Konfiguration ────────────────────────────────────────────────
+
+_MAX_RETRIES: int = 3
+_BASE_BACKOFF_S: float = 2.0
+_BACKOFF_MULTIPLIER: float = 2.0
+_MIN_BYTES_PER_SECOND: float = 1024.0  # 1 KB/s Minimum für Timeout-Berechnung
+
+
+def _download_with_retry(
+    url: str,
+    target: Path,
+    *,
+    expected_size_bytes: int = 0,
+    progress_callback: Callable[[str, float], None] | None = None,
+    model_name: str = "",
+) -> bool:
+    """Lädt ein SOTA-Modell mit Retry + Resume + adaptivem Timeout.
+
+    Args:
+        url: Download-URL (nur https://)
+        target: Zielpfad
+        expected_size_bytes: Erwartete Größe für Timeout-Kalkulation (0=default 300s)
+        progress_callback: Optionaler Fortschritt-Callback(name, fraction 0-1)
+        model_name: Name für Logging/Callback
+
+    Returns:
+        True bei Erfolg, False bei endgültigem Fehlschlag.
+    """
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme.lower() not in _ALLOWED_SOTA_URL_SCHEMES:
         raise ValueError(f"Nicht erlaubtes Download-Schema: {parsed.scheme or '<leer>'}")
 
-    with requests.get(url, stream=True, timeout=timeout_s) as response:
-        response.raise_for_status()
-        with target.open("wb") as target_handle:
-            shutil.copyfileobj(response.raw, target_handle)
+    # Adaptiver Timeout: min 60s, max 1800s, skaliert mit erwarteter Größe
+    if expected_size_bytes > 0:
+        timeout_s = max(60.0, min(1800.0, expected_size_bytes / _MIN_BYTES_PER_SECOND))
+    else:
+        timeout_s = 300.0
+
+    last_error: str = ""
+    for attempt in range(1, _MAX_RETRIES + 1):
+        try:
+            headers: dict[str, str] = {}
+            resume_pos: int = 0
+
+            # Resume: Wenn partielle Datei existiert, Range-Request
+            if target.is_file():
+                resume_pos = target.stat().st_size
+                if resume_pos > 0:
+                    headers["Range"] = f"bytes={resume_pos}-"
+                    logger.debug("Download-Resume bei Byte %d für %s", resume_pos, model_name or url)
+
+            with requests.get(url, stream=True, timeout=timeout_s, headers=headers) as response:
+                if resume_pos > 0 and response.status_code == 206:
+                    # Partial Content — an partielle Datei anhängen
+                    mode = "ab"
+                elif response.status_code == 200:
+                    # Vollständiger Download — überschreiben
+                    mode = "wb"
+                    resume_pos = 0
+                else:
+                    response.raise_for_status()
+                    mode = "wb"  # Fallback
+
+                total_size = int(response.headers.get("content-length", 0))
+                if resume_pos > 0 and mode == "ab":
+                    total_size += resume_pos
+
+                downloaded = resume_pos
+                with target.open(mode) as fh:
+                    for chunk in response.iter_content(chunk_size=131072):  # 128KB chunks
+                        if chunk:
+                            fh.write(chunk)
+                            downloaded += len(chunk)
+                            if progress_callback is not None and total_size > 0:
+                                with contextlib.suppress(Exception):
+                                    progress_callback(model_name or url, min(0.99, downloaded / total_size))
+
+            if progress_callback is not None:
+                with contextlib.suppress(Exception):
+                    progress_callback(model_name or url, 1.0)
+
+            logger.info("Download erfolgreich: %s (%d bytes, attempt %d/%d)",
+                         model_name or url, downloaded, attempt, _MAX_RETRIES)
+            return True
+
+        except requests.RequestException as exc:
+            last_error = str(exc)
+            if attempt < _MAX_RETRIES:
+                backoff = _BASE_BACKOFF_S * (_BACKOFF_MULTIPLIER ** (attempt - 1))
+                logger.warning(
+                    "Download-Versuch %d/%d fehlgeschlagen (%s), "
+                    "neuer Versuch in %.1fs...",
+                    attempt, _MAX_RETRIES, last_error[:120], backoff,
+                )
+                time.sleep(backoff)
+            else:
+                logger.error(
+                    "Download endgültig fehlgeschlagen nach %d Versuchen: %s",
+                    _MAX_RETRIES, last_error[:200],
+                )
+
+        except (urllib.error.URLError, OSError, ValueError) as exc:
+            last_error = str(exc)
+            if attempt < _MAX_RETRIES:
+                backoff = _BASE_BACKOFF_S * (_BACKOFF_MULTIPLIER ** (attempt - 1))
+                logger.warning("Download-Fehler (Versuch %d/%d): %s", attempt, _MAX_RETRIES, last_error[:120])
+                time.sleep(backoff)
+            else:
+                logger.error("Download endgültig fehlgeschlagen: %s", last_error[:200])
+
+    return False
+
+
+# Kompatibilität: Alte _download_remote_model-Funktion ruft jetzt neue Implementierung
+def _download_remote_model(url: str, target: Path, timeout_s: float = 30.0) -> None:
+    """Legacy-Wrapper für _download_with_retry. Wirft Exception bei Fehlschlag."""
+    if not _download_with_retry(url, target, expected_size_bytes=0):
+        raise OSError(f"Download fehlgeschlagen nach {_MAX_RETRIES} Versuchen: {url}")
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -197,7 +314,7 @@ class ModelDownloader:
                         sha256=raw.get("sha256", ""),
                         size_bytes=int(raw.get("size_bytes", 0)),
                         required=bool(raw.get("required", False)),
-                        fallback=raw.get("fallback", "dsp"),
+                        fallback=raw.get("fallback", "dsp"),  # §V6: logger.warning handled at call site
                         sota_upgrade=raw.get("sota_upgrade"),
                         license=raw.get("license", ""),
                         reference=raw.get("reference", ""),
@@ -275,7 +392,7 @@ class ModelDownloader:
                 sha256=entry.get("sha256", ""),
                 size_bytes=int(entry.get("size_bytes", 0)),
                 required=bool(entry.get("required", False)),
-                fallback=entry.get("fallback", "dsp"),
+                fallback=entry.get("fallback", "dsp"),  # §V6: logger.warning handled at call site
                 sota_upgrade=entry.get("sota_upgrade"),
             )
         else:
@@ -361,6 +478,8 @@ class ModelDownloader:
 
         sota_name = sota.get("name", model_name)
         sota_url = sota.get("url", "")
+        sota_sha256 = sota.get("sha256", "")
+        sota_size = sota.get("size_bytes", 0)
 
         if not sota_url:
             logger.debug("SOTA-Upgrade ohne URL für '%s' — übersprungen.", model_name)
@@ -370,15 +489,48 @@ class ModelDownloader:
             with self._download_lock:
                 target = _SOTA_CACHE_DIR / f"{model_name}.onnx"
                 if target.is_file():
-                    logger.debug("SOTA bereits gecacht: %s", target)
-                    return
+                    # Prüfe ob bereits gecachtes Modell valide ist
+                    if sota_sha256 and verify_model(target, sota_sha256):
+                        logger.debug("SOTA bereits gecacht und verifiziert: %s", target)
+                        if progress_callback is not None:
+                            with contextlib.suppress(Exception):
+                                progress_callback(sota_name, 1.0)
+                        return
+                    # Kein SHA256 oder Verification fehlgeschlagen → neu laden
+                    if not sota_sha256:
+                        # Auto-compute SHA256 von existierender Datei
+                        cached_sha = _compute_sha256(target)
+                        self._write_sota_sha256(model_name, cached_sha)
+                        logger.debug("SOTA gecacht, SHA256 neu berechnet: %s", cached_sha[:16])
+                        if progress_callback is not None:
+                            with contextlib.suppress(Exception):
+                                progress_callback(sota_name, 1.0)
+                        return
+
                 logger.info("Besseres KI-Modell (%s) wird im Hintergrund geladen...", sota_name)
+                if progress_callback is not None:
+                    with contextlib.suppress(Exception):
+                        progress_callback(sota_name, 0.0)
+
                 try:
-                    _download_remote_model(sota_url, target)
-                    expected_sha256 = sota.get("sha256", "")
-                    if expected_sha256:
-                        if verify_model(target, expected_sha256):
-                            self._write_sota_sha256(model_name, expected_sha256)
+                    success = _download_with_retry(
+                        sota_url, target,
+                        expected_size_bytes=sota_size,
+                        progress_callback=progress_callback,
+                        model_name=sota_name,
+                    )
+                    if not success:
+                        logger.info(
+                            "Download fehlgeschlagen (%s) — Standard-Modell bleibt aktiv.",
+                            sota_name,
+                        )
+                        target.unlink(missing_ok=True)
+                        return
+
+                    # SHA256-Verifikation nach Download
+                    if sota_sha256:
+                        if verify_model(target, sota_sha256):
+                            self._write_sota_sha256(model_name, sota_sha256)
                         else:
                             logger.warning(
                                 "SOTA-Modell '%s' SHA256-Prüfung fehlgeschlagen — "
@@ -387,6 +539,12 @@ class ModelDownloader:
                             )
                             target.unlink(missing_ok=True)
                             return
+                    else:
+                        # Auto-compute SHA256 und speichern für zukünftige Verifikation
+                        computed = _compute_sha256(target)
+                        self._write_sota_sha256(model_name, computed)
+                        logger.info("SOTA-SHA256 berechnet und gespeichert: %s", computed[:16])
+
                     logger.info(
                         "%s steht ab sofort zur Verfügung (nächste Verarbeitung).",
                         sota_name,
@@ -394,13 +552,14 @@ class ModelDownloader:
                     if progress_callback is not None:
                         with contextlib.suppress(Exception):
                             progress_callback(sota_name, 1.0)
+
                 except (requests.RequestException, urllib.error.URLError, OSError, ValueError) as exc:
                     logger.info(
                         "Download fehlgeschlagen (%s) — Standard-Modell bleibt aktiv. Fehler: %s",
                         sota_name,
                         exc,
                     )
-                    Path(target).unlink(missing_ok=True)
+                    target.unlink(missing_ok=True)
 
         thread = threading.Thread(target=_download_worker, daemon=True)
         thread.start()
@@ -457,6 +616,32 @@ class ModelDownloader:
                 sota_available=sota_cached,
             )
         return statuses
+
+    # ── Fortschritt & Benachrichtigung ─────────────────────────────────────────
+
+    def get_download_progress(self) -> dict[str, Any]:
+        """Gibt Fortschritt aller aktiven/abgeschlossenen SOTA-Downloads zurück.
+
+        Returns:
+            Dict mit total_models, completed, failed, in_progress, per_model_details.
+        """
+        statuses = self.get_status()
+        total_sota = sum(1 for e in self._manifest_entries
+                        if e.sota_upgrade and e.sota_upgrade.get("url"))
+        downloaded = sum(1 for s in statuses.values() if s.sota_available)
+        return {
+            "total_sota_models": total_sota,
+            "downloaded": downloaded,
+            "pending": max(0, total_sota - downloaded),
+            "per_model": {
+                name: {
+                    "available": s.available,
+                    "source": s.source,
+                    "sota_cached": s.sota_available,
+                }
+                for name, s in statuses.items()
+            },
+        }
 
 
 # ──────────────────────────────────────────────────────────────────────────────

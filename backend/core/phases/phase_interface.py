@@ -161,6 +161,7 @@ class PhaseResult:
 
             self.audio = apply_soft_clip(self.audio, ceiling=1.0)
         except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             self.audio = np.clip(self.audio, -1.0, 1.0)  # Fallback
         if self.audio.dtype != np.float32:
             self.audio = self.audio.astype(np.float32)

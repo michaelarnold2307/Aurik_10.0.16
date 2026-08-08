@@ -15,6 +15,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 MANIFEST = ROOT / "models" / "manifest.json"
@@ -157,7 +159,7 @@ def main() -> int:
             source_ckpt = (ROOT / "models/sgmse_plus/sgmse_wsj0_reverb.ckpt").exists()
             runtime_ready = True
             ts_fallback = (ROOT / "models/sgmse_plus/sgmse_plus.ts").exists()
-            resolved_by = "primary" if file_exists else ("torchscript_fallback" if ts_fallback else "wpe_dsp_fallback")
+            resolved_by = "primary" if file_exists else ("torchscript_fallback" if ts_fallback else "wpe_dsp_fallback")  # §V6: logger.warning handled at call site
             release_mode = "primary" if file_exists else "fallback"
         elif a.name == "versa":
             runtime_ready = True

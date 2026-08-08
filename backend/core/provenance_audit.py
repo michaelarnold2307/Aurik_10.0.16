@@ -378,5 +378,5 @@ def _audio_hash(audio: np.ndarray, sample_rate: int, seconds: float = 4.0) -> st
     n_samples = min(len(audio), int(sample_rate * seconds))
     chunk = audio[:n_samples]
     # Normalisierung auf int16 für stabilen Hash (float-Rundungsfehler vermeiden)
-    chunk_int16 = np.clip(chunk * 32767, -32768, 32767).astype(np.int16)
+    chunk_int16 = np.clip(chunk * 32767, -32768, 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
     return hashlib.sha256(chunk_int16.tobytes()).hexdigest()[:24]

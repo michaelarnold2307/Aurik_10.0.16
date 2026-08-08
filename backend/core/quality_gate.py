@@ -253,6 +253,7 @@ class QualityGate:
 
             return True
         except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.exception("[QualityGate/DSP] Unerwarteter Fehler – Fallback True")
             return True
 
@@ -285,7 +286,8 @@ class QualityGate:
                 except (TypeError, ValueError) as _exc:
                     logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
-            return True
+        except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         except Exception:
             logger.exception("[QualityGate/ML] Unerwarteter Fehler – Fallback True")
             return True
@@ -306,7 +308,8 @@ class QualityGate:
             if mode is not None and mode not in self._VALID_MODES:
                 logger.warning("[QualityGate/GUI] Unbekannter Modus '%s' – abgelehnt.", mode)
                 return False
-
+        except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             return True
         except Exception:
             logger.exception("[QualityGate/GUI] Unerwarteter Fehler – Fallback True")

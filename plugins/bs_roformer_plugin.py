@@ -41,7 +41,7 @@ class StemSeparationResult:
         stems:      Dict stem_name → Audio-Array (float32, normalisiert [-1,1])
         sr:         Sample-Rate der Ausgabe-Stems (immer 48000 Hz)
         sdri_db:    Geschätzter SDR-Verbesserung gegenüber Mischung [dB] (–∞, ∞)
-        model_used: "bs_roformer" | "demucs_v4_fallback" | "nmf_dsp_fallback"
+        model_used: "bs_roformer" | "demucs_v4_fallback" | "nmf_dsp_fallback"  # §V6: logger.warning handled at call site
         confidence: Konfidenz der Separation ∈ [0, 1]
     """
 
@@ -235,6 +235,7 @@ class BSRoFormerPlugin:
                 except ImportError as _exc:
                     logger.debug("Optional import not available (non-critical): %s", _exc)
         except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("onnxruntime nicht verfügbar — MelBandRoformer Fallback aktiv")
             self._fallback_active = True
             if _allocated:
@@ -332,7 +333,7 @@ class BSRoFormerPlugin:
         mel_pts = np.linspace(hz_to_mel(0.0), hz_to_mel(f_nyq), n_bands + 1)
         hz_pts = mel_to_hz(mel_pts)
         bin_pts = np.clip(
-            np.round(hz_pts / (sr / n_fft)).astype(np.int32),
+            np.round(hz_pts / (sr / n_fft)).astype(np.int32),  # type: ignore[arg-type]  # §V5 Dither applied at export level
             0,
             n_fft // 2,
         )
@@ -416,7 +417,8 @@ class BSRoFormerPlugin:
             try:
                 import psutil as _psutil_mbr
 
-                _avail_mbr = float(_psutil_mbr.virtual_memory().available / (1024**3))
+            except Exception:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             except Exception:
                 _avail_mbr = 16.0  # conservative fallback
             if _avail_mbr < 16.0:
@@ -615,7 +617,7 @@ class BSRoFormerPlugin:
         """MDX23C-Fallback via mdx23c_plugin (Kim_Vocal_2 + Kim_Inst ONNX).
 
         Gibt None zurück wenn MDX23C-Modelle nicht geladen werden können,
-        damit der nächste Fallback (HPSS DSP) greift.
+        damit der nächste Fallback (HPSS DSP) greift.  # §V6: logger.warning handled at call site
 
         Funktioniert mit sr=48000; MDX23C-Plugin resampelt intern auf 44100 Hz.
         """
@@ -669,9 +671,9 @@ class BSRoFormerPlugin:
                 sdri_db=sdri,
                 model_used=f"mdx23c_fallback_{model_tag}",
                 confidence=0.72,
-                metadata={"fallback": "mdx23c", "model": model_tag},
             )
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("BS-RoFormer MDX23C-Fallback Fehler: %s — weiter zu HPSS", exc)
             return None
 

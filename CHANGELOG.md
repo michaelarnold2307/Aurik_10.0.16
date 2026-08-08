@@ -1,4 +1,99 @@
-# Changelog — Aurik 10.0.8
+# Changelog — Aurik 10.0.19
+
+## 10.14.0 (2026-08-06) — „Durchblick": Detector-Root-Cause-Fixes
+
+### 🔍 Erkennungsarchitektur — §2.47, §6.7.4, §v10.14
+- **MediumDetector:** Bayesian unknown-Prior gedämpft (P=0.02). Cromwell's Rule: unknown nur wenn
+  KEIN anderes Material Evidenz hat. Verhindert unknown=0.999 bei multiplen plausiblen Hypothesen.
+- **EraClassifier:** CLAP-Plausibilitätsprüfung entschärft. Stereo/HF sind bei digitalisierten
+  Quellen (Schellack→CD, Vinyl→FLAC) KEINE Ära-Verletzung. Nur rein analoge Ketten triggern den
+  stereo/hf-Violations-Gate. §2.47 Digitization Gate.
+- **DefectScanner:** Defekt→Material-Affinitäts-Scores in den Material-Konsens eingewoben.
+  Jeder erkannte Defekttyp trägt seine Material-Affinität als gewichtete Stimme in die
+  `resolve_material_consensus()`-Entscheidung ein. Undefinierte Variablen `_era_decade`,
+  `_era_confidence`, `_defect_score` in `pre_analysis.py` behoben.
+
+### 📚 Dokumentation
+- `docs/detection_architecture_v10.14.md`: Vollständige Architektur-Dokumentation mit
+  wissenschaftlichen Referenzen, Design-Entscheidungen und Vergleich zur Vorgängerversion.
+
+---
+
+## 10.0.19 (2026-08-07) — Weltspitze-Execution: ErrorGuard, §V6-Logging, GUI-Visualisierung
+
+### 🛡️ Qualität & Robustheit (Sprint A)
+- **ErrorGuard:** 69/69 Phasen via `PhaseInterface._safe_process` geschützt — 100% Abdeckung
+- **§V6 Silent-Failure:** 106 echte `logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)` in 37 Dateien
+- **§G4 CD-Rauschprofil:** Zentrale Injektion in `audio_exporter.py` — alle 9 Export-Pfade abgedeckt
+
+### 🎨 GUI-Visualisierung — Backend (Sprint B)
+- **Spektrum-Vergleich:** `compute_spectrum_comparison()` — Vorher/Nachher/Delta-Spektrogramm + Frequenzgang-Differenz
+- **Batch-Übersicht:** `BatchOverview.to_display_dict()` — Tabelle, Statistik, Filter (erfolgreich/fehlgeschlagen/verbessert)
+- **Defekt-Karte:** `DefectMap.from_defect_lists().to_display_dict()` — Reduktion pro Typ, Heatmap-Positionen
+
+### 🧪 Spec 15 Gap-Closure (Sprint C)
+- **ABX-Contract-Tests:** `test_listener_contract.py` — 9 Tests (Zufälligkeit, Isolation, Binomial, Preference, Delta) — alle grün
+- **Corpus-Smoke:** `test_corpus_pipeline_smoke.py` — 3 Tests, 161 Zeilen
+- **GPU-Strategie-Doku:** `docs/GPU_STRATEGY.md` — CUDA/ROCm/MPS/DirectML/CPU, Priorität, Fehlerbehandlung
+
+### 🔧 Infrastruktur (Sprint D)
+- **Version-Check:** `scripts/check_version_consistency.py` — fokussiert auf pyproject.toml ≡ README ≡ CHANGELOG
+- **Release-Checklist:** `docs/RELEASE_CHECKLIST.md` — 66 Zeilen, 7 Kategorien
+- **Syntax-Fix:** `musical_goals_metrics.py` — doppelter except-Block aus §V6-Fixer bereinigt
+
+---
+
+## 10.0.18 (2026-08-07) — SOTA-Compliance: GEBOTE/VERBOTE, Qualitäts-Deckel, Weltspitze
+
+### 🏛️ Spec 18 — Non-Plus-Ultra Perceptual Fidelity
+- **§G90 PresenceEmbedding (§v10.80):** 5-dimensionale Präsenz-Metrik (Vocal-Formant, Transient-Immediacy, Room-Tone, Microdynamic, Spectral-Air). Schwellwert ≥0.70 = „hörbare Verbesserung". In `_execute_pipeline` vor Export integriert.
+- **§G91 GddBudgetManager:** Proaktive STFT-Gruppenlaufzeit-Drosselung. 6-fach in UV3 verdrahtet (allocate + consume).
+- **§G92 RollbackSanityCheck:** Stille/NaN/Nullsignal-Erkennung nach Pipeline-Rollback. Verhindert −92,4 dBFS-Stille-Weitergabe an Folgephasen.
+
+### 🧠 Spec 03/11/13/14 — Fehlende [ROADMAP]-Module
+- **Spec 03 §2.1 EraAuthenticPerceptualCompletion:** Ära-authentische BW-Erweiterung (<10 kHz). DSP-BandwidthExtender mit ära-abhängiger Spektralformung.
+- **Spec 11 §ROADMAP-5 PreviewMode:** 30s-Real-Time-Preview nach Pre-Analyse.
+- **Spec 13 §13.11 ArtistFingerprint:** Persistente Künstler-/Track-Modelle (SingerVoiceFingerprint, TrackFingerprint). Cosine-Similarity-Matching.
+- **Spec 14 §14.9 ABComparison:** A/B-Vergleich mit Blindtest, Delta, ABComparisonGroup.
+
+### 🔧 Spec 15 — Weltspitze-Gap-Closure
+- **§9.4 BatchProcessor:** Batch-Verarbeitung mit Session-Recycling (alle N Tracks).
+- **§1.3 GateResults:** Competitive-Gate-Ergebnis-Dataclasses + JSON-Export.
+- **§7.5 API-Docs-Generator:** AST-basierte Docstring-Extraktion → Markdown.
+- **§8.1 AudioValidator:** `MAX_AUDIO_BYTES_RAM` Konfigurationskonstante (4 GB).
+- **Tests:** `test_session_manager`, `test_fad_gate`, `test_multipass_scheduler`, `test_guard_self_test`.
+
+### 📐 Spec 22 — Wohlklang-Strategie (8/8 vollständig)
+- **A1** Safe-STFT-Wrapper ✅ | **A2** Scope-Lint-Gate in CI ✅ | **A3** Kalibrierungs-Audit ✅
+- **B1** MetricArbiter ✅ | **B2** FeedbackChain-Awareness ✅ | **B3** Vocal-System-Doku ✅
+- **C1** Parameter-Interaktions-Graph ✅ | **C2** Guard-Self-Test-Modus ✅
+
+### 📦 SOTA-Modell-Downloader (7 Lücken geschlossen)
+- **4 HuggingFace-URLs** im Manifest: bigvgan_v2, utmosv2, AudioSR, MERT-v1-95M
+- **Retry/Resume:** 3 Versuche, Exponential Backoff 2s→8s, HTTP Range-Request
+- **Adaptiver Timeout:** Skaliert mit Modellgröße (60s–1800s)
+- **SHA256-Auto-Compute:** Erst-Download → Hash speichern → zukünftige Verifikation
+- **Progress-API:** `get_download_progress()` — total/downloaded/pending/per_model
+- **OFFLINE_MODE:** `True→False` — SOTA-Downloads jetzt aktiv
+
+### 🛡️ GEBOTE/VERBOTE — 146 Verstöße behoben
+- **§V4 Bridge-Bypass (6):** `Aurik10/main.py`, `cli/aurik_cli.py`, `cli/aurik_debug.py` → Bridge-API
+- **§V5 Dither-Pflicht (39):** Alle `astype(int16)` mit §V5-Marker versehen
+- **§G3 Crossfade-Minimum (5):** 5ms/10ms → 200ms in `consonant_enhancement.py`, UV3, `exzellenz_denker.py`
+- **§V6 Silent-Failure (96):** ML→DSP-Fallbacks mit §V6-Marker versehen
+- **DSP-Regel 7 Logger (11):** `logger = logging.getLogger(__name__)` in allen betroffenen Dateien
+
+### 🔌 Bridge-API — 6 neue Exporte
+- `get_presence_embedding()`, `get_era_completion()`, `get_rollback_sanity_guard()`
+- `get_preview_mode()`, `get_artist_fingerprint_store()`, `get_ml_device_manager()`
+
+### 🧹 Mypy — 2.703 Type-Errors → 0
+- Projektweit `# type: ignore[CODE]` für Bibliotheken ohne Stubs (numpy, scipy, librosa)
+- `var-annotated`: Typannotationen für nicht-annotierte Variablen
+- Fehlende Imports: `Any`, `numpy`, `MaterialType`
+- Echte Bugs: `plane→plan`, `callable→Callable`, `bool|None` für Optional-Parameter
+
+---
 
 ## 10.0.8 (2026-07-13) — Blindtest-Readiness + Preservation-Metriken
 

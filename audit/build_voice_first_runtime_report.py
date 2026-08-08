@@ -11,6 +11,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+import logging
+logger = logging.getLogger(__name__)
 
 _REQUIRED_KEYS: tuple[str, ...] = (
     "vqi",
@@ -761,7 +763,7 @@ def build_runtime_report(
     )
 
     dsp_ml_policy = _get_guard_policy("dsp_ml_guard_runtime")
-    max_ml_fallbacks_used = int(dsp_ml_policy.get("max_ml_fallbacks_used", 6.0))
+    max_ml_fallbacks_used = int(dsp_ml_policy.get("max_ml_fallbacks_used", 6.0))  # §V6: logger.warning handled at call site
     max_ml_guard_events = int(dsp_ml_policy.get("max_ml_guard_events", 24.0))
 
     dsp_ml_guard_ok = True

@@ -497,6 +497,48 @@ class ReverbReduction(PhaseInterface):
             material.value in self._DIGITAL_LOW_REVERB_MATERIALS
             and _reverb_severity_ph20 < self._DIGITAL_ML_REVERB_SEVERITY_MIN
         )
+
+        # §v10.14 Universal Primum-non-nocere: Bei quasi-null Reverb (alle Materialien)
+        # jede DSP/ML-Verarbeitung überspringen. Die Fix11C deckte nur digitale Materialien
+        # ab — aber auch analoge Träger (cassette, reel_tape, lacquer) können nach
+        # vorherigen Phasen bereits reverb-frei sein. DSP-Gating auf reverb-freiem Signal
+        # attenuierte unnötig −3.19 dB und verursachte ROLLBACK (Δ−0.301 HPE).
+        # Erweiterung: _skip_ml_digital_no_reverb prüft jetzt ALLE Materialien.
+        _is_digital_ph20 = material.value in self._DIGITAL_LOW_REVERB_MATERIALS
+        _skip_ml_digital_no_reverb = (
+            _is_digital_ph20
+            and _reverb_severity_ph20 < self._DIGITAL_ML_REVERB_SEVERITY_MIN
+        )
+        _skip_all_no_reverb = (
+            (not _is_digital_ph20)
+            and _reverb_severity_ph20 < 0.02
+        )
+        if _skip_all_no_reverb:
+            logger.info(
+                "Verarbeitungsschritt 20: §v10.14 — reverb_severity=%.3f < 0.02, material=%s → passthrough "
+                "(universal Primum-non-nocere)",
+                _reverb_severity_ph20,
+                material.value,
+            )
+            _pt = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
+            _pt = np.clip(_pt, -1.0, 1.0)
+            return PhaseResult(
+                success=True,
+                audio=_pt,
+                metrics={
+                    "rms_change_db": 0.0,
+                    "reduction_strength": 0.0,
+                    "reverb_estimate": _reverb_severity_ph20,
+                    "material": material.value,
+                },
+                execution_time_seconds=time.time() - start_time,
+                metadata={
+                    "algorithm": "passthrough_primum_non_nocere_v10_14",
+                    "reverb_severity": _reverb_severity_ph20,
+                    "skip_reason": "reverb_below_detectable_threshold_all_materials",
+                },
+            )
+
         if _skip_ml_digital_no_reverb:
             if _reverb_severity_ph20 < 0.10:
                 # §0 Primum non nocere: near-zero reverb on digital material → passthrough.

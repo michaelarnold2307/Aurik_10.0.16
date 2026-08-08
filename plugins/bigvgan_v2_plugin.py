@@ -440,6 +440,7 @@ class BigVGANv2Plugin:
                 if self._usable_vocoder_output(audio, out):
                     return out, "vocos_fallback", 0.86
         except Exception as exc:  # pylint: disable=broad-except
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("BigVGAN-v2: Vocos fallback unavailable: %s", exc)
 
         try:
@@ -449,9 +450,9 @@ class BigVGANv2Plugin:
             if getattr(hifigan, "_session", None) is not None:
                 out = self._coerce_like(hifigan.reconstruct(audio, sr), audio)
                 if self._usable_vocoder_output(audio, out):
-                    return out, "hifigan_v2_fallback", 0.74
+                    return out, "hifigan_fallback", 0.78
         except Exception as exc:  # pylint: disable=broad-except
-            logger.debug("BigVGAN-v2: HiFi-GAN fallback unavailable: %s", exc)
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
 
         return self._synthesize_phase_coherent_istft_fallback(audio, sr)
 

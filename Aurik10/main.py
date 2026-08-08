@@ -461,7 +461,7 @@ def main():
         splash.set_status("GPU wird erkannt...")
         app.processEvents()
     try:
-        from backend.core.ml_device_manager import get_ml_device_manager as _gpu_mgr
+        from backend.api.bridge import get_ml_device_manager as _gpu_mgr
 
         _mgr = _gpu_mgr()
         _mgr.wait_for_detection(timeout=5.0)  # type: ignore[call-arg]

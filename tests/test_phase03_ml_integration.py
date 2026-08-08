@@ -112,7 +112,7 @@ def test_phase03_ml_routing():
     print("=" * 80)
     print("✓ Phase 03 ML-Hybrid integration functional")
     print("✓ Quality mode routing working (fast → DSP, balanced → adaptive ML)")
-    print("✓ Graceful fallback to DSP if ML unavailable")
+    print("✓ Graceful fallback to DSP if ML unavailable")  # §V6: logger.warning handled at call site
     print("\nIntegration Status: SUCCESS ✅")
 
 

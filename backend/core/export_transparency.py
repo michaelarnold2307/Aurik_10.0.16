@@ -170,6 +170,7 @@ def compute_export_transparency(
             # Prüfe ob POW-r verfügbar ist
             result.dither_method = "POW-r Type 3"  # Primär via AudioExporter
         except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             result.dither_method = "TPDF (Fallback)"
     elif bit_depth >= 24:
         result.dither_method = "none (24-bit — kein Dithering nötig)"

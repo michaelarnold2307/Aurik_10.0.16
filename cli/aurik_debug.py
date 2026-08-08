@@ -90,7 +90,7 @@ def _load_audio(path: str) -> tuple[Any, int]:
 def _run_restore(audio: Any, sr: int, mode: str, verbose: bool) -> Any:
     """Führt Pipeline mit aktiviertem Debug-Trace aus."""
     try:
-        from backend.core.unified_restorer_v3 import UnifiedRestorerV3
+        from backend.api.bridge import UnifiedRestorerV3
     except ImportError as e:
         logger.error("UV3 Import fehlgeschlagen: %s", e)
         raise
@@ -309,15 +309,15 @@ Exit-Codes: 0=OK, 1=Goal-Fails, 2=Pipeline-Fehler, 3=Import-Fehler
             get_goal_fails,
             get_worst_phases,
         )
-        from backend.core.pipeline_trace import (
+        from backend.api.bridge import (  # pipeline_trace via bridge
             build_from_result,
             format_goal_deltas,
             format_phase_decisions,
         )
-        from backend.core.pipeline_trace import (
+        from backend.api.bridge import (  # pipeline_trace via bridge
             format_full_report as _fmt_full,
         )
-        from backend.core.pipeline_trace import (
+        from backend.api.bridge import (  # pipeline_trace via bridge
             format_goals_table as _fmt_goals,
         )
     except ImportError as e:

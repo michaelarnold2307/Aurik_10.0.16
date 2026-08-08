@@ -564,6 +564,7 @@ class ExzellenzDenker:
 
             _thresholds: dict[str, float] = _gct(is_studio_2026=_is_studio)
         except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             _thresholds = {}  # Import-Fehler → Fallback
         _MIN_DEFICIT: float = 0.03  # Reparatur nur wenn Score < threshold − 0.03
         _REPAIR_TRIGGER_FLOOR: float = 0.75  # §2.45: Borderline nahe 0.75 nicht nachbearbeiten

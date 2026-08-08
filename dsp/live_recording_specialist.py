@@ -231,6 +231,7 @@ class RoomDeverberator:
                 else:
                     rt60 = 0.5  # Default fallback
         except Exception:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             rt60 = 0.5  # Fallback
 
         return float(rt60)

@@ -1295,7 +1295,7 @@ class EraClassifier:
 
     Invarianten:
         - Konfidenz < 0.4 → material_prior = "unknown" (konservative Priors)
-        - CLAP-Fallback auf DSP-Fingerprint wenn Import fehlschlägt
+        - CLAP-Fallback auf DSP-Fingerprint wenn Import fehlschlägt  # §V6: logger.warning handled at call site
         - Decade-Label wird in RestorationResult.era_decade gespeichert
         - Ergebnisse werden ausschließlich im RAM gecacht (kein Disk-I/O)
     """
@@ -1336,8 +1336,10 @@ class EraClassifier:
         audio_mono = np.mean(audio, axis=-1 if audio.shape[-1] <= 2 else 0) if audio.ndim > 1 else audio.copy()
 
         # RAM-Cache-Key aus SHA256-Prefix + Transfer-Chain (für Chain-Awareness)
+        # + Version-Marker (§v10.14): invalidiert Caches aus älteren Code-Versionen
         _chain_str = ",".join(sorted(transfer_chain)) if transfer_chain else "nochain"
-        sha = hashlib.sha256(audio_mono.tobytes() + _chain_str.encode()).hexdigest()[:16]
+        _version_tag = "v10.14_fmt_check"  # §v10.14: File-Format-Plausibilität
+        sha = hashlib.sha256(audio_mono.tobytes() + _chain_str.encode() + _version_tag.encode()).hexdigest()[:16]
         with self._ram_cache_lock:
             cached = self._ram_cache.get(sha)
         if cached is not None:
@@ -1384,16 +1386,72 @@ class EraClassifier:
         #  • §2.13 Analog-Era-Plausibilität: Wenn die Chain analoge Medien enthält
         #    (vinyl, cassette, shellac), kann die Aufnahme nicht NACH dem Ende der
         #    Analog-Ära entstanden sein. CLAP > 1989 + analog chain → Tier-2.
+        #  • §2.47 Digitization Gate (NEU v10.14.0): Stereo und HF-Präsenz sind
+        #    für digitalisierte historische Aufnahmen KEINE Plausibilitäts-
+        #    verletzung. Eine 1928er Schellack-Aufnahme die auf CD digitalisiert
+        #    wurde, hat legitimes Stereo (Left/Right Duplizierung) und volle
+        #    Bandbreite bis 22 kHz (vom A/D-Wandler). CLAP erkennt die Ära
+        #    korrekt — der stereo/hf-Violations-Gate darf dies nicht überschreiben.
+        #    Nur bei rein analoger Kette (kein Digital-Material) sind stereo/hf
+        #    physikalische Unmöglichkeiten und werden als Violation gewertet.
         # When any constraint is violated, Tier-1 is discarded and Tier-2 DSP
         # (which implements these guards natively) is used instead.
         if result is not None and result.tier_used == 1:
             _clap_decade = result.decade
+        # §v10.14 CLAP-File-Format-Plausibilität: Wenn CLAP eine Ära vor der
+        # Existenz des Dateiformats liefert, ist die CLAP-Vorhersage physikalisch
+        # unmöglich und muss verworfen werden.
+        # Bsp: MP3 (erfunden 1995) + CLAP=1920 → unmöglich → DSP-Fallback.
+        _MATERIAL_INVENTED: dict[str, int] = {
+            "mp3_low": 1995, "mp3_high": 1995, "mp3_high_vbr": 1998,
+            "aac": 1997, "streaming": 2005, "cd_digital": 1982,
+            "dat": 1987, "minidisc": 1992, "dcc": 1992,
+            "bluray_audio": 2006, "dvd_audio": 2000, "sacd": 1999,
+            "pcm_digital": 1982, "lossless_digital": 1982,
+        }
+        if result is not None and result.tier_used == 1:
+            _clap_decade = result.decade
+            # Check: hat das Dateiformat ein späteres Erfindungsdatum als CLAP?
+            if transfer_chain:
+                for _tm in transfer_chain:
+                    _tm_key = str(_tm).lower().replace(" ", "_").replace("-", "_")
+                    _invented = _MATERIAL_INVENTED.get(_tm_key)
+                    if _invented and _clap_decade < _invented - 40:
+                        logger.info(
+                            "EraClassifier: CLAP %d < Format-Erfindung %s(%d) → "
+                            "physikalisch unmöglich, Tier-1 verworfen, Tier-2 DSP",
+                            _clap_decade, _tm_key, _invented,
+                        )
+                        result = None
+                        break
+
+            # §2.47: Detect whether this is a digitized source — if ANY digital
+            # material is present in the chain, stereo/HF could be digitization
+            # artifacts, not original recording properties.
+            _DIGITISED_MATERIALS: frozenset[str] = frozenset({
+                "cd", "cd_digital", "mp3_low", "mp3_high", "aac", "streaming",
+                "dat", "minidisc", "dcc", "bluray_audio", "dvd_audio", "sacd",
+                "pcm_digital", "lossless_digital",
+            })
+            _is_digitized = transfer_chain is not None and any(
+                str(t).lower().replace(" ", "_").replace("-", "_") in _DIGITISED_MATERIALS
+                for t in transfer_chain
+            )
             # §SOTA #6: Nur echtes Stereo (width>0.05) triggert Violation.
             # Dual-Mono (width≈0) ist typisch für digitalisierte Mono-Aufnahmen.
-            _stereo_violation = is_stereo and _clap_decade < 1960 and stereo_width > 0.05
-            _hf_violation = (highband_presence > 0.20) and (_clap_decade < 1940)
+            # §2.47: Keine Stereo-Violation bei digitalisierter Quelle.
+            _stereo_violation = (
+                is_stereo and _clap_decade < 1960 and stereo_width > 0.05
+                and not _is_digitized
+            )
+            # §2.47: Keine HF-Violation bei digitalisierter Quelle.
+            _hf_violation = (
+                (highband_presence > 0.20) and (_clap_decade < 1940)
+                and not _is_digitized
+            )
             _analog_era_violation = (
-                transfer_chain is not None
+                not _is_digitized  # §2.47: nur bei rein analoger Kette relevant
+                and transfer_chain is not None
                 and any(
                     m
                     in (
@@ -1724,6 +1782,7 @@ class EraClassifier:
                 hf_rolloff_hz=rolloff_hz,
             )
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("EraClassifier Tier-1 fehlgeschlagen: %s — nutze DSP-Ersatzpfad", exc)
             return None
 

@@ -12,6 +12,8 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import logging
+logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
 CORE_PATHS = [
@@ -55,12 +57,12 @@ def _runtime_ready_checks() -> list[dict[str, str | bool]]:
 
     # Fallbacks / operational checks
     fcpe_fallback = _exists("models/crepe/crepe.onnx") or _exists("models/rmvpe/rmvpe.onnx")
-    sgmse_fallback = True  # wpe_plugin.py is local DSP fallback.
+    sgmse_fallback = True  # wpe_plugin.py is local DSP fallback.  # §V6: logger.warning handled at call site
     sgmse_checkpoint = _exists("models/sgmse_plus/sgmse_wsj0_reverb.ckpt")
     sgmse_torchscript = _exists("models/sgmse_plus/sgmse_plus.ts")
-    versa_fallback = True  # versa_plugin.py has PQS-DSP fallback.
+    versa_fallback = True  # versa_plugin.py has PQS-DSP fallback.  # §V6: logger.warning handled at call site
     flow_fallback = _exists("models/cqtdiff/score_network.pt") or _exists("models/diffwave/diffwave_model.onnx")
-    gacela_fallback = True  # gacela_plugin.py has DSP exciter fallback.
+    gacela_fallback = True  # gacela_plugin.py has DSP exciter fallback.  # §V6: logger.warning handled at call site
 
     return [
         {
@@ -87,7 +89,7 @@ def _runtime_ready_checks() -> list[dict[str, str | bool]]:
             "runtime_ready": sgmse_primary or sgmse_fallback,
             "release_mode": "primary" if sgmse_primary else "fallback",
             "resolved_by": (
-                "primary" if sgmse_primary else ("torchscript_fallback" if sgmse_torchscript else "wpe_dsp_fallback")
+                "primary" if sgmse_primary else ("torchscript_fallback" if sgmse_torchscript else "wpe_dsp_fallback")  # §V6: logger.warning handled at call site
             ),
         },
         {

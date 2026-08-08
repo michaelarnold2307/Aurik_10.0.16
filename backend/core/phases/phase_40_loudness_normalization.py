@@ -248,6 +248,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
+        _amplitude_drift_requested = bool(kwargs.get("amplitude_drift_correction", False))
 
         # ── §v10.303.36 Phase-0-Aware Skip ──
         # Nach Phase 0 (Apollo+DFN+Resemble) ist Loudness bereits nahe am Target.
@@ -258,7 +259,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
             _p0_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
             _p0_meter = _pyln.Meter(sample_rate)
             _p0_lufs = float(_p0_meter.integrated_loudness(_p0_mono.astype(np.float64)))
-            if abs(_p0_lufs - (-14.0)) < 3.0:
+            if abs(_p0_lufs - (-14.0)) < 3.0 and not _amplitude_drift_requested:
                 logger.info(
                     "§v10.303.36 Loudness-ueberspringen: LUFS=%.1f (Δ%.1f LU) → bereits optimal",
                     _p0_lufs,
@@ -266,7 +267,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
                 )
                 return PhaseResult(
                     success=True,
-                    audio=audio,
+                    audio=restore_layout(audio, _p40_transposed),
                     execution_time_seconds=0.0,
                     metadata={"algorithm": "skipped_near_target", "integrated_lufs": _p0_lufs},
                 )
@@ -368,7 +369,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         _drift_correction_applied = False
         _drift_gain_range_db = 0.0
         _drift_locality_coverage = 0.0
-        if kwargs.get("amplitude_drift_correction", False):
+        if _amplitude_drift_requested:
             try:
                 _drift_slope = float(kwargs.get("drift_slope_db_per_minute", 0.0))
                 if abs(_drift_slope) >= 1.5:

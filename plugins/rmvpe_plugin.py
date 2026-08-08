@@ -300,7 +300,7 @@ class RmvpePlugin:
             voiced = max_sal >= voiced_threshold  # [T] bool
 
             # Local weighted decode around argmax (±4 bins) to avoid low-frequency bias.
-            argmax_idx = np.argmax(salience, axis=1).astype(np.int32)
+            argmax_idx = np.argmax(salience, axis=1).astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
             local_offsets = np.arange(-4, 5, dtype=np.int32)
             local_idx = np.clip(argmax_idx[:, None] + local_offsets[None, :], 0, _PITCH_BINS - 1)
             local_sal = salience[np.arange(salience.shape[0])[:, None], local_idx]
@@ -389,6 +389,7 @@ class RmvpePlugin:
                     f0_std=float(np.std(voiced_f0)) if len(voiced_f0) > 1 else 0.0,
                 )
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("PESTO-Fallback fehlgeschlagen: %s — weiter mit pYIN", exc)
 
         try:

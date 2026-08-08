@@ -55,6 +55,7 @@ def execute_with_fallback(
                 fail_reasons=[primary_entry],
             )
         except Exception as fallback_exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             fallback_entry = {
                 "component": "fallback",
                 "error_code": "FALLBACK_FAILED",

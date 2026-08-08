@@ -32,7 +32,7 @@ jobs:
         os:
           - ubuntu-22.04
           - windows-2022
-          # NOTE: macOS nicht unterstützt (kein Apple Silicon CI verfügbar)
+          - macos-14  # Apple Silicon (M1+), GitHub-hosted
         python:
           - "3.10"
     timeout-minutes: 30

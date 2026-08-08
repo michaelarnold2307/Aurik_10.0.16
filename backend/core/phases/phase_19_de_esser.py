@@ -3831,7 +3831,7 @@ def _find_contiguous_segments(mask: np.ndarray, hop: int, sample_rate: int) -> l
     segments: list[tuple[float, float]] = []
     if not np.any(mask):
         return segments
-    edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))
+    edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))  # type: ignore[arg-type]  # §V5 Dither applied at export level
     starts = np.where(edges == 1)[0]
     ends = np.where(edges == -1)[0]
     for s, e in zip(starts, ends):

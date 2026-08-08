@@ -352,6 +352,7 @@ def inpaint(audio: np.ndarray, gap_start: int, gap_end: int, sr: int, n_steps: i
             out = np.clip(plugin_result, -1.0, 1.0).astype(np.float32)
             return out.T if (_was_channels_first and out.ndim == 2) else out
     except Exception as _e:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         logger.debug("DiffWave plugin inpaint fehlgeschlagen, DSP-Fallback: %s", _e)
 
     # ── Fallback: DSP cubic/linear interpolation ──────────────────────────────

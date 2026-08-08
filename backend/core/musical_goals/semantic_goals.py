@@ -707,6 +707,7 @@ class SemanticGoalsEngine:
             return (model, feature_extractor)
 
         except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             if not self._instrument_fallback_logged:
                 logger.warning(
                     "⚠️ SOTA SemanticGoals: transformers nicht verfügbar — akustischer Offline-Ersatzpfad aktiv"
@@ -731,7 +732,8 @@ class SemanticGoalsEngine:
             import madmom  # type: ignore[import-untyped]
 
             logger.info("madmom structure analyzer geladen")
-            return madmom
+        except ImportError:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         except ImportError:
             if not self._structure_fallback_logged:
                 logger.warning(

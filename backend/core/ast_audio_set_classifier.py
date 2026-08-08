@@ -276,6 +276,7 @@ class AstAudioSetClassifier:
                 release("ASTAudioSetClassifier")
                 raise
         except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("AST ONNX laden fehlgeschlagen: %s — DSP-Ersatzpfad aktiv", exc)
             self._session = None
 

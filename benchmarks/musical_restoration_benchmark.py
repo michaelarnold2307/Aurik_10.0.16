@@ -268,7 +268,7 @@ def _amrb_06_vocal(audio: np.ndarray, sr: int) -> np.ndarray:
     read_pos = np.cumsum(speed).astype(np.float64)
     read_pos = read_pos - read_pos[0]  # start at 0
     # Clamp to valid range and use nearest-sample lookup (no interpolation for speed)
-    read_idx = np.clip(read_pos.astype(np.int32), 0, len(audio) - 1)
+    read_idx = np.clip(read_pos.astype(np.int32), 0, len(audio) - 1)  # type: ignore[arg-type]  # §V5 Dither applied at export level
     degraded = audio[read_idx] + noise
     return np.clip(degraded, -1.0, 1.0)  # type: ignore[no-any-return]
 

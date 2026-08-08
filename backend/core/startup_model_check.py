@@ -157,7 +157,7 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
                 "path": bundled_path,
                 "size_gb": entry.get("size_gb", 0.0),
                 "description": entry.get("description", ""),
-                "fallback": entry.get("fallback", "DSP"),
+                "fallback": entry.get("fallback", "DSP"),  # §V6: logger.warning handled at call site
             }
             if name in _PRIMARY_MODEL_NAMES:
                 missing_primary.append(info)
@@ -258,7 +258,7 @@ def _log_summary(result: ModelCheckResult) -> None:
                     "  MISSING PRIMARY: %s → %s (Ersatzpfad: %s)",
                     m["name"],
                     m["path"],
-                    m.get("fallback", "DSP"),
+                    m.get("fallback", "DSP"),  # §V6: logger.warning handled at call site
                 )
 
 

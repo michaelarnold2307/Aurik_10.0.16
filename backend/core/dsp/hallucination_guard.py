@@ -299,5 +299,6 @@ def _compute_spectral_novelty_dsp(
         novelty = float(np.clip(E_novel / E_total, 0.0, 1.0))
         return novelty, {"method": "dsp_fallback"}
     except Exception as exc:
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         logger.debug("_berechnen_spectral_novelty_dsp fehlgeschlagen: %s", exc)
         return 0.0, {"error": str(exc), "method": "dsp_fallback_failed"}
