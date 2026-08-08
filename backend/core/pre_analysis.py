@@ -650,18 +650,23 @@ def run_pre_analysis(
             _defect_carrier_scores: dict[str, float] = {}
             if result.defects is not None and hasattr(result.defects, "scores"):
                 _defect_scores = getattr(result.defects, "scores", {})
-                # Defekt → Träger-Mapping mit Schwellwerten
+                # Defekt → Träger-Mapping mit Schwellwerten.
+                # §v10.14: Kontext-Aware — print_through/tape_head_level_dip sind
+                # NUR auf reel_tape dominant wenn KEIN cassette/vinyl in der Kette.
+                # Sonst: Kassette ist der gealterte Consumer-Copy-Träger.
+                _has_cassette_in_chain = "cassette" in _chain
+                _has_vinyl_in_chain = "vinyl" in _chain
                 _DEFECT_CARRIER_MAP: dict[str, tuple[str, float]] = {
                     "crackle": ("vinyl", 0.35),
                     "groove_echo": ("vinyl", 0.30),
                     "inner_groove_distortion": ("vinyl", 0.40),
                     "riaa_curve_error": ("vinyl", 0.30),
-                    "tape_hiss": ("cassette", 0.25),
-                    "wow": ("cassette", 0.20),
-                    "flutter": ("cassette", 0.20),
-                    "multiband_wow_flutter": ("cassette", 0.25),
-                    "print_through": ("reel_tape", 0.30),
-                    "tape_head_level_dip": ("reel_tape", 0.25),
+                    "tape_hiss": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.25),
+                    "wow": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
+                    "flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
+                    "multiband_wow_flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.25),
+                    "print_through": ("cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape", 0.30),
+                    "tape_head_level_dip": ("cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape", 0.25),
                     "low_freq_rumble": ("vinyl", 0.30),
                     "soft_saturation": ("reel_tape", 0.30),
                     "quantization_noise": ("cd_digital", 0.30),
@@ -901,6 +906,29 @@ def run_pre_analysis(
                     )
                     _chain = _trimmed
                     _md.transfer_chain = _chain  # type: ignore[attr-defined]
+
+                # §v10.14 Chain-Validation: Prüfe gegen bekannte plausible Ketten.
+                # Wenn die gebaute Kette keiner bekannten Vorlage entspricht,
+                # wird die nächstbeste bekannte Kette verwendet.
+                try:
+                    _detector = cast(
+                        Callable[[], Any],
+                        _load_symbol("forensics.medium_detector", "get_medium_detector"),
+                    )()
+                    _best_known = _detector._best_matching_chain(
+                        list(_chain),
+                        genre=_genre_label if _genre_label else None,
+                        language=_lang_code if _lang_code else None,
+                    )
+                    if _best_known and _best_known != _chain:
+                        logger.info(
+                            "pre_Analyse: Chain auf bekannte Vorlage korrigiert: %s → %s",
+                            " → ".join(_chain), " → ".join(_best_known),
+                        )
+                        _chain = _best_known
+                        _md.transfer_chain = _chain  # type: ignore[attr-defined]
+                except Exception:
+                    pass
 
                 logger.info(
                     "pre_Analyse: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
