@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""§v10.15 Gepote-Verifier: Garantiert dass ALLE §G-Regeln im Code umgesetzt sind.
+"""§v10.15 Gebote-Verifier: Garantiert dass ALLE §G-Regeln im Code umgesetzt sind.
 
 Non-Plus-Ultra-Compliance-Checker. Prüft JEDES Gebot gegen den tatsächlichen Code.
 Keine Spezifikation ohne Verifikation. Kein Gebot ohne Nachweis.
 
 Usage:
-    python scripts/gepote_verifier.py          # Alle Checks
-    python scripts/gepote_verifier.py --ci     # CI-Mode (exit code ≠ 0 bei Verstössen)
-    python scripts/gepote_verifier.py --list   # Nur Liste der Gepote-Checks
+    python scripts/gebote_verifier.py          # Alle Checks
+    python scripts/gebote_verifier.py --ci     # CI-Mode (exit code ≠ 0 bei Verstößen)
+    python scripts/gebote_verifier.py --list   # Nur Liste der Gebote-Checks
 """
 
 from __future__ import annotations

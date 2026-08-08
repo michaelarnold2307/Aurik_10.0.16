@@ -397,10 +397,10 @@ repos:
         pass_filenames: false
         files: ^(backend|plugins|denker|Aurik10|cli|tests/unit)/.*\.py$
 
-      # §v10.15 Gepote-Verifier — Non-Plus-Ultra-Compliance
-      - id: gepote-verifier
-        name: "§v10.15 Gepote-Verifier — 25/25 GEBOTE-Compliance"
-        entry: .venv_aurik/bin/python scripts/gepote_verifier.py --ci
+      # §v10.15 Gebote-Verifier — Non-Plus-Ultra-Compliance
+      - id: gebote-verifier
+        name: "§v10.15 Gebote-Verifier — 25/25 GEBOTE-Compliance"
+        entry: .venv_aurik/bin/python scripts/gebote_verifier.py --ci
         language: system
         pass_filenames: false
         always_run: true
