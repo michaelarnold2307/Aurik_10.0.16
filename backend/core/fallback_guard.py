@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from dataclasses import dataclass
 
 from backend.core.pipeline_health_state import PipelineHealthState
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)

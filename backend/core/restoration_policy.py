@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 def _clamp(value: Any, lower: float, upper: float, fallback: float = 0.0) -> float:
