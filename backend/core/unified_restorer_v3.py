@@ -1307,6 +1307,12 @@ class UnifiedRestorerV3:
         # §UQ-Drive: Emit-Zähler (reset per-restore() durch restore() selbst)
         self._uq_drive_emit_count: int = 0
 
+        # §v10.14 Wohlklang-Garantie (§v10.703.4): MUSHRA < 80 → Re-Run mit 50% Strengths.
+        self._wohlklang_retry_count: int = 0
+        self._wohlklang_strength_multiplier: float = 1.0
+        self._wohlklang_best_mushra: float = 0.0
+        self._wohlklang_best_audio: np.ndarray | None = None
+
         # PhaseSkipper (optional, beschleunigt Pipeline um 20–40 %)
         if self.config.enable_phase_skipping:
             try:
@@ -7269,6 +7275,11 @@ class UnifiedRestorerV3:
         # wird IMMER gechunked. RAM O(1), Modelle bleiben geladen.
         # §v10.451: audio.shape[0] (nicht shape[-1] = Kanäle bei Stereo)
         # §v10.452: _in_chunked Guard gegen Rekursion
+        # §v10.14 Wohlklang-Garantie: Reset nur beim Top-Level-Aufruf (multiplier==1.0).
+        if abs(float(getattr(self, "_wohlklang_strength_multiplier", 1.0)) - 1.0) < 0.01:
+            self._wohlklang_retry_count = 0
+            self._wohlklang_best_mushra = 0.0
+            self._wohlklang_best_audio = None
         _n_total = audio.shape[0]
         if _n_total / max(sample_rate, 1) > 120.0 and not getattr(self, "_in_chunked", False):
             logger.info("🎵 Chunked-Streaming: %.1fs Audio → RAM O(1)", _n_total / sample_rate)
@@ -13188,23 +13199,32 @@ class UnifiedRestorerV3:
         # §AQ PerceptualExportOptimizer — ML-Hybrid
         # §v10.15: PostGate-verifiziert
         try:
-            from backend.core.perceptual_export_optimizer import PerceptualExportOptimizer
-            from backend.core.post_processing_gate import get_post_processing_gate
-
             _lm = str(kwargs.get("listening_mode", "headphones")).lower()
             _mat = str(getattr(self, "_restoration_context", {}).get("primary_material", "unknown"))
-            _peo_result = get_post_processing_gate().apply(
-                lambda a, sr, strength=None: PerceptualExportOptimizer().optimize(  # type: ignore[misc]
-                    a, sr, material=_mat, listening_mode=_lm
-                ),
-                restored_audio,
-                sample_rate,
-                label="PerceptualExportOptimizer",
-            )
-            if _peo_result.adopted:
-                restored_audio = _peo_result.audio
+            # §v10.14: Material-Pre-Check — bei Risiko-Materialien Optimizer
+            # nicht laden (spart DeepFilterNetV3-Load + 20s overhead).
+            _PEO_HIGH_RISK: frozenset[str] = frozenset({"cassette", "shellac", "wax_cylinder", "lacquer_disc"})
+            if _mat in _PEO_HIGH_RISK:
+                logger.info(
+                    "§v10.15 PerceptualExportOptimizer uebersprungen: material=%s "
+                    "(Risiko-Material — Optimizer würde brillanz degradieren)", _mat
+                )
             else:
-                logger.info("§v10.15 PerceptualExportOptimizer uebersprungen: %s", _peo_result.skip_reason)
+                from backend.core.perceptual_export_optimizer import PerceptualExportOptimizer
+                from backend.core.post_processing_gate import get_post_processing_gate
+
+                _peo_result = get_post_processing_gate().apply(
+                    lambda a, sr, strength=None: PerceptualExportOptimizer().optimize(  # type: ignore[misc]
+                        a, sr, material=_mat, listening_mode=_lm
+                    ),
+                    restored_audio,
+                    sample_rate,
+                    label="PerceptualExportOptimizer",
+                )
+                if _peo_result.adopted:
+                    restored_audio = _peo_result.audio
+                else:
+                    logger.info("§v10.15 PerceptualExportOptimizer uebersprungen: %s", _peo_result.skip_reason)
         except Exception:
             logger.debug("wiederherstellen: silent except suppressed", exc_info=True)
 
@@ -21719,6 +21739,51 @@ class UnifiedRestorerV3:
         except Exception as _dr_exc:
             logger.debug("Donation Reminder nicht verfügbar: %s (nicht blockierend)", _dr_exc)
 
+        # §v10.14 Wohlklang-Garantie (§v10.703.4): MUSHRA < 80 → automatischer Re-Run
+        # mit halbierten Strengths. Max. 1 Retry (2 Läufe gesamt). Bester Lauf gewinnt.
+        _wm_mushra = float(getattr(self, "_mqa_mushra", 0.0) or 0.0)
+        if (
+            _wm_mushra > 0
+            and _wm_mushra < 80.0
+            and self._wohlklang_retry_count < 1
+            and self._wohlklang_strength_multiplier > 0.9
+        ):
+            self._wohlklang_best_mushra = _wm_mushra
+            self._wohlklang_best_audio = result.audio.copy()
+            self._wohlklang_retry_count += 1
+            self._wohlklang_strength_multiplier = 0.50
+            logger.warning(
+                "⚡ Wohlklang-Garantie: MUSHRA %.1f < 80 — "
+                "automatischer Re-Run mit 50%% Strengths (Versuch %d/2)",
+                _wm_mushra, self._wohlklang_retry_count + 1,
+            )
+            _retry_result = self.restore(audio, sample_rate, progress_callback, **kwargs)
+            self._wohlklang_strength_multiplier = 1.0  # Reset
+            _retry_mushra = float(getattr(self, "_mqa_mushra", 0.0) or 0.0)
+            if _retry_mushra > self._wohlklang_best_mushra:
+                logger.info(
+                    "⚡ Wohlklang-Garantie: Re-Run MUSHRA %.1f > Erstlauf %.1f → Re-Run gewinnt",
+                    _retry_mushra, self._wohlklang_best_mushra,
+                )
+                return _retry_result
+            else:
+                logger.info(
+                    "⚡ Wohlklang-Garantie: Erstlauf MUSHRA %.1f ≥ Re-Run %.1f → Erstlauf gewinnt",
+                    self._wohlklang_best_mushra, _retry_mushra,
+                )
+                result = RestorationResult(  # type: ignore[call-arg]
+                    audio=self._wohlklang_best_audio,
+                    config=result.config,
+                    material_type=result.material_type,
+                    defect_scores=dict(result.defect_scores),
+                    phases_executed=list(result.phases_executed),
+                    total_time_seconds=result.total_time_seconds,
+                    rt_factor=result.rt_factor,
+                    quality_estimate=result.quality_estimate,
+                    warnings=list(result.warnings),
+                    metadata=dict(result.metadata),
+                )
+
         return result
 
     def get_phase_progress(self) -> dict:
@@ -29867,6 +29932,11 @@ class UnifiedRestorerV3:
                 _uq_max_cut = 0.24
 
             _uq_scalar = float(np.clip(1.0 - _uq_risk * _uq_max_cut, 0.62, 1.0))
+
+            # §v10.14 Wohlklang-Garantie (§v10.703.4): Bei Re-Run alle Strengths halbieren.
+            _wm = float(getattr(self, "_wohlklang_strength_multiplier", 1.0) or 1.0)
+            if _wm < 0.99:
+                _uq_scalar = float(np.clip(_uq_scalar * _wm, 0.35, 1.0))
 
             # Nach HF-Hallucination-Event zusätzliche Vorsicht für additive/raumbezogene
             # Familien im selben Run (Reintroduction vermeiden).
