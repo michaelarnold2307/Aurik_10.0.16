@@ -21739,12 +21739,22 @@ class UnifiedRestorerV3:
         except Exception as _dr_exc:
             logger.debug("Donation Reminder nicht verfügbar: %s (nicht blockierend)", _dr_exc)
 
-        # §v10.14 Wohlklang-Garantie (§v10.703.4): MUSHRA < 80 → automatischer Re-Run
-        # mit halbierten Strengths. Max. 1 Retry (2 Läufe gesamt). Bester Lauf gewinnt.
+        # §v10.14 Wohlklang-Garantie (§v10.703.4) + §v10.15 Material-Minima:
+        # MUSHRA < Material-Minimum → automatischer Re-Run mit halbierten Strengths.
+        # Material-spezifische Schwellen: CD=75, Vinyl=65, Cassette=55, Shellac=45.
         _wm_mushra = float(getattr(self, "_mqa_mushra", 0.0) or 0.0)
+        _wm_mat = str(getattr(self, "_restoration_context", {}).get("primary_material", "unknown")).lower()
+        _MATERIAL_MUSHRA_MIN: dict[str, float] = {
+            "cd": 75.0, "cd_digital": 75.0, "mp3_high": 75.0, "mp3_low": 70.0,
+            "aac": 70.0, "streaming": 70.0, "dat": 72.0, "minidisc": 68.0,
+            "vinyl": 65.0, "reel_tape": 60.0, "tape": 55.0,
+            "cassette": 55.0, "shellac": 45.0, "wax_cylinder": 35.0,
+            "lacquer_disc": 50.0, "wire_recording": 30.0,
+        }
+        _wm_threshold = _MATERIAL_MUSHRA_MIN.get(_wm_mat, 80.0)
         if (
             _wm_mushra > 0
-            and _wm_mushra < 80.0
+            and _wm_mushra < _wm_threshold
             and self._wohlklang_retry_count < 1
             and self._wohlklang_strength_multiplier > 0.9
         ):
@@ -21753,9 +21763,9 @@ class UnifiedRestorerV3:
             self._wohlklang_retry_count += 1
             self._wohlklang_strength_multiplier = 0.50
             logger.warning(
-                "⚡ Wohlklang-Garantie: MUSHRA %.1f < 80 — "
+                "⚡ Wohlklang-Garantie: MUSHRA %.1f < %.0f (%s) — "
                 "automatischer Re-Run mit 50%% Strengths (Versuch %d/2)",
-                _wm_mushra, self._wohlklang_retry_count + 1,
+                _wm_mushra, _wm_threshold, _wm_mat, self._wohlklang_retry_count + 1,
             )
             _retry_result = self.restore(audio, sample_rate, progress_callback, **kwargs)
             self._wohlklang_strength_multiplier = 1.0  # Reset
