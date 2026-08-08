@@ -845,6 +845,27 @@ def run_pre_analysis(
                             _era_decade,
                             ", ".join(set(_pre_filter_chain) - set(_chain)),
                         )
+                # §v10.14 Physikalische-Unmöglichkeit: Wenn die Kette sowohl
+                # prä-1960-Analogmaterial (shellac, wax_cylinder) als auch
+                # post-1990-Digitalmaterial (mp3, aac, streaming) enthält,
+                # ist das Analogmaterial ANACHRONISTISCH — es kann nicht das
+                # Original-Aufnahmemedium eines digital vorliegenden Songs sein.
+                # CLAP verwechselt Schlager mit Schellack-Ära → Shellac muss raus.
+                _DIGITAL_END = {"mp3_low", "mp3_high", "mp3_high_vbr", "aac",
+                               "streaming", "cd_digital", "pcm_digital",
+                               "lossless_digital", "dat", "minidisc"}
+                _PRE_1960_ANALOG = {"shellac", "wax_cylinder", "wire_recording"}
+                _has_digital_end = bool(set(_chain) & _DIGITAL_END)
+                _has_pre1960 = bool(set(_chain) & _PRE_1960_ANALOG)
+                if _has_digital_end and _has_pre1960:
+                    _pre_phys = list(_chain)
+                    _chain = [m for m in _chain if m not in _PRE_1960_ANALOG]
+                    if len(_chain) < len(_pre_phys):
+                        logger.info(
+                            "§v10.14 Physik-Filter: prä-1960+digital in Kette → "
+                            "%s entfernt (physikalisch unmögliche Kombination)",
+                            ", ".join(set(_pre_phys) - set(_chain)),
+                        )
                 _md_confidence = float(getattr(_md, "confidence", 0.5) or 0.5)
                 _max_chain_depth = 2 if _md_confidence < 0.50 else (3 if _md_confidence < 0.60 else 99)
                 if len(_chain) > _max_chain_depth:

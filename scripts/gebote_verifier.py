@@ -406,6 +406,16 @@ def check_db12() -> tuple[bool, str]:
     return ok, "_count_onsets() existiert" if ok else "Groove-Guard fehlt"
 
 
+@gebot("§G-DB13", "Physik-Filter: prä-1960 + digital",
+       "shellac/wax_cylinder + mp3/aac → Analogmaterial entfernt.")
+def check_db13() -> tuple[bool, str]:
+    ok = _file_contains(
+        "backend/core/pre_analysis.py",
+        r"_PRE_1960_ANALOG.*shellac|Physik-Filter.*prä-1960",
+    )
+    return ok, "Physik-Filter prä-1960+digital" if ok else "Kein Physik-Filter"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Main
 # ═══════════════════════════════════════════════════════════════════════════════
