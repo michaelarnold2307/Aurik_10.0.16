@@ -10361,6 +10361,12 @@ class RecordSleeveWidget(QtWidgets.QFrame):
         )
         self._slide_info_label.setWordWrap(True)
         layout.addWidget(self._slide_info_label)
+        # §v10.14 P2: Vorher/Nachher-Vergleich
+        from Aurik10.ui.before_after import BeforeAfterWidget
+
+        self._before_after_widget = BeforeAfterWidget()
+        self._before_after_widget.setVisible(False)
+        layout.addWidget(self._before_after_widget)
         layout.addStretch()
         self._stack.addWidget(page)
 
@@ -10435,6 +10441,22 @@ class RecordSleeveWidget(QtWidgets.QFrame):
 
         _html = "<span style='font-size:9pt; color:#8899bb;'>" + "<br>".join(_parts) + "</span>"
         self._slide_info_label.setText(_html)
+
+        # §v10.14 P2: Vorher/Nachher-Vergleich mit echten Daten befüllen
+        if hasattr(self, "_before_after_widget"):
+            _defect_scores = getattr(restoration_result, "defect_scores", {}) or {}
+            _def_before = max(1, len(_defect_scores))
+            _def_after = max(0, _def_before - len(getattr(restoration_result, "phases_executed", [])))
+            _bw_before = float(_meta.get("bandwidth_before_hz", 0) or 0)
+            _bw_after = float(_meta.get("bandwidth_after_hz", 0) or _meta.get("bandwidth", 0) or 0)
+            _q_before = float(_meta.get("restorability_score", 50))
+            _lu_before = float(_meta.get("lufs_before", 0) or 0)
+            _lu_after = float(_meta.get("lufs_after", 0) or 0)
+            self._before_after_widget.load(
+                {"defects": _def_before, "bandwidth_hz": _bw_before, "quality": _q_before, "lufs": _lu_before},
+                {"defects": _def_after, "bandwidth_hz": _bw_after, "quality": _q * 100, "lufs": _lu_after},
+            )
+            self._before_after_widget.setVisible(True)
 
     def _build_export_panel(self):
         page = QtWidgets.QWidget()
