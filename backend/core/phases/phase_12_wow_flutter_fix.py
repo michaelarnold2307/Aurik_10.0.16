@@ -88,6 +88,7 @@ from backend.core.audio_utils import (
 )
 from backend.core.defect_scanner import MaterialType
 from backend.core.ml_model_readiness import check_ml_model_ready
+from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
 
 from .phase_interface import PhaseCategory, PhaseInterface, PhaseMetadata, PhaseResult
 
@@ -652,16 +653,32 @@ class WowFlutterFix(PhaseInterface):
                     else:
                         strategy = PitchDetectionStrategy.ADAPTIVE
 
-                    detector = HybridWowFlutter(
-                        config=WowFlutterConfig(
-                            strategy=strategy,
-                            crepe_model="full" if quality_mode in ["quality", "maximum"] else "medium",
-                            confidence_threshold=0.7,
-                            enable_preprocessing=True,
+                    # §v10.14 PLM-Guard: FCPE+CREPE vor Eviction schützen
+                    _plm12 = None
+                    try:
+                        _plm12 = get_plugin_lifecycle_manager()
+                        _plm12.set_active("FCPE", True)
+                        _plm12.set_active("CREPE", True)
+                    except Exception:
+                        _plm12 = None
+                    try:
+                        detector = HybridWowFlutter(
+                            config=WowFlutterConfig(
+                                strategy=strategy,
+                                crepe_model="full" if quality_mode in ["quality", "maximum"] else "medium",
+                                confidence_threshold=0.7,
+                                enable_preprocessing=True,
+                            )
                         )
-                    )
 
-                    ml_result = detector.detect_pitch(mono, sample_rate=sample_rate)
+                        ml_result = detector.detect_pitch(mono, sample_rate=sample_rate)
+                    finally:
+                        if _plm12 is not None:
+                            try:
+                                _plm12.set_active("CREPE", False)
+                                _plm12.set_active("FCPE", False)
+                            except Exception:
+                                pass
                     if len(_PYIN_CACHE) >= _PYIN_CACHE_MAX:
                         _PYIN_CACHE.pop(next(iter(_PYIN_CACHE)))
                     _PYIN_CACHE[_audio_hash] = ml_result  # type: ignore[index]

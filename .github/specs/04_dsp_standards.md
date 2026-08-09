@@ -1465,17 +1465,17 @@ Jeder Fallback in `metadata["ml_fallbacks_used"]` protokollieren.
 | phase_03 | SGMSE+ | ✅ | v10.0.0 |
 | phase_03 | ResembleEnhance | ✅ | v10.0.0.x |
 | phase_03 | DeepFilterNetV3 | ✅ | v10.0.0.x |
-| phase_09 | BANQUET | ⬜ TODO | — |
-| phase_12 | FCPE/RMVPE/CREPE | ⬜ TODO | — |
+| phase_09 | BANQUET | ✅ | v10.14 PLM-Guard |
+| phase_12 | FCPE/RMVPE/CREPE | ✅ | v10.14 PLM-Guard |
 | phase_18 | SileroVAD | ⬜ leicht (CPU) | nicht nötig (<100 MB) |
 | phase_20 | SGMSE+ | ✅ | v10.0.0 |
 | phase_23 | Apollo | ✅ | v10.0.0 |
-| phase_24 | FlashSR | ⬜ TODO | — |
+| phase_24 | FlashSR | ✅ | v10.14 PLM-Guard |
 | phase_29 | DeepFilterNetV3 | ✅ | v10.0.0.x |
-| phase_42 | BSRoFormer/MDX23C | ⬜ TODO | — |
-| phase_43 | MP-SENet | ⬜ TODO | — |
+| phase_42 | BSRoFormer/MDX23C | ✅ | v10.14 PLM-Guard |
+| phase_43 | MP-SENet | ✅ | v10.14 PLM-Guard |
 | phase_49 | SGMSE+ | ✅ | v10.0.0 |
-| phase_55 | CQTdiff/FlowMatching | ⬜ TODO | — |
+| phase_55 | CQTdiff/FlowMatching | ✅ | v10.14 PLM-Guard |
 
 **Invariante**: Jede Phase mit ⬜ MUSS vor Release v10.0.0 den `set_active()`-Guard implementieren.
 Leichte CPU-Modelle (< 200 MB) sind ausgenommen, da Emergency-Eviction sie nicht targetiert.

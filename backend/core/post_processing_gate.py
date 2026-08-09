@@ -86,6 +86,63 @@ class PostProcessingGate:
         self._total_adopted: int = 0
         self._total_checks: int = 0
 
+    # ── §v10.16 Binäre Suche für PostGate-Stärke ──────────────────────
+
+    def _binary_search_strength(
+        self,
+        component_fn: Callable[[np.ndarray, int, float | None], np.ndarray],
+        audio: np.ndarray,
+        sr: int,
+        label: str,
+        goals: tuple[str, ...],
+        threshold: float,
+        initial: float = 1.0,
+        iterations: int = 12,
+        precision: float = 0.00025,
+    ) -> float:
+        """Binäre Suche für optimale PostGate-Stärke (12 Iter., ±0.025%).
+
+        Algorithmus:
+        1. Starte mit initialer Stärke (default 1.0).
+        2. Bisektion: lo=0.0, hi=initial.
+        3. Pro Iteration: mid = (lo+hi)/2. Teste mid via component_fn.
+        4. Wenn Regression → hi = mid (Stärke zu hoch).
+           Wenn keine Regression → lo = mid (könnte höher gehen).
+        5. Nach 12 Iterationen: lo ist die maximale regressionsfreie Stärke.
+
+        Returns optimal strength value (float).
+        """
+        _lo, _hi = 0.0, float(initial)
+        _best = 0.0
+
+        for _i in range(iterations):
+            _mid = (_lo + _hi) / 2.0
+            if _hi - _lo < precision:
+                break
+            try:
+                _processed = component_fn(audio, sr, _mid)
+                if _processed.shape != audio.shape:
+                    _hi = _mid
+                    continue
+                _scores_after = self._measure(_processed, sr, goals)
+                _regression = any(
+                    _scores_after.get(g, 0.5) - self._measure(audio, sr, (g,)).get(g, 0.5) < -threshold
+                    for g in goals
+                )
+                if _regression:
+                    _hi = _mid
+                else:
+                    _lo = _mid
+                    _best = _mid
+            except Exception:
+                _hi = _mid
+
+        logger.debug(
+            "PostGate [%s] binary search: optimal=%.4f (iter=%d, range=[%.4f,%.4f])",
+            label, _best, iterations, _lo, _hi,
+        )
+        return float(_best)
+
     # ── Öffentliche API ────────────────────────────────────────────────
 
     def apply(
@@ -119,7 +176,15 @@ class PostProcessingGate:
         self._total_checks += 1
         _thresh = threshold if threshold is not None else _REGRESSION_THRESHOLD
 
-        # §v10.0.5 Lambda-Signatur-Guard: component_fn MUSS (audio, sr, strength)
+        # §v10.16: Binäre Suche für optimale Stärke
+        if binary_search_strength and strength is not None:
+            _optimal = self._binary_search_strength(
+                component_fn, audio, sr, label, goals, _thresh,
+                initial=float(strength),
+            )
+            if _optimal > 0.001:
+                strength = _optimal
+                logger.debug("PostGate [%s]: binäre Suche → optimal=%.5f", label, strength)
         # akzeptieren. Fängt 2-arg-Lambdas wie ``lambda a, sr: ...`` sofort ab,
         # statt zur Laufzeit mit kryptischem TypeError zu crashen.
         PostProcessingGate._validate_lambda(label, component_fn)

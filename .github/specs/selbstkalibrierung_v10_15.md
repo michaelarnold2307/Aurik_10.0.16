@@ -30,7 +30,7 @@
 | Komponente         | Status    | Maßnahme                                  |
 |--------------------|-----------|-------------------------------------------|
 | STCG (L/R-Delay)   | ✅ v10.14 | Universeller 20ms-Guard                   |
-| Polarity Inversion | ★ TODO   | Verify via L/R-Korrelation Δ vor/nach     |
+| Polarity Inversion | ✅ v10.14 | Verify via L/R-Korrelation Δ vor/nach     |
 
 ### Zone B: Main Pipeline (Phasen 01–64)
 
@@ -139,9 +139,9 @@ Keine Änderungen nötig:
 1. ✅ STCG Universal Guard (v10.14, bereits umgesetzt)
 2. ✅ Null-Lag-Integrationstest (tests/normative/test_null_lag_pass_through.py)
 3. ✅ PostProcessingGate — Klasse + verify_quick (5 Ziele) + Lambda-Signatur-Guard (§v10.0.5)
-4. 🔲 HumanizationPass — adaptive Stärke + PostGate-Integration
+4. ✅ HumanizationPass — adaptive Stärke + PostGate-Integration
 5. ✅ Post-Processing-Chain — alle Komponenten durch PostGate wrappen
-6. 🔲 Polarity Inversion — verify via Korrelations-Δ
+6. ✅ Polarity Inversion — verify via Korrelations-Δ
 7. ✅ Tests aktualisiert (24 Contract-Tests in backend/tests/test_phase_contracts.py)
 
 ## §v10.0.5 Genre-Key-Normalisierung

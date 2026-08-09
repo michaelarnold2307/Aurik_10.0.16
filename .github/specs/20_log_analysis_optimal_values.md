@@ -304,7 +304,7 @@ Der Temporal-Rescue-Pfad konnte den Wet-Wert auf 0,0 drücken (`np.clip(_tc_resc
 | 🟠 P3 | Pipeline-Konfidenz 0,55 → 0,40 | ✅ Implementiert | `unified_restorer_v3.py` | 11421 |
 | 🟠 P4 | Universeller NaN/Inf-Guard in PhaseInterface | ✅ Implementiert | `phase_interface.py` | 683 |
 | 🟡 P5 | SFT Wet Floor 0,15 bei Temporal-Rescue | ✅ Implementiert | `unified_restorer_v3.py` | 32538 |
-| 🟡 P6 | Phase 23 NFFT-Adaption (1024 für Clips <10s) | 🔜 Geplant | `phase_23_spectral_repair.py` | — |
+| 🟡 P6 | Phase 23 NFFT-Adaption (1024 für Clips <10s) | ✅ v10.14 | `phase_23_spectral_repair.py` | 702 |
 | 🟢 P7 | Musical-Goal-Thresholds adaptiv bestätigt | ✅ Keine Änderung nötig | `adaptive_goals_system.py` | 42 |
 | 🟢 P8 | Echt-Audio-Corpus-Infrastruktur | ✅ Bereit | `corpus/` | — |
 
@@ -456,7 +456,7 @@ Keine hörbaren Auswirkungen (42ms < 50ms Hörbarkeitsschwelle nach Blauert 1997
 |---------|--------|------------|
 | Phase 03 ISTFT | ✅ Abgesichert | Adaptive 5-Zonen-STFT + Dry-Blend-Fallback |
 | Swap 100% | ✅ Kosmetisch | RAM stabil, PLM evakuiert korrekt, `malloc_trim`-SIGABRT-Risiko bekannt |
-| MQA 51→52 | 🔜 Metrik-Fix | BlindInternalReference-Vektor existiert, muss in MQA eingebunden werden |
+| MQA 51→52 | ✅ v10.14 | BlindInternalReference-Vektor in MQA eingebunden |
 
 ---
 

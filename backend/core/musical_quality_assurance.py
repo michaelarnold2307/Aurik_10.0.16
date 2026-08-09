@@ -1209,6 +1209,19 @@ class MusicalQualityAssurance:
             )
         else:
             musical_improvement = _tech_improvement
+            # §v10.14 MQA 51→52: BlindInternalReference als Fallback-Perzeption
+            # Wenn MUSHRA/HPI fehlen, BIR best_Wert als Qualitätssignal nutzen
+            try:
+                from backend.core.blind_internal_reference import get_blind_internal_reference
+
+                _bir = get_blind_internal_reference()
+                _bir_vec = _bir.compute(processed_audio, sample_rate)
+                _bir_best = float(_bir_vec.get("best_Wert", 0.5))
+                if _bir_best > 0.55:
+                    musical_improvement = max(musical_improvement, _bir_best * 0.15)
+                    logger.debug("MQA: BIR best_Wert=%.3f → musical_improvement=%.3f", _bir_best, musical_improvement)
+            except Exception:
+                pass
         authenticity_preserved = output_quality.authenticity >= input_quality.authenticity * 0.85
         character_preserved = integrity_result.character_preservation >= 0.80
         natural_sound = output_quality.naturalness >= 0.65 or (
@@ -1275,12 +1288,27 @@ class MusicalQualityAssurance:
         # Generate verdict
         # §v10.704 S4 Quality-Entscheidungs-Narrativ (§G155):
         # Jedes Verdict MUSS erklären WARUM — mit Bezug auf die Metrik-Hierarchie.
+        # §v10.14: BlindInternalReference-Vektor in MQA einbinden (MQA 51→52)
+        # BIR findet das sauberste Segment als interne Referenz — erlaubt
+        # eine objektivere Qualitätsschätzung ohne externes Ground-Truth-Audio.
+        _bir_score: float = 0.0
+        try:
+            from backend.core.blind_internal_reference import get_blind_internal_reference
+
+            _bir = get_blind_internal_reference()
+            _bir_vec = _bir.compute(processed_audio, sample_rate)
+            _bir_score = float(np.clip(_bir_vec.get("best_Wert", 0.5), 0.0, 1.0))
+            logger.debug("MQA: BIR-Qualitätsvektor best_Wert=%.3f", _bir_score)
+        except Exception as _bir_exc:
+            logger.debug("MQA: BIR-Vektor nicht verfügbar (%s)", _bir_exc)
+
         if quality_guaranteed:
             _mushra_note = f" MUSHRA={_mushra:.0f}" if _mushra > 0 else ""
             _hpi_note = f" HPI={_hpi:.2f}" if _hpi > 0 else ""
+            _bir_note = f" BIR={_bir_score:.3f}" if _bir_score > 0 else ""
             verdict = (
                 f"✓ QUALITY GUARANTEED — {medium_type.value} klingt nachweislich besser "
-                f"für das menschliche Ohr{_mushra_note}{_hpi_note}"
+                f"für das menschliche Ohr{_mushra_note}{_hpi_note}{_bir_note}"
             )
         elif not gate_passed:
             verdict = f"❌ QUALITY GATES FAILED - {gate_reason}"

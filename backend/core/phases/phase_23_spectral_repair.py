@@ -699,6 +699,13 @@ class SpectralRepair(PhaseInterface):
         # Get material-specific parameters
         _mk = material.value if isinstance(material, MaterialType) else material  # §v10.113
         stft_cfg = self.STFT_CONFIG.get(_mk, self.STFT_CONFIG[MaterialType.CD_DIGITAL])  # type: ignore[arg-type]
+        # §v10.14 NFFT-Adaption: kurze Clips (<10s) → 1024 NFFT für bessere Zeitauflösung
+        _clip_dur = float(len(audio)) / float(sample_rate)
+        if _clip_dur < 10.0:
+            stft_cfg = dict(stft_cfg)
+            stft_cfg["nfft"] = 1024
+            stft_cfg["nperseg"] = min(1024, stft_cfg["nperseg"])
+            stft_cfg["noverlap"] = min(768, stft_cfg["noverlap"])
         thresholds = self.DETECTION_THRESHOLDS.get(_mk, self.DETECTION_THRESHOLDS[MaterialType.CD_DIGITAL])  # type: ignore[arg-type]
 
         # §GEBOT-G55: Signal-adaptive Detection-Thresholds via Noise-Floor-Analyse

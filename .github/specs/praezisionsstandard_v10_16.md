@@ -63,7 +63,7 @@
 | Komponente | Methode | Präzision | Status |
 |---|---|---|---|
 | PMGG Retry-Stärke | Binäre Suche 12 Iter. | ±0.025% | ✅ v10.16 |
-| PostGate Stärke | Binäre Suche 12 Iter. | ±0.025% | 🔲 TODO |
+| PostGate Stärke | Binäre Suche 12 Iter. | ±0.025% | ✅ v10.16 |
 | HumanizationPass | Material-Kalibrierung | ±2% | ✅ v10.15 |
 | ListeningEQ | Band-Δ-Analyse | ±0.5 dB/Band | ✅ v10.15 |
 | Excellence-Blend | Restorability-Formel | stetig [0.03, 0.12] | ✅ v10.15 |
