@@ -656,7 +656,7 @@ def run_pre_analysis(
                 _has_cassette_in_chain = "cassette" in _chain
                 _has_vinyl_in_chain = "vinyl" in _chain
                 _DEFECT_CARRIER_MAP: dict[str, tuple[str, float]] = {
-                    "crackle": ("vinyl", 0.35),
+                    "crackle": ("vinyl", 0.20),  # §v10.14 FIX: 0.35→0.20 (leichtere Oberflächengeräusche)
                     "groove_echo": ("vinyl", 0.30),
                     "inner_groove_distortion": ("vinyl", 0.40),
                     "riaa_curve_error": ("vinyl", 0.30),

@@ -3252,7 +3252,8 @@ class DefectScanner:
         vinyl_score += crackle_score * 2.0  # Crackle typisch, aber nicht exklusiv (§3 Material-Mismatch-Fix)
         vinyl_score += click_rate * 0.3  # Moderate Clicks
         vinyl_score += wow_flutter_score * 2.0  # Speed-Variation
-        vinyl_score -= rumble_energy * 1500.0 * _rumble_analog_factor  # SEHR wenig Rumble (era-moduliert)
+        vinyl_score += rumble_energy * 1500.0 * _rumble_analog_factor  # §v10.14 FIX: Vinyl HAT Rumble (Motor) — war subtrahiert!
+        vinyl_score += 9.0  # §v10.14 FIX: Baseline-Bonus (Vinyl ~Tape/Cassette-Niveau)
         if _era_is_digital:
             vinyl_score -= _rumble_digital_boost  # Digital-Ära → Vinyl unwahrscheinlich
 
@@ -3370,11 +3371,12 @@ class DefectScanner:
         # VINYL Score
         vinyl_score = 0.0
         vinyl_score += crackle_score * 2.0  # Crackle typisch für Vinyl, aber nicht exklusiv (§3 Material-Mismatch-Fix)
-        vinyl_score += rumble_energy * 10.0 * _rumble_factor_st  # Rumble era-moduliert
+        vinyl_score += rumble_energy * 10.0 * _rumble_factor_st  # Rumble era-moduliert (Vinyl-Motor!)
         vinyl_score += wow_flutter_score * 1.5  # Analog-Medium
         vinyl_score += click_score * 1.0  # Moderate Clicks
         vinyl_score -= compression_score * 2.0  # Vinyl hat keine Compression
         vinyl_score -= digital_score * 2.0  # Vinyl ist analog
+        vinyl_score += 6.0  # §v10.14 FIX: Baseline-Bonus (Vinyl ~Tape/Cassette-Niveau)
         if _era_is_digital_st:
             vinyl_score -= _digital_boost_st  # Digital-Ära → Vinyl unwahrscheinlich
         scores[MaterialType.VINYL] = max(0, vinyl_score)
