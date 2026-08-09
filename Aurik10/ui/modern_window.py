@@ -2834,6 +2834,9 @@ class BatchProcessingThread(QThread):
                             self.status_text.setText(
                                 f"⚠️ Qualitätswächter: {metrics.get('guardian_reason', 'Bearbeitung verworfen')}"
                             )
+                    # §v10.14: Narratives Kommunikationssystem — die Geschichte des Songs
+                    if msg and len(msg) > 40:
+                        self._update_narrative(msg)
                     # §v10.440: Chirurgie-Label ausblenden wenn nicht mehr in Chirurgie
                     if not msg.startswith("chirurgie:") and getattr(self, "chirurgie_label", None) is not None:
                         self.chirurgie_label.setVisible(False)
@@ -15260,6 +15263,39 @@ class ModernMainWindow(QMainWindow):
         )
         self.live_quality_label.setVisible(False)
         vbox.addWidget(self.live_quality_label)
+
+        # ── §v10.14: Narratives Kommunikationssystem — die Geschichte des Songs ──
+        self.narrative_label = _WrappingStatusLabel("")
+        self.narrative_label.setStyleSheet(
+            "color: #7B93B8; font-size: 8pt; background: transparent; padding: 2px 4px;"
+            "border-left: 1px solid #2A3040; margin: 2px 0;"
+        )
+        self.narrative_label.setWordWrap(True)
+        self.narrative_label.setVisible(False)
+        vbox.addWidget(self.narrative_label)
+        self._narrative_buffer: list[str] = []  # Letzte 4 narrative Texte
+
+    def _update_narrative(self, text: str) -> None:
+        """§v10.14: Zeigt die narrative Geschichte des Songs während der Restaurierung."""
+        if not hasattr(self, "narrative_label"):
+            return
+        if not text or not text.strip():
+            return
+        # Nur Texte mit narrativem Inhalt (Kapitel, Entdeckungen, Übergänge)
+        _has_narrative = any(kw in text for kw in ("📀", "💡", "Kapitel", "🎵", "Die", "Deine", "Wir", "Diese"))
+        if not _has_narrative and len(text) < 40:
+            return  # Zu kurz/technisch — kein narratives Material
+        self._narrative_buffer.append(text.strip())
+        if len(self._narrative_buffer) > 4:
+            self._narrative_buffer = self._narrative_buffer[-4:]
+        self.narrative_label.setText("\n".join(self._narrative_buffer))
+        self.narrative_label.setVisible(True)
+
+    def _hide_narrative(self) -> None:
+        """Blendet das narrative Panel aus (z.B. nach Abschluss)."""
+        if hasattr(self, "narrative_label"):
+            self.narrative_label.setVisible(False)
+        self._narrative_buffer = []
 
     def _update_live_quality(self, metrics: dict | None = None) -> None:
         """§v10.14 P1: Aktualisiert die Live-Qualitätsanzeige während der Restaurierung."""
