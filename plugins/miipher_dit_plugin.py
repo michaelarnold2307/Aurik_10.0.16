@@ -301,103 +301,96 @@ class MiipherDiTPlugin:
         else:
             _target = audio
 
-        # ── PLM-Guard (§4.6b) ──
-        _plm_instance = None
-        if _PLM_AVAILABLE:
-            try:
-                _plm_instance = get_plugin_lifecycle_manager()
-                _plm_instance.set_active(self._BUDGET_NAME, True)
-            except Exception:
-                _plm_instance = None
+        # ── §v10.14: Chunked-Routing für lange Songs (>10s) ──
+        _duration_s = len(_target) / sr
+        if _duration_s > 10.0:
+            _result_audio = self._enhance_chunked(_target, sr)
+        else:
+            _result_audio = self._enhance_single(_target, sr)
 
+        # ── Hallucination-Guard (§2.46e) ──
+        _novelty = self._spectral_novelty(_target, _result_audio, sr)
+        if _novelty > self._HALLUCINATION_THRESHOLD:
+            logger.warning(
+                "§2.46e MIIPHER-DiT Hallucination-Guard: novelty=%.3f > %.2f → Rollback (Material=%s)",
+                _novelty,
+                self._HALLUCINATION_THRESHOLD,
+                _mat,
+            )
+            _result_audio = _target
+            _model_used = "none"
+        else:
+            logger.info(
+                "MIIPHER-DiT: %s enhanced (%.2fs, novelty=%.3f)",
+                _mat,
+                time.time() - t_start,
+                _novelty,
+            )
+            _model_used = "miipher_dit"
+
+        # ── M/S-Remix ──
+        if _is_stereo:
+            _out_l = _result_audio + _side[: len(_result_audio)]
+            _out_r = _result_audio - _side[: len(_result_audio)]
+            _final = np.stack([_out_l, _out_r], axis=-1).astype(np.float32)
+        else:
+            _final = _result_audio.astype(np.float32)
+
+        # ── HF-Delta messen ──
         try:
-            # ── ONNX-Inferenz ──
-            if self._ort_session is not None:
-                # Normalisiere auf [-1, 1]
-                _peak = float(np.max(np.abs(_target))) + 1e-10
-                _input = (_target / _peak).astype(np.float32)
+            _bw_before = float(np.sum(np.abs(np.fft.rfft(_target[: sr * 2]))[sr // 4 :]) + 1e-10)
+            _bw_after = float(np.sum(np.abs(np.fft.rfft(_final[: sr * 2]))[sr // 4 :]) + 1e-10)
+            _hf_delta = float(20.0 * np.log10(_bw_after / _bw_before)) if _bw_before > 0 else 0.0
+        except Exception:
+            _hf_delta = 0.0
 
-                # Reshape für ONNX: [batch=1, seq_len, 1]
-                _input_onnx = _input.reshape(1, -1, 1)
-
-                # ONNX-Forward-Pass
-                _t = np.array([0.5], dtype=np.float32)  # Zeit-Schritt
-                _output = self._ort_session.run(
-                    None,
-                    {"x": _input_onnx, "t": _t},
-                )[0]
-
-                _enhanced = _output.reshape(-1).astype(np.float32) * _peak
-            else:
-                _enhanced = _target
-
-            # ── Hallucination-Guard (§2.46e) ──
-            _novelty = self._spectral_novelty(_target, _enhanced, sr)
-            if _novelty > self._HALLUCINATION_THRESHOLD:
-                logger.warning(
-                    "§2.46e MIIPHER-DiT Hallucination-Guard: novelty=%.3f > %.2f → Rollback (Material=%s)",
-                    _novelty,
-                    self._HALLUCINATION_THRESHOLD,
-                    _mat,
-                )
-                _enhanced = _target
-                _model_used = "none"
-            else:
-                logger.info(
-                    "MIIPHER-DiT: %s enhanced (%.2fs, novelty=%.3f)",
-                    _mat,
-                    time.time() - t_start,
-                    _novelty,
-                )
-                _model_used = "miipher_dit"
-
-            # ── M/S-Remix ──
-            if _is_stereo:
-                _out_l = _enhanced + _side[: len(_enhanced)]
-                _out_r = _enhanced - _side[: len(_enhanced)]
-                _final = np.stack([_out_l, _out_r], axis=-1).astype(np.float32)
-            else:
-                _final = _enhanced.astype(np.float32)
-
-            # ── HF-Delta messen ──
-            try:
-                _bw_before = float(np.sum(np.abs(np.fft.rfft(_target[: sr * 2]))[sr // 4 :]) + 1e-10)
-                _bw_after = float(np.sum(np.abs(np.fft.rfft(_final[: sr * 2]))[sr // 4 :]) + 1e-10)
-                _hf_delta = float(20.0 * np.log10(_bw_after / _bw_before)) if _bw_before > 0 else 0.0
-            except Exception:
-                _hf_delta = 0.0
-
-            return MiipherDiTResult(
+        return MiipherDiTResult(
                 audio=_final,
                 applied=True,
                 model_used=_model_used,
                 novelty=_novelty,
                 hf_delta_db=_hf_delta,
                 processing_time_s=time.time() - t_start,
-            )
+        )
 
-        except Exception as exc:
-            logger.warning("MIIPHER-DiT: Inferenz fehlgeschlagen (%s) — DSP-Fallback", exc)
-            _fallback = self._dsp_fallback(audio, sr)
-            if _is_stereo:
-                _final = _fallback
-            else:
-                _final = _fallback
-            return MiipherDiTResult(
-                audio=_final,
-                applied=True,
-                model_used="dsp_fallback",
-                processing_time_s=time.time() - t_start,
-                metadata={"error": str(exc)[:120]},
-            )
+    # ── §v10.14: Chunked Processing für lange Songs ────────────────────
 
-        finally:
-            # ── PLM-Freigabe (§4.6b) ──
-            if _plm_instance is not None:
-                try:
-                    _plm_instance.set_active(self._BUDGET_NAME, False)
-                except Exception:
-                    pass
+    def _enhance_single(self, audio_mono: np.ndarray, sr: int) -> np.ndarray:
+        """ONNX-Inferenz für kurze Segmente (<10s)."""
+        _peak = float(np.max(np.abs(audio_mono))) + 1e-10
+        _input = (audio_mono / _peak).astype(np.float32)
+        _input_onnx = _input.reshape(1, -1, 1)
+        _t = np.array([0.5], dtype=np.float32)
+        _output = self._ort_session.run(None, {"x": _input_onnx, "t": _t})[0]
+        return _output.reshape(-1).astype(np.float32) * _peak
+
+    def _enhance_chunked(self, audio_mono: np.ndarray, sr: int) -> np.ndarray:
+        """Chunked-Processing für lange Songs via Auriks ChunkedPipeline.
+
+        Nutzt die bestehende ChunkedPipeline-Infrastruktur für
+        Overlap-Add mit Hann-Crossfade — konsistent mit dem Rest
+        der Aurik-Pipeline.
+        """
+        try:
+            from backend.core.chunked_streaming import ChunkedPipeline
+
+            # ChunkedPipeline als Wrapper: 4s Chunks, 0.5s Overlap
+            cp = ChunkedPipeline(chunk_duration_s=4.0, overlap_s=0.5, crossfade_s=0.05)
+            chunks = cp.compute_chunks(audio_mono, sr)
+
+            results = []
+            for i, (start, end) in enumerate(chunks):
+                _chunk = audio_mono[start:end]
+                _enhanced = self._enhance_single(_chunk, sr)
+                from backend.core.chunked_streaming import ChunkResult
+
+                results.append(ChunkResult(_enhanced, sr, i, start, end))
+
+            return cp.collect_results(results, sr)
+        except ImportError:
+            # Fallback: Direktverarbeitung (nur für kurze Songs sicher)
+            logger.warning("MIIPHER-DiT: ChunkedPipeline nicht verfügbar — Direktverarbeitung")
+            return self._enhance_single(audio_mono, sr)
 
 
 # ── Singleton (PLM-kompatibel) ──────────────────────────────────────────
