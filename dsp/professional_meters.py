@@ -157,7 +157,7 @@ class LUFSMeter:
         n_blocks = (filtered.shape[1] - block_samples) // hop_samples + 1
 
         if n_blocks <= 0:
-            return -np.inf
+            return float(-np.inf)
 
         # Vectorized block extraction via index array
         starts = np.arange(n_blocks) * hop_samples
@@ -176,7 +176,7 @@ class LUFSMeter:
         # Convert to LUFS, filter out silent blocks
         valid = mean_square > 0
         if not np.any(valid):
-            return -np.inf
+            return float(-np.inf)
 
         block_loudness = -0.691 + 10 * np.log10(mean_square[valid])
 
@@ -184,7 +184,7 @@ class LUFSMeter:
         gated_blocks = block_loudness[block_loudness >= -70.0]
 
         if len(gated_blocks) == 0:
-            return -np.inf
+            return float(-np.inf)
 
         # Relative gate: -10 LU relative to absolute gated loudness
         absolute_gated = 10 * np.log10(np.mean(10 ** (gated_blocks / 10)))
@@ -193,7 +193,7 @@ class LUFSMeter:
         final_blocks = gated_blocks[gated_blocks >= relative_gate]
 
         if len(final_blocks) == 0:
-            return -np.inf
+            return float(-np.inf)
 
         # Final integrated loudness
         integrated = 10 * np.log10(np.mean(10 ** (final_blocks / 10)))

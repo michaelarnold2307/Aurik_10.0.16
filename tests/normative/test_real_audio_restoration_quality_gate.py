@@ -69,7 +69,7 @@ class TestRealAudioQualityGate:
 
     @pytest.fixture
     def gate(self, report: dict) -> dict:
-        return report.get("gate", {})  # type: ignore[no-any-return]
+        return report.get("gate", {})  # type: ignore[return-value]
 
     def test_gate_exists(self, gate: dict):
         """Quality Gate Report muss existieren und ein 'gate'-Feld enthalten."""
@@ -110,14 +110,14 @@ class TestRealAudioQualityGate:
         hpi = gate.get("hpi_average")
         if hpi is None:
             pytest.skip("HPI-Average nicht verfügbar")
-        assert hpi >= 0.60, f"HPI-Average {hpi:.3f} < 0.60. Siehe diagnose_gate_failures.py."
+        assert hpi >= 0.60, f"HPI-Average {hpi:.3f} < 0.60. Siehe diagnose_gate_failures.py."  # type: ignore[operator]
 
     def test_quality_above_minimum(self, gate: dict):
         """Quality-Estimate-Average muss ≥ 0.70 betragen (Basis-Schwelle für CI)."""
         qe = gate.get("quality_estimate_average")
         if qe is None:
             pytest.skip("Quality-Estimate-Average nicht verfügbar")
-        assert qe >= 0.70, f"Quality-Estimate {qe:.3f} < 0.70."
+        assert qe >= 0.70, f"Quality-Estimate {qe:.3f} < 0.70."  # type: ignore[operator]
 
     def test_noise_texture_above_minimum(self, gate: dict):
         """Noise-Texture-Pass-Rate muss ≥ 0.50 betragen (Basis-Schwelle)."""
@@ -143,7 +143,7 @@ class TestDailyGateStatus:
         data = _load_daily_status()
         if data is None:
             pytest.skip("Kein täglicher Gate-Status gefunden.")
-        return data
+        return data  # type: ignore[return-value]
 
     def test_daily_gate_stored_recently(self, status: dict):
         """Daily-Status muss in den letzten 48h aktualisiert worden sein."""
@@ -152,7 +152,7 @@ class TestDailyGateStatus:
         ts = status.get("timestamp") or status.get("generated_at")
         if ts is None:
             pytest.fail("Daily-Status hat keinen Timestamp")
-        last_run = datetime.fromisoformat(ts).replace(tzinfo=timezone.utc)
+        last_run = datetime.fromisoformat(str(ts)).replace(tzinfo=timezone.utc)
         age = datetime.now(timezone.utc) - last_run
         assert age < timedelta(hours=48), (
             f"Daily-Status ist {age.total_seconds() / 3600:.1f}h alt "
@@ -164,7 +164,7 @@ class TestDailyGateStatus:
         report = _load_gate_report()
         if report is None:
             pytest.skip("Kein Gate-Report zum Vergleich")
-        gate = report.get("gate", {})
+        gate = report.get("gate", {})  # type: ignore[union-attr]
         # Daily-Status muss dieselben Key-Metriken wie der Gate-Report enthalten
         for key in ("hpi_average", "real_audio_cases", "musical_goal_case_pass_rate"):
             if key in gate and key in status:

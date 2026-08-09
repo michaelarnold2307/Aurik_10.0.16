@@ -19,6 +19,7 @@ Aufruf: pytest tests/normative/test_hybrid_release_mode.py -v --timeout=30
 
 
 import importlib
+import importlib.util  # type: ignore[import-untyped]
 from pathlib import Path
 
 import pytest

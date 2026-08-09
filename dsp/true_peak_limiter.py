@@ -214,7 +214,7 @@ class TruePeakLimiter:
         # Convert to dBTP
         true_peak_dbtp = 20 * np.log10(peak_linear) if peak_linear > 0 else -np.inf
 
-        return true_peak_dbtp
+        return float(true_peak_dbtp)
 
     def process(self, audio: np.ndarray, sr: int, return_metrics: bool = False) -> tuple[np.ndarray, dict | None]:
         """

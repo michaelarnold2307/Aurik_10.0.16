@@ -262,8 +262,7 @@ class PresenceEmbedding:
             # Referenz: gute Musik hat median ~4dB, IQR ~3dB
             median_score = 1.0 - abs(median_onset - 4.0) / 8.0
             iqr_score = 1.0 - abs(iqr_onset - 3.0) / 6.0
-        except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            return float(np.clip((median_score * 0.7 + iqr_score * 0.3), 0.0, 1.0))
         except Exception as e:
             logger.debug("PresenceEmbedding: transient_immediacy fallback: %s", e)
             return 0.5
@@ -308,8 +307,6 @@ class PresenceEmbedding:
                 # Verbesserung? Dann score erhoehen
                 if score > orig_score:
                     score = min(1.0, score * 1.1)
-        except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             return float(np.clip(score, 0.0, 1.0))
         except Exception as e:
             logger.debug("PresenceEmbedding: room_tone_continuity fallback: %s", e)
@@ -339,8 +336,7 @@ class PresenceEmbedding:
             std_cf = float(np.std(crest_factors))
 
             # Referenz: gute Mikrodynamik hat median CF ~6-10, std ~2-4
-        except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            median_score = float(np.clip(1.0 - abs(median_cf - 8.0) / 10.0, 0.0, 1.0))
             std_score = min(std_cf / 3.0, 1.0)  # Hoehere Std = mehr Dynamik-Varianz = lebendiger
             return float(np.clip((median_score * 0.6 + std_score * 0.4), 0.0, 1.0))
         except Exception as e:
