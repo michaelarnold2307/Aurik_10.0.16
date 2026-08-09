@@ -12,6 +12,11 @@ from .apollo_plugin import (
     get_apollo,
     repair_codec_artifacts,
 )
+from .miipher_dit_plugin import (
+    MiipherDiTPlugin,
+    MiipherDiTResult,
+    get_miipher_dit,
+)
 from .bigvgan_v2_plugin import (
     BigVGANv2Plugin,
     VocoderResult,

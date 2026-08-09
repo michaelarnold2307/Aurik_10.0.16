@@ -55,7 +55,7 @@ _MONITOR_JOIN_TIMEOUT_S: float = 1.0  # Shutdown darf Tests/App-Ende nicht unbou
 _PHASE_REQUIRED_MODELS: dict[str, frozenset[str]] = {
     "phase_01_click_removal": frozenset({"DeepFilterNetV3"}),
     "phase_02_hum_removal": frozenset({"DeepFilterNetV3"}),
-    "phase_03_denoise": frozenset({"SGMSE+", "ResembleEnhance", "DeepFilterNetV3"}),
+    "phase_03_denoise": frozenset({"SGMSE+", "ResembleEnhance", "DeepFilterNetV3", "MIIPHER_DiT"}),  # §v10.14: MIIPHER-DiT für Gesang
     "phase_06_frequency_restoration": frozenset({"FlashSR"}),
     "phase_09_crackle_removal": frozenset({"BanquetVinyl"}),
     "phase_12_wow_flutter_fix": frozenset({"FCPE", "RMVPE", "CREPE"}),
