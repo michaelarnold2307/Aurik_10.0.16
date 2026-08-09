@@ -163,6 +163,7 @@ class RestorationResult:
     era_decade: int | None = None  # Erkannte Aufnahme-Ära (§2.2)
     # --- §2.38 KMV (Kontinuierliche ML-Veredelung) Pflichtfelder ---
     deferred_phases: list[str] = field(default_factory=list)  # Phasen für Stufe 2
+    phase_deltas: dict[str, dict] = field(default_factory=dict)  # §v10.14 P3: Per-Phase-Metriken
     refinement_complete: bool = False  # True nach ML-Veredelung
     stufe2_quality_estimate: float | None = None  # quality nach vollst. ML-Pass
     # --- §8.2 & §8.3 Emotionale Psychoakustik (Gänsehaut-Qualität) ---
@@ -21343,6 +21344,7 @@ class UnifiedRestorerV3:
             phases_executed=executed_phases,
             phases_skipped=skipped_phases,
             deferred_phases=deferred_phases,  # §2.38 KMV: RT-skipped phases for Stage 2
+            phase_deltas=dict(getattr(self, "_phase_deltas", {})),  # §v10.14 P3
             total_time_seconds=total_time,
             rt_factor=rt_factor,
             quality_estimate=quality_estimate,
