@@ -883,7 +883,10 @@ def run_pre_analysis(
                             ", ".join(set(_pre_phys) - set(_chain)),
                         )
                 _md_confidence = float(getattr(_md, "confidence", 0.5) or 0.5)
-                _max_chain_depth = 2 if _md_confidence < 0.50 else (3 if _md_confidence < 0.60 else 99)
+                # §v10.14 FIX: Chain-Depth-Cap angehoben für depth≥4.
+                # Bei niedriger Confidence kurze Ketten (Sicherheit), bei höherer
+                # Confidence tiefe Ketten erlauben (depth 4-5 für Kassetten etc.).
+                _max_chain_depth = {True: 2, False: (3 if _md_confidence < 0.55 else (4 if _md_confidence < 0.60 else 99))}[_md_confidence < 0.50]
                 if len(_chain) > _max_chain_depth:
                     # §v10.14: Letzten Eintrag (Endformat, z.B. mp3_high) IMMER behalten.
                     # Aus den analogen Zwischenträgern den Ära-plausibelsten wählen.
