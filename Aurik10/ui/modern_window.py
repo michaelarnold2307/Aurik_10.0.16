@@ -2823,7 +2823,11 @@ class BatchProcessingThread(QThread):
                     _local = max(0.0, min(100.0, ((_p - _s0) / _den) * 100.0))
                     return _sid, _local
 
-                def _on_batch_progress(pct: float, msg: str, elapsed_s: float = 0.0, _item=item) -> None:
+                def _on_batch_progress(pct: float, msg: str, elapsed_s: float = 0.0, metrics: dict | None = None, _item=item) -> None:
+                    # §v10.14 P1: Live-Metriken für GUI zwischenspeichern
+                    if metrics:
+                        self._latest_live_metrics = metrics
+                        self._update_live_quality(metrics)
                     # §v10.440: Chirurgie-Label ausblenden wenn nicht mehr in Chirurgie
                     if not msg.startswith("chirurgie:") and getattr(self, "chirurgie_label", None) is not None:
                         self.chirurgie_label.setVisible(False)
