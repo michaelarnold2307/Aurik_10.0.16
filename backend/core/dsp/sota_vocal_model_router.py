@@ -443,6 +443,35 @@ class SotaVocalModelRouter:
         attempts: list[str] = []
         capability_report = self._capability_report()
 
+        # §v10.14: MIIPHER-DiT als primärer Open-Source-Ersatz für proprietäres MIIPHER
+        try:
+            from plugins.miipher_dit_plugin import get_miipher_dit
+
+            _miipher_dit = get_miipher_dit()
+            _dit_loaded = getattr(_miipher_dit, "_model_loaded", False)
+            _dit_fallback = getattr(_miipher_dit, "_fallback_active", True)
+            if _dit_loaded and not _dit_fallback:
+                _dit_result = _miipher_dit.enhance(
+                    reference, sr, material="unknown", restorability_score=20.0,
+                )
+                if _dit_result.applied and _dit_result.model_used == "miipher_dit":
+                    attempts.append("miipher_dit:primary")
+                    logger.info("§v10.14 MIIPHER-DiT: Gesangsverbesserung erfolgreich (novelty=%.3f)", _dit_result.novelty)
+                    return EnhancementRouteResult(
+                        audio=np.asarray(_dit_result.audio, dtype=np.float32),
+                        route_taken="miipher_dit",
+                        attempt_log=attempts,
+                        implicit_harmonic_recovery=True,
+                    )
+                else:
+                    attempts.append(f"miipher_dit:{_dit_result.model_used}")
+            else:
+                attempts.append("miipher_dit:not_loaded")
+        except Exception as _dit_exc:
+            logger.debug("MIIPHER-DiT nicht verfügbar: %s", _dit_exc)
+            attempts.append("miipher_dit:import_error")
+
+        # §v10.14: Proprietäres MIIPHER als Fallback (falls Modell vorhanden)
         try:
             from plugins.miipher_plugin import get_miipher_plugin  # pylint: disable=import-outside-toplevel
 
