@@ -1,13 +1,13 @@
-""" A/B-Vergleich — Vorher/Nachher-Audio-Vergleich mit Blindtest und Delta.
+"""A/B-Vergleich — Vorher/Nachher-Audio-Vergleich mit Blindtest und Delta.
 
-    Spec 14 §14.9, Spec 08 §8.1 AB-Sync-Loop, Spec v10.207 Audio-Player-SOTA.
+Spec 14 §14.9, Spec 08 §8.1 AB-Sync-Loop, Spec v10.207 Audio-Player-SOTA.
 
-    Bietet:
-    - ABComparison: synchronisiertes A/B-Umschalten während der Wiedergabe
-    - ABLoop: wiederholtes Abspielen eines Segments im A/B-Wechsel
-    - ABBlindTest: randomisierte X-Zuweisung für verblindete Hörtests
-    - ABDelta: berechnet Differenzsignal und Metriken zwischen A und B
-    """
+Bietet:
+- ABComparison: synchronisiertes A/B-Umschalten während der Wiedergabe
+- ABLoop: wiederholtes Abspielen eines Segments im A/B-Wechsel
+- ABBlindTest: randomisierte X-Zuweisung für verblindete Hörtests
+- ABDelta: berechnet Differenzsignal und Metriken zwischen A und B
+"""
 
 from __future__ import annotations
 
@@ -23,9 +23,11 @@ logger = logging.getLogger(__name__)
 
 # ── Dataclasses ──────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ABSegment:
     """Ein A/B-Vergleichssegment (z.B. 5 Sekunden)."""
+
     start_sample: int
     end_sample: int
     label: str = ""  # "A" oder "B" (im Blindtest: "X1", "X2")
@@ -34,11 +36,12 @@ class ABSegment:
 @dataclass
 class ABDeltaResult:
     """Ergebnis der A/B-Delta-Berechnung."""
-    rms_delta_db: float = 0.0            # RMS-Differenz in dB
-    peak_delta_db: float = 0.0           # Peak-Differenz in dB
-    lufs_delta: float = 0.0              # LUFS-Differenz
+
+    rms_delta_db: float = 0.0  # RMS-Differenz in dB
+    peak_delta_db: float = 0.0  # Peak-Differenz in dB
+    lufs_delta: float = 0.0  # LUFS-Differenz
     spectral_centroid_delta_hz: float = 0.0  # Spektrale-Schwerpunkt-Verschiebung
-    correlation: float = 1.0             # Pearson-Korrelation A vs B
+    correlation: float = 1.0  # Pearson-Korrelation A vs B
     diff_audio: np.ndarray | None = None  # Differenzsignal A - B
     segments_compared: int = 0
     notes: list[str] = field(default_factory=list)
@@ -47,17 +50,19 @@ class ABDeltaResult:
 @dataclass
 class ABBlindResult:
     """Ergebnis eines AB-Blindtests."""
+
     total_trials: int = 0
     correct: int = 0
-    p_value: float = 1.0                  # Binomialtest-p-Wert
-    preference_a: int = 0                # "A klang besser"
+    p_value: float = 1.0  # Binomialtest-p-Wert
+    preference_a: int = 0  # "A klang besser"
     preference_b: int = 0
     no_preference: int = 0
     trials: list[dict[str, Any]] = field(default_factory=list)
-    is_significant: bool = False         # p < 0.05
+    is_significant: bool = False  # p < 0.05
 
 
 # ── A/B-Vergleich-Klasse ─────────────────────────────────────────────────────
+
 
 class ABComparison:
     """A/B-Vergleich zwischen Original (A) und restauriertem Audio (B).
@@ -75,8 +80,8 @@ class ABComparison:
 
     def __init__(
         self,
-        audio_a: np.ndarray,        # Original
-        audio_b: np.ndarray,        # Restauriert
+        audio_a: np.ndarray,  # Original
+        audio_b: np.ndarray,  # Restauriert
         sr: int = 48000,
         *,
         label_a: str = "Original",
@@ -104,7 +109,9 @@ class ABComparison:
 
         logger.debug(
             "ABComparison erstellt: A=%d samples, B=%d samples, sr=%d",
-            len(self._a), len(self._b), sr,
+            len(self._a),
+            len(self._b),
+            sr,
         )
 
     # ── Properties ────────────────────────────────────────────────────────
@@ -178,7 +185,9 @@ class ABComparison:
             self._segment_end = max_len
         logger.debug(
             "AB-Segment: %.1fs – %.1fs (%.1fs)",
-            self.segment_start_s, self.segment_end_s, self.segment_duration_s,
+            self.segment_start_s,
+            self.segment_end_s,
+            self.segment_duration_s,
         )
 
     def enable_loop(self, enabled: bool = True) -> None:
@@ -208,7 +217,7 @@ class ABComparison:
         if self._loop_enabled and end >= self._segment_end:
             remaining = length_samples - len(result)
             if remaining > 0:
-                wrap = src[self._segment_start:self._segment_start + remaining]
+                wrap = src[self._segment_start : self._segment_start + remaining]
                 result = np.concatenate([result, wrap])
         return result
 
@@ -254,10 +263,9 @@ class ABComparison:
         # Spektrale-Schwerpunkt-Verschiebung
         try:
             from scipy.signal import periodogram
-            f_a, p_a = periodogram(a_seg if a_seg.ndim == 1 else a_seg.mean(axis=1),
-                                   fs=self.sr, scaling='density')
-            _, p_b = periodogram(b_seg if b_seg.ndim == 1 else b_seg.mean(axis=1),
-                                 fs=self.sr, scaling='density')
+
+            f_a, p_a = periodogram(a_seg if a_seg.ndim == 1 else a_seg.mean(axis=1), fs=self.sr, scaling="density")
+            _, p_b = periodogram(b_seg if b_seg.ndim == 1 else b_seg.mean(axis=1), fs=self.sr, scaling="density")
             centroid_a = float(np.sum(f_a * p_a) / (np.sum(p_a) + 1e-12))
             centroid_b = float(np.sum(f_a * p_b) / (np.sum(p_b) + 1e-12))
             result.spectral_centroid_delta_hz = centroid_b - centroid_a
@@ -266,8 +274,10 @@ class ABComparison:
 
         logger.info(
             "AB-Delta: RMS=%.1fdB, Peak=%.1fdB, Corr=%.4f, Centroid=%.0fHz",
-            result.rms_delta_db, result.peak_delta_db,
-            result.correlation, result.spectral_centroid_delta_hz,
+            result.rms_delta_db,
+            result.peak_delta_db,
+            result.correlation,
+            result.spectral_centroid_delta_hz,
         )
         return result
 
@@ -297,6 +307,7 @@ class ABComparison:
 
 
 # ── A/B-Blindtest ────────────────────────────────────────────────────────────
+
 
 class ABBlindTest:
     """A/B-Blindtest: Randomisiert A/B-Zuweisung für verblindete Vergleiche.
@@ -330,15 +341,17 @@ class ABBlindTest:
         self._trials = []
         for i in range(n_trials):
             x_is_a = self._rng.choice([True, False])
-            self._trials.append({
-                "trial_id": i,
-                "x_is_a": x_is_a,
-                "x_label": f"X{i+1}",
-                "chosen_a": None,   # Nutzer-Antwort: True=A, False=B
-                "preference": None,  # "a", "b", "none"
-                "confidence": None,  # 1-5
-                "response_time_s": None,
-            })
+            self._trials.append(
+                {
+                    "trial_id": i,
+                    "x_is_a": x_is_a,
+                    "x_label": f"X{i + 1}",
+                    "chosen_a": None,  # Nutzer-Antwort: True=A, False=B
+                    "preference": None,  # "a", "b", "none"
+                    "confidence": None,  # 1-5
+                    "response_time_s": None,
+                }
+            )
         self._current_trial = 0
         logger.info("Blindtest-Session gestartet: %d Trials", n_trials)
 
@@ -381,9 +394,10 @@ class ABBlindTest:
 
         # Binomialtest: H0 = p=0.5 (Raten)
         from math import comb
+
         p_value = 0.0
         for k in range(correct, n + 1):
-            p_value += comb(n, k) * (0.5 ** n)
+            p_value += comb(n, k) * (0.5**n)
         # Zweiseitig
         p_value = min(p_value * 2.0, 1.0)
 
@@ -404,6 +418,7 @@ class ABBlindTest:
 
 
 # ── Synchronisierte A/B-Gruppe ───────────────────────────────────────────────
+
 
 class ABComparisonGroup:
     """Gruppe synchronisierter A/B-Vergleiche (z.B. für Multi-Track-A/B).

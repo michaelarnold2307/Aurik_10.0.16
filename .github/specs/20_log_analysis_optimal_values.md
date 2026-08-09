@@ -67,6 +67,7 @@ real_vocal_choir_breaths_hiss:        REQUIRED BUT SKIPPED: phase_06_frequency_r
 **Root Cause:** `_should_skip_resolved_phase()` in `unified_restorer_v3.py:39303` prüft den `resolved_defects_accumulator`. Wenn alle Primary-Defects der Phase bereits `residual < 0.05` haben, wird die Phase geskippt. Phase 06 (Frequency Restoration) mapped auf Defekte die von Phase 03 (Denoise) oder Phase 04 (EQ) als "resolved" markiert werden — obwohl die Frequenzrestauration ein UNTERSCHIEDLICHES Ziel verfolgt (Bandbreiten-Wiederherstellung, nicht Rauschentfernung).
 
 **Fix (`unified_restorer_v3.py:39315–39326`):**
+
 ```python
 if phase_id == "phase_06_frequency_restoration":
     _mat = str(_rctx.get("material_key", "")).lower()
@@ -79,11 +80,13 @@ if phase_id == "phase_06_frequency_restoration":
 ### §20.3.2 — Blockade 2: Pipeline-Konfidenz-Schwelle 0,55 am Durchschnitt
 
 **Evidenz aus `batch_processing.log`:**
+
 - 1.818 Konfidenz-Werte extrahiert
 - Ø = 0,547, Range = [0,080, 0,900]
 - Schwelle 0,55 liegt GENAU am Durchschnitt → ~50% aller Durchläufe unter der Schwelle
 
 **Log-Zeilen:**
+
 ```
 Phase Skipping deaktiviert: niedrige Pipeline-Konfidenz (0.46 < 0.55)
 Phase Skipping deaktiviert: niedrige Pipeline-Konfidenz (0.49 < 0.55)
@@ -92,14 +95,17 @@ Phase Skipping deaktiviert: niedrige Pipeline-Konfidenz (0.49 < 0.55)
 **Root Cause:** `unified_restorer_v3.py:11421` verwendet 0.55 als `_pipeline_confidence`-Schwelle. Bei Werten unter 0.55 wird `_enable_phase_skipping = False` gesetzt — was bedeutet dass Phase Skipping deaktiviert wird und ALLE Phasen laufen. Das klingt gut, aber die Schwelle ist zu hoch: Bei 0,46 wird Phase Skipping deaktiviert (alle Phasen laufen), bei 0,56 wird Phase Skipping aktiviert (einige Phasen werden geskippt). Die Schwelle sollte niedriger sein, damit nur bei WIRKLICH niedriger Konfidenz alle Phasen erzwungen werden, und bei moderater Konfidenz (0,40–0,55) das intelligente Skipping trotzdem läuft.
 
 **Fix (`unified_restorer_v3.py:11421`):**
+
 ```python
 if _pipeline_confidence is not None and float(_pipeline_confidence.confidence) < 0.40:
 ```
+
 Von 0.55 → 0.40. Nur bei Konfidenz unter 0.40 wird das Phase-Skipping komplett deaktiviert.
 
 ### §20.3.3 — Blockade 3: Phase 23 dominiert 84% der Gesamtlaufzeit
 
 **Evidenz aus `analysis_runtime.log`:**
+
 - 199 Ausführungen von `phase_23_spectral_repair`
 - Durchschnittliche Laufzeit: 48,4s pro Ausführung
 - Gesamt-Pipeline-RT: 19,6×
@@ -108,6 +114,7 @@ Von 0.55 → 0.40. Nur bei Konfidenz unter 0.40 wird das Phase-Skipping komplett
 **Root Cause:** Die FFT-basierte Spektralreparatur verwendet eine feste Fenstergröße die für 3s-Clips überdimensioniert ist. Der `hop_length=512` in `phase_23_spectral_repair.py:1170` ist der einzige direkt sichtbare STFT-Parameter; die `n_fft` wird implizit aus dem Kontext gesetzt (vermutlich 4096).
 
 **Empfehlung für Folge-Implementierung:**
+
 - `n_fft = 1024` für Clips < 10s Dauer
 - `hop_length = n_fft // 4`
 - Erwartete Beschleunigung: 16,1× → 4× RT-Faktor
@@ -143,6 +150,7 @@ Von 0.55 → 0.40. Nur bei Konfidenz unter 0.40 wird das Phase-Skipping komplett
 ### §20.4.3 — Implementierte Fixes
 
 **Fix 1 — `phase_glue_stage.py:83–84`:**
+
 ```python
 if not np.isfinite(result.audio).all():
     logger.warning("phase_glue_stage: NaN/Inf im Output — wird mit nan_to_num bereinigt")
@@ -150,6 +158,7 @@ output_audio = np.nan_to_num(result.audio, nan=0.0, posinf=0.0, neginf=0.0)
 ```
 
 **Fix 2 — `phase_interface.py:683–699` (Universeller Final Guard):**
+
 ```python
 # §v10.300 Universal NaN/Inf Final Guard
 _post_audio = np.asarray(result.audio, dtype=np.float32)
@@ -192,6 +201,7 @@ Dieser Guard läuft für ALLE 68 Phasen über `PhaseInterface._safe_process()` �
 ### §20.5.3 — Implementierter Fix
 
 **`unified_restorer_v3.py:32538–32540`:**
+
 ```python
 # §v10.300: Minimum-Wet-Floor — unter 0.15 ist dekorativ
 _sft_wet = min(_sft_wet, float(np.clip(_tc_rescue_wet, 0.15, 0.40)))
@@ -319,6 +329,7 @@ Der Temporal-Rescue-Pfad konnte den Wet-Wert auf 0,0 drücken (`np.clip(_tc_resc
 2. **Echt-Audio-Corpus befüllen:** Die Infrastruktur (`corpus/`, `MANIFEST_SCHEMA.yaml`, `generate_corpus_from_public_domain.py`) steht. Benötigt: 20+ Public-Domain-Aufnahmen aus 4+ Materialien. `scripts/generate_corpus_from_public_domain.py --all --count 5`
 
 3. **Quality Gate Re-Run nach Fixes:** Alle 8 Fälle mit den §v10.300-Fixes neu durchlaufen lassen und mit `diagnose_gate_failures.py` analysieren:
+
    ```bash
    python audit/real_audio_restoration_quality_gate.py
    python scripts/diagnose_gate_failures.py --output reports/gate_diagnosis_v10_300.md
@@ -331,6 +342,7 @@ Der Temporal-Rescue-Pfad konnte den Wet-Wert auf 0,0 drücken (`np.clip(_tc_resc
 ## §20.12 — Datenintegrität
 
 Sämtliche in dieser Spec genannten Zahlen stammen aus:
+
 - `analysis_runtime.log` (17.341 Zeilen, letzter Eintrag 2026-05-16)
 - `batch_processing.log` (24.021 Zeilen, letzter Eintrag 2026-05-16)
 - `audit/real_audio_execution_golden_report.json` (8 Fälle, 2026-06-04)
@@ -363,6 +375,7 @@ Alle Ableitungen sind durch die genannten Log-Zeilen und Code-Stellen belegbar.
 ### §20.13.2 — Fünf identifizierte Folgeprobleme
 
 **P1 — Phase 03 ISTFT-Edge-Cases (bereits abgesichert):**
+
 - `istft failed, passthrough: too many values to unpack` und `nperseg=2048 > input=236`
 - Betrifft Mikro-Chunks am Phasenübergang
 - Energy-Preservation Guard rettet mit Dry-Blend (`alpha=1.0`)
@@ -370,23 +383,27 @@ Alle Ableitungen sind durch die genannten Log-Zeilen und Code-Stellen belegbar.
 - **Status:** ✅ Kein Fix nötig — Fallback arbeitet wie designed
 
 **P2 — Swap 100% trotz 13,4 GB freiem RAM (kosmetisch):**
+
 - Swap-Pinning durch Linux Swappiness
 - PLM evakuiert korrekt (3–4 Plugins pro Zyklus)
 - `malloc_trim(0)` im PLM bewusst entfernt (SIGABRT-Risiko), aber im Pre-Phase-Deep-Flush aktiv (`unified_restorer_v3.py:35525`)
 - **Status:** ✅ Kein Code-Fix nötig — System-Tuning (`vm.swappiness=10`)
 
 **P3 — Group-Delay-Rollback bei 39,86ms vs 39,75ms Toleranz (behoben):**
+
 - CIG `compute_adaptive_drift_tolerance()` berechnet für cassette+rs=63,5 → 39,75ms
 - 3 STFT-Phasen (Phase 18, 27, 29) produzieren 39,86ms → Rollback
 - 0,11ms Überschreitung bei Hörbarkeitsschwelle >1ms pro kHz
 - **Fix (§20.14.2):** `restorability_factor *= 1.05` → Toleranz 41,74ms
 
 **P4 — Phase 06 ML-Skip bei depth≥4 für ALLE Materialien (behoben):**
+
 - `§v10.200 Depth-Gate` deaktivierte NVSR/FlashSR komplett bei depth≥4
 - Korrekt für shellac/wax_cylinder, aber falsch für cassette+mp3_low
 - **Fix (§20.14.1):** Differenzierung nach terminal carrier — nur extreme Analog-Träger blocken
 
 **P5 — MQA 51→52 trotz MUSHRA 94,2 (Metrik-Problem):**
+
 - Musical Quality Assurer vergleicht gegen degradierten Input
 - Gleiche Root-Cause wie HPI-Vergleich gegen defekten Input (§19.3)
 - BlindInternalReference existiert bereits, wird aber von MQA nicht genutzt
@@ -401,12 +418,14 @@ Alle Ableitungen sind durch die genannten Log-Zeilen und Code-Stellen belegbar.
 **Datei:** `backend/core/phases/phase_06_frequency_restoration.py:587–610`
 
 **Vorher:**
+
 ```python
 if _td_p06 >= 4 and use_ml_hybrid:
     use_ml_hybrid = False  # Blind für ALLE
 ```
 
 **Nachher:**
+
 ```python
 if _td_p06 >= 4 and use_ml_hybrid:
     _term = str(_chain[-1]).lower() if _chain else str(material_type).lower()

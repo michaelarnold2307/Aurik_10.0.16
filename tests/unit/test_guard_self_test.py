@@ -7,9 +7,11 @@ Kein Guard darf bei Guard-Fehler crashen (non-blocking).
 
 Autor: Aurik 10 — August 2026
 """
+
 from __future__ import annotations
-import pytest
+
 import numpy as np
+import pytest
 
 
 def _make_test_audio(duration_s: float = 1.0, sr: int = 48000) -> np.ndarray:
@@ -90,10 +92,12 @@ class TestAllGuardsNonBlocking:
 class TestGuardTestResult:
     def test_result_dataclass(self):
         from dataclasses import dataclass
+
         @dataclass
         class GuardTestResult:
             passed: bool
             failures: list[str]
+
         r = GuardTestResult(passed=True, failures=[])
         assert r.passed
         r2 = GuardTestResult(passed=False, failures=["RMS drop detected"])

@@ -2,12 +2,14 @@
 
 Testet:
 - Stimulus-Zufälligkeit (ABX X-Zuweisung randomisiert)
-- Session-Isolation (Sessions unabhängig)  
+- Session-Isolation (Sessions unabhängig)
 - Ergebnis-Aggregation (Binomialtest, Statistik)
 """
+
 from __future__ import annotations
-import pytest
+
 import numpy as np
+import pytest
 
 
 def _make_test_audio(duration_s: float = 1.0, sr: int = 48000) -> np.ndarray:
@@ -20,7 +22,7 @@ class TestABXStimulusRandomness:
 
     def test_x_assignment_is_binary(self):
         """Jeder Trial hat X = A oder X = B (nicht immer gleich)."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.9
@@ -33,7 +35,7 @@ class TestABXStimulusRandomness:
 
     def test_x_distribution_is_roughly_balanced(self):
         """X sollte ungefähr 50/50 A/B sein (Binomial, p≈0.5)."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.9
@@ -50,7 +52,7 @@ class TestSessionIsolation:
 
     def test_two_sessions_independent(self):
         """Zwei ABBlindTest-Sessions mit verschiedenem Seed erzeugen verschiedene X-Muster."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.9
@@ -68,7 +70,7 @@ class TestSessionIsolation:
 
     def test_same_seed_reproduces(self):
         """Gleicher Seed = gleiches X-Muster (Reproduzierbarkeit)."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.9
@@ -90,7 +92,7 @@ class TestResultAggregation:
 
     def test_perfect_discrimination_is_significant(self):
         """20/20 korrekt → p < 0.001 (hochsignifikant)."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.5  # Deutlich anders
@@ -109,7 +111,7 @@ class TestResultAggregation:
 
     def test_random_guessing_is_not_significant(self):
         """10/20 korrekt → p ≈ 0.5 (Raten)."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.99  # Kaum unterscheidbar
@@ -130,7 +132,7 @@ class TestResultAggregation:
 
     def test_preference_tracking(self):
         """Preferences (A, B, none) werden korrekt gezählt."""
-        from backend.core.ab_comparison import ABComparison, ABBlindTest
+        from backend.core.ab_comparison import ABBlindTest, ABComparison
 
         audio_a = _make_test_audio()
         audio_b = audio_a * 0.9

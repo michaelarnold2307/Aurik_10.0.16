@@ -458,6 +458,7 @@ class AudioExporter:
         # ── §G4 CD-Rauschprofil: Vor jedem Export psychoakustisch maskiert injizieren ──
         try:
             from backend.core.cd_noise_profile import inject_cd_noise_profile  # type: ignore[import]
+
             audio_export = inject_cd_noise_profile(audio_export, sr, bit_depth=bit_depth)
         except ImportError:
             pass  # CD noise profile module not available — skip gracefully
@@ -468,11 +469,13 @@ class AudioExporter:
         if bit_depth <= 16:
             try:
                 from backend.core.dsp.powr_dither import apply_powr_dither  # type: ignore[import]
+
                 audio_export = apply_powr_dither(audio_export, sr, bit_depth=bit_depth)
             except ImportError:
                 # Fallback: TPDF-Dither via numpy
-                noise = np.random.default_rng().uniform(-0.5, 0.5, audio_export.shape) + \
-                        np.random.default_rng().uniform(-0.5, 0.5, audio_export.shape)
+                noise = np.random.default_rng().uniform(
+                    -0.5, 0.5, audio_export.shape
+                ) + np.random.default_rng().uniform(-0.5, 0.5, audio_export.shape)
                 dither_amp = 1.0 / (2 ** (bit_depth - 1))
                 audio_export = audio_export + (noise * dither_amp).astype(np.float32)
                 logger.debug("§V5 TPDF-Fallback-Dither angewendet (POW-r nicht verfügbar)")

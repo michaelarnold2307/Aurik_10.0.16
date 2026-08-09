@@ -18,7 +18,7 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from collections.abc import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -172,29 +172,25 @@ def gebot(gebot_id: str, title: str, description: str, category: str = ""):
 # ── Kategorie I: Individuelle Song-Maximierung ────────────────────────────────
 
 
-@gebot("§G1", "Pro-Song-Kalibrierung",
-       "Jeder Song durchläuft eine isolierte SongCalibration.")
+@gebot("§G1", "Pro-Song-Kalibrierung", "Jeder Song durchläuft eine isolierte SongCalibration.")
 def check_g1() -> tuple[bool, str]:
     ok = _find_in_code(r"song_calibration|SongCalibration|_song_calibration_profile")
     return ok, "SongCalibration im Code referenziert" if ok else "SongCalibration nicht gefunden"
 
 
-@gebot("§G2", "Defekt-Vollständigkeit",
-       "Alle 62 DefectTypes werden gescannt.")
+@gebot("§G2", "Defekt-Vollständigkeit", "Alle 62 DefectTypes werden gescannt.")
 def check_g2() -> tuple[bool, str]:
     ok = _function_exists("backend/core/defect_scanner.py", "scan_defect_presence")
     return ok, "scan_defect_presence() existiert" if ok else "scan_defect_presence() fehlt"
 
 
-@gebot("§G3", "Gesangsintegrität",
-       "Vocal-Safety-Wrapper aktiv für Frequenzen 80 Hz–8 kHz.")
+@gebot("§G3", "Gesangsintegrität", "Vocal-Safety-Wrapper aktiv für Frequenzen 80 Hz–8 kHz.")
 def check_g3() -> tuple[bool, str]:
     ok = _find_in_code(r"vocal_safety|VocalSafety|vocal_protection|panns_singing")
     return ok, "Vocal-Safety-Mechanismen im Code" if ok else "Keine Vocal-Safety gefunden"
 
 
-@gebot("§G4", "Ghost-Echo-Freiheit",
-       "PhaseCoherentSTFT muss in allen Modi laufen (§2.60 STCG).")
+@gebot("§G4", "Ghost-Echo-Freiheit", "PhaseCoherentSTFT muss in allen Modi laufen (§2.60 STCG).")
 def check_g4() -> tuple[bool, str]:
     ok = _method_exists("backend/core/dsp/phase_coherent_stft.py", "PhaseCoherentSTFT", "capture")
     and_restore = _method_exists("backend/core/dsp/phase_coherent_stft.py", "PhaseCoherentSTFT", "restore")
@@ -210,8 +206,7 @@ def check_g4() -> tuple[bool, str]:
     return False, "PhaseCoherentSTFT capture/restore fehlen"
 
 
-@gebot("§G7", "Interchannel-Lag",
-       "LAG_PROBE an ≥3 Positionen gemessen.")
+@gebot("§G7", "Interchannel-Lag", "LAG_PROBE an ≥3 Positionen gemessen.")
 def check_g7() -> tuple[bool, str]:
     count = len(re.findall(r"LAG_PROBE", (ROOT / "backend/core/unified_restorer_v3.py").read_text()))
     return count >= 3, f"LAG_PROBE {count}× referenziert (≥3 erforderlich)"
@@ -220,22 +215,19 @@ def check_g7() -> tuple[bool, str]:
 # ── Kategorie II: Psychoakustik ──────────────────────────────────────────────
 
 
-@gebot("§G11", "Natürlicher Wohlklang",
-       "PQS-MOS < 3.0 löst Rollback aus.")
+@gebot("§G11", "Natürlicher Wohlklang", "PQS-MOS < 3.0 löst Rollback aus.")
 def check_g11() -> tuple[bool, str]:
     ok = _find_in_code(r"PQS.*MOS.*3\.0|pqs_mos.*rollback|PQS-MOS.*<.*3")
     return ok, "PQS-MOS-Rollback-Schutz existiert" if ok else "Kein PQS-MOS-Rollback gefunden"
 
 
-@gebot("§G12", "Lautheitskonsistenz",
-       "LUFS-integrated nach EBU R128.")
+@gebot("§G12", "Lautheitskonsistenz", "LUFS-integrated nach EBU R128.")
 def check_g12() -> tuple[bool, str]:
     ok = _find_in_code(r"loudness_normalization|LUFS.*integrated|EBU.*R128|pyloudnorm")
     return ok, "LUFS-Normalisierung im Code" if ok else "Keine LUFS-Normalisierung"
 
 
-@gebot("§G14", "Spectral-Tilt-Guard",
-       "Spektrale Neigung nach jeder Phase geprüft.")
+@gebot("§G14", "Spectral-Tilt-Guard", "Spektrale Neigung nach jeder Phase geprüft.")
 def check_g14() -> tuple[bool, str]:
     ok = _find_in_code(r"spectral_tilt|spectral.*neigung|tilt.*guard")
     return ok, "Spectral-Tilt-Guard im Code" if ok else "Kein Spectral-Tilt-Guard"
@@ -244,22 +236,19 @@ def check_g14() -> tuple[bool, str]:
 # ── Kategorie III: Architektur ───────────────────────────────────────────────
 
 
-@gebot("§G21", "Denker-Zentralität",
-       "Alle Stärke-Entscheidungen fließen zentral im Denker.")
+@gebot("§G21", "Denker-Zentralität", "Alle Stärke-Entscheidungen fließen zentral im Denker.")
 def check_g21() -> tuple[bool, str]:
     ok = _find_in_code(r"Denker|denker|AurikDenker|strategie_denker")
     return ok, "Denker-System referenziert" if ok else "Denker-System nicht gefunden"
 
 
-@gebot("§G23", "ML-Fallback-Logging",
-       "Jeder ML→DSP-Fallback mit logger.warning protokolliert.")
+@gebot("§G23", "ML-Fallback-Logging", "Jeder ML→DSP-Fallback mit logger.warning protokolliert.")
 def check_g23() -> tuple[bool, str]:
-    ok = _find_in_code(r'logger\.warning\(.*ML.*DSP.*Fallback|ML→DSP-Fallback|logger\.warning.*Ersatzpfad')
+    ok = _find_in_code(r"logger\.warning\(.*ML.*DSP.*Fallback|ML→DSP-Fallback|logger\.warning.*Ersatzpfad")
     return ok, "ML→DSP-Fallback-Logging existiert" if ok else "Kein ML-Fallback-Logging"
 
 
-@gebot("§G24", "NaN/Inf-Schutz",
-       "Jede Phase wendet np.nan_to_num() auf Ausgabe-Audio an.")
+@gebot("§G24", "NaN/Inf-Schutz", "Jede Phase wendet np.nan_to_num() auf Ausgabe-Audio an.")
 def check_g24() -> tuple[bool, str]:
     count = 0
     _phases_dir = ROOT / "backend/core/phases"
@@ -272,8 +261,7 @@ def check_g24() -> tuple[bool, str]:
     return count >= 10, f"NaN/Inf-Schutz {count}× in Phasen (≥10 erwartet)"
 
 
-@gebot("§G25", "Logger-Pflicht",
-       "Jede Datei mit logger-Verwendung definiert logging.getLogger.")
+@gebot("§G25", "Logger-Pflicht", "Jede Datei mit logger-Verwendung definiert logging.getLogger.")
 def check_g25() -> tuple[bool, str]:
     violations = []
     for py_file in (ROOT / "backend/core").rglob("*.py"):
@@ -288,8 +276,7 @@ def check_g25() -> tuple[bool, str]:
     return False, f"Fehlende getLogger in: {', '.join(violations[:3])}"
 
 
-@gebot("§G26", "Guard-Counter-Lebendigkeit",
-       "Jeder deklarierte Guard-Counter wird inkrementiert (kein toter Code).")
+@gebot("§G26", "Guard-Counter-Lebendigkeit", "Jeder deklarierte Guard-Counter wird inkrementiert (kein toter Code).")
 def check_g26() -> tuple[bool, str]:
     # Prüft den UQ-Drive: _uq_drive_emit_count muss += 1 haben
     ok = _file_contains(
@@ -301,22 +288,24 @@ def check_g26() -> tuple[bool, str]:
 
 # ── Kategorie VII: v10.14 Durchblick-Fixes ───────────────────────────────────
 
-@gebot("§G-DB1", "Bayesian-Prior aktiv",
-       "unknown-Prior (P=0.01) in _bayesian_score implementiert.")
+
+@gebot("§G-DB1", "Bayesian-Prior aktiv", "unknown-Prior (P=0.01) in _bayesian_score implementiert.")
 def check_db1() -> tuple[bool, str]:
     ok = _file_contains("forensics/medium_detector.py", r"_P_UNKNOWN.*=.*0\.01")
     return ok, "Bayesian-Prior P(unknown)=0.01" if ok else "Bayesian-Prior fehlt oder falscher Wert"
 
 
-@gebot("§G-DB2", "CLAP File-Format-Plausibilität",
-       "CLAP vor Format-Erfindung → Tier-2 DSP-Fallback.")
+@gebot("§G-DB2", "CLAP File-Format-Plausibilität", "CLAP vor Format-Erfindung → Tier-2 DSP-Fallback.")
 def check_db2() -> tuple[bool, str]:
     ok = _file_contains("backend/core/era_classifier.py", r"_MATERIAL_INVENTED")
     return ok, "File-Format-Plausibilität existiert" if ok else "File-Format-Plausibilität fehlt"
 
 
-@gebot("§G-DB3", "UQ-Drive strength_explicit Fix",
-       "strength_explicit prüft _user_strength_override, nicht 'strength' in kwargs.")
+@gebot(
+    "§G-DB3",
+    "UQ-Drive strength_explicit Fix",
+    "strength_explicit prüft _user_strength_override, nicht 'strength' in kwargs.",
+)
 def check_db3() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/unified_restorer_v3.py",
@@ -325,8 +314,7 @@ def check_db3() -> tuple[bool, str]:
     return ok, "UQ-Drive strength_explicit fix" if ok else "UQ-Drive noch mit 'strength' in kwargs"
 
 
-@gebot("§G-DB4", "StereoAuth 2-Gate-Schutz",
-       "Mono-Kollaps nur bei rest_ms_corr < 0.80.")
+@gebot("§G-DB4", "StereoAuth 2-Gate-Schutz", "Mono-Kollaps nur bei rest_ms_corr < 0.80.")
 def check_db4() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/stereo_authenticity_invariant.py",
@@ -335,8 +323,7 @@ def check_db4() -> tuple[bool, str]:
     return ok, "StereoAuth 2-Gate (0.80 enforcement)" if ok else "StereoAuth noch mit altem 0.97-Gate"
 
 
-@gebot("§G-DB5", "PhaseSteeringGuard ≥12 Phasen",
-       "STOP_GRACEFUL erst ab ≥12 Phasen.")
+@gebot("§G-DB5", "PhaseSteeringGuard ≥12 Phasen", "STOP_GRACEFUL erst ab ≥12 Phasen.")
 def check_db5() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/phase_steering_guard.py",
@@ -345,15 +332,13 @@ def check_db5() -> tuple[bool, str]:
     return ok, "STOP_GRACEFUL ≥12 Phasen" if ok else "STOP_GRACEFUL ohne Min-Phasen-Guard"
 
 
-@gebot("§G-DB6", "Atomarer Cache-Clear",
-       "shutil.rmtree für __pycache__ in backend/__init__.py.")
+@gebot("§G-DB6", "Atomarer Cache-Clear", "shutil.rmtree für __pycache__ in backend/__init__.py.")
 def check_db6() -> tuple[bool, str]:
     ok = _file_contains("backend/__init__.py", r"rmtree.*__pycache__|__pycache__.*rmtree|rglob.*__pycache__")
     return ok, "Atomarer Cache-Clear in backend" if ok else "Cache-Clear fehlt"
 
 
-@gebot("§G-DB7", "Wohlklang-Garantie implementiert",
-       "MUSHRA < 80 → Re-Run mit 50% Strength.")
+@gebot("§G-DB7", "Wohlklang-Garantie implementiert", "MUSHRA < 80 → Re-Run mit 50% Strength.")
 def check_db7() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/unified_restorer_v3.py",
@@ -362,8 +347,7 @@ def check_db7() -> tuple[bool, str]:
     return ok, "Wohlklang-Garantie implementiert" if ok else "Wohlklang-Garantie fehlt"
 
 
-@gebot("§G-DB8", "TruePeak-Clamp −0.2 dBTP",
-       "Hard-Clip auf 0.977 linear nach HHCG.")
+@gebot("§G-DB8", "TruePeak-Clamp −0.2 dBTP", "Hard-Clip auf 0.977 linear nach HHCG.")
 def check_db8() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/unified_restorer_v3.py",
@@ -372,8 +356,7 @@ def check_db8() -> tuple[bool, str]:
     return ok, "TruePeak-Clamp −0.2 dBTP" if ok else "TruePeak-Clamp fehlt"
 
 
-@gebot("§G-DB9", "Phase 20 Primum-non-nocere universal",
-       "reverb_severity < 0.02 → Passthrough für ALLE Materialien.")
+@gebot("§G-DB9", "Phase 20 Primum-non-nocere universal", "reverb_severity < 0.02 → Passthrough für ALLE Materialien.")
 def check_db9() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/phases/phase_20_reverb_reduction.py",
@@ -382,15 +365,13 @@ def check_db9() -> tuple[bool, str]:
     return ok, "Phase 20 universal Passthrough" if ok else "Phase 20 nur digital Passthrough"
 
 
-@gebot("§G-DB10", "Era-Filter shellac",
-       "shellac bei Ära≥1955 aus Kette entfernt.")
+@gebot("§G-DB10", "Era-Filter shellac", "shellac bei Ära≥1955 aus Kette entfernt.")
 def check_db10() -> tuple[bool, str]:
     ok = _file_contains("backend/core/pre_analysis.py", r"shellac.*1955|_MATERIAL_ERA_END")
     return ok, "Era-Filter shellac=1955" if ok else "Era-Filter fehlt"
 
 
-@gebot("§G-DB11", "PerceptualExportOptimizer Material-Check",
-       "Cassette/Schellack → Skip ohne DeepFilterNetV3-Load.")
+@gebot("§G-DB11", "PerceptualExportOptimizer Material-Check", "Cassette/Schellack → Skip ohne DeepFilterNetV3-Load.")
 def check_db11() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/unified_restorer_v3.py",
@@ -399,15 +380,13 @@ def check_db11() -> tuple[bool, str]:
     return ok, "PEO Material-Pre-Check" if ok else "PEO lädt immer DeepFilterNetV3"
 
 
-@gebot("§G-DB12", "ExcellenceOptimizer Groove-Guard",
-       "onset-count vor/nach micro_dynamics mit _count_onsets().")
+@gebot("§G-DB12", "ExcellenceOptimizer Groove-Guard", "onset-count vor/nach micro_dynamics mit _count_onsets().")
 def check_db12() -> tuple[bool, str]:
     ok = _function_exists("backend/core/excellence_optimizer.py", "_count_onsets")
     return ok, "_count_onsets() existiert" if ok else "Groove-Guard fehlt"
 
 
-@gebot("§G-DB13", "Physik-Filter: prä-1960 + digital",
-       "shellac/wax_cylinder + mp3/aac → Analogmaterial entfernt.")
+@gebot("§G-DB13", "Physik-Filter: prä-1960 + digital", "shellac/wax_cylinder + mp3/aac → Analogmaterial entfernt.")
 def check_db13() -> tuple[bool, str]:
     ok = _file_contains(
         "backend/core/pre_analysis.py",

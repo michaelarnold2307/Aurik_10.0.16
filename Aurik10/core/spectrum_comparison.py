@@ -6,8 +6,11 @@ Berechnet Spektrogramm-Daten für GUI-Visualisierung:
 - Delta-Spektrogramm (Differenz)
 - Frequenzgang-Differenz (gemittelt über Zeit)
 """
+
 from __future__ import annotations
+
 import logging
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -34,6 +37,7 @@ def compute_spectrum_comparison(
         Dict mit spectrogram_before, spectrogram_after, spectrogram_delta,
         frequency_response_diff, metadata.
     """
+
     def to_mono(audio):
         arr = np.asarray(audio, dtype=np.float32)
         return arr.mean(axis=1) if arr.ndim == 2 else arr
@@ -47,6 +51,7 @@ def compute_spectrum_comparison(
     # Spektrogramme
     try:
         from scipy.signal import stft
+
         f_orig, t_orig, Z_orig = stft(mono_orig, fs=sample_rate, nperseg=n_fft, noverlap=n_fft - hop_length)
         _, _, Z_rest = stft(mono_rest, fs=sample_rate, nperseg=n_fft, noverlap=n_fft - hop_length)
     except ImportError:
@@ -57,8 +62,8 @@ def compute_spectrum_comparison(
         Z_rest = np.zeros_like(Z_orig)
         for i in range(n_frames):
             start = i * hop_length
-            Z_orig[:, i] = np.fft.rfft(mono_orig[start:start + n_fft] * np.hanning(n_fft))
-            Z_rest[:, i] = np.fft.rfft(mono_rest[start:start + n_fft] * np.hanning(n_fft))
+            Z_orig[:, i] = np.fft.rfft(mono_orig[start : start + n_fft] * np.hanning(n_fft))
+            Z_rest[:, i] = np.fft.rfft(mono_rest[start : start + n_fft] * np.hanning(n_fft))
 
     mag_orig = 20.0 * np.log10(np.abs(Z_orig) + 1e-12)
     mag_rest = 20.0 * np.log10(np.abs(Z_rest) + 1e-12)
@@ -70,12 +75,12 @@ def compute_spectrum_comparison(
     return {
         "sample_rate": sample_rate,
         "duration_s": min_len / sample_rate,
-        "frequencies_hz": f_orig[:len(f_orig)//2].tolist(),
+        "frequencies_hz": f_orig[: len(f_orig) // 2].tolist(),
         "times_s": (np.arange(mag_orig.shape[1]) * hop_length / sample_rate).tolist(),
-        "spectrogram_before_db": _downsample_2d(mag_orig[:len(f_orig)//2]).tolist(),
-        "spectrogram_after_db": _downsample_2d(mag_rest[:len(f_orig)//2]).tolist(),
-        "spectrogram_delta_db": _downsample_2d(mag_delta[:len(f_orig)//2]).tolist(),
-        "frequency_response_diff_db": freq_diff[:len(f_orig)//2].tolist(),
+        "spectrogram_before_db": _downsample_2d(mag_orig[: len(f_orig) // 2]).tolist(),
+        "spectrogram_after_db": _downsample_2d(mag_rest[: len(f_orig) // 2]).tolist(),
+        "spectrogram_delta_db": _downsample_2d(mag_delta[: len(f_orig) // 2]).tolist(),
+        "frequency_response_diff_db": freq_diff[: len(f_orig) // 2].tolist(),
         "max_delta_db": float(np.max(np.abs(mag_delta))),
         "mean_abs_delta_db": float(np.mean(np.abs(mag_delta))),
     }

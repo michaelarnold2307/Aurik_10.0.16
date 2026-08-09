@@ -5,7 +5,9 @@ Berechnet Defekt-Statistiken für GUI-Visualisierung:
 - Defekt-Reduktionsrate
 - Heatmap-Daten für Wellenform-Overlay
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -13,6 +15,7 @@ from typing import Any
 @dataclass
 class DefectCount:
     """Defekt-Zähler für einen Typ."""
+
     defect_type: str
     count_before: int = 0
     count_after: int = 0
@@ -37,6 +40,7 @@ class DefectCount:
 @dataclass
 class DefectMap:
     """Vorher/Nachher-Defekt-Karte."""
+
     defects: list[DefectCount] = field(default_factory=list)
     total_before: int = 0
     total_after: int = 0
@@ -66,6 +70,7 @@ class DefectMap:
         audio_duration_s: float = 0.0,
     ) -> DefectMap:
         """Erstellt DefectMap aus zwei Defekt-Listen (vorher/nachher)."""
+
         def count_by_type(defects):
             counts: dict[str, int] = {}
             sevs: dict[str, list[float]] = {}
@@ -82,13 +87,15 @@ class DefectMap:
         all_types = set(before_counts.keys()) | set(after_counts.keys())
         defect_list = []
         for dt in sorted(all_types):
-            defect_list.append(DefectCount(
-                defect_type=dt,
-                count_before=before_counts.get(dt, 0),
-                count_after=after_counts.get(dt, 0),
-                severity_before=sum(before_sevs.get(dt, [0])) / max(1, len(before_sevs.get(dt, [0]))),
-                severity_after=sum(after_sevs.get(dt, [0])) / max(1, len(after_sevs.get(dt, [0]))),
-            ))
+            defect_list.append(
+                DefectCount(
+                    defect_type=dt,
+                    count_before=before_counts.get(dt, 0),
+                    count_after=after_counts.get(dt, 0),
+                    severity_before=sum(before_sevs.get(dt, [0])) / max(1, len(before_sevs.get(dt, [0]))),
+                    severity_after=sum(after_sevs.get(dt, [0])) / max(1, len(after_sevs.get(dt, [0]))),
+                )
+            )
 
         return cls(
             defects=defect_list,

@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import argparse
 import json
-from pathlib import Path
 import logging
+from pathlib import Path
+
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -89,7 +90,11 @@ def _runtime_ready_checks() -> list[dict[str, str | bool]]:
             "runtime_ready": sgmse_primary or sgmse_fallback,
             "release_mode": "primary" if sgmse_primary else "fallback",
             "resolved_by": (
-                "primary" if sgmse_primary else ("torchscript_fallback" if sgmse_torchscript else "wpe_dsp_fallback")  # §V6: logger.warning handled at call site
+                "primary"
+                if sgmse_primary
+                else (
+                    "torchscript_fallback" if sgmse_torchscript else "wpe_dsp_fallback"
+                )  # §V6: logger.warning handled at call site
             ),
         },
         {

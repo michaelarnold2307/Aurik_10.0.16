@@ -505,14 +505,8 @@ class ReverbReduction(PhaseInterface):
         # attenuierte unnötig −3.19 dB und verursachte ROLLBACK (Δ−0.301 HPE).
         # Erweiterung: _skip_ml_digital_no_reverb prüft jetzt ALLE Materialien.
         _is_digital_ph20 = material.value in self._DIGITAL_LOW_REVERB_MATERIALS
-        _skip_ml_digital_no_reverb = (
-            _is_digital_ph20
-            and _reverb_severity_ph20 < self._DIGITAL_ML_REVERB_SEVERITY_MIN
-        )
-        _skip_all_no_reverb = (
-            (not _is_digital_ph20)
-            and _reverb_severity_ph20 < 0.02
-        )
+        _skip_ml_digital_no_reverb = _is_digital_ph20 and _reverb_severity_ph20 < self._DIGITAL_ML_REVERB_SEVERITY_MIN
+        _skip_all_no_reverb = (not _is_digital_ph20) and _reverb_severity_ph20 < 0.02
         if _skip_all_no_reverb:
             logger.info(
                 "Verarbeitungsschritt 20: §v10.14 — reverb_severity=%.3f < 0.02, material=%s → passthrough "

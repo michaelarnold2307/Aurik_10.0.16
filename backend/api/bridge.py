@@ -487,7 +487,9 @@ def _build_bridge_calibration_dict() -> dict:
         )
         return data.to_frontend_dict()
     except Exception as _dexc:
-        logger.warning("§G93 bridge: Defekt-Ergebnis-Konvertierung fehlgeschlagen → returning {}: %s", _dexc, exc_info=True)
+        logger.warning(
+            "§G93 bridge: Defekt-Ergebnis-Konvertierung fehlgeschlagen → returning {}: %s", _dexc, exc_info=True
+        )
         return {}
 
 
@@ -695,6 +697,7 @@ def get_unified_restorer_v3_instance():
 def get_ml_device_manager():
     """Gibt den MLDeviceManager-Singleton zurück (lazy import, §v10.305)."""
     from backend.core.ml_device_manager import get_ml_device_manager as _fn  # type: ignore[import]
+
     return _fn()
 
 
@@ -2022,7 +2025,9 @@ def warmup_models_background() -> None:
                 logger.warning("§G23 bridge: ML-Modell-Validierung DSP-Ersatzpfad: %s", exc_info=True)
             return True
         except Exception:
-            logger.warning("§G93 bridge: ML-Modell-Ladeversuch fehlgeschlagen (Segfault-Risiko) → returning False", exc_info=True)
+            logger.warning(
+                "§G93 bridge: ML-Modell-Ladeversuch fehlgeschlagen (Segfault-Risiko) → returning False", exc_info=True
+            )
             return False  # §v10.306: Im Zweifel NICHT laden — Segfault-Risiko
 
     # ── Tier 1: Alle kleinen Modelle sofort laden ────────────────────────
@@ -2184,33 +2189,39 @@ def get_model_downloader():
 # §G90 PresenceEmbedding + EraAuthenticPerceptualCompletion (Aurik 10.14)
 # ---------------------------------------------------------------------------
 
+
 def get_presence_embedding():
     """Gibt die globale PresenceEmbedding-Instanz zurück (§G90)."""
     from backend.core.presence_embedding import get_presence_embedding as _fn  # type: ignore[import]
+
     return _fn()
 
 
 def get_era_completion():
     """Gibt die globale EraAuthenticPerceptualCompletion-Instanz zurück (§G90)."""
     from backend.core.era_authentic_completion import get_era_completion as _fn  # type: ignore[import]
+
     return _fn()
 
 
 def get_rollback_sanity_guard():
     """Gibt den globalen RollbackSanityGuard zurück (§G92)."""
     from backend.core.rollback_sanity_check import get_rollback_sanity_guard as _fn  # type: ignore[import]
+
     return _fn()
 
 
 def get_preview_mode():
     """Gibt den PreviewMode für 30s-Vorschau zurück (§ROADMAP-5)."""
     from backend.core.preview_mode import get_preview_mode as _fn  # type: ignore[import]
+
     return _fn()
 
 
 def get_artist_fingerprint_store():
     """Gibt den globalen ArtistFingerprintStore zurück (§13.11)."""
     from backend.core.artist_fingerprint import get_artist_fingerprint_store as _fn  # type: ignore[import]
+
     return _fn()
 
 
@@ -3291,7 +3302,9 @@ def get_pipeline_ab_snapshots(*, include_audio: bool = True, max_duration_s: flo
 
         return snippets
     except Exception as _snap_exc:
-        logger.warning("§G93 bridge: get_pipeline_ab_snapshots DSP-Ersatzpfad → returning []: %s", _snap_exc, exc_info=True)
+        logger.warning(
+            "§G93 bridge: get_pipeline_ab_snapshots DSP-Ersatzpfad → returning []: %s", _snap_exc, exc_info=True
+        )
         return []
 
 
@@ -3313,7 +3326,9 @@ def get_phase_display_formatter_fns() -> dict[str, object]:
             "get_phase_display": get_phase_display,
         }
     except Exception as _fmt_exc:
-        logger.warning("§G93 bridge: get_phase_display_formatter_fns DSP-Ersatzpfad → returning {}: %s", _fmt_exc, exc_info=True)
+        logger.warning(
+            "§G93 bridge: get_phase_display_formatter_fns DSP-Ersatzpfad → returning {}: %s", _fmt_exc, exc_info=True
+        )
         return {}
 
 

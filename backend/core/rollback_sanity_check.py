@@ -107,8 +107,7 @@ def validate_rollback_audio(
 
     if result.rms_db < silence_threshold_db:
         result.failure_reason = (
-            f"Silence detected after rollback: RMS={result.rms_db:.1f} dBFS "
-            f"(threshold={silence_threshold_db:.0f} dBFS)"
+            f"Silence detected after rollback: RMS={result.rms_db:.1f} dBFS (threshold={silence_threshold_db:.0f} dBFS)"
         )
         result.recommended_action = (
             "NEXT checkpoint (not rollback target) as audio source. "
@@ -119,10 +118,7 @@ def validate_rollback_audio(
 
     # Check 3: Signal-Praesenz (Peak)
     if result.peak < min_peak:
-        result.failure_reason = (
-            f"No signal after rollback: peak={result.peak:.2e} "
-            f"(threshold={min_peak})"
-        )
+        result.failure_reason = f"No signal after rollback: peak={result.peak:.2e} (threshold={min_peak})"
         result.recommended_action = "NEXT checkpoint as audio source"
         logger.critical("RollbackSanityCheck FAILED: %s", result.failure_reason)
         return result
@@ -131,7 +127,9 @@ def validate_rollback_audio(
     result.passed = True
     logger.debug(
         "RollbackSanityCheck PASSED: phase=%s, rms=%.1f dBFS, peak=%.6f",
-        source_phase, result.rms_db, result.peak,
+        source_phase,
+        result.rms_db,
+        result.peak,
     )
     return result
 

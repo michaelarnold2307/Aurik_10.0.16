@@ -6,13 +6,14 @@ This module provides high-quality pitch tracking using the CREPE model
 analysis to distinguish pitch errors from musical expression.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
 from .logging_config import setup_logger
-import logging
+
 logger = logging.getLogger(__name__)
 
 # FCPE pitch plugin (CREPE ONNX Fallback + pYIN DSP intern)

@@ -2,6 +2,7 @@
 
 Integriert in ModernMainWindow.keyPressEvent().
 """
+
 from __future__ import annotations
 
 
@@ -101,6 +102,7 @@ class KeyboardShortcuts:
     def _toggle_expert_mode(self) -> bool:
         try:
             from Aurik10.core.expert_mode import get_expert_mode
+
             em = get_expert_mode()
             em.enabled = not em.enabled
             if self._window:

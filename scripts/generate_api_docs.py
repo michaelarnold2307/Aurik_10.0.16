@@ -4,8 +4,12 @@ Extrahiert Docstrings aus backend/api/bridge.py und generiert Markdown.
 
 Autor: Aurik 10
 """
+
 from __future__ import annotations
-import ast, os, sys
+
+import ast
+import os
+import sys
 from pathlib import Path
 
 

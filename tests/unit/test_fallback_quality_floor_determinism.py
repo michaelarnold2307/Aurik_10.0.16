@@ -112,7 +112,9 @@ def test_fallback_quality_floor_handles_non_finite_hpi_stably() -> None:
 @pytest.mark.unit
 @pytest.mark.timeout(20)
 def test_fallback_quality_floor_enforces_hard_limit_for_ml_fallback_count() -> None:
-    fallbacks = [{"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 9)]  # §V6: logger.warning handled at call site
+    fallbacks = [
+        {"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 9)
+    ]  # §V6: logger.warning handled at call site
     result = UnifiedRestorerV3._evaluate_fallback_quality_floor(
         ml_fallbacks_used=fallbacks,
         hpi_result=SimpleNamespace(passed=True, hpi=0.91),
@@ -132,7 +134,9 @@ def test_fallback_quality_floor_enforces_hard_limit_for_ml_fallback_count() -> N
 @pytest.mark.unit
 @pytest.mark.timeout(20)
 def test_fallback_quality_floor_supports_stricter_vocal_profile_limit() -> None:
-    fallbacks = [{"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 5)]  # §V6: logger.warning handled at call site
+    fallbacks = [
+        {"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 5)
+    ]  # §V6: logger.warning handled at call site
     result = UnifiedRestorerV3._evaluate_fallback_quality_floor(
         ml_fallbacks_used=fallbacks,
         hpi_result=SimpleNamespace(passed=True, hpi=0.91),
@@ -152,7 +156,9 @@ def test_fallback_quality_floor_supports_stricter_vocal_profile_limit() -> None:
 @pytest.mark.unit
 @pytest.mark.timeout(20)
 def test_fallback_quality_floor_emits_warning_level_before_hard_limit() -> None:
-    fallbacks = [{"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 5)]  # §V6: logger.warning handled at call site
+    fallbacks = [
+        {"phase": f"phase_{i:02d}", "fallback": "dsp"} for i in range(1, 5)
+    ]  # §V6: logger.warning handled at call site
     result = UnifiedRestorerV3._evaluate_fallback_quality_floor(
         ml_fallbacks_used=fallbacks,
         hpi_result=SimpleNamespace(passed=True, hpi=0.91),

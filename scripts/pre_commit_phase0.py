@@ -63,7 +63,7 @@ def _check_syntax(filepath: str) -> bool:
 def _check_import() -> bool:
     """Prüft ob ChainedPhase0Preprocessor importierbar ist."""
     try:
-        from plugins.apollo_phase0_integration import (  # noqa: F401
+        from plugins.apollo_phase0_integration import (
             ApolloPhase0Guard,
             ApolloResult,
             ChainedPhase0Preprocessor,
@@ -157,7 +157,7 @@ def main() -> int:
         print(f"\n📋 {_name}...")
         try:
             if _fn():
-                print(f"  ✅ PASS")
+                print("  ✅ PASS")
             else:
                 _failures += 1
         except Exception as e:

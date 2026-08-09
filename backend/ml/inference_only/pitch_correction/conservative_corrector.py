@@ -13,13 +13,14 @@ Key Features:
 6. Transient Preservation: Protect attack characteristics
 """
 
+import logging
 from dataclasses import dataclass
 
 import numpy as np
 
 from .logging_config import setup_logger
 from .pitch_detector import CREPEPitchDetector, PitchAnalysis
-import logging
+
 logger = logging.getLogger(__name__)
 
 # Optional dependencies with fallbacks

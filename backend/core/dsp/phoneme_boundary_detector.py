@@ -154,7 +154,7 @@ def get_phoneme_features_dsp(
     try:
         hop_length = _valid_hop_length(hop_length)
         mono = _to_mono(audio)
-    except Exception as exc:
+    except Exception:
         logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     except Exception as exc:
         logger.debug("phoneme_features_dsp: Fehler: %s", exc)
@@ -185,7 +185,7 @@ def detect_phoneme_protection_mask_dsp(
                 continue
             start = max(0, idx * hop_length - guard)
             end = min(n_samples, idx * hop_length + hop_length * 2 + guard)
-    except Exception as exc:  # pylint: disable=broad-except
+    except Exception:  # pylint: disable=broad-except
         logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         return mask  # type: ignore[no-any-return]
     except Exception as exc:  # pylint: disable=broad-except

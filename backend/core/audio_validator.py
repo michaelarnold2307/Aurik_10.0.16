@@ -3,6 +3,7 @@ Spec 08 paragraph 8.1.4. Begrenzt die maximale Audio-Groesse im RAM.
 
 Autor: Aurik 10
 """
+
 from __future__ import annotations
 
 # Maximale Audio-Datenmenge im RAM (4 GB = 4 * 1024**3 Bytes)
@@ -18,12 +19,12 @@ MAX_CHANNELS: int = 8
 
 def validate_audio_size(num_samples: int, num_channels: int = 2, bytes_per_sample: int = 4) -> bool:
     """Prueft ob die Audio-Daten ins RAM-Budget passen.
-    
+
     Args:
         num_samples: Anzahl Samples pro Kanal
         num_channels: Anzahl Kanaele (default 2 = Stereo)
         bytes_per_sample: Bytes pro Sample (default 4 = float32)
-    
+
     Returns:
         True wenn innerhalb des Budgets
     """

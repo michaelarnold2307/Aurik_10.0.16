@@ -263,7 +263,9 @@ class LoudnessNormalizationPhase(PhaseInterface):
             _effective_strength = float(_effective_strength * _mode_scale)
             logger.debug(
                 "LoudnessNorm: mode=%s → strength scaled ×%.2f (effective=%.3f)",
-                _mode_raw, _mode_scale, _effective_strength,
+                _mode_raw,
+                _mode_scale,
+                _effective_strength,
             )
 
         _amplitude_drift_requested = bool(kwargs.get("amplitude_drift_correction", False))
@@ -478,6 +480,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         # pyloudnorm liefert dasselbe Ergebnis in <1s.
         try:
             import pyloudnorm as _pyln
+
             _p40_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
             _p40_meter = _pyln.Meter(sample_rate)
             integrated_lufs = float(_p40_meter.integrated_loudness(_p40_mono.astype(np.float64)))
@@ -595,6 +598,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         # Final measurements — §v10.14.1 pyloudnorm fast-path
         try:
             import pyloudnorm as _pyln2
+
             _p40_final_mono = normalized if normalized.ndim == 1 else normalized.mean(axis=0)
             _p40_final_meter = _pyln2.Meter(sample_rate)
             final_lufs = float(_p40_final_meter.integrated_loudness(_p40_final_mono.astype(np.float64)))

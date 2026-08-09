@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PhaseTiming:
     """Timing-Daten einer einzelnen Phase."""
+
     phase_id: str
     start_time: float = 0.0
     end_time: float = 0.0
@@ -38,6 +39,7 @@ class PhaseTiming:
 @dataclass
 class PipelinePerformance:
     """Gesamt-Performance-Daten des Pipeline-Laufs."""
+
     phases: list[PhaseTiming] = field(default_factory=list)
     total_audio_duration_s: float = 0.0
     total_processing_s: float = 0.0
@@ -94,6 +96,7 @@ class PhasePerformanceTracker:
         self._peak_memory_mb: float = 0.0
         try:
             import tracemalloc
+
             tracemalloc.start()
             self._has_tracemalloc = True
         except Exception:
@@ -107,6 +110,7 @@ class PhasePerformanceTracker:
         self._peak_memory_mb = 0.0
         if self._has_tracemalloc:
             import tracemalloc
+
             tracemalloc.reset_peak()
 
     def start_phase(self, phase_id: str) -> None:
@@ -153,6 +157,7 @@ class PhasePerformanceTracker:
 
         if self._has_tracemalloc:
             import tracemalloc
+
             _, peak = tracemalloc.get_traced_memory()
             self._peak_memory_mb = peak / (1024 * 1024)
 

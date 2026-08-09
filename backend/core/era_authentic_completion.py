@@ -5,7 +5,7 @@ Spec 03 §2.1, Spec 02 §1.5 Schritt 8.
 Aktiviert bei Quell-BW < 10 kHz. Rekonstruiert fehlende Höhenanteile
 mit era-appropriate Spektralformung via DSP BandwidthExtender.
 
-Nur für die Studio-2026-Kette. Kein ML, kein Download. 
+Nur für die Studio-2026-Kette. Kein ML, kein Download.
 100% deterministisch, 100% offline.
 
 Author: Aurik 10 — August 2026
@@ -230,8 +230,7 @@ class EraAuthenticPerceptualCompletion:
 
             self._applied = True
             logger.info(
-                "EraAuthenticPerceptualCompletion: Decade=%s, amount=%.2f, max_target=%.0f Hz, "
-                "BW vorher=%.0f Hz",
+                "EraAuthenticPerceptualCompletion: Decade=%s, amount=%.2f, max_target=%.0f Hz, BW vorher=%.0f Hz",
                 decade if decade else "auto",
                 amount,
                 max_target,
@@ -242,8 +241,7 @@ class EraAuthenticPerceptualCompletion:
 
         except Exception as exc:
             logger.warning(
-                "EraAuthenticPerceptualCompletion: Fehler bei Completion — "
-                "Original wird zurückgegeben: %s",
+                "EraAuthenticPerceptualCompletion: Fehler bei Completion — Original wird zurückgegeben: %s",
                 exc,
             )
             return arr
@@ -263,9 +261,7 @@ def _map_material_to_extender_category(material: str) -> str:
     return "shellac"  # Konservativster Fallback
 
 
-def _apply_era_spectral_shaping(
-    audio: np.ndarray, sr: int, *, max_target_hz: float
-) -> np.ndarray:
+def _apply_era_spectral_shaping(audio: np.ndarray, sr: int, *, max_target_hz: float) -> np.ndarray:
     """Wendet ära-spezifische spektrale Formung an (sanfter Lowpass).
 
     Simuliert den natürlichen Frequenzgang der Ära durch einen
@@ -297,9 +293,7 @@ def _apply_era_spectral_shaping(
         return audio
 
 
-def _validate_completion(
-    original: np.ndarray, completed: np.ndarray, sr: int
-) -> bool:
+def _validate_completion(original: np.ndarray, completed: np.ndarray, sr: int) -> bool:
     """Psychoakustische Plausibilitätsprüfung der Completion.
 
     Prüft dass die Completion:

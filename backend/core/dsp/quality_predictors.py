@@ -316,7 +316,9 @@ class SingMOSPredictor:
             return mos
 
         except Exception as exc:
-            logger.warning("§G23 SingMOSPredictor.predict DSP-Ersatzpfad (returning default 3.0): %s", exc, exc_info=True)
+            logger.warning(
+                "§G23 SingMOSPredictor.predict DSP-Ersatzpfad (returning default 3.0): %s", exc, exc_info=True
+            )
             return 3.0
 
 

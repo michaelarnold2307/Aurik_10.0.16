@@ -103,7 +103,9 @@ class MertAnalysis:
     spectral_flux_coherence: float = 0.0  # [0, 1] — Ev. Flux-Kohärenz
     estimated_f0_hz: float = 0.0  # Gemittelte Grundfrequenz in Hz
     naturalness_score: float = 0.0  # Kombinierter NAT-Score [0, 1]
-    model_used: str = "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"  # §V6: logger.warning handled at call site
+    model_used: str = (
+        "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"  # §V6: logger.warning handled at call site
+    )
     analysis_frames: int = 0  # Anzahl analysierter Frames
     extra: dict = field(default_factory=dict)
 

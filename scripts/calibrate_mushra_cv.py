@@ -61,19 +61,27 @@ def generate_internal_metrics_features(n_samples: int = 30) -> tuple[np.ndarray,
         naturalness = float(np.clip(rng.normal(0.80, 0.10), 0.0, 1.0))
         artifact_freedom = float(np.clip(rng.normal(0.85, 0.10), 0.0, 1.0))
 
-        X[i] = [hpi, vqi, presence, defect_reduction, rt_factor / 60.0,
-                musical_goals_mean, naturalness, artifact_freedom]
+        X[i] = [
+            hpi,
+            vqi,
+            presence,
+            defect_reduction,
+            rt_factor / 60.0,
+            musical_goals_mean,
+            naturalness,
+            artifact_freedom,
+        ]
 
         # MUSHRA-Score (ground truth, korreliert mit Features + Rauschen)
         mushra = (
-            0.30 * hpi +
-            0.20 * presence +
-            0.15 * vqi +
-            0.15 * musical_goals_mean +
-            0.10 * artifact_freedom +
-            0.05 * defect_reduction +
-            0.05 * (1.0 - rt_factor / 60.0) +
-            rng.normal(0, 0.05)  # Rauschen
+            0.30 * hpi
+            + 0.20 * presence
+            + 0.15 * vqi
+            + 0.15 * musical_goals_mean
+            + 0.10 * artifact_freedom
+            + 0.05 * defect_reduction
+            + 0.05 * (1.0 - rt_factor / 60.0)
+            + rng.normal(0, 0.05)  # Rauschen
         )
         y[i] = float(np.clip(mushra * 100.0, 0.0, 100.0))  # MUSHRA 0-100
 
@@ -104,7 +112,7 @@ def run_kfold_cv(
     model = Ridge(alpha=alpha)
 
     # Cross-Validation R²
-    cv_scores = cross_val_score(model, X, y, cv=kf, scoring='r2')
+    cv_scores = cross_val_score(model, X, y, cv=kf, scoring="r2")
     r2_mean = float(np.mean(cv_scores))
     r2_std = float(np.std(cv_scores))
 
@@ -112,15 +120,21 @@ def run_kfold_cv(
     print(f"    R² mean: {r2_mean:.4f}")
     print(f"    R² std:  {r2_std:.4f}")
     for i, score in enumerate(cv_scores):
-        print(f"    Fold {i+1}: R²={score:.4f}")
+        print(f"    Fold {i + 1}: R²={score:.4f}")
 
     # Finales Modell auf allen Daten trainieren
     model.fit(X, y)
     train_r2 = float(model.score(X, y))
 
     feature_names = [
-        "hpi", "vqi", "presence", "defect_reduction", "rt_factor_norm",
-        "musical_goals_mean", "naturalness", "artifact_freedom",
+        "hpi",
+        "vqi",
+        "presence",
+        "defect_reduction",
+        "rt_factor_norm",
+        "musical_goals_mean",
+        "naturalness",
+        "artifact_freedom",
     ]
 
     return {
@@ -142,9 +156,9 @@ def run_kfold_cv(
 
 
 def main():
-    k = int(sys.argv[2]) if '--k' in sys.argv else 5
-    alpha = float(sys.argv[4]) if '--alpha' in sys.argv else 1.0
-    force = '--force' in sys.argv
+    k = int(sys.argv[2]) if "--k" in sys.argv else 5
+    alpha = float(sys.argv[4]) if "--alpha" in sys.argv else 1.0
+    force = "--force" in sys.argv
 
     CALIBRATION_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -176,12 +190,12 @@ def main():
     with open(CALIBRATION_FILE, "w") as f:
         json.dump(result, f, indent=2)
 
-    print(f"\n=== CV-Kalibrierung abgeschlossen ===")
+    print("\n=== CV-Kalibrierung abgeschlossen ===")
     print(f"Artefakt: {CALIBRATION_FILE}")
     print(f"CV R²: {result['cv_r2_mean']:.4f} ± {result['cv_r2_std']:.4f}")
     print(f"Verbesserung: {bootstrap.get('r2_score', 0):.2f} → {result['cv_r2_mean']:.2f}" if bootstrap else "")
 
-    if result['cv_r2_mean'] >= 0.50:
+    if result["cv_r2_mean"] >= 0.50:
         print("✅ SOTA-Ziel R²≥0.50 erreicht")
     else:
         print("⚠️ R² noch unter SOTA-Ziel 0.50 — mehr Samples oder echte Panel-Daten nötig")

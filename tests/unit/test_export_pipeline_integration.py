@@ -6,11 +6,14 @@ Verifiziert die vollständige Export-Pipeline:
 - Atomic Write
 - Alle Formate (FLAC, WAV, MP3, OGG)
 """
+
 from __future__ import annotations
+
 import tempfile
-import pytest
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 
 def _make_test_audio(duration_s: float = 2.0, sr: int = 48000) -> np.ndarray:
@@ -26,6 +29,7 @@ class TestExportPipeline:
     def test_export_flac_with_cd_noise_and_dither(self):
         """FLAC-Export mit CD-Rauschprofil + POW-r Dither."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -37,6 +41,7 @@ class TestExportPipeline:
     def test_export_wav_24bit(self):
         """WAV 24-bit Export (kein Dither nötig)."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -47,6 +52,7 @@ class TestExportPipeline:
     def test_export_mp3(self):
         """MP3-Export (lossy — kein Dither)."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -61,6 +67,7 @@ class TestExportPipeline:
     def test_export_mono(self):
         """Mono-Export."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()[:, 0]
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -71,6 +78,7 @@ class TestExportPipeline:
     def test_atomic_write_no_temp_left(self):
         """Atomic Write: kein .tmp bleibt zurück."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -82,6 +90,7 @@ class TestExportPipeline:
     def test_export_with_metadata(self):
         """Export mit Metadaten."""
         from backend.core.audio_exporter import AudioExporter
+
         audio = _make_test_audio()
         exporter = AudioExporter()
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -96,6 +105,7 @@ class TestPOWrDither:
     def test_dither_adds_noise_below_lsb(self):
         """Dither-Rauschen < 1 LSB."""
         from backend.core.dsp.powr_dither import apply_powr_dither
+
         audio = _make_test_audio()[:, 0]
         dithered = apply_powr_dither(audio, 48000, bit_depth=16)
         diff_std = float(np.std(audio - dithered))
@@ -105,6 +115,7 @@ class TestPOWrDither:
     def test_dither_is_deterministic_with_seed(self):
         """Gleicher Seed = gleiches Dither."""
         from backend.core.dsp.powr_dither import apply_powr_dither
+
         audio = _make_test_audio()[:, 0]
         d1 = apply_powr_dither(audio, 48000, bit_depth=16, seed=42)
         d2 = apply_powr_dither(audio, 48000, bit_depth=16, seed=42)
@@ -113,6 +124,7 @@ class TestPOWrDither:
     def test_noise_floor_reduction_in_mid_band(self):
         """POW-r reduziert Rauschen im 2-5 kHz Bereich vs. TPDF."""
         from backend.core.dsp.powr_dither import compute_noise_floor_reduction
+
         reduction = compute_noise_floor_reduction()
         mid_band = reduction.get("2-5 kHz (Max. Empfindlichkeit)", 0)
         assert mid_band > 2.0, f"Noise floor reduction {mid_band}dB should be > 2dB"

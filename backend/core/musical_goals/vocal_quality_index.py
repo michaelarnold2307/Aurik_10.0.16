@@ -244,7 +244,7 @@ def _compute_singer_identity(
             raise RuntimeError("embed() returned None")
 
         cosine = plugin.cosine_similarity(emb_pre, emb_post)
-    except Exception as exc:
+    except Exception:
         logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
     except Exception as exc:
         logger.debug("Resemblyzer not verfuegbar (%s) — DSP Ersatzpfad", exc)

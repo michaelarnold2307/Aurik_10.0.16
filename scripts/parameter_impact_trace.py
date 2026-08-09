@@ -7,8 +7,14 @@ bis zur Anwendung, generiert docs/parameter_graph.json.
 Usage:
     python scripts/parameter_impact_trace.py [--check] [--output json|md]
 """
+
 from __future__ import annotations
-import ast, json, hashlib, os, sys
+
+import ast
+import hashlib
+import json
+import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -29,12 +35,14 @@ def extract_parameters(filepath: str) -> list[dict]:
                 if isinstance(target, ast.Name) and target.id.startswith("_"):
                     if isinstance(node.value, (ast.Constant, ast.Num)):
                         val = node.value.value if isinstance(node.value, ast.Constant) else node.value.n
-                        params.append({
-                            "name": target.id,
-                            "value": val,
-                            "line": node.lineno,
-                            "type": type(node.value).__name__,
-                        })
+                        params.append(
+                            {
+                                "name": target.id,
+                                "value": val,
+                                "line": node.lineno,
+                                "type": type(node.value).__name__,
+                            }
+                        )
     return params
 
 
@@ -48,8 +56,9 @@ def trace_usage(filepath: str, param_name: str) -> list[dict]:
     for node in ast.walk(tree):
         if isinstance(node, ast.Name) and node.id == param_name:
             if isinstance(node.ctx, ast.Load):
-                usages.append({"line": node.lineno, "col": node.col_offset,
-                              "context": lines[node.lineno - 1].strip()[:120]})
+                usages.append(
+                    {"line": node.lineno, "col": node.col_offset, "context": lines[node.lineno - 1].strip()[:120]}
+                )
     return usages
 
 
@@ -65,12 +74,12 @@ def generate_graph(target: str, output_json: str, output_md: str) -> dict:
     graph["hash"] = hashlib.sha256(open(target, "rb").read()).hexdigest()[:16]
     with open(output_json, "w") as f:
         json.dump(graph, f, indent=2)
-    lines = [f"# Parameter-Interaktions-Graph", f"", f"> Auto-generated. Source: `{target}`", f""]
+    lines = ["# Parameter-Interaktions-Graph", "", f"> Auto-generated. Source: `{target}`", ""]
     for p in sorted(graph["parameters"], key=lambda x: -x["impact_count"]):
         lines.append(f"## {p['name']} (line {p['line']})")
         lines.append(f"- Default: `{p['value']}`")
         lines.append(f"- Used in {p['impact_count']} locations")
-        if p['usages']:
+        if p["usages"]:
             lines.append(f"- First usage: line {p['usages'][0]['line']}")
         lines.append("")
     with open(output_md, "w") as f:

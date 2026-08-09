@@ -619,8 +619,7 @@ def run_pre_analysis(
             _defect_score: float = 0.0
             if result.defects is not None and hasattr(result.defects, "scores"):
                 _ds = getattr(result.defects, "scores", {})
-                _sevs = [float(getattr(s, "severity", 0.0))
-                         for s in (_ds.values() if isinstance(_ds, dict) else [])]
+                _sevs = [float(getattr(s, "severity", 0.0)) for s in (_ds.values() if isinstance(_ds, dict) else [])]
                 _defect_score = sum(_sevs) if _sevs else 0.0
 
             _physical = list(getattr(_md, "physical_analog_sources", []) or [])
@@ -665,8 +664,14 @@ def run_pre_analysis(
                     "wow": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
                     "flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
                     "multiband_wow_flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.25),
-                    "print_through": ("cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape", 0.30),
-                    "tape_head_level_dip": ("cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape", 0.25),
+                    "print_through": (
+                        "cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape",
+                        0.30,
+                    ),
+                    "tape_head_level_dip": (
+                        "cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape",
+                        0.25,
+                    ),
                     "low_freq_rumble": ("vinyl", 0.30),
                     "soft_saturation": ("reel_tape", 0.30),
                     "quantization_noise": ("cd_digital", 0.30),
@@ -838,10 +843,7 @@ def run_pre_analysis(
                 }
                 if _era_decade and _era_decade > 0:
                     _pre_filter_chain = list(_chain)
-                    _chain = [
-                        m for m in _chain
-                        if _MATERIAL_ERA_END.get(m, 9999) >= _era_decade - 10
-                    ]
+                    _chain = [m for m in _chain if _MATERIAL_ERA_END.get(m, 9999) >= _era_decade - 10]
                     _removed = len(_pre_filter_chain) - len(_chain)
                     if _removed > 0:
                         logger.info(
@@ -856,9 +858,18 @@ def run_pre_analysis(
                 # ist das Analogmaterial ANACHRONISTISCH — es kann nicht das
                 # Original-Aufnahmemedium eines digital vorliegenden Songs sein.
                 # CLAP verwechselt Schlager mit Schellack-Ära → Shellac muss raus.
-                _DIGITAL_END = {"mp3_low", "mp3_high", "mp3_high_vbr", "aac",
-                               "streaming", "cd_digital", "pcm_digital",
-                               "lossless_digital", "dat", "minidisc"}
+                _DIGITAL_END = {
+                    "mp3_low",
+                    "mp3_high",
+                    "mp3_high_vbr",
+                    "aac",
+                    "streaming",
+                    "cd_digital",
+                    "pcm_digital",
+                    "lossless_digital",
+                    "dat",
+                    "minidisc",
+                }
                 _PRE_1960_ANALOG = {"shellac", "wax_cylinder", "wire_recording"}
                 _has_digital_end = bool(set(_chain) & _DIGITAL_END)
                 _has_pre1960 = bool(set(_chain) & _PRE_1960_ANALOG)
@@ -877,22 +888,31 @@ def run_pre_analysis(
                     # §v10.14: Letzten Eintrag (Endformat, z.B. mp3_high) IMMER behalten.
                     # Aus den analogen Zwischenträgern den Ära-plausibelsten wählen.
                     if len(_chain) > 1 and _chain[-1] not in (
-                        "shellac", "wax_cylinder", "vinyl", "cassette",
-                        "reel_tape", "tape", "lacquer_disc", "wire_recording",
+                        "shellac",
+                        "wax_cylinder",
+                        "vinyl",
+                        "cassette",
+                        "reel_tape",
+                        "tape",
+                        "lacquer_disc",
+                        "wire_recording",
                     ):
                         _last = [_chain[-1]]
                         _analog_candidates = _chain[:-1]
                         # §v10.14: Ära-bewusste Auswahl — Material das zur Ära passt bevorzugen
                         _MATERIAL_ERA_PEAK: dict[str, int] = {
-                            "shellac": 1930, "wax_cylinder": 1900, "lacquer_disc": 1965,
-                            "wire_recording": 1940, "reel_tape": 1965, "vinyl": 1975,
-                            "cassette": 1985, "tape": 1970,
+                            "shellac": 1930,
+                            "wax_cylinder": 1900,
+                            "lacquer_disc": 1965,
+                            "wire_recording": 1940,
+                            "reel_tape": 1965,
+                            "vinyl": 1975,
+                            "cassette": 1985,
+                            "tape": 1970,
                         }
                         if _era_decade and _era_decade > 0:
-                            _analog_candidates.sort(
-                                key=lambda m: abs(_MATERIAL_ERA_PEAK.get(m, 1970) - _era_decade)
-                            )
-                        _middle = _analog_candidates[:_max_chain_depth - 1]
+                            _analog_candidates.sort(key=lambda m: abs(_MATERIAL_ERA_PEAK.get(m, 1970) - _era_decade))
+                        _middle = _analog_candidates[: _max_chain_depth - 1]
                         _trimmed = _middle + _last
                     else:
                         _trimmed = _chain[:_max_chain_depth]
@@ -923,12 +943,15 @@ def run_pre_analysis(
                     if _best_known and _best_known != _chain:
                         logger.info(
                             "pre_Analyse: Chain auf bekannte Vorlage korrigiert: %s → %s",
-                            " → ".join(_chain), " → ".join(_best_known),
+                            " → ".join(_chain),
+                            " → ".join(_best_known),
                         )
                         _chain = _best_known
                         _md.transfer_chain = _chain  # type: ignore[attr-defined]
                 except Exception:
-                    logger.debug("pre_analysis: transfer_chain injection failed for one stage, continuing", exc_info=True)
+                    logger.debug(
+                        "pre_analysis: transfer_chain injection failed for one stage, continuing", exc_info=True
+                    )
 
                 logger.info(
                     "pre_Analyse: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
@@ -940,18 +963,35 @@ def run_pre_analysis(
 
                 # ── §v10.20 Material-Konsens: 3 Detektoren abgleichen + Kette korrigieren ──
                 try:
-                    from backend.core.material_consensus import resolve_material_consensus, validate_material_era_consistency
+                    from backend.core.material_consensus import (
+                        resolve_material_consensus,
+                        validate_material_era_consistency,
+                    )
 
                     _consensus = resolve_material_consensus(
-                        medium_result={"material": _chain[-1] if _chain else "unknown", "confidence": _md_confidence, "chain": " → ".join(_chain)},
-                        era_result={"material": _era_material, "decade": _era_decade, "confidence": _era_confidence} if _era_material else None,
-                        defect_result={"material": _defect_material, "score": _defect_score,
-                                      "material_scores": _defect_carrier_scores} if _defect_material else None,
+                        medium_result={
+                            "material": _chain[-1] if _chain else "unknown",
+                            "confidence": _md_confidence,
+                            "chain": " → ".join(_chain),
+                        },
+                        era_result={"material": _era_material, "decade": _era_decade, "confidence": _era_confidence}
+                        if _era_material
+                        else None,
+                        defect_result={
+                            "material": _defect_material,
+                            "score": _defect_score,
+                            "material_scores": _defect_carrier_scores,
+                        }
+                        if _defect_material
+                        else None,
                     )
 
                     if _consensus["conflict_detected"]:
-                        logger.warning("pre_Analyse: Material-KONFLIKT — gewählter Konsens: %s (%.2f)",
-                                       _consensus["material"], _consensus["confidence"])
+                        logger.warning(
+                            "pre_Analyse: Material-KONFLIKT — gewählter Konsens: %s (%.2f)",
+                            _consensus["material"],
+                            _consensus["confidence"],
+                        )
                         # Korrigiere die Kette mit allen Detektor-Ergebnissen
                         _all_materials = []
                         for _det, _info in _consensus["all_votes"].items():
@@ -959,8 +999,21 @@ def run_pre_analysis(
                             if _mat and _mat != "unknown" and _mat not in _all_materials:
                                 _all_materials.append(_mat)
                         if len(_all_materials) > 1:
-                            _era_order = ["shellac", "wax_cylinder", "vinyl", "lacquer_disc", "reel_tape",
-                                         "cassette", "dat", "cd", "minidisc", "mp3", "mp3_low", "mp3_high", "streaming"]
+                            _era_order = [
+                                "shellac",
+                                "wax_cylinder",
+                                "vinyl",
+                                "lacquer_disc",
+                                "reel_tape",
+                                "cassette",
+                                "dat",
+                                "cd",
+                                "minidisc",
+                                "mp3",
+                                "mp3_low",
+                                "mp3_high",
+                                "streaming",
+                            ]
                             _all_materials.sort(key=lambda m: _era_order.index(m) if m in _era_order else 99)
                             _chain = _all_materials
                             _md.transfer_chain = _chain  # type: ignore[attr-defined]

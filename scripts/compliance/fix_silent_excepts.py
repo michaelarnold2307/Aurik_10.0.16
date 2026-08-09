@@ -6,10 +6,11 @@ Adds logger.debug(..., exc_info=True) before bare pass/return/continue
 in except Exception: blocks that have no logging.
 """
 
+import logging
 import re
 import sys
 from pathlib import Path
-import logging
+
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parent.parent.parent

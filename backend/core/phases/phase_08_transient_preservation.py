@@ -561,7 +561,9 @@ class TransientPreservationPhase(PhaseInterface):
                     _ctx_mono = np.concatenate(
                         [
                             np.mean(_channels[:, _ctx_before_s:_s], axis=0) if _s > _ctx_before_s else _channels[0, :1],
-                            np.mean(_channels[:, _end:_ctx_after_e], axis=0) if _ctx_after_e > _end else _channels[0, -1:],
+                            np.mean(_channels[:, _end:_ctx_after_e], axis=0)
+                            if _ctx_after_e > _end
+                            else _channels[0, -1:],
                         ]
                     )
                     _ctx_lo = _sps.sosfiltfilt(_sos_lo, _ctx_mono)

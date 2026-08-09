@@ -198,8 +198,13 @@ def _download_with_retry(
                 with contextlib.suppress(Exception):
                     progress_callback(model_name or url, 1.0)
 
-            logger.info("Download erfolgreich: %s (%d bytes, attempt %d/%d)",
-                         model_name or url, downloaded, attempt, _MAX_RETRIES)
+            logger.info(
+                "Download erfolgreich: %s (%d bytes, attempt %d/%d)",
+                model_name or url,
+                downloaded,
+                attempt,
+                _MAX_RETRIES,
+            )
             return True
 
         except requests.RequestException as exc:
@@ -207,15 +212,18 @@ def _download_with_retry(
             if attempt < _MAX_RETRIES:
                 backoff = _BASE_BACKOFF_S * (_BACKOFF_MULTIPLIER ** (attempt - 1))
                 logger.warning(
-                    "Download-Versuch %d/%d fehlgeschlagen (%s), "
-                    "neuer Versuch in %.1fs...",
-                    attempt, _MAX_RETRIES, last_error[:120], backoff,
+                    "Download-Versuch %d/%d fehlgeschlagen (%s), neuer Versuch in %.1fs...",
+                    attempt,
+                    _MAX_RETRIES,
+                    last_error[:120],
+                    backoff,
                 )
                 time.sleep(backoff)
             else:
                 logger.error(
                     "Download endgültig fehlgeschlagen nach %d Versuchen: %s",
-                    _MAX_RETRIES, last_error[:200],
+                    _MAX_RETRIES,
+                    last_error[:200],
                 )
 
         except (urllib.error.URLError, OSError, ValueError) as exc:
@@ -514,7 +522,8 @@ class ModelDownloader:
 
                 try:
                     success = _download_with_retry(
-                        sota_url, target,
+                        sota_url,
+                        target,
                         expected_size_bytes=sota_size,
                         progress_callback=progress_callback,
                         model_name=sota_name,
@@ -626,8 +635,7 @@ class ModelDownloader:
             Dict mit total_models, completed, failed, in_progress, per_model_details.
         """
         statuses = self.get_status()
-        total_sota = sum(1 for e in self._manifest_entries
-                        if e.sota_upgrade and e.sota_upgrade.get("url"))
+        total_sota = sum(1 for e in self._manifest_entries if e.sota_upgrade and e.sota_upgrade.get("url"))
         downloaded = sum(1 for s in statuses.values() if s.sota_available)
         return {
             "total_sota_models": total_sota,

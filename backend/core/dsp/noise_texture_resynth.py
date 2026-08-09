@@ -120,7 +120,9 @@ def restore_carrier_noise_texture(
             synthesize_comfort_noise,
         )
     except ImportError as _imp_exc:
-        logger.warning("§G23 noise_texture_resynth: psychoacoustics nicht verfügbar, DSP-Ersatzpfad (passthrough): %s", _imp_exc)
+        logger.warning(
+            "§G23 noise_texture_resynth: psychoacoustics nicht verfügbar, DSP-Ersatzpfad (passthrough): %s", _imp_exc
+        )
         return audio_post_nr
 
     try:

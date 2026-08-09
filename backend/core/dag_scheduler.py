@@ -6,21 +6,35 @@ Nutzt ThreadPoolExecutor für CPU-Phasen.
 
 Spec 11 §ROADMAP-4 Erweiterung.
 """
+
 from __future__ import annotations
-import logging, time
+
+import logging
+import time
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable
+from typing import Any
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 # Frequenzprofile pro Phase (Hz-Bereiche)
 PHASE_FREQ_BANDS: dict[str, tuple[float, float]] = {
-    "phase_01": (20, 20000), "phase_03": (20, 20000), "phase_04": (20, 20000),
-    "phase_07": (500, 8000), "phase_18": (20, 20000), "phase_19": (2000, 12000),
-    "phase_20": (200, 8000), "phase_23": (500, 16000), "phase_35": (20, 20000),
-    "phase_38": (2000, 8000), "phase_39": (8000, 20000), "phase_40": (20, 20000),
-    "phase_42": (100, 8000), "phase_47": (20, 20000), "phase_48": (1000, 15000),
+    "phase_01": (20, 20000),
+    "phase_03": (20, 20000),
+    "phase_04": (20, 20000),
+    "phase_07": (500, 8000),
+    "phase_18": (20, 20000),
+    "phase_19": (2000, 12000),
+    "phase_20": (200, 8000),
+    "phase_23": (500, 16000),
+    "phase_35": (20, 20000),
+    "phase_38": (2000, 8000),
+    "phase_39": (8000, 20000),
+    "phase_40": (20, 20000),
+    "phase_42": (100, 8000),
+    "phase_47": (20, 20000),
+    "phase_48": (1000, 15000),
 }
 
 
@@ -56,8 +70,13 @@ class DAGScheduler:
             remaining = rest
         return levels
 
-    def execute_parallel(self, phases: list[tuple[str, Callable]], audio: Any, sample_rate: int,
-                         progress_callback: Callable | None = None) -> dict[str, Any]:
+    def execute_parallel(
+        self,
+        phases: list[tuple[str, Callable]],
+        audio: Any,
+        sample_rate: int,
+        progress_callback: Callable | None = None,
+    ) -> dict[str, Any]:
         """Führt Phasen gemäß DAG parallel aus."""
         phase_ids = [p[0] for p in phases]
         levels = self.build_dag(phase_ids)
@@ -84,9 +103,12 @@ class DAGScheduler:
             if progress_callback:
                 progress_callback(level_idx / max(1, len(levels)))
 
-        results["_dag_stats"] = {"levels": len(levels), "parallel_phases": len(phases),
-                                  "wall_time_s": round(time.monotonic() - t0, 2),
-                                  "speedup_estimate": f"{len(phases)/len(levels):.1f}x"}
+        results["_dag_stats"] = {
+            "levels": len(levels),
+            "parallel_phases": len(phases),
+            "wall_time_s": round(time.monotonic() - t0, 2),
+            "speedup_estimate": f"{len(phases) / len(levels):.1f}x",
+        }
         return results
 
     def get_independent_groups(self, phase_ids: list[str]) -> list[list[str]]:

@@ -14,9 +14,16 @@ Latenz-Budget:
   ─────────────────────────────
   Total:        <500ms
 """
+
 from __future__ import annotations
-import logging, threading, time, numpy as np
-from typing import Any, Callable
+
+import logging
+import threading
+import time
+from typing import Any
+from collections.abc import Callable
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +120,7 @@ class StreamingPreview:
         except Exception:
             # Fallback: leichter Lowpass
             from scipy.signal import butter, filtfilt
+
             b, a_coeff = butter(4, 16000 / (self.sr / 2), btype="low")
             return filtfilt(b, a_coeff, chunk.astype(np.float64)).astype(np.float32)
 

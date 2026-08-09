@@ -354,7 +354,9 @@ class ConsonantEnhancement:
             if result.sibilant_mask is not None and result.sibilant_mask.shape[0] == mono.shape[0]:
                 return result.sibilant_mask.astype(bool)  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.warning("§G23 PhonemeDetector nicht verfügbar, DSP-Ersatzpfad ConsonantDetector: %s", exc, exc_info=True)
+            logger.warning(
+                "§G23 PhonemeDetector nicht verfügbar, DSP-Ersatzpfad ConsonantDetector: %s", exc, exc_info=True
+            )
 
         # Stufe 2: ConsonantDetector — §2.8 Step 5b (eigenständiger Singleton)
         try:

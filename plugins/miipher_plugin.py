@@ -268,7 +268,7 @@ class MiipherPlugin:
                 "energy_bias_db": _used_bias,
                 "activation_reason": "deepfilternet_fallback",
             }
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         except Exception as exc:  # pylint: disable=broad-except
             fallback_chain.append(f"deepfilternet_v3_ii:{type(exc).__name__}")

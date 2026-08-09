@@ -3230,7 +3230,7 @@ class DefectScanner:
         _rumble_digital_boost = 0.0
         if _era_is_modern:
             _rumble_analog_factor = 0.15  # 85% Dämpfung — Bass ist fast sicher musikalisch
-            _rumble_digital_boost = 8.0     # Starker Boost für digitale Materialien
+            _rumble_digital_boost = 8.0  # Starker Boost für digitale Materialien
         elif _era_is_digital:
             _rumble_analog_factor = 0.35  # 65% Dämpfung
             _rumble_digital_boost = 4.0
@@ -3359,10 +3359,10 @@ class DefectScanner:
         _rumble_factor_st = 1.0
         _digital_boost_st = 0.0
         if _era_is_modern_st:
-            _rumble_factor_st = 0.20   # 80% Dämpfung für analoge Rumble-Gewichte
-            _digital_boost_st = 6.0    # Starker Boost für digitale Materialien
+            _rumble_factor_st = 0.20  # 80% Dämpfung für analoge Rumble-Gewichte
+            _digital_boost_st = 6.0  # Starker Boost für digitale Materialien
         elif _era_is_digital_st:
-            _rumble_factor_st = 0.40   # 60% Dämpfung
+            _rumble_factor_st = 0.40  # 60% Dämpfung
             _digital_boost_st = 3.0
 
         scores = {}

@@ -8,7 +8,9 @@ Steuert Sichtbarkeit von:
 - Session-History
 - Batch-Übersicht
 """
+
 from __future__ import annotations
+
 import json
 import os
 from pathlib import Path
@@ -30,13 +32,13 @@ class ExpertMode:
     def _load(self) -> None:
         self._enabled: bool = False
         self._features: dict[str, bool] = {
-            "performance": False,      # RT-Faktor, Phase-Timings
-            "technical_metrics": False, # LUFS, Chroma, VQI, Goosebumps
-            "phase_report": False,     # Phase-Deltas, Übersprungene
-            "export_chain": False,     # Export-Chain-Details
+            "performance": False,  # RT-Faktor, Phase-Timings
+            "technical_metrics": False,  # LUFS, Chroma, VQI, Goosebumps
+            "phase_report": False,  # Phase-Deltas, Übersprungene
+            "export_chain": False,  # Export-Chain-Details
             "session_history": False,  # Frühere Ergebnisse
-            "batch_overview": False,   # Batch-Tabelle
-            "spectrum_compare": False, # Spektrum-Vergleich
+            "batch_overview": False,  # Batch-Tabelle
+            "spectrum_compare": False,  # Spektrum-Vergleich
         }
         if EXPERT_CONFIG_PATH.is_file():
             try:

@@ -3,7 +3,9 @@ Spec 15 paragraph 1.3. OQS-Delta, Timbre-Fidelity, artifact_freedom, Laufzeit.
 
 Autor: Aurik 10
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -34,13 +36,11 @@ class GateReport:
             "total_failed": self.total_failed,
             "aurik_version": self.aurik_version,
             "timestamp": self.timestamp,
-            "results": [
-                {k: v for k, v in r.__dict__.items() if not k.startswith("_")}
-                for r in self.results
-            ],
+            "results": [{k: v for k, v in r.__dict__.items() if not k.startswith("_")} for r in self.results],
         }
 
 
 def create_empty_report() -> GateReport:
     from datetime import datetime
+
     return GateReport(timestamp=datetime.now().isoformat())

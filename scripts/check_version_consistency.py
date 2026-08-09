@@ -7,7 +7,9 @@ CI-Gate: Exit 0 = konsistent, Exit 1 = Inkonsistenz.
 Usage:
     python scripts/check_version_consistency.py [--fix]
 """
+
 from __future__ import annotations
+
 import re
 import sys
 from pathlib import Path
@@ -25,7 +27,7 @@ def extract_version(filepath: Path) -> str | None:
     if m:
         return m.group(1)
     # README.md/CHANGELOG.md: **Version:** 10.0.18 or ## 10.0.18 (...)
-    m = re.search(r'(?:\*\*Version:?\*\*|##)\s*(\d+\.\d+\.\d+)', content)
+    m = re.search(r"(?:\*\*Version:?\*\*|##)\s*(\d+\.\d+\.\d+)", content)
     if m:
         return m.group(1)
     return None

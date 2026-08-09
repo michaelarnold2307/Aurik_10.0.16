@@ -264,7 +264,8 @@ class StereoAuthenticitiyInvariant:
                 logger.info(
                     "StereoAuth: Schmales Stereo erkannt (ms_corr=%.3f, Ära=%d) — "
                     "kein Pseudo-Stereo, Stereofeld bleibt erhalten",
-                    rest_ms_corr, decade,
+                    rest_ms_corr,
+                    decade,
                 )
 
         # Regel 2: Decca-Wide-Stereo (1952–1965, LR ∈ [0.25, 0.65])

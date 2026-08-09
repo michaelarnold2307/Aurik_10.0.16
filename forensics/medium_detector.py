@@ -1986,9 +1986,13 @@ class MediumDetector:
     # Conservative minimum: 6 s covers all standard speeds with ≥3 cycles.
     _MIN_ROTATION_ANALYSIS_DURATION_S: float = 6.0
 
-    def _bayesian_score(self, fp: SpectralFingerprint, duration_s: float = 0.0,
-                        era_decade: int | None = None,
-                        era_confidence: float = 0.0) -> dict[str, float]:
+    def _bayesian_score(
+        self,
+        fp: SpectralFingerprint,
+        duration_s: float = 0.0,
+        era_decade: int | None = None,
+        era_confidence: float = 0.0,
+    ) -> dict[str, float]:
         """Berechnet posterior probabilities for all 16 material types via Gaussian log-likelihood.
 
         Args:
@@ -2128,7 +2132,9 @@ class MediumDetector:
                     log_likes[mat] -= _era_boost_nats * 1.5  # harder penalty for impossible combos
             logger.debug(
                 "MediumDetector: Era-Prior applied (decade=%d, conf=%.2f, boost=%.1f nats)",
-                _era_decade_rounded, era_confidence, _era_boost_nats,
+                _era_decade_rounded,
+                era_confidence,
+                _era_boost_nats,
             )
 
         _N_MATERIALS: int = len(self._MATERIAL_MODELS)
@@ -2139,7 +2145,9 @@ class MediumDetector:
             log_likes[mat] += _log_prior
         logger.debug(
             "MediumDetector: Bayesian-Prior applied P(unknown)=%.3f P(other)=%.3f (Δ=%.1f nats)",
-            _P_UNKNOWN, _P_OTHER, math.log(_P_OTHER) - math.log(_P_UNKNOWN),
+            _P_UNKNOWN,
+            _P_OTHER,
+            math.log(_P_OTHER) - math.log(_P_UNKNOWN),
         )
 
         # Softmax normalization → posterior probabilities
@@ -2150,8 +2158,15 @@ class MediumDetector:
 
         return dict(sorted(posteriors.items(), key=lambda x: x[1], reverse=True))
 
-    def detect(self, audio: np.ndarray, sr: int, *, file_ext: str = "",
-               era_decade: int | None = None, era_confidence: float = 0.0) -> MediumDetectionResult:
+    def detect(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        *,
+        file_ext: str = "",
+        era_decade: int | None = None,
+        era_confidence: float = 0.0,
+    ) -> MediumDetectionResult:
         """Erkennt die Tonträgerkette forensisch via Bayesian-Fusion (§6.7 v10.0.0).
 
         Ablauf:
@@ -2184,8 +2199,9 @@ class MediumDetector:
         # Pass audio duration for rotation_strength masking in short clips (§2.47 §0c)
         _mono_len: int = audio.shape[0] if audio.ndim == 1 else int(max(audio.shape))
         _duration_s: float = float(_mono_len) / max(float(sr), 1.0)
-        posteriors = self._bayesian_score(fp, duration_s=_duration_s,
-                                         era_decade=era_decade, era_confidence=era_confidence)
+        posteriors = self._bayesian_score(
+            fp, duration_s=_duration_s, era_decade=era_decade, era_confidence=era_confidence
+        )
 
         # §6.7b File-Extension Prior: digital file formats cannot originate from
         # analog physical media.  A .mp3 file was encoded digitally at capture time —

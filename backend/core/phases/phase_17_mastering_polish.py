@@ -313,7 +313,9 @@ class MasteringPolishPhase(PhaseInterface):
             _effective_strength = float(_effective_strength * _mode_scale)
             logger.debug(
                 "MasteringPolish: mode=%s → strength scaled ×%.2f (effective=%.3f)",
-                _mode_raw, _mode_scale, _effective_strength,
+                _mode_raw,
+                _mode_scale,
+                _effective_strength,
             )
 
         # §v10.14.1 Early-Exit: Bei extrem niedriger effektiver Stärke (<0.05)

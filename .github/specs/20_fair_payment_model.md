@@ -121,23 +121,27 @@ Nicht jeder will monatlich spenden:
 ## 4. Implementierungs-Roadmap (Reihenfolge)
 
 ### Phase 1 — Jetzt ✔️
+
 - Freundlicher Spenden-Dialog nach Batch-Abschluss
-- PayPal-Button zu michael.arnold2307@gmail.com
+- PayPal-Button zu <michael.arnold2307@gmail.com>
 - Rate-Limit: 1× pro 24 Stunden
 
 ### Phase 2 — Qualitäts-Vorschlag (Aufwand: ~2 Tage)
+
 - `donation_reminder.py` → neues Modul `backend/core/fair_payment.py`
 - Funktion `compute_fair_price(quality_score, usage_count) -> FairPriceSuggestion`
 - GUI: Dialog zeigt Quality-Score + personalisierten Vorschlag
 - Drei Buttons: Vorgeschlagener Betrag, doppelter Betrag, „Später“
 
 ### Phase 3 — Supporter-Features (Aufwand: ~5 Tage)
+
 - Lizenzschlüssel-System (offline-validiert, HMAC-signiert)
 - `backend/core/licensing.py`: `LicenseTier(FREE, SUPPORTER, PRO)`
 - Supporter: kein Spenden-Dialog, Name im About, priorisierte Feature-Requests
 - Pro: zusätzlich Beta-Channel, Zertifikat, Direktsupport
 
 ### Phase 4 — Bezahl-Plattform (Aufwand: ~10 Tage)
+
 - Integration mit Stripe / LemonSqueezy / Gumroad
 - Monatliche / jährliche / Lifetime-Pläne
 - Automatische Lizenzschlüssel-Generierung nach Zahlung
@@ -164,6 +168,7 @@ Als regelmäßiger Nutzer sparst Du 25 % gegenüber Einzelspenden.
 ```
 
 Bei Quality Score < 30:
+
 ```
 🎵 Basis-Restaurierung — Qualität 27/100
 

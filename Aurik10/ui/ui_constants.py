@@ -33,11 +33,11 @@ PHASE_LIST_ICON_SIZE = 16
 # Timing (alle in Millisekunden)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-POLL_INTERVAL_MS = 50          # Pipeline-Status-Polling
-HEARTBEAT_INTERVAL_MS = 1000   # Watchdog-Check-Intervall
-ANIMATION_DURATION_MS = 300    # Übergangs-Animationen
+POLL_INTERVAL_MS = 50  # Pipeline-Status-Polling
+HEARTBEAT_INTERVAL_MS = 1000  # Watchdog-Check-Intervall
+ANIMATION_DURATION_MS = 300  # Übergangs-Animationen
 TOOLTIP_DELAY_MS = 500
-DEBOUNCE_MS = 200              # Input-Debounce für Suchfelder
+DEBOUNCE_MS = 200  # Input-Debounce für Suchfelder
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Spacing & Padding
@@ -66,6 +66,7 @@ OPACITY_OVERLAY = 0.92
 # ═══════════════════════════════════════════════════════════════════════════════
 # Depth-abhängige UI-Werte (aus CalibrationContext)
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 @dataclass(frozen=True)
 class DepthAwareUI:
@@ -98,7 +99,7 @@ class DepthAwareUI:
     def expected_duration_factor(self) -> float:
         """Erwartete längere Dauer für tiefe Ketten."""
         if self.chain_depth >= 4:
-            return 2.5   # 2.5× länger als depth=1
+            return 2.5  # 2.5× länger als depth=1
         elif self.chain_depth >= 3:
             return 1.8
         return 1.0

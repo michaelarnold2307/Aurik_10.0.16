@@ -166,7 +166,9 @@ class ArtifactEchoRemoval:
     ) -> np.ndarray:
         """Entfernt Echo + korrigiert Onsets in einem Durchlauf."""
         result = self.remove_echo(
-            audio, sr, ast_musical_confidence=ast_musical_confidence,
+            audio,
+            sr,
+            ast_musical_confidence=ast_musical_confidence,
         )
         if original_reference is not None:
             result = self.realign_onsets(result, sr, original_reference=original_reference)

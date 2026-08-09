@@ -128,7 +128,8 @@ def pipeline_health_from_fail_reasons(
                     _low_strength_components.add(_comp.lower())
     if _low_strength_components:
         reasons = [
-            r for r in reasons
+            r
+            for r in reasons
             if not (isinstance(r, dict) and str(r.get("component", "")).lower() in _low_strength_components)
         ]
     if not reasons:

@@ -514,15 +514,15 @@ def _dsp_hf_rolloff(audio_mono: np.ndarray, sr: int) -> float:
     # komprimierten Aufnahmen wo der Codec das Rauschen oberhalb des LPFs
     # unterdrückt und der Gap-Energie-Anteil künstlich niedrig ist).
     if e90 < 2000.0 and len(candidates) >= 3:
-        _high_estimators = [
-            v for v, _ in candidates if v > 5000.0
-        ]
+        _high_estimators = [v for v, _ in candidates if v > 5000.0]
         if len(_high_estimators) >= 2:
             _converged_bw = float(np.median(_high_estimators))
             logger.debug(
-                "BW Multi-Estimator Convergence: E90=%.0fHz corrupted, "
-                "%d/%d estimators converge at %.0f Hz → override",
-                e90, len(_high_estimators), len(candidates), _converged_bw,
+                "BW Multi-Estimator Convergence: E90=%.0fHz corrupted, %d/%d estimators converge at %.0f Hz → override",
+                e90,
+                len(_high_estimators),
+                len(candidates),
+                _converged_bw,
             )
             return float(np.clip(_converged_bw, 200.0, nyquist))
 
@@ -862,7 +862,10 @@ def _dsp_fingerprint_decade(
         logger.debug(
             "EraClassifier: BW corrupted (measured %.1f kHz, stereo=%s, SNR=%.1f dB) → "
             "recovered to %.1f kHz via SNR-proxy",
-            rolloff_hz / 1000.0, is_stereo, snr_db, bw_khz,
+            rolloff_hz / 1000.0,
+            is_stereo,
+            snr_db,
+            bw_khz,
         )
 
     # Primary decade selection via bandwidth.
@@ -1466,11 +1469,20 @@ class EraClassifier:
         # unmöglich und muss verworfen werden.
         # Bsp: MP3 (erfunden 1995) + CLAP=1920 → unmöglich → DSP-Fallback.
         _MATERIAL_INVENTED: dict[str, int] = {
-            "mp3_low": 1995, "mp3_high": 1995, "mp3_high_vbr": 1998,
-            "aac": 1997, "streaming": 2005, "cd_digital": 1982,
-            "dat": 1987, "minidisc": 1992, "dcc": 1992,
-            "bluray_audio": 2006, "dvd_audio": 2000, "sacd": 1999,
-            "pcm_digital": 1982, "lossless_digital": 1982,
+            "mp3_low": 1995,
+            "mp3_high": 1995,
+            "mp3_high_vbr": 1998,
+            "aac": 1997,
+            "streaming": 2005,
+            "cd_digital": 1982,
+            "dat": 1987,
+            "minidisc": 1992,
+            "dcc": 1992,
+            "bluray_audio": 2006,
+            "dvd_audio": 2000,
+            "sacd": 1999,
+            "pcm_digital": 1982,
+            "lossless_digital": 1982,
         }
         if result is not None and result.tier_used == 1:
             _clap_decade = result.decade
@@ -1483,7 +1495,9 @@ class EraClassifier:
                         logger.info(
                             "EraClassifier: CLAP %d < Format-Erfindung %s(%d) → "
                             "physikalisch unmöglich, Tier-1 verworfen, Tier-2 DSP",
-                            _clap_decade, _tm_key, _invented,
+                            _clap_decade,
+                            _tm_key,
+                            _invented,
                         )
                         result = None
                         break
@@ -1491,27 +1505,33 @@ class EraClassifier:
             # §2.47: Detect whether this is a digitized source — if ANY digital
             # material is present in the chain, stereo/HF could be digitization
             # artifacts, not original recording properties.
-            _DIGITISED_MATERIALS: frozenset[str] = frozenset({
-                "cd", "cd_digital", "mp3_low", "mp3_high", "aac", "streaming",
-                "dat", "minidisc", "dcc", "bluray_audio", "dvd_audio", "sacd",
-                "pcm_digital", "lossless_digital",
-            })
+            _DIGITISED_MATERIALS: frozenset[str] = frozenset(
+                {
+                    "cd",
+                    "cd_digital",
+                    "mp3_low",
+                    "mp3_high",
+                    "aac",
+                    "streaming",
+                    "dat",
+                    "minidisc",
+                    "dcc",
+                    "bluray_audio",
+                    "dvd_audio",
+                    "sacd",
+                    "pcm_digital",
+                    "lossless_digital",
+                }
+            )
             _is_digitized = transfer_chain is not None and any(
-                str(t).lower().replace(" ", "_").replace("-", "_") in _DIGITISED_MATERIALS
-                for t in transfer_chain
+                str(t).lower().replace(" ", "_").replace("-", "_") in _DIGITISED_MATERIALS for t in transfer_chain
             )
             # §SOTA #6: Nur echtes Stereo (width>0.05) triggert Violation.
             # Dual-Mono (width≈0) ist typisch für digitalisierte Mono-Aufnahmen.
             # §2.47: Keine Stereo-Violation bei digitalisierter Quelle.
-            _stereo_violation = (
-                is_stereo and _clap_decade < 1960 and stereo_width > 0.05
-                and not _is_digitized
-            )
+            _stereo_violation = is_stereo and _clap_decade < 1960 and stereo_width > 0.05 and not _is_digitized
             # §2.47: Keine HF-Violation bei digitalisierter Quelle.
-            _hf_violation = (
-                (highband_presence > 0.20) and (_clap_decade < 1940)
-                and not _is_digitized
-            )
+            _hf_violation = (highband_presence > 0.20) and (_clap_decade < 1940) and not _is_digitized
             _analog_era_violation = (
                 not _is_digitized  # §2.47: nur bei rein analoger Kette relevant
                 and transfer_chain is not None
@@ -1599,9 +1619,7 @@ class EraClassifier:
             # §v10.14.1: Deaktiviere Softener wenn BW-Messung korrumpiert ist.
             # Eine Stereo-Aufnahme mit <2 kHz Bandbreite ist physikalisch
             # unmöglich — der Rolloff ist ein Messartefakt.
-            _bw_measurement_corrupted = (
-                _rolloff < 2000.0 and is_stereo
-            )
+            _bw_measurement_corrupted = _rolloff < 2000.0 and is_stereo
             _steps = 0
             if not _bw_measurement_corrupted:
                 if _rolloff < 8000:
@@ -1852,7 +1870,9 @@ class EraClassifier:
                 try:
                     _rspoly = _get_resample_poly()
                     if _rspoly is None:
-                        logger.warning("§G23 EraClassifier Tier-1: scipy.signal.resample_poly nicht verfügbar — DSP-Ersatzpfad")
+                        logger.warning(
+                            "§G23 EraClassifier Tier-1: scipy.signal.resample_poly nicht verfügbar — DSP-Ersatzpfad"
+                        )
                         return None
                     _g = math.gcd(48000, sr)
                     _audio_clap = _rspoly(audio_mono, 48000 // _g, sr // _g).astype(np.float32)

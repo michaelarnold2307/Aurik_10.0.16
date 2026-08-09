@@ -259,7 +259,7 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                 hop_length=_NR_HOP,
                 length=len(audio_f),
             )
-        except Exception as exc:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("_dsp_wiederherstellen: Wiener-NR + Temporal-Smooth (SNR=%.1f dB)", snr_est_db)
         except Exception as exc:

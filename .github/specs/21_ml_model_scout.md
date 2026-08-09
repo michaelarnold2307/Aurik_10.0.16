@@ -9,6 +9,7 @@
 ## 1. Gefunden: Musik-taugliche Modelle (jenseits des HF-Speech-Mainstreams)
 
 ### 🥇 Stable Audio 3 — SAME Encoder/Decoder (ONNX!)
+
 | Feld | Wert |
 |---|---|
 | **Quelle** | `stabilityai/stable-audio-3-optimized` |
@@ -25,6 +26,7 @@
 ---
 
 ### 🥈 ACE-Step VAE (MIT-Lizenz!)
+
 | Feld | Wert |
 |---|---|
 | **Quelle** | `ACE-Step/ace-step-v1.5-1d-vae-stable-audio-format` |
@@ -40,6 +42,7 @@
 ---
 
 ### 🥉 NovaSR (Apache 2.0, 52 KB)
+
 | Feld | Wert |
 |---|---|
 | **Quelle** | `YatharthS/NovaSR` |
@@ -66,6 +69,7 @@ Bleibt als FlashSR-Alternative — aber nur relevant wenn der Qualitätsverlust 
 ## 3. Auriks Position im ML-Ökosystem
 
 Aurik hat bereits:
+
 - **3 Musik-Source-Separation-Modelle** (Demucs, MDX23C, BS-RoFormer)
 - **2 Musik-Encoder** (LAION-CLAP, MERT)
 - **2 Vocoder** (BigVGAN, HiFi-GAN)

@@ -6,10 +6,16 @@ Beschleunigt wiederholte Restaurierungen und verbessert Konsistenz.
 
 Persistenz: ~/.aurik/cross_run_learning.json
 """
+
 from __future__ import annotations
-import json, logging, time, numpy as np
+
+import json
+import logging
+import time
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 STORE_PATH = Path.home() / ".aurik" / "cross_run_learning.json"
@@ -48,12 +54,24 @@ class CrossRunLearning:
         with open(STORE_PATH, "w") as f:
             json.dump({"entries": self._entries[-200:], "updated": time.time()}, f, indent=2)
 
-    def record_run(self, material: str, era: int, quality: float, phase_strengths: dict[str, float],
-                   phase_order: list[str], rt_factor: float, presence_score: float = 0.0) -> None:
+    def record_run(
+        self,
+        material: str,
+        era: int,
+        quality: float,
+        phase_strengths: dict[str, float],
+        phase_order: list[str],
+        rt_factor: float,
+        presence_score: float = 0.0,
+    ) -> None:
         entry = {
-            "material": material, "era_decade": era, "quality": round(quality, 1),
-            "phase_strengths": phase_strengths, "phase_order": phase_order,
-            "rt_factor": round(rt_factor, 1), "presence_score": round(presence_score, 2),
+            "material": material,
+            "era_decade": era,
+            "quality": round(quality, 1),
+            "phase_strengths": phase_strengths,
+            "phase_order": phase_order,
+            "rt_factor": round(rt_factor, 1),
+            "presence_score": round(presence_score, 2),
             "timestamp": time.time(),
         }
         self._entries.append(entry)
@@ -69,8 +87,12 @@ class CrossRunLearning:
         if not candidates:
             return None
         best = max(candidates, key=lambda c: c.get("quality", 0))
-        return {"phase_strengths": best["phase_strengths"], "phase_order": best["phase_order"],
-                "prior_quality": best["quality"], "based_on_n_runs": len(candidates)}
+        return {
+            "phase_strengths": best["phase_strengths"],
+            "phase_order": best["phase_order"],
+            "prior_quality": best["quality"],
+            "based_on_n_runs": len(candidates),
+        }
 
     def get_material_stats(self, material: str) -> dict[str, Any]:
         entries = self._by_material.get(material, [])
@@ -78,6 +100,10 @@ class CrossRunLearning:
             return {}
         qualities = [e["quality"] for e in entries]
         rts = [e["rt_factor"] for e in entries]
-        return {"n_runs": len(entries), "avg_quality": round(float(np.mean(qualities)), 1),
-                "best_quality": round(float(np.max(qualities)), 1), "avg_rt": round(float(np.mean(rts)), 1),
-                "trend": "improving" if len(qualities) >= 3 and qualities[-1] > qualities[0] else "stable"}
+        return {
+            "n_runs": len(entries),
+            "avg_quality": round(float(np.mean(qualities)), 1),
+            "best_quality": round(float(np.max(qualities)), 1),
+            "avg_rt": round(float(np.mean(rts)), 1),
+            "trend": "improving" if len(qualities) >= 3 and qualities[-1] > qualities[0] else "stable",
+        }

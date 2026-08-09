@@ -6,7 +6,9 @@ Extrahiert aus RestorationResult die Daten für:
 - Export-Chain (Resample→Dither→Format)
 - Technische Metriken (LUFS-Delta, Chroma, VQI, Goosebumps)
 """
+
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -14,6 +16,7 @@ from typing import Any
 @dataclass
 class PerformanceInfo:
     """RT-Faktor und Phase-Timings."""
+
     rt_factor: float = 0.0
     total_duration_s: float = 0.0
     processing_time_s: float = 0.0
@@ -33,6 +36,7 @@ class PerformanceInfo:
 @dataclass
 class PhaseReport:
     """Phase-für-Phase-Report."""
+
     phases_total: int = 0
     phases_executed: int = 0
     phases_skipped: list[str] = field(default_factory=list)
@@ -54,6 +58,7 @@ class PhaseReport:
 @dataclass
 class ExportChainInfo:
     """Export-Chain-Transparenz."""
+
     input_format: str = ""
     output_format: str = ""
     sample_rate_in: int = 0
@@ -78,6 +83,7 @@ class ExportChainInfo:
 @dataclass
 class TechnicalMetrics:
     """Technische Metriken (LUFS-Delta, Chroma, VQI, Goosebumps)."""
+
     lufs_delta: float = 0.0
     chroma_correlation: float = 0.0
     warmth_band_loss_db: float = 0.0
@@ -150,7 +156,11 @@ class ResultEnricher:
             metrics.chroma_correlation = float(meta.get("chroma_correlation", 0))
             metrics.warmth_band_loss_db = float(meta.get("warmth_band_loss_cumulative_db", 0))
             metrics.vqi = float(meta.get("vqi", 0))
-            metrics.goosebumps_score = float(meta.get("goosebumps_result", {}).get("score", 0) if isinstance(meta.get("goosebumps_result"), dict) else 0)
+            metrics.goosebumps_score = float(
+                meta.get("goosebumps_result", {}).get("score", 0)
+                if isinstance(meta.get("goosebumps_result"), dict)
+                else 0
+            )
         except Exception:
             pass
         return metrics

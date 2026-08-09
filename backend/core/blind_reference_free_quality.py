@@ -374,7 +374,7 @@ class BlindQualityEstimator:
         # Post-1980: modern multi-track → width 0.3-1.5 is natural.
         _era = self.era_decade
         if _era is not None and _era < 1960:
-            _width_lo, _width_hi = 0.0, 0.30   # mono era: narrow is expected
+            _width_lo, _width_hi = 0.0, 0.30  # mono era: narrow is expected
         elif _era is not None and _era < 1980:
             _width_lo, _width_hi = 0.05, 0.80  # early stereo: moderate
         else:

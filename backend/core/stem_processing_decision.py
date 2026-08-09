@@ -11,10 +11,11 @@ abhaengigkeiten: [numpy]
 ---
 """
 
+import logging
 from dataclasses import asdict, dataclass
 
 import numpy as np
-import logging
+
 logger = logging.getLogger(__name__)
 
 

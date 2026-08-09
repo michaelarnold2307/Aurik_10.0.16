@@ -534,7 +534,7 @@ class CQTdiffPlusPlugin:
                     gap_end,
                 )
                 return result
-        except Exception as exc:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         except Exception as exc:
             logger.debug("CQTdiff+ DiffWave-Fallback Fehler: %s — lineare Interpolation", exc)

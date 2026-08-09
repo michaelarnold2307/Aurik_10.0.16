@@ -56,6 +56,7 @@ Output File (WAV/FLAC/MP3)
 ## 2. Phasen: 41/65 selektiert — warum 24 fehlen
 
 ### Instrument-spezifisch (7 Phasen) — kein Instrument erkannt
+
 | Phase | Benötigt | Warum nicht selektiert |
 |---|---|---|
 | phase_42_vocal_enhancement | PANNs Vocal > 0.5 | Vocal 0.35 — unter Schwelle |
@@ -69,6 +70,7 @@ Output File (WAV/FLAC/MP3)
 **→ Korrekt.** Diese Phasen würden auf falschem Material Artefakte produzieren.
 
 ### Studio/Enhancement-Modus (9 Phasen) — Restoration-Mode
+
 | Phase | Modus | Warum nicht selektiert |
 |---|---|---|
 | phase_10_compression | Studio | Nur in STUDIO_2026 |
@@ -84,6 +86,7 @@ Output File (WAV/FLAC/MP3)
 **→ Korrekt.** Restoration soll konservativ restaurieren, nicht künstlich verbessern.
 
 ### Defekt-spezifisch (5 Phasen) — Defekt nicht vorhanden
+
 | Phase | Benötigt | Warum nicht selektiert |
 |---|---|---|
 | phase_20_reverb_reduction | reverb_sev > 0.15 | reverb_sev 0.000 |
@@ -95,6 +98,7 @@ Output File (WAV/FLAC/MP3)
 **→ Korrekt.** Keine Defekte → keine Reparatur nötig.
 
 ### Konflikt-Phasen (2 Phasen) — durch Alternativen ersetzt
+
 | Phase | Ersetzt durch | Grund |
 |---|---|---|
 | phase_48_stereo_width_enhancer | phase_33_stereo_width_limiter | §2.48: Breiten-Limiter hat Vorrang |
@@ -103,6 +107,7 @@ Output File (WAV/FLAC/MP3)
 **→ Korrekt.** Pipe-Konflikte werden vom PhaseInteractionDenker gelöst.
 
 ### Grundlegende Cleanup-Phase (1 Phase) — conditional
+
 | Phase | Bedingung | Warum nicht selektiert |
 |---|---|---|
 | phase_30_dc_offset_removal | DC > 5e-4 | Digitales MP3 — DC ≈ 0 |
@@ -125,6 +130,7 @@ Output File (WAV/FLAC/MP3)
 ## 4. Fazit
 
 **Keine kritischen Lücken.** Alle 24 nicht selektierten Phasen sind entweder:
+
 - Instrument-spezifisch und korrekt deaktiviert (7×)
 - Nur für Studio-Modus (9×)
 - Defekt-spezifisch und Defekt nicht vorhanden (5×)

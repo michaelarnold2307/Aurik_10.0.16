@@ -731,8 +731,7 @@ class PhaseInterface(abc.ABC):
                     f"delta={_verdict.delta:.4f} ≤ 0 — Phase verschlechtert perzeptuelle Qualität"
                 )
                 self._logger.warning(
-                    "§G144/§G145 MUSHRA-Proxy %s: ROLLBACK — %s (mushra: %.1f→%.1f, Δ=%.3f, "
-                    "latency=%.1fms, proxy=%s)",
+                    "§G144/§G145 MUSHRA-Proxy %s: ROLLBACK — %s (mushra: %.1f→%.1f, Δ=%.3f, latency=%.1fms, proxy=%s)",
                     phase_id,
                     _rollback_reason,
                     _verdict.mushra_before,
@@ -745,15 +744,12 @@ class PhaseInterface(abc.ABC):
                 result.audio = audio.astype(np.float32, copy=True)
                 result.metadata["mushra_proxy_rollback"] = True
                 result.metadata["mushra_proxy_rollback_reason"] = _rollback_reason
-                result.warnings.append(
-                    f"§G144/§G145 MUSHRA-Proxy Rollback: {_rollback_reason}"
-                )
+                result.warnings.append(f"§G144/§G145 MUSHRA-Proxy Rollback: {_rollback_reason}")
                 # Qualitäts-Schätzung konservativ abwerten
                 result.quality_estimate = max(0.4, result.quality_estimate - 0.15)
             else:
                 self._logger.info(
-                    "§G144 MUSHRA-Proxy %s: PASS — mushra %.1f→%.1f (Δ=+.3f, "
-                    "latency=%.1fms, proxy=%s)",
+                    "§G144 MUSHRA-Proxy %s: PASS — mushra %.1f→%.1f (Δ=+.3f, latency=%.1fms, proxy=%s)",
                     phase_id,
                     _verdict.mushra_before,
                     _verdict.mushra_after,
@@ -769,9 +765,7 @@ class PhaseInterface(abc.ABC):
             )
             result.metadata["mushra_proxy_available"] = False
         except Exception as _mp_exc:
-            self._logger.debug(
-                "§G144 MUSHRA-Proxy non-blocking: %s", _mp_exc
-            )
+            self._logger.debug("§G144 MUSHRA-Proxy non-blocking: %s", _mp_exc)
             result.metadata["mushra_proxy_error"] = str(_mp_exc)[:200]
 
         # ── VocalQualityGate: Gesangsqualität prüfen (nur bei Vokal-Phasen) ─

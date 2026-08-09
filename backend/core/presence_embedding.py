@@ -29,8 +29,11 @@ PRESENCE_THRESHOLD_HEARABLE: float = 0.70
 # Referenz-Datenbank fuer Vocal-Formant-Coherence (wird via MERT gefuellt)
 # Format: {formant_bin: (reference_mean, reference_std)}
 _VOCAL_FORMANT_REFERENCE: dict[int, tuple[float, float]] = {
-    0: (0.65, 0.15), 1: (0.55, 0.18), 2: (0.45, 0.20),
-    3: (0.35, 0.22), 4: (0.25, 0.25),  # Faelle fuer 5 Formant-Bins
+    0: (0.65, 0.15),
+    1: (0.55, 0.18),
+    2: (0.45, 0.20),
+    3: (0.35, 0.22),
+    4: (0.25, 0.25),  # Faelle fuer 5 Formant-Bins
 }
 
 
@@ -67,6 +70,7 @@ class PresenceScore:
 
 
 # ── Hauptklasse ──────────────────────────────────────────────────────────────
+
 
 class PresenceEmbedding:
     """Berechnet den 5-dimensionalen Presence-Score.
@@ -148,7 +152,13 @@ class PresenceEmbedding:
         self._last_score = score
         logger.info(
             "PresenceEmbedding: overall=%.3f (hearable=%s) | vfc=%.3f ti=%.3f rtc=%.3f ml=%.3f saa=%.3f",
-            overall, is_hearable, vfc, ti, rtc, ml, saa,
+            overall,
+            is_hearable,
+            vfc,
+            ti,
+            rtc,
+            ml,
+            saa,
         )
         return score
 
@@ -188,12 +198,13 @@ class PresenceEmbedding:
             if n_fft < 64:
                 return 0.5
 
-            spec = np.abs(np.fft.rfft(audio[:n_fft * 4], n=n_fft))
+            spec = np.abs(np.fft.rfft(audio[: n_fft * 4], n=n_fft))
             spec_db = 20.0 * np.log10(spec + 1e-12)
             spec_db -= np.max(spec_db)
 
             # Finde Peaks als Proxy fuer Formanten
             from scipy.signal import find_peaks
+
             peaks, props = find_peaks(spec_db, height=-30.0, distance=max(5, n_fft // 128))
             if len(peaks) < 2:
                 return 0.5
@@ -233,8 +244,8 @@ class PresenceEmbedding:
             n_frames = max(1, len(audio) // frame_len)
             energy = np.zeros(n_frames)
             for i in range(n_frames):
-                chunk = audio[i * frame_len:(i + 1) * frame_len]
-                energy[i] = np.mean(chunk ** 2)
+                chunk = audio[i * frame_len : (i + 1) * frame_len]
+                energy[i] = np.mean(chunk**2)
 
             # Onset: Energie-Sprung > 6dB zwischen Frames
             energy_db = 10.0 * np.log10(energy + 1e-12)
@@ -251,15 +262,13 @@ class PresenceEmbedding:
             # Referenz: gute Musik hat median ~4dB, IQR ~3dB
             median_score = 1.0 - abs(median_onset - 4.0) / 8.0
             iqr_score = 1.0 - abs(iqr_onset - 3.0) / 6.0
-        except Exception as e:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
         except Exception as e:
             logger.debug("PresenceEmbedding: transient_immediacy fallback: %s", e)
             return 0.5
 
-    def _compute_room_tone_continuity(
-        self, restored: np.ndarray, original: np.ndarray | None, sr: int
-    ) -> float:
+    def _compute_room_tone_continuity(self, restored: np.ndarray, original: np.ndarray | None, sr: int) -> float:
         """Rauschboden-Varianz ueber die Zeit.
 
         Ein echter Raum hat einen kontinuierlichen, gleichmaessigen Rauschboden.
@@ -271,7 +280,7 @@ class PresenceEmbedding:
             noise_floors = np.zeros(n_frames)
 
             for i in range(n_frames):
-                chunk = restored[i * frame_len:(i + 1) * frame_len]
+                chunk = restored[i * frame_len : (i + 1) * frame_len]
                 # Rauschboden = unterstes 10%-Perzentil der Amplitude
                 noise_floors[i] = float(np.percentile(np.abs(chunk), 10))
 
@@ -292,14 +301,14 @@ class PresenceEmbedding:
                 orig_mono = self._to_mono(original)
                 orig_noise = np.zeros(min(n_frames, len(orig_mono) // frame_len))
                 for i in range(len(orig_noise)):
-                    chunk = orig_mono[i * frame_len:(i + 1) * frame_len]
+                    chunk = orig_mono[i * frame_len : (i + 1) * frame_len]
                     orig_noise[i] = float(np.percentile(np.abs(chunk), 10))
                 orig_cov = float(np.std(orig_noise)) / (float(np.mean(orig_noise)) + 1e-12)
                 orig_score = 1.0 - min(orig_cov / 1.5, 1.0)
                 # Verbesserung? Dann score erhoehen
                 if score > orig_score:
                     score = min(1.0, score * 1.1)
-        except Exception as e:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             return float(np.clip(score, 0.0, 1.0))
         except Exception as e:
@@ -318,9 +327,9 @@ class PresenceEmbedding:
             crest_factors = np.zeros(n_frames)
 
             for i in range(n_frames):
-                chunk = audio[i * frame_len:(i + 1) * frame_len]
+                chunk = audio[i * frame_len : (i + 1) * frame_len]
                 peak = float(np.max(np.abs(chunk)))
-                rms = float(np.sqrt(np.mean(chunk ** 2)) + 1e-12)
+                rms = float(np.sqrt(np.mean(chunk**2)) + 1e-12)
                 crest_factors[i] = peak / rms
 
             if n_frames < 3:
@@ -330,7 +339,7 @@ class PresenceEmbedding:
             std_cf = float(np.std(crest_factors))
 
             # Referenz: gute Mikrodynamik hat median CF ~6-10, std ~2-4
-        except Exception as e:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             std_score = min(std_cf / 3.0, 1.0)  # Hoehere Std = mehr Dynamik-Varianz = lebendiger
             return float(np.clip((median_score * 0.6 + std_score * 0.4), 0.0, 1.0))
@@ -349,7 +358,7 @@ class PresenceEmbedding:
             if n_fft < 128:
                 return 0.5
 
-            spec = np.abs(np.fft.rfft(audio[:n_fft * 2], n=n_fft))
+            spec = np.abs(np.fft.rfft(audio[: n_fft * 2], n=n_fft))
             freqs = np.fft.rfftfreq(n_fft, d=1.0 / sr)
 
             # HF-Bereich: >10 kHz
@@ -377,7 +386,7 @@ class PresenceEmbedding:
             # R^2 der Regression: wie gut passt die Kurve?
             predicted = slope * log_freqs + intercept
             ss_res = float(np.sum((log_env - predicted) ** 2))
-        except Exception as e:
+        except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             r_squared = 1.0 - ss_res / (ss_tot + 1e-12)
 

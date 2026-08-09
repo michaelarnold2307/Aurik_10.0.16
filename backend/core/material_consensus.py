@@ -8,16 +8,18 @@ Lösung: Gewichteter Konsens mit Konfidenz-basierter Auflösung.
 - EraClassifier: mittleres Gewicht (Ära → Material-Inferenz)
 - DefectScanner: ergänzend (Defektmuster → Material)
 """
+
 from __future__ import annotations
+
 import logging
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
 MATERIAL_WEIGHTS = {
-    "medium_detector": 0.50,   # Physikalische Trägermedium-Analyse (autoritativ)
-    "era_classifier": 0.30,    # Ära → Material-Inferenz (korrelativ)
-    "defect_scanner": 0.20,    # Defektmuster → Material (indirekt)
+    "medium_detector": 0.50,  # Physikalische Trägermedium-Analyse (autoritativ)
+    "era_classifier": 0.30,  # Ära → Material-Inferenz (korrelativ)
+    "defect_scanner": 0.20,  # Defektmuster → Material (indirekt)
 }
 
 
@@ -46,16 +48,18 @@ def resolve_material_consensus(
         conf = medium_result.get("confidence", 0.5)
         weight = MATERIAL_WEIGHTS["medium_detector"]
         votes[mat] = votes.get(mat, 0) + conf * weight
-        details["medium_detector"] = {"material": mat, "confidence": conf,
-                                        "chain": medium_result.get("chain", "unknown")}
+        details["medium_detector"] = {
+            "material": mat,
+            "confidence": conf,
+            "chain": medium_result.get("chain", "unknown"),
+        }
 
     if era_result and era_result.get("material"):
         mat = era_result["material"]
         conf = era_result.get("confidence", 0.5)
         weight = MATERIAL_WEIGHTS["era_classifier"]
         votes[mat] = votes.get(mat, 0) + conf * weight
-        details["era_classifier"] = {"material": mat, "confidence": conf,
-                                       "decade": era_result.get("decade", 0)}
+        details["era_classifier"] = {"material": mat, "confidence": conf, "decade": era_result.get("decade", 0)}
 
     if defect_result and defect_result.get("material"):
         mat = defect_result["material"]
@@ -103,7 +107,9 @@ def resolve_material_consensus(
             }
             logger.debug(
                 "Material-Konsens: Era-Boost +%.3f für %s (era_conf=%.2f)",
-                _era_boost, _era_mat, _era_conf,
+                _era_boost,
+                _era_mat,
+                _era_conf,
             )
 
     # §v10.14.1 Chain-Consistency Penalty: Wenn die Tonträgerkette
@@ -124,15 +130,21 @@ def resolve_material_consensus(
                     # Material nicht in der Chain → starke Penalty
                     # (aber nicht auf 0 — Defektmuster können override)
                     _penalty = 0.60  # 60% Reduktion
-                    votes[_mat] *= (1.0 - _penalty)
+                    votes[_mat] *= 1.0 - _penalty
                     logger.debug(
                         "Material-Konsens: Chain-Penalty für %s (nicht in chain %s)",
-                        _mat, _chain_materials,
+                        _mat,
+                        _chain_materials,
                     )
 
     if not votes:
-        return {"material": "unknown", "confidence": 0.0, "source": "none",
-                "all_votes": details, "conflict_detected": False}
+        return {
+            "material": "unknown",
+            "confidence": 0.0,
+            "source": "none",
+            "all_votes": details,
+            "conflict_detected": False,
+        }
 
     # Gewinner mit höchstem gewichtetem Score
     best_material = max(votes.items(), key=lambda x: x[1])
@@ -140,7 +152,7 @@ def resolve_material_consensus(
     normalized_confidence = best_material[1] / total_weight
 
     # Konflikt-Erkennung
-    unique_materials = set(d["material"] for d in details.values())
+    unique_materials = {d["material"] for d in details.values()}
     conflict_detected = len(unique_materials) > 1
 
     if conflict_detected:
@@ -192,14 +204,14 @@ def validate_material_era_consistency(material: str, decade: int, transfer_chain
     # Aufnahmemedium verwendet. Eine Aufnahme DANACH kann nicht auf
     # diesem Medium entstanden sein.
     _PRODUCTION_END: dict[str, int] = {
-        "wax_cylinder": 1929,    # Edison stellte Wachswalzen 1929 ein
+        "wax_cylinder": 1929,  # Edison stellte Wachswalzen 1929 ein
         "wire_recording": 1945,  # Drahtton nach WWII obsolet
-        "shellac": 1958,         # Letzte kommerzielle Shellac-Pressungen
-        "lacquer_disc": 1960,    # Transcription discs
-        "8track": 1982,          # 8-Track Ende der Produktion
-        "dat": 2005,             # DAT-Produktion eingestellt
-        "minidisc": 2013,        # Letzte MiniDisc-Player
-        "dcc": 1996,             # DCC eingestellt
+        "shellac": 1958,  # Letzte kommerzielle Shellac-Pressungen
+        "lacquer_disc": 1960,  # Transcription discs
+        "8track": 1982,  # 8-Track Ende der Produktion
+        "dat": 2005,  # DAT-Produktion eingestellt
+        "minidisc": 2013,  # Letzte MiniDisc-Player
+        "dcc": 1996,  # DCC eingestellt
     }
 
     _mat_lower = material.lower().replace(" ", "_").replace("-", "_")
@@ -209,9 +221,10 @@ def validate_material_era_consistency(material: str, decade: int, transfer_chain
         # Nein — wenn decade > _end, wurde es VOR der Aufnahme eingestellt.
         # Das ist physikalisch unmöglich.
         logger.warning(
-            "validate_material_era_consistency: %s production ended %d, "
-            "but era=%d → IMPOSSIBLE",
-            material, _end, decade,
+            "validate_material_era_consistency: %s production ended %d, but era=%d → IMPOSSIBLE",
+            material,
+            _end,
+            decade,
         )
         return False
 
@@ -225,10 +238,13 @@ def validate_material_era_consistency(material: str, decade: int, transfer_chain
         "vinyl": 1948,
         "cassette": 1963,
         "reel_tape": 1935,
-        "cd": 1982, "cd_digital": 1982,
+        "cd": 1982,
+        "cd_digital": 1982,
         "dat": 1987,
         "minidisc": 1992,
-        "mp3_low": 1995, "mp3_high": 1995, "mp3_high_vbr": 1998,
+        "mp3_low": 1995,
+        "mp3_high": 1995,
+        "mp3_high_vbr": 1998,
         "aac": 1997,
         "streaming": 2005,
         "dcc": 1992,
@@ -245,9 +261,19 @@ def validate_material_era_consistency(material: str, decade: int, transfer_chain
         # Wenn das Medium ein ORIGINAL-AUFNAHMEMEDIUM ist (Shellac, Vinyl,
         # Cassette) und das EINZIGE erkannte Medium → IMPOSSIBLE.
         _distribution_formats = {
-            "cd", "cd_digital", "mp3_low", "mp3_high", "mp3_high_vbr",
-            "aac", "streaming", "bluray_audio", "sacd", "pcm_digital",
-            "dat", "minidisc", "dcc",
+            "cd",
+            "cd_digital",
+            "mp3_low",
+            "mp3_high",
+            "mp3_high_vbr",
+            "aac",
+            "streaming",
+            "bluray_audio",
+            "sacd",
+            "pcm_digital",
+            "dat",
+            "minidisc",
+            "dcc",
         }
         if _mat_lower not in _distribution_formats:
             # Analoges Original-Medium — kann nicht vor seiner Erfindung
@@ -257,9 +283,10 @@ def validate_material_era_consistency(material: str, decade: int, transfer_chain
             # Bei Einzel-Medium (keine Chain) → IMPOSSIBLE.
             if not transfer_chain or len(transfer_chain) <= 1:
                 logger.warning(
-                    "validate_material_era_consistency: %s invented %d, "
-                    "but era=%d and no transfer chain → IMPOSSIBLE",
-                    material, _invented, decade,
+                    "validate_material_era_consistency: %s invented %d, but era=%d and no transfer chain → IMPOSSIBLE",
+                    material,
+                    _invented,
+                    decade,
                 )
                 return False
 
@@ -282,9 +309,21 @@ def build_chain(materials: list[str], era_decade: int | None = None) -> list[str
     Returns:
         Chronologisch sortierte, deduplizierte Kette der ERKANNTEN Medien.
     """
-    _era_order = ["wax_cylinder", "shellac", "reel_tape", "lacquer_disc",
-                  "vinyl", "cassette", "dat", "cd", "minidisc",
-                  "mp3", "mp3_low", "mp3_high", "streaming"]
+    _era_order = [
+        "wax_cylinder",
+        "shellac",
+        "reel_tape",
+        "lacquer_disc",
+        "vinyl",
+        "cassette",
+        "dat",
+        "cd",
+        "minidisc",
+        "mp3",
+        "mp3_low",
+        "mp3_high",
+        "streaming",
+    ]
 
     # Nur deduplizieren + chronologisch sortieren. NICHTS hinzufügen.
     seen: set[str] = set()

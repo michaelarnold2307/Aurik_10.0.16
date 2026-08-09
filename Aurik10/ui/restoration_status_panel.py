@@ -64,22 +64,38 @@ class RestorationStatusPanel(QFrame):
 
     # §v10.708: Material-adaptive P1/P2-Schwellwerte (identisch mit Export-Gate)
     _P1P2_THRESHOLDS: dict[str, dict[str, float]] = {
-        "shellac": {"tonal_center": 0.65, "timbre_authentizitaet": 0.60,
-                     "natuerlichkeit": 0.62, "authentizitaet": 0.60},
-        "vinyl": {"tonal_center": 0.74, "timbre_authentizitaet": 0.70,
-                  "natuerlichkeit": 0.72, "authentizitaet": 0.70},
-        "tape": {"tonal_center": 0.72, "timbre_authentizitaet": 0.68,
-                 "natuerlichkeit": 0.70, "authentizitaet": 0.68},
-        "cassette": {"tonal_center": 0.70, "timbre_authentizitaet": 0.66,
-                      "natuerlichkeit": 0.68, "authentizitaet": 0.66},
-        "reel_tape": {"tonal_center": 0.74, "timbre_authentizitaet": 0.70,
-                      "natuerlichkeit": 0.72, "authentizitaet": 0.70},
-        "digital": {"tonal_center": 0.78, "timbre_authentizitaet": 0.75,
-                     "natuerlichkeit": 0.78, "authentizitaet": 0.76},
+        "shellac": {
+            "tonal_center": 0.65,
+            "timbre_authentizitaet": 0.60,
+            "natuerlichkeit": 0.62,
+            "authentizitaet": 0.60,
+        },
+        "vinyl": {"tonal_center": 0.74, "timbre_authentizitaet": 0.70, "natuerlichkeit": 0.72, "authentizitaet": 0.70},
+        "tape": {"tonal_center": 0.72, "timbre_authentizitaet": 0.68, "natuerlichkeit": 0.70, "authentizitaet": 0.68},
+        "cassette": {
+            "tonal_center": 0.70,
+            "timbre_authentizitaet": 0.66,
+            "natuerlichkeit": 0.68,
+            "authentizitaet": 0.66,
+        },
+        "reel_tape": {
+            "tonal_center": 0.74,
+            "timbre_authentizitaet": 0.70,
+            "natuerlichkeit": 0.72,
+            "authentizitaet": 0.70,
+        },
+        "digital": {
+            "tonal_center": 0.78,
+            "timbre_authentizitaet": 0.75,
+            "natuerlichkeit": 0.78,
+            "authentizitaet": 0.76,
+        },
     }
     _DEFAULT_THRESHOLDS: dict[str, float] = {
-        "tonal_center": 0.74, "timbre_authentizitaet": 0.70,
-        "natuerlichkeit": 0.72, "authentizitaet": 0.70,
+        "tonal_center": 0.74,
+        "timbre_authentizitaet": 0.70,
+        "natuerlichkeit": 0.72,
+        "authentizitaet": 0.70,
     }
 
     # Human-readable labels for the 4 dimensions
@@ -140,8 +156,7 @@ class RestorationStatusPanel(QFrame):
         for dim_key in ["tonal_center", "timbre_authentizitaet", "natuerlichkeit", "authentizitaet"]:
             label = QLabel("—")
             label.setStyleSheet(
-                "font-size: 11px; padding: 2px 6px; border-radius: 3px; "
-                "background: #2a2a35; color: #888;"
+                "font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #2a2a35; color: #888;"
             )
             label.setToolTip(self._DIM_LABELS.get(dim_key, dim_key))
             self._dim_labels[dim_key] = label
@@ -217,16 +232,13 @@ class RestorationStatusPanel(QFrame):
                     natuerlichkeit, authentizitaet. Werte 0.0–1.0.
                     Fehlende Keys werden als "—" angezeigt.
         """
-        thresholds = self._P1P2_THRESHOLDS.get(
-            self._current_material, self._DEFAULT_THRESHOLDS
-        )
+        thresholds = self._P1P2_THRESHOLDS.get(self._current_material, self._DEFAULT_THRESHOLDS)
         for dim_key, label in self._dim_labels.items():
             value = scores.get(dim_key)
             if value is None:
                 label.setText("—")
                 label.setStyleSheet(
-                    "font-size: 11px; padding: 2px 6px; border-radius: 3px; "
-                    "background: #2a2a35; color: #888;"
+                    "font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #2a2a35; color: #888;"
                 )
                 continue
 
@@ -252,13 +264,9 @@ class RestorationStatusPanel(QFrame):
 
             label.setText(f"{short_label} {value:.0%}")
             label.setStyleSheet(
-                f"font-size: 11px; padding: 2px 6px; border-radius: 3px; "
-                f"background: {bg}; color: {color};"
+                f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {bg}; color: {color};"
             )
-            label.setToolTip(
-                f"{short_label}: {value:.3f} "
-                f"(Schwelle: {threshold:.2f} für {self._current_material})"
-            )
+            label.setToolTip(f"{short_label}: {value:.3f} (Schwelle: {threshold:.2f} für {self._current_material})")
 
     def set_complete(self) -> None:
         """Show completion state."""

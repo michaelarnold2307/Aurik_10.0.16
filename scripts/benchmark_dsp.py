@@ -220,7 +220,10 @@ def benchmark_cython():
     max_gap = 1000
     python_time, _ = benchmark_function(python_group_clicks, clicks, max_gap, iterations=100)
     cython_time, _ = benchmark_function(
-        cython_loops.group_clicks_fast, clicks.astype(np.int32), max_gap, iterations=100  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        cython_loops.group_clicks_fast,
+        clicks.astype(np.int32),
+        max_gap,
+        iterations=100,  # type: ignore[arg-type]  # §V5 Dither applied at export level
     )
     speedup = python_time / cython_time
 

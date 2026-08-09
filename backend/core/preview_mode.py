@@ -10,7 +10,9 @@ Pipeline: restore(audio, mode="preview", preview_duration_s=30)
 
 Autor: Aurik 10
 """
+
 from __future__ import annotations
+
 import logging
 import tempfile
 from dataclasses import dataclass
@@ -85,10 +87,7 @@ class PreviewMode:
         _end = min(_start + preview_samples, total_len)
         if audio.ndim == 2:
             _is_ch_first = audio.shape[0] <= 8
-            preview_audio = (
-                audio[:, _start:_end].copy() if _is_ch_first
-                else audio[_start:_end, :].copy()
-            )
+            preview_audio = audio[:, _start:_end].copy() if _is_ch_first else audio[_start:_end, :].copy()
         else:
             preview_audio = audio[_start:_end].copy()
 
@@ -99,6 +98,7 @@ class PreviewMode:
         if self._restorer is not None:
             try:
                 from backend.core.pre_analysis import analyze as _pre_analyze
+
                 _pa = _pre_analyze(preview_audio, sample_rate)
                 quality = float(getattr(_pa, "quality_estimate", 0.0) or 0.0)
                 defects = int(getattr(_pa, "defect_count", 0) or 0)
@@ -125,6 +125,7 @@ class PreviewMode:
 
     def export_preview(self, result: PreviewResult, output_dir: str | None = None) -> str:
         import soundfile as sf
+
         out_dir = Path(output_dir) if output_dir else Path(tempfile.mkdtemp(prefix="aurik_preview_"))
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"preview_{result.duration_s:.0f}s.flac"

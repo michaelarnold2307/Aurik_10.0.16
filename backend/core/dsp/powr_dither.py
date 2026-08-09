@@ -21,6 +21,7 @@ Autor: Aurik 10.0.20 — August 2026
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -30,20 +31,29 @@ logger = logging.getLogger(__name__)
 # Werte < 1.0 = weniger Rauschen (bessere Maskierung)
 # Werte > 1.0 = mehr Rauschen (HF-Kompensation)
 POWR_TYPE3_SHAPING: list[float] = [
-    0.95,   #   0–100 Hz   — Tiefbass (leicht reduziert)
-    0.90,   # 100–200 Hz   — Bass
-    0.80,   # 200–400 Hz   — Untere Mitten
-    0.60,   # 400–800 Hz   — Mitten (reduziert)
-    0.40,   # 800–1600 Hz  — Präsenz (stark reduziert)
-    0.30,   # 1.6–3.2 kHz  — Max. Ohrempfindlichkeit (max. reduziert, −14 dB)
-    0.40,   # 3.2–6.4 kHz  — Untere Höhen (reduziert)
-    0.70,   # 6.4–12.8 kHz — Höhen
-    1.00,   # 12.8–20 kHz  — Luft (flach, natürlicher Rauschboden)
+    0.95,  #   0–100 Hz   — Tiefbass (leicht reduziert)
+    0.90,  # 100–200 Hz   — Bass
+    0.80,  # 200–400 Hz   — Untere Mitten
+    0.60,  # 400–800 Hz   — Mitten (reduziert)
+    0.40,  # 800–1600 Hz  — Präsenz (stark reduziert)
+    0.30,  # 1.6–3.2 kHz  — Max. Ohrempfindlichkeit (max. reduziert, −14 dB)
+    0.40,  # 3.2–6.4 kHz  — Untere Höhen (reduziert)
+    0.70,  # 6.4–12.8 kHz — Höhen
+    1.00,  # 12.8–20 kHz  — Luft (flach, natürlicher Rauschboden)
 ]
 
 # Band-Grenzen in Hz (10 Kanten für 9 Bänder)
 POWR3_BAND_EDGES: list[float] = [
-    0.0, 100.0, 200.0, 400.0, 800.0, 1600.0, 3200.0, 6400.0, 12800.0, 20000.0,
+    0.0,
+    100.0,
+    200.0,
+    400.0,
+    800.0,
+    1600.0,
+    3200.0,
+    6400.0,
+    12800.0,
+    20000.0,
 ]
 
 
@@ -68,7 +78,7 @@ def _generate_noise_shaping_filter(sample_rate: int, fft_size: int) -> np.ndarra
 
     # Sanfte Übergänge zwischen Bändern (Gleitender Durchschnitt über 3 Bins)
     kernel = np.ones(3) / 3.0
-    filter_response = np.convolve(filter_response, kernel, mode='same')
+    filter_response = np.convolve(filter_response, kernel, mode="same")
     filter_response[:2] = filter_response[2]
     filter_response[-2:] = filter_response[-3]
 
@@ -132,7 +142,7 @@ def _apply_powr_mono(
     noise_filter = _generate_noise_shaping_filter(sample_rate, block_size)
 
     # Dither-Amplitude: 0.5 LSB (Standard TPDF-Pegel)
-    lsb = 2.0 / (2 ** bit_depth)
+    lsb = 2.0 / (2**bit_depth)
     dither_amplitude = lsb * 0.5
 
     # Overlap-Add Buffer (Hanning 50% OLA = perfect reconstruction, sum=1)
@@ -190,7 +200,7 @@ def quantize_to_int(audio: np.ndarray, bit_depth: int = 16) -> np.ndarray:
         max_val = 8388607  # 2^23 - 1
         return np.clip(audio * max_val, -max_val, max_val).astype(np.int32)
     else:
-        raise ValueError(f"quantize_to_int: bit_depth muss 16 oder 24 sein")
+        raise ValueError("quantize_to_int: bit_depth muss 16 oder 24 sein")
 
 
 def compute_noise_floor_reduction(sample_rate: int = 48000) -> dict:

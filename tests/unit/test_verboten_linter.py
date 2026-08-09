@@ -24,32 +24,32 @@ CANONICAL_FILES: set[str] = {
     "backend/core/calibration_context.py",
     "backend/core/per_phase_musical_goals_gate.py",  # REGRESSION_THRESHOLD_*
     "backend/core/cumulative_interaction_guard.py",  # MAX_GROUP_DELAY_*
-    "backend/core/spec_constitution.py",             # MUSIC_DEATH_SHIELD
-    "backend/core/pipeline_calibration.py",          # calibrate_pipeline_guards
+    "backend/core/spec_constitution.py",  # MUSIC_DEATH_SHIELD
+    "backend/core/pipeline_calibration.py",  # calibrate_pipeline_guards
 }
 
 # Muster für Schwellwert-Konstanten
 THRESHOLD_PATTERN = re.compile(
-    r'^[A-Z][A-Z_0-9]*(?:_THRESHOLD|_FLOOR|_CAP|_MAX|_MIN|_TOLERANCE|'
-    r'_WARN|_CRIT|_CEILING|_GUARD|_LIMIT|_SAFE|_BUDGET|_GATE|'
-    r'_BASELINE|_TARGET|_DEF|_DB|_MS|_HZ|_PCT|_RATIO|_FACTOR|_BOOST|'
-    r'_DISCOUNT|_PENALTY|_BAND|_KNEE|_ATTACK|_RELEASE|_DEPTH|_WINDOW)'
-    r'\s*[:=]\s*[\d.+-]+',
+    r"^[A-Z][A-Z_0-9]*(?:_THRESHOLD|_FLOOR|_CAP|_MAX|_MIN|_TOLERANCE|"
+    r"_WARN|_CRIT|_CEILING|_GUARD|_LIMIT|_SAFE|_BUDGET|_GATE|"
+    r"_BASELINE|_TARGET|_DEF|_DB|_MS|_HZ|_PCT|_RATIO|_FACTOR|_BOOST|"
+    r"_DISCOUNT|_PENALTY|_BAND|_KNEE|_ATTACK|_RELEASE|_DEPTH|_WINDOW)"
+    r"\s*[:=]\s*[\d.+-]+",
     re.VERBOSE,
 )
 
 # Numerische Defaults in Funktionssignaturen (zusätzlich zu transfer_chain_depth)
 SIGNATURE_NUMERIC_DEFAULT = re.compile(
-    r'(?:restorability_score|snr_db|bandwidth|threshold|tolerance|'
-    r'strength|confidence|weight|factor|bonus|penalty|floor|cap|ceiling|'
-    r'guard|limit|budget|gate|baseline|target)\s*:\s*(?:int|float)\s*=\s*[\d.+-]+',
+    r"(?:restorability_score|snr_db|bandwidth|threshold|tolerance|"
+    r"strength|confidence|weight|factor|bonus|penalty|floor|cap|ceiling|"
+    r"guard|limit|budget|gate|baseline|target)\s*:\s*(?:int|float)\s*=\s*[\d.+-]+",
     re.IGNORECASE,
 )
 
 # Diskrete Buckets/Lookup-Tabellen (§G77 verboten)
 BUCKET_PATTERN = re.compile(
-    r'(?:if|elif)\s+.*\b(?:transfer_chain_depth|restorability_score|'
-    r'material_type|snr_db|bandwidth)\b.*[<>]=?\s*[\d.]+',
+    r"(?:if|elif)\s+.*\b(?:transfer_chain_depth|restorability_score|"
+    r"material_type|snr_db|bandwidth)\b.*[<>]=?\s*[\d.]+",
 )
 
 
@@ -104,25 +104,31 @@ def _scan_file(filepath: Path) -> dict[str, list[dict[str, Any]]]:
             # Nicht innerhalb einer Funktion/Klasse
             indent = len(line) - len(line.lstrip())
             if indent <= 4:  # Modul-Level (inkl. Klassen-Attribute in einfachen Cases)
-                results["thresholds"].append({
-                    "line": lineno_1,
-                    "text": stripped[:120],
-                })
+                results["thresholds"].append(
+                    {
+                        "line": lineno_1,
+                        "text": stripped[:120],
+                    }
+                )
 
         # 2. Numerische Defaults in Funktionssignaturen
         if SIGNATURE_NUMERIC_DEFAULT.search(stripped):
-            results["signature_defaults"].append({
-                "line": lineno_1,
-                "text": stripped.strip()[:120],
-            })
+            results["signature_defaults"].append(
+                {
+                    "line": lineno_1,
+                    "text": stripped.strip()[:120],
+                }
+            )
 
         # 3. Diskrete Buckets (§G77)
         if BUCKET_PATTERN.search(stripped):
             # Nur wenn es nach Bucket-Logik aussieht (mehrere elifs mit gleicher Variable)
-            results["buckets"].append({
-                "line": lineno_1,
-                "text": stripped.strip()[:120],
-            })
+            results["buckets"].append(
+                {
+                    "line": lineno_1,
+                    "text": stripped.strip()[:120],
+                }
+            )
 
     return results
 
@@ -156,6 +162,7 @@ def _scan_all() -> dict[str, dict]:
 # Pytest-Test
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_no_new_hardcoded_thresholds() -> None:
     """§V25/§G123: Keine NEUEN hartcodierten Schwellwerte.
 
@@ -174,20 +181,24 @@ def test_no_new_hardcoded_thresholds() -> None:
 
     # Für jetzt: nur dokumentieren, nicht failen
     # Sobald Baseline existiert → vergleichen wie beim transfer_chain_depth-Linter
-    print(f"\n§V25 VERBOTE-Linter Scan:")
-    print(f"  Schwellwert-Konstanten: {threshold_count} in {sum(1 for v in results.values() if v['thresholds'])} Dateien")
-    print(f"  Signatur-Defaults:      {sig_count} in {sum(1 for v in results.values() if v['signature_defaults'])} Dateien")
+    print("\n§V25 VERBOTE-Linter Scan:")
+    print(
+        f"  Schwellwert-Konstanten: {threshold_count} in {sum(1 for v in results.values() if v['thresholds'])} Dateien"
+    )
+    print(
+        f"  Signatur-Defaults:      {sig_count} in {sum(1 for v in results.values() if v['signature_defaults'])} Dateien"
+    )
     print(f"  Diskrete Buckets:       {bucket_count} in {sum(1 for v in results.values() if v['buckets'])} Dateien")
 
     # Top-10 Dateien mit den meisten Verstößen
     ranked = sorted(results.items(), key=lambda x: sum(len(v) for v in x[1].values()), reverse=True)
     if ranked:
-        print(f"\n  Top-10 Dateien:")
+        print("\n  Top-10 Dateien:")
         for path, counts in ranked[:10]:
             t = len(counts["thresholds"])
             s = len(counts["signature_defaults"])
             b = len(counts["buckets"])
-            print(f"    {path}: {t}T + {s}S + {b}B = {t+s+b}")
+            print(f"    {path}: {t}T + {s}S + {b}B = {t + s + b}")
 
     # Kein Assert — informativ in dieser Phase
     assert threshold_count >= 0  # Trivial — dokumentiert nur
@@ -199,7 +210,7 @@ if __name__ == "__main__":
     sig_count = sum(len(v["signature_defaults"]) for v in results.values())
     bucket_count = sum(len(v["buckets"]) for v in results.values())
 
-    print(f"§V25 VERBOTE-Linter:")
+    print("§V25 VERBOTE-Linter:")
     print(f"  Schwellwerte: {threshold_count}")
     print(f"  Signaturen:   {sig_count}")
     print(f"  Buckets:      {bucket_count}")

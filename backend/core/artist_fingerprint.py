@@ -251,22 +251,26 @@ class ArtistFingerprintStore:
     @staticmethod
     def _voice_similarity(a: SingerVoiceFingerprint, b: SingerVoiceFingerprint) -> float:
         """Cosine-Similarity zwischen zwei Stimm-Fingerprints."""
-        vec_a = np.array([
-            a.formant_f1_hz / 1000.0,
-            a.formant_f2_hz / 2000.0,
-            a.vibrato_rate_hz / 10.0,
-            a.vibrato_extent_semitones / 2.0,
-            a.hnr_db / 40.0,
-            a.f0_mean_hz / 500.0,
-        ])
-        vec_b = np.array([
-            b.formant_f1_hz / 1000.0,
-            b.formant_f2_hz / 2000.0,
-            b.vibrato_rate_hz / 10.0,
-            b.vibrato_extent_semitones / 2.0,
-            b.hnr_db / 40.0,
-            b.f0_mean_hz / 500.0,
-        ])
+        vec_a = np.array(
+            [
+                a.formant_f1_hz / 1000.0,
+                a.formant_f2_hz / 2000.0,
+                a.vibrato_rate_hz / 10.0,
+                a.vibrato_extent_semitones / 2.0,
+                a.hnr_db / 40.0,
+                a.f0_mean_hz / 500.0,
+            ]
+        )
+        vec_b = np.array(
+            [
+                b.formant_f1_hz / 1000.0,
+                b.formant_f2_hz / 2000.0,
+                b.vibrato_rate_hz / 10.0,
+                b.vibrato_extent_semitones / 2.0,
+                b.hnr_db / 40.0,
+                b.f0_mean_hz / 500.0,
+            ]
+        )
         dot = float(np.dot(vec_a, vec_b))
         norm_a = float(np.linalg.norm(vec_a) + 1e-12)
         norm_b = float(np.linalg.norm(vec_b) + 1e-12)
@@ -370,6 +374,7 @@ def extract_singer_voice_fingerprint(
     spec_env: list[float] = []
     try:
         from scipy.signal import spectrogram  # type: ignore[import]
+
         f, _, Sxx = spectrogram(mono, fs=sample_rate, nperseg=1024)  # type: ignore[no-any-return]
         band_edges = np.logspace(np.log10(80), np.log10(8000), n_bands + 1)
         for i in range(n_bands):

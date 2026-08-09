@@ -10,7 +10,9 @@ Stage 3: CI-Proxy — Bootstrap als Fallback wenn kein Panel verfügbar
 Usage:
     python scripts/calibrate_mushra_bootstrap.py [--force] [--stage 2|3]
 """
+
 from __future__ import annotations
+
 import json
 import logging
 import os
@@ -31,6 +33,7 @@ def generate_synthetic_panel_data(n_listeners: int = 10, n_samples: int = 15) ->
     (Mittelwert ~75, Std ~12, Range 0-100).
     """
     import numpy as np
+
     rng = np.random.RandomState(42)
 
     samples = []
@@ -42,13 +45,15 @@ def generate_synthetic_panel_data(n_listeners: int = 10, n_samples: int = 15) ->
             score = base_score + rng.normal(0, 8)
             score = max(0.0, min(100.0, score))
             listener_scores.append(round(float(score), 1))
-        samples.append({
-            "sample_id": f"sample_{i:03d}",
-            "listener_scores": listener_scores,
-            "mean_score": round(float(np.mean(listener_scores)), 1),
-            "std_score": round(float(np.std(listener_scores)), 1),
-            "material": rng.choice(["vinyl", "cassette", "shellac", "cd"]),
-        })
+        samples.append(
+            {
+                "sample_id": f"sample_{i:03d}",
+                "listener_scores": listener_scores,
+                "mean_score": round(float(np.mean(listener_scores)), 1),
+                "std_score": round(float(np.std(listener_scores)), 1),
+                "material": rng.choice(["vinyl", "cassette", "shellac", "cd"]),
+            }
+        )
 
     return {
         "panel_size": n_listeners,
@@ -79,12 +84,11 @@ def run_bootstrap_calibration(force: bool = False) -> bool:
     # Schritt 2: Ridge-Regression auf Panel-Daten
     print("[2/3] Führe Ridge-Regression durch...")
     try:
-        from sklearn.linear_model import Ridge
         import numpy as np
+        from sklearn.linear_model import Ridge
 
         # Extrahiere Features aus den Panel-Daten (vereinfacht)
-        X = np.array([[s["mean_score"] / 100.0, 1.0 - s["std_score"] / 30.0]
-                      for s in panel_data["samples"]])
+        X = np.array([[s["mean_score"] / 100.0, 1.0 - s["std_score"] / 30.0] for s in panel_data["samples"]])
         y = np.array([s["mean_score"] / 100.0 for s in panel_data["samples"]])
 
         model = Ridge(alpha=1.0)
@@ -105,7 +109,7 @@ def run_bootstrap_calibration(force: bool = False) -> bool:
             },
             "timestamp": __import__("datetime").datetime.now().isoformat(),
             "bootstrap": True,
-            "note": "Synthetische Bootstrap-Kalibrierung. Echte Panel-Daten via calibrate_from_panel() für Stage 2."
+            "note": "Synthetische Bootstrap-Kalibrierung. Echte Panel-Daten via calibrate_from_panel() für Stage 2.",
         }
 
         with open(CALIBRATION_FILE, "w") as f:
@@ -133,7 +137,7 @@ def run_bootstrap_calibration(force: bool = False) -> bool:
         print(f"      Panel: {saved.get('panel_size', '?')} Hörer × {saved.get('sample_count', '?')} Samples")
         print("\n=== Bootstrap abgeschlossen ===")
         print(f"Artefakt: {CALIBRATION_FILE}")
-        print(f"Nächster Schritt: Echte Panel-Daten sammeln → calibrate_from_panel() aufrufen")
+        print("Nächster Schritt: Echte Panel-Daten sammeln → calibrate_from_panel() aufrufen")
         return True
 
     print("❌ Fehler: Artefakt wurde nicht erstellt")

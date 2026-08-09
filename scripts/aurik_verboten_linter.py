@@ -7,11 +7,11 @@ Referenz: .github/VERBOTEN.md — Linter-Referenz-Tabelle.
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import re
 import sys
-import ast
 from pathlib import Path
 from typing import NamedTuple
 

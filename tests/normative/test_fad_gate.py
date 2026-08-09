@@ -3,9 +3,11 @@ Frechet Audio Distance Gate — laeuft nur mit --run-heavy-tests.
 
 Autor: Aurik 10
 """
+
 from __future__ import annotations
-import pytest
+
 import numpy as np
+import pytest
 
 pytestmark = pytest.mark.heavy
 

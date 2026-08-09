@@ -5,7 +5,9 @@ Speichert:
 - Frühere Restaurierungsergebnisse (Datei-Pfad → Qualität, Datum)
 - Letzte Einstellungen (Modus, Material, Export-Format)
 """
+
 from __future__ import annotations
+
 import json
 import time
 from pathlib import Path
@@ -40,6 +42,7 @@ class SessionMemory:
                 geo_b64 = data.get("window_geometry")
                 if geo_b64:
                     import base64
+
                     self._window_geometry = base64.b64decode(geo_b64)
                 self._last_mode = data.get("last_mode", "restoration")
                 self._last_material = data.get("last_material", "unknown")
@@ -50,6 +53,7 @@ class SessionMemory:
     def _save(self) -> None:
         SESSION_PATH.parent.mkdir(parents=True, exist_ok=True)
         import base64
+
         data = {
             "history": self._history[-MAX_HISTORY_ENTRIES:],
             "window_geometry": base64.b64encode(self._window_geometry).decode() if self._window_geometry else None,
@@ -63,14 +67,16 @@ class SessionMemory:
     # ── History ──────────────────────────────────────────────────────────
 
     def add_result(self, file_path: str, quality: float, mode: str, duration_s: float) -> None:
-        self._history.append({
-            "file": file_path,
-            "quality": round(quality, 1),
-            "mode": mode,
-            "duration_s": round(duration_s, 1),
-            "timestamp": time.time(),
-            "date": time.strftime("%Y-%m-%d %H:%M"),
-        })
+        self._history.append(
+            {
+                "file": file_path,
+                "quality": round(quality, 1),
+                "mode": mode,
+                "duration_s": round(duration_s, 1),
+                "timestamp": time.time(),
+                "date": time.strftime("%Y-%m-%d %H:%M"),
+            }
+        )
         self._save()
 
     def get_history(self, file_path: str | None = None) -> list[dict[str, Any]]:

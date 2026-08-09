@@ -53,36 +53,42 @@ def _scan_ui_file(filepath: Path) -> dict[str, list[dict]]:
 
         # 1. time.sleep() — UI-Thread-Blocker
         if "time.sleep(" in stripped:
-            results["thread_blockers"].append({
-                "line": lineno_1,
-                "text": stripped[:120],
-            })
+            results["thread_blockers"].append(
+                {
+                    "line": lineno_1,
+                    "text": stripped[:120],
+                }
+            )
 
         # 2. Magic Numbers: float/int Literale in UI-Kontext
         #    (Zahlen die wie Schwellwerte/Dimensionen aussehen)
         magic = re.findall(
-            r'(?:width|height|margin|padding|spacing|size|threshold|'
-            r'delay|timeout|interval|duration|opacity|scale|factor|'
-            r'ratio|limit|max|min|offset|radius)\s*[:=]\s*([\d.]+)',
+            r"(?:width|height|margin|padding|spacing|size|threshold|"
+            r"delay|timeout|interval|duration|opacity|scale|factor|"
+            r"ratio|limit|max|min|offset|radius)\s*[:=]\s*([\d.]+)",
             stripped,
         )
         for m in magic:
             val = float(m)
             # Nur nicht-triviale Zahlen (>3, nicht 0/1/100)
             if val > 3 and val not in (10, 20, 30, 50, 100, 200, 500, 1000):
-                results["magic_numbers"].append({
-                    "line": lineno_1,
-                    "text": stripped.strip()[:120],
-                    "value": val,
-                })
+                results["magic_numbers"].append(
+                    {
+                        "line": lineno_1,
+                        "text": stripped.strip()[:120],
+                        "value": val,
+                    }
+                )
 
         # 3. Lange UI-Texte (sollten Callback-basiert oder in i18n sein)
         if len(stripped) > 80 and ('"' in stripped or "'" in stripped):
-            if any(kw in stripped.lower() for kw in ('text', 'label', 'title', 'message', 'tooltip')):
-                results["long_strings"].append({
-                    "line": lineno_1,
-                    "text": stripped[:150],
-                })
+            if any(kw in stripped.lower() for kw in ("text", "label", "title", "message", "tooltip")):
+                results["long_strings"].append(
+                    {
+                        "line": lineno_1,
+                        "text": stripped[:150],
+                    }
+                )
 
     return results
 
@@ -109,6 +115,7 @@ def _scan_all_ui() -> dict[str, dict]:
 # Pytest-Test
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 def test_no_new_frontend_anti_patterns() -> None:
     """Frontend-VERBOTE: Keine NEUEN Anti-Patterns.
 
@@ -121,19 +128,19 @@ def test_no_new_frontend_anti_patterns() -> None:
     blocker_count = sum(len(v["thread_blockers"]) for v in results.values())
     string_count = sum(len(v["long_strings"]) for v in results.values())
 
-    print(f"\nFrontend-VERBOTE Scan:")
+    print("\nFrontend-VERBOTE Scan:")
     print(f"  Magic Numbers:    {magic_count}")
     print(f"  Thread-Blocker:   {blocker_count}")
     print(f"  Lange UI-Texte:   {string_count}")
 
     ranked = sorted(results.items(), key=lambda x: sum(len(v) for v in x[1].values()), reverse=True)
     if ranked:
-        print(f"\n  Top-5 Dateien:")
+        print("\n  Top-5 Dateien:")
         for path, counts in ranked[:5]:
             m = len(counts["magic_numbers"])
             t = len(counts["thread_blockers"])
             s = len(counts["long_strings"])
-            print(f"    {path}: {m}M + {t}T + {s}S = {m+t+s}")
+            print(f"    {path}: {m}M + {t}T + {s}S = {m + t + s}")
 
     assert magic_count >= 0
 
@@ -144,7 +151,7 @@ if __name__ == "__main__":
     blocker_count = sum(len(v["thread_blockers"]) for v in results.values())
     string_count = sum(len(v["long_strings"]) for v in results.values())
 
-    print(f"Frontend-VERBOTE:")
+    print("Frontend-VERBOTE:")
     print(f"  Magic Numbers:  {magic_count}")
     print(f"  Thread-Blocker: {blocker_count}")
     print(f"  Lange Texte:    {string_count}")

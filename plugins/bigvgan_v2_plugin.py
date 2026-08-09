@@ -451,7 +451,7 @@ class BigVGANv2Plugin:
                 out = self._coerce_like(hifigan.reconstruct(audio, sr), audio)
                 if self._usable_vocoder_output(audio, out):
                     return out, "hifigan_fallback", 0.78
-        except Exception as exc:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
 
         return self._synthesize_phase_coherent_istft_fallback(audio, sr)

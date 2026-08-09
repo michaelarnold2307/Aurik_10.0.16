@@ -3,7 +3,9 @@
 # §v10.14 ATOMIC CACHE-CLEAR: Löscht ALLE __pycache__-Verzeichnisse
 # rekursiv beim ersten Import. Garantiert dass JEDER Aurik-Start mit
 # frischem Bytecode läuft — kein manuelles find/rm mehr nötig.
-import shutil as _bclear_shutil, pathlib as _bclear_path
+import pathlib as _bclear_path
+import shutil as _bclear_shutil
+
 _BACKEND_ROOT = _bclear_path.Path(__file__).parent
 for _bclear_d in _BACKEND_ROOT.rglob("__pycache__"):
     _bclear_shutil.rmtree(_bclear_d, ignore_errors=True)

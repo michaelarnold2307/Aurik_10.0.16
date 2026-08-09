@@ -344,8 +344,14 @@ def _count_onsets(audio: np.ndarray, sr: int) -> int:
         _hop = _n_fft // 4
         if len(audio) < _n_fft * 2:
             return 0
-        _spec = np.abs(np.array([np.fft.rfft(audio[i:i+_n_fft] * np.hanning(_n_fft))
-                                  for i in range(0, len(audio)-_n_fft+1, _hop)]))
+        _spec = np.abs(
+            np.array(
+                [
+                    np.fft.rfft(audio[i : i + _n_fft] * np.hanning(_n_fft))
+                    for i in range(0, len(audio) - _n_fft + 1, _hop)
+                ]
+            )
+        )
         _flux = np.sum(np.maximum(0.0, _spec[1:] - _spec[:-1]), axis=1)
         _thresh = np.mean(_flux) + 0.5 * np.std(_flux)
         return int(np.sum(_flux > _thresh))
@@ -955,14 +961,20 @@ class ExcellenceOptimizer:
                     logger.warning(
                         "ExcellenceOptimizer: micro_dynamics onset loss %.0f%% (%d→%d) — "
                         "ueberspringen, Modulation zu aggressiv",
-                        _onset_loss * 100, _pre_onsets, _post_onsets,
+                        _onset_loss * 100,
+                        _pre_onsets,
+                        _post_onsets,
                     )
                     out = _pre_out  # Revert: Modulation zu aggressiv
                 else:
                     result.micro_dynamic_injected = True
                     result.applied_steps.append("micro_dynamics")
-                    logger.debug("ExcellenceOptimizer: Micro-dynamics injected, CV=%.3f onsets=%d→%d",
-                                 ctx.dynamic_cv, _pre_onsets, _post_onsets)
+                    logger.debug(
+                        "ExcellenceOptimizer: Micro-dynamics injected, CV=%.3f onsets=%d→%d",
+                        ctx.dynamic_cv,
+                        _pre_onsets,
+                        _post_onsets,
+                    )
             except Exception as exc:
                 logger.warning("ExcellenceOptimizer: micro_dynamics fehlgeschlagen: %s", exc)
 

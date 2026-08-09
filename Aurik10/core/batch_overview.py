@@ -5,15 +5,18 @@ Bietet:
 - Batch-Statistik (Durchschnitt, Bester, Schlechtester)
 - Batch-Filter (nur fehlgeschlagene, nur verbesserte)
 """
+
 from __future__ import annotations
+
+import time
 from dataclasses import dataclass, field
 from typing import Any
-import time
 
 
 @dataclass
 class BatchTrackInfo:
     """Einzelner Track im Batch."""
+
     file_path: str
     mode: str = "restoration"
     quality_before: float = 0.0
@@ -39,6 +42,7 @@ class BatchTrackInfo:
 @dataclass
 class BatchOverview:
     """Batch-Ergebnis-Übersicht."""
+
     tracks: list[BatchTrackInfo] = field(default_factory=list)
     started_at: float = 0.0
     finished_at: float = 0.0

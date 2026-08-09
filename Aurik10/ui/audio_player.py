@@ -482,7 +482,11 @@ class StreamingAudioPlayer:
 
                 data = _soxr_player.resample(data, sr, output_sr, quality="HQ").astype(np.float32)
             except Exception as exc:
-                logger.warning("§G23 StreamingAudioPlayer: soxr resample fehlgeschlagen → DSP-Ersatzpfad resample_poly: %s", exc, exc_info=True)
+                logger.warning(
+                    "§G23 StreamingAudioPlayer: soxr resample fehlgeschlagen → DSP-Ersatzpfad resample_poly: %s",
+                    exc,
+                    exc_info=True,
+                )
                 try:
                     from scipy.signal import resample_poly
 

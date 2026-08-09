@@ -8,10 +8,15 @@ Speichert Nutzer-Präferenzen pro Kategorie:
 
 Persistenz: ~/.aurik/preferences.json
 """
+
 from __future__ import annotations
-import json, logging, numpy as np
+
+import json
+import logging
 from pathlib import Path
 from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 PREF_PATH = Path.home() / ".aurik" / "preferences.json"
@@ -48,16 +53,21 @@ class PreferenceLearner:
                 self._prefs = data.get("preferences", {})
                 self._history = data.get("history", [])
                 self._gold_standards = data.get("gold_standards", {})
-            except Exception: pass
+            except Exception:
+                pass
 
     def _save(self) -> None:
         PREF_PATH.parent.mkdir(exist_ok=True)
         with open(PREF_PATH, "w") as f:
-            json.dump({"preferences": self._prefs, "history": self._history[-100:],
-                        "gold_standards": self._gold_standards}, f, indent=2)
+            json.dump(
+                {"preferences": self._prefs, "history": self._history[-100:], "gold_standards": self._gold_standards},
+                f,
+                indent=2,
+            )
 
-    def record_feedback(self, material: str, phase_strengths: dict[str, float],
-                        feedback: str, user_comment: str = "") -> None:
+    def record_feedback(
+        self, material: str, phase_strengths: dict[str, float], feedback: str, user_comment: str = ""
+    ) -> None:
         """Verarbeitet Nutzer-Feedback und aktualisiert Präferenzen."""
         if feedback not in FEEDBACK_CATEGORIES:
             logger.warning("Unbekanntes Feedback: %s", feedback)
@@ -68,16 +78,19 @@ class PreferenceLearner:
         adjust = cat["adjust"]
 
         if target == "lock":
-            self._gold_standards[material] = {"strengths": phase_strengths,
-                                               "timestamp": __import__("time").time(),
-                                               "comment": user_comment}
+            self._gold_standards[material] = {
+                "strengths": phase_strengths,
+                "timestamp": __import__("time").time(),
+                "comment": user_comment,
+            }
         else:
             mat_prefs = self._prefs.setdefault(material, {})
             current = mat_prefs.get(target, 0.0)
             mat_prefs[target] = np.clip(current + adjust, -0.5, 0.5)
 
-        self._history.append({"material": material, "feedback": feedback,
-                               "comment": user_comment, "time": __import__("time").time()})
+        self._history.append(
+            {"material": material, "feedback": feedback, "comment": user_comment, "time": __import__("time").time()}
+        )
         self._save()
         logger.info("Preference gelernt [%s]: %s → %s %+.2f", material, feedback, target, adjust)
 
@@ -96,8 +109,14 @@ class PreferenceLearner:
         return self._gold_standards.get(material)
 
     def get_learning_summary(self) -> dict[str, Any]:
-        return {"n_materials": len(self._prefs), "n_feedbacks": len(self._history),
-                "n_gold_standards": len(self._gold_standards),
-                "most_common_feedback": max(set(h["feedback"] for h in self._history[-50:]),
-                                            key=lambda x: sum(1 for h in self._history[-50:] if h["feedback"] == x))
-                if self._history else "none"}
+        return {
+            "n_materials": len(self._prefs),
+            "n_feedbacks": len(self._history),
+            "n_gold_standards": len(self._gold_standards),
+            "most_common_feedback": max(
+                {h["feedback"] for h in self._history[-50:]},
+                key=lambda x: sum(1 for h in self._history[-50:] if h["feedback"] == x),
+            )
+            if self._history
+            else "none",
+        }
