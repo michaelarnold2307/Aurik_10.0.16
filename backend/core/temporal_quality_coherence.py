@@ -39,7 +39,7 @@ _MATERIAL_SPAN_THRESHOLD: dict[str, float] = {
     "lossy_high": 1.20,
     "ogg": 1.50,
     "aac": 1.50,
-    "cassette": 1.80,  # §v10.0.4: 1.20→1.80 — Kassette hat Dropouts+Oxide-Shed (gemessen: span=1.762)
+    "cassette": 2.50,  # §v10.14 FIX: 1.80→2.50 — depth-4+ Kassetten-Ketten haben extreme Qualitätsvarianz
     # §9.12.8 vintage additions
     "shellac": 2.00,  # Shellac: high noise floor + significant amplitude variation
     "wax_cylinder": 2.50,  # Wax cylinder: very high noise + narrow BW
@@ -59,7 +59,7 @@ _MATERIAL_SIGMA_THRESHOLD: dict[str, float] = {
     "lossy_high": 0.60,
     "ogg": 0.70,
     "aac": 0.70,
-    "cassette": 0.60,
+    "cassette": 0.90,  # §v10.14 FIX: 0.60→0.90 — depth-4+ Kassetten-Ketten (gemessen: sigma=0.915)
     # §9.12.8 vintage additions
     "shellac": 0.90,
     "wax_cylinder": 1.10,

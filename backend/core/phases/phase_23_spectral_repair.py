@@ -652,6 +652,13 @@ class SpectralRepair(PhaseInterface):
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
 
+        # §v10.14 FIX: FlashSR Early-Exit-State pro Aufruf zurücksetzen.
+        # Vorher persistierte _flashsr_last_bw_gain_hz über Segmente —
+        # wenn Segment 1 0 Hz Gain hatte, wurde FlashSR für ALLE Folgesegmente
+        # deaktiviert, selbst wenn diese massiv von BW-Erweiterung profitiert hätten.
+        self._flashsr_last_bw_gain_hz = float("inf")
+        self._flashsr_pass_count = 0
+
         # §4.6b: Pre-phase eviction — free previous phase models to prevent OOM
         try:
             get_plugin_lifecycle_manager().evict_for_phase("phase_23_spectral_repair")

@@ -183,6 +183,12 @@ class StereoAuthenticitiyInvariant:
     MONO_ERA_CORRELATION_THRESHOLD: float = 0.97
     DECCA_CORRELATION_RANGE: tuple = (0.25, 0.65)
     PHANTOM_CENTER_MAX_DEG: float = 3.0
+    # §v10.14: Material-adaptive Toleranz — degradierte Medien haben inhärent
+    # instabileres Stereofeld (Kassetten-Dropouts, Azimut-Fehler).
+    PHANTOM_CENTER_MAX_DEG_RELAXED: float = 5.0
+    PHANTOM_CENTER_RELAXED_MATERIALS: frozenset[str] = frozenset({
+        "cassette", "mp3_low", "mp3_mid", "aac", "streaming",
+    })
     DECCA_DECADE_START: int = 1952
     DECCA_DECADE_END: int = 1965
     ABBEY_ROAD_DECADE_START: int = 1967
@@ -286,12 +292,17 @@ class StereoAuthenticitiyInvariant:
         elif original_type == "abbey_road":
             azimuth_dev = abs(rest_azimuth - orig_azimuth)
             result.phantom_center_deg = azimuth_dev
-            if azimuth_dev > self.PHANTOM_CENTER_MAX_DEG:
+            _max_deg = self.PHANTOM_CENTER_MAX_DEG
+            # §v10.14: Material-adaptive Toleranz — degradierte Medien ≥5°
+            _material_key = str(getattr(era_result, "material_key", "") or "").lower()
+            if _material_key in self.PHANTOM_CENTER_RELAXED_MATERIALS:
+                _max_deg = self.PHANTOM_CENTER_MAX_DEG_RELAXED
+            if azimuth_dev > _max_deg:
                 result.passed = False
                 result.rule_triggered = "abbey_road_phantom_center"
                 result.message = (
                     f"Abbey-Road-Stereo: Phantom-Center um {azimuth_dev:.1f}° "
-                    f"verschoben (max. {self.PHANTOM_CENTER_MAX_DEG}°)."
+                    f"verschoben (max. {_max_deg:.1f}°)."
                 )
                 logger.warning("⚠️ StereoAuth: %s", result.message)
                 return result
