@@ -335,6 +335,22 @@ class VocalEnhancement(PhaseInterface):
         """
         start_time = time.time()
         self.validate_input(audio)
+
+        # §v10.14: MIIPHER-DiT Early-Exit — wenn Phase 03 bereits
+        # Flow-Matching-DiT angewandt hat, ist Phase 42 redundant.
+        # Doppeltes Enhancement = Overprocessing → Primum non nocere.
+        _route_taken = str(kwargs.get("vocal_route_taken", "") or "")
+        if _route_taken == "miipher_dit":
+            logger.info(
+                "Phase 42: MIIPHER-DiT bereits in Phase 03 gelaufen — "
+                "überspringe (kein Doppel-Enhancement)"
+            )
+            return PhaseResult(
+                audio=audio,
+                sample_rate=sample_rate,
+                algorithm="skipped_miipher_dit_already_applied",
+                processing_time_ms=0.0,
+            )
         sample_rate = kwargs.get("sample_rate", 48000)
         assert sample_rate == 48000, f"SR muss 48000 Hz sein, erhalten: {sample_rate}"
 
