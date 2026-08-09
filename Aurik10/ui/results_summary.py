@@ -384,6 +384,11 @@ def build_results_data(
     _dnh_reason = str((_rmeta.get("do_no_harm") or {}).get("reason", ""))
     _phases_skipped = getattr(restoration_result, "phases_skipped", None) or []
     _deferred_phases = getattr(restoration_result, "deferred_phases", None) or []
+    # §v10.14: RestorationNarrator-Verdict + Phase-Deltas für Ergebnis-Dialog
+    _narrator = _rmeta.get("narrator", {}) or {}
+    _narrator_verdict = str(_narrator.get("verdict", "") or "")
+    _narrator_emotional = str(_narrator.get("emotional_summary", "") or "")
+    _phase_deltas = getattr(restoration_result, "phase_deltas", None) or {}
     return {
         "file_name": file_name,
         "duration_seconds": duration_seconds,

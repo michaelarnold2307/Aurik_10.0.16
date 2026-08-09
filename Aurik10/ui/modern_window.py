@@ -20803,6 +20803,17 @@ class ModernMainWindow(QMainWindow):
         # unabhängig vom Dateisystem-Zugriff (kein sf.read-Risiko hier).
         if restoration_result is not None and hasattr(restoration_result, "audio"):
             _ra = _normalize_audio(restoration_result.audio)
+            # §v10.14: RestorationNarrator-Verdict im narrativen Panel anzeigen
+            _rmeta_nar = getattr(restoration_result, "metadata", {}) or {}
+            _nar = _rmeta_nar.get("narrator", {}) or {}
+            _nar_verdict = str(_nar.get("verdict", "") or _nar.get("emotional_summary", "") or "")
+            if _nar_verdict and hasattr(self, "narrative_label"):
+                self.narrative_label.setText(f"📖 {_nar_verdict}")
+                self.narrative_label.setStyleSheet(
+                    "color: #AFC3DA; font-size: 8.5pt; background: transparent; padding: 4px 6px;"
+                    "border-left: 2px solid #82B89A; margin: 4px 0;"
+                )
+                self.narrative_label.setVisible(True)
             if isinstance(_ra, np.ndarray) and _ra.size > 0:
                 self._rest_audio = _ra
                 self._rest_sr = 48000  # Aurik interne SR immer 48 kHz
