@@ -3389,6 +3389,7 @@ class DefectScanner:
         tape_score -= crackle_score * 0.5  # Gealtertes Tape kann Crackle haben (Oxidflaking) - leichte Penalty
         tape_score -= rumble_energy * 5.0 * _rumble_factor_st  # Rumble era-moduliert
         tape_score -= compression_score * 2.0  # Tape analog
+        tape_score += 4.0  # §v10.14 FIX: Baseline-Bonus für TAPE(=Cassette) Stereo-Pfad
         if _era_is_digital_st:
             tape_score -= _digital_boost_st * 0.5  # Digital-Ära → Tape unwahrscheinlich
         scores[MaterialType.TAPE] = max(0, tape_score)
@@ -3518,6 +3519,7 @@ class DefectScanner:
         cassette_score -= rumble_energy * 8.0  # Leichter Transport → kein Rumble
         cassette_score -= compression_score * 2.0  # Analog - kein Codec
         cassette_score -= digital_score * 2.0  # Analog
+        cassette_score += 5.0  # §v10.14 FIX: Baseline-Bonus (Cassette ist häufigstes Consumer-Format)
         # Boost: hohe Flutter + HF-Hiss → eindeutiger Cassetten-Fingerabdruck
         if wow_flutter_score > 0.2 and hf_noise_score > 0.15:
             cassette_score += 1.5
