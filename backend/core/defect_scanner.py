@@ -3492,7 +3492,7 @@ class DefectScanner:
         streaming_score -= crackle_score * 3.0  # Kein Crackle
         streaming_score -= rumble_energy * 10.0  # Kein Rumble
         streaming_score -= wow_flutter_score * 2.0  # Kein Wow/Flutter
-        streaming_score -= digital_score * 1.0  # Compression ≠ digital artifacts
+        streaming_score += digital_score * 0.5  # §v10.14 FIX: Streaming IST digital — war subtrahiert!
         scores[MaterialType.STREAMING] = max(0, streaming_score)
 
         # SHELLAC Score (aus Stereo unwahrscheinlich, aber möglich bei Remaster)
