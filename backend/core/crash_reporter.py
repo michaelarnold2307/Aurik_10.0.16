@@ -122,8 +122,8 @@ def _crash_handler(exc_type: type, exc_value: BaseException, exc_tb: Any) -> Non
 
     # Hinweis für Nutzer
     if report_path:
-        print(f"\n⚠️  Aurik ist abgestürzt. Crash-Report gespeichert unter:\n   {report_path}", file=sys.stderr)
-        print("   Export mit: aurik report --export\n", file=sys.stderr)
+        logger.critical("Aurik ist abgestürzt. Crash-Report gespeichert unter: %s", report_path)
+        logger.critical("Export mit: aurik report --export")
 
 
 def install_crash_handler() -> None:
