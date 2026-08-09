@@ -655,21 +655,27 @@ def run_pre_analysis(
                 # Sonst: Kassette ist der gealterte Consumer-Copy-Träger.
                 _has_cassette_in_chain = "cassette" in _chain
                 _has_vinyl_in_chain = "vinyl" in _chain
+                _has_reel_in_chain = "reel_tape" in _chain  # §v10.14: für Kontext-Aware Default
                 _DEFECT_CARRIER_MAP: dict[str, tuple[str, float]] = {
                     "crackle": ("vinyl", 0.20),  # §v10.14 FIX: 0.35→0.20 (leichtere Oberflächengeräusche)
                     "groove_echo": ("vinyl", 0.30),
                     "inner_groove_distortion": ("vinyl", 0.40),
                     "riaa_curve_error": ("vinyl", 0.30),
-                    "tape_hiss": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.25),
-                    "wow": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
-                    "flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.20),
-                    "multiband_wow_flutter": ("cassette" if _has_cassette_in_chain else "reel_tape", 0.25),
+                    # §v10.14 FIX: Cassette als DEFAULT für Tape-Defekte (häufigstes Consumer-Format).
+                    # Nur auf reel_tape zurückfallen wenn reel_tape BEREITS in der Kette ist
+                    # (professionelles Master-Tape → keine Kassette als Consumer-Copy).
+                    "tape_hiss": ("reel_tape" if _has_reel_in_chain else "cassette", 0.25),
+                    "wow": ("reel_tape" if _has_reel_in_chain else "cassette", 0.20),
+                    "flutter": ("reel_tape" if _has_reel_in_chain else "cassette", 0.20),
+                    "multiband_wow_flutter": ("reel_tape" if _has_reel_in_chain else "cassette", 0.25),
+                    # §v10.14 FIX: print_through/tape_head_level_dip sind Magnetband-Defekte.
+                    # Default=cassette (Consumer-Format), reel_tape nur wenn bereits in Kette.
                     "print_through": (
-                        "cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape",
+                        "reel_tape" if _has_reel_in_chain else "cassette",
                         0.30,
                     ),
                     "tape_head_level_dip": (
-                        "cassette" if _has_cassette_in_chain or _has_vinyl_in_chain else "reel_tape",
+                        "reel_tape" if _has_reel_in_chain else "cassette",
                         0.25,
                     ),
                     "low_freq_rumble": ("vinyl", 0.30),
