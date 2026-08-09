@@ -20675,6 +20675,28 @@ class UnifiedRestorerV3:
             _a = np.asarray(_arr, dtype=np.float32)
             if _target_len <= 0 or _a.shape[_axis] == _target_len:
                 return cast(np.ndarray, _a)
+            # §v10.14 FIX: Nur resamplen wenn Sample-Raten unterschiedlich sind.
+            # Bei gleicher Sample-Rate aber unterschiedlicher Länge: trimmen/padden.
+            # scipy.signal.resample ändert die Frequenzinhalte (Zeitkompression),
+            # was das Audio komplett zerstört.
+            _len_diff = abs(_a.shape[_axis] - _target_len)
+            _len_pct = _len_diff / max(_target_len, 1)
+            if _len_diff <= 2 or _len_pct < 0.001:
+                # Marginaler Unterschied (±2 Samples oder <0.1%): trimmen/padden
+                if _a.shape[_axis] > _target_len:
+                    return cast(np.ndarray, _a[: _target_len] if _axis == 0 else _a[:, : _target_len])
+                else:
+                    _pad = [(0, 0)] * _a.ndim
+                    _pad[_axis] = (0, _target_len - _a.shape[_axis])
+                    return cast(np.ndarray, np.pad(_a, _pad, mode='constant'))
+            if _len_pct > 0.50:
+                # §v10.14: >50% Längenunterschied → kein Resample, sondern trimmen.
+                # Resample würde Audio unbrauchbar machen (7.5× Zeitkompression).
+                logger.error(
+                    "FATAL: restored_audio Länge %d weicht >50%% von Ziel %d ab — trimme auf Ziel (kein Resample!)",
+                    _a.shape[_axis], _target_len,
+                )
+                return cast(np.ndarray, _a[: _target_len] if _axis == 0 else _a[:, : _target_len])
             try:
                 from scipy import signal as _scipy_signal_uv3
 
