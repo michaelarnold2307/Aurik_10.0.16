@@ -278,5 +278,5 @@ def compute_phrase_strength_map(
         )
 
     except Exception as exc:
-        logger.debug("berechnen_phrase_strength_map: nicht blockierend Ersatzpfad — %s", exc)
+        logger.warning("§G23 berechnen_phrase_strength_map: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return _empty

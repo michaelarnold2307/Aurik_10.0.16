@@ -172,7 +172,7 @@ def detect_natural_performance(
     try:
         return _detect_internal(audio, sr, panns_singing_confidence)
     except Exception as exc:
-        logger.debug("§2.46f natural_performance_detector: nicht blockierend Ersatzpfad (%s)", exc)
+        logger.warning("§G23 natural_performance_detector: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return NaturalPerformanceProfile(detection_succeeded=False, error_message=str(exc))
 
 

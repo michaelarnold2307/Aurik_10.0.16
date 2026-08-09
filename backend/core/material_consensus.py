@@ -79,6 +79,57 @@ def resolve_material_consensus(
                 votes[_mat] = votes.get(_mat, 0.0) + _norm_sev * _weight
             details["defect_affinities"] = _mat_scores
 
+    # §v10.14.1 Era-Consistency Boost: Wenn der EraClassifier eine hohe
+    # Konfidenz (>0.50) hat und sein material_prior mit EINEM der votierten
+    # Materialien übereinstimmt, bekommt dieses Material einen Boost.
+    # Logik: Der EraClassifier hat die Aufnahme-Ära aus physikalischen
+    # Signalcharakteristika (BW, SNR, Stereo) abgeleitet. Wenn diese
+    # Charakteristika konsistent mit dem Material sind, ist das ein
+    # unabhängiger Validierungspunkt — kein Zirkelschluss.
+    if era_result and era_result.get("material") and era_result.get("confidence", 0) >= 0.50:
+        _era_mat = str(era_result["material"]).lower()
+        _era_conf = float(era_result.get("confidence", 0.5))
+        if _era_mat in votes:
+            # Era-Material-Konsistenz-Boost: +0.10 bei conf≥0.60, +0.20 bei conf≥0.75
+            _era_boost = 0.10 if _era_conf >= 0.60 else 0.05
+            if _era_conf >= 0.75:
+                _era_boost = 0.20
+            _era_boost *= MATERIAL_WEIGHTS["era_classifier"]
+            votes[_era_mat] += _era_boost
+            details["era_consistency_boost"] = {
+                "material": _era_mat,
+                "boost": round(_era_boost, 3),
+                "era_confidence": _era_conf,
+            }
+            logger.debug(
+                "Material-Konsens: Era-Boost +%.3f für %s (era_conf=%.2f)",
+                _era_boost, _era_mat, _era_conf,
+            )
+
+    # §v10.14.1 Chain-Consistency Penalty: Wenn die Tonträgerkette
+    # (vom MediumDetector) bekannte Träger enthält, die ein votiertes
+    # Material NICHT enthält, wird dieses Material penalisiert.
+    # Beispiel: chain=['vinyl','mp3_high'] + material='cassette' →
+    # Cassette ist NICHT in der Chain → Penalty.
+    if medium_result and medium_result.get("chain"):
+        _chain_materials: set[str] = set()
+        for _cm in str(medium_result.get("chain", "")).replace(" → ", "→").split("→"):
+            _cm = _cm.strip().lower().replace(" ", "_").replace("-", "_")
+            if _cm and _cm != "unknown":
+                _chain_materials.add(_cm)
+        if len(_chain_materials) >= 1:
+            for _mat in list(votes.keys()):
+                _mat_key = _mat.lower().replace(" ", "_").replace("-", "_")
+                if _mat_key not in _chain_materials and _mat_key != "unknown":
+                    # Material nicht in der Chain → starke Penalty
+                    # (aber nicht auf 0 — Defektmuster können override)
+                    _penalty = 0.60  # 60% Reduktion
+                    votes[_mat] *= (1.0 - _penalty)
+                    logger.debug(
+                        "Material-Konsens: Chain-Penalty für %s (nicht in chain %s)",
+                        _mat, _chain_materials,
+                    )
+
     if not votes:
         return {"material": "unknown", "confidence": 0.0, "source": "none",
                 "all_votes": details, "conflict_detected": False}
@@ -111,32 +162,107 @@ def resolve_material_consensus(
     }
 
 
-def validate_material_era_consistency(material: str, decade: int) -> bool:
-    """Prüft ob das ORIGINAL-Aufnahmemedium zur Ära passt.
+def validate_material_era_consistency(material: str, decade: int, transfer_chain: list[str] | None = None) -> bool:
+    """Prüft ob das erkannte Material zur Ära passt (§v10.14.1).
 
-    Die Ära = Aufnahmejahr (z.B. 1960). Die Tonträgerkette = gesamte Historie
-    (z.B. vinyl → cassette → mp3_high). Ein MP3 in der Kette widerspricht NICHT
-    der Ära 1960 — es ist nur das ENDFORMAT. Ein Widerspruch liegt nur vor,
-    wenn das ERSTE Glied der Kette jünger ist als die Ära (unmögliche Reihenfolge).
+    ZWEI Validierungsregeln:
+    1. Produktions-Ende-Regel: Ein physisches Trägermedium (Shellac, Wachswalze)
+       wurde nach einem bestimmten Datum nicht mehr produziert. Eine Aufnahme
+       NACH diesem Datum KANN nicht auf diesem Medium entstanden sein.
+       Bsp: shellac + decade=2005 → UNMÖGLICH (Shellac-Produktion endete ~1958).
+
+    2. Erfindungs-Floor-Regel: Ein Medium kann keine Aufnahme enthalten,
+       die VOR seiner Erfindung entstanden ist — ABER NUR wenn das Medium
+       das ORIGINAL-Aufnahmemedium ist, nicht wenn es ein späteres
+       Digitalisierungs-Format ist.
+       Bsp: vinyl + decade=1920 → möglich (wenn Vinyl NACH 1948 erkannt wurde,
+       ist die Aufnahme älter und wurde später auf Vinyl gepresst).
+       ABER: mp3_high + decade=1920 → möglich (alte Aufnahme, neue Digitalisierung).
+
+    Args:
+        material: Das erkannte Material (z.B. "shellac", "vinyl", "mp3_high").
+        decade: Die vom EraClassifier geschätzte Dekade (z.B. 1970).
+        transfer_chain: Optionale Tonträgerkette für Kontext.
 
     Returns:
-        True wenn konsistent, False wenn ERSTES Medium nach der Ära erfunden wurde.
+        True wenn konsistent, False wenn physikalisch unmöglich.
     """
-    material_earliest: dict[str, int] = {
-        "shellac": 1890, "wax_cylinder": 1877, "vinyl": 1948, "lacquer_disc": 1930,
-        "cassette": 1963, "reel_to_reel": 1935, "dat": 1987, "cd": 1982,
-        "minidisc": 1992, "mp3": 1995, "mp3_low": 1995, "mp3_high": 1998,
-        "streaming": 2005, "blu_ray_audio": 2006, "digital": 1982,
+    # ── Produktions-Ende (Hard Ceilings) ───────────────────────────────
+    # Diese Medien wurden nach diesem Jahr NICHT MEHR als ORIGINAL-
+    # Aufnahmemedium verwendet. Eine Aufnahme DANACH kann nicht auf
+    # diesem Medium entstanden sein.
+    _PRODUCTION_END: dict[str, int] = {
+        "wax_cylinder": 1929,    # Edison stellte Wachswalzen 1929 ein
+        "wire_recording": 1945,  # Drahtton nach WWII obsolet
+        "shellac": 1958,         # Letzte kommerzielle Shellac-Pressungen
+        "lacquer_disc": 1960,    # Transcription discs
+        "8track": 1982,          # 8-Track Ende der Produktion
+        "dat": 2005,             # DAT-Produktion eingestellt
+        "minidisc": 2013,        # Letzte MiniDisc-Player
+        "dcc": 1996,             # DCC eingestellt
     }
-    earliest = material_earliest.get(material)
-    if earliest is None:
-        return True
-    # Ein Medium, das später erfunden wurde, kann trotzdem in der Kette sein
-    # (z.B. 1960er Aufnahme → später als MP3 digitalisiert).
-    # Nur: Das ERSTE Glied der Kette kann nicht jünger sein als die Ära.
-    # Da wir hier nur EIN Material prüfen (nicht die ganze Kette), geben wir
-    # immer True zurück — die Ketten-Validierung erfolgt in build_chain().
-    _ = decade  # bewusst ignoriert — Logik in build_chain()
+
+    _mat_lower = material.lower().replace(" ", "_").replace("-", "_")
+    _end = _PRODUCTION_END.get(_mat_lower)
+    if _end is not None and decade > _end:
+        # Das Medium wurde NACH dem geschätzten Aufnahmejahr noch produziert?
+        # Nein — wenn decade > _end, wurde es VOR der Aufnahme eingestellt.
+        # Das ist physikalisch unmöglich.
+        logger.warning(
+            "validate_material_era_consistency: %s production ended %d, "
+            "but era=%d → IMPOSSIBLE",
+            material, _end, decade,
+        )
+        return False
+
+    # ── Erfindungs-Floor (Hard Floor) ───────────────────────────────────
+    # Digitale Verteilformate (MP3, CD, Streaming) sind Container —
+    # sie können Aufnahmen aus JEDER früheren Ära enthalten.
+    # ABER: Wenn decade VOR der Erfindung des Formats liegt UND das
+    # Format das EINZIGE erkannte Medium ist, ist die Kombination
+    # extrem unwahrscheinlich (das Format existierte noch nicht).
+    _INVENTION_FLOOR: dict[str, int] = {
+        "vinyl": 1948,
+        "cassette": 1963,
+        "reel_tape": 1935,
+        "cd": 1982, "cd_digital": 1982,
+        "dat": 1987,
+        "minidisc": 1992,
+        "mp3_low": 1995, "mp3_high": 1995, "mp3_high_vbr": 1998,
+        "aac": 1997,
+        "streaming": 2005,
+        "dcc": 1992,
+        "bluray_audio": 2006,
+        "sacd": 1999,
+        "pcm_digital": 1982,
+    }
+
+    _invented = _INVENTION_FLOOR.get(_mat_lower)
+    if _invented is not None and decade < _invented:
+        # Die Aufnahme wurde VOR der Erfindung des Mediums gemacht.
+        # Wenn das Medium ein VERTEIL-FORMAT ist (CD, MP3, Streaming),
+        # kann es eine ältere Aufnahme enthalten → akzeptieren.
+        # Wenn das Medium ein ORIGINAL-AUFNAHMEMEDIUM ist (Shellac, Vinyl,
+        # Cassette) und das EINZIGE erkannte Medium → IMPOSSIBLE.
+        _distribution_formats = {
+            "cd", "cd_digital", "mp3_low", "mp3_high", "mp3_high_vbr",
+            "aac", "streaming", "bluray_audio", "sacd", "pcm_digital",
+            "dat", "minidisc", "dcc",
+        }
+        if _mat_lower not in _distribution_formats:
+            # Analoges Original-Medium — kann nicht vor seiner Erfindung
+            # als ORIGINAL-Aufnahmemedium verwendet worden sein.
+            # ABER: Wenn die Kette mehrere Medien enthält, könnte das
+            # physische Medium ein späteres Remaster sein.
+            # Bei Einzel-Medium (keine Chain) → IMPOSSIBLE.
+            if not transfer_chain or len(transfer_chain) <= 1:
+                logger.warning(
+                    "validate_material_era_consistency: %s invented %d, "
+                    "but era=%d and no transfer chain → IMPOSSIBLE",
+                    material, _invented, decade,
+                )
+                return False
+
     return True
 
 

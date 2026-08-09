@@ -822,8 +822,18 @@ class WowFlutterFix(PhaseInterface):
                     try:
                         from scipy.signal import butter, filtfilt
 
-                        _mod_cutoff = 8.0  # Hz — envelope modulation above 8Hz
-                        _mod_strength = float(np.clip(_effective_strength * 0.6, 0.15, 0.50))
+                        # §v10.14.1 Transient-preserving Envelope Stabilizer:
+                        # Die ursprüngliche Implementierung (8 Hz Cutoff, 60% Blend)
+                        # zerstörte Transienten: Kick-Drums (50-200 Hz Envelope-Mod)
+                        # wurden als "Modulationsrauschen" fehlinterpretiert und
+                        # um bis zu 30% gedämpft → onsets_orig=180, onsets_rest=15.
+                        #
+                        # Fix: 2 Hz Cutoff (nur sehr langsame Modulation wie
+                        # Capstan-Wow), 15% Blend-Stärke, Gain-Floor 0.85 (max
+                        # -15% statt -30%), und Transienten-Gate: Frames mit
+                        # onset energy > 3σ des lokalen Kontexts werden preserved.
+                        _mod_cutoff = 2.0  # Hz — nur Capstan-Wow (<2 Hz)
+                        _mod_strength = float(np.clip(_effective_strength * 0.15, 0.05, 0.20))
                         b_mod, a_mod = butter(2, _mod_cutoff / (sample_rate / 2), btype="low")
 
                         def _stabilize_envelope(sig: np.ndarray) -> np.ndarray:
@@ -831,8 +841,18 @@ class WowFlutterFix(PhaseInterface):
                             env_smooth = filtfilt(b_mod, a_mod, env)
                             env_out = _mod_strength * env_smooth + (1.0 - _mod_strength) * env
                             gain = np.divide(env_out, env, out=np.ones_like(env), where=env > 1e-10)
-                            gain = np.clip(gain, 0.7, 1.3)
-                            return (sig.astype(np.float64) * gain).astype(np.float32)  # type: ignore[no-any-return]
+                            # §v10.14.1 Transient-Gate: Onsets > 3σ → gain=1.0 (preserve)
+                            _onset = np.abs(np.diff(env, prepend=env[:1]))
+                            _onset_sigma = float(np.std(_onset) + 1e-10)
+                            _onset_mask = _onset > 3.0 * _onset_sigma
+                            # Dilate mask by 5ms to protect the full attack
+                            _dilate_n = int(0.005 * sample_rate)
+                            if _dilate_n > 1:
+                                _kernel = np.ones(_dilate_n) / _dilate_n
+                                _onset_mask = np.convolve(_onset_mask.astype(float), _kernel, mode="same") > 0.3
+                            gain[_onset_mask] = 1.0
+                            gain = np.clip(gain, 0.85, 1.30)  # Floor 0.85 statt 0.70
+                            return (sig.astype(np.float64) * gain).astype(np.float32)
 
                         if audio.ndim == 2:
                             ch_first = audio.shape[0] == 2 and audio.shape[1] > 2

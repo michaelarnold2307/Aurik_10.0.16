@@ -335,7 +335,7 @@ class ABCompareManager:
             return sim
 
         except Exception as exc:
-            logger.debug("spectral_similarity Ersatzpfad: %s", exc)
+            logger.warning("§G23/§G93 spectral_similarity DSP-Ersatzpfad — returning 0.5: %s", exc, exc_info=True)
             return 0.5
 
     @staticmethod

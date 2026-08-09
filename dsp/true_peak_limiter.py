@@ -209,7 +209,7 @@ class TruePeakLimiter:
         audio_up, _sr_up = self._upsample(audio, sr)
 
         # Find maximum absolute value
-        peak_linear = np.max(np.abs(audio_up)) if audio_up.ndim == 1 else np.max(np.abs(audio_up))
+        peak_linear: float = float(np.max(np.abs(audio_up)))
 
         # Convert to dBTP
         true_peak_dbtp = 20 * np.log10(peak_linear) if peak_linear > 0 else -np.inf

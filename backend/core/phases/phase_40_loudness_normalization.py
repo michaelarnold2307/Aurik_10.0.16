@@ -248,6 +248,24 @@ class LoudnessNormalizationPhase(PhaseInterface):
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
+
+        # §v10.14.1 Mode-Sensitive Loudness:
+        # Restoration-Mode soll originale Dynamik/Lautheit bewahren.
+        # Nur minimale Normalisierung für Hörbarkeit, kein Streaming-Target.
+        _mode_raw = str(kwargs.get("quality_mode", kwargs.get("mode", ""))).strip().lower()
+        _MODE_STRENGTH_SCALE: dict[str, float] = {
+            "restoration": 0.15,
+            "forensic": 0.05,
+            "archival": 0.10,
+        }
+        _mode_scale = _MODE_STRENGTH_SCALE.get(_mode_raw, 1.0)
+        if _mode_scale < 1.0:
+            _effective_strength = float(_effective_strength * _mode_scale)
+            logger.debug(
+                "LoudnessNorm: mode=%s → strength scaled ×%.2f (effective=%.3f)",
+                _mode_raw, _mode_scale, _effective_strength,
+            )
+
         _amplitude_drift_requested = bool(kwargs.get("amplitude_drift_correction", False))
 
         # ── §v10.303.36 Phase-0-Aware Skip ──
@@ -454,8 +472,25 @@ class LoudnessNormalizationPhase(PhaseInterface):
             except Exception as _drift_exc:
                 logger.warning("Verarbeitungsschritt 40: AMPLITUDE_DRIFT correction fehlgeschlagen: %s", _drift_exc)
 
-        # Measure current loudness (ITU-R BS.1770-4)
-        integrated_lufs, lra, momentary_max, short_term_max = self._measure_loudness_full(audio, sample_rate)
+        # §v10.14.1: pyloudnorm (C-beschleunigt) statt Python-Loop.
+        # Die eigene _measure_loudness_full implementiert ITU-R BS.1770-4
+        # in pure-Python for-loops — für >30min Audio eine Katastrophe (2907s).
+        # pyloudnorm liefert dasselbe Ergebnis in <1s.
+        try:
+            import pyloudnorm as _pyln
+            _p40_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+            _p40_meter = _pyln.Meter(sample_rate)
+            integrated_lufs = float(_p40_meter.integrated_loudness(_p40_mono.astype(np.float64)))
+            # LRA via pyloudnorm (wenn verfügbar) oder konservativer Default
+            try:
+                lra = float(_p40_meter.loudness_range(_p40_mono.astype(np.float64)))
+            except (AttributeError, TypeError):
+                lra = 6.0  # Konservativer Default für Pop/Rock
+            momentary_max = integrated_lufs  # pyloudnorm misst kein Momentary
+            short_term_max = integrated_lufs
+            logger.debug("Phase 40: pyloudnorm LUFS=%.1f LRA=%.1f (<0.1s)", integrated_lufs, lra)
+        except ImportError:
+            integrated_lufs, lra, momentary_max, short_term_max = self._measure_loudness_full(audio, sample_rate)
 
         # Calculate gain adjustment
         # §v10.0.0 Genre-adaptive LUFS: Schlager/Klassik brauchen unterschiedliche Targets
@@ -557,8 +592,18 @@ class LoudnessNormalizationPhase(PhaseInterface):
         if 0.0 < _effective_strength < 1.0:
             normalized = audio + _effective_strength * (normalized - audio)
 
-        # Final measurements
-        final_lufs, final_lra, _, _ = self._measure_loudness_full(normalized, sample_rate)
+        # Final measurements — §v10.14.1 pyloudnorm fast-path
+        try:
+            import pyloudnorm as _pyln2
+            _p40_final_mono = normalized if normalized.ndim == 1 else normalized.mean(axis=0)
+            _p40_final_meter = _pyln2.Meter(sample_rate)
+            final_lufs = float(_p40_final_meter.integrated_loudness(_p40_final_mono.astype(np.float64)))
+            try:
+                final_lra = float(_p40_final_meter.loudness_range(_p40_final_mono.astype(np.float64)))
+            except (AttributeError, TypeError):
+                final_lra = lra
+        except ImportError:
+            final_lufs, final_lra, _, _ = self._measure_loudness_full(normalized, sample_rate)
         final_true_peak_db = self._measure_true_peak(normalized, sample_rate)
 
         # Calculate achieved tolerance

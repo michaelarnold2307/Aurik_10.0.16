@@ -110,6 +110,7 @@ class TestScopeGuardrails:
         data = _load_guardrails()
         if data is None:
             pytest.skip("policy/scope_guardrails.yaml nicht gefunden oder nicht parsebar.")
+            return {}  # unreachable — pytest.skip raises; satisfies mypy
         return data
 
     def test_guardrails_file_exists(self):

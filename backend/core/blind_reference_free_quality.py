@@ -79,8 +79,13 @@ class BlindQualityEstimator:
         logger.info(f"Reference-free quality: {score.overall:.0f}/100")
     """
 
-    def __init__(self, sr: int = 48000):
+    def __init__(self, sr: int = 48000, material_key: str = "unknown", era_decade: int | None = None):
         self.sr = sr
+        self.material_key = str(material_key).lower()
+        self.era_decade = era_decade
+        # §G100: Era-adaptive "natural" ranges for HF and stereo scoring.
+        # Pre-1960 recordings have fundamentally different spectral and spatial
+        # characteristics — scoring them against modern standards is unfair.
 
     def estimate(self, audio: np.ndarray) -> BlindQualityScore:
         """Compute reference-free quality score."""
@@ -313,15 +318,30 @@ class BlindQualityEstimator:
 
         ratio = e_hf / e_total
 
-        # Natural HF ratio: 0.005 - 0.15 (0.5% to 15% of midrange energy)
-        # Below 0.001 = severely band-limited (old tape, over-denoised)
-        # Above 0.25 = excessive HF (artifacts, aliasing)
-        if ratio < 0.001:
-            score = ratio / 0.001 * 30.0
-        elif ratio <= 0.15:
+        # §G100 Era-adaptive natural HF ratio.
+        # Pre-1950 recordings: carbon mics, limited bandwidth → much less HF.
+        # Modern digital: full 20 kHz spectrum.
+        _era = self.era_decade
+        _mat = self.material_key
+        if _era is not None and _era < 1950:
+            _hf_lo, _hf_hi = 0.0001, 0.03
+        elif _era is not None and _era < 1970:
+            _hf_lo, _hf_hi = 0.0005, 0.08
+        elif any(t in _mat for t in ("shellac", "wax", "wire")):
+            _hf_lo, _hf_hi = 0.0002, 0.04
+        elif "cassette" in _mat:
+            _hf_lo, _hf_hi = 0.001, 0.12
+        else:
+            _hf_lo, _hf_hi = 0.001, 0.15  # original universal range
+
+        # Score: linear ramp below lo, flat 90 in [lo, hi], linear decay above hi
+        if ratio < _hf_lo:
+            score = max(0.0, ratio / max(_hf_lo, 1e-9) * 30.0)
+        elif ratio <= _hf_hi:
             score = 90.0
         else:
-            score = max(30.0, 90.0 - (ratio - 0.15) * 200.0)
+            _decay = 200.0 * (0.15 / max(_hf_hi, 0.01))  # scale decay to range width
+            score = max(30.0, 90.0 - (ratio - _hf_hi) * _decay)
 
         return float(np.clip(score, 0.0, 100.0))
 
@@ -348,15 +368,25 @@ class BlindQualityEstimator:
 
         width = rms_side / rms_mid
 
-        # Natural width: 0.3 - 1.5 (side-to-mid ratio)
-        # Below 0.1 = near-mono (collapsed)
-        # Above 2.0 = over-wide (phase issues)
-        if width < 0.1:
-            score = width / 0.1 * 50.0
-        elif width <= 1.5:
+        # §G100 Era-adaptive natural stereo width.
+        # Pre-1960: commercial stereo didn't exist — narrow/mono is NORMAL.
+        # 1960-1980: early stereo, hard-pan mixing → width 0.05-0.8 is natural.
+        # Post-1980: modern multi-track → width 0.3-1.5 is natural.
+        _era = self.era_decade
+        if _era is not None and _era < 1960:
+            _width_lo, _width_hi = 0.0, 0.30   # mono era: narrow is expected
+        elif _era is not None and _era < 1980:
+            _width_lo, _width_hi = 0.05, 0.80  # early stereo: moderate
+        else:
+            _width_lo, _width_hi = 0.10, 1.50  # modern stereo: wide expected
+
+        # Natural width scoring
+        if width < _width_lo:
+            score = width / max(_width_lo, 1e-9) * 50.0
+        elif width <= _width_hi:
             score = 90.0
         else:
-            score = max(30.0, 90.0 - (width - 1.5) * 40.0)
+            score = max(30.0, 90.0 - (width - _width_hi) * (40.0 * 1.5 / max(_width_hi, 0.1)))
 
         # Also check L/R correlation (not too correlated, not anti-correlated)
         corr = float(np.corrcoef(left, right)[0, 1])
@@ -411,15 +441,24 @@ class BlindQualityEstimator:
         duration_s = n / self.sr
         density = n_onsets / max(duration_s, 0.1)
 
-        # Natural density: 0.5 - 8 onsets/second
-        # Below 0.2 = severely over-smoothed (no attacks)
-        # Above 15 = noisy/artifact-ridden
-        if density < 0.2:
-            score = density / 0.2 * 40.0
-        elif density <= 8:
+        # §G100 Era-adaptive natural transient density.
+        # Pre-1950: simpler arrangements, less percussion → lower density.
+        # Post-1980: dense productions, more transients → higher density.
+        _era = self.era_decade
+        if _era is not None and _era < 1950:
+            _td_lo, _td_hi = 0.1, 4.0
+        elif _era is not None and _era < 1980:
+            _td_lo, _td_hi = 0.3, 6.0
+        else:
+            _td_lo, _td_hi = 0.5, 8.0  # original universal range
+
+        # Score: linear ramp below lo, flat 85 in [lo, hi], linear decay above hi
+        if density < _td_lo:
+            score = density / max(_td_lo, 1e-9) * 40.0
+        elif density <= _td_hi:
             score = 85.0
         else:
-            score = max(30.0, 85.0 - (density - 8) * 3.0)
+            score = max(30.0, 85.0 - (density - _td_hi) * 3.0)
 
         return float(np.clip(score, 0.0, 100.0))
 

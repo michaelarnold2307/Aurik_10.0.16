@@ -68,8 +68,8 @@ def phase_instance():
         PHASE_IMPORT.rsplit(".", 1) if "." in PHASE_IMPORT else (PHASE_IMPORT, PHASE_CLASS.__name__)
     )
     mod = importlib.import_module(module_path)
-    cls = getattr(mod, class_name if class_name else PHASE_CLASS.__name__)
-    return cls(sample_rate=SAMPLE_RATE)
+    cls = getattr(mod, class_name if class_name else PHASE_CLASS.__name__)  # type: ignore[union-attr]
+    return cls(sample_rate=SAMPLE_RATE)  # type: ignore[misc]
 
 
 # ═══════════════════════════════════════════════════════════════════════════

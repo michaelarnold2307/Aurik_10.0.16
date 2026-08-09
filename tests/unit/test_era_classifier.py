@@ -993,15 +993,16 @@ class TestDspSanityCheckV10:
 
         monkeypatch.setattr(clf, "_try_tier1", fake_tier1)
 
-        # Mock Tier-2: DSP sagt 1970 mit 0.45 confidence
+        # Mock Tier-2: DSP sagt 1970 mit 0.52 confidence (>0.50 required da CLAP≥0.65)
         def fake_tier2(*args, **kwargs):
-            return EraResult(decade=1970, era_label="1970er", confidence=0.45, material_prior="reel_tape", tier_used=2)
+            return EraResult(decade=1970, era_label="1970er", confidence=0.52, material_prior="reel_tape", tier_used=2)
 
         monkeypatch.setattr(clf, "_tier2", fake_tier2)
 
         audio = np.random.randn(int(SR * 15)).astype(np.float32) * 0.1
         result = clf.classify(audio, SR)
-        # DSP widerspricht CLAP (1990 vs 1970) + DSP conf ≥ 0.35 → DSP gewinnt
+        # §v10.15: DSP override nur wenn DSP-Confidence ≥ f(CLAP-Confidence)
+        # CLAP=0.76 → DSP muss ≥0.50; DSP=0.52 → Override erlaubt
         assert result.tier_used == 2, f"Expected Tier-2 override, got tier={result.tier_used}"
         assert result.decade == 1970, f"DSP decade should win, got {result.decade}"
 
@@ -1025,7 +1026,7 @@ class TestDspSanityCheckV10:
         assert result.tier_used == 1, f"CLAP should be kept when DSP agrees, got tier={result.tier_used}"
 
     def test_dsp_override_logged(self, monkeypatch, clf, caplog):
-        """DSP-Override produziert eine Info-Logmeldung."""
+        """DSP-Override produziert eine Info-Logmeldung (§v10.15 adaptiv)."""
         import logging
 
         caplog.set_level(logging.INFO)
@@ -1036,14 +1037,15 @@ class TestDspSanityCheckV10:
         monkeypatch.setattr(clf, "_try_tier1", fake_tier1)
 
         def fake_tier2(*args, **kwargs):
-            return EraResult(decade=1970, era_label="1970er", confidence=0.45, material_prior="reel_tape", tier_used=2)
+            # §v10.15: CLAP=0.70 → DSP muss ≥0.50 für Override
+            return EraResult(decade=1970, era_label="1970er", confidence=0.55, material_prior="reel_tape", tier_used=2)
 
         monkeypatch.setattr(clf, "_tier2", fake_tier2)
 
         audio = np.random.randn(int(SR * 15)).astype(np.float32) * 0.1
         clf.classify(audio, SR)
-        assert any("DSP-Sanity-Check widerspricht CLAP" in r.message for r in caplog.records), (
-            "Should log DSP-Sanity-Check override"
+        assert any("DSP-Sanity-Pruefung widerspricht CLAP" in r.message for r in caplog.records), (
+            "Should log DSP-Sanity-Pruefung override"
         )
 
 

@@ -91,7 +91,7 @@ class FeedbackChain:
 
                 self._pqs_score_fn = score_audio_absolute
             except Exception as exc:
-                logger.debug("FeedbackChain: PQS scorer nicht verfuegbar, heuristic Ersatzpfad active: %s", exc)
+                logger.warning("§G23 FeedbackChain: PQS scorer nicht verfügbar, heuristic Ersatzpfad: %s", exc, exc_info=True)
         if self.use_versa_in_loop:
             try:
                 from plugins.versa_plugin import (  # pylint: disable=import-outside-toplevel

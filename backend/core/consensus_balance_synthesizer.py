@@ -228,7 +228,7 @@ def measure_candidate_dims(
     # Fehlgeschlagene Einzelmessung: aktueller Wert (0.80) als konservativer Boden.
     for _k in _failed:
         dims[_k] = 0.80
-        logger.debug("CBS: %s Messung fehlgeschlagen → konservativer Ersatzpfad 0.80.", _k)
+        logger.warning("§G23 CBS: %s Messung fehlgeschlagen → konservativer DSP-Ersatzpfad 0.80", _k)
 
     _elapsed = time.monotonic() - _t0
     logger.debug(

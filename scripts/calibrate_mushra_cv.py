@@ -34,7 +34,8 @@ def load_bootstrap_data() -> dict | None:
     """Lädt existierende Bootstrap-Kalibrierung."""
     if BOOTSTRAP_FILE.exists():
         with open(BOOTSTRAP_FILE) as f:
-            return json.load(f)
+            data: dict = json.load(f)
+            return data
     return None
 
 

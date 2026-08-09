@@ -104,7 +104,7 @@ class StreamingAudioPlayer:
         try:
             dev = sd.query_devices(kind="output")
         except Exception as exc:
-            logger.debug("StreamingAudioPlayer: Ausgabe device query fehlgeschlagen: %s", exc)
+            logger.warning("§G23 StreamingAudioPlayer: Audio-Device-Query fehlgeschlagen: %s", exc, exc_info=True)
             return False
         if not isinstance(dev, dict):
             return False
@@ -482,7 +482,7 @@ class StreamingAudioPlayer:
 
                 data = _soxr_player.resample(data, sr, output_sr, quality="HQ").astype(np.float32)
             except Exception as exc:
-                logger.debug("soxr resample fehlgeschlagen (%s), trying resample_poly", exc)
+                logger.warning("§G23 StreamingAudioPlayer: soxr resample fehlgeschlagen → DSP-Ersatzpfad resample_poly: %s", exc, exc_info=True)
                 try:
                     from scipy.signal import resample_poly
 

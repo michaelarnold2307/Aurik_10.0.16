@@ -106,8 +106,8 @@ def _set_job_budget_registered(job: object, registered: bool) -> None:
     try:
         object.__setattr__(job, "_budget_registered", bool(registered))
     except Exception:
-        logger.debug(
-            "KMV Stufe 2: _Grenze_registered konnte nicht gesetzt werden (non-fatal)",
+        logger.warning(
+            "§G23 KMV Stufe 2: _budget_registered konnte nicht gesetzt werden (non-fatal)",
             exc_info=True,
         )
 
@@ -151,7 +151,7 @@ class MLRefinementThread(QThread):
                 logger.info("KMV Stufe 2 nicht gestartet: nur %.1f GB RAM frei (< 4 GB)", avail_gb)
                 return False
         except Exception:
-            logger.debug("KMV should_start: psutil nicht verfuegbar, RAM-Pruefung uebersprungen", exc_info=True)
+            logger.warning("§G23 KMV should_start: psutil nicht verfügbar, RAM-Prüfung übersprungen", exc_info=True)
             # psutil not available -> proceed without check
         return True
 
@@ -168,11 +168,11 @@ class MLRefinementThread(QThread):
         try:
             self.setPriority(getattr(QThread, "LowPriority", 2))  # type: ignore[arg-type]  # Qt::LowPriority, int fallback vs Priority enum stub
         except Exception:
-            logger.debug("KMV Stufe 2: QThread-Prioritaet konnte nicht gesetzt werden", exc_info=True)
+            logger.warning("§G23 KMV Stufe 2: QThread-Priorität konnte nicht gesetzt werden", exc_info=True)
         try:
             os.nice(10)
         except Exception:
-            logger.debug("KMV Stufe 2: os.nice(10) nicht anwendbar", exc_info=True)
+            logger.warning("§G23 KMV Stufe 2: os.nice(10) nicht anwendbar", exc_info=True)
 
         self.refinement_started.emit(output_path, job.n_deferred)
         logger.info(
@@ -198,7 +198,7 @@ class MLRefinementThread(QThread):
                 self.refinement_cancelled.emit(output_path)
                 return
         except ImportError as _be:
-            logger.debug("ml_memory_Grenze nicht verfügbar (KMV): %s", _be)
+            logger.warning("§G23 KMV: ml_memory_budget nicht verfügbar — ohne Budget-Guard: %s", _be, exc_info=True)
             # Continue without budget guard if module absent (test environments)
             _budget_registered = False
             _set_job_budget_registered(job, False)

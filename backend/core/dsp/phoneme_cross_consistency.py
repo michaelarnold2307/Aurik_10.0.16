@@ -303,7 +303,7 @@ class PhonemeConsistencyMonitor:
             return report
 
         except Exception as exc:
-            logger.debug("PhonemeConsistencyMonitor.berechnen_consistency: Ersatzpfad — %s", exc)
+            logger.warning("§G23 PhonemeConsistencyMonitor DSP-Ersatzpfad: %s", exc, exc_info=True)
             return PhonemeConsistencyReport()
 
     def get_correction_eq(
@@ -355,7 +355,7 @@ class PhonemeConsistencyMonitor:
             )
 
         except Exception as exc:
-            logger.debug("PhonemeConsistencyMonitor.get_correction_eq: Ersatzpfad — %s", exc)
+            logger.warning("§G23 PhonemeConsistencyMonitor.get_correction_eq DSP-Ersatzpfad: %s", exc, exc_info=True)
             return None
 
     # ------------------------------------------------------------------

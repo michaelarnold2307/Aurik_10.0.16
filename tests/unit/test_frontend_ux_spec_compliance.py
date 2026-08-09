@@ -131,11 +131,11 @@ class TestModernProgressBarDeltaFilter:
         app_cls = getattr(qt_widgets, "QApplication", None)
         if app_cls is None:
             pytest.skip("QApplication nicht verfügbar")
-        self._app = app_cls.instance() or app_cls(sys.argv)  # keep ref alive — GC would destroy it otherwise
+        self._app = app_cls.instance() or app_cls(sys.argv)  # type: ignore[union-attr,misc]
         MPB = getattr(_MW_MODULE, "ModernProgressBar", None) if _MW_MODULE_LOADED else None
         if MPB is None:
             pytest.skip("ModernProgressBar nicht verfügbar")
-        pb = MPB()
+        pb = MPB()  # type: ignore[misc]
         pb.setRange(0, 10000)
         pb.setValue(0)
         pb.setValue(5000)  # erstes gesetztes Value

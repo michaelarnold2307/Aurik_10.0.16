@@ -248,7 +248,7 @@ class DNSMOSPredictor:
             return {"sig": sig, "bak": bak, "ovr": ovr}
 
         except Exception as exc:
-            logger.debug("DNSMOSPredictor.predict Ersatzpfad (nicht blockierend): %s", exc)
+            logger.warning("§G23 DNSMOSPredictor.predict DSP-Ersatzpfad (returning defaults): %s", exc, exc_info=True)
             return {"sig": 3.0, "bak": 3.0, "ovr": 3.0}
 
 
@@ -316,7 +316,7 @@ class SingMOSPredictor:
             return mos
 
         except Exception as exc:
-            logger.debug("SingMOSPredictor.predict Ersatzpfad (nicht blockierend): %s", exc)
+            logger.warning("§G23 SingMOSPredictor.predict DSP-Ersatzpfad (returning default 3.0): %s", exc, exc_info=True)
             return 3.0
 
 

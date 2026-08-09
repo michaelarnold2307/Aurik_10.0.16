@@ -379,8 +379,8 @@ class ValidationMetrics:
         if noise_rms < 1e-10:
             return 60.0  # Very high SNR
 
-        snr_db = 20 * np.log10(rms / noise_rms)
-        return max(0.0, min(snr_db, 100.0))  # Clamp  # type: ignore
+        snr_db: float = float(20 * np.log10(rms / noise_rms))
+        return float(max(0.0, min(snr_db, 100.0)))  # Clamp
 
     @staticmethod
     def compute_thd(audio: np.ndarray, sr: int) -> float:
@@ -403,8 +403,8 @@ class ValidationMetrics:
         if fundamental_power < 1e-10:
             return 0.0
 
-        thd = np.sqrt(harmonic_power / fundamental_power)
-        return min(thd, 1.0)  # Clamp to [0, 1]  # type: ignore
+        thd: float = float(np.sqrt(harmonic_power / fundamental_power))
+        return float(min(thd, 1.0))  # Clamp to [0, 1]
 
     @staticmethod
     def compute_lufs(audio: np.ndarray, sr: int) -> float:

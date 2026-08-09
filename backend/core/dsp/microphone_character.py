@@ -494,5 +494,5 @@ def detect_microphone_character(
         return sig_out
 
     except Exception as exc:
-        logger.debug("erkennen_microphone_character: nicht blockierend Ersatzpfad — %s", exc)
+        logger.warning("§G23 erkennen_microphone_character: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return _default

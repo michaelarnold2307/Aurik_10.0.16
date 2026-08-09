@@ -1719,6 +1719,7 @@ class DefectScanner:
         progress_callback: Optional["Callable[[float, str], None]"] = None,
         file_ext: str = "",
         forensic_medium_result: object | None = None,
+        era_decade: int | None = None,  # §v10.14.1: Era-Info für Material-Auto-Detect
     ) -> DefectAnalysisResult:
         """
         Hauptmethode: Scannt Audio-Daten und erkennt alle 20 Defekttypen.
@@ -1729,6 +1730,8 @@ class DefectScanner:
             material_type: Override für Material-Typ (falls nicht im Constructor gesetzt)
             file_ext: Dateiendung der Quelldatei (z.B. '.mp3') - wird an ForensicMediumDetector
                       weitergegeben, um Analog-Posterior-Zeroing anzuwenden (Bug-15-Fix).
+            era_decade: Geschätzte Aufnahme-Dekade (vom EraClassifier). Moduliert
+                        die Rumble-Gewichtung im Material-Auto-Detect (§v10.14.1).
 
         Returns:
             DefectAnalysisResult mit allen Scores
@@ -1814,7 +1817,7 @@ class DefectScanner:
 
         # Material-Typ: Hint als Prior, aber auto-detect für spectral_fingerprint immer ausführen
         _material_hint = material_type  # Hint des Aufrufers (kann None sein)
-        _auto_material = self._auto_detect_material(audio)  # §6.6.1: immer berechnen
+        _auto_material = self._auto_detect_material(audio, era_decade=era_decade)  # §6.6.1: immer berechnen
         _sf["material_detected"] = float(list(MaterialType).index(_auto_material))
         if material_type is None:
             material_type = self.material_type or _auto_material
@@ -3156,7 +3159,7 @@ class DefectScanner:
 
     # ========== MATERIAL AUTO-DETECTION ==========
 
-    def _auto_detect_material(self, audio: np.ndarray) -> MaterialType:
+    def _auto_detect_material(self, audio: np.ndarray, era_decade: int | None = None) -> MaterialType:
         """
         Auto-Detect Material-Typ basierend auf Audio-Charakteristiken.
 
@@ -3166,19 +3169,25 @@ class DefectScanner:
         - Tape: High-freq noise (hiss), wow/flutter, stereo oder mono
         - CD/Digital: Sehr sauber, evtl. digital artifacts, stereo
         - Streaming: Compression artifacts, stereo
+
+        §v10.14.1: era_decade moduliert die Rumble-Gewichtung. Bei digitalen
+        Ära-Aufnahmen (≥1990) ist sub-60Hz Energie mit hoher Wahrscheinlichkeit
+        musikalischer Bass, NICHT mechanischer Rumble.
         """
         if audio.ndim == 1:
             # Mono → Shellac, Vinyl (Mono) oder Tape (Mono)
-            return self._detect_mono_material(audio)
+            return self._detect_mono_material(audio, era_decade=era_decade)
         else:
             # Stereo → Vinyl, Tape, CD oder Streaming
-            return self._detect_stereo_material(audio)
+            return self._detect_stereo_material(audio, era_decade=era_decade)
 
-    def _detect_mono_material(self, audio: np.ndarray) -> MaterialType:
+    def _detect_mono_material(self, audio: np.ndarray, era_decade: int | None = None) -> MaterialType:
         """
         Unterscheidet Shellac vs Vinyl (Mono) vs Tape (Mono).
 
         Verwendet Scoring-System für robustere Detektion.
+
+        §v10.14.1: era_decade moduliert Rumble-Gewichtung.
         """
         # === Feature-Extraction ===
 
@@ -3210,6 +3219,22 @@ class DefectScanner:
 
         # === Material Scoring ===
 
+        # §v10.14.1 Era-Aware Rumble Modulation:
+        # Bei digitalen Ära-Aufnahmen (≥1990) ist sub-60Hz Energie
+        # mit hoher Wahrscheinlichkeit musikalischer Bass (Kick, Bass-Gitarre),
+        # NICHT mechanischer Turntable-/Transport-Rumble.
+        # Die Rumble-Gewichte werden entsprechend gedämpft.
+        _era_is_digital = era_decade is not None and era_decade >= 1990
+        _era_is_modern = era_decade is not None and era_decade >= 2000
+        _rumble_analog_factor = 1.0
+        _rumble_digital_boost = 0.0
+        if _era_is_modern:
+            _rumble_analog_factor = 0.15  # 85% Dämpfung — Bass ist fast sicher musikalisch
+            _rumble_digital_boost = 8.0     # Starker Boost für digitale Materialien
+        elif _era_is_digital:
+            _rumble_analog_factor = 0.35  # 65% Dämpfung
+            _rumble_digital_boost = 4.0
+
         # SHELLAC Score (Mono) - sehr alt, viele defekte, wenig HF
         # Penalized heavily since modern materials are more common
         shellac_score = 0.0
@@ -3217,7 +3242,7 @@ class DefectScanner:
         shellac_score += crackle_score * 2.0  # Crackle reduziert
         shellac_score += (1.0 - high_freq_energy) * 1.0  # HF-Mangel weniger stark
         shellac_score += wow_flutter_score * 0.3  # Wow/Flutter reduziert
-        shellac_score -= rumble_energy * 20.0  # Shellac sollte fast kein Rumble haben
+        shellac_score -= rumble_energy * 20.0 * _rumble_analog_factor  # Shellac sollte fast kein Rumble haben
         shellac_score -= 10.0  # Starke Baseline-Penalty (Shellac ist selten)
 
         # VINYL Score (Mono) - Basiert auf empirischen Daten
@@ -3227,17 +3252,21 @@ class DefectScanner:
         vinyl_score += crackle_score * 2.0  # Crackle typisch, aber nicht exklusiv (§3 Material-Mismatch-Fix)
         vinyl_score += click_rate * 0.3  # Moderate Clicks
         vinyl_score += wow_flutter_score * 2.0  # Speed-Variation
-        vinyl_score -= rumble_energy * 1500.0  # SEHR wenig Rumble - stark gewichtet!
+        vinyl_score -= rumble_energy * 1500.0 * _rumble_analog_factor  # SEHR wenig Rumble (era-moduliert)
+        if _era_is_digital:
+            vinyl_score -= _rumble_digital_boost  # Digital-Ära → Vinyl unwahrscheinlich
 
         # TAPE Score (Mono) - Basiert auf empirischen Daten
         # Tape (1980s cassette): HF=0.024, rumble=0.0010, crackle=1.0, clicks=48
         tape_score = 0.0
         tape_score += wow_flutter_score * 6.0  # Sehr typisch (Tape-Stretch)
-        tape_score += rumble_energy * 2500.0  # Viel mehr Rumble - stark erhöht!
+        tape_score += rumble_energy * 2500.0 * _rumble_analog_factor  # Rumble stark era-moduliert!
         tape_score -= high_freq_energy * 80.0  # Niedrigere HF als Vinyl (Hauptmerkmal!)
         tape_score += crackle_score * 1.0  # Crackle schwach positive (beide haben es)
         tape_score += click_rate * 0.1  # Clicks schwach positive
         tape_score += 10.0  # Baseline-Bonus erhöht
+        if _era_is_digital:
+            tape_score -= _rumble_digital_boost  # Digital-Ära → Tape unwahrscheinlich
 
         # CASSETTE Score (Mono) - Compact Cassette IEC 60094-1 Type I/II/IV
         # Diskriminatoren vs. TAPE/Reel-Tape:
@@ -3278,11 +3307,13 @@ class DefectScanner:
             logger.warning("Mono material unclear (best Wert=%.2f), using UNKNOWN", best_score)
             return MaterialType.UNKNOWN
 
-    def _detect_stereo_material(self, audio: np.ndarray) -> MaterialType:
+    def _detect_stereo_material(self, audio: np.ndarray, era_decade: int | None = None) -> MaterialType:
         """
         Unterscheidet alle Stereo-Material-Typen (Vinyl, Tape, Reel-Tape, DAT, CD, MP3, AAC, MiniDisc, Streaming).
 
         Verwendet Scoring-System statt binärer Thresholds für robustere Detektion.
+
+        §v10.14.1: era_decade moduliert Rumble-Gewichtung.
         """
         audio_mono = np.mean(audio, axis=1)
 
@@ -3320,16 +3351,32 @@ class DefectScanner:
         click_score = self._detect_clicks(audio_mono).severity
 
         # === Material Scoring ===
+
+        # §v10.14.1 Era-Aware Rumble Modulation (Stereo-Pfad):
+        # Bei digitalen Ära-Aufnahmen ist sub-60Hz Energie musikalischer Bass.
+        _era_is_digital_st = era_decade is not None and era_decade >= 1990
+        _era_is_modern_st = era_decade is not None and era_decade >= 2000
+        _rumble_factor_st = 1.0
+        _digital_boost_st = 0.0
+        if _era_is_modern_st:
+            _rumble_factor_st = 0.20   # 80% Dämpfung für analoge Rumble-Gewichte
+            _digital_boost_st = 6.0    # Starker Boost für digitale Materialien
+        elif _era_is_digital_st:
+            _rumble_factor_st = 0.40   # 60% Dämpfung
+            _digital_boost_st = 3.0
+
         scores = {}
 
         # VINYL Score
         vinyl_score = 0.0
         vinyl_score += crackle_score * 2.0  # Crackle typisch für Vinyl, aber nicht exklusiv (§3 Material-Mismatch-Fix)
-        vinyl_score += rumble_energy * 10.0  # Rumble ist Vinyl-spezifisch
+        vinyl_score += rumble_energy * 10.0 * _rumble_factor_st  # Rumble era-moduliert
         vinyl_score += wow_flutter_score * 1.5  # Analog-Medium
         vinyl_score += click_score * 1.0  # Moderate Clicks
         vinyl_score -= compression_score * 2.0  # Vinyl hat keine Compression
         vinyl_score -= digital_score * 2.0  # Vinyl ist analog
+        if _era_is_digital_st:
+            vinyl_score -= _digital_boost_st  # Digital-Ära → Vinyl unwahrscheinlich
         scores[MaterialType.VINYL] = max(0, vinyl_score)
 
         # TAPE (Cassette) Score
@@ -3338,8 +3385,10 @@ class DefectScanner:
         tape_score += wow_flutter_score * 2.0  # Noch typischer für Tape
         tape_score += click_score * 0.5  # Wenige Clicks
         tape_score -= crackle_score * 0.5  # Gealtertes Tape kann Crackle haben (Oxidflaking) - leichte Penalty
-        tape_score -= rumble_energy * 5.0  # Tape hat keinen Rumble
+        tape_score -= rumble_energy * 5.0 * _rumble_factor_st  # Rumble era-moduliert
         tape_score -= compression_score * 2.0  # Tape analog
+        if _era_is_digital_st:
+            tape_score -= _digital_boost_st * 0.5  # Digital-Ära → Tape unwahrscheinlich
         scores[MaterialType.TAPE] = max(0, tape_score)
 
         # REEL_TAPE (Professional) Score
@@ -3348,9 +3397,11 @@ class DefectScanner:
         reel_tape_score += wow_flutter_score * 1.0  # Less than cassette, but present
         reel_tape_score += click_score * 0.3  # Very few clicks
         reel_tape_score -= crackle_score * 2.0  # No crackle
-        reel_tape_score -= rumble_energy * 5.0  # No rumble
+        reel_tape_score -= rumble_energy * 5.0 * _rumble_factor_st  # No rumble (era-moduliert)
         reel_tape_score -= compression_score * 2.0  # Analog
         reel_tape_score -= digital_score * 1.5  # Analog
+        if _era_is_digital_st:
+            reel_tape_score -= _digital_boost_st * 0.3  # Digital-Ära → Reel-Tape unwahrscheinlich
         # Boost if hiss present but better quality than cassette
         if hf_noise_score > 0.2 and hf_noise_score < 0.5:
             reel_tape_score += 1.0  # Professional tape sweet spot
@@ -3373,10 +3424,12 @@ class DefectScanner:
         cd_score = 0.0
         cd_score += digital_score * 3.0  # Digital artifacts typisch
         cd_score -= crackle_score * 3.0  # CD hat kein Crackle
-        cd_score -= rumble_energy * 10.0  # CD hat keinen Rumble
+        cd_score -= rumble_energy * 10.0 * _rumble_factor_st  # Rumble era-moduliert
         cd_score -= wow_flutter_score * 2.0  # CD hat kein Wow/Flutter
         cd_score -= hf_noise_score * 2.0  # CD hat keinen Tape-Hiss
         cd_score -= compression_score * 1.0  # CD meist lossless
+        if _era_is_digital_st:
+            cd_score += _digital_boost_st  # Digital-Ära → CD wahrscheinlich
         scores[MaterialType.CD_DIGITAL] = max(0, cd_score)
 
         # MP3_LOW (<128 kbps) Score

@@ -89,7 +89,7 @@ class StreamingPreview:
                 try:
                     self._on_chunk_ready(processed)
                 except Exception:
-                    pass
+                    logger.debug("streaming_preview: chunk processing failed, skipping chunk", exc_info=True)
 
             pos = end
             chunks_processed += 1

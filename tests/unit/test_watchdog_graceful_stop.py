@@ -40,7 +40,7 @@ def _get_modern_window_source() -> str:
         if p.exists():
             return p.read_text(encoding="utf-8")
         pytest.skip("modern_window.py nicht gefunden")
-    with open(spec.origin, encoding="utf-8") as f:  # type: ignore[arg-type]
+    with open(spec.origin, encoding="utf-8") as f:  # type: ignore[arg-type,union-attr]
         return f.read()
 
 

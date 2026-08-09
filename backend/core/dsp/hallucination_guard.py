@@ -173,7 +173,7 @@ def check_hallucination(
 
     except ImportError:
         # DSP fallback: simple spectral energy delta
-        logger.debug("hallucination_guard primary import fehlgeschlagen; using DSP Ersatzpfad.")
+        logger.warning("§G23 hallucination_guard primary import fehlgeschlagen; using DSP Ersatzpfad")
         spectral_novelty, meta = _compute_spectral_novelty_dsp(pre_arr, post_arr, sr)
 
     except Exception as exc:

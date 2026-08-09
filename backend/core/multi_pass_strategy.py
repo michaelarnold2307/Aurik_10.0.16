@@ -592,10 +592,12 @@ class ObjectiveScorer:
                 try:
                     score.snr_db = metrics.compute_snr(audio, sample_rate)
                 except Exception:
+                    logger.debug("multi_pass_strategy: SNR computation failed, using default 20.0", exc_info=True)
                     score.snr_db = 20.0
                 try:
                     score.thd_percent = metrics.compute_thd(audio, sample_rate)
                 except Exception:
+                    logger.debug("multi_pass_strategy: THD computation failed, using default 1.0", exc_info=True)
                     score.thd_percent = 1.0
             except Exception as e2:
                 logger.warning("EnhancedMetrics auch nicht verfügbar: %s", e2)

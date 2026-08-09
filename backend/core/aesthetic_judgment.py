@@ -395,7 +395,7 @@ class AestheticProxyCalculator:
                 details["foundation_genre_match"] = _genre_match
                 details["foundation_semantic_alignment"] = _semantic_alignment
         except Exception as exc:
-            logger.debug("Naturalness CLAP foundation deviation Ersatzpfad active: %s", exc)
+            logger.warning("§G23 Naturalness CLAP foundation deviation DSP-Ersatzpfad: %s", exc, exc_info=True)
 
         # Foundation Model Deviation Score: MERT-Cosine-Similarity als Proxy
         # Berechne Ähnlichkeit zwischen Original und Restauriert im MERT-Embedding-Raum.

@@ -896,6 +896,11 @@ class MediumDetector:
     # against these templates and prefers chains that match known patterns.
     _KNOWN_CHAINS: list[list[str]] = [
         # ═══ Studio → Veroeffentlichung → Kopie → Digital ═══
+        ["reel_tape", "lacquer_disc", "vinyl", "cassette", "mp3_high"],
+        ["reel_tape", "lacquer_disc", "vinyl", "cassette", "mp3_low"],
+        ["reel_tape", "lacquer_disc", "vinyl", "mp3_high"],
+        ["reel_tape", "lacquer_disc", "vinyl", "mp3_low"],
+        ["reel_tape", "lacquer_disc", "vinyl", "cd_digital"],
         ["reel_tape", "vinyl", "cassette", "mp3_low"],
         ["reel_tape", "vinyl", "cassette", "mp3_high"],
         ["reel_tape", "vinyl", "cartridge_8track", "mp3_low"],
@@ -1981,17 +1986,19 @@ class MediumDetector:
     # Conservative minimum: 6 s covers all standard speeds with ≥3 cycles.
     _MIN_ROTATION_ANALYSIS_DURATION_S: float = 6.0
 
-    def _bayesian_score(self, fp: SpectralFingerprint, duration_s: float = 0.0) -> dict[str, float]:
+    def _bayesian_score(self, fp: SpectralFingerprint, duration_s: float = 0.0,
+                        era_decade: int | None = None,
+                        era_confidence: float = 0.0) -> dict[str, float]:
         """Berechnet posterior probabilities for all 16 material types via Gaussian log-likelihood.
 
         Args:
-            fp:         Spectral fingerprint of the audio.
-            duration_s: Audio duration in seconds.  When > 0 and shorter than
-                        _MIN_ROTATION_ANALYSIS_DURATION_S, rotation_strength is
-                        excluded from the Bayesian update (treated as unobserved).
-                        This prevents short vinyl excerpts from being classified as
-                        tape, because the turntable ACF requires ≥3 full rotations
-                        (≥6 s at 33⅓ RPM) for a reliable peak estimate.
+            fp:             Spectral fingerprint of the audio.
+            duration_s:     Audio duration in seconds.
+            era_decade:     Optional era estimate from EraClassifier (§v10.14.1).
+                            When provided, material priors are modulated: materials
+                            consistent with the era get a log-prior boost, materials
+                            from impossible eras get a penalty.
+            era_confidence: EraClassifier confidence [0,1] — modulates prior strength.
 
         Returns dict[material_name → posterior_probability], sorted descending.
         """
@@ -2055,8 +2062,77 @@ class MediumDetector:
         # Ref: J. Pearl (1988) Probabilistic Reasoning in Intelligent Systems
         #      Section 2.3: Cromwell's Rule — assign only a small probability to
         #      the catch-all hypothesis so that plausible alternatives are preferred.
+
+        # §v10.14.1 Era-Aware Prior Modulation:
+        # Wenn der EraClassifier eine Dekade mit ausreichender Konfidenz liefert,
+        # werden die log-priors der Materialien entsprechend moduliert:
+        #   - Materialien, die in dieser Ära TYPISCH sind → Boost
+        #   - Materialien, die in dieser Ära UNMÖGLICH sind → Penalty
+        #   - Materialien, die möglich aber untypisch sind → neutral
+        # Die Stärke skaliert mit der Era-Confidence (niedrige Conf → schwacher Effekt).
+        if era_decade is not None and era_confidence >= 0.40:
+            _era_boost_nats = 0.0
+            if era_confidence >= 0.75:
+                _era_boost_nats = 1.0
+            elif era_confidence >= 0.60:
+                _era_boost_nats = 0.6
+            elif era_confidence >= 0.40:
+                _era_boost_nats = 0.3
+
+            # ── Era → Material Consistency Tables ─────────────────────────
+            # Materials that are TYPICAL for each era (get positive boost)
+            _ERA_CONSISTENT: dict[str, list[int]] = {
+                "wax_cylinder": [1890, 1900, 1910, 1920],
+                "wire_recording": [1900, 1910, 1920, 1930, 1940],
+                "shellac": [1900, 1910, 1920, 1930, 1940, 1950],
+                "lacquer_disc": [1920, 1930, 1940, 1950, 1960],
+                "vinyl": [1950, 1960, 1970, 1980],
+                "reel_tape": [1940, 1950, 1960, 1970, 1980],
+                "cassette": [1970, 1980, 1990],
+                "tape": [1970, 1980, 1990],
+                "8track": [1970, 1980],
+                "dat": [1980, 1990, 2000],
+                "cd_digital": [1990, 2000, 2010],
+                "cd": [1990, 2000, 2010],
+                "minidisc": [1990, 2000],
+                "dcc": [1990],
+                "mp3_low": [2000, 2010, 2020],
+                "mp3_high": [2000, 2010, 2020],
+                "mp3_high_vbr": [2000, 2010, 2020],
+                "aac": [2000, 2010, 2020],
+                "streaming": [2010, 2020, 2025],
+                "pcm_digital": [2000, 2010, 2020],
+                "lossless_digital": [2000, 2010, 2020],
+            }
+            # Materials that are IMPOSSIBLE for each era (get negative penalty)
+            _ERA_IMPOSSIBLE: dict[str, list[int]] = {
+                "wax_cylinder": [1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020],
+                "shellac": [1970, 1980, 1990, 2000, 2010, 2020],
+                "wire_recording": [1960, 1970, 1980, 1990, 2000, 2010, 2020],
+                "8track": [1990, 2000, 2010, 2020],
+                "dat": [1970, 2010, 2020],
+                "minidisc": [1970, 1980, 2010, 2020],
+                "dcc": [1970, 1980, 2000, 2010, 2020],
+            }
+
+            _era_decade_rounded = (era_decade // 10) * 10  # round to decade
+            for mat in log_likes:
+                _mat_key = mat.lower().replace(" ", "_").replace("-", "_")
+                if mat == "unknown":
+                    continue
+                _consistent_decades = _ERA_CONSISTENT.get(_mat_key, [])
+                _impossible_decades = _ERA_IMPOSSIBLE.get(_mat_key, [])
+                if _era_decade_rounded in _consistent_decades:
+                    log_likes[mat] += _era_boost_nats
+                elif _era_decade_rounded in _impossible_decades:
+                    log_likes[mat] -= _era_boost_nats * 1.5  # harder penalty for impossible combos
+            logger.debug(
+                "MediumDetector: Era-Prior applied (decade=%d, conf=%.2f, boost=%.1f nats)",
+                _era_decade_rounded, era_confidence, _era_boost_nats,
+            )
+
         _N_MATERIALS: int = len(self._MATERIAL_MODELS)
-        _P_UNKNOWN: float = 0.01  # §v10.14 erhöht von 0.02 → 0.01 (stärkere Dämpfung)
+        _P_UNKNOWN: float = 0.001  # §v10.14.1: 0.01→0.001 — unknown braucht ~2.9 nats mehr
         _P_OTHER: float = (1.0 - _P_UNKNOWN) / max(_N_MATERIALS - 1, 1)
         for mat in log_likes:
             _log_prior = math.log(_P_UNKNOWN) if mat == "unknown" else math.log(_P_OTHER)
@@ -2074,24 +2150,25 @@ class MediumDetector:
 
         return dict(sorted(posteriors.items(), key=lambda x: x[1], reverse=True))
 
-    def detect(self, audio: np.ndarray, sr: int, *, file_ext: str = "") -> MediumDetectionResult:
+    def detect(self, audio: np.ndarray, sr: int, *, file_ext: str = "",
+               era_decade: int | None = None, era_confidence: float = 0.0) -> MediumDetectionResult:
         """Erkennt die Tonträgerkette forensisch via Bayesian-Fusion (§6.7 v10.0.0).
 
         Ablauf:
         1. Vollständiger Spektralfingerabdruck (13 Features)
         2. Bayesian Scoring über 16 Materialtypen
-        3. §6.7b File-Extension Prior: digital formats → analog posteriors zeroed
+        3. §6.7b File-Extension Prior: digital formats → analog posteriors penalized
         4. Primärmaterial = höchster Analog-Posterior (oder Digital)
         5. Codec-Layer-Erkennung (Block-Artefakte, Pre-Echo)
         6. Multi-Layer-Ketten-Inferenz (3+ Stufen möglich)
         7. ClassificationResult-Kompatibilitäts-Objekt für Passthrough
 
         Args:
-            audio:    Input audio, float32/64, mono or stereo.
-            sr:       Sample rate in Hz.
-            file_ext: File extension of the source file (e.g. '.mp3', '.flac').
-                      When provided, constrains the Bayesian prior so that analog
-                      materials can never win for known-digital formats.
+            audio:          Input audio, float32/64, mono or stereo.
+            sr:             Sample rate in Hz.
+            file_ext:       File extension of the source file (e.g. '.mp3', '.flac').
+            era_decade:     Optional era estimate from EraClassifier (§v10.14.1).
+            era_confidence: EraClassifier confidence [0,1] — modulates era prior strength.
 
         Returns:
             MediumDetectionResult mit transfer_chain, bayesian_scores,
@@ -2107,7 +2184,8 @@ class MediumDetector:
         # Pass audio duration for rotation_strength masking in short clips (§2.47 §0c)
         _mono_len: int = audio.shape[0] if audio.ndim == 1 else int(max(audio.shape))
         _duration_s: float = float(_mono_len) / max(float(sr), 1.0)
-        posteriors = self._bayesian_score(fp, duration_s=_duration_s)
+        posteriors = self._bayesian_score(fp, duration_s=_duration_s,
+                                         era_decade=era_decade, era_confidence=era_confidence)
 
         # §6.7b File-Extension Prior: digital file formats cannot originate from
         # analog physical media.  A .mp3 file was encoded digitally at capture time —
@@ -2230,14 +2308,25 @@ class MediumDetector:
         # via Bayesian-Posterior gefunden wurde und _analog_zeroed=False).
         _pa_conf_thresh: float = 0.40
         _feature_ok: bool = True
-        # §2.46a: Physische Analog-Quellen auch bei penalized (nicht zeroed) Codec-Containern
-        # inferieren. MP3/AAC-Dateien attenuieren die Bayesian-Posteriors für Analog-Materialien,
-        # aber physikalische Cues (Wow/Flutter, Rotation, Infrasonic) überleben die Codec-Kodierung
-        # und müssen für Multi-Generation-Chains (z.B. vinyl→reel_tape→mp3) ausgewertet werden.
+        # §v10.14.1: Bayesian-Blind-Erkennung — wenn unknown > 0.90 dominiert,
+        # sind physikalische Features die einzige verbleibende Evidenz.
+        # Wird sowohl im Physical-Gate als auch in der Sekundär-Chain verwendet.
+        _bayesian_blind = (
+            best_analog is None
+            and len(top_materials) > 0
+            and top_materials[0][0] == "unknown"
+            and top_materials[0][1] > 0.90
+        )
+        # §v10.14.1: Immer physische Inferenz laufen lassen — auch wenn
+        # file_ext nicht digital ist. Bei unknown-dominierten Bayesian-
+        # Posteriors (unknown > 0.90) sind die physikalischen Features
+        # (Crackle, Rotation, Wow/Flutter, Infrasonic) die EINZIGE
+        # verbleibende Evidenz für die Tonträgerkette.
         _needs_physical_inference = (
             _analog_zeroed
             or (_ext_lower in _DIGITAL_FILE_EXTS and fp.codec_artifact_score > self._CODEC_ARTIFACT_THRESHOLD)
             or fp.codec_artifact_score > 0.30
+            or best_analog is None  # §v10.14.1: unknown-dominierte Posteriors
         )
         if _needs_physical_inference:
             _physical_analog_sources = self._infer_analog_source_from_fingerprint(fp)
@@ -2249,11 +2338,18 @@ class MediumDetector:
                 # transfer stage. Fixed thresholds miss genuine analog origins when
                 # codec degradation is high. Scale by codec contamination level.
                 _pa_codec_att = min(1.0, fp.codec_artifact_score / 0.60)
-                _pa_conf_thresh = max(0.20, 0.55 * (1.0 - 0.55 * _pa_codec_att))
-                _pa_rot_thresh = max(0.15, 0.65 * (1.0 - 0.45 * _pa_codec_att))
-                _pa_wow_thresh = max(0.02, 0.06 * (1.0 - 0.45 * _pa_codec_att))
-                _pa_infra_thresh = max(0.015, 0.025 * (1.0 - 0.40 * _pa_codec_att))
-                _pa_crackle_thresh = max(0.010, 0.020 * (1.0 - 0.40 * _pa_codec_att))
+                if _bayesian_blind:
+                    _pa_conf_thresh = max(0.10, 0.25 * (1.0 - 0.55 * _pa_codec_att))
+                    _pa_rot_thresh = max(0.08, 0.35 * (1.0 - 0.45 * _pa_codec_att))
+                    _pa_wow_thresh = max(0.01, 0.03 * (1.0 - 0.45 * _pa_codec_att))
+                    _pa_infra_thresh = max(0.008, 0.012 * (1.0 - 0.40 * _pa_codec_att))
+                    _pa_crackle_thresh = max(0.005, 0.010 * (1.0 - 0.40 * _pa_codec_att))
+                else:
+                    _pa_conf_thresh = max(0.20, 0.55 * (1.0 - 0.55 * _pa_codec_att))
+                    _pa_rot_thresh = max(0.15, 0.65 * (1.0 - 0.45 * _pa_codec_att))
+                    _pa_wow_thresh = max(0.02, 0.06 * (1.0 - 0.45 * _pa_codec_att))
+                    _pa_infra_thresh = max(0.015, 0.025 * (1.0 - 0.40 * _pa_codec_att))
+                    _pa_crackle_thresh = max(0.010, 0.020 * (1.0 - 0.40 * _pa_codec_att))
                 _feature_ok = (
                     fp.rotation_strength >= _pa_rot_thresh
                     or fp.wow_flutter_index >= _pa_wow_thresh
@@ -2439,6 +2535,14 @@ class MediumDetector:
                 # This allows multi-generation chains beyond one secondary layer.
                 _candidate_scores: dict[str, float] = {}
                 _candidate_sources: dict[str, str] = {}
+                # §v10.14.1: Bayesian-Blind-Modus — auch physikalisch inferierte
+                # Materialien als Sekundär-Kandidaten einweben, selbst wenn ihre
+                # Bayesian-Posteriors unter _SECONDARY_ANALOG_MIN liegen.
+                if _bayesian_blind and _physical_analog_sources:
+                    for _p_mat, _p_conf in _physical_analog_sources:
+                        if _p_mat != best_analog and _p_mat in self._ANALOG_MATERIALS:
+                            _candidate_scores[_p_mat] = float(_p_conf)
+                            _candidate_sources[_p_mat] = "physical_blind"
                 for mat2, score2 in top_materials:
                     if mat2 == best_analog or mat2 not in self._ANALOG_MATERIALS or score2 < self._SECONDARY_ANALOG_MIN:
                         continue

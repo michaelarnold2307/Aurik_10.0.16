@@ -160,7 +160,7 @@ def compute_export_transparency(
         estimated_lufs = float(20.0 * np.log10(max(rms, 1e-10))) - 3.0  # grobe Näherung
         result.integrated_lufs = round(estimated_lufs, 1)
         result.lufs_ok = True  # Kann nicht verifiziert werden
-        logger.debug("pyloudnorm nicht verfügbar — LUFS via RMS-Schätzung")
+        logger.warning("§G23 pyloudnorm nicht verfügbar — LUFS via RMS-Schätzung (DSP-Ersatzpfad)")
 
     # ── Dithering ──
     if bit_depth <= 16 and export_format in ("WAV", "AIFF", "FLAC"):

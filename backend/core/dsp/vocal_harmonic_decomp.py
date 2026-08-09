@@ -306,5 +306,5 @@ def build_vocal_harmonic_mask(
     try:
         return VocalHarmonicMask(audio, sr, use_crepe=use_crepe)
     except Exception as exc:
-        logger.debug("build_vocal_harmonic_mask: nicht blockierend Ersatzpfad — %s", exc)
+        logger.warning("§G23 build_vocal_harmonic_mask: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return None

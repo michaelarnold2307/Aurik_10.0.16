@@ -486,7 +486,8 @@ def _build_bridge_calibration_dict() -> dict:
             calibration_timestamp=time.monotonic(),
         )
         return data.to_frontend_dict()
-    except Exception:
+    except Exception as _dexc:
+        logger.warning("§G93 bridge: Defekt-Ergebnis-Konvertierung fehlgeschlagen → returning {}: %s", _dexc, exc_info=True)
         return {}
 
 
@@ -994,6 +995,7 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
     try:
         _cnt = int(_cnt_raw)
     except Exception:
+        logger.debug("bridge: auto-improvement count parse failed, using len(recommendations)")
         _cnt = len(_normalized_recommendations)
     _cnt = max(_cnt, len(_normalized_recommendations), 0)
 
@@ -1015,6 +1017,7 @@ def get_experience_insights(result: Any) -> dict[str, Any]:
     try:
         _tc_count = int(_tc.get("event_count", len(_tc_events)))
     except Exception:
+        logger.debug("bridge: team coordination event_count parse failed, using len(events)")
         _tc_count = len(_tc_events)
     _pt_summary = dict(_tc.get("phase_type_summary", {}) or {})
     _fqf_trace_raw_val = _fqf.get("recovery_trace")
@@ -1576,7 +1579,8 @@ def get_export_transparency(
             _tp_db = float(_approx_true_peak(output_audio, output_sr))
             _report["true_peak_dbtp"] = round(_tp_db, 2)
             _report["true_peak_ok"] = _tp_db <= -1.0  # EBU R128: ≤ -1 dBTP
-        except Exception:
+        except Exception as _tp_exc:
+            logger.warning("§G93 bridge: True-Peak-Messung fehlgeschlagen → None: %s", _tp_exc, exc_info=True)
             _report["true_peak_dbtp"] = None
             _report["true_peak_ok"] = None
 
@@ -1587,7 +1591,8 @@ def get_export_transparency(
             rms = float(np.sqrt(np.mean(mono.astype(np.float64) ** 2)) + 1e-12)
             _lufs_approx = float(20.0 * np.log10(rms)) - 0.0  # RMS ≈ LUFS für stationäre Signale
             _report["integrated_lufs"] = round(_lufs_approx, 1)
-        except Exception:
+        except Exception as _lufs_exc:
+            logger.warning("§G93 bridge: LUFS-Messung fehlgeschlagen → None: %s", _lufs_exc, exc_info=True)
             _report["integrated_lufs"] = None
 
     # Dateigröße
@@ -1683,6 +1688,7 @@ def build_export_quality_gate_payload(result: object) -> dict[str, Any]:
         try:
             _gap = max(0.0, float(_thr_val) - float(_goal_scores.get(_goal_name, 0.0)))
         except Exception:
+            logger.debug("bridge: goal gap calculation failed for '%s', using 0.0", _goal_name)
             _gap = 0.0
         if _gap > 0.0:
             _goal_gaps.append({"goal": str(_goal_name), "gap": round(float(_gap), 4)})
@@ -1697,6 +1703,7 @@ def build_export_quality_gate_payload(result: object) -> dict[str, Any]:
             _gain_step = float(_entry.get("gain_step_db", 0.0) or 0.0)
             _variance_ratio = float(_entry.get("variance_ratio", 1.0) or 1.0)
         except Exception:
+            logger.debug("bridge: temporal continuity parse failed for '%s', using defaults", _phase_id)
             _gain_step = 0.0
             _variance_ratio = 1.0
         _hot = (abs(_gain_step) > 1.5) or (_variance_ratio > 2.5)
@@ -2012,9 +2019,10 @@ def warmup_models_background() -> None:
                 if sw.percent > 65.0:
                     return False
             except Exception:
-                logger.debug("bridge.py:2005: Silent exception absorbed", exc_info=True)
+                logger.warning("§G23 bridge: ML-Modell-Validierung DSP-Ersatzpfad: %s", exc_info=True)
             return True
         except Exception:
+            logger.warning("§G93 bridge: ML-Modell-Ladeversuch fehlgeschlagen (Segfault-Risiko) → returning False", exc_info=True)
             return False  # §v10.306: Im Zweifel NICHT laden — Segfault-Risiko
 
     # ── Tier 1: Alle kleinen Modelle sofort laden ────────────────────────
@@ -3202,7 +3210,7 @@ def limit_quiet_edge_boost(
             max_edge_boost_db=max_edge_boost_db,
         )
     except Exception as _e:
-        logger.debug("limit_quiet_edge_boost bridge Ersatzpfad: %s", _e)
+        logger.warning("§G23 bridge: limit_quiet_edge_boost DSP-Ersatzpfad (passthrough): %s", _e, exc_info=True)
         return candidate_audio
 
 
@@ -3282,8 +3290,8 @@ def get_pipeline_ab_snapshots(*, include_audio: bool = True, max_duration_s: flo
             snippets.append(entry)
 
         return snippets
-    except Exception:
-        logger.warning("bridge.py::get_pipeline_ab_snapshots Ersatzpfad", exc_info=True)
+    except Exception as _snap_exc:
+        logger.warning("§G93 bridge: get_pipeline_ab_snapshots DSP-Ersatzpfad → returning []: %s", _snap_exc, exc_info=True)
         return []
 
 
@@ -3304,8 +3312,8 @@ def get_phase_display_formatter_fns() -> dict[str, object]:
             "get_era_display": get_era_display,
             "get_phase_display": get_phase_display,
         }
-    except Exception:
-        logger.warning("bridge.py::get_Verarbeitungsschritt_display_formatter_fns Ersatzpfad", exc_info=True)
+    except Exception as _fmt_exc:
+        logger.warning("§G93 bridge: get_phase_display_formatter_fns DSP-Ersatzpfad → returning {}: %s", _fmt_exc, exc_info=True)
         return {}
 
 
@@ -3347,7 +3355,8 @@ def get_live_preview(seek_s: float = 0.0, duration_s: float = 5.0) -> dict | Non
             "seek_s": float(seek_s),
             "total_s": float(n_total / sr),  # type: ignore[operator]
         }
-    except Exception:
+    except Exception as _prev_exc:
+        logger.warning("§G93 bridge: get_live_preview failed → returning None: %s", _prev_exc, exc_info=True)
         return None
 
 

@@ -213,7 +213,7 @@ class VocalStyleProfiler:
             # safe_filtfilt → scipy.signal.filtfilt kann in seltenen Fällen
             # (0.3% aller Runs) eine C-Level-Rekursion triggern.
             # Fallback: lfilter (minimum-phase) statt filtfilt (zero-phase).
-            logger.debug("vocal_style_profiler.py::_berechnen_vibrato recursion → lfilter Ersatzpfad")
+            logger.warning("§G23 vocal_style_profiler: recursion → lfilter DSP-Ersatzpfad")
             try:
                 from scipy.signal import lfilter
 

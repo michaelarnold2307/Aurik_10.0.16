@@ -10,6 +10,7 @@ Usage:
 from __future__ import annotations
 import ast, json, hashlib, os, sys
 from pathlib import Path
+from typing import Any
 
 PROJECT_ROOT = Path(__file__).parent.parent
 TARGET_MODULE = PROJECT_ROOT / "backend" / "core" / "excellence_optimizer.py"
@@ -55,7 +56,7 @@ def trace_usage(filepath: str, param_name: str) -> list[dict]:
 def generate_graph(target: str, output_json: str, output_md: str) -> dict:
     """Generiert vollständigen Parameter-Interaktions-Graphen."""
     params = extract_parameters(target)
-    graph = {"source_file": target, "parameters": [], "generated_by": "parameter_impact_trace.py"}
+    graph: dict[str, Any] = {"source_file": target, "parameters": [], "generated_by": "parameter_impact_trace.py"}
     for p in params:
         usages = trace_usage(target, p["name"])
         p["usages"] = usages

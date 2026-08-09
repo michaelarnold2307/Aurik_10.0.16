@@ -354,7 +354,7 @@ class ConsonantEnhancement:
             if result.sibilant_mask is not None and result.sibilant_mask.shape[0] == mono.shape[0]:
                 return result.sibilant_mask.astype(bool)  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("PhonemeDetector nicht verfügbar, weiter mit ConsonantDetector: %s", exc)
+            logger.warning("§G23 PhonemeDetector nicht verfügbar, DSP-Ersatzpfad ConsonantDetector: %s", exc, exc_info=True)
 
         # Stufe 2: ConsonantDetector — §2.8 Step 5b (eigenständiger Singleton)
         try:
@@ -369,7 +369,7 @@ class ConsonantEnhancement:
                 )
                 return cd_result.mask  # type: ignore[no-any-return]
         except Exception as exc:
-            logger.debug("ConsonantDetector nicht verfügbar, leere Maske: %s", exc)
+            logger.warning("§G23 ConsonantDetector nicht verfügbar, DSP-Ersatzpfad leere Maske: %s", exc, exc_info=True)
 
         # Stufe 3: Notfall-Fallback (kein Daten-Verlust, Pipeline läuft weiter)
         return np.zeros(len(mono), dtype=bool)  # type: ignore[no-any-return]

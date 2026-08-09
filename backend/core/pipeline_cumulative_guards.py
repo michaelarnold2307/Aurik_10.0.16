@@ -218,8 +218,8 @@ class EarlyQualityGate:
                         f"Material zu schlecht für Full-Pipeline"
                     )
                     logger.warning("§EARLY-GATE abbrechen: %s", result["reason"])
-            except Exception:
-                pass
+            except Exception as _eg_exc:
+                logger.warning("§G93 pipeline_cumulative_guards early-gate check failed (non-blocking): %s", _eg_exc, exc_info=True)
 
         return result
 

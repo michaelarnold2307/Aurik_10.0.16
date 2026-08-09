@@ -125,7 +125,7 @@ def estimate_goal_feasibility(
             )
         return result
     except Exception as _exc:
-        logger.debug("estimate_goal_feasibility nicht verfügbar: %s", _exc)
+        logger.warning("§G23 estimate_goal_feasibility nicht verfügbar — returning {} (DSP-Ersatzpfad): %s", _exc, exc_info=True)
         return {}
 
 

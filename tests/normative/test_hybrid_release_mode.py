@@ -34,8 +34,8 @@ def _load_validate_script():
     spec_path = _SCRIPTS_DIR / "validate_core_model_presence.py"
     if not spec_path.exists():
         pytest.skip(f"validate_core_model_presence.py nicht gefunden: {spec_path}")
-    spec = importlib.util.spec_from_file_location("validate_core_model_presence", spec_path)
-    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
+    spec = importlib.util.spec_from_file_location("validate_core_model_presence", spec_path)  # type: ignore[union-attr]
+    mod = importlib.util.module_from_spec(spec)  # type: ignore[arg-type,union-attr]
     spec.loader.exec_module(mod)  # type: ignore[union-attr]
     return mod
 
@@ -204,5 +204,6 @@ def test_fcpe_not_blocked_if_crepe_present(runtime_rows):
     row = next((r for r in runtime_rows if r["name"] == "fcpe"), None)
     if row is None:
         pytest.skip("fcpe nicht in runtime_rows")
-    if bool(row.get("fallback")):
+    _fallback = bool(row.get("fallback")) if isinstance(row, dict) else False
+    if _fallback:
         assert row.get("release_mode") != "blocked", "fcpe hat Fallback (crepe/rmvpe), darf nicht 'blocked' sein."

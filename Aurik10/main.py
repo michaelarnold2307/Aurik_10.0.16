@@ -178,7 +178,7 @@ def _enable_crash_forensics() -> None:
                 faulthandler.register(_sig, file=_crash_log_fh[0], all_threads=True)
             except Exception:
                 # Not all platforms allow explicit registration for every signal.
-                pass
+                logger.debug("main: faulthandler signal registration skipped (platform limitation)", exc_info=True)
         logger.info("Crash forensics active (faulthandler): %s", crash_log)
     except Exception as exc:
         logger.warning("Faulthandler setup fehlgeschlagen (non-fatal): %s", exc)

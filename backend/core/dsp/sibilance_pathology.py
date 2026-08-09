@@ -264,7 +264,7 @@ def classify_sibilance_pathology(
         return segments
 
     except Exception as exc:
-        logger.debug("sibilance_pathology: Ersatzpfad (nicht blockierend) — %s", exc)
+        logger.warning("§G23 sibilance_pathology: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return []
 
 

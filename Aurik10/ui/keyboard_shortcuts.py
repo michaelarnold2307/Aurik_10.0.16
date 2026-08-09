@@ -72,6 +72,7 @@ class KeyboardShortcuts:
                 self._player.play()
             return True
         except Exception:
+            logger.debug("keyboard_shortcuts: play/pause action failed", exc_info=True)
             return False
 
     def _seek_relative(self, delta_s: float) -> bool:
@@ -84,6 +85,7 @@ class KeyboardShortcuts:
             self._player.seek(new_pos / max(duration, 0.001))
             return True
         except Exception:
+            logger.debug("keyboard_shortcuts: seek action failed", exc_info=True)
             return False
 
     def _stop(self) -> bool:
@@ -93,6 +95,7 @@ class KeyboardShortcuts:
             self._player.stop()
             return True
         except Exception:
+            logger.debug("keyboard_shortcuts: stop action failed", exc_info=True)
             return False
 
     def _toggle_expert_mode(self) -> bool:
@@ -104,4 +107,5 @@ class KeyboardShortcuts:
                 self._window._update_expert_mode_visibility()
             return True
         except Exception:
+            logger.debug("keyboard_shortcuts: toggle expert mode failed", exc_info=True)
             return False

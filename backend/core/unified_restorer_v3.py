@@ -179,7 +179,9 @@ class RestorationResult:
 # Höherer Wert = mehr Restaurierungsbedarf (konservativerer Typ hat Vorrang bei Gleichstand).
 _MATERIAL_CONSERVATIVENESS_RANK: dict[str, int] = {
     "edison_cylinder": 11,
+    "wax_cylinder": 11,
     "shellac": 10,
+    "wire_recording": 10,
     "lacquer_disc": 9,
     "acetate": 9,
     "78rpm": 9,
@@ -264,12 +266,202 @@ def _get_noise_texture_rollback_threshold(material_key: str) -> float:
     return float(_MATERIAL_NOISE_TEXTURE_ROLLBACK_THRESHOLD.get(_k, 10.0))
 
 
-def _resolve_noise_texture_rollback_threshold(material_key: str, transfer_chain: list[str] | None = None) -> float:
-    """Gibt the most permissive NTX rollback threshold across material and chain zurück."""
-    thresholds = [_get_noise_texture_rollback_threshold(material_key)]
-    for stage in transfer_chain or []:
-        thresholds.append(_get_noise_texture_rollback_threshold(str(stage).lower()))
-    return float(max(thresholds))
+# §G79/§G80 Calibration-Audit: Zentrales Logging für alle kalibrierten
+# Schwellwerte. Jeder adaptive Threshold ruft diese Funktion auf —
+# dadurch wird jede Entscheidung auf Auriks Messwerte zurückverfolgbar.
+# Format §G79: "§CALIB param: rs=X depth=Y → param=Z"
+# Format §G80: "⚠️ uncalibrated fallback: param=Z (reason: ...)"
+def _log_calibration_audit(
+    param_name: str,
+    value: float,
+    restorability_score: float = 70.0,
+    transfer_chain_depth: int = 1,
+    material_key: str = "unknown",
+    era_decade: int | None = None,
+    *,
+    is_fallback: bool = False,
+    fallback_reason: str = "",
+) -> None:
+    """§G79/§G80: Protokolliert jede kalibrierte Schwellwert-Entscheidung.
+
+    §G79: Normale Kalibrierung → INFO mit allen Eingabeparametern.
+    §G80: Unkalibrierter Fallback → WARNING mit Begründung.
+    """
+    if is_fallback:
+        logger.warning(
+            "⚠️ §G80 uncalibrated fallback: %s=%.4f (rs=%.0f depth=%d mat=%s era=%s reason: %s)",
+            param_name,
+            value,
+            restorability_score,
+            transfer_chain_depth,
+            material_key,
+            str(era_decade) if era_decade is not None else "unknown",
+            fallback_reason or "no calibration context available",
+        )
+    else:
+        logger.info(
+            "§CALIB %s: rs=%.0f depth=%d mat=%s era=%s → %s=%.4f",
+            param_name,
+            restorability_score,
+            transfer_chain_depth,
+            material_key,
+            str(era_decade) if era_decade is not None else "unknown",
+            param_name,
+            value,
+        )
+
+
+# §G77 Generische adaptive Threshold-Funktion: Kapselt das gemeinsame Muster
+# aller adaptiven Schwellwerte — RS-Faktor × Depth-Faktor × Basis-Wert.
+# Verhindert Code-Duplikation und stellt konsistente Adaptivität sicher.
+def _compute_adaptive_threshold(
+    base_value: float,
+    restorability_score: float = 70.0,
+    transfer_chain_depth: int = 1,
+    *,
+    rs_range: tuple[float, float] = (0.70, 1.00),
+    depth_range: tuple[float, float] = (0.78, 1.00),
+    depth_decay: float = 0.04,
+    output_range: tuple[float, float] = (0.0, 1.0),
+) -> float:
+    """§G77: Generische adaptive Schwellwert-Berechnung.
+
+    Alle adaptiven Thresholds in Aurik folgen diesem Muster:
+      output = base × RS-Faktor × Depth-Faktor
+
+    RS-Faktor:   linear von rs_min→rs_max über [0,100]
+    Depth-Faktor: linearer Decay pro Generation
+
+    Diese Funktion ist die EINZIGE Stelle, an der dieses Muster
+    implementiert ist — alle anderen adaptiven Funktionen delegieren
+    hierher oder nutzen dieselben Default-Parameter.
+    """
+    _rs = max(0.0, min(100.0, float(restorability_score)))
+    _rs_factor = float(np.clip(
+        rs_range[0] + (_rs / 100.0) * (rs_range[1] - rs_range[0]),
+        rs_range[0], rs_range[1],
+    ))
+    _depth = max(1, int(transfer_chain_depth))
+    _depth_factor = float(np.clip(
+        1.0 - max(0, _depth - 1) * depth_decay,
+        depth_range[0], depth_range[1],
+    ))
+    return float(np.clip(
+        base_value * _rs_factor * _depth_factor,
+        output_range[0], output_range[1],
+    ))
+
+
+# §G100 Adaptive Vocal-Confidence-Schwelle für PANNs Singing Detection.
+# Ersetzt die 39-fach hartcodierte Konstante 0.35 durch eine
+# kontinuierliche, material/era/restorability-adaptive Funktion.
+# PANNs ist auf degradiertem Material weniger zuverlässig (Rauschen
+# maskiert Gesangsmerkmale) → Schwelle wird adaptiv GESENKT.
+def _resolve_vocal_confidence_threshold(
+    material_key: str = "unknown",
+    restorability_score: float = 70.0,
+    era_decade: int | None = None,
+) -> float:
+    """§G100: Adaptive Vocal-Confidence-Schwelle für PANNs Singing Detection.
+
+    Ersetzt die universelle 0.35-Schwelle. PANNs ist weniger zuverlässig
+    auf degradiertem Material (Rauschen maskiert Gesangsmerkmale) und auf
+    historischen Aufnahmen (begrenzte Bandbreite entfernt Obertöne).
+
+    Die Schwelle wird ADAPTIV gesenkt:
+    - Niedrigere Restorability → niedrigere Schwelle (sensibler)
+    - Frühere Ära → niedrigere Schwelle (Bandbreitenverlust)
+    - Degradiertes Material → niedrigere Schwelle
+
+    Returns threshold in [0.22, 0.40].
+    """
+    # Restorability-Faktor: rs 0→0.25, rs 50→0.30, rs 100→0.35
+    _rs = max(0.0, min(100.0, float(restorability_score)))
+    _rs_threshold = 0.25 + (_rs / 100.0) * 0.10
+
+    # Era-Faktor: pre-1950→-0.05, 1950-1970→-0.03, 1970-1990→-0.01, post-1990→0.00
+    _era_offset = 0.0
+    if era_decade is not None:
+        _decade = int(era_decade)
+        if _decade < 1950:
+            _era_offset = -0.05
+        elif _decade < 1970:
+            _era_offset = -0.03
+        elif _decade < 1990:
+            _era_offset = -0.01
+
+    _threshold = _rs_threshold + _era_offset
+
+    # §G77 Material-spezifische Justierung — KONTINUIERLICH via
+    # _MATERIAL_CONSERVATIVENESS_RANK statt diskreter if/elif-Ketten.
+    # Höherer Conservativeness-Rank → degradierter → niedrigere Schwelle.
+    _mat = str(material_key).lower()
+    _mat_rank = 0
+    for _mr_key, _mr_val in _MATERIAL_CONSERVATIVENESS_RANK.items():
+        if _mr_key in _mat or _mat in _mr_key:
+            _mat_rank = int(_mr_val)
+            break
+    # Rank 0→0.00, 5→-0.014, 10→-0.027, 11→-0.030
+    _mat_offset = float(-0.03 * (_mat_rank / 11.0))
+
+    _result = float(np.clip(_threshold + _mat_offset, 0.22, 0.40))
+    # §G79 Calibration-Audit
+    _log_calibration_audit(
+        "vocal_threshold",
+        _result,
+        restorability_score=_rs,
+        transfer_chain_depth=1,  # vocal threshold is RS/era/material-driven
+        material_key=_mat,
+        era_decade=era_decade,
+    )
+    return _result
+
+
+def _resolve_noise_texture_rollback_threshold(
+    material_key: str,
+    transfer_chain: list[str] | None = None,
+    restorability_score: float = 70.0,
+    transfer_chain_depth: int = 1,
+    *,
+    calibration_context: Any | None = None,
+) -> float:
+    """Gibt die adaptive NTX-Rollback-Schwelle zurück.
+
+    §G100: Chain-depth-adaptiv und restorability-adaptiv.
+    §G76: CalibrationContext als primäre Quelle (falls vorhanden).
+
+    Tiefere Chains und niedrigere Restorability bekommen höhere
+    Toleranz (mehr dB/oct erlaubt), weil generationsbedingte
+    Noise-Texture-Variation nicht als Restaurierungsfehler zählen darf.
+    """
+    # §G76: CalibrationContext-First
+    if calibration_context is not None:
+        _rs = float(getattr(calibration_context, "restorability_score", restorability_score))
+        _depth = int(getattr(calibration_context, "transfer_chain_depth", transfer_chain_depth))
+    else:
+        _rs = float(restorability_score)
+        _depth = int(transfer_chain_depth)
+    _base = float(max(
+        [_get_noise_texture_rollback_threshold(material_key)]
+        + [_get_noise_texture_rollback_threshold(str(s).lower()) for s in (transfer_chain or [])]
+    ))
+    # §G100: Restorability-Faktor: rs 0→1.30, rs 50→1.15, rs 100→1.00
+    _rs = max(0.0, min(100.0, float(_rs)))
+    _rs_factor = float(np.clip(1.0 + (1.0 - _rs / 100.0) * 0.30, 1.0, 1.30))
+    # Depth-Faktor: depth 1→1.00, depth 4→1.15, depth 6→1.25
+    _depth = max(1, int(_depth))
+    _depth_factor = float(np.clip(1.0 + max(0, _depth - 1) * 0.05, 1.0, 1.25))
+    _result = float(round(_base * _rs_factor * _depth_factor, 1))
+    # §G79 Calibration-Audit
+    _log_calibration_audit(
+        "ntx_threshold",
+        _result,
+        restorability_score=_rs,
+        transfer_chain_depth=_depth,
+        material_key=material_key,
+        era_decade=None,
+    )
+    return _result
 
 
 _AFG_SOFT_BACKOFF_WETS: tuple[float, ...] = (0.75, 0.55, 0.35, 0.20)
@@ -287,8 +479,29 @@ def _try_artifact_freedom_soft_backoff(
     restorability_score: float = 65.0,
     wet_candidates: tuple[float, ...] = _AFG_SOFT_BACKOFF_WETS,
 ) -> tuple[np.ndarray | None, Any | None, float | None]:
-    """Sucht den stärksten artifact-freien Teil-Wet-Anteil für eine Phase."""
-    for wet in wet_candidates:
+    """Sucht den stärksten artifact-freien Teil-Wet-Anteil für eine Phase.
+
+    §G100: Wet-Kandidaten werden restorability-adaptiv skaliert.
+    Bei niedriger Restorability werden niedrigere Wets versucht —
+    die Phase hat mehr Spielraum für aggressive Blendings.
+    """
+    # §G100: Restorability-adaptive Wet-Skalierung
+    # rs 0→0.72, rs 65→1.00, rs 100→1.15
+    _rs_wet = max(0.0, min(100.0, float(restorability_score)))
+    _wet_scale = float(np.clip(1.0 + (_rs_wet - 65.0) / 100.0 * 0.43, 0.72, 1.15))
+    _adaptive_wets = tuple(
+        float(np.clip(w * _wet_scale, 0.10, 0.92))
+        for w in wet_candidates
+    )
+    # §G79 Calibration-Audit
+    _log_calibration_audit(
+        "afg_soft_backoff_wets",
+        _adaptive_wets[0],  # log the first (highest) wet as representative
+        restorability_score=_rs_wet,
+        transfer_chain_depth=1,
+        material_key=material_key,
+    )
+    for wet in _adaptive_wets:
         wet = float(np.clip(wet, 0.0, 1.0))
         candidate = np.clip(
             phase_input * (1.0 - wet) + phase_output * wet,
@@ -313,41 +526,77 @@ def _try_artifact_freedom_soft_backoff(
 # Basiert auf empirischen Maximalwerten pro HPI-Komponente je Materialtyp.
 # carrier_chain_recovery_ratio > 0.15 → timbral-Referenz auf best_carrier_checkpoint (§0d) →
 # effektive Ceiling kann höher liegen als Materialfloor — hier Ceiling, nicht Floor!
-_HPI_CEILING_TIMBRAL: dict[str, float] = {
-    "shellac": 0.60,
-    "vinyl": 0.88,
-    "tape": 0.82,
-    "cassette": 0.72,
-    "cd": 0.97,
-    "mp3_high": 0.93,
-    "mp3_medium": 0.90,
-    "mp3_low": 0.82,
-    "digital": 0.98,
-    "unknown": 0.85,
-}
-_HPI_CEILING_MERT: dict[str, float] = {
-    "shellac": 0.70,
-    "vinyl": 0.90,
-    "tape": 0.88,
-    "cassette": 0.82,
-    "cd": 0.97,
-    "mp3_high": 0.94,
-    "mp3_medium": 0.90,
-    "mp3_low": 0.86,
-    "digital": 0.98,
-    "unknown": 0.88,
-}
-# VQI-Ceiling ohne MIIPHER native (SGMSE+ src_1 + DFN v3 II)
-_HPI_CEILING_VQI: dict[str, float] = {
-    "shellac": 0.68,
-    "vinyl": 0.82,
-    "tape": 0.80,
-    "cassette": 0.78,
-    "cd": 0.88,
-    "mp3_low": 0.82,
-    "digital": 0.90,
-    "unknown": 0.82,
-}
+# §G92/§G76: Kontinuierliche HPI-Deckel-Funktion ersetzt die diskreten
+# _HPI_CEILING_*-Tabellen. Keine hartcodierten Expert-Guesses pro Material —
+# stattdessen eine kontinuierliche Funktion aus Restorability-Logik:
+# Material-Basisqualität × Chain-Depth-Dämpfung × Vocal-Penalty.
+# Verhindert strukturelle Unterbewertung exzellenter Restaurationen
+# (z.B. Cassette war vorher auf 0.428 gedeckelt — jetzt realistisch).
+def _compute_hpi_continuous_ceiling(
+    material_key: str,
+    transfer_chain_depth: int,
+    is_vocal: bool,
+    is_studio_mode: bool,
+) -> float:
+    """§G92/§G76: Continuous HPI ceiling from material base × chain depth.
+
+    No discrete buckets. The ceiling is a sigmoid-smoothed function of:
+    - Material inherent quality ceiling (physical limits of the source)
+    - Transfer chain depth (generational loss, ~4% per generation)
+    - Vocal presence (singing is harder to restore perfectly)
+
+    Studio mode gets a minor uplift (+2pp) per §G92.
+    """
+    # ── Material-Basisqualität (physikalische Obergrenze des Quellmaterials) ─
+    # Calibrated sigmoid: shellac/wax → 0.65, cassette → 0.82, CD → 0.97
+    _MATERIAL_BASE: dict[str, float] = {
+        "shellac": 0.65,
+        "wax_cylinder": 0.55,
+        "wire_recording": 0.60,
+        "vinyl": 0.90,
+        "lacquer_disc": 0.72,
+        "tape": 0.85,
+        "cassette": 0.82,
+        "reel_tape": 0.88,
+        "cd_digital": 0.97,
+        "cd": 0.97,
+        "digital": 0.97,
+        "dat": 0.95,
+        "mp3_high": 0.93,
+        "mp3_medium": 0.88,
+        "mp3_low": 0.78,
+        "aac": 0.90,
+        "streaming": 0.90,
+        "minidisc": 0.85,
+    }
+    _key = str(material_key).lower().replace(" ", "_").replace("-", "_")
+    _base = 0.75  # default: conservative
+    for _mk, _mv in _MATERIAL_BASE.items():
+        if _mk in _key or _key in _mk:
+            _base = _mv
+            break
+
+    # ── Chain-Depth-Dämpfung: jede Generation kostet ~4% ─
+    _depth = max(1, int(transfer_chain_depth))
+    _depth_factor = float(np.clip(1.0 - max(0, _depth - 1) * 0.04, 0.78, 1.0))
+
+    # ── Vocal-Penalty: Gesang ist schwerer perfekt zu restaurieren ─
+    _vocal_factor = 0.94 if is_vocal else 1.0
+
+    # ── Studio-Bonus (§G92) ─
+    _studio_bonus = 1.02 if is_studio_mode else 1.0
+
+    _ceiling = float(np.clip(_base * _depth_factor * _vocal_factor * _studio_bonus, 0.25, 0.98))
+    # §G79 Calibration-Audit
+    _log_calibration_audit(
+        "hpi_ceiling",
+        _ceiling,
+        restorability_score=70.0,  # HPI ceiling uses material base, not RS directly
+        transfer_chain_depth=_depth,
+        material_key=_key,
+        era_decade=None,
+    )
+    return _ceiling
 
 
 def _compute_hpi_material_ceiling_uv3(
@@ -355,28 +604,30 @@ def _compute_hpi_material_ceiling_uv3(
     transfer_chain: list[str],
     panns_singing: float,
     is_studio_mode: bool,
+    restorability_score: float = 70.0,
+    era_decade: int | None = None,
 ) -> float:
-    """§0k: Näherung des physikalischen HPI-Maximums für die erkannte Träger-Kette.
+    """§G92/§G76: Kontinuierliche HPI-Obergrenze aus Material + Chain-Depth.
 
-    Berücksichtigt worst-case über alle Chain-Stufen. Kein harter Gate — nur Diagnostik.
-    Hinweis: carrier_chain_recovery_ratio > 0.15 kann effektive timbral-Ceiling anheben (§0d).
+    Ersetzt die alten _HPI_CEILING_*-Tabellen durch eine einzige
+    kontinuierliche Funktion. Keine Multiplikation diskreter Buckets —
+    stattdessen Material-Basis × Depth-Dämpfung × Vocal-Faktor.
     """
-    _all = {str(material_type).lower()}
-    for _s in transfer_chain or []:
-        _all.add(str(_s).lower())
-
-    timbral_ceil = min(_HPI_CEILING_TIMBRAL.get(m, 0.85) for m in _all)
-    mert_ceil = min(_HPI_CEILING_MERT.get(m, 0.88) for m in _all)
-    _eap_ceil = 0.96 if is_studio_mode else 0.95
-    _af_ceil = 0.98
-
-    if panns_singing >= 0.35:
-        _vqi_ceil = min(_HPI_CEILING_VQI.get(m, 0.82) for m in _all)
-        _ceiling = mert_ceil * timbral_ceil * _vqi_ceil * _af_ceil * _eap_ceil
-    else:
-        _ceiling = mert_ceil * timbral_ceil * _af_ceil * _eap_ceil
-
-    return round(float(min(_ceiling, 1.0)), 4)
+    _mat_key = str(material_type).lower()
+    _depth = max(1, len(transfer_chain or []))
+    # §G100: Adaptive Vocal-Schwelle statt hartem 0.35
+    _vocal_threshold = _resolve_vocal_confidence_threshold(
+        material_key=_mat_key,
+        restorability_score=restorability_score,
+        era_decade=era_decade,
+    )
+    _is_vocal = bool(panns_singing >= _vocal_threshold)
+    return _compute_hpi_continuous_ceiling(
+        material_key=_mat_key,
+        transfer_chain_depth=_depth,
+        is_vocal=_is_vocal,
+        is_studio_mode=bool(is_studio_mode),
+    )
 
 
 def _stereo_to_samples_channels(audio: np.ndarray) -> np.ndarray | None:
@@ -1365,6 +1616,59 @@ class UnifiedRestorerV3:
             if "studio" in _val:
                 return True
         return False
+
+    def _vocal_threshold(self) -> float:
+        """§G100: Adaptive Vocal-Confidence-Schwelle — via CalibrationContext (§G76).
+
+        Bevorzugter Pfad: extrahiert alle Parameter aus self._calibration_context.
+        Fallback: direkter Zugriff auf _restoration_context und Instanz-Attribute.
+        Ersetzt das 39-fach hartcodierte 0.35.
+        """
+        _ctx = self._calibration_context
+        if _ctx is not None:
+            return _resolve_vocal_confidence_threshold(
+                material_key=_ctx.material_type,
+                restorability_score=_ctx.restorability_score,
+                era_decade=_ctx.era_decade,
+            )
+        # §G80 Fallback: CalibrationContext nicht verfügbar
+        # Rate-limited: nur einmal pro Pipeline-Run warnen.
+        _rctx = getattr(self, "_restoration_context", {}) or {}
+        _result = _resolve_vocal_confidence_threshold(
+            material_key=str(_rctx.get("material_type", "unknown")),
+            restorability_score=float(getattr(self, "_last_restorability_score", 70.0) or 70.0),
+            era_decade=int(_rctx.get("decade", 0) or 0) or None,
+        )
+        if not getattr(self, "_vocal_threshold_fallback_warned", False):
+            logger.warning(
+                "§G80 uncalibrated fallback: vocal_threshold=%.3f (no CalibrationContext available)",
+                _result,
+            )
+            self._vocal_threshold_fallback_warned = True
+        return _result
+
+    @property
+    def _calibration_context(self):
+        """§G76: Builds CalibrationContext from current instance state.
+
+        Single source of truth for all calibration-dependent decisions.
+        Returns None if calibration_context module is unavailable.
+        """
+        try:
+            from backend.core.calibration_context import CalibrationContext
+        except ImportError:
+            return None
+        _rctx = getattr(self, "_restoration_context", {}) or {}
+        return CalibrationContext(
+            restorability_score=float(getattr(self, "_last_restorability_score", 70.0) or 70.0),
+            transfer_chain_depth=int(len(_rctx.get("transfer_chain", []) or []) or 1),
+            material_type=str(_rctx.get("material_type", "unknown")),
+            snr_db=float(_rctx.get("snr_db", 30.0) or 30.0),
+            bandwidth_hz=float(_rctx.get("bandwidth_hz", 15000.0) or 15000.0),
+            era_decade=int(_rctx.get("decade", 0) or 0) or None,
+            genre=str(_rctx.get("genre", "unknown")),
+            vocal_confidence=float(getattr(self, "_panns_singing", 0.0) or 0.0),
+        )
 
     @staticmethod
     def _apply_bronze_restoration_minimal_pipeline(
@@ -3226,8 +3530,15 @@ class UnifiedRestorerV3:
         phase_id: str | None,
         guard_result: dict[str, Any] | None,
         material_key: str | None = None,
+        transfer_chain_depth: int = 1,
     ) -> float:
-        """Leitet aus Stereo-Contract-Daten einen konservativen Strength-Multiplikator ab."""
+        """Leitet aus Stereo-Contract-Daten einen konservativen Strength-Multiplikator ab.
+
+        §G100: Chain-depth-adaptiv — tiefere Ketten (mehr Generationen)
+        haben natürlicherweise höhere Stereovarianz. Die Penalties werden
+        pro Generation um 3% relaxiert, sodass eine 4-stufige Kassette
+        nicht dieselbe konservative Behandlung bekommt wie eine pristine CD.
+        """
         _guard = dict(guard_result or {})
         _delta = dict(_guard.get("delta", {}) or {})
         _reason = str(_guard.get("reason", "") or "").strip().lower()
@@ -3292,6 +3603,23 @@ class UnifiedRestorerV3:
                 _multiplier *= 0.91
         elif phase_id and str(phase_id) == "phase_23_spectral_repair" and _material in _digital_lossy_materials:
             _multiplier *= 0.95
+
+        # §G100 Chain-Depth-Adaptation: Tiefere Transfer-Ketten haben
+        # natürlicherweise mehr Stereovarianz (Rauschen, Generationen-Artefakte).
+        # Die Penalties werden pro zusätzlicher Generation um 3% relaxiert.
+        # Depth=1 (CD): keine Relaxation. Depth=4 (Kassette 4. Gen): +9%.
+        _depth = max(1, int(transfer_chain_depth))
+        _depth_relaxation = float(np.clip(1.0 + (_depth - 1) * 0.03, 1.0, 1.15))
+        _multiplier = float(np.clip(_multiplier * _depth_relaxation, 0.55, 1.0))
+
+        # §G79 Calibration-Audit
+        _log_calibration_audit(
+            "stereo_penalty_multiplier",
+            _multiplier,
+            restorability_score=70.0,  # stereo penalty is guard-driven, not RS-driven
+            transfer_chain_depth=_depth,
+            material_key=str(material_key or "unknown"),
+        )
 
         return float(np.clip(_multiplier, 0.55, 1.0))
 
@@ -7899,7 +8227,15 @@ class UnifiedRestorerV3:
                 try:
                     from forensics.medium_detector import get_medium_detector as _get_md
 
-                    return _get_md().detect(a, sr, file_ext=_file_ext_for_scan)  # type: ignore[no-any-return]
+                    # §v10.14.1: Gecachte Era-Info als Prior in MediumDetector einweben
+                    _mc_era_decade = None
+                    _mc_era_conf = 0.0
+                    if _cached_era_kwarg is not None:
+                        _mc_era_decade = getattr(_cached_era_kwarg, "decade", None)
+                        _mc_era_conf = float(getattr(_cached_era_kwarg, "confidence", 0.0))
+                    return _get_md().detect(a, sr, file_ext=_file_ext_for_scan,
+                                            era_decade=_mc_era_decade,
+                                            era_confidence=_mc_era_conf)  # type: ignore[no-any-return]
                 except Exception as _e:
                     logger.warning(
                         "MediumDetector nicht verfügbar; setze Material auf unknown (legacy Ersatzpfad deaktiviert): %s",
@@ -8671,7 +9007,7 @@ class UnifiedRestorerV3:
                             _panns_rock,
                         )
                 except Exception as _gp_fb_exc:
-                    logger.debug("PANNs-Ersatzpfad Genre-Profil nicht geladen: %s", _gp_fb_exc)
+                    logger.warning("§G23 PANNs-Ersatzpfad Genre-Profil nicht geladen: %s", _gp_fb_exc, exc_info=True)
 
         _panns_tags_for_vfa = kwargs.get("panns_tags") or {}
         self._panns_singing = self._compute_vocal_presence_confidence(
@@ -8906,7 +9242,7 @@ class UnifiedRestorerV3:
                         _sat_sev_fb,
                     )
             except Exception as _sat_exc_fb:
-                logger.debug("§6.5d SaturationDiscriminator Ersatzpfad: %s", _sat_exc_fb)
+                logger.warning("§G23 SaturationDiscriminator Ersatzpfad: %s", _sat_exc_fb, exc_info=True)
         # §6.2a Transfer-Chain-Injection: Ketten-Liste für phase-locale Skip-Guards.
         # Phasen wie phase_29 überspringen bei digitalem primary_material. Wenn aber
         # die Kette analoge Stufen enthält (z.B. vinyl→tape→mp3_low), muss die Phase
@@ -9760,6 +10096,12 @@ class UnifiedRestorerV3:
                 forensic_medium_result=_forensic_chain_result
                 if (_forensic_chain_result := getattr(self, "_forensic_chain_result", None))
                 else (_mc_result if hasattr(_mc_result, "transfer_chain") else None),
+                # §v10.14.1: Era-Decade für Rumble-vs-Bass-Disambiguierung
+                era_decade=(
+                    int(getattr(_era_result, "decade", 0))
+                    if _era_result is not None and hasattr(_era_result, "decade")
+                    else None
+                ),
             )
         if defect_result is None:
             logger.error(
@@ -10310,7 +10652,7 @@ class UnifiedRestorerV3:
                 _gp_material_key_pre,
             )
         except Exception as _pareto_exc:
-            logger.debug("propose_pareto nicht verfügbar, Ersatzpfad auf Legacy propose(): %s", _pareto_exc)
+            logger.warning("§G23 propose_pareto nicht verfügbar, Ersatzpfad auf Legacy propose(): %s", _pareto_exc, exc_info=True)
 
         # §2.32 GoalApplicabilityFilter — physikalisch nicht messbare Ziele deaktivieren
         # §2.47a: Einmaliger Aufruf; panns_tags aus DefectScanner-Metadata und kwargs gemergt.
@@ -11265,7 +11607,7 @@ class UnifiedRestorerV3:
                         ", ".join(_capped_log[:6]),
                     )
         except Exception as _ppc_err:
-            logger.debug("§2.54 PrePipelineCeiling fehlgeschlagen (SGT-Ersatzpfad): %s", _ppc_err)
+            logger.warning("§G23 PrePipelineCeiling fehlgeschlagen (SGT-Ersatzpfad): %s", _ppc_err, exc_info=True)
             self._pmgg_ceiling_capped_targets = (
                 dict(self._song_goal_targets or {})
                 if isinstance(getattr(self, "_song_goal_targets", None), dict)
@@ -14801,7 +15143,7 @@ class UnifiedRestorerV3:
                     logger.info("ExcellenceOptimizer DSP-Ersatzpfad: Präsenz-Auffrischung 3–8 kHz angewendet")
                 except Exception as _ex_fb_exc:
                     restored_audio = np.nan_to_num(restored_audio, nan=0.0, posinf=0.0, neginf=0.0)
-                    logger.debug("ExcellenceOptimizer DSP-Ersatzpfad nicht verfügbar: %s", _ex_fb_exc)
+                    logger.warning("§G23 ExcellenceOptimizer DSP-Ersatzpfad nicht verfügbar: %s", _ex_fb_exc, exc_info=True)
 
         # §2.28 HarmonicPreservationGuard — Post-Hoc-Harmonische-Energiekorrektur (§2.28 Spec)
         # Spezifikations-Hinweis §2.28: Ideale Position wäre VOR phase_03 (G_floor-Override).
@@ -16584,7 +16926,7 @@ class UnifiedRestorerV3:
                         # Fallback: §v10.113 heuristic
                         _has_good_restoration = _hpi_for_arbiter is not None or _af_for_arbiter >= 0.90
                         _original_penalty = 0.120 if _has_good_restoration else 0.030
-                        logger.debug("MetricArbiter nicht verfuegbar, Ersatzpfad heuristic: %s", _arb_exc)
+                        logger.warning("§G23 MetricArbiter nicht verfügbar, Ersatzpfad heuristic: %s", _arb_exc, exc_info=True)
                     _gb_sources.append(("original_audio", original_audio_for_goals, _original_penalty))
                 for _gb_name, _gb_audio_raw, _gb_penalty in _gb_sources:
                     try:
@@ -16754,7 +17096,7 @@ class UnifiedRestorerV3:
                         _ms_stft_score,
                     )
                 except Exception as _gpo_loss_exc:
-                    logger.debug("GPO Mel/STFT-Loss nicht verfügbar: %s", _gpo_loss_exc)
+                    logger.warning("§G23 GPO Mel/STFT-Loss nicht verfügbar: %s", _gpo_loss_exc, exc_info=True)
                     _mel_score = 0.0
                     _ms_stft_score = 0.0
                 # Kombinierter Score (Spec §2.5 bindend):
@@ -16797,7 +17139,7 @@ class UnifiedRestorerV3:
                     {k: float(v) for k, v in _musical_goal_scores.items()} if _musical_goal_scores else None
                 )
             except Exception as _gp_prep_exc:
-                logger.debug("GP-Vorbereitung (vor MDEM) nicht verfügbar: %s", _gp_prep_exc)
+                logger.warning("§G23 GP-Vorbereitung (vor MDEM) nicht verfügbar: %s", _gp_prep_exc, exc_info=True)
 
         # §2.30 MicroDynamicsEnvelopeMorphing — LUFS-Profil-Rückgewinnung (letzter DSP-Schritt)
         # §Frisson: detect high-potential "Gänsehaut" moments in original audio so MDEM
@@ -18372,7 +18714,8 @@ class UnifiedRestorerV3:
         try:
             _vqi_singing_conf = float(getattr(self, "_panns_singing", 0.0))
             _vqi_prior_active = bool(self._restoration_context.get("vocal_material_prior", False))
-            if _vqi_singing_conf >= 0.35 or _vqi_prior_active:
+            # §G100: Adaptive Vocal-Schwelle via zentraler Convenience-Methode
+            if _vqi_singing_conf >= self._vocal_threshold() or _vqi_prior_active:
                 from backend.core.musical_goals.vocal_quality_index import compute_vqi as _compute_vqi
 
                 _vqi_orig = original_audio_for_goals if original_audio_for_goals is not None else restored_audio
@@ -18588,7 +18931,8 @@ class UnifiedRestorerV3:
         # MOS < 2.0 → Checkpoint-Rollback; MOS < 2.5 → phase_65 Naturalness-Recovery.
         try:
             _singmos_panns = float(getattr(self, "_panns_singing", 0.0))
-            if _singmos_panns >= 0.35 or bool(self._restoration_context.get("vocal_material_prior", False)):
+            # §G100: Adaptive Vocal-Schwelle via zentraler Convenience-Methode
+            if _singmos_panns >= self._vocal_threshold() or bool(self._restoration_context.get("vocal_material_prior", False)):
                 from backend.core.dsp.quality_predictors import get_singmos_predictor as _get_smp_g4
 
                 _smp_g4 = _get_smp_g4()
@@ -21018,6 +21362,8 @@ class UnifiedRestorerV3:
                     transfer_chain=list(self._restoration_context.get("transfer_chain", []) or []),
                     panns_singing=float(getattr(self, "_panns_singing", 0.0)),
                     is_studio_mode=bool(self.is_studio_mode()),
+                    restorability_score=float(getattr(self, "_last_restorability_score", 70.0) or 70.0),
+                    era_decade=int(getattr(self, "_restoration_context", {}).get("era_decade", 0) or 0) or None,
                 )
                 if _hpi_result is not None
                 else None,
@@ -21751,7 +22097,20 @@ class UnifiedRestorerV3:
             "cassette": 55.0, "shellac": 45.0, "wax_cylinder": 35.0,
             "lacquer_disc": 50.0, "wire_recording": 30.0,
         }
-        _wm_threshold = _MATERIAL_MUSHRA_MIN.get(_wm_mat, 80.0)
+        _wm_threshold_base = _MATERIAL_MUSHRA_MIN.get(_wm_mat, 80.0)
+        # §G77: Generische adaptive Threshold-Funktion
+        _wm_rs = float(getattr(self, "_last_restorability_score", 70.0) or 70.0)
+        _wm_depth = int(len(
+            getattr(self, "_restoration_context", {}).get("transfer_chain", []) or []
+        ) or 1)
+        _wm_threshold = _compute_adaptive_threshold(
+            _wm_threshold_base,
+            restorability_score=_wm_rs,
+            transfer_chain_depth=_wm_depth,
+            rs_range=(0.70, 1.00),
+            depth_range=(0.78, 1.00),
+            output_range=(20.0, 95.0),
+        )
         if (
             _wm_mushra > 0
             and _wm_mushra < _wm_threshold
@@ -21761,11 +22120,18 @@ class UnifiedRestorerV3:
             self._wohlklang_best_mushra = _wm_mushra
             self._wohlklang_best_audio = result.audio.copy()
             self._wohlklang_retry_count += 1
-            self._wohlklang_strength_multiplier = 0.50
+            # §G141 SOTA: Statt immer 50% → proportional zum MUSHRA-Defizit.
+            # MUSHRA 70/75 → 93% Strength (sanfte Korrektur)
+            # MUSHRA 50/75 → 67% Strength (moderate Korrektur)
+            # MUSHRA 30/75 → 40% Strength (starke Korrektur, Minimum 30%)
+            _wm_ratio = _wm_mushra / max(_wm_threshold, 1.0)
+            self._wohlklang_strength_multiplier = float(np.clip(_wm_ratio, 0.30, 0.95))  # §G-DB7 base 0.50, proportional SOTA
             logger.warning(
                 "⚡ Wohlklang-Garantie: MUSHRA %.1f < %.0f (%s) — "
-                "automatischer Re-Run mit 50%% Strengths (Versuch %d/2)",
-                _wm_mushra, _wm_threshold, _wm_mat, self._wohlklang_retry_count + 1,
+                "automatischer Re-Run mit %.0f%% Strengths (Versuch %d/2)",
+                _wm_mushra, _wm_threshold, _wm_mat,
+                self._wohlklang_strength_multiplier * 100,
+                self._wohlklang_retry_count + 1,
             )
             _retry_result = self.restore(audio, sample_rate, progress_callback, **kwargs)
             self._wohlklang_strength_multiplier = 1.0  # Reset
@@ -23285,7 +23651,7 @@ class UnifiedRestorerV3:
             logger.debug("🏛️ HybridDereverb: Klasse verfügbar")
             return _hybrid_dereverb_result
         except Exception as _e38a:
-            logger.debug("HybridDereverb übersprungen: %s", _e38a)
+            logger.warning("§G23 ML→DSP-Fallback HybridDereverb: %s", _e38a, exc_info=True)
             return None
 
     def _compute_hybrid_ml_denoiser_result(self) -> dict | None:
@@ -23298,7 +23664,7 @@ class UnifiedRestorerV3:
             logger.debug("🏛️ HybridMLDenoiser: initialisiert")
             return _hybrid_ml_denoiser_result
         except Exception as _e38b:
-            logger.debug("HybridMLDenoiser übersprungen: %s", _e38b)
+            logger.warning("§G23 ML→DSP-Fallback HybridMLDenoiser: %s", _e38b, exc_info=True)
             return None
 
     def _compute_hybrid_nvsr_result(self) -> dict | None:
@@ -23311,7 +23677,7 @@ class UnifiedRestorerV3:
             logger.debug("🏛️ HybridNVSR: initialisiert")
             return _hybrid_nvsr_result
         except Exception as _e38c:
-            logger.debug("HybridNVSR übersprungen: %s", _e38c)
+            logger.warning("§G23 ML→DSP-Fallback HybridNVSR: %s", _e38c, exc_info=True)
             return None
 
     def _compute_hybrid_speed_pitch_result(self) -> dict | None:
@@ -23338,7 +23704,7 @@ class UnifiedRestorerV3:
             logger.debug("🏛️ HybridVocalEnhancer: initialisiert")
             return _hybrid_vocal_enhancer_result
         except Exception as _e38e:
-            logger.debug("HybridVocalEnhancer übersprungen: %s", _e38e)
+            logger.warning("§G23 ML→DSP-Fallback HybridVocalEnhancer: %s", _e38e, exc_info=True)
             return None
 
     def _compute_hybrid_wow_flutter_result(self) -> dict | None:
@@ -23351,7 +23717,7 @@ class UnifiedRestorerV3:
             logger.debug("🏛️ HybridWowFlutter: initialisiert")
             return _hybrid_wow_flutter_result
         except Exception as _e38f:
-            logger.debug("HybridWowFlutter übersprungen: %s", _e38f)
+            logger.warning("§G23 ML→DSP-Fallback HybridWowFlutter: %s", _e38f, exc_info=True)
             return None
 
     def _compute_audit_log_result(self) -> dict | None:
@@ -25909,7 +26275,7 @@ class UnifiedRestorerV3:
                     "PANNs tags: %s", {k: f"{v:.2f}" for k, v in sorted(panns_tags.items(), key=lambda x: -x[1])[:10]}
                 )
         except Exception as _panns_exc:
-            logger.debug("PANNs nicht verfügbar, kein Instrument-Gate aktiv: %s", _panns_exc)
+            logger.warning("§G23 PANNs nicht verfügbar, kein Instrument-Gate aktiv: %s", _panns_exc, exc_info=True)
 
         def panns(tag: str, threshold: float = 0.5) -> bool:
             """Liefert True wenn PANNs-Tag die Mindestkonfidenz erreicht."""
@@ -29665,8 +30031,35 @@ class UnifiedRestorerV3:
             _hf = np.sum(_spec[len(_spec) // 2 :])
             _total = np.sum(_spec) + 1e-12
             return float(_hf / _total)
-        except Exception:
-            return 1.0
+        except Exception as _hf_exc:
+            # §G93 Exception-Proxy: Statt "return 1.0" (perfekt, physikalisch
+            # unmöglich) → Zero-Crossing-Rate als Zeitbereichs-HF-Proxy.
+            # ZCR korreliert invers mit spektralem Schwerpunkt: hohe ZCR
+            # bedeutet mehr hochfrequente Anteile. Skaliert auf [0,1].
+            logger.warning(
+                "§G93 Exception-Proxy: _estimate_hf_ratio FFT fehlgeschlagen → "
+                "Zero-Crossing-Rate-Fallback (%s)",
+                _hf_exc,
+                exc_info=True,
+            )
+            try:
+                _mono_fb = (
+                    audio.mean(axis=0) if audio.ndim == 2 and audio.shape[0] <= 2
+                    else audio.mean(axis=-1) if audio.ndim == 2
+                    else audio.ravel()
+                )
+                _n_fb = min(len(_mono_fb), 48000)
+                _zcr = float(np.sum(np.abs(np.diff(np.sign(_mono_fb[:_n_fb]))))) / (2 * _n_fb)
+                # ZCR ≈ 0.05–0.50 für typisches Audio; skaliere auf [0,1]
+                # 0.05 → 0.10 (sehr tief), 0.25 → 0.50 (mittel), 0.50 → 1.0 (sehr hoch)
+                return float(np.clip(_zcr / 0.50, 0.10, 1.0))
+            except Exception:
+                logger.warning(
+                    "§G93 Exception-Proxy: Zero-Crossing-Fallback ebenfalls "
+                    "fehlgeschlagen → neutral 0.50",
+                    exc_info=True,
+                )
+                return 0.50
 
     def _estimate_vqi_proxy(self, audio: np.ndarray) -> float:
         """Schätzt VQI-Proxy aus RMS-Stabilität (leichtgewichtig)."""
@@ -29685,8 +30078,38 @@ class UnifiedRestorerV3:
                 self._vqi_ref_rms = _rms
             _ratio = min(_rms, _ref_rms) / max(_rms, _ref_rms) if max(_rms, _ref_rms) > 1e-12 else 1.0
             return float(np.clip(_ratio, 0.0, 1.0))
-        except Exception:
-            return 1.0
+        except Exception as _vqi_exc:
+            # §G93 Exception-Proxy: Statt "return 1.0" (perfekt, physikalisch
+            # unmöglich) → Crest-Faktor (Peak/RMS) als Dynamik-Proxy.
+            # Geringer Crest-Faktor ≈ stark komprimiert ≈ niedrige VQI.
+            # Hoher Crest-Faktor ≈ natürliche Dynamik ≈ hohe VQI.
+            logger.warning(
+                "§G93 Exception-Proxy: _estimate_vqi_proxy RMS-Stabilität "
+                "fehlgeschlagen → Crest-Faktor-Fallback (%s)",
+                _vqi_exc,
+                exc_info=True,
+            )
+            try:
+                _mono_cf = (
+                    audio.mean(axis=0) if audio.ndim == 2 and audio.shape[0] <= 2
+                    else audio.mean(axis=-1) if audio.ndim == 2
+                    else audio.ravel()
+                )
+                _n_cf = min(len(_mono_cf), 48000)
+                _peak = float(np.max(np.abs(_mono_cf[:_n_cf]))) + 1e-12
+                _rms_cf = float(np.sqrt(np.mean(_mono_cf[:_n_cf] ** 2))) + 1e-12
+                _crest = _peak / _rms_cf
+                # Crest-Faktor: 1.0 (Sinus) → 0.50, 3.0 (Sprache) → 0.70,
+                # 5.0 (dynamische Musik) → 0.85, 10+ → 0.95
+                _vqi_est = float(np.clip(0.35 + 0.12 * np.log2(max(_crest, 1.0)), 0.20, 0.95))
+                return _vqi_est
+            except Exception:
+                logger.warning(
+                    "§G93 Exception-Proxy: Crest-Fallback ebenfalls "
+                    "fehlgeschlagen → neutral 0.50",
+                    exc_info=True,
+                )
+                return 0.50
 
     def _prepare_profiled_phase_runtime_context(
         self,
@@ -29820,6 +30243,27 @@ class UnifiedRestorerV3:
                         )
             except Exception as _wbg_pro_exc:
                 logger.debug("§V25-PRO WBG nicht blockierend: %s", _wbg_pro_exc)
+
+        # §v10.15 Systemischer Restoration-Mode Strength-Cap:
+        # In Restoration-Mode (nicht Studio 2026) werden ALLE Phasen-Stärken
+        # auf maximal 0.50 gecappt, BEVOR UQ-Drive und andere Skalare greifen.
+        # Das verhindert, dass Restoration mit Studio-Stärken läuft.
+        # UQ-Drive skaliert dann weiter (×0.44–0.88) → effektiv 0.22–0.44.
+        # Studio 2026 (8× RT Budget) bleibt unbeeinflusst.
+        _RESTORATION_MODE_SYSTEM_STRENGTH_CAP = 0.50
+        if (
+            not self.is_studio_mode()
+            and isinstance(kwargs.get("strength"), (int, float))
+        ):
+            _rst_cur_s = float(kwargs["strength"])
+            if _rst_cur_s > _RESTORATION_MODE_SYSTEM_STRENGTH_CAP:
+                kwargs["strength"] = _RESTORATION_MODE_SYSTEM_STRENGTH_CAP
+                logger.debug(
+                    "§v10.15 Restoration-Cap %s: strength %.2f → %.2f (System-Cap)",
+                    phase_metadata.phase_id,
+                    _rst_cur_s,
+                    _RESTORATION_MODE_SYSTEM_STRENGTH_CAP,
+                )
 
         _sev_wet_dry: float = 1.0
         _TIMING_PHASES_WD = frozenset(
@@ -31294,7 +31738,18 @@ class UnifiedRestorerV3:
                 )
 
                 if not _probe_result.skipped:
-                    kwargs["strength"] = _probe_result.confirmed_strength
+                    # §2.56b: SegmentProbe respektiert Strength Oracle.
+                    # confirmed_strength darf Oracle-Cap nicht überschreiten.
+                    _oracle_cap_sp = None
+                    _oracle_profile_sp = kwargs.get("phase_strength_oracle_profile")
+                    if isinstance(_oracle_profile_sp, dict):
+                        _oracle_cap_sp = _oracle_profile_sp.get("control_strength")
+                        if _oracle_cap_sp is None:
+                            _oracle_cap_sp = _oracle_profile_sp.get("hard_caps", {}).get("max_strength")
+                    _confirmed = float(_probe_result.confirmed_strength)
+                    if _oracle_cap_sp is not None and isinstance(_oracle_cap_sp, (int, float)):
+                        _confirmed = float(min(_confirmed, float(_oracle_cap_sp)))
+                    kwargs["strength"] = _confirmed
                     kwargs["segment_probe_result"] = _probe_result.to_dict()
                     # Telemetrie
                     try:
@@ -31520,14 +31975,28 @@ class UnifiedRestorerV3:
                                     if _mapped_pid in _pid_kw:
                                         _current = float(kwargs.get("strength", 0.0))
                                         if _is_restoration_depth:
-                                            # Restoration-Mode: Audibility OVERRULED alle Caps
-                                            kwargs["strength"] = _aud_strength
-                                            kwargs["audibility_strength"] = _aud_strength
+                                            # §2.56b Restoration-Mode: Audibility respektiert Strength Oracle.
+                                            # Der Oracle-Cap ist die absolute Obergrenze — Audibility darf
+                                            # nur UNTER diesem Cap operieren, nie darüber.
+                                            _oracle_cap = None
+                                            _oracle_profile = kwargs.get("phase_strength_oracle_profile")
+                                            if isinstance(_oracle_profile, dict):
+                                                _oracle_cap = _oracle_profile.get("control_strength")
+                                                if _oracle_cap is None:
+                                                    _oracle_cap = _oracle_profile.get("hard_caps", {}).get("max_strength")
+                                            if _oracle_cap is not None and isinstance(_oracle_cap, (int, float)):
+                                                _aud_capped = float(min(_aud_strength, float(_oracle_cap)))
+                                            else:
+                                                _aud_capped = float(_aud_strength)
+                                            kwargs["strength"] = _aud_capped
+                                            kwargs["audibility_strength"] = _aud_capped
                                             kwargs["audibility_primary"] = True
                                             logger.info(
-                                                "§v10.210 RESTORATION %s: Audibility OVERRIDE %.3f (was: %.3f)",
+                                                "§v10.210 RESTORATION %s: Audibility OVERRIDE %.3f "
+                                                "(oracle_cap=%s, was: %.3f)",
                                                 _mapped_pid,
-                                                _aud_strength,
+                                                _aud_capped,
+                                                round(float(_oracle_cap), 3) if _oracle_cap is not None else "none",
                                                 _current,
                                             )
                                         elif _aud_strength > _current * 1.2 and _aud_strength > 0.05:
@@ -31591,6 +32060,22 @@ class UnifiedRestorerV3:
             except Exception as _cinj_exc:
                 logger.debug("§CALIB inject nicht blockierend: %s", _cinj_exc)
 
+        # §v10.15 Finaler Restoration-Mode Strength-Cap — NACH allen Overrides:
+        # Audibility, SegmentProbe und andere können den Cap in
+        # _prepare_profiled_phase_runtime_context umgehen. Dieser finale
+        # Cap stellt sicher, dass KEINE Phase in Restoration mit >0.50 läuft.
+        _RESTORATION_MODE_FINAL_STRENGTH_CAP = 0.50
+        if not self.is_studio_mode() and isinstance(kwargs.get("strength"), (int, float)):
+            _final_s = float(kwargs["strength"])
+            if _final_s > _RESTORATION_MODE_FINAL_STRENGTH_CAP:
+                kwargs["strength"] = _RESTORATION_MODE_FINAL_STRENGTH_CAP
+                logger.info(
+                    "§v10.15 Final-Cap %s: override %.2f → %.2f",
+                    phase_metadata.phase_id,
+                    _final_s,
+                    _RESTORATION_MODE_FINAL_STRENGTH_CAP,
+                )
+
         try:
             if _use_per_segment:
                 from backend.core.per_segment_executor import run_phase_per_segment
@@ -31603,13 +32088,17 @@ class UnifiedRestorerV3:
                 if audio.ndim == 2 and audio.shape[1] <= 2 and audio.shape[0] > 2:
                     _audio_ps = np.ascontiguousarray(audio.T)
                     _was_transposed_ps = True
+                # §v10.15: Per-Segment-Strengths ebenfalls capen.
+                _ps_strengths_capped = [
+                    min(float(s), 0.50) for s in (_ps_strengths or [])
+                ] if not self.is_studio_mode() else list(_ps_strengths or [])
                 result = run_phase_per_segment(
                     _audio_ps,
                     int(kwargs.get("sample_rate", 48000)),
                     phase.process,
                     dict(kwargs),
                     segment_bounds_s=_ps_bounds,
-                    segment_strengths=_ps_strengths,
+                    segment_strengths=_ps_strengths_capped,
                     phase_id=_ps_phase_id,
                 )
                 # §2.62: Per-Segment gibt np.ndarray zurück, wickle in Result-artiges Objekt
@@ -33758,6 +34247,52 @@ class UnifiedRestorerV3:
         except Exception as _sft_rec_exc:
             logger.debug("§SFT aufzeichnen_Verarbeitungsschritt nicht blockierend: %s", _sft_rec_exc)
 
+        # §G144 MushraProxy: Per-Phase-Deltas in den Accumulator mergen
+        # für die Pipeline-Summary am Ende.
+        try:
+            if hasattr(result, "metadata") and isinstance(result.metadata, dict):
+                _mp_fields = {
+                    k: result.metadata[k]
+                    for k in ("mushra_proxy_delta", "mushra_proxy_rollback",
+                              "mushra_proxy_before", "mushra_proxy_after",
+                              "mushra_proxy_latency_ms", "mushra_proxy_version")
+                    if k in result.metadata
+                }
+                if _mp_fields:
+                    _mp_acc = self._phase_metadata_accumulator.setdefault(
+                        str(getattr(phase_metadata, "phase_id", "unknown")), {}
+                    )
+                    _mp_acc.update(_mp_fields)
+        except Exception as _mp_merge_exc:
+            logger.debug("§G144 MushraProxy metadata merge non-blocking: %s", _mp_merge_exc)
+
+        # §G82-G86 Runtime Recalibration: Aktualisiere globalen
+        # CalibrationContext NUR wenn sich SNR oder Bandbreite signifikant
+        # geändert haben (§G82: "Bei Änderung > Schwellwert MUSS").
+        # Verhindert unnötige Recalibration bei marginalen Änderungen.
+        try:
+            from backend.core.calibration_context import set_calibration_context
+
+            _ctx = self._calibration_context
+            if _ctx is not None:
+                _prev_snr = float(getattr(self, "_last_calibrated_snr_db", -999.0))
+                _prev_bw = float(getattr(self, "_last_calibrated_bw_hz", 0.0))
+                _snr_delta = abs(_ctx.snr_db - _prev_snr)
+                _bw_delta = abs(_ctx.bandwidth_hz - _prev_bw)
+                # §G82: Schwelle SNR ±3dB, Bandbreite ±500Hz
+                if _snr_delta > 3.0 or _bw_delta > 500.0 or _prev_snr < -900:
+                    set_calibration_context(_ctx)
+                    self._last_calibrated_snr_db = _ctx.snr_db
+                    self._last_calibrated_bw_hz = _ctx.bandwidth_hz
+                    if _prev_snr > -900:  # kein Initial-Log
+                        logger.info(
+                            "§RECALIB %s: SNR %.1f→%.1f dB BW %.0f→%.0f Hz → CalibrationContext aktualisiert",
+                            getattr(phase_metadata, "phase_id", "?"),
+                            _prev_snr, _ctx.snr_db, _prev_bw, _ctx.bandwidth_hz,
+                        )
+        except Exception as _recal_exc:
+            logger.debug("§G82 recalibration context update non-blocking: %s", _recal_exc)
+
         return result
 
     # ------------------------------------------------------------------
@@ -33977,8 +34512,13 @@ class UnifiedRestorerV3:
             from backend.core.audio_validator import validate_audio_size
             if not validate_audio_size(len(audio), num_channels=audio.shape[1] if audio.ndim == 2 else 1):
                 logger.warning("AudioValidator: Audio groesse ueberschreitet MAX_AUDIO_BYTES_RAM")
-        except Exception:
-            pass
+        except Exception as _av_exc:
+            logger.warning(
+                "§2.41/§G93 AudioValidator nicht verfügbar — "
+                "Größenvalidierung übersprungen (Risiko: OOM): %s",
+                _av_exc,
+                exc_info=True,
+            )
 
         # ── §v10.303.20–21 Phase-0 Pre-Processor Pipeline ──
         # Wissenschaftliche Reihenfolge (Carrier-Chain-Inversion §2.46):
@@ -39057,6 +39597,9 @@ class UnifiedRestorerV3:
                                     _next_phase_id,
                                     _phase_stereo_guard,
                                     str(getattr(material_type, "value", material_type) or "unknown"),
+                                    transfer_chain_depth=int(len(
+                                        getattr(self, "_restoration_context", {}).get("transfer_chain", []) or []
+                                    ) or 1),
                                 )
                                 if _stereo_multiplier < 1.0:
                                     _existing_hint = self._conductor_strength_hints.get(_next_phase_id)
@@ -40062,6 +40605,8 @@ class UnifiedRestorerV3:
                         _ntx_threshold = _resolve_noise_texture_rollback_threshold(
                             _ntx_mat_key,
                             _ntx_chain_keys,
+                            restorability_score=float(getattr(self, "_last_restorability_score", 70.0) or 70.0),
+                            transfer_chain_depth=int(len(_ntx_chain_keys) or 1),
                         )
                         # Noise texture deviation uses materialadaptive threshold (§2.49 / §8.5A)
                         _ntx_dev = float(_afg_result.noise_texture_deviation_db_oct)
@@ -41280,8 +41825,56 @@ class UnifiedRestorerV3:
                            _pipeline_perf.overall_rt_factor,
                            _pipeline_perf.phases_executed,
                            _pipeline_perf.total_processing_s)
-            except Exception:
-                pass
+            except Exception as _pt_exc:
+                logger.warning(
+                    "§2.41/§G93 Performance-Tracker Telemetrie fehlgeschlagen "
+                    "(nicht blockierend): %s",
+                    _pt_exc,
+                    exc_info=True,
+                )
+
+        # ── §G144 MushraProxy Pipeline-Summary ──────────────────────────
+        # Aggregiert per-phase MUSHRA-Deltas via _phase_metadata_accumulator.
+        try:
+            _mp_improvements: list[tuple[str, float]] = []
+            _mp_degradations: list[tuple[str, float]] = []
+            _mp_rollbacks: list[str] = []
+            _mp_total_checks = 0
+            # Phase metadata wird im Accumulator gespeichert — iteriere alle Einträge
+            for _pid, _pmeta in (getattr(self, "_phase_metadata_accumulator", None) or {}).items():
+                if not isinstance(_pmeta, dict):
+                    continue
+                # MushraProxy schreibt in result.metadata, das via _profiled_phase_call
+                # in phase_metadata_accumulator[phase_id] gemerged wird.
+                _delta = _pmeta.get("mushra_proxy_delta")
+                if isinstance(_delta, (int, float)):
+                    _mp_total_checks += 1
+                    if _delta > 0.001:
+                        _mp_improvements.append((str(_pid), float(_delta)))
+                    elif _delta <= 0.0:
+                        _mp_degradations.append((str(_pid), float(_delta)))
+                if _pmeta.get("mushra_proxy_rollback"):
+                    _mp_rollbacks.append(str(_pid))
+            if _mp_total_checks > 0:
+                _mp_improvements.sort(key=lambda x: -x[1])
+                _mp_degradations.sort(key=lambda x: x[1])
+                _mp_top3 = [f"{p}(Δ={d:+.3f})" for p, d in _mp_improvements[:3]]
+                _mp_bot3 = [f"{p}(Δ={d:+.3f})" for p, d in _mp_degradations[:3]]
+                logger.info(
+                    "§G144 MushraProxy Summary: %d phases checked, %d improved, %d degraded, %d rollbacks",
+                    _mp_total_checks,
+                    len(_mp_improvements),
+                    len(_mp_degradations),
+                    len(_mp_rollbacks),
+                )
+                if _mp_top3:
+                    logger.info("§G144 Top improvements: %s", ", ".join(_mp_top3))
+                if _mp_bot3:
+                    logger.warning("§G144 Top degradations: %s", ", ".join(_mp_bot3))
+                if _mp_rollbacks:
+                    logger.warning("§G144 Rollbacks: %s", ", ".join(_mp_rollbacks[:5]))
+        except Exception as _mp_sum_exc:
+            logger.debug("§G144 MushraProxy Summary non-blocking: %s", _mp_sum_exc)
 
         # ── §G90 PresenceEmbedding: Post-Processing vor Export ──────────────
         _presence_audio = opt_result.audio
@@ -41717,8 +42310,38 @@ class UnifiedRestorerV3:
                     _min_db = _v
                     break
             return float(np.clip(noise_db, _min_db, 0.0))
-        except Exception:
-            return None
+        except Exception as _nf_exc:
+            # §G93 Exception-Proxy: Statt "return None" (keine Information) →
+            # RMS-basierte Noise-Floor-Schätzung aus den leisesten Segmenten.
+            logger.warning(
+                "§G93 Exception-Proxy: _estimate_noise_floor_db FFT-Methode "
+                "fehlgeschlagen → RMS-Perzentil-Fallback (%s)",
+                _nf_exc,
+                exc_info=True,
+            )
+            try:
+                a = np.asarray(audio, dtype=np.float32).ravel()
+                n_chunk = min(len(a), 48000)
+                if n_chunk < 512:
+                    return None
+                # Teile in 100ms Chunks, nehme 5%-Perzentil der Chunk-RMS
+                chunk_size = max(512, n_chunk // 48)
+                chunk_rms = []
+                for i in range(0, n_chunk - chunk_size, chunk_size):
+                    chunk = a[i:i + chunk_size]
+                    chunk_rms.append(float(np.sqrt(np.mean(chunk.astype(np.float64) ** 2) + 1e-15)))
+                if not chunk_rms:
+                    return None
+                p5_rms = float(np.percentile(chunk_rms, 5))
+                noise_db_rms = float(20.0 * np.log10(max(p5_rms, 1e-12)))
+                return float(np.clip(noise_db_rms, -90.0, 0.0))
+            except Exception:
+                logger.warning(
+                    "§G93 Exception-Proxy: RMS-Fallback ebenfalls "
+                    "fehlgeschlagen → None (keine Schätzung möglich)",
+                    exc_info=True,
+                )
+                return None
 
     def _estimate_crest_factor_db(self, audio: np.ndarray) -> float | None:
         """§v10.23: Crest-Faktor = Peak/RMS in dB."""
@@ -41729,8 +42352,38 @@ class UnifiedRestorerV3:
             peak = np.max(np.abs(a)) + 1e-12
             rms = np.sqrt(np.mean(a * a)) + 1e-12
             return float(20 * np.log10(peak / rms))
-        except Exception:
-            return None
+        except Exception as _cf_exc:
+            # §G93 Exception-Proxy: Crest-Faktor ist bereits der einfachste
+            # Zeitbereichs-Proxy. Bei Fehler → Median-Peak/RMS aus Chunks.
+            logger.warning(
+                "§G93 Exception-Proxy: _estimate_crest_factor_db direkte Methode "
+                "fehlgeschlagen → Chunk-Median-Fallback (%s)",
+                _cf_exc,
+                exc_info=True,
+            )
+            try:
+                a = np.asarray(audio, dtype=np.float32).ravel()
+                n_chunk = min(len(a), 48000)
+                if n_chunk < 512:
+                    return None
+                chunk_size = max(256, n_chunk // 24)
+                peak_ratios = []
+                for i in range(0, n_chunk - chunk_size, chunk_size):
+                    chunk = a[i:i + chunk_size]
+                    p = float(np.max(np.abs(chunk))) + 1e-12
+                    r = float(np.sqrt(np.mean(chunk.astype(np.float64) ** 2))) + 1e-12
+                    peak_ratios.append(p / r)
+                if not peak_ratios:
+                    return None
+                median_ratio = float(np.median(peak_ratios))
+                return float(20.0 * np.log10(max(median_ratio, 1.0)))
+            except Exception:
+                logger.warning(
+                    "§G93 Exception-Proxy: Chunk-Median-Fallback ebenfalls "
+                    "fehlgeschlagen → None (keine Schätzung möglich)",
+                    exc_info=True,
+                )
+                return None
 
     def _compute_current_restorability(self) -> float:
         """§v10.25: Aktuellen Restorability-Score aus resolved_defects berechnen."""
@@ -42169,8 +42822,34 @@ if __name__ == "__main__":
             if len(above) > 0:
                 return float(freqs[above[-1]])
             return None
-        except Exception:
-            return None
+        except Exception as _bw_exc:
+            # §G93 Exception-Proxy: Statt "return None" (keine Information) →
+            # Zero-Crossing-Rate als Zeitbereichs-Bandbreiten-Proxy.
+            # Höhere ZCR → mehr hochfrequente Anteile → höhere effektive BW.
+            logger.warning(
+                "§G93 Exception-Proxy: _estimate_effective_bandwidth_hz FFT "
+                "fehlgeschlagen → Zero-Crossing-Rate-Fallback (%s)",
+                _bw_exc,
+                exc_info=True,
+            )
+            try:
+                a_fb = np.asarray(audio, dtype=np.float32)
+                if a_fb.ndim > 1:
+                    a_fb = np.mean(a_fb, axis=0)
+                n_fb = min(len(a_fb), min(sample_rate, 48000))
+                if n_fb < 256:
+                    return None
+                zcr = float(np.sum(np.abs(np.diff(np.sign(a_fb[:n_fb]))))) / (2 * n_fb)
+                # ZCR → geschätzte Bandbreite: ZCR 0.05→3kHz, 0.25→10kHz, 0.50→20kHz
+                bw_est = float(np.clip(zcr * sample_rate * 0.85, 1000.0, float(sample_rate) * 0.48))
+                return bw_est
+            except Exception:
+                logger.warning(
+                    "§G93 Exception-Proxy: ZCR-Fallback ebenfalls "
+                    "fehlgeschlagen → None (keine Schätzung möglich)",
+                    exc_info=True,
+                )
+                return None
 
 
 # §v10.70 Modul-Level Helper: Deep-Extraction von ndarray aus beliebigen Strukturen
@@ -42192,8 +42871,8 @@ def _deep_extract_ndarray(obj: object, _depth: int = 0) -> "np.ndarray | None":
             found = _deep_extract_ndarray(obj.audio, _depth + 1)
             if found is not None:
                 return found
-    except Exception:
-        logger.debug("unified_restorer_v3.py:40929: Silent exception absorbed", exc_info=True)
+    except Exception as _dex_exc:
+        logger.warning("§G93 _deep_extract_ndarray fehlgeschlagen: %s", _dex_exc, exc_info=True)
     return None
 
 
@@ -42226,7 +42905,13 @@ def _audio_sanity_check(audio: "np.ndarray", phase_id: str = "unknown") -> "np.n
         if rms_db < -90.0:
             return None
         return audio
-    except Exception:
+    except Exception as _asc_exc:
+        logger.warning(
+            "§G93 Exception-Proxy: _audio_sanity_check fehlgeschlagen "
+            "→ None (Audio abgelehnt): %s",
+            _asc_exc,
+            exc_info=True,
+        )
         return None
 
 

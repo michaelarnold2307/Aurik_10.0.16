@@ -505,6 +505,27 @@ def _dsp_hf_rolloff(audio_mono: np.ndarray, sr: int) -> float:
         if _gap / _tail > 0.40:
             return float(np.clip(edge_30db, 200.0, nyquist))
 
+    # ── §v10.14.1 Multi-Estimator Convergence Guard ─────────────────────
+    # Wenn E90 extrem niedrig ist (< 2 kHz) aber mindestens 2 unabhängige
+    # Schätzer (edge_30dB, slope_break, flat_onset) auf > 5 kHz zeigen,
+    # ist E90 durch Bass-Dominanz korrumpiert.  Vertraue dem Median der
+    # nicht-korrumpierten Schätzer.
+    # Dieser Guard feuert auch bei gap/tail < 0.40 (z.B. bei Codec-
+    # komprimierten Aufnahmen wo der Codec das Rauschen oberhalb des LPFs
+    # unterdrückt und der Gap-Energie-Anteil künstlich niedrig ist).
+    if e90 < 2000.0 and len(candidates) >= 3:
+        _high_estimators = [
+            v for v, _ in candidates if v > 5000.0
+        ]
+        if len(_high_estimators) >= 2:
+            _converged_bw = float(np.median(_high_estimators))
+            logger.debug(
+                "BW Multi-Estimator Convergence: E90=%.0fHz corrupted, "
+                "%d/%d estimators converge at %.0f Hz → override",
+                e90, len(_high_estimators), len(candidates), _converged_bw,
+            )
+            return float(np.clip(_converged_bw, 200.0, nyquist))
+
     # Weighted median: sort by value, find where cumulative weight crosses 0.5
     candidates.sort(key=lambda x: x[0])
     total_w = sum(w for _, w in candidates)
@@ -816,6 +837,34 @@ def _dsp_fingerprint_decade(
     """
     bw_khz = rolloff_hz / 1000.0
 
+    # ── §v10.14.1 Codec-BW-Recovery ──────────────────────────────────────
+    # Bei stark basslastigen oder codec-komprimierten Aufnahmen kann der
+    # kumulative Energie-Schätzer (E90) auf absurd niedrige Werte fallen
+    # (z.B. 300 Hz), weil die meiste Energie im Bassbereich konzentriert ist.
+    # Eine Stereo-Aufnahme mit > 35 dB SNR und messbarem Stereobild KANN
+    # physikalisch NICHT auf < 2 kHz bandbegrenzt sein — das ist ein
+    # Messartefakt, keine echte Aufnahmecharakteristik.
+    #
+    # Recovery: Ersetze die korrumpierte BW durch einen SNR-basierten
+    # Schätzwert. Der konservative Floor (10 kHz) verhindert Overcorrection
+    # bei echten Schmalband-Aufnahmen.
+    # §v10.14.1: SNR-Condition entfernt — eine echte Stereo-Aufnahme mit
+    # <2 kHz Bandbreite ist physikalisch unmöglich (Stereo erst ab ~1958,
+    # Bandbreite damals ≥8 kHz). Ist die BW <2 kHz bei Stereo, ist das
+    # IMMER ein Messartefakt.
+    _bw_corrupted = bw_khz < 2.0 and is_stereo
+    if _bw_corrupted:
+        # SNR-basierte BW-Schätzung: je höher der SNR, desto breiter das
+        # Originalsignal. Calibriert gegen gemessene Werte für 1970er–2000er
+        # Aufnahmen mit Codec-Artefakten.
+        _recovered_bw = float(np.clip(snr_db * 0.28 + 2.0, 10.0, 20.0))
+        bw_khz = _recovered_bw
+        logger.debug(
+            "EraClassifier: BW corrupted (measured %.1f kHz, stereo=%s, SNR=%.1f dB) → "
+            "recovered to %.1f kHz via SNR-proxy",
+            rolloff_hz / 1000.0, is_stereo, snr_db, bw_khz,
+        )
+
     # Primary decade selection via bandwidth.
     # Thresholds = midpoint of 0.90 × adjacent DECADE_HF_LIMITS:
     #   threshold(D, D+1) = (DECADE_HF_LIMITS[D] × 0.9 + DECADE_HF_LIMITS[D+1] × 0.9) / 2
@@ -873,6 +922,8 @@ def _dsp_fingerprint_decade(
     # Multi-Carrier-Ketten degradieren den gemessenen SNR systematisch.
     # 3 analoge Träger + MP3 = 10–16 dB SNR-Verlust. Der EraClassifier
     # muss diesen Verlust kompensieren, sonst wird 1977 als 1960 fehldatiert.
+    # §v10.14.1: Cap von 18→22 dB erhöht + Stereo-Breiten-Bonus (Stereo-
+    # Aufnahmen verlieren durch Generation-Copying mehr wahrgenommenen SNR).
     _transfer_chain_items = list(transfer_chain or [])
     _chain_depth = len(_transfer_chain_items) if _transfer_chain_items else 1
     _snr_correction_db = 0.0
@@ -885,15 +936,19 @@ def _dsp_fingerprint_decade(
         )
         _codec_steps = _chain_depth - _analog_steps
         _snr_correction_db = _analog_steps * 4.0 + _codec_steps * 3.0
-        _snr_correction_db = min(_snr_correction_db, 18.0)  # Cap bei 18 dB
+        # Stereo-Bonus: Breite Stereo-Aufnahmen verlieren ~1.5 dB SNR pro
+        # Träger-Generation durch Kanal-Übersprechen und Phasenfehler.
+        if is_stereo and stereo_width >= 0.10:
+            _snr_correction_db += stereo_width * _chain_depth * 8.0
+        _snr_correction_db = min(_snr_correction_db, 22.0)  # Cap bei 22 dB (§v10.14.1)
     _snr_corrected = snr_db + _snr_correction_db
 
-    # §v10.303.32 Deep-Chain Bias: Bei ≥3 Trägern sind ALLE Features
-    # (SNR, BW, Stereo, Dynamic Range) systematisch degradiert.
+    # §v10.303.32+§v10.14.1 Deep-Chain Bias: Schon ab 2 Trägern sind
+    # ALLE Features (SNR, BW, Stereo, Dynamic Range) systematisch degradiert.
     # Die akkumulierte Degradation drückt die Fingerprint-Analyse um
-    # 1–2 Jahrzehnte nach unten. Korrektur: +10 Jahre wenn mindestens
-    # EIN Sekundärmerkmal (Stereo, DR, Tilt) auf spätere Ära hindeutet.
-    if _chain_depth >= 3 and decade < 1980:
+    # 1–2 Jahrzehnte nach unten. Korrektur: +10 / +20 Jahre abhängig von
+    # der Anzahl der Sekundärmerkmale die auf spätere Ära hindeuten.
+    if _chain_depth >= 2 and decade < 1980:
         _hints_later = 0
         if is_stereo and stereo_width >= 0.08:
             _hints_later += 1
@@ -901,10 +956,18 @@ def _dsp_fingerprint_decade(
             _hints_later += 1
         if spectral_tilt > -6.0:
             _hints_later += 1
-        if _hints_later >= 1:
+        if _snr_corrected >= 45.0:
+            _hints_later += 1
+        if is_stereo and stereo_width >= 0.14:
+            _hints_later += 1  # Wide stereo → strongly suggests ≥1970s multi-track
+        if _hints_later >= 3:
+            decade = min(decade + 20, 1990)
+        elif _hints_later >= 1:
             decade = min(decade + 10, 1990)
+        if _hints_later >= 1:
             logger.debug(
-                "EraClassifier: deep-chain bias +10y (depth=%d, hints=%d, SNR %.0f→%.0f)",
+                "EraClassifier: deep-chain bias +%dy (depth=%d, hints=%d, SNR %.0f→%.0f)",
+                20 if _hints_later >= 3 else 10,
                 _chain_depth,
                 _hints_later,
                 snr_db,
@@ -1523,19 +1586,30 @@ class EraClassifier:
         # härteste physikalische Fakt — eine Aufnahme mit <10 kHz Rolloff
         # KANN nicht aus den 1990ern stammen.
         #
+        # §v10.14.1 Guard: Bei Codec-korrumpierter BW-Messung (sehr niedriger
+        # Rolloff + hoher SNR + Stereo) ist der Rolloff ein Messartefakt, KEIN
+        # echtes Bandbreiten-Limit. Der Softener wird dann deaktiviert.
+        #
         # Korrektur-Stärke hängt von der Bandbreite ab:
         #   rolloff <  8 kHz → −3 Dekaden  (AM-Radio / Schellack-Ära)
         #   rolloff < 12 kHz → −2 Dekaden  (frühes Tape / Vinyl)
         #   rolloff < 16 kHz → −1 Dekade   (pre-digitales Equipment)
         if result is not None and result.tier_used == 1 and result.decade >= 1980:
             _rolloff = float(rolloff_hz or 22000)
+            # §v10.14.1: Deaktiviere Softener wenn BW-Messung korrumpiert ist.
+            # Eine Stereo-Aufnahme mit <2 kHz Bandbreite ist physikalisch
+            # unmöglich — der Rolloff ist ein Messartefakt.
+            _bw_measurement_corrupted = (
+                _rolloff < 2000.0 and is_stereo
+            )
             _steps = 0
-            if _rolloff < 8000:
-                _steps = 3
-            elif _rolloff < 12000:
-                _steps = 2
-            elif _rolloff < 16000 and result.confidence < 0.72:
-                _steps = 1
+            if not _bw_measurement_corrupted:
+                if _rolloff < 8000:
+                    _steps = 3
+                elif _rolloff < 12000:
+                    _steps = 2
+                elif _rolloff < 16000 and result.confidence < 0.72:
+                    _steps = 1
 
             if _steps > 0:
                 _original = result.decade
@@ -1577,18 +1651,43 @@ class EraClassifier:
         )
         if result is None or result.confidence < 0.40:
             result = _tier2_result
-        elif _tier2_result.confidence >= 0.35 and _tier2_result.decade != result.decade and result.tier_used == 1:
-            # DSP widerspricht CLAP Tier-1 — DSP ist physikalisch fundiert,
-            # CLAP ist general-purpose. Bei Diskrepanz DSP bevorzugen.
-            logger.info(
-                "EraClassifier: Tier-2 DSP-Sanity-Pruefung widerspricht CLAP Tier-1 "
-                "(CLAP=%d/%.2f, DSP=%d/%.2f) → DSP-Override",
-                result.decade,
-                result.confidence,
-                _tier2_result.decade,
-                _tier2_result.confidence,
-            )
-            result = _tier2_result
+        elif _tier2_result.decade != result.decade and result.tier_used == 1:
+            # §v10.15 Intelligente DSP-Override-Schwelle:
+            # DSP darf CLAP nur überschreiben, wenn DSP SELBST hinreichend
+            # sicher ist — und zwar proportional zur CLAP-Confidence.
+            # Je sicherer CLAP, desto sicherer muss DSP sein.
+            #   CLAP ≥ 0.80 → DSP muss ≥ 0.60
+            #   CLAP ≥ 0.65 → DSP muss ≥ 0.50
+            #   CLAP ≥ 0.50 → DSP muss ≥ 0.42
+            #   CLAP  < 0.50 → DSP muss ≥ 0.35 (alte Schwelle)
+            _clap_conf = result.confidence
+            if _clap_conf >= 0.80:
+                _dsp_required = 0.60
+            elif _clap_conf >= 0.65:
+                _dsp_required = 0.50
+            elif _clap_conf >= 0.50:
+                _dsp_required = 0.42
+            else:
+                _dsp_required = 0.35
+            if _tier2_result.confidence >= _dsp_required:
+                logger.info(
+                    "EraClassifier: Tier-2 DSP-Sanity-Pruefung widerspricht CLAP Tier-1 "
+                    "(CLAP=%d/%.2f, DSP=%d/%.2f, required=%.2f) → DSP-Override",
+                    result.decade,
+                    result.confidence,
+                    _tier2_result.decade,
+                    _tier2_result.confidence,
+                    _dsp_required,
+                )
+                result = _tier2_result
+            else:
+                logger.info(
+                    "EraClassifier: Tier-2 DSP widerspricht CLAP, aber DSP-Confidence "
+                    "%.2f < required %.2f (CLAP=%.2f) → CLAP behalten",
+                    _tier2_result.confidence,
+                    _dsp_required,
+                    result.confidence,
+                )
 
         # §2.13 Multi-Generation Era Ceiling: Wenn die Kette einen analogen
         # Ursprungsträger enthält, darf die erkannte Ära nicht jünger sein
@@ -1753,7 +1852,7 @@ class EraClassifier:
                 try:
                     _rspoly = _get_resample_poly()
                     if _rspoly is None:
-                        logger.debug("EraClassifier Tier-1: scipy.signal.resample_poly nicht verfügbar")
+                        logger.warning("§G23 EraClassifier Tier-1: scipy.signal.resample_poly nicht verfügbar — DSP-Ersatzpfad")
                         return None
                     _g = math.gcd(48000, sr)
                     _audio_clap = _rspoly(audio_mono, 48000 // _g, sr // _g).astype(np.float32)
@@ -1783,7 +1882,7 @@ class EraClassifier:
             )
         except Exception as exc:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-            logger.debug("EraClassifier Tier-1 fehlgeschlagen: %s — nutze DSP-Ersatzpfad", exc)
+            logger.warning("§G23 EraClassifier Tier-1 fehlgeschlagen — DSP-Ersatzpfad: %s", exc, exc_info=True)
             return None
 
     def _tier2(

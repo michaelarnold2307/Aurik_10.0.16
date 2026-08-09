@@ -147,6 +147,24 @@ class MicroDynamicsEnvelopeMorphing:
         res = np.nan_to_num(np.asarray(restored, dtype=np.float32))
         orig = np.nan_to_num(np.asarray(original, dtype=np.float32))
 
+        # §v10.14.1 Defensive-Length-Normalization:
+        # OLA/STFT-Rounding, TDP-Crossfade und Chunk-Grenzen können
+        # restored und original um wenige Samples (352 hier) divergieren
+        # lassen. Abschneiden auf gemeinsame Mindestlänge verhindert
+        # Broadcast-Errors in der Gain-Envelope-Application.
+        _r_n = res.shape[-1] if res.ndim >= 1 else 0
+        _o_n = orig.shape[-1] if orig.ndim >= 1 else 0
+        if _r_n != _o_n and _r_n > 0 and _o_n > 0:
+            _common_len = min(_r_n, _o_n)
+            if res.ndim == 2:
+                res = res[..., :_common_len]
+            else:
+                res = res[:_common_len]
+            if orig.ndim == 2:
+                orig = orig[..., :_common_len]
+            else:
+                orig = orig[:_common_len]
+
         # §Bug-Fix: interne Längen-Absicherung — schlägt fehl wenn UV3-Alignment nicht greift
         # (z.B. bei TDP-OLA-Crossfade, STFT-Rounding, phase_09 AR-Interpolation).
         # Gilt für (channels, samples) = (2, N) UND (N, 2) Format.

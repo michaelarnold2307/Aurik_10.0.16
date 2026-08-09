@@ -928,7 +928,7 @@ def run_pre_analysis(
                         _chain = _best_known
                         _md.transfer_chain = _chain  # type: ignore[attr-defined]
                 except Exception:
-                    pass
+                    logger.debug("pre_analysis: transfer_chain injection failed for one stage, continuing", exc_info=True)
 
                 logger.info(
                     "pre_Analyse: Deep-Transfer-Chain: %s (injected=%s, era=%s, defect=%s)",
@@ -971,7 +971,7 @@ def run_pre_analysis(
                     # Ein Song von 1960 kann selbstverständlich als MP3 vorliegen.
                     # Keine Ära-Korrektur nötig — die Kette enthält bereits alle Infos.
                 except Exception:
-                    pass
+                    logger.debug("pre_analysis: era correction skipped for one stage", exc_info=True)
         except Exception as _inj_exc:
             logger.debug("Deep-Transfer-Chain-Injection uebersprungen: %s", _inj_exc)
 

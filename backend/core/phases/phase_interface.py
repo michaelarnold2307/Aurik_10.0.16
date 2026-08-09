@@ -701,6 +701,79 @@ class PhaseInterface(abc.ABC):
         except Exception as _nan_exc:
             self._logger.debug("§v10.300 NaN/Inf-Guard non-blocking: %s", _nan_exc)
 
+        # ── Guard 6: §G144/§G145 MUSHRA-Proxy Per-Phase Check + Rollback ─
+        # SOTA perzeptueller Guard: Vergleich des Pre-Phase- mit dem
+        # Post-Phase-Audio via leichtgewichtigem MERT-Embedding-Vergleich
+        # (MERT verfügbar) oder Bark-Band-Heuristik (Fallback).
+        # §G144: JEDE Phase MUSS nach Ausführung den MUSHRAProxy konsultieren.
+        # §G145: delta ≤ 0 → Phase MUSS zurückgerollt werden.
+        # Keine Ausnahme, kein "war nur eine kleine Verschlechterung".
+        try:
+            from backend.core.mushra_proxy import get_mushra_proxy
+
+            _mushra_proxy = get_mushra_proxy()
+            _verdict = _mushra_proxy.evaluate(
+                phase_id=phase_id,
+                audio_before=audio,
+                audio_after=result.audio,
+                sample_rate=sample_rate,
+            )
+            # Telemetrie immer speichern — auch bei erfolgreicher Phase
+            result.metadata["mushra_proxy_delta"] = round(_verdict.delta, 4)
+            result.metadata["mushra_proxy_before"] = round(_verdict.mushra_before, 2)
+            result.metadata["mushra_proxy_after"] = round(_verdict.mushra_after, 2)
+            result.metadata["mushra_proxy_latency_ms"] = round(_verdict.latency_ms, 2)
+            result.metadata["mushra_proxy_version"] = "mert" if _mushra_proxy._mert_available else "bark-fallback"
+
+            # §G145: delta ≤ 0 → kompromissloser Rollback
+            if _verdict.should_rollback or _verdict.delta <= 0.0:
+                _rollback_reason = _verdict.rollback_reason or (
+                    f"delta={_verdict.delta:.4f} ≤ 0 — Phase verschlechtert perzeptuelle Qualität"
+                )
+                self._logger.warning(
+                    "§G144/§G145 MUSHRA-Proxy %s: ROLLBACK — %s (mushra: %.1f→%.1f, Δ=%.3f, "
+                    "latency=%.1fms, proxy=%s)",
+                    phase_id,
+                    _rollback_reason,
+                    _verdict.mushra_before,
+                    _verdict.mushra_after,
+                    _verdict.delta,
+                    _verdict.latency_ms,
+                    result.metadata["mushra_proxy_version"],
+                )
+                # §G145: result.audio auf Pre-Phase-Audio zurücksetzen
+                result.audio = audio.astype(np.float32, copy=True)
+                result.metadata["mushra_proxy_rollback"] = True
+                result.metadata["mushra_proxy_rollback_reason"] = _rollback_reason
+                result.warnings.append(
+                    f"§G144/§G145 MUSHRA-Proxy Rollback: {_rollback_reason}"
+                )
+                # Qualitäts-Schätzung konservativ abwerten
+                result.quality_estimate = max(0.4, result.quality_estimate - 0.15)
+            else:
+                self._logger.info(
+                    "§G144 MUSHRA-Proxy %s: PASS — mushra %.1f→%.1f (Δ=+.3f, "
+                    "latency=%.1fms, proxy=%s)",
+                    phase_id,
+                    _verdict.mushra_before,
+                    _verdict.mushra_after,
+                    _verdict.delta,
+                    _verdict.latency_ms,
+                    result.metadata["mushra_proxy_version"],
+                )
+                result.metadata["mushra_proxy_rollback"] = False
+        except ImportError:
+            self._logger.debug(
+                "§G144 MUSHRA-Proxy nicht verfügbar (mushra_proxy Import fehlgeschlagen) — "
+                "perzeptueller Per-Phase-Guard deaktiviert"
+            )
+            result.metadata["mushra_proxy_available"] = False
+        except Exception as _mp_exc:
+            self._logger.debug(
+                "§G144 MUSHRA-Proxy non-blocking: %s", _mp_exc
+            )
+            result.metadata["mushra_proxy_error"] = str(_mp_exc)[:200]
+
         # ── VocalQualityGate: Gesangsqualität prüfen (nur bei Vokal-Phasen) ─
         if any(kw in phase_id for kw in ("42", "65", "vocal", "voice", "deess")):
             try:

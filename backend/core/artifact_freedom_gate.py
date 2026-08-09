@@ -655,7 +655,32 @@ class ArtifactFreedomGate:
             "shellac": 0.65,
             "wax_cylinder": 0.60,
         }
-        _veto = float(_MATERIAL_VETO.get(mat_key, 0.90))
+        _veto_base = float(_MATERIAL_VETO.get(mat_key, 0.90))
+
+        # §G100 Adaptive Veto-Margin: Statt hartem Binary-Gate wird der
+        # Veto-Threshold aus Restorability-Score und Transfer-Chain-Depth
+        # kontinuierlich moduliert. Tief degradiertes Material (niedrige RS,
+        # tiefe Chain) bekommt eine niedrigere Schwelle — es wäre unfair,
+        # eine 4.-Gen-Kassette mit denselben Artefakt-Limits zu messen wie
+        # eine pristine CD.
+        _rs_veto = float(restorability_score if isinstance(restorability_score, (int, float)) else 70.0)
+        _depth_veto = max(1, int(transfer_chain_depth if isinstance(transfer_chain_depth, (int, float)) else 1))
+        # Restorability-Faktor: rs 0→0.82, rs 50→0.91, rs 100→1.00
+        _rs_factor = float(np.clip(0.82 + (_rs_veto / 100.0) * 0.18, 0.80, 1.0))
+        # Depth-Faktor: depth 1→1.00, depth 4→0.91, depth 6→0.85
+        _depth_factor = float(np.clip(1.0 - max(0, _depth_veto - 1) * 0.03, 0.82, 1.0))
+        _veto = float(np.clip(_veto_base * _rs_factor * _depth_factor, 0.35, 0.97))
+
+        # §G79 Calibration-Audit: dokumentiere adaptiven Veto-Threshold
+        logger.info(
+            "§CALIB af_veto: rs=%.0f depth=%d mat=%s → veto=%.4f (base=%.2f)",
+            _rs_veto,
+            _depth_veto,
+            mat_key,
+            _veto,
+            _veto_base,
+        )
+
         _afg_fr = None
         if artifact_freedom < _veto:
             _afg_fr = make_fail_reason(
@@ -663,7 +688,11 @@ class ArtifactFreedomGate:
                 "ARTIFACT_VETO",
                 severity="failed",
                 action="rollback",
-                details=f"artifact_freedom={artifact_freedom:.4f} < {_veto} (material={mat_key}), {len(all_artifacts)} artifacts detected",
+                details=(
+                    f"artifact_freedom={artifact_freedom:.4f} < {_veto:.3f} "
+                    f"(base={_veto_base:.2f} rs={_rs_veto:.0f} depth={_depth_veto} "
+                    f"material={mat_key}), {len(all_artifacts)} artifacts detected"
+                ),
             )
 
         return ArtifactFreedomResult(

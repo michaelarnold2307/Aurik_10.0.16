@@ -418,7 +418,7 @@ def classify_intonation_events(
         return events
 
     except Exception as exc:
-        logger.debug("classify_intonation_events: nicht blockierend Ersatzpfad — %s", exc)
+        logger.warning("§G23 classify_intonation_events: DSP-Ersatzpfad — %s", exc, exc_info=True)
         return []
 
 

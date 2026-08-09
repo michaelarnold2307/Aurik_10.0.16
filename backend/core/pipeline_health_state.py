@@ -96,9 +96,41 @@ def normalize_pipeline_health_state(raw: Any) -> PipelineHealthState:
     return PipelineHealthState.OK
 
 
-def pipeline_health_from_fail_reasons(fail_reasons: list[dict[str, Any]] | None) -> PipelineHealthState:
-    """Derive canonical health state from structured fail_reasons metadata."""
+def pipeline_health_from_fail_reasons(
+    fail_reasons: list[dict[str, Any]] | None,
+    *,
+    executed_phases: list[dict[str, Any]] | None = None,
+) -> PipelineHealthState:
+    """Derive canonical health state from structured fail_reasons metadata.
+
+    §v10.14.1: Phases with effective_strength < 0.20 (mode-sensitive low-strength,
+    e.g. restoration-mode mastering polish) are filtered out — their "degraded"
+    entries should not downgrade the overall pipeline health.
+    """
     reasons = list(fail_reasons or [])
+    if not reasons:
+        return PipelineHealthState.OK
+
+    # §v10.14.1: Filter out low-strength phase entries
+    _low_strength_components: set[str] = set()
+    if executed_phases:
+        for _ep in executed_phases:
+            if not isinstance(_ep, dict):
+                continue
+            _meta = _ep.get("metadata") or {}
+            if not isinstance(_meta, dict):
+                continue
+            _eff = float(_meta.get("effective_strength", 1.0))
+            _alg = str(_meta.get("algorithm", ""))
+            if _eff < 0.20 or "low_strength" in _alg.lower():
+                _comp = str(_ep.get("phase_name", _ep.get("component", "")))
+                if _comp:
+                    _low_strength_components.add(_comp.lower())
+    if _low_strength_components:
+        reasons = [
+            r for r in reasons
+            if not (isinstance(r, dict) and str(r.get("component", "")).lower() in _low_strength_components)
+        ]
     if not reasons:
         return PipelineHealthState.OK
 

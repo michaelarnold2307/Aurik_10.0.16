@@ -879,7 +879,7 @@ class ExcellenceOptimizer:
                     _gp_proposal.expected_quality,
                 )
         except Exception as _gp_exc:
-            logger.debug("GPParameterOptimizer nicht verfügbar: %s", _gp_exc)
+            logger.warning("§G23 ML→DSP-Fallback: GPParameterOptimizer nicht verfügbar: %s", _gp_exc, exc_info=True)
 
         # Optional: MERT-Analyse verbessert die Context-Felder (harmonicity)  # v10.0.0-C3: dynamic_cv korrigiert (MertAnalysis hat kein dynamic_cv-Feld)
         if self.use_mert and context is None:
@@ -910,7 +910,7 @@ class ExcellenceOptimizer:
                     _analysis.naturalness_score,
                 )
             except Exception as _mert_exc:
-                logger.debug("ExcellenceOptimizer: MERT-Context nicht verfügbar: %s", _mert_exc)
+                logger.warning("§G23 ML→DSP-Fallback: MERT-Context nicht verfügbar: %s", _mert_exc, exc_info=True)
 
         result = ExcellenceResult()
 
@@ -1058,7 +1058,7 @@ class ExcellenceOptimizer:
             if _priority_log:
                 result.applied_steps.extend(_priority_log)
         except Exception as _gpp_exc:
-            logger.debug("GoalPriorityProtocol in ExcellenceOptimizer nicht verfügbar: %s", _gpp_exc)
+            logger.warning("§G23 ML→DSP-Fallback: GoalPriorityProtocol nicht verfügbar: %s", _gpp_exc, exc_info=True)
 
         # RMS-Delta auf dem finalen Output berechnen (auch nach Rollback korrekt).
         rms_after = float(np.sqrt(np.mean(out.astype(np.float64) ** 2)) + 1e-10)

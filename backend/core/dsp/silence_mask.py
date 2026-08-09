@@ -307,8 +307,27 @@ def apply_silence_preservation(
         _orig = _to_channels_first(_orig)
         _proc = _to_channels_first(_proc)
 
-        # Längenabgleich (jetzt sicher: shape[1] = Sample-Anzahl bei Stereo)
-        _n = min(_orig.shape[-1], _proc.shape[-1], _mask.shape[0])
+        # Längenabgleich — §v10.14.1: Maske kann 1D (N,) oder 2D (2,N) sein.
+        # Bei 2D-Maske beide Kanäle gleich behandeln → erste Zeile nehmen.
+        # §Bugfix: Validiere Mask-Shape vor Extraktion — fehlerhafte Upstream-Masken
+        # können 0-d oder unerwartete Shapes haben (§v10.15).
+        if _mask.ndim == 0 or _mask.size == 0:
+            logger.warning("silence_mask: empty/scalar mask received, returning proc unchanged")
+            return _proc
+        if _mask.ndim == 1:
+            _mask_1d = _mask
+        elif _mask.ndim == 2:
+            if _mask.shape[0] <= 8:
+                _mask_1d = _mask[0, :]
+            else:
+                _mask_1d = _mask[:, 0]
+        else:
+            logger.warning("silence_mask: mask ndim=%d unexpected, returning proc unchanged", _mask.ndim)
+            return _proc
+        if _mask_1d.ndim != 1:
+            logger.warning("silence_mask: mask_1d ndim=%d after extraction, returning proc unchanged", _mask_1d.ndim)
+            return _proc
+        _n = min(_orig.shape[-1], _proc.shape[-1], _mask_1d.shape[0])
         if _n <= 0:
             return _proc  # type: ignore[no-any-return]
 
@@ -317,16 +336,16 @@ def apply_silence_preservation(
             # Stereo: Maske als Zeile (1, N) oder Spalte (N, 1)
             if _proc.shape[0] == 2 and _proc.shape[1] > 2:
                 # (2, N) channels-first
-                _m = _mask[:_n][np.newaxis, :]
+                _m = _mask_1d[:_n][np.newaxis, :]
                 _o = _orig[..., :_n]
                 _p = _proc[..., :_n]
             else:
                 # (N, 2) channels-last
-                _m = _mask[:_n][:, np.newaxis]
+                _m = _mask_1d[:_n][:, np.newaxis]
                 _o = _orig[:_n]
                 _p = _proc[:_n]
         else:
-            _m = _mask[:_n]
+            _m = _mask_1d[:_n]
             _o = _orig[:_n]
             _p = _proc[:_n]
 

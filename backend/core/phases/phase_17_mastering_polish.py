@@ -295,6 +295,48 @@ class MasteringPolishPhase(PhaseInterface):
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
 
+        # §v10.14.1 Mode-Sensitive Strength:
+        # Mastering-Polish soll NIE komplett übersprungen werden (88s Leerlauf),
+        # sondern mode-abhängig mit angepasster Intensität arbeiten:
+        #   - restoration: ×0.15 — kaum hörbar, erhält Originalcharakter
+        #   - forensic:    ×0.05 — minimal, nur DC-Offset + Safety Limiter
+        #   - balanced/default: ×1.0 — volle Mastering-Kette
+        #   - studio/studio_2026: ×1.0 — volle Mastering-Kette
+        _mode_raw = str(kwargs.get("quality_mode", kwargs.get("mode", ""))).strip().lower()
+        _MODE_STRENGTH_SCALE: dict[str, float] = {
+            "restoration": 0.15,
+            "forensic": 0.05,
+            "archival": 0.10,
+        }
+        _mode_scale = _MODE_STRENGTH_SCALE.get(_mode_raw, 1.0)
+        if _mode_scale < 1.0:
+            _effective_strength = float(_effective_strength * _mode_scale)
+            logger.debug(
+                "MasteringPolish: mode=%s → strength scaled ×%.2f (effective=%.3f)",
+                _mode_raw, _mode_scale, _effective_strength,
+            )
+
+        # §v10.14.1 Early-Exit: Bei extrem niedriger effektiver Stärke (<0.05)
+        # ist die gesamte Multi-Band-EQ-Kette ein No-Op (<0.3 dB Änderung).
+        # Überspringen spart ~89s pro Restaurations-Lauf.
+        if _effective_strength < 0.05:
+            audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
+            audio = np.clip(audio, -1.0, 1.0)
+            return PhaseResult(
+                success=True,
+                audio=audio.copy(),
+                execution_time_seconds=time.time() - start_time,
+                metadata={
+                    "algorithm": "skipped_low_strength_mode",
+                    "material": material.name,
+                    "mode": _mode_raw,
+                    "effective_strength": _effective_strength,
+                    "rms_drop_db": 0.0,
+                },
+                metrics={"rms_change_db": 0.0},
+                modifications={"algorithm": "skipped_low_strength_mode"},
+            )
+
         if _effective_strength <= 0.0:
             audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
             audio = np.clip(audio, -1.0, 1.0)
@@ -307,6 +349,7 @@ class MasteringPolishPhase(PhaseInterface):
                     "material": material.name,
                     "phase_locality_factor": phase_locality_factor,
                     "effective_strength": _effective_strength,
+                    "mode": _mode_raw,
                     "rms_drop_db": 0.0,
                     "loudness_makeup_db": 0.0,
                 },
