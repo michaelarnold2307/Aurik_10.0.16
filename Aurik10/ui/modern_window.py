@@ -19971,7 +19971,7 @@ class ModernMainWindow(QMainWindow):
                 _hb_frac = 0.88 + _tail
             _phase_bp = int(round(_hb_frac * 10000.0))
             if not _clean and _uv3["idx"] >= 0:
-                _clean = f"Phase {_uv3['idx'] + 1}/{_uv3['count']}"
+                _clean = f"Phase {_uv3['idx'] + 1}/{_uv3['count']}" if _uv3.get('count', 0) > 0 else f"Phase {_uv3['idx'] + 1}"
         else:
             _phase_bp = int(round(_item_pct * 100.0))
 
@@ -20089,7 +20089,8 @@ class ModernMainWindow(QMainWindow):
         _ph_tot = _uv3s3["count"]
         # Fallback: wenn kein externer Callback kam
         if not _clean and _ph_cur > 0:
-            _clean = f"Phase {_ph_cur}/{_ph_tot}"
+            # §v10.14 P0: Keine Anzeige "Phase 3/0" — tot=0 bedeutet unbekannt
+            _clean = f"Phase {_ph_cur}/{_ph_tot}" if _ph_tot > 0 else f"Phase {_ph_cur}"
             self._latest_phase_text = _clean
 
         if hasattr(self, "status_text"):
@@ -20633,6 +20634,10 @@ class ModernMainWindow(QMainWindow):
             if _medium_label:
                 return t("status.processing_item_medium", file=_file, medium=_medium_label)
         elif base_key == "status.saved_file":
+            # §v10.14 P0: Revert-Erkennung — kein "Meisterwerk" wenn Guardian verworfen hat
+            if _reverted:
+                _reason = str(getattr(_item, "revert_reason", "") or _rmeta.get("revert_reason", "Qualität nicht garantiert"))
+                return t("status.saved_file_reverted", file=_file, reason=_reason)
             if _medium_label and _score is not None and _defect_count is not None:
                 if _score >= 70:
                     return t(

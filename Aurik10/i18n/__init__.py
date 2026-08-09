@@ -146,11 +146,13 @@ _TRANSLATIONS: dict[str, dict[str, str]] = {
         "status.defect_scan_progress_text": "Schadensanalyse: {percent}\u202f%",
         "status.era_genre_detecting": "🕰 Aurik reist in die Vergangenheit deiner Aufnahme — wann ist sie entstanden? Auf welchem Medium? Welches Genre? All das fließt in die Entscheidungen ein.",
         "status.saved_prefix": "✅ Gespeichert",
-        "status.saved_file": "✅ {file} ist fertig. Ein weiteres Meisterwerk wurde gerettet.",
-        # §v10.305 Kontextbewusste Kommunikation: Song-spezifische Abschluss-Botschaften
+        "status.saved_file": "✅ {file} ist fertig.",
+        # §v10.14 P0: Echte Status-Kommunikation statt pauschales "Meisterwerk"
         "status.saved_file_excellent": "✅ {file} erstrahlt in neuem Glanz! Deine {medium}-Aufnahme (Score {score}/100) — {defects} Defekttypen chirurgisch behandelt. Hör selbst!",
         "status.saved_file_improved": "✅ {file} wurde spürbar verbessert. Deine {medium}-Aufnahme (Score {score}/100) — {defects} Defekttypen behoben. Jetzt anhören.",
         "status.saved_file_challenging": "✅ {file} ist fertig — Aurik hat das Maximum herausgeholt. Deine {medium}-Aufnahme (Score {score}/100) mit {defects} Defekttypen. Ein schwieriger Fall, mit Respekt behandelt.",
+        # §v10.14 P0: Ehrliche Kommunikation bei Guardian-Revert
+        "status.saved_file_reverted": "⚠️ {file}: Aurik hat entschieden, das Original beizubehalten. Grund: {reason}. Die gespeicherte Datei ist unverändert.",
         "status.kmv_refinement_step": "KI-Nachbearbeitung: Schritt {step} von {total}  ·  {phase}",
         "status.processing_limited": "⚠ Verarbeitung mit Einschränkungen: {reason}",
         "status.phase_active_icon": "🔧 {phase} — ein weiterer Schritt auf dem Weg zur Perfektion.",

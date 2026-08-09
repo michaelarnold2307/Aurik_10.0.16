@@ -91,7 +91,12 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
         hpi = d.get("hpi_score", 0.0)
         phases = d.get("phases_total", 0)
 
-        if was_reverted:
+        # §v10.14 P0: Keine Fake-Werte — wenn Qualität nicht verfügbar, ehrlich sein
+        if quality_before is None or quality_after is None or (quality_before == 0 and quality_after == 0):
+            quality_text = "Qualitätsmetriken nicht verfügbar — Messung fehlgeschlagen oder Audio zu kurz."
+            _color = "#8899AA"
+            _bg = "rgba(136, 153, 170, 0.08)"
+        elif was_reverted:
             revert_reason = d.get("revert_reason", "")
             quality_text = (
                 (
@@ -353,8 +358,8 @@ def build_results_data(
     duration_seconds: float = 0,
     defects_found: int = 0,
     defects_fixed: int = 0,
-    quality_before: float = 50,
-    quality_after: float = 85,
+    quality_before: float | None = None,  # §v10.14 P0: None = nicht verfügbar (vorher Fake-Default 50)
+    quality_after: float | None = None,  # §v10.14 P0: None = nicht verfügbar (vorher Fake-Default 85)
     material_detected: str = "",
     era_detected: str = "",
     mode: str = "",
@@ -384,9 +389,10 @@ def build_results_data(
         "duration_seconds": duration_seconds,
         "defects_found": defects_found,
         "defects_fixed": defects_fixed,
-        # §v10.201: Echte Werte aus metadata (überschreiben die Default-Parameter)
-        "quality_before": _q_before if _q_before > 0 else quality_before,
-        "quality_after": _q_after if _q_after > 0 else quality_after,
+        # §v10.14 FIX P0: Keine Fake-Werte — echte Daten oder "—" anzeigen.
+        # Defaults 50/85 waren aktiv irreführend wenn keine Metriken verfügbar.
+        "quality_before": _q_before if _q_before > 0 else None,
+        "quality_after": _q_after if _q_after > 0 else None,
         "mushra_score": _mushra,
         "hpi_score": _hpi,
         "was_reverted": _reverted,
