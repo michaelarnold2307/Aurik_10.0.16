@@ -15242,6 +15242,40 @@ class ModernMainWindow(QMainWindow):
         )
         vbox.addWidget(self.status_text)
 
+        # ── §v10.14 P1: Live-Qualitätsmetriken während der Restaurierung ──────────
+        self.live_quality_label = _ElidingLabel("")
+        self.live_quality_label.setStyleSheet(
+            "color: #82B89A; font-size: 8pt; background: transparent; padding: 0px 2px;"
+        )
+        self.live_quality_label.setVisible(False)
+        vbox.addWidget(self.live_quality_label)
+
+    def _update_live_quality(self, metrics: dict | None = None) -> None:
+        """§v10.14 P1: Aktualisiert die Live-Qualitätsanzeige während der Restaurierung."""
+        if not hasattr(self, "live_quality_label"):
+            return
+        if not metrics:
+            self.live_quality_label.setVisible(False)
+            return
+        _parts = []
+        if metrics.get("guardian_reverted"):
+            _parts.append(f"⚠️ Qualitätswächter: {metrics.get('guardian_reason', 'Bearbeitung verworfen')}")
+        else:
+            _m = metrics.get("mushra", 0)
+            _h = metrics.get("hpi", 0)
+            _v = metrics.get("vqi", 0)
+            if _m > 0:
+                _parts.append(f"🎧 MUSHRA {_m:.0f}")
+            if _h > 0:
+                _parts.append(f"📈 HPI {_h:.2f}")
+            if _v > 0:
+                _parts.append(f"🎤 VQI {_v:.2f}")
+        if _parts:
+            self.live_quality_label.setText(" · ".join(_parts))
+            self.live_quality_label.setVisible(True)
+        else:
+            self.live_quality_label.setVisible(False)
+
         # ── Ablaufprotokoll: obsolet als eigene Zeile; Details stehen in status_text Zeile 2 ─────────
         self._process_timeline_label = _ElidingLabel("")
         self._process_timeline_label.setStyleSheet(
