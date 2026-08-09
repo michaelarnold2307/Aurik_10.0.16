@@ -3399,7 +3399,7 @@ class DefectScanner:
         reel_tape_score += wow_flutter_score * 1.0  # Less than cassette, but present
         reel_tape_score += click_score * 0.3  # Very few clicks
         reel_tape_score -= crackle_score * 2.0  # No crackle
-        reel_tape_score -= rumble_energy * 5.0 * _rumble_factor_st  # No rumble (era-moduliert)
+        reel_tape_score += rumble_energy * 8.0 * _rumble_factor_st  # §v10.14 FIX: Reel-Tape HAT Rumble (Transport-Motoren) — war subtrahiert!
         reel_tape_score -= compression_score * 2.0  # Analog
         reel_tape_score -= digital_score * 1.5  # Analog
         if _era_is_digital_st:
