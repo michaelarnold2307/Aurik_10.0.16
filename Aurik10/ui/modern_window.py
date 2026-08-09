@@ -2828,6 +2828,12 @@ class BatchProcessingThread(QThread):
                     if metrics:
                         self._latest_live_metrics = metrics
                         self._update_live_quality(metrics)
+                        # Guardian-Revert auch als Status-Text anzeigen
+                        if metrics.get("guardian_reverted") and hasattr(self, "status_text"):
+                            self._apply_status_text_style("error")
+                            self.status_text.setText(
+                                f"⚠️ Qualitätswächter: {metrics.get('guardian_reason', 'Bearbeitung verworfen')}"
+                            )
                     # §v10.440: Chirurgie-Label ausblenden wenn nicht mehr in Chirurgie
                     if not msg.startswith("chirurgie:") and getattr(self, "chirurgie_label", None) is not None:
                         self.chirurgie_label.setVisible(False)
@@ -12489,6 +12495,7 @@ class ModernMainWindow(QMainWindow):
         self._defect_anim_timer = None
         self._current_repair_names: str = ""
         self._latest_phase_text: str = ""
+        self._latest_live_metrics: dict | None = None  # §v10.14 P1
         self._inpainting_saved_view = None
         self._inpainting_zoom_active: bool = False
         self._inpainting_locations: list[Any] = []
