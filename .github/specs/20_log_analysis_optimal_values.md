@@ -407,7 +407,7 @@ Alle Ableitungen sind durch die genannten Log-Zeilen und Code-Stellen belegbar.
 - Musical Quality Assurer vergleicht gegen degradierten Input
 - Gleiche Root-Cause wie HPI-Vergleich gegen defekten Input (§19.3)
 - BlindInternalReference existiert bereits, wird aber von MQA nicht genutzt
-- **Status:** 🔜 Metrik-Korrektur — kein DSP-Fix, kein Code-Change an Pipeline
+- **Status:** ✅ Implementiert — BIR-Vektor in MQA validate_final_quality() eingebunden
 
 ---
 

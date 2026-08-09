@@ -22,7 +22,7 @@
 | `get_phase_strength_range` | `backend/core/calibration_matrix.py` | ✅ |
 | `get_material_floor` | `backend/core/calibration_matrix.py` | ✅ |
 | `get_effective_material_floor` | `backend/core/calibration_matrix.py` | ✅ |
-| Effektiver Goal-Target-Resolver (`resolve_effective_goal_targets`) | `backend/core/calibration_matrix.py` / UV3-Integration | 🔲 |
+| Effektiver Goal-Target-Resolver (`resolve_effective_goal_targets`) | `backend/core/calibration_matrix.py` / UV3-Integration | ✅ |
 | UV3-Integration (SongGoalTargets → PMGG) | `backend/core/unified_restorer_v3.py` | ✅ |
 
 ---
