@@ -303,6 +303,9 @@ class ABCompareManager:
         Robustheit: kurzes Audio oder fehlende FFT → Fallback 0.5
         """
         try:
+            # §v10.14: Guard gegen None/Skalar-Eingaben
+            if original is None or restored is None or not hasattr(original, 'ndim') or not hasattr(restored, 'ndim'):
+                return 0.5
             # Mono-Konversion (nur Kanal 0 wenn Stereo)
             orig_m = original.flatten() if original.ndim == 1 else original[:, 0]
             rest_m = restored.flatten() if restored.ndim == 1 else restored[:, 0]

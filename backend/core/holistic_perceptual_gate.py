@@ -924,6 +924,11 @@ class HolisticPerceptualGate:
             damit absichtliche BW-Erweiterung (FlashSR phase_06) nicht als Divergenz
             gewertet wird (§2.44 BW-Ceiling-Guard, Reference Paradox §0d).
         """
+        # §v10.14: Guard gegen None-Input (fail-closed auf Originalsignal)
+        if original is None or restored is None:
+            return 1.0
+        if not hasattr(original, 'astype') or not hasattr(restored, 'astype'):
+            return 1.0
         orig_clean = np.nan_to_num(original.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
         rest_clean = np.nan_to_num(restored.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
 
