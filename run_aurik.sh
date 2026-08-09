@@ -146,8 +146,8 @@ echo "Aurik GPU-Modus: ${_GPU_MODE} (Python: ${VENV_PYTHON})"
 export NUMBA_DISABLE_JIT=1
 
 # Kein Doppelstart: verhindert UI-Konflikte und wiederholte Force-Quit-Dialoge.
-if pgrep -f "[A]urik910/main.py" >/dev/null 2>&1; then
-    _pid="$(pgrep -f "[A]urik910/main.py" | head -n 1)"
+if pgrep -f "[A]urik10/main.py" >/dev/null 2>&1; then
+    _pid="$(pgrep -f "[A]urik10/main.py" | head -n 1)"
     echo "Aurik läuft bereits (PID ${_pid})."
     exit 0
 fi

@@ -26,12 +26,15 @@ logger = logging.getLogger(__name__)
 # Capping OpenBLAS/OMP to 1 internal thread makes each numpy call single-
 # threaded but prevents the OpenBLAS-vs-Python-thread race. PyTorch uses its
 # own thread pool (set via torch.set_num_threads) and is unaffected.
-os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
-os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
-os.environ.setdefault("MIOPEN_LOG_LEVEL", "1")
+# Direkte Zuweisung (nicht setdefault): überschreibt Runtime-Hook-Werte
+# (runtime_hook_threading.py setzt cpu_count() via setdefault; das muss hier
+# auf 1 zurückgesetzt werden, sonst OpenBLAS-Race → Heap-Corruption → SIGABRT)
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+os.environ["MIOPEN_LOG_LEVEL"] = "1"
 
 # Release-Start: bekannte Framework-Hinweise ohne Nutzerwert ausblenden.
 warnings.filterwarnings(
