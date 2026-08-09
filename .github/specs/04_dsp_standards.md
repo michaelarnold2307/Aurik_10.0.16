@@ -230,7 +230,7 @@ def hz_to_mel(f_hz: float) -> float:
 | Singer-Identity-Erhalt | ML: **Resemblyzer** (dvector, GE2E-Loss) → X-Vector | DSP Formant-Korrelation | — |
 | Vibrato-vs-Flutter-Diskriminierung | DSP: **F0-Autokorrelation** (Vibrato 4–7 Hz; Wow < 2 Hz) + FCPE | pYIN | — |
 
-> ¹ **MIIPHER** (Google 2023, W2v-BERT-Konditionierung): proprietär, **nicht öffentlich verfügbar**. Code-Fallback `_compensate_missing_miipher()` in `sota_vocal_model_router.py` ist aktiv; bei fehlendem Modell wird automatisch SGMSE+-Fallback-Kette aktiviert.
+> ¹ **MIIPHER-DiT** (§v10.14): Flow-Matching-DiT-Modell (806 MB ONNX, OpSet 17). **Open-Source**, ersetzt proprietäres Google MIIPHER. CPU-fähig (RT 0.1×). Route: DiT → MIIPHER(prop.) → SGMSE+ → DFN+HNR. Plugin: `plugins/miipher_dit_plugin.py`.
 
 **HTDemucs / AERO / MIIPHER Auswahllogik (Normativ):**
 
