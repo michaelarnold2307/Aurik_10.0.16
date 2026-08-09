@@ -76,6 +76,13 @@ class PipelineStatus:
     error: str = ""
     timestamp: float = 0.0
 
+    # ── §v10.14 P1: Live-Metriken während des Laufs ──
+    live_mushra: float = 0.0  # MUSHRA-Score (0-100), per-phase update
+    live_hpi: float = 0.0  # HPI-Score (0-1)
+    live_vqi: float = 0.0  # Vocal Quality Index (0-1)
+    live_guardian_reverted: bool = False  # Guardian hat verworfen
+    live_guardian_reason: str = ""  # Guardian-Begründung
+
     # ── §v10.201 Ergebnis-Felder (nur bei state∈{completed,warning,failed}) ──
     result_quality: float = 0.0  # quality_estimate * 100
     result_reverted: bool = False  # do_no_harm.reverted
@@ -96,6 +103,12 @@ class PipelineStatus:
             "mos_estimate": self.mos_estimate,
             "error": self.error,
             "timestamp": time.monotonic(),
+            # §v10.14 P1: Live-Metriken
+            "live_mushra": self.live_mushra,
+            "live_hpi": self.live_hpi,
+            "live_vqi": self.live_vqi,
+            "live_guardian_reverted": self.live_guardian_reverted,
+            "live_guardian_reason": self.live_guardian_reason,
             # §v10.201 Ergebnis-Felder
             "result_quality": self.result_quality,
             "result_reverted": self.result_reverted,
@@ -296,24 +309,29 @@ def _run_restoration_job(
         except Exception as e:
             logger.debug("SharedAudioRing write fehlgeschlagen: %s", e)
 
-    def _progress_callback(pct: float, phase_name: str, phase_idx: int = 0, total: int = 0) -> None:
+    def _progress_callback(pct: float, phase_name: str, phase_idx: int = 0, total: int = 0, metrics: dict | None = None) -> None:
         """Wird bei Fortschrittsänderungen aufgerufen.
 
-        §v10.118: Akzeptiert sowohl 3-arg (backend: pct, narrative, elapsed)
-        als auch 4-arg (frontend-legacy: pct, phase_name, phase_idx, total).
-        Der zweite Parameter wird immer als Erzähltext interpretiert.
+        §v10.14 P1: Akzeptiert optionalen metrics-Dict mit Live-Qualitätsdaten
+        (mushra, hpi, vqi, guardian_reverted).
         """
-        # §v10.118: Erzähltext vom PhaseProgressNarrator kommt als phase_name an
         _narrative = str(phase_name) if phase_name else ""
         _phase_short = _narrative[:60] + "…" if len(_narrative) > 60 else _narrative
+        _m = metrics or {}
         output_pipe.send(
             PipelineStatus(
                 state="running",
                 progress_pct=pct,
                 current_phase=_phase_short,
-                narrative=_narrative,  # §v10.118: vollständiger Erzähltext
+                narrative=_narrative,
                 phase_index=int(phase_idx) if isinstance(phase_idx, (int, float)) else 0,
                 total_phases=int(total) if isinstance(total, (int, float)) else 0,
+                # §v10.14 P1: Live-Metriken aus optionalem metrics-Dict
+                live_mushra=float(_m.get("mushra", 0.0)),
+                live_hpi=float(_m.get("hpi", 0.0)),
+                live_vqi=float(_m.get("vqi", 0.0)),
+                live_guardian_reverted=bool(_m.get("guardian_reverted", False)),
+                live_guardian_reason=str(_m.get("guardian_reason", "")),
             ).to_json()
         )
 

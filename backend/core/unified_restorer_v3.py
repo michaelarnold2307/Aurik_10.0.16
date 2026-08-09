@@ -7716,7 +7716,13 @@ class UnifiedRestorerV3:
                     _display = f"🎵 {phase}"
             if progress_callback is not None:
                 try:
-                    progress_callback(pct, _display, time.time() - start_time)
+                    # §v10.14 P1: Live-Metriken in den Progress-Callback einspeisen
+                    _live_metrics = {
+                        "mushra": float(getattr(self, "_mqa_mushra", 0.0) or 0.0),
+                        "hpi": float(getattr(self, "_phase_deltas", {}).get(phase, {}).get("hpi_live", 0.0) or 0.0),
+                        "vqi": float(getattr(self, "_panns_singing", 0.0) or 0.0),
+                    }
+                    progress_callback(pct, _display, time.time() - start_time, _live_metrics)
                 except Exception as _cb_exc:
                     logger.debug(
                         "Progress-Callback fehlgeschlagen (Ursache: %s). "
@@ -21293,6 +21299,16 @@ class UnifiedRestorerV3:
                         _do_no_harm_reverted = True
                         _do_no_harm_reason = _dnh_result.reason
                         _do_no_harm_scores = _dnh_result.degraded_metrics
+                        # §v10.14 P1: Guardian-Revert sofort ans GUI melden
+                        if progress_callback is not None:
+                            try:
+                                progress_callback(
+                                    99.0, "⚠️ Qualitätswächter: Bearbeitung verworfen",
+                                    time.time() - start_time,
+                                    {"guardian_reverted": True, "guardian_reason": str(_dnh_result.reason)},
+                                )
+                            except Exception:
+                                pass
                     else:
                         _do_no_harm_reverted = False
                         _do_no_harm_reason = f"gcv_override:{','.join(_gcv_votes)}"
