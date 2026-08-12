@@ -135,11 +135,13 @@ def run_benchmark() -> BenchmarkReport:
             # SOTA-Kette
             t_step = time.time()
             try:
-                manifest = consensus.analyze(damaged, SR)
+                manifest = consensus.analyze(
+                    damaged, SR, metadata={"material": medium, "is_digital": medium == "digital"},
+                )
                 planner = RepairPlanner()
                 plan = planner.plan(manifest, len(damaged))
                 executor = CoordinatedRepair()
-                restored, _ = executor.execute(damaged, plan, manifest, SR)
+                restored, _ = executor.execute(damaged, plan, manifest, SR, material=medium)
                 restored = np.asarray(restored)
                 if restored.ndim > 1:
                     restored = restored.mean(axis=0)

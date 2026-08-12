@@ -1,0 +1,60 @@
+{
+  "version": "v10.800",
+  "timestamp": "2026-08-12T23:28:32",
+  "summary": {
+    "improved": 2,
+    "degraded": 2,
+    "avg_snr_improvement_db": 0.25,
+    "total_files": 6
+  },
+  "results": [
+    {
+      "medium": "cassette",
+      "file": "cassette_hiphop_1980s_hiss.wav",
+      "snr_before_db": 21.0,
+      "snr_after_db": 22.96,
+      "snr_improvement_db": 1.95,
+      "verdict": "improved"
+    },
+    {
+      "medium": "digital",
+      "file": "digital_electronic_2000s_clicks.wav",
+      "snr_before_db": 24.27,
+      "snr_after_db": 23.55,
+      "snr_improvement_db": -0.72,
+      "verdict": "degraded"
+    },
+    {
+      "medium": "digital",
+      "file": "digital_electronic_2000s_mp3.wav",
+      "snr_before_db": 17.67,
+      "snr_after_db": 17.69,
+      "snr_improvement_db": 0.02,
+      "verdict": "neutral"
+    },
+    {
+      "medium": "reel_tape",
+      "file": "reel_classical_1960s_hiss.wav",
+      "snr_before_db": 17.57,
+      "snr_after_db": 19.62,
+      "snr_improvement_db": 2.05,
+      "verdict": "improved"
+    },
+    {
+      "medium": "tape",
+      "file": "tape_blues_1970s_wow.wav",
+      "snr_before_db": -3.39,
+      "snr_after_db": -3.28,
+      "snr_improvement_db": 0.11,
+      "verdict": "neutral"
+    },
+    {
+      "medium": "vinyl",
+      "file": "vinyl_blues_1950s_crackle.wav",
+      "snr_before_db": 20.14,
+      "snr_after_db": 18.22,
+      "snr_improvement_db": -1.92,
+      "verdict": "degraded"
+    }
+  ]
+}

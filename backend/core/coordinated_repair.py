@@ -392,7 +392,9 @@ class CoordinatedRepair:
         plan: RepairPlan,
         manifest: Optional[Any] = None,
         sample_rate: int = SR,
+        material: str = "",
     ) -> tuple[np.ndarray, RepairReport]:
+        self._material = material
         """
         Führt den Reparatur-Plan Schritt für Schritt aus.
 
@@ -556,9 +558,13 @@ class CoordinatedRepair:
     ) -> np.ndarray:
         """Vinyl-Crackle/Oberflächenrauschen via Banquet ONNX.
 
-        §v10.830: Banquet ist das SOTA-Modell für Vinyl-Restauration
-        (Knistern + Oberflächenrauschen). RX-11-Äquivalent: De-crackle.
+        §v10.840: Banquet ist ein VINYL-Modell — auf digitalem Material
+        verschlechtert es (Benchmark: -1.3 dB). Nicht-Vinyl → Interpolation.
         """
+        material = getattr(self, "_material", None)
+        if material is not None and str(material).lower() not in ("vinyl", "shellac", ""):
+            log.info("Banquet übersprungen (Material %s) — Interpolation", material)
+            return self._run_transient_repair(audio, step, manifest, sr)
         try:
             from plugins.banquet_vinyl_plugin import get_banquet_plugin
             strength = float(step.parameters.get("strength", 0.5))
@@ -680,7 +686,9 @@ class CoordinatedRepairPipeline:
         plan: RepairPlan,
         manifest: Optional[Any] = None,
         sample_rate: int = SR,
+        material: str = "",
     ) -> tuple[np.ndarray, RepairReport]:
+        self._material = material
         return self.executor.execute(audio, plan, manifest, sample_rate)
 
     def repair_all(
