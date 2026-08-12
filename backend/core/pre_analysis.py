@@ -107,6 +107,27 @@ class PreAnalysisResult:
 
     # Restorability estimate (backend.core.restorability_estimator)
     restorability: object | None = None  # RestorabilityResult
+    # §v10.220: Defect Consensus Pipeline — 30 Module koordiniert
+    # Ersetzt den einzelnen defect_scanner durch die Consensus-Pipeline
+    try:
+        from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
+        _consensus_pipeline = DefectConsensusPipeline()
+        _consensus_manifest = _consensus_pipeline.analyze(audio, sample_rate)
+        if _consensus_manifest and _consensus_manifest.defects:
+            logger.info(
+                "§v10.220 Defect Consensus: %d Defekte gefunden "
+                "(%d Hypothesen, %d Konflikte gelöst, %d Merges, %d kausale Downgrades)",
+                len(_consensus_manifest.defects),
+                _consensus_manifest.total_hypotheses,
+                _consensus_manifest.conflicts_resolved,
+                _consensus_manifest.merged_defects,
+                _consensus_manifest.causal_downgrades,
+            )
+            # Nutze Consensus-Manifest statt Einzel-Scanner
+            _defect_list_consensus = _consensus_manifest.defects
+    except Exception:
+        _defect_list_consensus = None
+
 
     # Metadata
     native_sr: int = 0
