@@ -164,7 +164,7 @@ class InpaintingDataset(Dataset):
 # Training
 # ═════════════════════════════════════════════════════════════════════════════
 
-def train(epochs: int = EPOCHS, lr: float = LR):
+def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
     device = torch.device("cuda")
 
     # Daten

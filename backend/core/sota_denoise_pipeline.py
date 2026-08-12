@@ -230,70 +230,52 @@ class AdaptiveSpectralSubtractor:
         strength: float = 0.5,
     ) -> np.ndarray:
         """
-        Führt spektrale Subtraktion mit Bark-Gewichtung durch.
-
-        Args:
-            audio: [T] Eingangssignal
-            noise_profile: Rauschprofil aus Layer 1
-            strength: 0.0 (keine Subtraktion) bis 1.0 (maximale Subtraktion)
+        Spektrale Subtraktion mit Bark-Gewichtung + Wiener Gain.
+        
+        Verwendet Zero-Padding + Post-Trim für artefaktfreie Overlap-Add-Rekonstruktion.
         """
-        if not noise_profile.is_valid:
+        if not noise_profile.is_valid or strength <= 0.0:
             return audio
 
+        # ── Zero-padding für saubere Overlap-Add-Kanten ──
+        pad = self.n_fft // 2
+        audio_padded = np.pad(audio.astype(np.float64), pad, mode='reflect')
+
         window = np.hanning(self.n_fft)
-        output = np.zeros_like(audio)
-        weight = np.zeros_like(audio)
+        output = np.zeros(len(audio_padded), dtype=np.float64)
+        weight = np.zeros(len(audio_padded), dtype=np.float64)
 
-        # Normalisiere Rauschprofil auf die gleiche Länge wie Audio-Spektrum
-        noise_spec = noise_profile.spectrum[:self.freq_bins].copy()
+        # Noise power (Amplitude → Power)
+        noise_power = (noise_profile.spectrum[:self.freq_bins].astype(np.float64) ** 2)
+        band_strength = np.clip(strength * self._bark_weights.astype(np.float64), 0.0, 2.0)
 
-        # Skaliere Strength pro Bark-Band
-        band_strength = strength * self._bark_weights
-        band_strength = np.clip(band_strength, 0.0, 1.0)
-
-        n_frames = 1 + (len(audio) - self.n_fft) // self.hop
+        n_frames = 1 + (len(audio_padded) - self.n_fft) // self.hop
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio_padded[start:start + self.n_fft] * window
             spec = np.fft.rfft(frame)
 
-            # Spektrale Subtraktion
-            spec_mag = np.abs(spec)
-            spec_phase = np.angle(spec)
+            # Wiener Gain: G = max(S² - N², floor) / S²
+            spec_power = np.abs(spec) ** 2
+            noise_est = noise_power * band_strength * noise_profile.confidence
+            gain = (spec_power - noise_est) / (spec_power + 1e-10)
+            gain = np.clip(gain, 0.05, 1.0)
 
-            # Subtrahiere gewichtetes Rauschprofil
-            subtrahend = noise_spec * band_strength * noise_profile.confidence
-            clean_mag = spec_mag - subtrahend
-
-            # Fletcher-Munson-Floor: nicht unter die Hörschwelle
-            hearing_floor = self._hearing_threshold * 0.1  # Skalierung
-            clean_mag = np.maximum(clean_mag, hearing_floor)
-
-            # Sanfte Null-Floor (nicht komplett stumm)
-            clean_mag = np.maximum(clean_mag, spec_mag * 0.01)
-
-            # Rekonstruktion
-            clean_spec = clean_mag * np.exp(1j * spec_phase)
-            clean_frame = np.fft.irfft(clean_spec)[:self.n_fft]
-            clean_frame = clean_frame * window
-
-            end = min(start + self.n_fft, len(audio))
+            clean_frame = np.fft.irfft(spec * gain) * window
+            end = min(start + self.n_fft, len(audio_padded))
             output[start:end] += clean_frame[:end - start]
             weight[start:end] += window[:end - start] ** 2
 
+        # ── Normalize overlap-add ──
         weight[weight < 1e-8] = 1.0
         output /= weight
 
-        # Crossfade: Original → Clean (basierend auf Strength)
-        crossfade = 1.0 - strength * noise_profile.confidence
-        result = output * (1 - crossfade) + audio * crossfade
+        # ── Trim padding ──
+        result_padded = output[pad:pad + len(audio)]
 
-        # Fade Edges: Die ersten/letzten Samples sind unzuverlässig
-        fade_len = min(self.n_fft, len(audio) // 4)
-        fade_in = np.linspace(0, 1, fade_len, dtype=np.float64)
-        fade_out = np.linspace(1, 0, fade_len, dtype=np.float64)
-        result[:fade_len] = audio[:fade_len] * (1 - fade_in) + result[:fade_len] * fade_in
-        result[-fade_len:] = audio[-fade_len:] * (1 - fade_out) + result[-fade_len:] * fade_out
+        # ── Crossfade: original + cleaned ──
+        crossfade = 1.0 - strength * noise_profile.confidence
+        result = result_padded * (1 - crossfade) + audio * crossfade
 
         return result.astype(np.float32)
 
