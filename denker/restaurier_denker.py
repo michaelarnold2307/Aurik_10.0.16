@@ -1374,7 +1374,24 @@ def get_restaurier_denker() -> RestaurierDenker:
             rms_after = float(np.sqrt(np.mean(ctx.audio_after.ravel() ** 2)) + 1e-10)
             rms_drop_db = 20 * np.log10(rms_before / rms_after if rms_after > 1e-10 else 1.0)
             if rms_drop_db > 12:
-                return Decision(
+                        # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                     verdict=DecisionVerdict.ROLLBACK,
                     reason=f"Katastrophaler Content-Verlust: RMS-Drop={rms_drop_db:.1f} dB",
                     recommended_strength=0.0,
@@ -1393,7 +1410,24 @@ def get_restaurier_denker() -> RestaurierDenker:
                 # Prüfe ob aktuelle Phase ein Undo verursacht hat
                 for conf in conflicts[:3]:
                     if conf.get("undoing_phase") == ctx.phase_id.split("_")[0]:
-                        return Decision(
+                                # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                             verdict=DecisionVerdict.RETRY_LIGHTER,
                             reason=f"Undo erkannt: {ctx.phase_id} hat "
                             f"{conf['original_contributor']}'s Arbeit an "
@@ -1427,7 +1461,24 @@ def get_restaurier_denker() -> RestaurierDenker:
                     if alt_regression < ctx.regression * 0.5:
                         # False positive bestätigt → Guard override!
                         self._best_effort_count += 1
-                        return Decision(
+                                # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                             verdict=DecisionVerdict.OVERRIDE_GUARD,
                             reason=f"Guard-Paralysis bei {ctx.current_strength:.0%}: "
                             f"PMGG Δ={ctx.regression:.3f} → Alternativ Δ={alt_regression:.3f} "
@@ -1478,7 +1529,24 @@ def get_restaurier_denker() -> RestaurierDenker:
 
         # Verbesserung → CONTINUE
         if regression < thresholds["retry_light"]:
-            return Decision(
+                    # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                 verdict=DecisionVerdict.CONTINUE,
                 reason=f"Regression {regression:.4f} < {thresholds['retry_light']} — "
                 f"Phase erfolgreich ({'Studio' if is_studio else 'Restoration'})",
@@ -1488,7 +1556,24 @@ def get_restaurier_denker() -> RestaurierDenker:
         # Leichter Drop → RETRY_LIGHTER (Restoration) oder RETRY_DIFFERENT (Studio)
         if regression < thresholds["retry_heavy"]:
             if is_studio and ctx.retry_count >= 2:
-                return Decision(
+                        # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                     verdict=DecisionVerdict.RETRY_DIFFERENT,
                     reason=f"Leichter Drop (Δ={regression:.3f}) nach {ctx.retry_count} Retries "
                     f"→ alternativen Ansatz versuchen (Studio 2026)",
@@ -1496,7 +1581,24 @@ def get_restaurier_denker() -> RestaurierDenker:
                     retry_strategy=RetryStrategy.SWITCH_PLUGIN,
                 )
             new_strength = ctx.current_strength * (0.65 if ctx.retry_count == 0 else 0.40)
-            return Decision(
+                    # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                 verdict=DecisionVerdict.RETRY_LIGHTER,
                 reason=f"Leichter Drop (Δ={regression:.3f}) → reduzierte Intensität ({new_strength:.0%})",
                 recommended_strength=new_strength,
@@ -1505,11 +1607,45 @@ def get_restaurier_denker() -> RestaurierDenker:
 
         # Starker Drop → SKIP oder ROLLBACK
         if ctx.retry_count >= thresholds["max_drops"]:
-            return Decision(
+                    # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
+        return Decision(
                 verdict=DecisionVerdict.ROLLBACK,
                 reason=f"Starker Drop (Δ={regression:.3f}) nach {ctx.retry_count} Retries → ROLLBACK",
                 recommended_strength=0.0,
             )
+                # 
+4.4 
+10.400: Repair Planner — Manifest-gesteuerte Phasen-Optimierung
+        _repair_plan = None
+        if ctx.defect_manifest is not None:
+            try:
+                from backend.core.coordinated_repair import RepairPlanner
+                _planner = RepairPlanner()
+                _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                if _repair_plan and _repair_plan.steps:
+                    logger.info(
+                        "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
+                        len(_repair_plan.steps), _repair_plan.total_defects,
+                    )
+            except Exception as exc:
+                logger.debug("RestaurierDenker: RepairPlanner nicht verfügbar (%s)", exc)
+
         return Decision(
             verdict=DecisionVerdict.SKIP,
             reason=f"Starker Drop (Δ={regression:.3f}) → Phase {ctx.phase_id} überspringen",

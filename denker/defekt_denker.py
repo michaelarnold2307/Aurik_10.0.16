@@ -169,7 +169,7 @@ class DefektDenker:
         with self._init_lock:
             if self._loaded:
                 return
-            # --- DefectScanner ---
+            # --- DefectScanner (Original, immer vorhanden) ---
             try:
                 from backend.core.defect_scanner import DefectScanner
 
@@ -177,6 +177,16 @@ class DefektDenker:
                 logger.info("DefektDenker: DefectScanner geladen.")
             except Exception as exc:
                 logger.warning("DefektDenker: DefectScanner nicht verfügbar (%s).", exc)
+
+            # --- §v10.220: Defect Consensus Pipeline (30 Module) ---
+            try:
+                from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
+
+                self._consensus = DefectConsensusPipeline()
+                logger.info("DefektDenker: DefectConsensusPipeline geladen (30 Module).")
+            except Exception as exc:
+                self._consensus = None
+                logger.debug("DefektDenker: Consensus nicht verfügbar (%s).", exc)
 
             # --- CausalDefectReasoner ---
             try:
@@ -268,6 +278,19 @@ class DefektDenker:
             except Exception as exc:
                 logger.warning("DefektDenker: scan() fehlgeschlagen (%s).", exc)
 
+        # §v10.220: Run Consensus Pipeline for enriched defect manifest
+        _consensus_manifest = None
+        if self._consensus is not None and scan_result is not None:
+            try:
+                _consensus_manifest = self._consensus.analyze(audio, sr)
+                logger.info(
+                    "DefektDenker: Consensus Manifest erstellt (%d Defekte, %d Konflikte gelöst)",
+                    len(_consensus_manifest.defects) if _consensus_manifest else 0,
+                    _consensus_manifest.conflicts_resolved if _consensus_manifest else 0,
+                )
+            except Exception as exc:
+                logger.debug("DefektDenker: Consensus fehlgeschlagen (%s)", exc)
+
         # Step 2: Causal Reasoning
         plan: Any | None = None
         if self._reasoner is not None and scan_result is not None:
@@ -281,7 +304,10 @@ class DefektDenker:
             except Exception as exc:
                 logger.warning("DefektDenker: reason() fehlgeschlagen (%s).", exc)
 
-        return DefektErgebnis.from_bericht(self._to_bericht(defect_scores, plan, material), raw_scan_result=scan_result)
+        result = DefektErgebnis.from_bericht(self._to_bericht(defect_scores, plan, material), raw_scan_result=scan_result)
+        if _consensus_manifest is not None:
+            result._consensus_manifest = _consensus_manifest
+        return result
 
     def scan_nur(
         self,
