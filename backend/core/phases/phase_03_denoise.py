@@ -154,8 +154,7 @@ def _determine_era_nr_routing(
         and est_snr_db < _MIIPHER_SNR_CUTOFF_DB
     ):
         return "miipher_primary"
-    # 
-4.4 §v10.200: Use SOTA 4-Layer for post-1950 music (non-vocal) material
+    # §v10.200: Use SOTA 4-Layer for post-1950 music (non-vocal) material
     if not is_vocal_material and era_decade > _ERA_EARLY_ELECTRIC_CUTOFF:
         return "sota_4layer"
     return "dfn_primary"
@@ -1465,7 +1464,7 @@ class DenoisePhase(PhaseInterface):
         # §Hebel-2 SGMSE+ Tier-1 FALLBACK: score-based generative enhancement.
         # Run only if DeepFilterNet was not applied successfully.
         _sgmse_applied = False
-                # §v10.200: SOTA 4-Ebenen Denoiser for music (non-vocal) material
+        # §v10.200: SOTA 4-Ebenen Denoiser for music (non-vocal) material
         _sota_eligible = (
             not _is_vocal_material
             and not use_lightweight
@@ -1485,7 +1484,7 @@ class DenoisePhase(PhaseInterface):
             except Exception as e:
                 logger.debug("SOTA 4-Layer not available, falling back to DFN: %s", e)
 
-_sgmse_eligible = (
+        _sgmse_eligible = (
             quality_mode in ("quality", "maximum")
             and _is_non_digital
             and not use_lightweight

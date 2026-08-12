@@ -305,25 +305,7 @@ class VocalEnhancement(PhaseInterface):
             description="Comprehensive vocal processing chain for clarity and polish",
         )
 
-    
-        # §v10.210: SOTA Vocal Enhancement Pipeline
-        # Koordiniert 10 DSP-Module (De-Esser, Sibilance, Formant, Breath etc.)
-        if not use_lightweight and is_vocal_material:
-            try:
-                from backend.core.sota_vocal_pipeline import SOTAVocalPipeline
-                _vocal_pipeline = SOTAVocalPipeline()
-                _vocal_result = _vocal_pipeline.process(audio, int(sample_rate))
-                audio = _vocal_result.audio
-                logger.info(
-                    "§v10.210 SOTA Vocal Pipeline: register=%s deess=%.1fdB harmonic=%.0f%% time=%.1fs",
-                    _vocal_result.profile.register,
-                    _vocal_result.sibilance_reduction_db,
-                    _vocal_result.harmonic_preservation_pct,
-                    _vocal_result.processing_time,
-                )
-            except Exception:
-                pass
-def process(  # type: ignore  # pylint: disable=arguments-renamed
+    def process(  # type: ignore  # pylint: disable=arguments-renamed
         self, audio: np.ndarray, sample_rate: int, material: MaterialType = MaterialType.CD_DIGITAL, **kwargs
     ) -> PhaseResult:
         check_ml_model_ready("BS-RoFormer", phase_name="42")
@@ -353,6 +335,24 @@ def process(  # type: ignore  # pylint: disable=arguments-renamed
         """
         start_time = time.time()
         self.validate_input(audio)
+        # §v10.210: SOTA Vocal Pipeline — 10 DSP-Module koordiniert
+        # Läuft VOR der bestehenden DSP-Kette und liefert Register/Sibilance-Analyse.
+        try:
+            from backend.core.sota_vocal_pipeline import SOTAVocalPipeline
+
+            _vocal_pipeline = SOTAVocalPipeline()
+            _vocal_result = _vocal_pipeline.process(audio, int(sample_rate))
+            audio = _vocal_result.audio
+            logger.info(
+                "Phase 42: SOTA Vocal Pipeline register=%s deess=%.1fdB harmonic=%.0f%% time=%.1fs",
+                _vocal_result.profile.register,
+                _vocal_result.sibilance_reduction_db,
+                _vocal_result.harmonic_preservation_pct,
+                _vocal_result.processing_time,
+            )
+        except Exception:
+            pass  # SOTA Vocal optional — Fallback auf bestehende DSP-Kette
+
 
         # §v10.14: MIIPHER-DiT Early-Exit — wenn Phase 03 bereits
         # Flow-Matching-DiT angewandt hat, ist Phase 42 redundant.
