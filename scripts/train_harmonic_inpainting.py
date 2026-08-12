@@ -234,6 +234,7 @@ def train(epochs: int = EPOCHS, lr: float = LR):
         optimizer.zero_grad()
 
         for step, batch in enumerate(train_loader):
+            if step >= steps_per_epoch: break
             clean = batch["clean"].to(device).unsqueeze(-1)       # [B, T, 1]
             attenuated = batch["attenuated"].to(device).unsqueeze(-1)
             mask = batch["mask"].to(device).unsqueeze(-1)          # [B, T, 1]
@@ -327,5 +328,6 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Harmonic Inpainting Fine-Tuning (§v10.300)")
     p.add_argument("--epochs", type=int, default=EPOCHS)
     p.add_argument("--lr", type=float, default=LR)
+    p.add_argument("--steps-per-epoch", type=int, default=200)
     args = p.parse_args()
-    train(args.epochs, args.lr)
+    train(args.epochs, args.lr, args.steps_per_epoch)
