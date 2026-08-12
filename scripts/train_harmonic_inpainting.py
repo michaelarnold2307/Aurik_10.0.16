@@ -32,7 +32,7 @@ from dit_model import FlowMatchingDiT
 SR = 48_000
 CHUNK_SEC = 2.0
 CHUNK_SAMPLES = int(CHUNK_SEC * SR)
-BATCH_SIZE = 2
+BATCH_SIZE = 1
 ACCUM_STEPS = 4  # Effective batch = 8
 EPOCHS = 25
 LR = 5e-5
