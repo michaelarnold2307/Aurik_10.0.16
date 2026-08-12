@@ -148,6 +148,127 @@ DEFAULT_WEIGHT = 0.70
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# §v10.840: Impuls-Detektor — Klicks/Knackser direkt auf der Waveform
+# ═════════════════════════════════════════════════════════════════════════════
+
+_ANALOG_ONLY_CATEGORIES = frozenset({
+    DefectCategory.UNKNOWN,
+})
+
+# Analog-Detektoren, die auf digitalem Material physikalisch unmöglich sind
+_ANALOG_ONLY_NAMES = frozenset({
+    "bandwidth_loss", "riaa_curve_error", "soft_saturation",
+    "speed_calibration_error", "print_through", "wow_flutter",
+    "flutter_spectral_sidebands", "room_mode_resonance",
+    "proximity_effect_excess", "reverb_excess",
+})
+
+
+def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]:
+    """Erkennt Klicks und Knackser als kurze, breitbandige Impulse.
+
+    §v10.840: Der DefectScanner ist auf Träger-Artefakte (Wow, Rumble, RIAA)
+    kalibriert und übersieht Transienten auf digitalem Material. Dieser
+    Detektor arbeitet direkt auf der Waveform:
+      - Klick:   isolierter Spike 1–5 ms
+      - Knackser: dichte Folge von Spikes (Crackle-Bursts)
+
+    Returns:
+        Liste von DefectHypothesis (click/crackle).
+    """
+    audio = np.asarray(audio, dtype=np.float32)
+    if audio.ndim > 1:
+        audio = audio.mean(axis=0)
+
+    hop = max(1, sr // 1000)          # 1 ms Hops
+    win = max(4, sr // 250)           # 4 ms Fenster
+    n = 1 + (len(audio) - win) // hop
+    if n < 4:
+        return []
+
+    # Kurzzeit-Energie + lokaler Median (robust gegen Musik-Transienten)
+    energy = np.zeros(n, dtype=np.float64)
+    for i in range(n):
+        s = i * hop
+        energy[i] = np.mean(audio[s:s + win] ** 2) + 1e-12
+
+    # Median-Filter (51 ms = 51 Hops) als lokale Referenz
+    med_k = 51
+    local_med = np.zeros_like(energy)
+    for i in range(n):
+        lo, hi = max(0, i - med_k // 2), min(n, i + med_k // 2 + 1)
+        local_med[i] = np.median(energy[lo:hi])
+
+    ratio = energy / (local_med + 1e-12)
+
+    # Klick: isolierter Peak mit Verhältnis > 3.5 (§v10.840 kalibriert auf Corpus:
+    # echte digitale Klicks erreichen nur ~4× — Drums sind länger und breiter)
+    click_mask = ratio > 3.5
+    # Crackle: mehrere Spikes in kurzer Folge mit Verhältnis > 2.5
+    crackle_mask = ratio > 2.5
+
+    hypotheses: list[DefectHypothesis] = []
+
+    # Klicks: isolierte Spikes zusammenfassen
+    i = 0
+    click_count = 0
+    while i < n:
+        if click_mask[i]:
+            start_i = i
+            while i < n and click_mask[i]:
+                i += 1
+            # Nur kurze Bursts (max 10 ms) sind Klicks
+            burst_ms = (i - start_i) * 1.0
+            if burst_ms <= 10:
+                click_count += 1
+                s_smp = start_i * hop
+                e_smp = min(len(audio), i * hop + win)
+                hypotheses.append(DefectHypothesis(
+                    category=DefectCategory.CLICK,
+                    start_sample=int(s_smp),
+                    end_sample=int(e_smp),
+                    confidence=min(0.95, 0.5 + click_count * 0.02),
+                    severity=float(min(1.0, ratio[start_i] / 20.0)),
+                    source_module="impulse_detector",
+                    evidence={"method": "waveform_spike", "ratio": float(ratio[start_i])},
+                ))
+        else:
+            i += 1
+
+    # Crackle: dichte Spikes (mehr als 3 Spikes in 100 ms)
+    spike_positions = np.where(crackle_mask)[0]
+    if len(spike_positions) >= 3:
+        burst_starts: list[int] = []
+        prev = -1000
+        burst: list[int] = []
+        for pos in spike_positions:
+            if pos - prev > 100:  # neue Burst-Gruppe (100 ms Lücke)
+                if len(burst) >= 3:
+                    burst_starts.append(burst[0])
+                burst = [pos]
+            else:
+                burst.append(pos)
+            prev = pos
+        if len(burst) >= 3:
+            burst_starts.append(burst[0])
+
+        for bs in burst_starts:
+            s_smp = int(bs * hop)
+            e_smp = min(len(audio), int((bs + 100) * hop))
+            hypotheses.append(DefectHypothesis(
+                category=DefectCategory.CRACKLE,
+                start_sample=s_smp,
+                end_sample=e_smp,
+                confidence=0.7,
+                severity=0.6,
+                source_module="impulse_detector",
+                evidence={"method": "crackle_burst"},
+            ))
+
+    return hypotheses
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # Stage 1: Parallel Scanning
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -220,6 +341,9 @@ class ParallelDefectScanner:
             return RemasterDetector().analyse
         _reg("remaster_detector", _load_remaster)
 
+        # 5b. §v10.840: Impuls-Detektor (Klicks/Knackser auf der Waveform)
+        _reg("impulse_detector", lambda: detect_impulse_defects)
+
         # 6. Precision Locator — refine_edges(audio, sr, defects): braucht Defekte als Input
         def _load_precision():
             from backend.core.precision_defect_locator import PrecisionDefectLocator
@@ -261,6 +385,9 @@ class ParallelDefectScanner:
         """
         all_hypotheses: list[DefectHypothesis] = []
 
+        is_digital = (metadata or {}).get("is_digital", False) or \
+            str((metadata or {}).get("material", "")).lower() in ("digital", "cd_digital")
+
         for name, detector_fn in self._detectors:
             try:
                 t0 = time.time()
@@ -268,6 +395,16 @@ class ParallelDefectScanner:
                 dt = time.time() - t0
 
                 hypotheses = self._normalize_result(name, result, sample_rate)
+
+                # §v10.840: Material-Aware-Filter — Analog-Detektoren sind
+                # auf digitalem Material physikalisch unmöglich und würden
+                # die echten Defekte (Klicks/Knackser) übertönen.
+                if is_digital:
+                    hypotheses = [
+                        h for h in hypotheses
+                        if h.category.value not in _ANALOG_ONLY_NAMES
+                    ]
+
                 all_hypotheses.extend(hypotheses)
 
                 log.debug(f"  {name}: {len(hypotheses)} hypotheses in {dt:.2f}s")
@@ -492,6 +629,8 @@ class ConflictResolver:
                 merged.append(h1)
 
         # Step 3: Resolve conflicting categories at same time position
+        # §v10.840: Globale Defekte (hum/hiss über ganze Datei) dürfen lokale
+        # Defekte (Klicks/Knackser) NICHT verdrängen — beide werden behalten.
         resolved: list[DefectHypothesis] = []
         i = 0
         while i < len(merged):
@@ -504,9 +643,16 @@ class ConflictResolver:
                 j += 1
 
             if len(conflict_group) > 1:
-                winner = self._resolve_conflict(conflict_group)
-                resolved.append(winner)
-                conflicts_resolved += len(conflict_group) - 1
+                # Globale vs lokale Defekte: beide behalten
+                global_cats = {"hum", "hiss", "tape_hiss", "vinyl_noise", "bandwidth_loss"}
+                has_global = any(h.category.value in global_cats for h in conflict_group)
+                has_local = any(h.category.value not in global_cats for h in conflict_group)
+                if has_global and has_local:
+                    resolved.extend(conflict_group)  # BEIDE behalten
+                else:
+                    winner = self._resolve_conflict(conflict_group)
+                    resolved.append(winner)
+                    conflicts_resolved += len(conflict_group) - 1
                 i += len(conflict_group)
             else:
                 resolved.append(merged[i])
