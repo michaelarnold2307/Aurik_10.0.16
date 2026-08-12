@@ -20,7 +20,7 @@ AURIK_ABOUT = {
         "und Self-Supervised Learning."
     ),
     "donation_url": "https://www.paypal.com/donate?business=michael.arnold2307@gmail.com&currency_code=EUR",
-    "license": "MIT — Kostenlos für private und kommerzielle Nutzung",
+    "license": "Apache 2.0 — Kostenlos für private und kommerzielle Nutzung",
 }
 
 
@@ -40,8 +40,8 @@ def get_about_text() -> str:
 ║  {AURIK_ABOUT["description"][80:120]}  ║
 ║  {AURIK_ABOUT["description"][120:160]} ║
 ║                                          ║
-║  Lizenz: {AURIK_ABOUT["license"][:35]} ║
-║          {AURIK_ABOUT["license"][35:]}  ║
+║  Lizenz: {AURIK_ABOUT["license"][:42]} ║
+║  {AURIK_ABOUT["license"][42:]:<42} ║
 ║                                          ║
 ║  ❤️  Danke für Deine Unterstützung!     ║
 ╚══════════════════════════════════════════╝

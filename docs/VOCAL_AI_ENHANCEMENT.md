@@ -387,7 +387,7 @@ pytest tests/test_vocal_ai_enhancement.py -v
 
 ## 📝 Lizenz
 
-Proprietär - Aurik 10.0.0
+Apache 2.0 - Aurik 10.0.0
 Musical Excellence First
 
 ---

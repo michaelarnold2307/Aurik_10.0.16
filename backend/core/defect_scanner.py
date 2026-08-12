@@ -1645,6 +1645,135 @@ class DefectScanner:
             logger.debug("AST Pre-Filter fehlgeschlagen: %s", _exc)
             return {}
 
+    # ── BEATs Tag → DefectType Konflikt-Mapping ──────────────────────────
+    # AudioSet tag names that, when detected with high confidence, indicate
+    # content that can be mistaken for audio defects (transients, noise, etc.)
+    _BEATS_TAG_DEFECT_MAP: dict[str, list[str]] = {
+        "Drum": ["crackle", "click", "hiss"],
+        "Percussion": ["crackle", "click"],
+        "Guitar": ["click"],
+        "Electric guitar": ["click"],
+        "Piano": ["click"],
+        "Bass guitar": ["rumble"],
+        "Brass instrument": ["hiss"],
+        "Trumpet": ["hiss"],
+        "Saxophone": ["hiss"],
+        "Singing voice": ["click"],
+        "Music": ["crackle", "click", "hiss", "hum"],
+        "Musical instrument": ["crackle", "click"],
+    }
+
+    def adjust_thresholds_for_beats(
+        self,
+        beats_tags: dict[str, float] | None = None,
+        beats_embedding: list[float] | None = None,
+    ) -> dict[str, float]:
+        """§v10.700: BEATs-basierte Schwellwert-Anpassung für Defekt-Detektoren.
+
+        Läuft VOR dem Scan (nach adjust_thresholds_for_ast). Nutzt BEATs
+        AudioSet-Tags, um Defekt-Schwellen kontextabhängig zu modulieren:
+
+        - Instrument-Tags (Drum, Guitar, Piano, etc.): Schwellen ANHEBEN
+          für Defekttypen, die mit diesen Instrumenten verwechselt werden
+          (z.B. Drum → crackle/click/hiss, Guitar → click, Bass → rumble).
+        - "Noise"-Tag: Schwellen SENKEN für hiss/hum/crackle — bei realem
+          Rauschen sind Defekte wahrscheinlicher und sollen erkannt werden.
+        - "Silence"-Tag: Schwellen stark ANHEBEN — kein Signal, keine Defekte.
+        - "Music"-Tag (global): Leichte Anhebung aller Schwellen bei Musik,
+          da komplexes Musikmaterial mehr False Positives produziert.
+
+        Returns:
+            Dict mit angepassten Schwellwerten (Defekttyp → neuer Threshold).
+        """
+        if beats_tags is None or not beats_tags:
+            return {}
+        try:
+            _adjustments: dict[str, float] = {}
+
+            # ── Globale Musik-Modulation ──────────────────────────────
+            _music_conf = beats_tags.get("Music", 0.0)
+            _global_music_mult = 1.0
+            if _music_conf >= 0.5:
+                # Musik ist komplex → konservativer scannen
+                _global_music_mult = 1.0 + (_music_conf - 0.5) * 0.6  # max ~1.30x
+
+            # ── Noise-Modulation: reales Rauschen → sensitiver ─────────
+            _noise_conf = beats_tags.get("Noise", 0.0)
+            _noise_defects = {"hiss", "hum", "crackle"}
+            _noise_mult = 1.0
+            if _noise_conf >= 0.3:
+                # Rauschen detektiert → Defekte sind wahrscheinlich real
+                _noise_mult = max(0.65, 1.0 - (_noise_conf - 0.3) * 0.8)  # min ~0.65x
+
+            # ── Silence-Modulation: Stille → fast nichts scannen ───────
+            _silence_conf = beats_tags.get("Silence", 0.0)
+            _silence_mult = 1.0
+            if _silence_conf >= 0.4:
+                _silence_mult = 1.0 + _silence_conf * 2.0  # max ~3.0x
+
+            # ── Instrument-Defekt-Konflikt-Modulation ──────────────────
+            for _tag_name, _defect_names in self._BEATS_TAG_DEFECT_MAP.items():
+                _tag_conf = beats_tags.get(_tag_name, 0.0)
+                if _tag_conf < 0.20:
+                    continue
+                # Höhere Konfidenz → stärkere Schwellwert-Anhebung
+                _inst_mult = 1.0 + _tag_conf * 2.0  # 0.20→1.4x, 0.50→2.0x, 0.80→2.6x
+
+                for _defect_name in _defect_names:
+                    _defect_type = None
+                    for _dt in DefectType:
+                        if _dt.value == _defect_name:
+                            _defect_type = _dt
+                            break
+                    if _defect_type is None:
+                        continue
+                    _old_thresh = self.thresholds.get(_defect_type, 0.5)
+                    # Nimm die stärkste Modulation (max multiplier wins)
+                    _existing = _adjustments.get(_defect_name, _old_thresh)
+                    _current_mult = _existing / _old_thresh if _old_thresh > 0 else 1.0
+                    _best_mult = max(_current_mult, _inst_mult)
+                    _new_thresh = float(np.clip(_old_thresh * _best_mult, 0.1, 0.95))
+                    self.thresholds[_defect_type] = _new_thresh
+                    _adjustments[_defect_name] = _new_thresh
+                    logger.debug(
+                        "§v10.700 BEATs-Schwelle: %s %.2f→%.2f (tag=%s conf=%.2f mult=%.2f)",
+                        _defect_name, _old_thresh, _new_thresh, _tag_name, _tag_conf, _best_mult,
+                    )
+
+            # ── Globale Modulation auf ALLE Defekttypen anwenden ───────
+            for _dt in DefectType:
+                if _dt not in self.thresholds:
+                    continue
+                _old_thresh = self.thresholds[_dt]
+                _defect_name = _dt.value
+                # Starte mit der stärksten Modulation
+                _combined_mult = _global_music_mult
+                if _defect_name in _noise_defects:
+                    _combined_mult *= _noise_mult
+                # Silence überschreibt alles
+                _combined_mult = max(_combined_mult, _silence_mult) if _silence_conf >= 0.4 else _combined_mult
+
+                if _combined_mult != 1.0:
+                    _new_thresh = float(np.clip(_old_thresh * _combined_mult, 0.1, 0.95))
+                    if abs(_new_thresh - _old_thresh) > 0.01:
+                        self.thresholds[_dt] = _new_thresh
+                        _adjustments[_defect_name] = _new_thresh
+
+            if _adjustments:
+                _n_instrument = sum(
+                    1 for t in self._BEATS_TAG_DEFECT_MAP
+                    if beats_tags.get(t, 0.0) >= 0.20
+                )
+                logger.info(
+                    "§v10.700 BEATs Pre-Filter: %d Schwellen moduliert "
+                    "(music=%.2f noise=%.2f silence=%.2f instruments=%d)",
+                    len(_adjustments), _music_conf, _noise_conf, _silence_conf, _n_instrument,
+                )
+            return _adjustments
+        except Exception as _exc:
+            logger.debug("BEATs Pre-Filter fehlgeschlagen: %s", _exc)
+            return {}
+
     @classmethod
     def is_audible(
         cls,

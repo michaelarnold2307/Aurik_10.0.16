@@ -722,26 +722,38 @@ class BreathPreservingProcessor:
         """
         preservation_ratio = float(np.clip(preservation_ratio, 0.0, 1.0))
 
-        # Detect breath regions
-        breath_mask = self._detect_breath_regions(audio, characteristics)
+        # §v10.118: Transient-aware breath classification (3-stage).
+        # Replaces binary ZCR/energy threshold with:
+        #   1. ZCR + energy → candidates
+        #   2. Onset detection → excludes consonants (sharp attack)
+        #   3. Spectral tilt → separates breath (falling) from sibilance (rising)
+        # Result: only true breath segments are reduced, consonants/sibilance untouched.
+        try:
+            from backend.core.transient_breath_processor import (
+                classify_breath_frame,
+                process_breath_transient_aware,
+            )
 
-        # Classify breath as artistic vs. disturbing
-        artistic_breath = self._classify_breath_artistic(audio, breath_mask, characteristics)
-
-        # Apply selective reduction
-        processed = audio.copy()
-
-        for start, end in breath_mask:
-            is_artistic = artistic_breath.get((start, end), True)
-
-            if is_artistic:
-                # Keep artistic breaths (pre-phrase, emotional)
-                reduction_factor = 1.0 - ((1.0 - preservation_ratio) * 0.2)  # Minimal reduction
-            else:
-                # Reduce disturbing breaths more
-                reduction_factor = 1.0 - (1 - preservation_ratio) * 0.8
-
-            processed[start:end] *= reduction_factor
+            processed = process_breath_transient_aware(
+                audio,
+                self.sr,
+                breath_reduction_db=float((1.0 - preservation_ratio) * 12.0),  # Map ratio to dB
+                preserve_consonants=True,
+                preserve_sibilance=True,
+            )
+        except Exception as _tb_exc:
+            logger.debug("Transient-Breath nicht verfügbar, fallback: %s", _tb_exc)
+            # Fallback to original binary ZCR/energy processing (no regression)
+            breath_mask = self._detect_breath_regions(audio, characteristics)
+            artistic_breath = self._classify_breath_artistic(audio, breath_mask, characteristics)
+            processed = audio.copy()
+            for start, end in breath_mask:
+                is_artistic = artistic_breath.get((start, end), True)
+                if is_artistic:
+                    reduction_factor = 1.0 - ((1.0 - preservation_ratio) * 0.2)
+                else:
+                    reduction_factor = 1.0 - (1 - preservation_ratio) * 0.8
+                processed[start:end] *= reduction_factor
 
         return processed, preservation_ratio
 
@@ -909,11 +921,35 @@ class UnifiedVocalAIEnhancer:
 
         # Apply to stereo if needed
         if is_stereo:
-            # Apply same processing to both channels
-            # (In production: might want to process L/R independently)
-            ratio = processed / (audio_mono + 1e-10)
-            ratio = np.nan_to_num(ratio, nan=0.0, posinf=0.0, neginf=0.0)
-            result_audio = audio * ratio[:, np.newaxis]
+            # §v10.117: Stereo-bewusste Mid/Side-Verarbeitung
+            # Statt einfachem ratio = processed / mono (zerstört Stereo-Bild),
+            # Mid/Side-Transformation: bearbeite nur M-Kanal, S-Kanal unberührt.
+            try:
+                from backend.core.stereo_aware_vocal_processor import (
+                    process_vocal_mid_side,
+                    compute_stereo_preservation_score,
+                )
+
+                result_audio = process_vocal_mid_side(
+                    audio,
+                    lambda m: processed,  # Apply mono processing to mid channel
+                    side_preservation=1.0,  # Keep stereo width unchanged
+                )
+
+                # Verify stereo preservation
+                _stereo_score = compute_stereo_preservation_score(audio, result_audio)
+                logger.debug(
+                    "Mid/Side: corr_diff=%.3f width_ratio=%.2f balance_shift=%.1f dB",
+                    _stereo_score["correlation_diff"],
+                    _stereo_score["width_ratio"],
+                    _stereo_score["balance_shift_db"],
+                )
+            except Exception as _ms_exc:
+                logger.debug("Mid/Side nicht verfügbar, fallback auf ratio: %s", _ms_exc)
+                # Fallback to original ratio-based processing
+                ratio = processed / (audio_mono + 1e-10)
+                ratio = np.nan_to_num(ratio, nan=0.0, posinf=0.0, neginf=0.0)
+                result_audio = audio * ratio[:, np.newaxis]
         else:
             result_audio = processed
 

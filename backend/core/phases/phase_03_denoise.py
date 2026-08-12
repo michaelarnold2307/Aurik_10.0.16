@@ -1462,7 +1462,6 @@ class DenoisePhase(PhaseInterface):
         _sgmse_applied = False
         _sgmse_eligible = (
             quality_mode in ("quality", "maximum")
-            and _is_vocal_material
             and _is_non_digital
             and not use_lightweight
             and not _dfn_applied
@@ -1541,7 +1540,7 @@ class DenoisePhase(PhaseInterface):
                     audio = np.clip(audio, -1.0, 1.0)
                     _sgmse_applied = True
                     logger.info(
-                        "§Hebel-2 SGMSE+ Tier-1 Ersatzpfad: vocal enhancement angewendet "
+                        "§Hebel-2 SGMSE+ Tier-1 Ersatzpfad: broadband music enhancement angewendet "
                         "(sigma=%.2f snr=%.1f dB material=%s model=%s — Richter et al. 2022)",
                         _sgmse_sigma,
                         _snr_for_sigma,

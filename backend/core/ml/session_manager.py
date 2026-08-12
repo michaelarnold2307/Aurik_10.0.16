@@ -214,6 +214,24 @@ class InferenceSessionManager:
         sess_options.enable_mem_pattern = True
         sess_options.enable_cpu_mem_arena = True
 
+        # Try MIGraphX GPU backend if available (gfx1100 / RDNA3 support)
+        try:
+            from backend.core.migraphx_adapter import MIGraphXSession, is_migraphx_available
+            if is_migraphx_available():
+                logger.debug("SessionManager: trying MIGraphX GPU for %s", model_path.name)
+                session = MIGraphXSession(
+                    str(model_path),
+                    providers=["MIGraphXExecutionProvider", "CPUExecutionProvider"],
+                    sess_options=sess_options,
+                )
+                try:
+                    size_mb = model_path.stat().st_size / (1024 * 1024)
+                except OSError:
+                    size_mb = 0.0
+                return session, size_mb
+        except Exception as _mgx_exc:
+            logger.debug("SessionManager: MIGraphX not available (%s), using ORT CPU", _mgx_exc)
+
         session = ort.InferenceSession(
             str(model_path),
             sess_options=sess_options,

@@ -584,6 +584,10 @@ class MLDeviceManager:
             self._detect_cuda_or_rocm()
             if self._gpu_available:
                 return
+            # MIGraphX standalone bridge: AMD GPU without ONNX Runtime ROCm EP
+            self._detect_migraphx_bridge()
+            if self._gpu_available:
+                return
             if sys.platform == "win32":
                 self._detect_directml()
         except Exception as exc:
@@ -705,6 +709,46 @@ class MLDeviceManager:
             logger.debug("MLDeviceManager: onnxruntime not installed")
         except Exception as exc:
             logger.debug("MLDeviceManager: ONNX ROCm detection error: %s", exc)
+
+    def _detect_migraphx_bridge(self) -> None:
+        """Detect AMD GPU via standalone MIGraphX bridge (no ONNX Runtime ROCm EP required).
+
+        Uses the custom libmigraphx_bridge.so that wraps AMD's MIGraphX C API.
+        This is the primary GPU path for gfx1100 (RDNA3 / RX 7900 XTX) because
+        the standard ONNX Runtime ROCm wheel lacks MIOpen kernels for this arch.
+
+        On success sets:
+          - _backend = GPUBackend.ROCM
+          - _ort_gpu_providers = ["MIGraphXExecutionProvider", "CPUExecutionProvider"]
+          - _gpu_available = True
+        """
+        try:
+            from backend.core.migraphx_adapter import is_migraphx_available, get_migraphx_device_info
+
+            if not is_migraphx_available():
+                return
+
+            device_info = get_migraphx_device_info()
+            with self._lock:
+                self._backend = GPUBackend.ROCM
+                self._ort_gpu_providers = ["MIGraphXExecutionProvider", "CPUExecutionProvider"]
+                self._gpu_available = True
+                self._gpu_name = device_info.get("name", "AMD GPU (MIGraphX)")
+                self._vram_total_gb = device_info.get("vram_gb", 8.0)
+                self._vram_free_gb = self._vram_total_gb * 0.85
+                self._gpu_architecture = device_info.get("arch", "gfx1100")
+                # Tier 2: RDNA3 dGPU — capable, >8GB
+                self._gpu_tier = GPUTier.TIER_2
+            logger.info(
+                "MLDeviceManager: MIGraphX-Bridge erkannt — %s (%s VRAM=%.1f GB) → ONNX GPU aktiv",
+                self._gpu_name,
+                self._gpu_architecture,
+                self._vram_total_gb,
+            )
+        except ImportError:
+            logger.debug("MLDeviceManager: MIGraphX bridge adapter not installed")
+        except Exception as exc:
+            logger.debug("MLDeviceManager: MIGraphX bridge detection error: %s", exc)
 
     def _probe_rocm_onnx_pad(self) -> None:
         """Probe ROCm ONNX Runtime with a minimal GPU-compute op.

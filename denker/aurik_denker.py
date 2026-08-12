@@ -1974,18 +1974,19 @@ class AurikDenker:
                             "source": "denker_policy_synthesis",
                         }
                         # 4c: RestaurierDenker (UV3-Vollpipeline) auf vorgereinigtem Material
-                        # Scaled inner progress: UV3 0–100 → AurikDenker 13–94
+                        # Scaled inner progress: UV3 0–100 → AurikDenker 17–94
                         # UV3-intern: Analyse pct 1–19, Pipeline pct 20–85, Post pct 86–96.
-                        # Denker-Mapping:
-                        #   UV3 0–19  (Analyse)   → Denker 13–20  (komprimiert: 7 pts)
-                        #   UV3 20–85 (37 Phasen) → Denker 20–87  (Löwenanteil: 67 pts)
+                        # Denker-Mapping (§v10.19 Bugfix: Baseline 13→17, verhindert
+                        # Monotonic-Dead-Zone mit letztem Pre-ARE-Emit von 16):
+                        #   UV3 0–19  (Analyse)   → Denker 17–24  (komprimiert: 7 pts)
+                        #   UV3 20–85 (37 Phasen) → Denker 24–87  (Löwenanteil: 63 pts)
                         #   UV3 86–100 (Post)     → Denker 87–94  (komprimiert: 7 pts)
 
                         def _inner_cb(pct, msg, elapsed=0.0):
                             if pct <= 19:
-                                d = 13 + int(pct * 7 / 19) if pct > 0 else 13
+                                d = 17 + int(pct * 7 / 19) if pct > 0 else 17
                             elif pct <= 85:
-                                d = 20 + int((pct - 20) * 67 / 65)
+                                d = 24 + int((pct - 20) * 63 / 65)
                             else:
                                 d = 87 + int((pct - 86) * 7 / 14)
                             _emit(min(94, d), msg)

@@ -47,13 +47,13 @@ logger = logging.getLogger(__name__)
 _MEDIUM_ORDER: dict[str, int] = {
     # Physikalisch-analoge Quellmedien (Ära 0) — direkte Aufzeichnung
     "wax_cylinder": 0,
-    "lacquer_disc": 0,
     "shellac": 0,
     "wire_recording": 0,
     "reel_tape": 0,  # Original-Aufnahmemedium (kommt VOR Vinyl-Pressung)
     "tape": 0,  # Original-Aufnahmemedium
     # Analoge Kopien/Vervielfältigungen (Ära 1) — vom Quellmedium abgeleitet
-    "vinyl": 1,  # Schallplatten-Pressung aus Tape-Master
+    "lacquer_disc": 1,  # §v10.19 Fix: war Ära 0 — Lackfolie wird VOM Tape geschnitten, ist Kopie, nicht Quelle
+    "vinyl": 1,  # Schallplatten-Pressung aus Tape-Master via Lackfolie
     "cassette": 1,  # Bandkopie
     # Verlustfreie Digitalformate (Ära 2)
     "dat": 2,

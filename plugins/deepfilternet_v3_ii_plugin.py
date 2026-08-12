@@ -68,7 +68,7 @@ _ERB_FB = _erb_fb(_N_FFT, _N_ERB, float(_SR))  # [32, 481]
 
 
 class DeepFilterNetV3Plugin:
-    """DeepFilterNet v3 (NOTE: v4 available — 30% faster, same quality) II Rauschunterdrückung (ONNX) mit OMLSA-DSP-Fallback.
+    """DeepFilterNet v3 (§v10.15 Musik-Fine-Tuning) II Rauschunterdrückung (ONNX) mit OMLSA-DSP-Fallback.
 
     Die drei Modelle arbeiten zusammen:
       1. enc: Berechnet Embedding + Encoder-Features aus ERB und Spektrum
@@ -155,18 +155,18 @@ class DeepFilterNetV3Plugin:
         self,
         audio: np.ndarray,
         sr: int,
-        energy_bias_db: float = -6.0,
+        energy_bias_db: float = 0.0,  # §v10.15: DFN Musik — kein energy_bias nötig
     ) -> np.ndarray:
         """Rauschunterdrückung via DeepFilterNet oder OMLSA-Fallback.
 
         Args:
             audio:           float32 mono [n] oder stereo [n,2].
             sr:              Sample-Rate in Hz.
-            energy_bias_db:  Musik-Modus Gain-Anhebung (§4.4 Spec).
+            energy_bias_db:  Standard-Modus (Musik-trainiert, §v10.15) (§4.4 Spec).
                              Negativer Wert → Gain-Floor erhöht → mehr harmonische
-                             Energie erhalten. Standard: −6.0 dB (Musik-Optimum;
+                             Energie erhalten. Standard: 0.0 dB (Musik-Modell braucht kein Bias;
                              schützt harmonische Strukturen besser als −4.0 dB).
-                             0.0 = kein Bias (Sprach-Einstellung, VERBOTEN für Musik).
+                             0.0 = Standard — DFN Musik versteht Harmonische nativ.
 
         Returns:
             Denoisiertes Audio, selbe Form, float32 ∈ [-1, 1].

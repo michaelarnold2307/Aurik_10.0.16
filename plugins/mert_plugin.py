@@ -621,47 +621,57 @@ class MertPlugin:
             logger.debug("MERT fairseq Ladefehler: %s → weiter", e)
 
     def _try_load_onnx(self) -> None:
-        onnx_path = self._model_dir / "mert.onnx"
-        if not onnx_path.exists():
-            logger.debug("MERT ONNX nicht gefunden (%s) → DSP-Ersatzpfad", onnx_path)
-            return
-        try:
-            if not ml_budget_try_allocate("MERT-ONNX", size_gb=0.18):
-                try:
-                    ml_budget_release("MERT-ONNX")
-                except Exception:
-                    logger.warning("mert_plugin.py::_try_laden_onnx Ersatzpfad", exc_info=True)
-                if not ml_budget_try_allocate("MERT-ONNX", size_gb=0.18):
-                    logger.warning("MERT ONNX: ML-Grenze erschöpft — DSP-Ersatzpfad")
+        """Try loading MERT ONNX variants: 330M > 95M > legacy mert.onnx > DSP."""
+        # Priority: 330M ONNX → 95M ONNX → legacy mert.onnx
+        _variant_paths = [
+            (self._model_dir / "mert_330m.onnx", "mert_onnx_330m", 0.40),
+            (self._model_dir / "mert_95m.onnx", "mert_onnx_95m", 0.18),
+            (self._model_dir / "mert.onnx", "mert_onnx", 0.18),
+        ]
+        for _onnx_path, _model_type, _budget_gb in _variant_paths:
+            if not _onnx_path.exists():
+                continue
+            try:
+                _budget_key = f"MERT-ONNX-{_model_type}"
+                if not ml_budget_try_allocate(_budget_key, size_gb=_budget_gb):
+                    try:
+                        ml_budget_release(_budget_key)
+                    except Exception:
+                        pass
+                    if not ml_budget_try_allocate(_budget_key, size_gb=_budget_gb):
+                        logger.warning(
+                            "MERT ONNX %s: ML-Budget erschöpft (%.2f GB) → nächster Versuch",
+                            _model_type, _budget_gb,
+                        )
+                        continue
+            except Exception as _exc:
+                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
+
+            try:
+                if ort is None:
                     return
-        except Exception as _exc:
-            logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
-        try:
-            if ort is None:
-                return
-            self._model = ort.InferenceSession(str(onnx_path), providers=["CPUExecutionProvider"])
-            self._model_type = "mert_onnx"
-            logger.info("MERT ONNX geladen: %s", onnx_path)
-            try:
-
-                def _unload_mert_model() -> None:
-                    self._model = None
-                    self._model_type = "dsp"
-
-                register_plugin(
-                    "MERT-ONNX",
-                    size_gb=0.18,
-                    unload_fn=_unload_mert_model,
-                )
-            except Exception as _exc:
-                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
-        except Exception as e:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-            logger.debug("MERT ONNX Ladefehler: %s → DSP-Ersatzpfad", e)
-            try:
-                ml_budget_release("MERT-ONNX")
-            except Exception as _exc:
-                logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
+                self._model = ort.InferenceSession(str(_onnx_path), providers=["CPUExecutionProvider"])
+                self._model_type = _model_type
+                logger.info("MERT ONNX geladen (%s): %s", _model_type, _onnx_path.name)
+                try:
+                    def _unload_mert_model() -> None:
+                        self._model = None
+                        self._model_type = "dsp"
+                    register_plugin(
+                        _budget_key,
+                        size_gb=_budget_gb,
+                        unload_fn=_unload_mert_model,
+                    )
+                except Exception as _exc:
+                    logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
+                return  # Successfully loaded — stop trying further variants
+            except Exception as e:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)
+                logger.debug("MERT ONNX Ladefehler (%s): %s → nächster Versuch", _model_type, e)
+                try:
+                    ml_budget_release(_budget_key)
+                except Exception as _exc:
+                    logger.debug("Plugin operation fehlgeschlagen (unkritisch): %s", _exc)
 
     def _try_load_local_dsp(self) -> None:
         """Lokaler DSP-Fallback — kein Netzwerkzugriff, kein Modell-Download."""
@@ -670,7 +680,7 @@ class MertPlugin:
     @property
     def model_available(self) -> bool:
         """True wenn ein echtes MERT-Modell geladen ist."""
-        return self._model_type in ("mert_onnx", "mert_hf", "mert_fairseq")
+        return self._model_type in ("mert_onnx_330m", "mert_onnx_95m", "mert_onnx", "mert_hf", "mert_fairseq")
 
     def analyze(self, audio: np.ndarray, sample_rate: int) -> MertAnalysis:
         """
@@ -722,7 +732,7 @@ class MertPlugin:
             result = self._analyze_hf(resampled)
         elif self._model_type == "mert_fairseq":
             result = self._analyze_fairseq(resampled)
-        elif self._model_type == "mert_onnx":
+        elif self._model_type in ("mert_onnx_330m", "mert_onnx_95m", "mert_onnx"):
             result = self._analyze_onnx(resampled)
         else:
             result = _dsp_analyze(resampled, self._target_sr)
@@ -821,9 +831,10 @@ class MertPlugin:
             feed = {self._model.get_inputs()[0].name: audio[np.newaxis]}
             # §4.6b PLM-Active-Guard: prevent Emergency-Eviction during MERT ONNX inference
             _plm_mert_onnx = None
+            _plm_key = f"MERT-ONNX-{self._model_type}"
             try:
                 _plm_mert_onnx = get_plugin_lifecycle_manager()
-                _plm_mert_onnx.set_active("MERT-ONNX", True)
+                _plm_mert_onnx.set_active(_plm_key, True)
             except Exception:
                 logger.warning("mert_plugin.py::_analyze_onnx Ersatzpfad", exc_info=True)
             try:
@@ -831,7 +842,7 @@ class MertPlugin:
             finally:
                 if _plm_mert_onnx is not None:
                     try:
-                        _plm_mert_onnx.set_active("MERT-ONNX", False)
+                        _plm_mert_onnx.set_active(_plm_key, False)
                     except Exception:
                         logger.warning("mert_plugin.py::_analyze_onnx Ersatzpfad", exc_info=True)
             score = float(np.clip(np.mean(np.abs(result)) / 10.0, 0.0, 1.0))

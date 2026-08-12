@@ -26,7 +26,7 @@ Anwendungsbereiche:
 - Mastering & Sound Design
 
 Autor: Aurik v8.0 - Psychoacoustic Foundation
-Lizenz: Proprietär
+Lizenz: Apache 2.0
 """
 
 import logging

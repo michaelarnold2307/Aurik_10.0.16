@@ -103,6 +103,133 @@ class DiffwavePlugin:
             result = np.stack([result, result], axis=0 if _was_channels_first else 1)
         return np.clip(result, -1.0, 1.0).astype(np.float32)
 
+    def denoise(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        denoise_strength: float = 0.5,
+    ) -> np.ndarray:
+        """SDEdit-style lightweight denoising via DiffWave ONNX.
+
+        Uses DiffWave's mel-conditioned diffusion for CPU denoising:
+        1. Extracts mel spectrogram from noisy audio (mel is robust to noise).
+        2. Starts reverse diffusion from an intermediate timestep with
+           the noisy audio as initialization (SDEdit).
+        3. The mel conditions the model toward the clean signal.
+
+        Args:
+            audio: Noisy input audio (mono or stereo, any sample rate).
+            sr: Sample rate of input audio.
+            denoise_strength: 0.0 = bypass, 1.0 = full regeneration.
+                              Default 0.5 for moderate denoising.
+
+        Returns:
+            Denoised audio at original sample rate, float32.
+        """
+        if self._session is None:
+            logger.debug("DiffWave denoise: model not loaded, returning original")
+            return np.asarray(audio, dtype=np.float32)
+
+        audio = np.nan_to_num(np.asarray(audio, dtype=np.float32),
+                              nan=0.0, posinf=0.0, neginf=0.0)
+        _was_channels_first = audio.ndim == 2 and audio.shape[0] <= 8 and audio.shape[1] > audio.shape[0]
+        if audio.ndim == 2:
+            mono = audio.mean(axis=0) if _was_channels_first else audio.mean(axis=1)
+        else:
+            mono = audio
+        n = len(mono)
+        strength = float(np.clip(denoise_strength, 0.0, 1.0))
+
+        if strength < 0.02:
+            return np.asarray(audio, dtype=np.float32)
+
+        # Silent guard
+        if float(np.sqrt(np.mean(mono**2))) < 1e-4:
+            return np.asarray(audio, dtype=np.float32)
+
+        m22 = _resamp(mono, sr, _SR)
+
+        # SDEdit: start_step based on denoise_strength
+        # strength=0.0 → start_step=0 (no diffusion), strength=1.0 → start_step=_N_STEPS
+        start_step = max(1, int(_N_STEPS * strength))
+        if start_step < 1:
+            # Just resample back
+            result = _resamp(m22, _SR, sr)[:n]
+            if audio.ndim == 2:
+                result = np.stack([result, result], axis=0 if _was_channels_first else 1)
+            return np.clip(result, -1.0, 1.0).astype(np.float32)
+
+        _plm = None
+        try:
+            from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+            _plm = get_plugin_lifecycle_manager()
+            _plm.set_active("DiffWave", True)
+        except Exception:
+            pass
+
+        try:
+            out_chunks = []
+            start = 0
+            while start < len(m22):
+                end = min(start + _AUDIO_LEN, len(m22))
+                chunk = np.zeros(_AUDIO_LEN, dtype=np.float32)
+                chunk_len = end - start
+                chunk[:chunk_len] = m22[start:end]
+
+                # Extract mel from noisy chunk (mel is robust to noise)
+                mel = _mel_spec(chunk, _SR)
+                mel_in = mel[None].astype(np.float32)  # [1, 80, 64]
+
+                # SDEdit init: start from noisy audio instead of pure noise
+                noise_level = float(start_step) / float(_N_STEPS)
+                noisy_init = chunk.copy()
+                if noise_level > 0.0:
+                    _noise = np.random.randn(_AUDIO_LEN).astype(np.float32) * 0.1 * noise_level
+                    noisy_init = chunk + _noise
+                audio_in = noisy_init[None]  # [1, 16384]
+
+                # Run reverse diffusion from start_step down to 1
+                for step in range(start_step, 0, -1):
+                    step_in = np.array([[step]], dtype=np.int64)
+                    try:
+                        out = np.asarray(
+                            self._session.run(None, {
+                                "audio": audio_in,
+                                "step": step_in,
+                                "spectrogram": mel_in,
+                            })[0], dtype=np.float32)
+                        out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
+                        audio_in = out[:, 0:1, :] if out.ndim == 3 else out
+                    except Exception as exc:
+                        logger.debug("DiffWave denoise step %d error: %s", step, exc)
+                        break
+
+                denoised_chunk = (audio_in[0, 0] if audio_in.ndim == 3 else audio_in[0])[:chunk_len]
+                out_chunks.append(denoised_chunk)
+                start = end
+
+            out_mono = np.concatenate(out_chunks)[:len(m22)].astype(np.float32)
+            result = _resamp(out_mono, _SR, sr)[:n]
+
+            if audio.ndim == 2:
+                result = np.stack([result, result], axis=0 if _was_channels_first else 1)
+
+            logger.info(
+                "DiffWave denoise: strength=%.2f start_step=%d/%d",
+                strength, start_step, _N_STEPS,
+            )
+            return np.clip(result, -1.0, 1.0).astype(np.float32)
+
+        except Exception as exc:
+            logger.warning("DiffWave denoise failed: %s — returning original", exc)
+            return np.asarray(audio, dtype=np.float32)
+        finally:
+            if _plm is not None:
+                try:
+                    _plm.set_active("DiffWave", False)
+                except Exception:
+                    pass
+
     def _diffuse(self, mono: np.ndarray, mask: np.ndarray | None) -> np.ndarray:
         _plm = None
         try:

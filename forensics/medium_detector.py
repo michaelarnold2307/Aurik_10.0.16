@@ -248,7 +248,7 @@ class MediumDetector:
     _CODEC_ARTIFACT_THRESHOLD: float = 0.15  # ab hier: Codec-Layer erkannt
     _ANALOG_POSTERIOR_MIN: float = 0.08  # Mindest-Posterior für Analog-Layer
     _SECONDARY_ANALOG_MIN: float = 0.08  # Mindest-Posterior für 2. Analog-Stufe
-    _MAX_ANALOG_CHAIN_DEPTH: int = 4  # inkl. Primärquelle; erlaubt 3+ Transfer-Layer
+    _MAX_ANALOG_CHAIN_DEPTH: int = 5  # §v10.19: 4→5 — erlaubt reel_tape→lacquer→vinyl→cassette→mp3 (Depth-5-Ketten)
     _SAME_ORDER_ANALOG_MIN: float = 0.22  # konservativer Guard für gleichrangige Analog-Stufen
     _ANALOG_CHAIN_MP3_HIGH_MIN_BW_HZ: float = 18_000.0  # unterhalb: mp3_high bei Analogkette unplausibel
 
@@ -290,13 +290,13 @@ class MediumDetector:
         # Pre-1900
         "tinfoil_cylinder": 0,  # Edison 1877, experimentell
         "wax_cylinder": 1,  # Edison 1888–1929, 2–4 min
-        # 1900–1950: Schellack-Ara
-        "lacquer_disc": 2,  # Acetat-Mitschnitt, 1930er+, Unikat
-        "shellac": 3,  # 78 rpm, 1898–1950er, 3–5 min/Seite
-        "shellac_vertical": 4,  # Pathe/Edison Diamond Disc, vertikaler Schnitt
-        "wire_recording": 5,  # Stahldraht, 1898–1950er
-        # 1950–1980: Vinyl- + Tape-Ara
-        "reel_tape": 6,  # Studio-Master, 1935+ (Recording → Pressing)
+        # 1900–1950: Schellack-Ära
+        "shellac": 2,  # 78 rpm, 1898–1950er, 3–5 min/Seite
+        "shellac_vertical": 3,  # Pathé/Edison Diamond Disc, vertikaler Schnitt
+        "wire_recording": 4,  # Stahldraht, 1898–1950er
+        # 1950–1980: Vinyl- + Tape-Ära
+        "reel_tape": 5,  # Studio-Master, 1935+ (Recording → Pressing)
+        "lacquer_disc": 6,  # §v10.19 Fix: war Pos.2 (vor reel_tape) — Lackfolie wird VOM Tape geschnitten, muss NACH reel_tape und VOR vinyl stehen
         "vinyl": 7,  # LP 1948, 45 rpm 1949
         "tape": 7,  # Alias
         "cartridge_4track": 8,  # Fidelipac 1956, Radio
@@ -314,6 +314,43 @@ class MediumDetector:
         "mp3_low": 17,  # <192 kbps
         "aac": 18,  # 1997+
         "streaming": 19,  # Spotify/Apple Music/YouTube
+    }
+
+    # §v10.19: Era-Prior-Tabellen als class attributes für externen Zugriff
+    # (pre_analysis Era-Adjustment, vorher locals in _bayesian_score).
+    # Materials that are TYPICAL for each era (get positive boost).
+    _ERA_CONSISTENT: dict[str, list[int]] = {
+        "wax_cylinder": [1890, 1900, 1910, 1920],
+        "wire_recording": [1900, 1910, 1920, 1930, 1940],
+        "shellac": [1900, 1910, 1920, 1930, 1940, 1950],
+        "lacquer_disc": [1920, 1930, 1940, 1950, 1960, 1970, 1980],  # §v10.19: +1970,1980 — Lackfolie bis Ende Vinyl-Ära
+        "vinyl": [1950, 1960, 1970, 1980],
+        "reel_tape": [1940, 1950, 1960, 1970, 1980],
+        "cassette": [1970, 1980, 1990],
+        "tape": [1970, 1980, 1990],
+        "8track": [1970, 1980],
+        "dat": [1980, 1990, 2000],
+        "cd_digital": [1990, 2000, 2010],
+        "cd": [1990, 2000, 2010],
+        "minidisc": [1990, 2000],
+        "dcc": [1990],
+        "mp3_low": [2000, 2010, 2020],
+        "mp3_high": [2000, 2010, 2020],
+        "mp3_high_vbr": [2000, 2010, 2020],
+        "aac": [2000, 2010, 2020],
+        "streaming": [2010, 2020, 2025],
+        "pcm_digital": [2000, 2010, 2020],
+        "lossless_digital": [2000, 2010, 2020],
+    }
+    # Materials that are IMPOSSIBLE for each era (get negative penalty).
+    _ERA_IMPOSSIBLE: dict[str, list[int]] = {
+        "wax_cylinder": [1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020],
+        "shellac": [1970, 1980, 1990, 2000, 2010, 2020],
+        "wire_recording": [1960, 1970, 1980, 1990, 2000, 2010, 2020],
+        "8track": [1990, 2000, 2010, 2020],
+        "dat": [1970, 2010, 2020],
+        "minidisc": [1970, 1980, 2010, 2020],
+        "dcc": [1970, 1980, 2000, 2010, 2020],
     }
 
     # Genre -> fruehestes moegliches Aufnahmemedium (Order-Nummer).
@@ -2083,49 +2120,13 @@ class MediumDetector:
             elif era_confidence >= 0.40:
                 _era_boost_nats = 0.3
 
-            # ── Era → Material Consistency Tables ─────────────────────────
-            # Materials that are TYPICAL for each era (get positive boost)
-            _ERA_CONSISTENT: dict[str, list[int]] = {
-                "wax_cylinder": [1890, 1900, 1910, 1920],
-                "wire_recording": [1900, 1910, 1920, 1930, 1940],
-                "shellac": [1900, 1910, 1920, 1930, 1940, 1950],
-                "lacquer_disc": [1920, 1930, 1940, 1950, 1960],
-                "vinyl": [1950, 1960, 1970, 1980],
-                "reel_tape": [1940, 1950, 1960, 1970, 1980],
-                "cassette": [1970, 1980, 1990],
-                "tape": [1970, 1980, 1990],
-                "8track": [1970, 1980],
-                "dat": [1980, 1990, 2000],
-                "cd_digital": [1990, 2000, 2010],
-                "cd": [1990, 2000, 2010],
-                "minidisc": [1990, 2000],
-                "dcc": [1990],
-                "mp3_low": [2000, 2010, 2020],
-                "mp3_high": [2000, 2010, 2020],
-                "mp3_high_vbr": [2000, 2010, 2020],
-                "aac": [2000, 2010, 2020],
-                "streaming": [2010, 2020, 2025],
-                "pcm_digital": [2000, 2010, 2020],
-                "lossless_digital": [2000, 2010, 2020],
-            }
-            # Materials that are IMPOSSIBLE for each era (get negative penalty)
-            _ERA_IMPOSSIBLE: dict[str, list[int]] = {
-                "wax_cylinder": [1940, 1950, 1960, 1970, 1980, 1990, 2000, 2010, 2020],
-                "shellac": [1970, 1980, 1990, 2000, 2010, 2020],
-                "wire_recording": [1960, 1970, 1980, 1990, 2000, 2010, 2020],
-                "8track": [1990, 2000, 2010, 2020],
-                "dat": [1970, 2010, 2020],
-                "minidisc": [1970, 1980, 2010, 2020],
-                "dcc": [1970, 1980, 2000, 2010, 2020],
-            }
-
             _era_decade_rounded = (era_decade // 10) * 10  # round to decade
             for mat in log_likes:
                 _mat_key = mat.lower().replace(" ", "_").replace("-", "_")
                 if mat == "unknown":
                     continue
-                _consistent_decades = _ERA_CONSISTENT.get(_mat_key, [])
-                _impossible_decades = _ERA_IMPOSSIBLE.get(_mat_key, [])
+                _consistent_decades = MediumDetector._ERA_CONSISTENT.get(_mat_key, [])
+                _impossible_decades = MediumDetector._ERA_IMPOSSIBLE.get(_mat_key, [])
                 if _era_decade_rounded in _consistent_decades:
                     log_likes[mat] += _era_boost_nats
                 elif _era_decade_rounded in _impossible_decades:
@@ -2790,6 +2791,18 @@ class MediumDetector:
         # bestrafen. Stütze ihn dann auf die gemessene Codec-Stufen-Konfidenz.
         if primary in self._CODEC_MATERIALS and primary in chain:
             _primary_post = max(_primary_post, float(chain_confidences[chain.index(primary)]))
+        # §v10.19 Bayesian-Blind-Physical-Fusion: Wenn der Bayesian-Klassifikator
+        # >90% "unknown" sagt, aber physikalische Inferenz die Primary gesetzt hat,
+        # verwende die physikalische Confidence statt des ∼0.0 Bayesian-Posteriors.
+        # Verhindert, dass 23.8% Confidence → wet_dry=0.12 → 88% unbearbeitetes Signal.
+        if _best_analog_set_by_physical_gate and _physical_analog_sources:
+            _phys_dict = dict(_physical_analog_sources)
+            if primary in _phys_dict:
+                _primary_post = max(_primary_post, _phys_dict[primary])
+                logger.debug(
+                    "MediumDetector: Physical-Posterior-Override primary=%s bayes=%.4f→phys=%.4f",
+                    primary, float(posteriors.get(primary, 0.0)), _phys_dict[primary],
+                )
         # Adaptives SNR-Gewicht: Bei niedrigem SNR (kurze/stark degradierte Clips) ist
         # chain_min weniger zuverlässig (Detektor-Scores unstabil bei < 5 s oder SNR < 20 dB).
         # → Reduziere chain_min-Einfluss und erhöhe primary_post-Gewicht.

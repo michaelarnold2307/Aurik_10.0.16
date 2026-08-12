@@ -10070,6 +10070,29 @@ class UnifiedRestorerV3:
             except Exception as _ast_pre_exc:
                 logger.debug("AST Pre-Filter nicht verfügbar: %s", _ast_pre_exc)
 
+            # §v10.700: BEATs Pre-Filter — kontextabhängige Schwellwert-Modulation
+            # basierend auf AudioSet-Tags (Instrument-Erkennung, Noise/Silence-Detektion).
+            # Läuft NACH AST Pre-Filter, ergänzt die Instrument-Erkennung um
+            # Noise- und Silence-adaptive Modulation.
+            try:
+                from plugins.beats_plugin import get_beats_plugin as _get_beats_pre
+
+                _beats_tags: dict[str, float] = {}
+                try:
+                    _beats_result = _get_beats_pre().get_tags(
+                        _defect_scan_audio, analysis_sample_rate, top_k=15
+                    )
+                    _beats_tags = _beats_result.tags
+                except Exception as _beats_tag_exc:
+                    logger.debug("BEATs tag extraction für Pre-Filter fehlgeschlagen: %s", _beats_tag_exc)
+
+                if _beats_tags:
+                    self.defect_scanner.adjust_thresholds_for_beats(
+                        beats_tags=_beats_tags,
+                    )
+            except Exception as _beats_pre_exc:
+                logger.debug("BEATs Pre-Filter nicht verfügbar: %s", _beats_pre_exc)
+
             # §v10.304 AST Instrument Context: Top-Instrumente für Phase-Steering speichern
             try:
                 from backend.core.ast_audio_set_classifier import AUDIOSET_LABELS, get_ast_classifier

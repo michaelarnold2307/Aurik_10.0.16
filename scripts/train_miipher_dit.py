@@ -298,7 +298,7 @@ def train(
     if torch.cuda.is_available():
         device = torch.device("cuda")
         print(f"GPU: {torch.cuda.get_device_name(0)}")
-        print(f"VRAM: {torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB")
+        print(f"VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.1f} GB")
         scaler = torch.amp.GradScaler("cuda")
         use_amp = True
     else:
@@ -339,11 +339,11 @@ def train(
 
     train_loader = DataLoader(
         train_dataset, batch_size=batch_size, shuffle=True,
-        num_workers=2, pin_memory=(device.type == "cuda"), drop_last=True,
+        num_workers=0, pin_memory=False, drop_last=True,
     )
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=2, pin_memory=(device.type == "cuda"), drop_last=True,
+        num_workers=0, pin_memory=False, drop_last=True,
     )
 
     effective_batch = batch_size * GRADIENT_ACCUM_STEPS
@@ -356,24 +356,38 @@ def train(
     n_params = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"Model: FlowMatchingDiT ({n_params:.1f}M params)")
 
-    # Resume from checkpoint if specified
-    start_epoch = 0
-    if resume:
-        ckpt = torch.load(resume, map_location=device, weights_only=True)
-        model.load_state_dict(ckpt["model_state_dict"])
-        start_epoch = ckpt.get("epoch", 0)
-        print(f"Resumed from epoch {start_epoch}")
-
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5, betas=(0.9, 0.999))
     scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
         optimizer, T_0=50, T_mult=2, eta_min=1e-6
     )
 
+    # Resume from checkpoint if specified
+    start_epoch = 0
+    best_val_loss = float("inf")
+    if resume:
+        ckpt = torch.load(resume, map_location=device, weights_only=True)
+        model.load_state_dict(ckpt["model_state_dict"])
+        start_epoch = ckpt.get("epoch", 0)
+        # Restore optimizer state (Adam momentum, etc.)
+        if "optimizer_state_dict" in ckpt:
+            try:
+                optimizer.load_state_dict(ckpt["optimizer_state_dict"])
+                print(f"Resumed optimizer state")
+            except Exception:
+                print(f"⚠️  Optimizer state mismatch — starting fresh optimizer")
+        # Restore scheduler state (LR cycle position)
+        if "scheduler_state_dict" in ckpt:
+            try:
+                scheduler.load_state_dict(ckpt["scheduler_state_dict"])
+                print(f"Resumed scheduler state")
+            except Exception:
+                print(f"⚠️  Scheduler state mismatch — starting fresh schedule")
+        best_val_loss = ckpt.get("val_loss", float("inf"))
+        print(f"Resumed from epoch {start_epoch} (best val_loss={best_val_loss:.4f})")
+
     # Create output directory
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
-
-    best_val_loss = float("inf")
 
     print(f"\n{'='*60}")
     print(f"Training: {epochs} epochs, {steps_per_epoch} steps/epoch")
@@ -492,6 +506,7 @@ def train(
                 "model_state_dict": model.state_dict(),
                 "epoch": epoch + 1,
                 "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
                 "train_loss": avg_train_loss,
                 "val_loss": avg_val_loss,
             },
@@ -576,7 +591,7 @@ if __name__ == "__main__":
         description="Train FlowMatchingDiT for MIIPHER vocal enhancement (§v10.14)"
     )
     parser.add_argument("--epochs", type=int, default=500, help="Training epochs (default: 500)")
-    parser.add_argument("--batch-size", type=int, default=8, help="Batch size (default: 8)")
+    parser.add_argument("--batch-size", type=int, default=2, help="Batch size (default: 2, RX 7900 XTX safe)")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
     parser.add_argument("--steps-per-epoch", type=int, default=200, help="Steps per epoch (default: 200)")
     parser.add_argument("--no-stft-loss", action="store_true", help="Disable MR-STFT auxiliary loss")

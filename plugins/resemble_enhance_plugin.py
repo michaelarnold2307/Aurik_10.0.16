@@ -1,3 +1,4 @@
+# §v10.19 DEPRECATED: ersetzt durch DFN+SGMSE++MP-SENet Musik-Kaskade
 """ResembleEnhancePlugin — Audio-Enhancement via lokales ONNX (kein Docker/HF).
 
 Modell : models/resemble_enhance/model.onnx

@@ -443,7 +443,9 @@ class SotaVocalModelRouter:
         attempts: list[str] = []
         capability_report = self._capability_report()
 
-        # §v10.14: MIIPHER-DiT als primärer Open-Source-Ersatz für proprietäres MIIPHER
+        # §v10.14: MIIPHER-DiT als primärer Open-Source-Ersatz
+        # §v10.19 TODO: MP-SENet Musik als Post-Enhancer nach DFN einbauen
+        # §v10.19 TODO: Proprietäre MIIPHER-Stufe (Zeile 474) entfernen für proprietäres MIIPHER
         try:
             from plugins.miipher_dit_plugin import get_miipher_dit
 

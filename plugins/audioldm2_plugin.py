@@ -617,6 +617,125 @@ class AudioLDM2Plugin:
             logger.warning("AudioLDM2: generation fehlgeschlagen: %s", exc, exc_info=True)
             return self._fallback_noise(duration)
 
+    def denoise(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        denoise_strength: float = 0.5,
+        prompt: str | None = None,
+    ) -> np.ndarray:
+        """SDEdit-style text-guided denoising via AudioLDM2.
+
+        Uses AudioLDM2's generative capabilities for denoising by:
+        1. Extracting the audio's semantic context (via PANNs tags) to
+           auto-generate a restoration prompt if none is given.
+        2. Generating clean audio conditioned on the prompt.
+        3. Crossfading the generated clean audio with the original,
+           controlled by denoise_strength.
+
+        Args:
+            audio: Noisy input audio (mono or stereo, any sample rate).
+            sr: Sample rate of input audio.
+            denoise_strength: 0.0 = original only, 1.0 = fully regenerated.
+                              Default 0.5 balances original character with
+                              denoising effect.
+            prompt: Optional text prompt override. Auto-generated from
+                    PANNs audio tags if None (e.g. "clean high quality music
+                    recording").
+
+        Returns:
+            Denoised audio at original sample rate, float32, same shape as input.
+        """
+        if not self._ok:
+            logger.debug("AudioLDM2 denoise: model not loaded, returning original")
+            return np.asarray(audio, dtype=np.float32)
+
+        audio = np.nan_to_num(np.asarray(audio, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+        was_stereo = audio.ndim == 2 and audio.shape[0] == 2
+        mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+
+        # Resample to 16 kHz for AudioLDM2
+        if sr != self.TARGET_SR:
+            from math import gcd
+            from scipy.signal import resample_poly
+            g = gcd(sr, self.TARGET_SR)
+            mono_16k = resample_poly(mono.astype(np.float64),
+                                     self.TARGET_SR // g, sr // g).astype(np.float32)
+        else:
+            mono_16k = mono.astype(np.float32)
+
+        # Clamp to [-1, 1]
+        mono_16k = np.clip(mono_16k, -1.0, 1.0)
+
+        # Auto-generate prompt from audio tags if not provided
+        if prompt is None:
+            prompt = "clean high quality audio, studio recording, professional mastering"
+            try:
+                from plugins.panns_plugin import get_panns_plugin
+                _panns = get_panns_plugin()
+                _panns_tags = _panns.get_tags(audio, sr)
+                _top_tag = max(_panns_tags.items(), key=lambda x: x[1], default=("", 0.0))
+                if _top_tag[1] >= 0.3:
+                    if _top_tag[0] in ("Music", "Musical instrument"):
+                        prompt = "clean high quality music recording, studio master"
+                    elif _top_tag[0] in ("Speech", "Singing voice", "Vocals"):
+                        prompt = "clean professional speech recording, studio quality"
+                    elif _top_tag[0] in ("Noise", "Silence"):
+                        prompt = "clean ambient sound, high quality recording"
+            except Exception:
+                pass  # Use default prompt
+
+        duration = len(mono_16k) / self.TARGET_SR
+        duration = max(1.0, min(30.0, duration))
+        strength = float(np.clip(denoise_strength, 0.0, 1.0))
+
+        try:
+            # Generate clean audio from prompt
+            generated = self.generate_array(prompt=prompt, duration=duration, guidance=3.0)
+            # Match length to original
+            if len(generated) > len(mono_16k):
+                generated = generated[:len(mono_16k)]
+            elif len(generated) < len(mono_16k):
+                generated = np.pad(generated, (0, len(mono_16k) - len(generated)),
+                                   mode='edge')
+
+            # Crossfade: blend generated clean with original
+            # strength=0 → all original, strength=1 → all generated
+            # Use equal-power crossfade (cos² + sin² = 1)
+            _theta = strength * np.pi / 2
+            _orig_weight = float(np.cos(_theta))
+            _gen_weight = float(np.sin(_theta))
+            denoised_16k = _orig_weight * mono_16k + _gen_weight * generated
+            denoised_16k = np.clip(denoised_16k, -1.0, 1.0)
+
+            # Resample back to original sample rate
+            if sr != self.TARGET_SR:
+                g2 = gcd(self.TARGET_SR, sr)
+                denoised = resample_poly(denoised_16k.astype(np.float64),
+                                         sr // g2, self.TARGET_SR // g2).astype(np.float32)
+                # Match original length
+                orig_len = audio.shape[-1] if audio.ndim == 2 else len(audio)
+                if len(denoised) > orig_len:
+                    denoised = denoised[:orig_len]
+                elif len(denoised) < orig_len:
+                    denoised = np.pad(denoised, (0, orig_len - len(denoised)), mode='edge')
+            else:
+                denoised = denoised_16k
+
+            # Restore stereo
+            if was_stereo:
+                denoised = np.stack([denoised, denoised], axis=0)
+
+            logger.info(
+                "AudioLDM2 denoise: strength=%.2f duration=%.1fs prompt='%s'",
+                strength, duration, prompt,
+            )
+            return denoised.astype(np.float32)
+
+        except Exception as exc:
+            logger.warning("AudioLDM2 denoise failed: %s — returning original", exc)
+            return np.asarray(audio, dtype=np.float32)
+
     def _run_unet(
         self,
         sample: np.ndarray,

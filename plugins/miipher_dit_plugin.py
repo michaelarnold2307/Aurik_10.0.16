@@ -356,13 +356,21 @@ class MiipherDiTPlugin:
     # ── §v10.14: Chunked Processing für lange Songs ────────────────────
 
     def _enhance_single(self, audio_mono: np.ndarray, sr: int) -> np.ndarray:
-        """ONNX-Inferenz für kurze Segmente (<10s)."""
+        """ONNX-Inferenz für kurze Segmente (<10s).
+
+        Flow-Matching-Korrektur: Das Modell sagt das Geschwindigkeitsfeld v̂
+        vorher, nicht das Audio direkt. Die Formel lautet:
+            ŷ = x + (1 - t) · v̂
+        (Ref: train_miipher_dit.py:12)
+        """
         _peak = float(np.max(np.abs(audio_mono))) + 1e-10
         _input = (audio_mono / _peak).astype(np.float32)
         _input_onnx = _input.reshape(1, -1, 1)
         _t = np.array([0.5], dtype=np.float32)
-        _output = self._ort_session.run(None, {"x": _input_onnx, "t": _t})[0]
-        return _output.reshape(-1).astype(np.float32) * _peak
+        _velocity = self._ort_session.run(None, {"x": _input_onnx, "t": _t})[0]
+        # Flow-Matching: ŷ = x + (1-t) · v̂
+        _corrected = _input_onnx + (1.0 - _t[0]) * _velocity.reshape(1, -1, 1)
+        return _corrected.reshape(-1).astype(np.float32) * _peak
 
     def _enhance_chunked(self, audio_mono: np.ndarray, sr: int) -> np.ndarray:
         """Chunked-Processing für lange Songs via Auriks ChunkedPipeline.

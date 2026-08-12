@@ -550,6 +550,187 @@ def run_pre_analysis(
 
     _cb(96, "Kette wird rekonstruiert…")
 
+    # ── §v10.19 Era-Prior Bayesian Adjustment ─────────────────────
+    # Der Bayesian-Klassifikator hat eine Era-Aware-Prior-Modulation,
+    # die aber nie aktiv war (era_decade wurde nicht übergeben).
+    # Hier wird sie NACH der Era-Erkennung als Posteriors-Adjustment
+    # angewendet. Für 1977 z.B.: vinyl +1.0 nat, shellac −1.5 nat.
+    if result.medium is not None and result.era is not None:
+        try:
+            _era_decade_raw = getattr(result.era, "decade", None)
+            _era_conf_raw = float(getattr(result.era, "confidence", 0.0) or 0.0)
+            if _era_decade_raw is not None and _era_conf_raw >= 0.40:
+                _era_decade = (int(_era_decade_raw) // 10) * 10
+                if _era_conf_raw >= 0.75:
+                    _era_boost = 1.0
+                elif _era_conf_raw >= 0.60:
+                    _era_boost = 0.6
+                else:
+                    _era_boost = 0.3
+
+                _md_detector = cast(Callable[[], Any], _load_symbol("forensics.medium_detector", "get_medium_detector"))()
+                _posteriors = dict(getattr(result.medium, "bayesian_scores", {}) or {})
+                if _posteriors:
+                    import math
+                    _consistent = getattr(_md_detector, "_ERA_CONSISTENT", {})
+                    _impossible = getattr(_md_detector, "_ERA_IMPOSSIBLE", {})
+                    _log_posts = {}
+                    for _mat, _prob in _posteriors.items():
+                        if _prob <= 0:
+                            # §v10.19 Floor: Era-konsistente Materialien bekommen
+                            # -20 (-e-9 prob) statt -1e9, damit der Boost wirken kann.
+                            if _era_decade in _consistent.get(_mat, []):
+                                _log_posts[_mat] = -20.0
+                            else:
+                                _log_posts[_mat] = -1e9
+                        else:
+                            _log_posts[_mat] = math.log(_prob)
+                        # Apply era boost/penalty (same logic as _bayesian_score)
+                        _decades_consistent = _consistent.get(_mat, [])
+                        _decades_impossible = _impossible.get(_mat, [])
+                        if _era_decade in _decades_consistent:
+                            _log_posts[_mat] += _era_boost
+                        elif _era_decade in _decades_impossible:
+                            _log_posts[_mat] -= _era_boost * 1.5
+                    # Re-normalize via softmax
+                    _max_ll = max(_log_posts.values())
+                    _exp_sum = sum(math.exp(v - _max_ll) for v in _log_posts.values()) + 1e-12
+                    _new_posteriors = {k: math.exp(v - _max_ll) / _exp_sum for k, v in _log_posts.items()}
+                    result.medium.bayesian_scores = _new_posteriors  # type: ignore[attr-defined]
+
+                    # Re-compute confidence with era-adjusted primary posterior
+                    _primary = str(getattr(result.medium, "primary_material", "") or "")
+                    _old_conf = float(getattr(result.medium, "confidence", 0.0) or 0.0)
+                    _primary_era_post = _new_posteriors.get(_primary, 0.0)
+                    if _primary_era_post > 0.01:
+                        _conf_boost = min(0.20, _primary_era_post * 0.40)
+                        _new_conf = min(1.0, _old_conf + _conf_boost)
+                        result.medium.confidence = _new_conf  # type: ignore[attr-defined]
+                        logger.info(
+                            "pre_Analyse: Era-Prior applied — decade=%d boost=%.1f nat "
+                            "→ %s posterior %.3f→%.3f, confidence %.3f→%.3f",
+                            _era_decade, _era_boost, _primary,
+                            _posteriors.get(_primary, 0.0), _primary_era_post,
+                            _old_conf, _new_conf,
+                        )
+                    else:
+                        logger.debug(
+                            "pre_Analyse: Era-Prior applied — decade=%d, but primary=%s "
+                            "still at zero posterior (no era tables entry)",
+                            _era_decade, _primary,
+                        )
+        except Exception as _era_adj_exc:
+            logger.debug("Era-Prior-Adjustment uebersprungen: %s", _era_adj_exc)
+
+    # ── §v10.19 Iterative-Physical-Bayesian-Fusion ─────────────────
+    # Wenn die physikalische Inferenz Materialien mit guter Confidence
+    # gefunden hat, wird der Bayesian-Prior für diese Materialien auf
+    # P=0.90 gesetzt und die Posteriors neu berechnet.
+    # "Die Stärke des Bayesian liegt in der präzisen Klassifikation bei
+    #  scharfem Fingerprint — nachdem Physical das Feld eingeengt hat."
+    if result.medium is not None:
+        try:
+            _md_iter = result.medium
+            _phys_iter = list(getattr(_md_iter, "physical_analog_sources", []) or [])
+            _post_iter = dict(getattr(_md_iter, "bayesian_scores", {}) or {})
+            if _phys_iter and _post_iter:
+                # Nur physikalische Quellen mit conf > 0.15 boosten
+                _phys_strong = [(m, c) for m, c in _phys_iter if c > 0.15]
+                if _phys_strong:
+                    import math
+                    _N = len(_post_iter)
+                    _phys_set = {m for m, _ in _phys_strong}
+                    # Neue Priors: P(physical)=0.90/n, P(other)=(0.10-p_unknown)/(N-n-1)
+                    _n_phys = len(_phys_set)
+                    _p_phys_each = 0.90 / max(_n_phys, 1)
+                    _p_unknown = 0.05  # stark reduziert
+                    _n_other = max(_N - _n_phys - 1, 1)
+                    _p_other_each = max(0.001, (0.05) / _n_other)
+
+                    _log_priors = {}
+                    for _mat in _post_iter:
+                        if _mat == "unknown":
+                            _log_priors[_mat] = math.log(_p_unknown)
+                        elif _mat in _phys_set:
+                            _log_priors[_mat] = math.log(_p_phys_each)
+                        else:
+                            _log_priors[_mat] = math.log(_p_other_each)
+
+                    _log_posts2 = {}
+                    for _mat, _prob in _post_iter.items():
+                        if _prob <= 0:
+                            _log_posts2[_mat] = -20.0 if _mat in _phys_set else -1e9
+                        else:
+                            _log_posts2[_mat] = math.log(_prob)
+                        _log_posts2[_mat] += _log_priors[_mat]
+
+                    _max2 = max(_log_posts2.values())
+                    _exp2 = sum(math.exp(v - _max2) for v in _log_posts2.values()) + 1e-12
+                    _new_posts2 = {k: math.exp(v - _max2) / _exp2 for k, v in _log_posts2.items()}
+                    result.medium.bayesian_scores = _new_posts2  # type: ignore[attr-defined]
+
+                    _primary2 = str(getattr(_md_iter, "primary_material", "") or "")
+                    _primary_phys_post = _new_posts2.get(_primary2, 0.0)
+                    _old_conf2 = float(getattr(_md_iter, "confidence", 0.0) or 0.0)
+                    if _primary_phys_post > 0.05:
+                        _conf_boost2 = min(0.25, _primary_phys_post * 0.50)
+                        _new_conf2 = min(1.0, _old_conf2 + _conf_boost2)
+                        result.medium.confidence = _new_conf2  # type: ignore[attr-defined]
+                        _phys_names = ", ".join(f"{m}({c:.2f})" for m, c in _phys_strong)
+                        logger.info(
+                            "pre_Analyse: Iterative-Physical-Bayesian — %s → "
+                            "%s posterior %.3f→%.3f, confidence %.3f→%.3f",
+                            _phys_names, _primary2,
+                            _post_iter.get(_primary2, 0.0), _primary_phys_post,
+                            _old_conf2, _new_conf2,
+                        )
+        except Exception as _iter_exc:
+            logger.debug("Iterative-Physical-Bayesian uebersprungen: %s", _iter_exc)
+
+    # ── §v10.19 CLAP-Material-Consensus (4. Konsens-Quelle, Gewicht 0.15) ─
+    # Nutzt CLAP-Embeddings (512-dim), die bereits für Era-Klassifikation
+    # geladen sind. Ein trainierter Classifier-Head mapped auf 16 Materialien.
+    # Compliance §6.8: CLAP entscheidet NIE allein. DSP-Fallback verbindlich.
+    if result.medium is not None:
+        try:
+            from backend.core.forensics.clap_material_classifier import (
+                get_clap_material_classifier,
+                map_clap_tags_to_canonical,
+            )
+
+            _clap_classifier = get_clap_material_classifier()
+            if _clap_classifier.is_trained:
+                from plugins.laion_clap_plugin import get_laion_clap
+
+                _clap = get_laion_clap()
+                _tagged = _clap.tag(audio_native, sr_native)
+                _clap_embedding = getattr(_tagged, "embedding", None)
+                _clap_material_tags = getattr(_tagged, "material_tags", None)
+
+                _clap_probs: dict[str, float] = {}
+                if _clap_embedding is not None and len(_clap_embedding) == 512:
+                    _clap_probs = _clap_classifier.predict(_clap_embedding)
+                elif isinstance(_clap_material_tags, dict) and _clap_material_tags:
+                    _clap_probs = map_clap_tags_to_canonical(_clap_material_tags)
+
+                if _clap_probs:
+                    _clap_top = max(_clap_probs.items(), key=lambda x: x[1])
+                    _clap_mat, _clap_conf = _clap_top[0], float(_clap_top[1])
+                    _chain_clap = list(getattr(result.medium, "transfer_chain", []) or [])
+                    if _clap_mat in _chain_clap and _clap_conf > 0.30:
+                        logger.info(
+                            "CLAP-Consensus: %s (%.3f) bestätigt Tonträgerkette %s",
+                            _clap_mat, _clap_conf, " → ".join(_chain_clap),
+                        )
+                    elif _clap_conf > 0.50 and _clap_mat not in _chain_clap:
+                        logger.info(
+                            "CLAP-Consensus: %s (%.3f) NICHT in Kette %s — "
+                            "semantische vs. physikalische Diskrepanz (Physical hat Vorrang §6.8)",
+                            _clap_mat, _clap_conf, " → ".join(_chain_clap),
+                        )
+        except Exception as _clap_exc:
+            logger.debug("CLAP-Material-Consensus uebersprungen: %s", _clap_exc)
+
     # ── §2.46a Deep-Transfer-Chain-Injection [RELEASE_MUST] ───────────
     # Spec §2.46a: Importsongs mit 3+ Tonträgerstufen müssen vollständig
     # modelliert werden. Drei Quellen für die Ketten-Rekonstruktion:
@@ -779,15 +960,16 @@ def run_pre_analysis(
                     _chain.insert(_vi, "vinyl")
                     logger.info("pre_Analyse: Vinyl-Inference — reel_tape+cassette+vinyl-era → vinyl eingefügt")
 
-                # §v10.14 Lacquer-Disc-Inference: Jede Vinylpressung entsteht
-                # aus einer Lackfolie (Schneidstichel → Lack/Alu → Galvanik → Stempel).
-                # Wenn reel_tape UND vinyl in der Kette sind, MUSS lacquer_disc
-                # dazwischen liegen — der physische Zwang des Pressprozesses.
+                # §v10.19 Fix: Jede Vinylpressung entsteht aus einer Lackfolie.
+                # Wenn vinyl in der Kette ist, MUSS lacquer_disc davor stehen —
+                # unabhängig davon, ob reel_tape explizit erkannt wurde.
+                # (Schneidstichel → Lack/Alu → Galvanik → Stempel → Vinyl)
                 _has_lacquer = "lacquer_disc" in _chain
-                if _has_reel and _has_vinyl and not _has_lacquer:
+                if _has_vinyl and not _has_lacquer:
                     _ld_pos = _chain.index("vinyl")
                     _chain.insert(_ld_pos, "lacquer_disc")
-                    logger.info("pre_Analyse: Lacquer-Disc-Inference — reel_tape+vinyl → lacquer_disc eingefügt")
+                    _reason = "reel_tape+vinyl" if _has_reel else "vinyl ohne reel_tape (original Tape implizit)"
+                    logger.info("pre_Analyse: Lacquer-Disc-Inference — %s → lacquer_disc eingefügt", _reason)
 
                 _md.is_multi_generation = len(_chain) > 1  # type: ignore[attr-defined]
                 _analog_in = [m for m in _chain if m in _analog]
@@ -889,10 +1071,31 @@ def run_pre_analysis(
                             ", ".join(set(_pre_phys) - set(_chain)),
                         )
                 _md_confidence = float(getattr(_md, "confidence", 0.5) or 0.5)
+                # §v10.19: Physical-Evidence-Boost für die Depth-Gate-Confidence.
+                # Wenn die physische Inferenz starke Evidenz hat (rotation > 0.20,
+                # wow > 0.01, crackle > 0.005), ist die Kette vertrauenswürdiger
+                # als der blinde Bayesian-Score suggeriert.
+                _phys_boost = 0.0
+                if result.medium is not None:
+                    _fp = getattr(result.medium, "spectral_fingerprint", None)
+                    if _fp is not None:
+                        _rot = float(getattr(_fp, "rotation_strength", 0.0) or 0.0)
+                        _wow = float(getattr(_fp, "wow_flutter_index", 0.0) or 0.0)
+                        _crk = float(getattr(_fp, "crackle_density", 0.0) or 0.0)
+                        _inf = float(getattr(_fp, "infrasonic_rms", 0.0) or 0.0)
+                        _phys_evidence = (
+                            (1.0 if _rot > 0.20 else 0.0)
+                            + (1.0 if _wow > 0.01 else 0.0)
+                            + (1.0 if _crk > 0.005 else 0.0)
+                            + (1.0 if _inf > 0.02 else 0.0)
+                        )
+                        _phys_boost = min(0.35, _phys_evidence * 0.08)
+                _effective_confidence = _md_confidence + _phys_boost
                 # §v10.14 FIX: Chain-Depth-Cap angehoben für depth≥4.
                 # Bei niedriger Confidence kurze Ketten (Sicherheit), bei höherer
                 # Confidence tiefe Ketten erlauben (depth 4-5 für Kassetten etc.).
-                _max_chain_depth = {True: 2, False: (3 if _md_confidence < 0.55 else (4 if _md_confidence < 0.60 else 99))}[_md_confidence < 0.50]
+                # §v10.19: effective_confidence nutzt Physical-Boost.
+                _max_chain_depth = {True: 2, False: (3 if _effective_confidence < 0.55 else (4 if _effective_confidence < 0.60 else 99))}[_effective_confidence < 0.50]
                 if len(_chain) > _max_chain_depth:
                     # §v10.14: Letzten Eintrag (Endformat, z.B. mp3_high) IMMER behalten.
                     # Aus den analogen Zwischenträgern den Ära-plausibelsten wählen.

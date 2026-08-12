@@ -27,7 +27,7 @@ Anwendungen:
 - Quality Assessment
 
 Autor: Aurik v8.0 - Psychoacoustic Core
-Lizenz: Proprietär
+Lizenz: Apache 2.0
 """
 
 import logging

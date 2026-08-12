@@ -119,6 +119,7 @@ class CQTdiffPlusPlugin:
 
     def __init__(self) -> None:
         self._session = None  # onnxruntime.InferenceSession (score network)
+        self._ts_model = None  # torch.jit.ScriptModule fallback
         self._model_loaded: bool = False
         self._fallback_active: bool = False
         self._try_load_model()
@@ -157,8 +158,21 @@ class CQTdiffPlusPlugin:
                 except Exception as _exc:
                     logger.debug("Operation failed (non-critical): %s", _exc)
             else:
+                # ── ONNX nicht vorhanden → TorchScript-Direktladung ────
+                ts_path = self.MODELS_DIR / "score_network.pt"
+                if ts_path.exists():
+                    logger.info("CQTdiff: score_network.onnx nicht gefunden — lade TorchScript direkt")
+                    try:
+                        import torch
+                        self._ts_model = torch.jit.load(str(ts_path), map_location="cpu")
+                        self._ts_model.eval()
+                        self._model_loaded = True
+                        logger.info("🔵 CQTdiff: TorchScript geladen (%s)", ts_path)
+                        return
+                    except Exception as _ts_exc:
+                        logger.warning("TorchScript-Ladung fehlgeschlagen: %s", _ts_exc)
                 logger.info(
-                    "CQTdiff: ONNX-Modell nicht gefunden (%s) — Fallback aktiv",
+                    "CQTdiff: Kein Modell verfügbar (%s) — DSP-Fallback",
                     model_path,
                 )
                 self._fallback_active = True
@@ -228,6 +242,9 @@ class CQTdiffPlusPlugin:
         audio_f32 = np.nan_to_num(audio_f32)
 
         if self._model_loaded and self._session is not None:
+            result_audio = self._inpaint_diffusion(audio_f32, sr, gap_start_sample, gap_end_sample, context_audio)
+        elif self._ts_model is not None:
+            # TorchScript-Direktladung — einfache Forward-Propagation
             result_audio = self._inpaint_diffusion(audio_f32, sr, gap_start_sample, gap_end_sample, context_audio)
         else:
             result_audio = self._inpaint_dsp_fallback(audio_f32, sr, gap_start_sample, gap_end_sample)

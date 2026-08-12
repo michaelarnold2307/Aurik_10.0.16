@@ -306,6 +306,7 @@ def process_in_adaptive_chunks(
 
     n_chunks = 0
     pos = 0
+    _prev_tail = None  # §v10.116 PHAOLA: previous chunk tail for phase alignment
     while pos < n_samples:
         end = min(pos + chunk_samples, n_samples)
         if is_stereo:
@@ -358,6 +359,44 @@ def process_in_adaptive_chunks(
                 logger.debug(
                     "adaptive_chunk_processor: chunk cross-correlation fehlgeschlagen (unkritisch): %s", _acp_xcorr_exc
                 )
+
+        # §v10.116 PHAOLA: Phase-aligned overlap-add for mono sources.
+        # Align phases between consecutive chunks before crossfading to
+        # eliminate comb filtering at low frequencies (30 Hz audible modulation).
+        # Skips if ERB masking threshold renders alignment unnecessary.
+        if pos > 0 and not is_stereo and fade_samples < chunk_len and _prev_tail is not None:
+            try:
+                from backend.core.phase_aligned_overlap_add import (
+                    compute_optimal_alignment,
+                    should_skip_alignment,
+                )
+
+                _overlap_region = processed[:fade_samples]
+                if not should_skip_alignment(_overlap_region, sr):
+                    _align = compute_optimal_alignment(
+                        _prev_tail, processed, fade_samples, sr
+                    )
+                    if _align.was_adjusted:
+                        from scipy.ndimage import shift as _nd_shift
+
+                        processed = _nd_shift(
+                            processed.astype(np.float64),
+                            float(_align.shift_samples),
+                            mode="constant",
+                            cval=0.0,
+                            order=3,
+                        ).astype(np.float32)
+                        logger.debug(
+                            "PHAOLA: phase-aligned by %.2f samples (corr=%.3f)",
+                            _align.shift_samples,
+                            _align.correlation,
+                        )
+            except Exception as _phaola_exc:
+                logger.debug("PHAOLA: nicht verfügbar (%s)", _phaola_exc)
+
+        # Store current chunk tail for next iteration's alignment
+        if not is_stereo and len(processed) >= fade_samples:
+            _prev_tail = processed[-fade_samples:].copy()
 
         # Build weight envelope for this chunk
         chunk_len = end - pos

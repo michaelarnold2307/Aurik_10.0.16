@@ -33,7 +33,7 @@ from typing import Any, cast
 
 import numpy as np
 import soundfile as sf
-from PyQt5 import QtCore, QtGui, QtSvg, QtWidgets
+from PyQt5 import QtCore, QtGui, QtSvg, QtWidgets, sip
 
 from Aurik10.i18n import get_language, set_language, t
 
@@ -15296,6 +15296,7 @@ class ModernMainWindow(QMainWindow):
         self.narrative_label.setVisible(False)
         vbox.addWidget(self.narrative_label)
         self._narrative_buffer: list[str] = []  # Letzte 4 narrative Texte
+        return wrapper  # §v10.19 Bugfix: wrapper muss zurückgegeben werden, sonst GC → C++-Löschung → SIGABRT
 
     def _update_narrative(self, text: str) -> None:
         """§v10.14: Zeigt die narrative Geschichte des Songs während der Restaurierung."""
@@ -15345,8 +15346,9 @@ class ModernMainWindow(QMainWindow):
         else:
             self.live_quality_label.setVisible(False)
 
-        # ── Ablaufprotokoll: obsolet als eigene Zeile; Details stehen in status_text Zeile 2 ─────────
-        self._process_timeline_label = _ElidingLabel("")
+        # ── Ablaufprotokoll: einmalig erstellen, nicht bei jedem Aufruf neu ─────────
+        if self._process_timeline_label is None:
+            self._process_timeline_label = _ElidingLabel("")
         self._process_timeline_label.setStyleSheet(
             "color: #7B93B8; font-size: 8.5pt; background: transparent; padding: 0px 2px;"
         )
@@ -15358,8 +15360,9 @@ class ModernMainWindow(QMainWindow):
             "Schritt, UV3-Phase, aktive Defektarten und Plananpassungen (+/-)."
         )
 
-        # ── Ergebnis-Banner: Ausgabepfad + Aktionen (nach Fertigstellung) ────
-        self._result_banner = QFrame()
+        # ── Ergebnis-Banner: einmalig erstellen, nicht bei jedem Aufruf neu ────
+        if self._result_banner is None:
+            self._result_banner = QFrame()
         self._result_banner.setVisible(False)
         self._result_banner.setStyleSheet(
             "QFrame { background: rgba(25, 75, 45, 0.30);"
@@ -19701,19 +19704,19 @@ class ModernMainWindow(QMainWindow):
         if hasattr(self, "phase_progress_bar"):
             self.phase_progress_bar.setValue(0)
             self.phase_progress_bar.setVisible(True)
-        if hasattr(self, "_phase_step_label"):
+        if hasattr(self, "_phase_step_label") and self._phase_step_label is not None:
             self._phase_step_label.setText("")
             self._phase_step_label.setVisible(False)
-        if hasattr(self, "_process_timeline_label"):
+        if hasattr(self, "_process_timeline_label") and self._process_timeline_label is not None:
             self._process_timeline_label.setText("")
             self._process_timeline_label.setVisible(False)
         # Monotonic step counter zurücksetzen für neuen Batch
         self._last_phase_step_val = 0
         self._last_phase_step_total = 0
         # Ergebnis-Banner vom letzten Durchgang ausblenden
-        if hasattr(self, "_result_banner"):
+        if hasattr(self, "_result_banner") and self._result_banner is not None:
             self._result_banner.setVisible(False)
-        if hasattr(self, "_btn_preview_restored"):
+        if hasattr(self, "_btn_preview_restored") and self._btn_preview_restored is not None:
             self._btn_preview_restored.setEnabled(False)
         if hasattr(self, "quality_meter_widget"):
             self._prime_live_quality_meter()
@@ -20875,7 +20878,7 @@ class ModernMainWindow(QMainWindow):
 
                 threading.Thread(target=_warmup_rest, daemon=True).start()
                 # Vorschau-Button im Ergebnis-Banner aktivieren (kein Autoplay)
-                if hasattr(self, "_btn_preview_restored"):
+                if hasattr(self, "_btn_preview_restored") and self._btn_preview_restored is not None:
                     self._btn_preview_restored.setEnabled(True)
         # Musical Goals direkt aus AurikErgebnis im Radar anzeigen (kein sf.read nötig)
         if restoration_result is not None:
@@ -21284,9 +21287,9 @@ class ModernMainWindow(QMainWindow):
         if hasattr(self, "phase_progress_bar"):
             self.phase_progress_bar.setValue(10000)
             self.phase_progress_bar.setVisible(False)
-        if hasattr(self, "_phase_step_label"):
+        if hasattr(self, "_phase_step_label") and self._phase_step_label is not None:
             self._phase_step_label.setVisible(False)
-        if hasattr(self, "_process_timeline_label"):
+        if hasattr(self, "_process_timeline_label") and self._process_timeline_label is not None:
             self._process_timeline_label.setVisible(False)
         if hasattr(self, "resource_status_widget"):
             self.resource_status_widget.update_status(phase=None, ml_active=False, ml_plugins=[])
@@ -21351,9 +21354,9 @@ class ModernMainWindow(QMainWindow):
             )
 
         # ── Ergebnis-Banner mit Ausgabepfad + Aktions-Buttons anzeigen ────────
-        if hasattr(self, "_result_banner"):
+        if hasattr(self, "_result_banner") and self._result_banner is not None:
             # Retry-Button Sichtbarkeit: nur wenn es Fehler gab
-            if hasattr(self, "_btn_retry_failed"):
+            if hasattr(self, "_btn_retry_failed") and self._btn_retry_failed is not None:
                 self._btn_retry_failed.setVisible(n_fail > 0)
 
             if n_ok > 0:
@@ -21371,7 +21374,7 @@ class ModernMainWindow(QMainWindow):
                     self._result_path_label.setText(
                         f"<b>{_fname}</b>  ·  <span style='color:#7ABBA8;'>{_dir_short}</span>"
                     )
-                    if hasattr(self, "_btn_ab_compare"):
+                    if hasattr(self, "_btn_ab_compare") and self._btn_ab_compare is not None:
                         _has_restored = getattr(self, "_rest_audio", None) is not None
                         self._btn_ab_compare.setEnabled(_has_restored)
                     self._result_banner.setVisible(True)
@@ -21520,7 +21523,7 @@ class ModernMainWindow(QMainWindow):
 
         logger.info("Batch-Wiederholung: %d fehlgeschlagene Items zurückgesetzt", n_retried)
         # Banner + Retry-Button ausblenden
-        if hasattr(self, "_result_banner"):
+        if hasattr(self, "_result_banner") and self._result_banner is not None:
             self._result_banner.setVisible(False)
         # Verarbeitung neu starten
         self._start_processing()
@@ -21787,7 +21790,7 @@ class ModernMainWindow(QMainWindow):
             self._apply_status_text_style("success")
             self.status_text.setText(_msg)
         # Ergebnis-Banner Pfad aktualisieren (ML-veredeltes Ergebnis)
-        if hasattr(self, "_result_banner") and Path(output_path).exists():
+        if hasattr(self, "_result_banner") and self._result_banner is not None and Path(output_path).exists():
             self._last_result_output = output_path
             _dir_short = str(Path(output_path).parent)
             if len(_dir_short) > 55:
@@ -25933,6 +25936,8 @@ class ModernMainWindow(QMainWindow):
 
     def _apply_i18n_texts(self) -> None:
         """Refresh visible UI texts after language changes."""
+        # §v10.19 Bugfix: sip.isdeleted()-Guards verhindern RuntimeError
+        # wenn ein C++-Widget vorzeitig gelöscht wurde (Qt parent-child cascade).
         if hasattr(self, "btn_import"):
             self.btn_import.setText(t("action.open_file"))
         if hasattr(self, "title_bar") and hasattr(self.title_bar, "title_label"):
@@ -25968,19 +25973,32 @@ class ModernMainWindow(QMainWindow):
         # Keep user-facing placeholders translated
         if hasattr(self, "detected_medium_label") and not self.current_file_path:
             self.detected_medium_label.setText(t("ui.no_file_loaded"))
-        if hasattr(self, "defect_summary_label") and self.defect_summary_label.text() in {
-            "Noch keine Analyse",
-            "No analysis yet",
-        }:
+        # §v10.19: sip.isdeleted() guards — verhindert RuntimeError bei gelöschtem C++-Widget
+        if (
+            hasattr(self, "defect_summary_label")
+            and not sip.isdeleted(self.defect_summary_label)
+            and self.defect_summary_label.text() in {
+                "Noch keine Analyse",
+                "No analysis yet",
+            }
+        ):
             self.defect_summary_label.setText(t("ui.no_analysis"))
-        if hasattr(self, "status_text") and self.status_text.text() in {
-            "Bereit für Verarbeitung",
-            "Ready for processing",
-        }:
+        if (
+            hasattr(self, "status_text")
+            and self.status_text is not None
+            and not sip.isdeleted(self.status_text)
+            and self.status_text.text() in {
+                "Bereit für Verarbeitung",
+                "Ready for processing",
+            }
+        ):
             self.status_text.setText(t("status.ready"))
 
         if hasattr(self, "findChildren"):
             for _lbl in self.findChildren(QLabel):
+                # §v10.19: sip.isdeleted()-Guard für jedes QLabel im Loop
+                if sip.isdeleted(_lbl):
+                    continue
                 if _lbl.text() in {
                     "erkannte Defekte:",
                     "erkannte Schäden:",

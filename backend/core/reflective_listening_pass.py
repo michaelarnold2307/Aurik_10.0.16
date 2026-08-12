@@ -425,6 +425,7 @@ class ReflectiveListeningPass:
             pleasantness_improved = hpe_cmp.get("improved", False)
         except Exception:
             # Fallback: Wenn HPE nicht verfügbar, nur technische Prüfung
+            logger.debug("HPE-Vergleich fehlgeschlagen — Fallback auf technische Prüfung", exc_info=True)
             pleasantness_delta = 0.0
             pleasantness_improved = True
 

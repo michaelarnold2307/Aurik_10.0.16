@@ -3,7 +3,7 @@
 Speichert erfolgreiche Restaurierungs-Läufe (era × material × defect_cluster_hash)
 als JSON unter ~/.aurik/restoration_memory.json und stellt sie als Prior für den
 GPOptimizer zur Verfügung. Nur erfolgreiche Läufe werden gespeichert
-(HPI > 0 AND artifact_freedom >= 0.95).
+(HPI > 0 AND artifact_freedom >= depth_adaptive_af_threshold(depth)).
 
 Design:
     - Singleton (thread-safe, double-checked locking).
@@ -18,7 +18,7 @@ Kanonische Nutzung:
     # Vor GPOptimizer:
     prior = mem.get_prior((era, material, cluster_hash))  # None wenn kein Prior
 
-    # Nach HolisticPerceptualGate (HPI > 0 AND artifact_freedom >= 0.95):
+    # Nach HolisticPerceptualGate (HPI > 0 AND artifact_freedom >= depth_adaptive_af_threshold(depth)):
     mem.save_result(key=(era, material, cluster_hash), phase_params={...}, hpi_achieved=0.81)
 """
 

@@ -27,12 +27,16 @@ try:
     result["torch_cuda_available"] = bool(torch.cuda.is_available())
     result["torch_hip"] = getattr(getattr(torch, "version", None), "hip", None)
     result["torch_cuda_version"] = getattr(getattr(torch, "version", None), "cuda", None)
-except Exception: pass
+except Exception:
+    # expected: torch may not be installed in subprocess probe
+    pass
 try:
     import onnxruntime as ort
     result["onnxruntime_import"] = True
     result["ort_providers"] = list(ort.get_available_providers())
-except Exception: pass
+except Exception:
+    # expected: onnxruntime may not be installed in subprocess probe
+    pass
 sys.stdout.write(json.dumps(result, sort_keys=True) + "\n")
 """
 

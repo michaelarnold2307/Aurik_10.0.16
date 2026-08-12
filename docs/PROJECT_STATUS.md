@@ -248,12 +248,19 @@ Dithering: POW-r Typ 3 bei 24->16-bit; Fallback: TPDF
 | DeepFilterNet v3.II | Breitrauschen (NR) | ~37 MB ONNX | OMLSA/IMCRA DSP |
 | MDX23C Kim_Vocal_2/Kim_Inst | Stem-Separation | 2x 64 MB ONNX | NMF-b |
 | Apollo | Codec-Artefakte | ~65 MB ONNX | DSP Spectral Repair |
-| Vocos 24 kHz | Neuronaler Vocoder | ~52 MB ONNX | HiFi-GAN -> PGHI |
+| **AST** (331M) | AudioSet-527 Klassifikator | ~346 MB ONNX | DSP Spectral Features |
+| **BEATs** (345M) | Audio-Embeddings + Tagging | ~90 MB ONNX | PANNs → Spectral DSP |
+| **MERT** v1-95M / v1-330M | Naturalness-Scoring | 117 MB / 355 MB ONNX INT8 | DSP Harmonicity |
+| **SGMSE+** | Breitband-Enhancement (48 kHz) | ~251 MB TorchScript | OMLSA DSP |
+| **AudioLDM2** | SDEdit-Entrauschung + Lückenfüllung | 1.39 GB UNet + 126 MB VAE ONNX | Shaped Noise |
+| Vocos 24 kHz | Neuronaler Vocoder | ~52 MB ONNX | HiFi-GAN → PGHI |
 | CREPE full | Pitch-Tracking f0 | ~85 MB ONNX | pYIN DSP |
 | PANNs CNN14 | Audio-Tagging | ~81 KB ONNX | DSP Fingerprint |
-| DiffWave | Dropout-Inpainting | ~552 KB ONNX | NMF-b + Sinusoidal |
+| DiffWave | Dropout-Inpainting + Leichtgewicht-Entrauschung | ~552 KB ONNX | NMF-b + Sinusoidal |
 | Resemble-Enhance | Apollo-Fallback | ~41 MB ONNX | DSP Spectral Repair |
 | HiFi-GAN | Vocoder-Fallback | ~3.6 MB ONNX | PGHI-ISTFT |
+| DAC | Neural Audio Codec | 87 MB Enc + 208 MB Dec ONNX | DSP Codec Simulation |
+| BigVGAN v2 | Vocoder (Studio-2026) | ~489 MB PyTorch | HiFi-GAN → PGHI |
 
 ---
 
