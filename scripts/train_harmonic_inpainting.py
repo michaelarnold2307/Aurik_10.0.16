@@ -207,14 +207,14 @@ def train(epochs: int = EPOCHS, lr: float = LR):
     # Das spart VRAM und verhindert Overfitting
     frozen_params = 0
     for name, param in model.named_parameters():
-        if not any(f"blocks.{i}." in name for i in range(18, 24)):
+        if not (any(f"blocks.{i}." in name for i in range(15, 18)) or "final_ada" in name or "output_proj" in name):
             param.requires_grad = False
             frozen_params += 1
         else:
             pass  # Fine-tune Block 18-23
 
     trainable_ft = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
-    print(f"Fine-tuning: {trainable_ft:.0f}M parameters (blocks 18-23, rest frozen)")
+    print(f"Fine-tuning: {trainable_ft:.0f}M parameters (blocks 15-17 + final layers, rest frozen)")
 
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
