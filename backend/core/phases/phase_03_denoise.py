@@ -128,6 +128,7 @@ def _determine_era_nr_routing(
 
     Returns one of:
       "miipher_primary"  — MIIPHER → DFN fallback (deep SNR, post-1950, vocal)
+      "sota_4layer"      — §v10.200 SOTA 4-Ebenen Denoiser (post-1950, music, high-quality)
       "dfn_primary"      — DFN primary, current SOTA behavior
       "dfn_restricted"   — DFN capped at 30 %% wet (early electrical 1930-1945, shellac)
       "omlsa_only"       — No ML NR (acoustic era, wax/wire, digital material)
@@ -153,6 +154,10 @@ def _determine_era_nr_routing(
         and est_snr_db < _MIIPHER_SNR_CUTOFF_DB
     ):
         return "miipher_primary"
+    # 
+4.4 §v10.200: Use SOTA 4-Layer for post-1950 music (non-vocal) material
+    if not is_vocal_material and era_decade > _ERA_EARLY_ELECTRIC_CUTOFF:
+        return "sota_4layer"
     return "dfn_primary"
 
 
@@ -1460,7 +1465,27 @@ class DenoisePhase(PhaseInterface):
         # §Hebel-2 SGMSE+ Tier-1 FALLBACK: score-based generative enhancement.
         # Run only if DeepFilterNet was not applied successfully.
         _sgmse_applied = False
-        _sgmse_eligible = (
+                # §v10.200: SOTA 4-Ebenen Denoiser for music (non-vocal) material
+        _sota_eligible = (
+            not _is_vocal_material
+            and not use_lightweight
+            and _era_nr_routing == "sota_4layer"
+            and not _miipher_applied
+        )
+        if _sota_eligible:
+            try:
+                from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
+                _sota_pipeline = SOTADenoisePipeline()
+                _sota_result = _sota_pipeline.process(audio, int(sample_rate))
+                audio = _sota_result.audio
+                logger.info(
+                    "§v10.200 SOTA 4-Layer Denoiser applied: genre=%s layers=%s time=%.1fs",
+                    _sota_result.genre, _sota_result.layers_applied, _sota_result.processing_time,
+                )
+            except Exception as e:
+                logger.debug("SOTA 4-Layer not available, falling back to DFN: %s", e)
+
+_sgmse_eligible = (
             quality_mode in ("quality", "maximum")
             and _is_non_digital
             and not use_lightweight
