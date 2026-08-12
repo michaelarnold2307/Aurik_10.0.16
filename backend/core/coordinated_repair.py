@@ -42,6 +42,11 @@ try:
 except Exception:  # pragma: no cover — optional
     _ArtifactGuard = None
 
+try:
+    from backend.core.perceptual_closed_loop import PerceptualClosedLoop as _PerceptualLoop
+except Exception:  # pragma: no cover — optional
+    _PerceptualLoop = None
+
 log = logging.getLogger(__name__)
 
 SR = 48000
@@ -414,6 +419,7 @@ class CoordinatedRepair:
         failed: list[tuple[str, str]] = []
 
         _guard = _ArtifactGuard() if _ArtifactGuard is not None else None
+        _perceptual = _PerceptualLoop() if _PerceptualLoop is not None else None
 
         for step in plan.steps:
             try:
@@ -436,6 +442,24 @@ class CoordinatedRepair:
                             "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
                             step.phase_id,
                             getattr(_guard_result, "violations", []),
+                        )
+                # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
+                if _perceptual is not None:
+                    _percept_result = _perceptual.evaluate(
+                        audio_pre=_audio_pre,
+                        audio_post=current_audio,
+                        sr=sample_rate,
+                        golden_sample=getattr(self, "_golden_sample", None),
+                    )
+                    if not getattr(_percept_result, "passed", True):
+                        current_audio = _perceptual.blend_back(
+                            _audio_pre, current_audio, _percept_result,
+                        )
+                        logger.warning(
+                            "§v10.620 Loop: %s verschlechterte MOS (%.3f → %.3f) — adaptiert",
+                            step.phase_id,
+                            _percept_result.mos_pre,
+                            _percept_result.mos_post,
                         )
                 completed.append(step.phase_id)
                 log.info(
