@@ -368,6 +368,28 @@ class GenreAdaptiveRouter:
     def __init__(self):
         self._panns = None
         self._init_panns()
+        # §v10.710: Kalibrierte Presets laden (falls vorhanden)
+        self._load_calibrated_presets()
+
+    def _load_calibrated_presets(self):
+        """Lädt UTMOS-kalibrierte Presets aus models/calibrated_presets.json."""
+        try:
+            import json
+            from pathlib import Path as _P
+
+            calib_path = _P(__file__).resolve().parent.parent.parent / "models" / "calibrated_presets.json"
+            if calib_path.exists():
+                with open(calib_path, encoding="utf-8") as fh:
+                    data = json.load(fh)
+                presets = data.get("presets", {})
+                for genre, strength in presets.items():
+                    if genre in self.GENRE_PRESETS and isinstance(strength, (int, float)):
+                        # Nur spectral_strength kalibrieren, Rest bleibt
+                        old = self.GENRE_PRESETS[genre]
+                        self.GENRE_PRESETS[genre] = (float(strength), old[1], old[2], old[3])
+                log.info("Genre Router: %d kalibrierte Presets geladen", len(presets))
+        except Exception as exc:
+            log.debug("Genre Router: Kalibrierung nicht ladbar (%s)", exc)
 
     def _init_panns(self):
         try:

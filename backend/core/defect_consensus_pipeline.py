@@ -163,74 +163,88 @@ class ParallelDefectScanner:
         self._register_detectors()
 
     def _register_detectors(self):
-        """Registriert alle verfügbaren Detektoren mit ihren Scan-Funktionen."""
-        # DefectScanner (primary)
-        try:
+        """Registriert alle verfügbaren Detektoren mit ihren ECHTEN APIs.
+
+        §v10.700: Keine Silent Failures — jeder Detektor wird protokolliert:
+          - "registered":   Scan-Funktion aktiv
+          - "needs_context": braucht Zusatz-Kontext (Material/Onset/Original)
+          - "failed":       Import/API-Fehler — wird GELOGGT, nicht verschluckt
+        """
+        self._registration_report: list[dict[str, str]] = []
+
+        def _reg(name: str, loader, context_needed: bool = False):
+            try:
+                fn = loader()
+                if fn is not None:
+                    self._detectors.append((name, fn))
+                    self._registration_report.append({"name": name, "status": "registered"})
+                else:
+                    self._registration_report.append(
+                        {"name": name, "status": "needs_context" if context_needed else "failed"}
+                    )
+                    log.warning(
+                        "Defect Consensus: %s NICHT registriert (%s)",
+                        name, "braucht Zusatz-Kontext" if context_needed else "API nicht verfügbar",
+                    )
+            except Exception as exc:
+                self._registration_report.append({"name": name, "status": "failed"})
+                log.warning("Defect Consensus: %s fehlgeschlagen — %s", name, exc)
+
+        # 1. DefectScanner (primary)
+        def _load_defect_scanner():
             from backend.core.defect_scanner import get_defect_scanner
+            return get_defect_scanner().scan
+        _reg("defect_scanner", _load_defect_scanner)
 
-            _scanner = get_defect_scanner()
-            self._detectors.append(("defect_scanner", _scanner.scan))
-        except Exception:
-            pass
+        # 2. Clipping Detection — classify_clipping(audio, sr)
+        def _load_clipping():
+            from backend.core.clipping_detection import classify_clipping
+            return classify_clipping
+        _reg("clipping_detection", _load_clipping)
 
-        # Precision Defect Locator
-        try:
+        # 3. Artifact Detector — ArtifactDetector().scan(audio)
+        def _load_artifact():
+            from backend.core.artifact_detector import ArtifactDetector
+            return ArtifactDetector().scan
+        _reg("artifact_detector", _load_artifact)
+
+        # 4. Psychoacoustic — Detector().analyze(audio, sr)
+        def _load_psychoacoustic():
+            from backend.core.psychoacoustic_artifact_detector import PsychoacousticArtifactDetector
+            return PsychoacousticArtifactDetector().analyze
+        _reg("psychoacoustic_artifact_detector", _load_psychoacoustic)
+
+        # 5. Remaster Detector — analyse(audio, sr)
+        def _load_remaster():
+            from backend.core.remaster_detector import RemasterDetector
+            return RemasterDetector().analyse
+        _reg("remaster_detector", _load_remaster)
+
+        # 6. Precision Locator — refine_edges(audio, sr, defects): braucht Defekte als Input
+        def _load_precision():
             from backend.core.precision_defect_locator import PrecisionDefectLocator
-            locator = PrecisionDefectLocator()
-            self._detectors.append(("precision_defect_locator", locator.refine_edges))
-        except Exception:
-            pass
+            return None  # refine_edges braucht Defects-Liste → Stufe 2
+        _reg("precision_defect_locator", _load_precision, context_needed=True)
 
-        # Defect Heatmap
-        try:
-            from backend.core.defect_heatmap import compute as heatmap_compute
-            self._detectors.append(("defect_heatmap", heatmap_compute))
-        except Exception:
-            pass
+        # 7. Attack Type — classify(audio, sr, onset_sample): braucht Onset-Positionen
+        _reg("attack_type_classifier", lambda: None, context_needed=True)
 
-        # Clipping Detection
-        try:
-            from backend.core.clipping_detection import detect_clipping
-            self._detectors.append(("clipping_detection", detect_clipping))
-        except Exception:
-            pass
+        # 8. Intentional Artifact — classify(material, era, freedom): braucht Material-Kontext
+        _reg("intentional_artifact_classifier", lambda: None, context_needed=True)
 
-        # Artifact Detector
-        try:
-            from backend.core.artifact_detector import detect_artifacts
-            self._detectors.append(("artifact_detector", detect_artifacts))
-        except Exception:
-            pass
+        # 9. Dolby NR — detect_dolby_encoding(audio, sr, material, era): braucht Material/Ära
+        _reg("dolby_nr_detector", lambda: None, context_needed=True)
 
-        # Psychoacoustic Artifact Detector
-        try:
-            from backend.core.psychoacoustic_artifact_detector import detect_psychoacoustic_artifacts
-            self._detectors.append(("psychoacoustic_artifact_detector", detect_psychoacoustic_artifacts))
-        except Exception:
-            pass
+        # 10. Cassette Verifier — verify(original, repaired): braucht Vorher/Nachher
+        _reg("cassette_defect_verifier", lambda: None, context_needed=True)
 
-        # Introduced Artifact Detector
-        try:
-            from backend.core.introduced_artifact_detector import detect_introduced_artifacts
-            self._detectors.append(("introduced_artifact_detector", detect_introduced_artifacts))
-        except Exception:
-            pass
-
-        # Attack Type Classifier
-        try:
-            from backend.core.attack_type_classifier import classify_attacks
-            self._detectors.append(("attack_type_classifier", classify_attacks))
-        except Exception:
-            pass
-
-        # Intentional Artifact Classifier
-        try:
-            from backend.core.intentional_artifact_classifier import classify_intentional_artifacts
-            self._detectors.append(("intentional_artifact_classifier", classify_intentional_artifacts))
-        except Exception:
-            pass
-
-        log.info(f"Defect Consensus: {len(self._detectors)} Detektoren registriert")
+        _registered = sum(1 for r in self._registration_report if r["status"] == "registered")
+        _needs = sum(1 for r in self._registration_report if r["status"] == "needs_context")
+        _failed = sum(1 for r in self._registration_report if r["status"] == "failed")
+        log.info(
+            "Defect Consensus: %d registriert, %d brauchen Kontext, %d fehlgeschlagen (von %d)",
+            _registered, _needs, _failed, len(self._registration_report),
+        )
 
     def scan_all(
         self,
