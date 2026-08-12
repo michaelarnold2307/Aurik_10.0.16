@@ -461,6 +461,16 @@ class CoordinatedRepair:
                             _percept_result.mos_pre,
                             _percept_result.mos_post,
                         )
+                # §v10.820: Do-No-Harm-Gate — SNR-Verschlechterung → Schritt zurückrollen
+                _snr_pre = float(np.mean(_audio_pre ** 2) + 1e-10)
+                _snr_post = float(np.mean(current_audio ** 2) + 1e-10)
+                if _snr_post < _snr_pre * 0.7 and len(step.affected_samples) == 0:
+                    # Signalenergie um >30% reduziert ohne lokale Defekt-Bereiche
+                    current_audio = _audio_pre
+                    log.warning(
+                        "§v10.820 Do-No-Harm: %s reduzierte Signalenergie >30%% — Schritt verworfen",
+                        step.phase_id,
+                    )
                 completed.append(step.phase_id)
                 log.info(
                     "Repair: %s completed (%d defects, %.1f%% coverage)",
@@ -498,16 +508,19 @@ class CoordinatedRepair:
         """Führt einen einzelnen Reparatur-Schritt aus."""
 
         # Dispatch zu den bekannten Phasen
+        # §v10.810: Transient-Defekte nutzen DirectDefectRepair (spektrale
+        # Interpolation — RX-11-Äquivalent), statt Pass-Through.
         phase_handlers = {
             "phase_03_denoise": self._run_denoise,
-            "phase_01_click_removal": self._run_pass_through,
+            "phase_01_click_removal": self._run_transient_repair,
+            "phase_09_crackle_removal": self._run_transient_repair,
+            "phase_24_dropout_repair": self._run_transient_repair,
+            "phase_27_click_pop_removal": self._run_transient_repair,
             "phase_02_hum_removal": self._run_pass_through,
             "phase_07_declipper": self._run_pass_through,
-            "phase_09_crackle_removal": self._run_pass_through,
             "phase_12_wow_flutter_fix": self._run_pass_through,
             "phase_14_phase_correction": self._run_pass_through,
             "phase_19_de_esser": self._run_pass_through,
-            "phase_24_dropout_repair": self._run_pass_through,
             "phase_28_surface_noise_profiling": self._run_pass_through,
             "phase_29_tape_hiss_reduction": self._run_pass_through,
             "phase_55_diffusion_inpainting": self._run_inpainting,
@@ -536,6 +549,30 @@ class CoordinatedRepair:
             return result.audio.astype(np.float32)
         except Exception:
             return audio
+
+    def _run_transient_repair(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """Transient-Reparatur via DirectDefectRepair (spektrale Interpolation).
+
+        §v10.810: RX-11-Äquivalent — ersetzt Klicks/Knackser/Dropouts durch
+        Interpolation aus der Umgebung statt nur zu dämpfen.
+        """
+        try:
+            from backend.core.direct_defect_repair import DirectDefectRepair
+            repairer = DirectDefectRepair()
+            repaired, report = repairer.repair(audio, sr)
+            if repaired is not None and repaired.shape == audio.shape:
+                log.info(
+                    "Transient-Repair %s: %s",
+                    step.phase_id,
+                    {k: v for k, v in report.items() if isinstance(v, (int, float, bool))},
+                )
+                return repaired.astype(np.float32)
+        except Exception as exc:
+            log.debug("DirectDefectRepair nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
 
     def _run_inpainting(
         self, audio: np.ndarray, step: RepairStep,
