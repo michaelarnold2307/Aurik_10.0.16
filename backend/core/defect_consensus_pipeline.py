@@ -167,7 +167,9 @@ class ParallelDefectScanner:
         # DefectScanner (primary)
         try:
             from backend.core.defect_scanner import get_defect_scanner
-            self._detectors.append(("defect_scanner", get_defect_scanner))
+
+            _scanner = get_defect_scanner()
+            self._detectors.append(("defect_scanner", _scanner.scan))
         except Exception:
             pass
 
@@ -294,12 +296,35 @@ class ParallelDefectScanner:
                 if hyp:
                     hypotheses.append(hyp)
 
-        # Handle DefectScore objects (from defect_scanner)
-        elif hasattr(result, 'defects'):
-            for d in result.defects:
-                hyp = self._object_to_hypothesis(module_name, d, sample_rate)
-                if hyp:
-                    hypotheses.append(hyp)
+        # Handle DefectAnalysisResult with .scores (from defect_scanner)
+        elif hasattr(result, 'scores'):
+            scores = result.scores
+            if isinstance(scores, dict):
+                for key, score_obj in scores.items():
+                    cat_str = key.value if hasattr(key, 'value') else str(key)
+                    severity = float(getattr(score_obj, 'severity', 0.0))
+                    confidence = float(getattr(score_obj, 'confidence', 0.0))
+                    locations = getattr(score_obj, 'locations', None) or []
+                    if not locations:
+                        # Kein Ort → Defekt überall / nicht lokalisierbar
+                        locations = [(0, 4800)]  # 100ms default
+                    for loc in locations:
+                        if isinstance(loc, (tuple, list)) and len(loc) >= 2:
+                            s_smp, e_smp = int(loc[0]), int(loc[1])
+                        else:
+                            s_smp, e_smp = 0, 4800
+                        if e_smp <= s_smp:
+                            e_smp = s_smp + 4800
+                        hyp = DefectHypothesis(
+                            category=self._map_category(cat_str),
+                            start_sample=s_smp,
+                            end_sample=e_smp,
+                            confidence=confidence,
+                            severity=severity,
+                            source_module=module_name,
+                            evidence={"metadata": getattr(score_obj, 'metadata', {})},
+                        )
+                        hypotheses.append(hyp)
 
         return hypotheses
 

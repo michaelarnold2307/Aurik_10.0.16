@@ -397,7 +397,8 @@ class CoordinatedRepair:
         """
         t0 = time.time()
 
-        if audio.ndim == 1:
+        was_mono = audio.ndim == 1
+        if was_mono:
             audio = audio[np.newaxis, :]
         n_channels = audio.shape[0]
 
@@ -425,6 +426,9 @@ class CoordinatedRepair:
 
         elapsed = time.time() - t0
         output_peak = float(np.abs(current_audio).max())
+
+        if was_mono and current_audio.shape[0] == 1:
+            current_audio = current_audio[0]
 
         return current_audio.astype(np.float32), RepairReport(
             plan=plan,
