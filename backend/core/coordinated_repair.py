@@ -438,7 +438,7 @@ class CoordinatedRepair:
                     if not getattr(_guard_result, "passed", True):
                         # Artefakt erkannt → zurückblenden (70% pre / 30% post)
                         current_audio = _guard.blend_back(_audio_pre, current_audio, 0.7)
-                        logger.warning(
+                        log.warning(
                             "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
                             step.phase_id,
                             getattr(_guard_result, "violations", []),
@@ -455,7 +455,7 @@ class CoordinatedRepair:
                         current_audio = _perceptual.blend_back(
                             _audio_pre, current_audio, _percept_result,
                         )
-                        logger.warning(
+                        log.warning(
                             "§v10.620 Loop: %s verschlechterte MOS (%.3f → %.3f) — adaptiert",
                             step.phase_id,
                             _percept_result.mos_pre,
