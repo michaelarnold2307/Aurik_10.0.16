@@ -513,7 +513,7 @@ class CoordinatedRepair:
         phase_handlers = {
             "phase_03_denoise": self._run_denoise,
             "phase_01_click_removal": self._run_transient_repair,
-            "phase_09_crackle_removal": self._run_transient_repair,
+            "phase_09_crackle_removal": self._run_banquet_vinyl,
             "phase_24_dropout_repair": self._run_transient_repair,
             "phase_27_click_pop_removal": self._run_transient_repair,
             "phase_02_hum_removal": self._run_pass_through,
@@ -521,7 +521,7 @@ class CoordinatedRepair:
             "phase_12_wow_flutter_fix": self._run_pass_through,
             "phase_14_phase_correction": self._run_pass_through,
             "phase_19_de_esser": self._run_pass_through,
-            "phase_28_surface_noise_profiling": self._run_pass_through,
+            "phase_28_surface_noise_profiling": self._run_banquet_vinyl,
             "phase_29_tape_hiss_reduction": self._run_pass_through,
             "phase_55_diffusion_inpainting": self._run_inpainting,
             "phase_57_print_through_reduction": self._run_pass_through,
@@ -549,6 +549,27 @@ class CoordinatedRepair:
             return result.audio.astype(np.float32)
         except Exception:
             return audio
+
+    def _run_banquet_vinyl(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """Vinyl-Crackle/Oberflächenrauschen via Banquet ONNX.
+
+        §v10.830: Banquet ist das SOTA-Modell für Vinyl-Restauration
+        (Knistern + Oberflächenrauschen). RX-11-Äquivalent: De-crackle.
+        """
+        try:
+            from plugins.banquet_vinyl_plugin import get_banquet_plugin
+            strength = float(step.parameters.get("strength", 0.5))
+            plugin = get_banquet_plugin()
+            result = plugin.process(audio, sr, strength)
+            if result is not None and np.asarray(result).shape == audio.shape:
+                log.info("Banquet Vinyl: %s (strength=%.2f)", step.phase_id, strength)
+                return np.asarray(result, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Banquet nicht verfügbar (%s) — Fallback DirectDefectRepair", exc)
+        return self._run_transient_repair(audio, step, manifest, sr)
 
     def _run_transient_repair(
         self, audio: np.ndarray, step: RepairStep,
