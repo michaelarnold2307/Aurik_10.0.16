@@ -37,6 +37,11 @@ from typing import Any, Optional
 
 import numpy as np
 
+try:
+    from backend.core.post_repair_artifact_guard import PostRepairArtifactGuard as _ArtifactGuard
+except Exception:  # pragma: no cover — optional
+    _ArtifactGuard = None
+
 log = logging.getLogger(__name__)
 
 SR = 48000
@@ -408,11 +413,30 @@ class CoordinatedRepair:
         completed: list[str] = []
         failed: list[tuple[str, str]] = []
 
+        _guard = _ArtifactGuard() if _ArtifactGuard is not None else None
+
         for step in plan.steps:
             try:
+                _audio_pre = current_audio.copy()
                 current_audio = self._execute_step(
                     current_audio, step, manifest, sample_rate, n_channels,
                 )
+                # §v10.610: Post-Repair Artifact Guard — Pumping/Verzerrung checken
+                if _guard is not None:
+                    _guard_result = _guard.check(
+                        audio_pre=_audio_pre,
+                        audio_post=current_audio,
+                        sr=sample_rate,
+                        phase_id=step.phase_id,
+                    )
+                    if not getattr(_guard_result, "passed", True):
+                        # Artefakt erkannt → zurückblenden (70% pre / 30% post)
+                        current_audio = _guard.blend_back(_audio_pre, current_audio, 0.7)
+                        logger.warning(
+                            "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
+                            step.phase_id,
+                            getattr(_guard_result, "violations", []),
+                        )
                 completed.append(step.phase_id)
                 log.info(
                     "Repair: %s completed (%d defects, %.1f%% coverage)",
