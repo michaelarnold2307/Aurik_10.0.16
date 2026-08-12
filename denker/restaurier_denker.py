@@ -504,6 +504,25 @@ class RestaurierDenker:
             # §PID: PhaseInteractionDenker-Plan weitergeben (UV3 wird reiner Executor)
             if precomputed_phase_plan:
                 _uv3_kwargs["precomputed_phase_plan"] = precomputed_phase_plan
+            # §v10.400: RepairPlan aus Consensus-Manifest berechnen → UV3 folgt ihm
+            _consensus_manifest = getattr(cached_defect_result, "_consensus_manifest", None)
+            if _consensus_manifest is not None and _RepairPlanner is not None:
+                try:
+                    _planner = _RepairPlanner()
+                    _repair_plan = _planner.plan(
+                        _consensus_manifest,
+                        len(audio) if audio.ndim == 1 else audio.shape[1],
+                    )
+                    if _repair_plan is not None and getattr(_repair_plan, "steps", None):
+                        _uv3_kwargs["repair_plan"] = _repair_plan
+                        logger.info(
+                            "RestaurierDenker: RepairPlan übergeben (%d Schritte: %s)",
+                            len(_repair_plan.steps),
+                            " → ".join(s.phase_id for s in _repair_plan.steps),
+                        )
+                except Exception:
+                    logger.debug("RestaurierDenker: RepairPlan-Berechnung fehlgeschlagen", exc_info=True)
+
             # §2.70 Joint-Calibrator: Codec-Kontext aus PhaseInteractionDenker
             if conflict_notes:
                 _uv3_kwargs["conflict_notes"] = conflict_notes

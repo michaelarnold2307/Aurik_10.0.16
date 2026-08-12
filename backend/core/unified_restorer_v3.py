@@ -7809,10 +7809,12 @@ class UnifiedRestorerV3:
         # dann als reiner Executor (kein _optimize_phase_plan_intelligence() mehr).
         # Leerer Plan [] oder None → UV3 selektiert autonom (fail-safe).
         _precomputed_phase_plan: list[str] | None = kwargs.pop("precomputed_phase_plan", None) or None
+        _repair_plan_kw: Any | None = kwargs.pop("repair_plan", None) or None
         # §2.70: Codec-Kontext vom PhaseInteractionDenker für Joint-Calibrator
         _conflict_notes: list[str] = kwargs.pop("conflict_notes", None) or []
         # Store on self for downstream consumers (joint calibrator, phase guards)
         self._precomputed_phase_plan = _precomputed_phase_plan
+        self._active_repair_plan = _repair_plan_kw  # §v10.400 RepairPlan
         self._conflict_notes = _conflict_notes
         # §2.53b: Log immediately so test mock-patched pipelines capture these messages
         # before intermediate analysis steps that may be incomplete/mocked.
@@ -11952,6 +11954,27 @@ class UnifiedRestorerV3:
                         selected_phases = _ordered
                 except Exception:
                     logger.debug("unified_restorer_v3.py:11409: Silent exception absorbed", exc_info=True)
+            # §v10.400/§v10.500: RepairPlan befolgen — Denker-optimierte Phasen-Reihenfolge
+            # Der RestaurierDenker berechnet den optimalen Plan aus dem Defect-Manifest.
+            # Hier folgt der Orchestrator diesem Plan für die Reparatur-Phasen.
+            _repair_plan = getattr(self, "_active_repair_plan", None)
+            if _repair_plan is not None and getattr(_repair_plan, "steps", None):
+                try:
+                    _plan_order = [s.phase_id for s in _repair_plan.steps]
+                    # Reparatur-Phasen aus dem Plan, die auch in selected_phases sind
+                    _plan_phases_in_selection = [p for p in _plan_order if p in selected_phases]
+                    if len(_plan_phases_in_selection) > 1:
+                        # Nicht-Reparatur-Phasen bleiben an Position; Reparatur-Phasen
+                        # werden in Plan-Reihenfolge umsortiert
+                        _rest = [p for p in selected_phases if p not in _plan_phases_in_selection]
+                        selected_phases = _rest[:1] + _plan_phases_in_selection + _rest[1:]
+                        logger.info(
+                            "UV3: RepairPlan-Reihenfolge übernommen — %s",
+                            " → ".join(_plan_phases_in_selection),
+                        )
+                except Exception:
+                    logger.debug("UV3: RepairPlan-Übernahme fehlgeschlagen", exc_info=True)
+
             _dag_violations = _validate_phase_order(selected_phases)
             if _dag_violations:
                 # §7.5a Transienter Zwischenzustand: §GOAL_BASELINE-Sort (Sort2) korrigiert noch
