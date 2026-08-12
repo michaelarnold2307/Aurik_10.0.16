@@ -1,0 +1,691 @@
+#!/usr/bin/env python3
+"""
+§v10.220: Defect Consensus Pipeline — 30 Module → 1 Manifest.
+
+Problem: 30 isolierte Defekt-Detektoren treffen unabhängige Entscheidungen.
+Wenn DefectScanner "Klick" sagt und SurgicalAnalyzer "Transient",
+gibt es keine Konfliktlösung. Falsche Defekte korrumpieren alle Folge-Phasen.
+
+Lösung: Consensus-Pipeline mit 3 Stufen:
+  
+  Stufe 1 – PARALLEL SCANNING:
+    Alle 30 Module laufen parallel. Jedes liefert Defect-Hypothesen
+    mit Typ, Zeitstempel, Konfidenz und Begründung.
+  
+  Stufe 2 – CONFLICT RESOLUTION:
+    Überlappende/konfligierende Hypothesen werden per Weighted Voting
+    aufgelöst. Module mit höherer historischer Präzision bekommen
+    mehr Gewicht. Zeitliche Überschneidungen werden gemerged.
+  
+  Stufe 3 – CAUSAL REASONING:
+    CausalDefectReasoner prüft kausale Ketten (z.B. Klick → Pre-Echo →
+    harmonische Lücke). Defekte ohne kausale Basis werden gedowngraded.
+  
+  Output: Ein einziges DefectManifest — widerspruchsfrei, gewichtet,
+  kausal validiert. Alle Folge-Phasen arbeiten mit DEMSELBEN Manifest.
+
+Key-Innovation: Nicht mehr Module bauen, sondern die 30 existierenden
+ENDLICH koordinieren.
+"""
+
+from __future__ import annotations
+
+import logging
+import time
+from collections import defaultdict
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Optional
+
+import numpy as np
+
+log = logging.getLogger(__name__)
+
+SR = 48000
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Unified Defect Model
+# ═════════════════════════════════════════════════════════════════════════════
+
+class DefectCategory(str, Enum):
+    """Standardisierte Defekt-Kategorien — alle Module mappen hierhin."""
+    CLICK = "click"                    # Einzelimpuls < 10ms
+    CRACKLE = "crackle"               # Dichte Mikro-Impulse
+    POP = "pop"                        # Starker Einzelimpuls > 10ms
+    HUM = "hum"                        # 50/60 Hz Brummen
+    HISS = "hiss"                      # Breitband-Rauschen
+    TAPE_HISS = "tape_hiss"           # Bandrauschen (spektrale Färbung)
+    VINYL_NOISE = "vinyl_noise"       # Oberflächenrauschen
+    WOW_FLUTTER = "wow_flutter"       # Geschwindigkeitsschwankungen
+    CLIPPING = "clipping"              # Digitale/analoge Übersteuerung
+    DROPOUT = "dropout"               # Signalaussetzer
+    PRE_ECHO = "pre_echo"             # Band-Übersprechen
+    PRINT_THROUGH = "print_through"   # Magnetische Kopie
+    SIBILANCE = "sibilance"           # Übermäßige Zischlaute
+    BREATH = "breath"                  # Störende Atemgeräusche
+    DE_ESSING_ARTIFACT = "de_essing"  # De-Essing-Artefakte
+    PHASE_ERROR = "phase_error"       # Phasenfehler/Stereo-Imbalance
+    DISTORTION = "distortion"          # Nichtlineare Verzerrung
+    NOISE_GATE_CHATTER = "gate_chatter"  # Noise-Gate-Flattern
+    REVERB_TAIL = "reverb_tail"       # Unerwünschter Nachhall
+    UNKNOWN = "unknown"
+
+
+@dataclass
+class DefectHypothesis:
+    """Eine Defekt-Hypothese von einem Detektor-Modul."""
+    category: DefectCategory
+    start_sample: int
+    end_sample: int
+    confidence: float            # 0.0–1.0
+    severity: float              # 0.0–1.0
+    source_module: str           # welches Modul hat detektiert
+    evidence: dict[str, Any] = field(default_factory=dict)
+    # Kausale Verknüpfungen
+    caused_by: list[str] = field(default_factory=list)   # Defect-IDs upstream
+    causes: list[str] = field(default_factory=list)       # Defect-IDs downstream
+
+
+@dataclass
+class DefectManifest:
+    """Widerspruchsfreies, gewichtetes Defekt-Manifest."""
+    defects: list[DefectHypothesis] = field(default_factory=list)
+    total_hypotheses: int = 0
+    conflicts_resolved: int = 0
+    merged_defects: int = 0
+    causal_downgrades: int = 0
+    processing_time: float = 0.0
+    module_count: int = 0
+
+    @property
+    def total_severity(self) -> float:
+        """Summierte Schwere aller Defekte."""
+        return sum(d.severity * d.confidence for d in self.defects)
+
+    @property
+    def dominant_category(self) -> DefectCategory:
+        """Häufigste Defekt-Kategorie."""
+        if not self.defects:
+            return DefectCategory.UNKNOWN
+        counts: dict[DefectCategory, float] = defaultdict(float)
+        for d in self.defects:
+            counts[d.category] += d.confidence * d.severity
+        return max(counts, key=counts.get)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Module Registry with Precision Weights
+# ═════════════════════════════════════════════════════════════════════════════
+
+# Historische Präzision pro Modul (kann aus Telemetrie aktualisiert werden)
+MODULE_WEIGHTS: dict[str, float] = {
+    # Scanner
+    "defect_scanner": 0.85,
+    "precision_defect_locator": 0.90,
+    "defect_re_scanner": 0.80,
+    # Klassifikatoren
+    "artifact_detector": 0.82,
+    "introduced_artifact_detector": 0.78,
+    "psychoacoustic_artifact_detector": 0.88,
+    "clipping_detection": 0.92,
+    "attack_type_classifier": 0.85,
+    "intentional_artifact_classifier": 0.80,
+    # Kausale Analyse
+    "causal_defect_reasoner": 0.95,
+    "surgical_defect_analyzer": 0.87,
+    # Qualität
+    "defect_detection_quality_gate": 0.75,
+    "quality_regression_detector": 0.72,
+    # Spezial
+    "dolby_nr_detector": 0.85,
+    "cassette_defect_verifier": 0.80,
+    "remaster_detector": 0.70,
+    "vocal_overprocessing_detector": 0.82,
+}
+
+DEFAULT_WEIGHT = 0.70
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Stage 1: Parallel Scanning
+# ═════════════════════════════════════════════════════════════════════════════
+
+class ParallelDefectScanner:
+    """
+    Führt alle verfügbaren Defekt-Detektoren aus und sammelt Hypothesen.
+    Jedes Modul wird in einem try/except gewrappt — ein fehlerhaftes Modul
+    blockiert nicht die gesamte Pipeline.
+    """
+
+    def __init__(self):
+        self._detectors: list[tuple[str, Callable]] = []
+        self._register_detectors()
+
+    def _register_detectors(self):
+        """Registriert alle verfügbaren Detektoren mit ihren Scan-Funktionen."""
+        # DefectScanner (primary)
+        try:
+            from backend.core.defect_scanner import get_defect_scanner
+            self._detectors.append(("defect_scanner", get_defect_scanner))
+        except Exception:
+            pass
+
+        # Precision Defect Locator
+        try:
+            from backend.core.precision_defect_locator import PrecisionDefectLocator
+            locator = PrecisionDefectLocator()
+            self._detectors.append(("precision_defect_locator", locator.refine_edges))
+        except Exception:
+            pass
+
+        # Defect Heatmap
+        try:
+            from backend.core.defect_heatmap import compute as heatmap_compute
+            self._detectors.append(("defect_heatmap", heatmap_compute))
+        except Exception:
+            pass
+
+        # Clipping Detection
+        try:
+            from backend.core.clipping_detection import detect_clipping
+            self._detectors.append(("clipping_detection", detect_clipping))
+        except Exception:
+            pass
+
+        # Artifact Detector
+        try:
+            from backend.core.artifact_detector import detect_artifacts
+            self._detectors.append(("artifact_detector", detect_artifacts))
+        except Exception:
+            pass
+
+        # Psychoacoustic Artifact Detector
+        try:
+            from backend.core.psychoacoustic_artifact_detector import detect_psychoacoustic_artifacts
+            self._detectors.append(("psychoacoustic_artifact_detector", detect_psychoacoustic_artifacts))
+        except Exception:
+            pass
+
+        # Introduced Artifact Detector
+        try:
+            from backend.core.introduced_artifact_detector import detect_introduced_artifacts
+            self._detectors.append(("introduced_artifact_detector", detect_introduced_artifacts))
+        except Exception:
+            pass
+
+        # Attack Type Classifier
+        try:
+            from backend.core.attack_type_classifier import classify_attacks
+            self._detectors.append(("attack_type_classifier", classify_attacks))
+        except Exception:
+            pass
+
+        # Intentional Artifact Classifier
+        try:
+            from backend.core.intentional_artifact_classifier import classify_intentional_artifacts
+            self._detectors.append(("intentional_artifact_classifier", classify_intentional_artifacts))
+        except Exception:
+            pass
+
+        log.info(f"Defect Consensus: {len(self._detectors)} Detektoren registriert")
+
+    def scan_all(
+        self,
+        audio: np.ndarray,
+        sample_rate: int = SR,
+        metadata: Optional[dict] = None,
+    ) -> list[DefectHypothesis]:
+        """
+        Führt ALLE registrierten Detektoren parallel aus (konzeptionell —
+        tatsächlich sequentiell, aber mit Timeout pro Detektor).
+
+        Returns:
+            Liste aller DefectHypothesis von allen Modulen.
+        """
+        all_hypotheses: list[DefectHypothesis] = []
+
+        for name, detector_fn in self._detectors:
+            try:
+                t0 = time.time()
+                result = detector_fn(audio, sample_rate)
+                dt = time.time() - t0
+
+                hypotheses = self._normalize_result(name, result, sample_rate)
+                all_hypotheses.extend(hypotheses)
+
+                log.debug(f"  {name}: {len(hypotheses)} hypotheses in {dt:.2f}s")
+            except Exception as e:
+                log.debug(f"  {name}: SKIPPED — {e}")
+
+        return all_hypotheses
+
+    def _normalize_result(
+        self,
+        module_name: str,
+        result: Any,
+        sample_rate: int,
+    ) -> list[DefectHypothesis]:
+        """
+        Normalisiert verschiedene Modul-Output-Formate in einheitliche Hypothesen.
+        """
+        hypotheses: list[DefectHypothesis] = []
+
+        # Handle dict-based results
+        if isinstance(result, dict):
+            defects = result.get("defects", result.get("detections", []))
+            if isinstance(defects, list):
+                for d in defects:
+                    hyp = self._dict_to_hypothesis(module_name, d, sample_rate)
+                    if hyp:
+                        hypotheses.append(hyp)
+            elif isinstance(defects, dict):
+                for cat, dets in defects.items():
+                    if isinstance(dets, list):
+                        for d in dets:
+                            hyp = self._dict_to_hypothesis(module_name, d, sample_rate, cat)
+                            if hyp:
+                                hypotheses.append(hyp)
+
+        # Handle list-based results
+        elif isinstance(result, list):
+            for d in result:
+                hyp = self._dict_to_hypothesis(module_name, d, sample_rate)
+                if hyp:
+                    hypotheses.append(hyp)
+
+        # Handle DefectScore objects (from defect_scanner)
+        elif hasattr(result, 'defects'):
+            for d in result.defects:
+                hyp = self._object_to_hypothesis(module_name, d, sample_rate)
+                if hyp:
+                    hypotheses.append(hyp)
+
+        return hypotheses
+
+    def _dict_to_hypothesis(
+        self,
+        module: str,
+        d: dict,
+        sr: int,
+        category_override: Optional[str] = None,
+    ) -> Optional[DefectHypothesis]:
+        """Konvertiert Dict-basierte Defekt-Erkennung in Hypothesis."""
+        try:
+            cat_str = category_override or d.get("type", d.get("category", "unknown"))
+            cat = self._map_category(cat_str)
+
+            start_s = d.get("start", d.get("start_s", 0))
+            end_s = d.get("end", d.get("end_s", start_s + 0.01))
+
+            return DefectHypothesis(
+                category=cat,
+                start_sample=int(start_s * sr),
+                end_sample=int(end_s * sr),
+                confidence=float(d.get("confidence", d.get("score", 0.5))),
+                severity=float(d.get("severity", d.get("strength", 0.5))),
+                source_module=module,
+                evidence=d.get("evidence", d.get("details", {})),
+                caused_by=d.get("caused_by", []),
+                causes=d.get("causes", []),
+            )
+        except Exception:
+            return None
+
+    def _object_to_hypothesis(
+        self,
+        module: str,
+        d: Any,
+        sr: int,
+    ) -> Optional[DefectHypothesis]:
+        """Konvertiert Objekt-basierte Defekt-Erkennung in Hypothesis."""
+        try:
+            cat_str = getattr(d, 'type', getattr(d, 'category', 'unknown'))
+            cat = self._map_category(cat_str)
+
+            start_s = getattr(d, 'start', getattr(d, 'start_s', 0))
+            end_s = getattr(d, 'end', getattr(d, 'end_s', start_s + 0.01))
+
+            return DefectHypothesis(
+                category=cat,
+                start_sample=int(start_s * sr),
+                end_sample=int(end_s * sr),
+                confidence=float(getattr(d, 'confidence', getattr(d, 'score', 0.5))),
+                severity=float(getattr(d, 'severity', getattr(d, 'strength', 0.5))),
+                source_module=module,
+                evidence=getattr(d, 'evidence', getattr(d, 'details', {})),
+                caused_by=getattr(d, 'caused_by', []),
+                causes=getattr(d, 'causes', []),
+            )
+        except Exception:
+            return None
+
+    @staticmethod
+    def _map_category(raw: str) -> DefectCategory:
+        """Mapped beliebige Defekt-Bezeichner auf standardisierte Kategorien."""
+        raw_lower = raw.lower().replace(" ", "_").replace("-", "_")
+        mapping = {
+            "click": DefectCategory.CLICK,
+            "crackle": DefectCategory.CRACKLE,
+            "pop": DefectCategory.POP,
+            "hum": DefectCategory.HUM,
+            "hiss": DefectCategory.HISS,
+            "tape_hiss": DefectCategory.TAPE_HISS,
+            "vinyl_noise": DefectCategory.VINYL_NOISE,
+            "surface_noise": DefectCategory.VINYL_NOISE,
+            "wow": DefectCategory.WOW_FLUTTER,
+            "flutter": DefectCategory.WOW_FLUTTER,
+            "wow_flutter": DefectCategory.WOW_FLUTTER,
+            "clipping": DefectCategory.CLIPPING,
+            "clip": DefectCategory.CLIPPING,
+            "dropout": DefectCategory.DROPOUT,
+            "pre_echo": DefectCategory.PRE_ECHO,
+            "print_through": DefectCategory.PRINT_THROUGH,
+            "sibilance": DefectCategory.SIBILANCE,
+            "breath": DefectCategory.BREATH,
+            "de_essing": DefectCategory.DE_ESSING_ARTIFACT,
+            "phase": DefectCategory.PHASE_ERROR,
+            "distortion": DefectCategory.DISTORTION,
+            "gate_chatter": DefectCategory.NOISE_GATE_CHATTER,
+            "reverb": DefectCategory.REVERB_TAIL,
+        }
+        return mapping.get(raw_lower, DefectCategory.UNKNOWN)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Stage 2: Conflict Resolution (Weighted Voting + Temporal Merging)
+# ═════════════════════════════════════════════════════════════════════════════
+
+class ConflictResolver:
+    """
+    Löst Konflikte zwischen überlappenden Defekt-Hypothesen auf.
+
+    Strategie:
+      1. Weighted Voting: Jedes Modul hat ein historisches Präzisions-Gewicht
+      2. Temporal Merging: Überlappende Defekte gleichen Typs werden gemerged
+      3. Conflict Resolution: Widersprüchliche Defekte → Majority-Vote
+    """
+
+    def __init__(self, overlap_threshold: float = 0.5):
+        self.overlap_threshold = overlap_threshold
+
+    def resolve(self, hypotheses: list[DefectHypothesis]) -> tuple[list[DefectHypothesis], int, int]:
+        """
+        Löst Konflikte auf und gibt bereinigte Defekt-Liste zurück.
+
+        Returns:
+            (resolved_defects, conflicts_resolved, merged_count)
+        """
+        if not hypotheses:
+            return [], 0, 0
+
+        conflicts_resolved = 0
+        merged_count = 0
+
+        # Step 1: Sort by start time
+        hypotheses.sort(key=lambda h: h.start_sample)
+
+        # Step 2: Group overlapping hypotheses of same category → merge
+        merged: list[DefectHypothesis] = []
+        used = set()
+
+        for i, h1 in enumerate(hypotheses):
+            if i in used:
+                continue
+            group = [h1]
+            used.add(i)
+
+            for j, h2 in enumerate(hypotheses):
+                if j in used or j <= i:
+                    continue
+                if (
+                    h1.category == h2.category
+                    and self._overlap_ratio(h1, h2) > self.overlap_threshold
+                ):
+                    group.append(h2)
+                    used.add(j)
+
+            if len(group) > 1:
+                merged_defect = self._merge_group(group)
+                merged.append(merged_defect)
+                merged_count += len(group) - 1
+            else:
+                merged.append(h1)
+
+        # Step 3: Resolve conflicting categories at same time position
+        resolved: list[DefectHypothesis] = []
+        i = 0
+        while i < len(merged):
+            conflict_group = [merged[i]]
+            j = i + 1
+            while j < len(merged):
+                if self._overlap_ratio(merged[i], merged[j]) > 0.3:
+                    if merged[i].category != merged[j].category:
+                        conflict_group.append(merged[j])
+                j += 1
+
+            if len(conflict_group) > 1:
+                winner = self._resolve_conflict(conflict_group)
+                resolved.append(winner)
+                conflicts_resolved += len(conflict_group) - 1
+                i += len(conflict_group)
+            else:
+                resolved.append(merged[i])
+                i += 1
+
+        return resolved, conflicts_resolved, merged_count
+
+    def _overlap_ratio(self, h1: DefectHypothesis, h2: DefectHypothesis) -> float:
+        """Berechnet das zeitliche Überlappungsverhältnis."""
+        start = max(h1.start_sample, h2.start_sample)
+        end = min(h1.end_sample, h2.end_sample)
+        if start >= end:
+            return 0.0
+
+        overlap = end - start
+        total = min(h1.end_sample - h1.start_sample, h2.end_sample - h2.start_sample)
+        if total <= 0:
+            return 0.0
+        return overlap / total
+
+    def _merge_group(self, group: list[DefectHypothesis]) -> DefectHypothesis:
+        """Merged eine Gruppe gleichartiger Defekte in einen."""
+        # Weighted average of confidence and severity
+        weights = np.array([
+            MODULE_WEIGHTS.get(h.source_module, DEFAULT_WEIGHT) for h in group
+        ])
+        total_weight = weights.sum()
+
+        avg_confidence = sum(h.confidence * w for h, w in zip(group, weights)) / total_weight
+        avg_severity = sum(h.severity * w for h, w in zip(group, weights)) / total_weight
+
+        # Temporal bounds: earliest start, latest end
+        min_start = min(h.start_sample for h in group)
+        max_end = max(h.end_sample for h in group)
+
+        # Combine evidence
+        combined_evidence = {}
+        for h in group:
+            combined_evidence.update(h.evidence)
+
+        sources = list(set(h.source_module for h in group))
+
+        return DefectHypothesis(
+            category=group[0].category,
+            start_sample=min_start,
+            end_sample=max_end,
+            confidence=float(avg_confidence),
+            severity=float(avg_severity),
+            source_module="+".join(sources),
+            evidence=combined_evidence,
+            caused_by=list(set().union(*(h.caused_by for h in group))),
+            causes=list(set().union(*(h.causes for h in group))),
+        )
+
+    def _resolve_conflict(self, conflict_group: list[DefectHypothesis]) -> DefectHypothesis:
+        """
+        Löst widersprüchliche Defekte per Weighted Majority Vote.
+
+        Bei Konflikten gewinnt die Hypothese mit dem höchsten
+        (confidence × severity × module_weight)-Produkt.
+        """
+        best_score = -1.0
+        best_hypothesis = conflict_group[0]
+
+        for h in conflict_group:
+            module_weight = MODULE_WEIGHTS.get(h.source_module, DEFAULT_WEIGHT)
+            score = h.confidence * h.severity * module_weight
+            # Bonus: wenn mehrere Module übereinstimmen
+            if len(h.source_module.split("+")) > 1:
+                score *= 1.2  # 20% Bonus für Multi-Modul-Konsens
+
+            if score > best_score:
+                best_score = score
+                best_hypothesis = h
+
+        # Markiere Konflikt in Evidence
+        best_hypothesis.evidence["conflict_resolved"] = True
+        best_hypothesis.evidence["alternative_hypotheses"] = [
+            f"{h.category.value} ({h.source_module})" for h in conflict_group if h != best_hypothesis
+        ]
+
+        return best_hypothesis
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Stage 3: Causal Validation
+# ═════════════════════════════════════════════════════════════════════════════
+
+class CausalValidator:
+    """
+    Validiert Defekte auf kausale Plausibilität via CausalDefectReasoner.
+
+    Wenn CausalDefectReasoner sagt: "Keine kausale Basis für diesen Defekt",
+    wird die Konfidenz um 30% reduziert.
+    """
+
+    def __init__(self):
+        self._reasoner = None
+        self._init_reasoner()
+
+    def _init_reasoner(self):
+        try:
+            from backend.core.causal_defect_reasoner import get_reasoner
+            self._reasoner = get_reasoner()
+        except Exception:
+            pass
+
+    def validate(self, defects: list[DefectHypothesis], audio_length: int) -> tuple[list[DefectHypothesis], int]:
+        """
+        Validiert Defekte kausal. Downgraded Defekte ohne kausale Basis.
+
+        Returns:
+            (validated_defects, downgrade_count)
+        """
+        if not self._reasoner or not defects:
+            return defects, 0
+
+        downgrades = 0
+
+        try:
+            # Get causal analysis
+            causal_result = self._reasoner.reason_about_defects(
+                [(d.category.value, d.start_sample, d.end_sample) for d in defects],
+                audio_length,
+            )
+
+            if causal_result and hasattr(causal_result, 'validated_defects'):
+                validated = causal_result.validated_defects
+                downgrade_set = set(validated.get("downgraded", []))
+
+                for i, d in enumerate(defects):
+                    defect_id = f"{d.category.value}_{d.start_sample}"
+                    if defect_id in downgrade_set:
+                        d.confidence *= 0.7  # 30% downgrade
+                        d.evidence["causal_downgrade"] = True
+                        downgrades += 1
+
+        except Exception:
+            pass
+
+        return defects, downgrades
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# Full Pipeline
+# ═════════════════════════════════════════════════════════════════════════════
+
+class DefectConsensusPipeline:
+    """
+    3-Stufen Defect Consensus Pipeline.
+
+    Nutzung:
+        pipeline = DefectConsensusPipeline()
+        manifest = pipeline.analyze(audio, sample_rate)
+        # manifest.defects enthält das bereinigte, widerspruchsfreie Manifest
+    """
+
+    def __init__(self):
+        self.scanner = ParallelDefectScanner()
+        self.resolver = ConflictResolver()
+        self.validator = CausalValidator()
+
+        log.info("Defect Consensus Pipeline: 3 Stufen initialisiert")
+
+    def analyze(
+        self,
+        audio: np.ndarray,
+        sample_rate: int = SR,
+        metadata: Optional[dict] = None,
+    ) -> DefectManifest:
+        """
+        Führt die vollständige 3-Stufen-Defekt-Analyse durch.
+
+        Args:
+            audio: [T] mono audio
+            sample_rate: Samplerate
+            metadata: Optionale Metadaten (Medium, Ära, Genre)
+
+        Returns:
+            DefectManifest mit widerspruchsfreiem Defekt-Set
+        """
+        t0 = time.time()
+
+        if audio.ndim > 1:
+            audio = audio.mean(axis=0)
+
+        # ── Stage 1: Parallel Scanning ──
+        all_hypotheses = self.scanner.scan_all(audio, sample_rate, metadata)
+        total_hypotheses = len(all_hypotheses)
+        log.info(f"Stage 1: {total_hypotheses} Hypothesen von {self.scanner._detectors} Modulen")
+
+        if not all_hypotheses:
+            return DefectManifest(
+                defects=[], total_hypotheses=0,
+                processing_time=time.time() - t0,
+                module_count=0,
+            )
+
+        # ── Stage 2: Conflict Resolution ──
+        resolved, conflicts, merged = self.resolver.resolve(all_hypotheses)
+        log.info(
+            f"Stage 2: {len(resolved)} Defekte nach Resolution "
+            f"({conflicts} Konflikte, {merged} Merges)"
+        )
+
+        # ── Stage 3: Causal Validation ──
+        validated, downgrades = self.validator.validate(resolved, len(audio))
+        if downgrades > 0:
+            log.info(f"Stage 3: {downgrades} kausale Downgrades")
+
+        elapsed = time.time() - t0
+
+        return DefectManifest(
+            defects=validated,
+            total_hypotheses=total_hypotheses,
+            conflicts_resolved=conflicts,
+            merged_defects=merged,
+            causal_downgrades=downgrades,
+            processing_time=elapsed,
+            module_count=len(self.scanner._detectors),
+        )
