@@ -87,13 +87,19 @@ class PostRepairArtifactGuard:
         """
         violations: list[str] = []
 
-        # ── Check 1: TruePeak (Clipping) ──
+        # ── Check 1: TruePeak (Clipping) — RELATIV, nicht absolut ──
+        # §v10.860: Vorher wurde jede Datei geflaggt, die bereits mit
+        # -0.4 dBFS gemastert war (Corpus!). Jetzt: nur flaggen, wenn der
+        # Schritt den Peak um >0.1 dB ERHÖHT hat.
         truepeak = float(np.abs(audio_post).max())
         truepeak_dbfs = float(20 * np.log10(truepeak + 1e-10))
+        pre_peak = float(np.abs(audio_pre).max())
+        pre_peak_dbfs = float(20 * np.log10(pre_peak + 1e-10))
+        peak_delta = truepeak_dbfs - pre_peak_dbfs
         if truepeak_dbfs > TRUEPEAK_LIMIT_DBFS:
             violations.append(f"truepeak_overflow_{truepeak_dbfs:+.1f}dBFS")
-        elif truepeak_dbfs > TRUEPEAK_WARN_DBFS:
-            violations.append(f"truepeak_warn_{truepeak_dbfs:+.1f}dBFS")
+        elif peak_delta > 0.1:
+            violations.append(f"truepeak_rise_{peak_delta:+.2f}dB")
 
         # ── Check 2: Pumping (Gain-Modulation) ──
         pumping_index = self._measure_pumping(audio_pre, audio_post, sr)

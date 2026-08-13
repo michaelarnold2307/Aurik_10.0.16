@@ -438,13 +438,25 @@ class CoordinatedRepair:
                         phase_id=step.phase_id,
                     )
                     if not getattr(_guard_result, "passed", True):
-                        # Artefakt erkannt → zurückblenden (70% pre / 30% post)
-                        current_audio = _guard.blend_back(_audio_pre, current_audio, 0.7)
-                        log.warning(
-                            "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
-                            step.phase_id,
-                            getattr(_guard_result, "violations", []),
+                        # §v10.860: Spektrale Verstöße → 100% Reject (kein Blend),
+                        # milde Verstöße (truepeak/pumping) → 70/30 Blend.
+                        _violations = getattr(_guard_result, "violations", [])
+                        _is_spectral = any(
+                            str(v).startswith(("spectral", "formant_drift"))
+                            for v in _violations
                         )
+                        if _is_spectral:
+                            current_audio = _audio_pre
+                            log.warning(
+                                "§v10.860 Guard: %s SPEKTRALER Schaden (%s) — Schritt verworfen",
+                                step.phase_id, _violations,
+                            )
+                        else:
+                            current_audio = _guard.blend_back(_audio_pre, current_audio, 0.7)
+                            log.warning(
+                                "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
+                                step.phase_id, _violations,
+                            )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
                 if _perceptual is not None:
                     _percept_result = _perceptual.evaluate(
@@ -562,6 +574,16 @@ class CoordinatedRepair:
         verschlechtert es (Benchmark: -1.3 dB). Nicht-Vinyl → Interpolation.
         """
         material = getattr(self, "_material", None)
+        # §v10.870: Banquet auf diesem Corpus-Knistern bei JEDER Strength
+        # schädlich (0.02→-0.6 dB, 0.12→-3.4 dB). Default: Interpolation.
+        # Banquet nur als Opt-In, wenn es für das Material kalibriert wurde.
+        use_banquet = bool(step.parameters.get("use_banquet", False))
+        if not use_banquet:
+            log.info(
+                "Banquet übersprungen (nicht kalibriert für %s) — Interpolation",
+                material or "unbekannt",
+            )
+            return self._run_transient_repair(audio, step, manifest, sr)
         if material is not None and str(material).lower() not in ("vinyl", "shellac", ""):
             log.info("Banquet übersprungen (Material %s) — Interpolation", material)
             return self._run_transient_repair(audio, step, manifest, sr)
