@@ -790,3 +790,49 @@ Die Monotonie-Garantie (§G86) ist in `set_novelty_crit_threshold()` implementie
 | `.github/VERBOTE.md` Kategorie E | §V25–§V28: Hartcodierte Schwellwerte VERBOTEN |
 | `.github/specs/09_global_calibration_matrix.md` | Detaillierte Dispatch-Implementierung |
 | `.github/specs/17_sft_novelty_adaptive_calibration.md` | SFT-Adaptivität und Defekt-Audibilität |
+
+
+---
+
+## 16. Frontend↔Backend-Harmonisierung & Evaluation (§v10.990–§v10.999, 2026-08-13)
+
+Der Kreis des Gesamtsystems schließt sich: **Vorher → Während → Nachher → Beleg**.
+
+| §Ref | Bedeutung | Kern-Dateien |
+|------|-----------|--------------|
+| `§v10.990` | Zentrale UI-Palette, SOTA-Status-Panel im Hauptfenster, Bridge-SOTA-Zugänge (Model-Zoo, Consensus, Plan, Guards) | `Aurik10/ui/ui_constants.py`, `restoration_status_panel.py`, `backend/api/bridge.py`, `coordinated_repair.py` |
+| `§v10.991` | closeEvent: kein modaler Dialog bei headless/unsichtbar (Layout-Gate-Hang behoben) | `modern_window.py` |
+| `§v10.992` | Laienverständliche Einwilligungs-Ansicht („Gefunden … · Aurik wird …") | `bridge.get_repair_plan_consent`, `restoration_status_panel.py` |
+| `§v10.993` | Crash-Report-Sichtbarkeit: Exception-Hook im GUI-Start, Fehler-Dialog beim Start, GUI-Smoke-Gate in CI | `crash_reporter.py`, `main.py`, `ci-lite.yml` |
+| `§v10.994` | Model-Zoo-Aktivierung: SGMSE+ kontextaktiv, MP-SENet Norm-Kalibrierung (Peak-99 + Gain + Loudness-Guard) | `coordinated_repair.py`, `model_zoo_registry.py` |
+| `§v10.995` | DAS EINE Evaluations-System: Engine, Report-Schema, CLI, Gates (Regression/Competitive/Goals), Hörvergleich-Export | `backend/core/evaluation_system.py`, `scripts/evaluate.py` |
+| `§v10.996` | Konsolidierter Restaurierungs-Bericht (Plan → Ausführung → Beweis) im Ergebnis-Dialog | `bridge.get_restoration_bericht`, `results_summary.py` |
+| `§v10.997` | Live-Plan-Tracker (✓/▶/○) während der Verarbeitung | `restoration_status_panel.py` |
+| `§v10.998` | Kassetten-Katastrophe behoben: Null-Schwere-Fehlalarme triggern keine Phasen, Strength-Durchreichung, Energy-Collapse-Guard, Bass/Hum-Diskriminierung (Perzentil-Modulationstiefe), Block-LMS | `coordinated_repair.py`, `phase_02_hum_removal.py`, `phase_57_print_through_reduction.py` |
+| `§v10.999` | Live-Mithören: voller Zwischenstand, Toggle statt Neustart, Positionsgedächtnis, Scrubber-Seek | `modern_window.py` |
+
+### 16.1 Ehrlichkeits-Regeln (Evaluation)
+
+1. JEDES Ergebnis wird berichtet — auch Verschlechterungen (nie gefiltert).
+2. Ein Report-Schema (JSON v1.0) für objektive Läufe, Wettbewerber-Vergleiche und Hörergebnisse.
+3. Gates: regression (nie schlechter), competitive (≥ RX-11-Proxy in ≥7/10), goal_achievement (Passrate ≥ 0.8).
+4. Erste echte Korpus-Messung (2026-08-13): FAIL (−52 dB) → Ursache isoliert (Phase 02 auf Null-Schwere-Fehlalarm) → Fix → PASS (0.00 dB, 0 Schritte).
+
+### 16.2 Guard-Netz (Primum non nocere, §0)
+
+- TruePeak / Pumping / Formant / Spektral (ArtifactGuard)
+- **Energy-Collapse-Guard (§v10.998)**: RMS-Ausgang < 25% des Eingangs → vollständiger Revert
+- UTMOS-Loop + Do-No-Harm-Gate (UV3)
+- Planner-Severity-Gate: severity < 0.05 → keine Phase
+
+### 16.3 Cross-Referenzen
+
+| Dokument | Inhalt |
+|----------|--------|
+| `.github/specs/v10.99x_stimmiges_gesamtsystem.md` | Detaillierte Spezifikation + Evidenzblock |
+| `.github/workflows/ci-lite.yml` | gui-smoke-gate + evaluation-gate |
+| `tests/unit/test_frontend_backend_harmony.py` | Drift-Gates Frontend↔Backend |
+| `tests/unit/test_evaluation_system.py` | Evaluations-Selbsttests (Ehrlichkeit gepinnt) |
+| `tests/unit/test_model_zoo_activation.py` | Zoo-Aktivierung + §v10.998-Regressionen |
+| `tests/unit/test_phase02_bass_hum_discrimination.py` | Physik der Bass/Hum-Trennung |
+| `scripts/diagnose_phase_degradation.py` | Schrittweise SNR-Diagnose |
