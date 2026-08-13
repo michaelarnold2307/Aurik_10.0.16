@@ -530,15 +530,15 @@ class CoordinatedRepair:
             "phase_09_crackle_removal": self._run_banquet_vinyl,
             "phase_24_dropout_repair": self._run_transient_repair,
             "phase_27_click_pop_removal": self._run_transient_repair,
-            "phase_02_hum_removal": self._run_pass_through,
-            "phase_07_declipper": self._run_pass_through,
-            "phase_12_wow_flutter_fix": self._run_pass_through,
-            "phase_14_phase_correction": self._run_pass_through,
-            "phase_19_de_esser": self._run_pass_through,
+            "phase_02_hum_removal": self._run_hum_removal,
+            "phase_07_declipper": self._run_declipper,
+            "phase_12_wow_flutter_fix": self._run_wow_flutter,
+            "phase_14_phase_correction": self._run_phase_correction,
+            "phase_19_de_esser": self._run_de_esser,
             "phase_28_surface_noise_profiling": self._run_banquet_vinyl,
-            "phase_29_tape_hiss_reduction": self._run_pass_through,
+            "phase_29_tape_hiss_reduction": self._run_tape_hiss,
             "phase_55_diffusion_inpainting": self._run_inpainting,
-            "phase_57_print_through_reduction": self._run_pass_through,
+            "phase_57_print_through_reduction": self._run_print_through,
         }
 
         handler = phase_handlers.get(step.phase_id, self._run_pass_through)
@@ -725,6 +725,137 @@ class CoordinatedRepair:
         except Exception:
             log.debug("Inpainting not available, skipping")
             return audio
+
+    def _run_hum_removal(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: Hum-Entfernung via Phase 02 (echte Implementierung)."""
+        try:
+            from backend.core.phases.phase_02_hum_removal import HumRemovalPhase
+            mat = getattr(self, "_material", "") or "unknown"
+            result = HumRemovalPhase().process(
+                audio=audio, sample_rate=sr, material_type=mat, auto_detect=True,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Hum-Removal nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_declipper(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: De-Clipping via Phase 07."""
+        try:
+            from backend.core.phases.phase_07_declipper import DeclipperPhase
+            strength = float(step.parameters.get("strength", 0.5))
+            result = DeclipperPhase().process(
+                audio=audio, sample_rate=sr, strength=strength,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("De-Clipper nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_wow_flutter(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: Wow/Flutter-Korrektur via Phase 12."""
+        try:
+            from backend.core.phases.phase_12_wow_flutter_fix import WowFlutterFix
+            mat = getattr(self, "_material", "") or "unknown"
+            result = WowFlutterFix().process(
+                audio=audio, sample_rate=sr, material_type=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Wow/Flutter-Fix nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_phase_correction(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: Phasenkorrektur via Phase 14."""
+        try:
+            from backend.core.phases.phase_14_phase_correction import PhaseCorrection
+            mat = getattr(self, "_material", "") or "unknown"
+            result = PhaseCorrection().process(
+                audio=audio, sample_rate=sr, material_type=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Phasenkorrektur nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_de_esser(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: De-Essing via Phase 19."""
+        try:
+            from backend.core.phases.phase_19_de_esser import DeEsserPhase
+            mat_str = getattr(self, "_material", "") or "unknown"
+            try:
+                from backend.core.defect_scanner import MaterialType as _MT
+                mat = _MT("tape" if mat_str == "cassette" else mat_str)
+            except Exception:
+                mat = mat_str
+            result = DeEsserPhase().process(
+                audio=audio, sample_rate=sr, material_type=mat, gender="unknown",
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("De-Esser nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_tape_hiss(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: Tape-Hiss-Reduktion via Phase 29."""
+        try:
+            from backend.core.phases.phase_29_tape_hiss_reduction import TapeHissReductionPhase
+            mat = getattr(self, "_material", "") or "unknown"
+            result = TapeHissReductionPhase().process(
+                audio=audio, sample_rate=sr, material=mat, quality_mode="quality",
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Tape-Hiss-Reduktion nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_print_through(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.940: Print-Through-Reduktion via Phase 57."""
+        try:
+            from backend.core.phases.phase_57_print_through_reduction import PrintThroughReductionPhase
+            mat = getattr(self, "_material", "") or "unknown"
+            result = PrintThroughReductionPhase().process(
+                audio=audio, sample_rate=sr, material_type=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Print-Through-Reduktion nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
 
     def _run_pass_through(
         self, audio: np.ndarray, step: RepairStep,
