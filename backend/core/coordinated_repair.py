@@ -128,6 +128,31 @@ def _guard_amp_loudness(denoised: np.ndarray, original: np.ndarray) -> np.ndarra
     return denoised.astype(np.float32)
 
 
+def _is_localized_change(pre: np.ndarray, post: np.ndarray, max_fraction: float = 0.10) -> bool:
+    """§v10.998: Trägt < max_fraction der Samples 90% der Änderungs-Energie?
+
+    Lokalisierte Reparaturen (Dropout-Interpolation, Klick-Ersatz) ändern nur
+    wenige Prozent der Samples — sie dürfen die Spektral-Guards NICHT auslösen.
+    Globale Zerstörung (Filter-Notch-Ketten) ändert das ganze Signal.
+    """
+    try:
+        _pre = np.asarray(pre, dtype=np.float64)
+        _post = np.asarray(post, dtype=np.float64)
+        if _pre.shape != _post.shape:
+            return False
+        if _pre.ndim > 1:
+            _pre = _pre.mean(axis=0)
+            _post = _post.mean(axis=0)
+        _diff = np.abs(_post - _pre).flatten()
+        _sorted = np.sort(_diff)[::-1]
+        _cum = np.cumsum(_sorted ** 2)
+        _total = _cum[-1] + 1e-12
+        _n90 = int(np.searchsorted(_cum, _total * 0.9))
+        return (_n90 + 1) / max(len(_sorted), 1) < max_fraction
+    except Exception:
+        return False
+
+
 def _spectral_damage_db(pre: np.ndarray, post: np.ndarray, sr: int) -> float:
     """§v10.998: Mittlere absolute Band-Energie-Abweichung (log-Bänder).
 
@@ -669,15 +694,17 @@ class CoordinatedRepair:
                         # die Musik spektral, −65 dB SNR, RMS fast unverändert).
                         # Kriterium: mittlere absolute Band-Energie-Abweichung in
                         # 10 log-Beabständeten Bändern > 9 dB → Revert.
-                        _spec_damage = _spectral_damage_db(_audio_pre, current_audio, sample_rate)
-                        if _spec_damage > 9.0:
-                            current_audio = _audio_pre
-                            _guard_violations["spectral_damage"] = _guard_violations.get("spectral_damage", 0) + 1
-                            log.warning(
-                                "§v10.998 Guard: %s verursachte spektralen Schaden "
-                                "(%.1f dB Band-Abweichung → revert)",
-                                step.phase_id, _spec_damage,
-                            )
+                        # LOKALE Reparaturen (Dropout/Klick) sind ausgenommen.
+                        if not _is_localized_change(_audio_pre, current_audio):
+                            _spec_damage = _spectral_damage_db(_audio_pre, current_audio, sample_rate)
+                            if _spec_damage > 9.0:
+                                current_audio = _audio_pre
+                                _guard_violations["spectral_damage"] = _guard_violations.get("spectral_damage", 0) + 1
+                                log.warning(
+                                    "§v10.998 Guard: %s verursachte spektralen Schaden "
+                                    "(%.1f dB Band-Abweichung → revert)",
+                                    step.phase_id, _spec_damage,
+                                )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
                 if _perceptual is not None and _changed:
                     _percept_result = _perceptual.evaluate(
@@ -727,14 +754,22 @@ class CoordinatedRepair:
         # §v10.998: Kumulativer Spektral-Guard — finale Prüfung gegen den
         # Session-Input. Kriterium: ≥ 3 log-Bänder mit > 12 dB Abweichung
         # (fängt frequenz-lokalisierte Zerstörung wie die Hum-Notch-Kette).
-        _cum_bands = _spectral_bands_over_db(_session_audio, current_audio, sample_rate)
-        if _cum_bands >= 3:
-            _guard_violations["cumulative_spectral"] = _guard_violations.get("cumulative_spectral", 0) + 1
-            current_audio = _session_audio
-            log.warning(
-                "§v10.998 Guard: Kette verursachte kumulativen Spektral-Schaden "
-                "(%d Bänder > 12 dB) → kompletter Revert auf Session-Input", _cum_bands,
+        # Lokale Reparaturen sind ausgenommen.
+        if not _is_localized_change(_session_audio, current_audio):
+            # §v10.998: Summen-Kriterium — die Hum-Kette verteilt Schaden
+            # breitbandig (viele Bänder je 5-10 dB); eine reine Band-Zählung
+            # (> 12 dB je Band) verfehlt das. Summe der Band-Abweichungen
+            # > 30 dB = Zerstörung.
+            _cum_sum = _spectral_bands_over_db(
+                _session_audio, current_audio, sample_rate, threshold_db=4.0
             )
+            if _cum_sum >= 6:
+                _guard_violations["cumulative_spectral"] = _guard_violations.get("cumulative_spectral", 0) + 1
+                current_audio = _session_audio
+                log.warning(
+                    "§v10.998 Guard: Kette verursachte kumulativen Spektral-Schaden "
+                    "(%d Bänder > 4 dB) → kompletter Revert auf Session-Input", _cum_sum,
+                )
 
         if was_mono and current_audio.shape[0] == 1:
             current_audio = current_audio[0]
@@ -1014,7 +1049,16 @@ class CoordinatedRepair:
         try:
             from backend.core.phases.phase_02_hum_removal import HumRemovalPhase
             mat = getattr(self, "_material", "") or "unknown"
-            result = HumRemovalPhase().process(
+            # §v10.998: Do-no-harm-Gate — liegt MUSIK im Hum-Band (Bass etc.),
+            # überspringt die Notch-Kette KOMPLETT. Messung: Phase 02 zerstörte
+            # Hum-auf-Musik um −53 dB trotz Budget/Tiefen-Logik; der ehrliche
+            # Default ist: Hum nur entfernen, wenn er wirklich dominiert.
+            _phase = HumRemovalPhase()
+            _phase.sample_rate = sr
+            if _phase._detect_musical_content(audio, 50.0) or _phase._detect_musical_content(audio, 60.0):
+                log.info("Hum-Removal übersprungen (§v10.998: Musik im Hum-Band)")
+                return audio
+            result = _phase.process(
                 audio=audio, sample_rate=sr, material_type=mat, auto_detect=True,
                 strength=float(step.parameters.get("strength", 1.0)),
             )

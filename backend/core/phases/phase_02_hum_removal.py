@@ -716,6 +716,14 @@ class HumRemovalPhase(PhaseInterface):
             for harmonic_freq in hum_info["harmonics"]:
                 initial_hum_energy += self._measure_hum_at_freq(audio, harmonic_freq)  # type: ignore[assignment]
 
+        # §v10.998: Hum-Budget — die Notch-Kette darf NIE mehr Band-Energie
+        # entfernen als der Hum selbst (×1.5 Sicherheitsfaktor). Überschreitet
+        # die kumulierte Entfernung das Budget, wird abgebrochen und das
+        # Ergebnis zurückgemischt. Damit ist Hum-Entfernung mathematisch
+        # daran gebunden, was tatsächlich an Hum vorhanden ist.
+        hum_budget = initial_hum_energy * 1.5 + 1e-12
+        removed_energy = 0.0
+
         # Apply notch filter for each harmonic
         for hum_info in harmonic_data:
             harmonics = hum_info["harmonics"]
@@ -744,7 +752,22 @@ class HumRemovalPhase(PhaseInterface):
                     depth = 1.0
 
                 # Apply notch filter
+                _pre_notch = self._measure_hum_at_freq(result, harmonic_freq)
                 result = self._apply_notch_filter(result, harmonic_freq, q_effective, depth=depth)
+                _post_notch = self._measure_hum_at_freq(result, harmonic_freq)
+                removed_energy += max(0.0, _pre_notch - _post_notch)
+
+                # §v10.998: Budget-Check — mehr als 1.5× Hum-Energie entfernt?
+                if removed_energy > hum_budget:
+                    _over = removed_energy / hum_budget
+                    # Zurückmischen auf Budget: result = audio + beta*(result - audio)
+                    _beta = max(0.0, min(1.0, 1.0 / max(_over, 1e-9)))
+                    result = audio + _beta * (result - audio)
+                    log.info(
+                        "§v10.998 Hum-Budget: %.0f%% entfernt → auf Budget zurückgemischt (beta=%.2f)",
+                        _over * 100, _beta,
+                    )
+                    break
 
                 total_harmonics_removed += 1
 

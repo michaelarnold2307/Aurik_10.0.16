@@ -236,6 +236,9 @@ def test_hum_handler_passes_strength_from_step(monkeypatch):
     captured: dict = {}
 
     class _FakePhase:
+        def _detect_musical_content(self, audio, freq):
+            return False  # §v10.998: Do-no-harm-Gate — kein Musik-Befund
+
         def process(self, **kwargs):
             captured.update(kwargs)
             return type("R", (), {"audio": kwargs["audio"]})()
