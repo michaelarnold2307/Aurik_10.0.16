@@ -104,3 +104,36 @@ def test_b12_utmos_shape_normalisierung():
     """§v10.920: UTMOS muss 2D-Inputs auf Mono reduzieren (88-Fold-Fehler-Fix)."""
     content = _read("plugins/utmos_plugin.py")
     assert "audio_f32.ndim > 1" in content
+
+
+def test_b13_time_major_stereo_normalisierung():
+    """§v10.998: [T, C]-Stereo (sf.read-Layout) darf nicht als [C, T] fehlinterpretiert werden.
+
+    Live-Betriebs-Bug, aufgedeckt durch die erste echte Korpus-Messung:
+    phase_02/phase_12 scheiterten mit Broadcast-Fehler (2048,2) vs (2048,),
+    weil Frames statt Kanäle iteriert wurden.
+    """
+    import numpy as np
+
+    from backend.core.coordinated_repair import (
+        CoordinatedRepair,
+        RepairPlan,
+        RepairPriority,
+        RepairStep,
+    )
+
+    n = 48000
+    left = np.linspace(0.0, 1.0, n, dtype=np.float32)
+    right = np.linspace(1.0, 0.0, n, dtype=np.float32)
+    audio_tm = np.stack([left, right], axis=1)  # [T, 2] — time-major
+
+    plan = RepairPlan(steps=[
+        RepairStep(
+            phase_id="phase_99_test_pass", priority=RepairPriority.TRANSIENT,
+            defect_category="test", affected_samples=[],
+        )
+    ])
+    out, report = CoordinatedRepair().execute(audio_tm, plan, None, 48000)
+    assert out.shape == (n, 2)  # Orientierung bleibt [T, C]
+    assert np.allclose(out[:, 0], left)
+    assert np.allclose(out[:, 1], right)

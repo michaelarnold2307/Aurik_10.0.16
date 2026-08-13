@@ -477,6 +477,14 @@ class CoordinatedRepair:
         was_mono = audio.ndim == 1
         if was_mono:
             audio = audio[np.newaxis, :]
+        # §v10.998: Time-major Stereo ([T, C] aus sf.read) → [C, T] normalisieren.
+        # Ohne diese Normalisierung werden Frames statt Kanäle iteriert —
+        # Live-Betriebs-Bug, aufgedeckt durch die erste echte Korpus-Messung.
+        was_time_major = (
+            audio.ndim == 2 and audio.shape[0] > 2 and audio.shape[1] in (1, 2)
+        )
+        if was_time_major:
+            audio = np.ascontiguousarray(audio.T)
         n_channels = audio.shape[0]
 
         input_peak = float(np.abs(audio).max())
@@ -597,6 +605,8 @@ class CoordinatedRepair:
 
         if was_mono and current_audio.shape[0] == 1:
             current_audio = current_audio[0]
+        elif was_time_major and current_audio.ndim == 2:
+            current_audio = np.ascontiguousarray(current_audio.T)  # zurück zu [T, C]
 
         return current_audio.astype(np.float32), RepairReport(
             plan=plan,
