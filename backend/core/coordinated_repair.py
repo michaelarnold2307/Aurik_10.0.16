@@ -204,6 +204,13 @@ DEFECT_TO_PHASE: dict[str, RepairStep] = {
         affected_samples=[],
         depends_on=["phase_03_denoise"],  # erst entrauschen, dann Hall reduzieren
     ),
+    "bandwidth_loss": RepairStep(
+        phase_id="phase_06_frequency_restoration",
+        priority=RepairPriority.INPAINTING,
+        defect_category="bandwidth_loss",
+        affected_samples=[],
+        depends_on=["phase_03_denoise"],  # Höhen-Rekonstruktion NACH Entrauschen
+    ),
 }
 
 
@@ -550,6 +557,7 @@ class CoordinatedRepair:
             "phase_12_wow_flutter_fix": self._run_wow_flutter,
             "phase_14_phase_correction": self._run_phase_correction,
             "phase_19_de_esser": self._run_de_esser,
+            "phase_06_frequency_restoration": self._run_frequency_restoration,
             "phase_20_reverb_reduction": self._run_reverb_reduction,
             "phase_49_advanced_dereverb": self._run_advanced_dereverb,
             "phase_28_surface_noise_profiling": self._run_banquet_vinyl,
@@ -969,6 +977,24 @@ class CoordinatedRepair:
                 return np.asarray(out, dtype=np.float32)
         except Exception as exc:
             log.warning("Advanced De-Reverb nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_frequency_restoration(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.970: Bandwidth-Extension via Phase 06 (RX-11 Spectral-Recovery-Äquivalent)."""
+        try:
+            from backend.core.phases.phase_06_frequency_restoration import FrequencyRestorationPhase
+            mat = getattr(self, "_material", "") or "unknown"
+            result = FrequencyRestorationPhase().process(
+                audio=audio, sample_rate=sr, material_type=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Frequency-Restoration nicht verfügbar (%s) — Pass-Through", exc)
         return audio
 
     def _run_pass_through(

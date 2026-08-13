@@ -232,6 +232,13 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
     )
 
     _log_summary(result)
+    # §v10.950: Model Zoo Registry — alle Modelle sichtbar machen
+    try:
+        from backend.core.model_zoo_registry import report as _zoo_report
+        logger.info("Start_Pruefung: %s", _zoo_report())
+    except Exception:
+        pass
+
     return result
 
 
