@@ -25311,6 +25311,8 @@ class ModernMainWindow(QMainWindow):
         _bt = getattr(self, "batch_thread", None)
         _rft = getattr(self, "_ml_refinement_thread", None)
         _workers_running = bool((_bt is not None and _bt.isRunning()) or (_rft is not None and _rft.isRunning()))
+        # §v10.991: Headless/unsichtbar → kein modaler Dialog (Offscreen-Tests hängen sonst ewig)
+        _headless = os.environ.get("QT_QPA_PLATFORM") == "offscreen" or not self.isVisible()
 
         class _CloseWhileProcessingDialog(QtWidgets.QDialog):
             """Dialog mit Splashscreen-Hintergrund."""
@@ -25396,7 +25398,12 @@ class ModernMainWindow(QMainWindow):
         _btn_keep.clicked.connect(_dlg.reject)
         _btn_close.clicked.connect(lambda: (setattr(_dlg, "_close_requested", True), _dlg.accept()))
         _btn_keep.setDefault(True)
-        _dlg.exec()
+        if _workers_running and not _headless:
+            # Interaktiver Modus MIT laufender Verarbeitung → Benutzer fragen
+            _dlg.exec()
+        else:
+            # Kein Worker aktiv ODER headless/unsichtbar → direkt wie „Schließen" behandeln
+            setattr(_dlg, "_close_requested", True)
         if not bool(getattr(_dlg, "_close_requested", False)):
             # Sofortige positive Rückmeldung: Dialog wurde bewusst verworfen,
             # Restaurierung läuft unverändert weiter.

@@ -185,6 +185,18 @@ def test_modern_window_wires_status_panel():
     assert "_sync_status_panel_sota()" in src
 
 
+def test_close_event_headless_gate():
+    """§v10.991: closeEvent darf im Headless/Offscreen-Modus keinen modalen Dialog öffnen.
+
+    Regression für den Layout-Gate-Hang: _dlg.exec() nur wenn
+    Worker laufen UND sichtbar/interaktiv.
+    """
+    src = _read("Aurik10/ui/modern_window.py")
+    assert '_headless = os.environ.get("QT_QPA_PLATFORM") == "offscreen" or not self.isVisible()' in src
+    assert "if _workers_running and not _headless:" in src
+    assert 'setattr(_dlg, "_close_requested", True)' in src
+
+
 def test_restaurier_denker_stores_repair_plan_for_frontend():
     src = _read("denker/restaurier_denker.py")
     assert "cached_defect_result.repair_plan = _repair_plan" in src
