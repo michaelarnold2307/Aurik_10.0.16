@@ -100,6 +100,8 @@ def _run_objective(args: argparse.Namespace) -> EvalReport:
             cases.append(_make_synthetic_case(i))
     else:
         paths = discover_corpus_cases(Path(args.corpus), limit=int(args.limit or 0))
+        if args.material:
+            paths = [p for p in paths if p.get("material") == args.material]
         # §v10.998: Echte Restaurationen erzeugen — Proxy wird Messung.
         # --restore regeneriert AUCH vorhandene restored/-Dateien (explizit
         # angefordert; sonst würde ein alter fehlerhafter Stand stillschweigend
@@ -169,6 +171,8 @@ def main() -> int:
     parser.add_argument("--synthetic", action="store_true")
     parser.add_argument("--restore", action="store_true",
                         help="§v10.998: Fehlende restored/-Dateien mit der SOTA-Kette erzeugen")
+    parser.add_argument("--material", default=None,
+                        help="Nur Fälle dieses Materials bewerten (z.B. reverb)")
     parser.add_argument("--cases", type=int, default=4)
     parser.add_argument("--out", default=None)
     parser.add_argument("--gate", action="store_true", help="Exit 1 bei FAIL")

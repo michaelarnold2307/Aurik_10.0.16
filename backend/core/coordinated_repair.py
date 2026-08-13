@@ -1097,12 +1097,18 @@ class CoordinatedRepair:
         self, audio: np.ndarray, step: RepairStep,
         manifest: Optional[Any], sr: int,
     ) -> np.ndarray:
-        """§v10.960: Hall-Reduktion via Phase 20 (RX-11 De-reverb-Äquivalent)."""
+        """§v10.960: Hall-Reduktion via Phase 20 (RX-11 De-reverb-Äquivalent).
+
+        §v10.998: strength aus dem RepairStep durchreichen (gleiche Bug-Klasse
+        wie Phase 02: ohne Durchreichung läuft die Phase mit voller Stärke 1.0
+        statt mit der Planner-skalierten Stärke).
+        """
         try:
             from backend.core.phases.phase_20_reverb_reduction import ReverbReduction
             mat = getattr(self, "_material", "") or "unknown"
             result = ReverbReduction().process(
                 audio=audio, sample_rate=sr, material=mat,
+                strength=float(step.parameters.get("strength", 1.0)),
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:

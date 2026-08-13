@@ -272,6 +272,89 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
 # Stage 1: Parallel Scanning
 # ═════════════════════════════════════════════════════════════════════════════
 
+def detect_reverb_tail(audio: np.ndarray, sr: int = SR) -> dict:
+    """§v10.998: Reverb-Tail-Detektor — Late-Tail-Energy (SOTA-Lücken-Schluss).
+
+    Messung zeigte: Ein Hall-Fall (RT60 = 1.2s) wurde von der Consensus
+    NIE erkannt — es gab keinen Detektor, der REVERB_TAIL meldet. Dieser
+    Detektor schließt die Lücke:
+
+      - 20-ms-Hüllkurve des bandgefilterten Signals (200–4000 Hz)
+      - Direktenergie um den Hüllkurven-Peak vs. Tail-Energie (+120–520 ms)
+      - late/direct-Ratio → Severity (0.1 trocken … 0.6+ hallig)
+
+    Returns dict im Consensus-Format: {"defects": [{"type": "reverb_tail", …}]}
+    """
+    try:
+        from scipy.signal import butter, hilbert, sosfiltfilt
+    except Exception as exc:
+        log.debug("Reverb-Detektor: scipy nicht verfügbar (%s)", exc)
+        return {"defects": []}
+
+    mono = np.asarray(audio, dtype=np.float64)
+    if mono.ndim > 1:
+        mono = mono.mean(axis=0)
+    if len(mono) < sr:  # mindestens 1 s Audio
+        return {"defects": []}
+
+    sos = butter(4, [200.0, 4000.0], "band", fs=sr, output="sos")
+    band = sosfiltfilt(sos, mono)
+    env = np.abs(hilbert(band))
+
+    hop = max(1, int(0.020 * sr))
+    n_blocks = (len(env) - hop) // hop
+    if n_blocks < 40:
+        return {"defects": []}
+    blocks = np.array([env[i * hop : (i + 1) * hop].mean() for i in range(n_blocks)])
+
+    peak_idx = int(np.argmax(blocks))
+    direct = float(np.max(blocks[max(0, peak_idx - 2) : min(n_blocks, peak_idx + 4)]))
+    if direct < 1e-9:
+        return {"defects": []}
+
+    late_start = min(n_blocks - 1, peak_idx + int(0.120 / 0.020))
+    late_end = min(n_blocks, late_start + int(0.400 / 0.020))
+    if late_end <= late_start:
+        return {"defects": []}
+    late = float(np.mean(blocks[late_start:late_end]))
+
+    ratio = late / direct
+    if ratio < 0.10:  # trockenes Signal
+        return {"defects": []}
+
+    # §v10.998: Hüllkurven-Dynamik-Gate — ein gehaltener Dauerton (Orgel,
+    # Sinus) hat eine flache Hülle (ratio ≈ 1, aber KEIN Hall). Hall zeigt
+    # sich nur in den Pausen zwischen Impulsen: erst abfallende Hüllkurven
+    # mit deutlicher Dynamik zählen als Nachhall.
+    _env_dynamics = float((np.max(blocks) - np.min(blocks)) / (np.max(blocks) + 1e-9))
+    if _env_dynamics < 0.25:
+        return {"defects": []}
+
+    # Abkling-Check: Hall FÄLLT in den Pausen ab (negativer log-Hüllkurven-Slope)
+    _late_blocks = blocks[late_start:late_end]
+    if len(_late_blocks) > 8:
+        _x = np.arange(len(_late_blocks), dtype=np.float64)
+        _log_env = np.log(_late_blocks + 1e-12)
+        _slope = float(np.polyfit(_x, _log_env, 1)[0])
+        if _slope >= -0.002:  # flach oder steigend → kein Nachhall-Abfall
+            return {"defects": []}
+
+    severity = float(np.clip((ratio - 0.10) / 0.5, 0.05, 1.0))
+    confidence = float(np.clip(0.4 + (ratio - 0.10) * 0.8, 0.4, 0.9))
+    start_s = float(peak_idx * 0.020)
+    end_s = float(min(len(audio) / sr, start_s + 2.0))
+    return {
+        "defects": [{
+            "type": "reverb_tail",
+            "start": start_s,
+            "end": end_s,
+            "severity": severity,
+            "confidence": confidence,
+            "evidence": {"late_direct_ratio": round(ratio, 3)},
+        }]
+    }
+
+
 class ParallelDefectScanner:
     """
     Führt alle verfügbaren Defekt-Detektoren aus und sammelt Hypothesen.
@@ -340,6 +423,10 @@ class ParallelDefectScanner:
             from backend.core.remaster_detector import RemasterDetector
             return RemasterDetector().analyse
         _reg("remaster_detector", _load_remaster)
+
+        # §v10.998: Reverb-Tail-Detektor (Late-Tail-Energy) — schließt die
+        # Dereverb-Detektionslücke (Messung: Hall-Fall RT60 1.2s wurde NIE erkannt)
+        _reg("reverb_tail_detector", lambda: detect_reverb_tail)
 
         # 5b. §v10.840: Impuls-Detektor (Klicks/Knackser auf der Waveform)
         _reg("impulse_detector", lambda: detect_impulse_defects)
@@ -410,6 +497,15 @@ class ParallelDefectScanner:
                 log.debug(f"  {name}: {len(hypotheses)} hypotheses in {dt:.2f}s")
             except Exception as e:
                 log.debug(f"  {name}: SKIPPED — {e}")
+
+        # §v10.998: Severity-Fallback — mehrere Detektoren melden severity ≈ 0.0
+        # trotz positiver Erkennung (selbst auf echtem Vinyl-Knistern gemessen).
+        # Ein selbst-widersprüchlicher Befund (detektiert, aber Schwere 0) wird
+        # aus der Confidence abgeleitet, damit der Planner-Gate (sev < 0.05)
+        # echte Befunde nicht systematisch verwerfen muss.
+        for _h in all_hypotheses:
+            if _h.severity < 0.01:
+                _h.severity = float(np.clip(max(0.05, _h.confidence * 0.5), 0.0, 1.0))
 
         return all_hypotheses
 
@@ -564,6 +660,7 @@ class ParallelDefectScanner:
             "distortion": DefectCategory.DISTORTION,
             "gate_chatter": DefectCategory.NOISE_GATE_CHATTER,
             "reverb": DefectCategory.REVERB_TAIL,
+            "reverb_tail": DefectCategory.REVERB_TAIL,  # §v10.998: Detektor-Format
         }
         return mapping.get(raw_lower, DefectCategory.UNKNOWN)
 
