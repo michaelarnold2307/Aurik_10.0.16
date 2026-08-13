@@ -642,11 +642,21 @@ class CoordinatedRepair:
             from models.miipher_dit.dit_model import FlowMatchingDiT
             import torch
 
-            model = FlowMatchingDiT()
-            ckpt_path = __import__('pathlib').Path(__file__).parent.parent / "models" / "harmonic_inpainting" / "inpainting_best.pt"
-            if ckpt_path.exists():
-                ckpt = torch.load(str(ckpt_path), map_location='cpu', weights_only=True)
+            base_dir = __import__('pathlib').Path(__file__).parent.parent / "models" / "harmonic_inpainting"
+            mask_ckpt = base_dir / "inpainting_mask_best.pt"
+            if mask_ckpt.exists():
+                # §v10.910: Mask-konditioniertes Modell (2 Kanäle: Audio+Maske)
+                model = FlowMatchingDiT(in_channels=2)
+                ckpt = torch.load(str(mask_ckpt), map_location='cpu', weights_only=True)
                 model.load_state_dict(ckpt.get("model_state_dict", ckpt))
+                use_mask_channel = True
+            else:
+                model = FlowMatchingDiT()
+                ckpt_path = base_dir / "inpainting_best.pt"
+                use_mask_channel = False
+                if ckpt_path.exists():
+                    ckpt = torch.load(str(ckpt_path), map_location='cpu', weights_only=True)
+                    model.load_state_dict(ckpt.get("model_state_dict", ckpt))
 
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             model.to(device)
@@ -666,8 +676,18 @@ class CoordinatedRepair:
                 if len(chunk) < chunk_samples:
                     chunk = np.pad(chunk, (0, chunk_samples - len(chunk)))
 
-                x = torch.from_numpy(chunk).float().unsqueeze(0).unsqueeze(-1).to(device)
-                x0 = x.clone()
+                x_audio = torch.from_numpy(chunk).float().unsqueeze(0).unsqueeze(-1).to(device)
+                if use_mask_channel:
+                    # 2. Kanal: Maske (1 in Inpaint-Regionen)
+                    ch_mask = torch.zeros_like(x_audio)
+                    for s_smp, e_smp in step.affected_samples or []:
+                        ch_mask[:, s_smp:min(e_smp, x_audio.shape[1]), :] = 1.0
+                    if not step.affected_samples or ch_mask.sum() == 0:
+                        ch_mask = torch.ones_like(x_audio)
+                    x = torch.cat([x_audio, ch_mask], dim=-1)
+                else:
+                    x = x_audio
+                x0 = x_audio.clone()
 
                 # §v10.900: Mask-Reset — nach jedem Euler-Schritt werden die
                 # NICHT-Inpaint-Regionen auf das Original zurückgesetzt. Das
@@ -681,15 +701,17 @@ class CoordinatedRepair:
                     mask = torch.ones_like(x0)  # ganzes Chunk
 
                 # ── ODE-Integration: dx/dt = v(x, t) via Euler ──
+                # §v10.910: Velocity wirkt NUR auf den Audio-Kanal; der
+                # Mask-Kanal ist eine Bedingung und bleibt konstant.
                 with torch.no_grad():
                     for i in range(n_steps):
                         t = torch.full((1,), i * dt, device=device)
-                        velocity = model(x, t)
-                        x = x + velocity * dt
-                        # Mask-Reset: unmaskierte Regionen bleiben Original
-                        x = x * mask + x0 * (1.0 - mask)
+                        velocity = model(x, t)  # [B, T, 1]
+                        x = x + torch.cat([velocity, torch.zeros_like(velocity)], dim=-1) * dt
+                        # Mask-Reset: unmaskierte Audio-Regionen bleiben Original
+                        x[..., :1] = x[..., :1] * mask + x0 * (1.0 - mask)
 
-                enhanced_np = x.squeeze().cpu().numpy()
+                enhanced_np = x[..., :1].squeeze().cpu().numpy()
 
                 # Nur die Inpaint-Regionen übernehmen, Rest = Original
                 mix = min(1.0, strength)
