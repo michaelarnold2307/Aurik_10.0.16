@@ -219,6 +219,9 @@ __all__ = [
     "get_guard_report",
     # §v10.992: Laienverständliche Einwilligungs-Ansicht
     "get_repair_plan_consent",
+    # §v10.993: Crash-Report-Sichtbarkeit im Live-Betrieb
+    "get_new_crash_reports",
+    "mark_crash_reports_seen",
 ]
 
 # ---------------------------------------------------------------------------
@@ -3677,6 +3680,31 @@ def get_repair_plan_consent(defect_result: object) -> dict:
         return {"found": found, "will_do": will_do}
     except Exception:
         return {}
+
+
+# ---------------------------------------------------------------------------
+# §v10.993: Crash-Report-Sichtbarkeit — Live-Fehler erreichen den Nutzer
+# ---------------------------------------------------------------------------
+
+
+def get_new_crash_reports() -> list[dict]:
+    """Unbehandelte Fehler der letzten Sitzung(en) — für die GUI-Anzeige beim Start."""
+    try:
+        from backend.core.crash_reporter import get_new_reports as _new
+
+        return list(_new() or [])
+    except Exception:
+        return []
+
+
+def mark_crash_reports_seen() -> None:
+    """Setzt die Basislinie: Reports gelten als gesehen (keine erneute Anzeige)."""
+    try:
+        from backend.core.crash_reporter import mark_reports_seen as _mark
+
+        _mark()
+    except Exception:
+        pass
 
 
 def get_guard_report(result: object) -> dict:

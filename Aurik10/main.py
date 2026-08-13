@@ -186,6 +186,16 @@ def _enable_crash_forensics() -> None:
     except Exception as exc:
         logger.warning("Faulthandler setup fehlgeschlagen (non-fatal): %s", exc)
 
+    # §v10.993: Globalen Exception-Hook installieren — unbehandelte GUI-Fehler
+    # landen sonst nur unsichtbar in stderr. Ohne diesen Hook ist der
+    # Crash-Reporter toter Code für die GUI.
+    try:
+        from backend.core.crash_reporter import install_crash_handler
+
+        install_crash_handler()
+    except Exception as exc:
+        logger.warning("Crash-Reporter-Installation fehlgeschlagen (non-fatal): %s", exc)
+
 
 # PyQt5 and Aurik imports must come after logging setup and sys.path configuration.
 # pylint: disable=wrong-import-position

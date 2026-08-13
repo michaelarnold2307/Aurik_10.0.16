@@ -12725,6 +12725,9 @@ class ModernMainWindow(QMainWindow):
         # §2.39 OOM-Recovery: Beim Start prüfen ob unterbrochene Restaurierungen vorliegen
         QTimer.singleShot(1500, self._check_oom_recovery_checkpoints)
 
+        # §v10.993: Crash-Reports der letzten Sitzung sichtbar machen
+        QTimer.singleShot(2500, self._check_crash_reports)
+
         # Auto-Update-Check: vorerst deaktiviert
         # QTimer.singleShot(5000, self._check_for_update_startup)
 
@@ -13214,6 +13217,49 @@ class ModernMainWindow(QMainWindow):
                 "background: rgba(148, 82, 82, 0.10);"
                 "border-radius: 8px; border: 1px solid rgba(152, 88, 88, 0.26);"
             )
+
+    def _check_crash_reports(self) -> None:
+        """§v10.993: Zeigt unbehandelte Fehler der letzten Sitzung laienverständlich an.
+
+        Kein Fachjargon: Der Nutzer erfährt, dass ein Fehler auftrat, dass er
+        gespeichert wurde, und kann ihn mit einem Klick für den Support kopieren.
+        """
+        try:
+            from backend.api.bridge import get_new_crash_reports, mark_crash_reports_seen
+
+            reports = list(get_new_crash_reports() or [])
+            if not reports:
+                mark_crash_reports_seen()  # Basislinie setzen
+                return
+            latest = reports[-1]
+            _msg = QtWidgets.QMessageBox(self)
+            _msg.setWindowTitle("Aurik — Hinweis")
+            _msg.setIcon(QtWidgets.QMessageBox.Icon.Warning)
+            _n = len(reports)
+            _msg.setText(
+                f"Aurik hatte in der letzten Sitzung {_n} unerwartete"
+                f"{'s' if _n == 1 else ''} Problem{'e' if _n != 1 else ''}."
+                " Die Details wurden automatisch gespeichert — deine Musik ist nicht betroffen."
+            )
+            _msg.setInformativeText(
+                f"Letzter Fehler: {latest.get('type', 'unbekannt')} — {latest.get('message', '')}"
+            )
+            _btn_copy = _msg.addButton("Bericht kopieren", QtWidgets.QMessageBox.ButtonRole.ActionRole)
+            _msg.addButton("OK", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
+            _msg.exec()
+            if _msg.clickedButton() is _btn_copy:
+                try:
+                    QtWidgets.QApplication.clipboard().setText(
+                        "Aurik Fehlerbericht\n"
+                        f"Typ: {latest.get('type', 'unbekannt')}\n"
+                        f"Meldung: {latest.get('message', '')}\n"
+                        f"Gespeichert: {latest.get('_file', '')}"
+                    )
+                except Exception as _clip_err:
+                    logger.debug("Clipboard-Kopie fehlgeschlagen: %s", _clip_err)
+            mark_crash_reports_seen()
+        except Exception as _cr_err:
+            logger.debug("Crash-Report-Prüfung fehlgeschlagen: %s", _cr_err)
 
     def _check_oom_recovery_checkpoints(self) -> None:
         """§2.39 OOM-Recovery: Prüfe beim Start ob unterbrochene Restaurierungen vorliegen.

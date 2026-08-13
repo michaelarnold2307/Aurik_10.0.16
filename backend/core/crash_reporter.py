@@ -19,6 +19,7 @@ import logging
 import os
 import platform
 import sys
+import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
@@ -130,6 +131,55 @@ def install_crash_handler() -> None:
     """Installiert den globalen Exception-Hook. Einmal beim App-Start aufrufen."""
     sys.excepthook = _crash_handler
     logger.info("Crash-Reporter installiert — Reports unter %s", _REPORTS_DIR)
+
+
+# §v10.993: GUI-Sichtbarkeit — "Neue Fehler seit letzter Sitzung"
+_LAST_SEEN_FILE = _REPORTS_DIR / ".last_seen"
+
+
+def get_last_seen_ts() -> float:
+    """Zeitstempel der letzten Sitzung, in der Reports als gesehen markiert wurden."""
+    try:
+        return float(_LAST_SEEN_FILE.read_text(encoding="utf-8").strip())
+    except Exception:
+        return 0.0
+
+
+def mark_reports_seen() -> None:
+    """Markiert alle aktuellen Reports als gesehen (Basislinie für die nächste Sitzung)."""
+    try:
+        _REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        _LAST_SEEN_FILE.write_text(str(time.time()), encoding="utf-8")
+    except OSError:
+        logger.debug("Crash-Reporter: .last_seen konnte nicht geschrieben werden", exc_info=True)
+
+
+def get_new_reports() -> list[dict[str, Any]]:  # type: ignore[name-defined]
+    """Reports, die seit der letzten als gesehen markierten Sitzung entstanden sind.
+
+    Returns:
+        [{_file, type, message, timestamp}, …] — leichte Zusammenfassung fürs Frontend.
+    """
+    since = get_last_seen_ts()
+    reports: list[dict[str, Any]] = []  # type: ignore[name-defined]
+    if not _REPORTS_DIR.exists():
+        return reports
+    for report_file in sorted(_REPORTS_DIR.glob("crash_*.json")):
+        try:
+            if report_file.stat().st_mtime <= since:
+                continue
+            with open(report_file, encoding="utf-8") as f:
+                data = json.load(f)
+            exc = data.get("exception", {}) or {}
+            reports.append({
+                "_file": str(report_file),
+                "type": str(exc.get("type", "unknown")),
+                "message": str(exc.get("message", ""))[:200],
+                "timestamp": report_file.stat().st_mtime,
+            })
+        except Exception:
+            logger.debug("Konnte Report nicht lesen: %s", report_file)
+    return reports
 
 
 def get_reports() -> list[dict[str, Any]]:  # type: ignore[name-defined]

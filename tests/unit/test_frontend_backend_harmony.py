@@ -319,3 +319,85 @@ def test_ui_still_bridge_only():
         elif isinstance(node, ast.ImportFrom):
             mod = node.module or ""
             assert not mod.startswith(("backend.core", "plugins", "dsp")), mod
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.993: GUI-Bug-Erkennung im Live-Betrieb — Crash-Report-Sichtbarkeit
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_crash_reporter_new_reports_lifecycle(tmp_path, monkeypatch):
+    """get_new_reports → mark_seen → keine erneute Anzeige."""
+    import json
+    import time
+
+    from backend.core import crash_reporter
+
+    monkeypatch.setattr(crash_reporter, "_REPORTS_DIR", tmp_path)
+    monkeypatch.setattr(crash_reporter, "_LAST_SEEN_FILE", tmp_path / ".last_seen")
+
+    # Basislinie ohne Reports
+    assert crash_reporter.get_new_reports() == []
+    crash_reporter.mark_reports_seen()
+    _base = crash_reporter.get_last_seen_ts()
+    assert _base > 0
+
+    # Neuen Report schreiben (älter als Basislinie → unsichtbar)
+    _old = tmp_path / "crash_old.json"
+    _old.write_text(json.dumps({"exception": {"type": "ValueError", "message": "alt"}}), encoding="utf-8")
+    _old_ts = time.time() - 60
+    import os
+
+    os.utime(_old, (_old_ts, _old_ts))
+    assert crash_reporter.get_new_reports() == []
+
+    # Frischen Report schreiben → sichtbar mit type/message
+    _new = tmp_path / "crash_new.json"
+    _new.write_text(json.dumps({"exception": {"type": "KeyError", "message": "kaputt"}}), encoding="utf-8")
+    reports = crash_reporter.get_new_reports()
+    assert len(reports) == 1
+    assert reports[0]["type"] == "KeyError"
+    assert reports[0]["message"] == "kaputt"
+
+    # Gesehen → weg
+    crash_reporter.mark_reports_seen()
+    assert crash_reporter.get_new_reports() == []
+
+
+def test_bridge_crash_report_accessors():
+    """Bridge-Zugänge liefern Listen und sind defensiv."""
+    from backend.api.bridge import get_new_crash_reports, mark_crash_reports_seen
+
+    reports = get_new_crash_reports()
+    assert isinstance(reports, list)
+    mark_crash_reports_seen()  # darf nie werfen
+
+
+def test_main_installs_crash_handler():
+    """§v10.993: Der GUI-Start MUSS den Exception-Hook installieren (sonst toter Code)."""
+    src = _read("Aurik10/main.py")
+    assert "from backend.core.crash_reporter import install_crash_handler" in src
+    assert "install_crash_handler()" in src
+
+
+def test_modern_window_checks_crash_reports_on_start():
+    """§v10.993: Startup-Dialog für Fehler der letzten Sitzung ist verdrahtet."""
+    src = _read("Aurik10/ui/modern_window.py")
+    assert "QTimer.singleShot(2500, self._check_crash_reports)" in src
+    assert "def _check_crash_reports(self) -> None:" in src
+    assert "Bericht kopieren" in src
+    assert "mark_crash_reports_seen()" in src
+
+
+def test_ci_gui_smoke_gate_exists():
+    """§v10.993: Das GUI-Smoke-Gate MUSS im CI-Lite-Workflow verankert sein.
+
+    Ohne dieses Gate laufen GUI-Tests nie automatisch — Bug-Regressionen
+    (wie der §v10.991-Dialog-Hang) würden unentdeckt in den Live-Betrieb gehen.
+    """
+    src = _read(".github/workflows/ci-lite.yml")
+    assert "gui-smoke-gate:" in src
+    assert "tests/normative/test_e2e_gui_smoke.py" in src
+    assert "tests/ui/test_ui_quality.py" in src
+    assert "--run-gui-tests" in src
+    assert "QT_QPA_PLATFORM: offscreen" in src
