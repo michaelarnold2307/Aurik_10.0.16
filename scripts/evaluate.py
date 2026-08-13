@@ -100,11 +100,13 @@ def _run_objective(args: argparse.Namespace) -> EvalReport:
             cases.append(_make_synthetic_case(i))
     else:
         paths = discover_corpus_cases(Path(args.corpus), limit=int(args.limit or 0))
-        # §v10.998: Echte Restaurationen erzeugen — Proxy wird Messung
+        # §v10.998: Echte Restaurationen erzeugen — Proxy wird Messung.
+        # --restore regeneriert AUCH vorhandene restored/-Dateien (explizit
+        # angefordert; sonst würde ein alter fehlerhafter Stand stillschweigend
+        # weiter bewertet — wie bei der Kassetten-Diagnose geschehen).
         if args.restore:
             for p in paths:
-                if not p.get("restored_path"):
-                    p["restored_path"] = _restore_case(p)
+                p["restored_path"] = _restore_case(p)
         for p in paths:
             case = _load_case(p)
             if case is not None:

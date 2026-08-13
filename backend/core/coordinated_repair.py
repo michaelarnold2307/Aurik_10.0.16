@@ -287,6 +287,12 @@ class RepairPlanner:
             cat = getattr(d, 'category', None)
             if cat is None:
                 continue
+            # §v10.998: Null-Schwere-Fehlalarme dürfen keine Phasen triggern.
+            # (Diagnose: severity 0.00 auf hum-freiem Hip-Hop → Phase 02 lief
+            # mit voller Stärke und kollabierte das Signal um 62 dB.)
+            _sev = float(getattr(d, 'severity', 0.5) or 0.0)
+            if _sev < 0.05:
+                continue
             cat_str = cat.value if hasattr(cat, 'value') else str(cat)
             mapping = DEFECT_TO_PHASE.get(cat_str)
             if mapping is None:
@@ -557,6 +563,20 @@ class CoordinatedRepair:
                                 "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
                                 step.phase_id, _violations,
                             )
+                # §v10.998: Energy-Collapse-Guard — katastrophale Signalvernichtung
+                # (z.B. -62 dB durch Phase 02 auf Null-Schwere-Fehlalarm) wird
+                # erkannt und vollständig zurückgerollt. RMS < 25% des Eingangs
+                # ist bei keiner legitimen Reparatur-Phase plausibel.
+                if _changed:
+                    _rms_in = float(np.sqrt(np.mean(np.square(_audio_pre))) + 1e-12)
+                    _rms_out = float(np.sqrt(np.mean(np.square(current_audio))) + 1e-12)
+                    if _rms_out < _rms_in * 0.25:
+                        current_audio = _audio_pre
+                        _guard_violations["energy_collapse"] = _guard_violations.get("energy_collapse", 0) + 1
+                        log.warning(
+                            "§v10.998 Guard: %s kollabierte die Energie (%.0f%% → revert)",
+                            step.phase_id, _rms_out / _rms_in * 100,
+                        )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
                 if _perceptual is not None and _changed:
                     _percept_result = _perceptual.evaluate(
@@ -872,12 +892,18 @@ class CoordinatedRepair:
         self, audio: np.ndarray, step: RepairStep,
         manifest: Optional[Any], sr: int,
     ) -> np.ndarray:
-        """§v10.940: Hum-Entfernung via Phase 02 (echte Implementierung)."""
+        """§v10.940: Hum-Entfernung via Phase 02 (echte Implementierung).
+
+        §v10.998: strength aus dem RepairStep durchreichen — der Planner
+        skaliert die Stärke mit der Defekt-Schwere; ohne Durchreichen lief
+        Phase 02 mit voller Stärke 1.0 auf Null-Schwere-Fehlalarmen.
+        """
         try:
             from backend.core.phases.phase_02_hum_removal import HumRemovalPhase
             mat = getattr(self, "_material", "") or "unknown"
             result = HumRemovalPhase().process(
                 audio=audio, sample_rate=sr, material_type=mat, auto_detect=True,
+                strength=float(step.parameters.get("strength", 1.0)),
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:

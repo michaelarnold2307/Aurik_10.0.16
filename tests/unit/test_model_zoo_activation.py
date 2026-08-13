@@ -201,3 +201,73 @@ def test_zoo_registry_reflects_activation():
     mel = get_model("melbandroformer")
     assert mel is not None
     assert "bs_roformer_plugin" in mel.notes  # präzise statt vage "Kalibrierung offen"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.998: Die Kassetten-Katastrophe — Null-Schwere-Fehlalarme + Energy-Collapse
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_planner_skips_zero_severity_false_alarms():
+    """severity < 0.05 darf keine Phase triggern (Kassetten-Diagnose-Befund)."""
+    from backend.core.coordinated_repair import RepairPlanner
+
+    manifest = DefectManifest(defects=[
+        DefectHypothesis(category=DefectCategory.HUM, start_sample=0, end_sample=48000,
+                         confidence=0.26, severity=0.0, source_module="x"),
+        DefectHypothesis(category=DefectCategory.CLIPPING, start_sample=0, end_sample=48000,
+                         confidence=0.79, severity=0.0, source_module="x"),
+        DefectHypothesis(category=DefectCategory.HISS, start_sample=0, end_sample=48000,
+                         confidence=0.8, severity=0.4, source_module="x"),
+    ])
+    plan = RepairPlanner().plan(manifest, 48000)
+    phase_ids = [s.phase_id for s in plan.steps]
+    assert "phase_02_hum_removal" not in phase_ids  # sev 0.0 → kein Hum-Schritt
+    assert "phase_07_declipper" not in phase_ids    # sev 0.0 trotz conf 0.79
+    assert "phase_03_denoise" in phase_ids          # sev 0.4 → läuft
+
+
+def test_hum_handler_passes_strength_from_step(monkeypatch):
+    """Ohne strength-Durchreichung lief Phase 02 mit voller Stärke auf Fehlalarm."""
+    import numpy as np
+
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPriority, RepairStep
+
+    captured: dict = {}
+
+    class _FakePhase:
+        def process(self, **kwargs):
+            captured.update(kwargs)
+            return type("R", (), {"audio": kwargs["audio"]})()
+
+    monkeypatch.setattr(
+        "backend.core.phases.phase_02_hum_removal.HumRemovalPhase", _FakePhase
+    )
+    step = RepairStep(
+        phase_id="phase_02_hum_removal", priority=RepairPriority.TONAL,
+        defect_category="hum", affected_samples=[], parameters={"strength": 0.02},
+    )
+    audio = np.ones(4096, dtype=np.float32) * 0.1
+    CoordinatedRepair()._run_hum_removal(audio, step, None, 48000)
+    assert captured.get("strength") == 0.02  # volle Stärke 1.0 wäre der alte Bug
+
+
+def test_energy_collapse_guard_reverts_destruction(monkeypatch):
+    """RMS < 25% des Eingangs → Schritt wird vollständig zurückgerollt."""
+    import numpy as np
+
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlan, RepairPriority, RepairStep
+
+    plan = RepairPlan(steps=[
+        RepairStep(phase_id="phase_99_collapse_test", priority=RepairPriority.TRANSIENT,
+                   defect_category="test", affected_samples=[]),
+    ])
+    audio = np.ones(48000, dtype=np.float32) * 0.5
+    executor = CoordinatedRepair()
+    monkeypatch.setattr(
+        executor, "_execute_step",
+        lambda audio, step, manifest, sr, n_channels: audio * 0.01,  # kollabiert auf 1%
+    )
+    out, report = executor.execute(audio, plan, None, 48000)
+    assert np.allclose(out, audio)  # revert
+    assert report.guard_violations.get("energy_collapse") == 1
