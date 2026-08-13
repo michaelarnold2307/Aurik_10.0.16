@@ -197,6 +197,13 @@ DEFECT_TO_PHASE: dict[str, RepairStep] = {
         defect_category="print_through",
         affected_samples=[],
     ),
+    "reverb_tail": RepairStep(
+        phase_id="phase_20_reverb_reduction",
+        priority=RepairPriority.DISTORTION,
+        defect_category="reverb_tail",
+        affected_samples=[],
+        depends_on=["phase_03_denoise"],  # erst entrauschen, dann Hall reduzieren
+    ),
 }
 
 
@@ -543,6 +550,8 @@ class CoordinatedRepair:
             "phase_12_wow_flutter_fix": self._run_wow_flutter,
             "phase_14_phase_correction": self._run_phase_correction,
             "phase_19_de_esser": self._run_de_esser,
+            "phase_20_reverb_reduction": self._run_reverb_reduction,
+            "phase_49_advanced_dereverb": self._run_advanced_dereverb,
             "phase_28_surface_noise_profiling": self._run_banquet_vinyl,
             "phase_29_tape_hiss_reduction": self._run_tape_hiss,
             "phase_55_diffusion_inpainting": self._run_inpainting,
@@ -924,6 +933,42 @@ class CoordinatedRepair:
             return out.astype(np.float32)
         except Exception as exc:
             log.warning("MP-SENet nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_reverb_reduction(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.960: Hall-Reduktion via Phase 20 (RX-11 De-reverb-Äquivalent)."""
+        try:
+            from backend.core.phases.phase_20_reverb_reduction import ReverbReduction
+            mat = getattr(self, "_material", "") or "unknown"
+            result = ReverbReduction().process(
+                audio=audio, sample_rate=sr, material=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Reverb-Reduktion nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_advanced_dereverb(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.960: Advanced De-Reverb via Phase 49 (für stark verhallte Aufnahmen)."""
+        try:
+            from backend.core.phases.phase_49_advanced_dereverb import AdvancedDereverbPhase
+            mat = getattr(self, "_material", "") or "unknown"
+            result = AdvancedDereverbPhase().process(
+                audio=audio, sample_rate=sr, material_type=mat,
+            )
+            out = getattr(result, "audio", result)
+            if out is not None and np.asarray(out).shape == audio.shape:
+                return np.asarray(out, dtype=np.float32)
+        except Exception as exc:
+            log.warning("Advanced De-Reverb nicht verfügbar (%s) — Pass-Through", exc)
         return audio
 
     def _run_pass_through(
