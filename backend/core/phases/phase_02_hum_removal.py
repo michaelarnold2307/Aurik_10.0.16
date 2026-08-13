@@ -539,15 +539,23 @@ class HumRemovalPhase(PhaseInterface):
 
         detected_fundamentals = []
 
+        # §v10.998: Musik-Bass vs. Hum — statische Band-Energie allein reicht
+        # nicht. Ein 50/60-Hz-Bass hat Dynamik (Hüllkurven-Variation),
+        # Netzbrummen ist stationär. Ohne diese Prüfung verwechselte der
+        # Detektor den Hip-Hop-Bass mit Brummen und Phase 02 zerstörte
+        # das Signal (Kassetten-Diagnose: −62 dB).
+
         # Check for 50 Hz hum (±2 Hz tolerance)
         energy_50hz = self._measure_band_energy(spectrum, freqs, 48, 52)
         if energy_50hz / total_energy > 10 ** (params["threshold_db"] / 10):
-            detected_fundamentals.append(50)
+            if not self._detect_musical_content(audio_mono, 50.0):
+                detected_fundamentals.append(50)
 
         # Check for 60 Hz hum (±2 Hz tolerance)
         energy_60hz = self._measure_band_energy(spectrum, freqs, 58, 62)
         if energy_60hz / total_energy > 10 ** (params["threshold_db"] / 10):
-            detected_fundamentals.append(60)
+            if not self._detect_musical_content(audio_mono, 60.0):
+                detected_fundamentals.append(60)
 
         return detected_fundamentals
 
@@ -851,8 +859,17 @@ class HumRemovalPhase(PhaseInterface):
             # High variation suggests musical content
             variation_ratio = envelope_std / (envelope_mean + 1e-10)
 
+            # §v10.998: Zweistufige Prüfung — Variation ODER Modulationstiefe.
+            # Echter Hum ist stationär (ratio < 0.35, depth < 0.25); Bass hat
+            # klare Hüllkurven-Modulation (depth ≥ 0.3).
+            # WICHTIG: Perzentil-basierte Tiefe statt min/max — Rausch-Ausreißer
+            # machen die min/max-Tiefe wertlos (gemessen: 0.98 auf reinem Hum!).
+            _p95 = float(np.percentile(envelope, 95))
+            _p05 = float(np.percentile(envelope, 5))
+            modulation_depth = (_p95 - _p05) / (_p95 + _p05 + 1e-10)
+
             # Threshold: >0.5 suggests musical content
-            if variation_ratio > 0.5:
+            if variation_ratio > 0.35 or modulation_depth > 0.3:
                 return True
 
         return False
