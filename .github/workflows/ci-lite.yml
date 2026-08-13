@@ -167,6 +167,44 @@ jobs:
             --disable-warnings \
             --no-header
 
+  evaluation-gate:
+    name: Evaluation Gate (§v10.995 — Das EINE Evaluations-System)
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements/requirements_dev.txt
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements/requirements_dev.txt
+          pip install numpy==1.26.4 scipy==1.15.3
+
+      - name: Evaluation-System-Selbsttest
+        run: |
+          python -m pytest tests/unit/test_evaluation_system.py \
+            -p no:xdist \
+            --override-ini="addopts=--strict-markers --import-mode=importlib" \
+            --timeout=120 \
+            --tb=short \
+            -q \
+            --disable-warnings \
+            --no-header
+
+      - name: Objektives Gate (synthetisch, deterministisch)
+        run: |
+          python scripts/evaluate.py --mode objective --synthetic --cases 4 --gate \
+            --out reports/ci_evaluation.json
+
   scope-lint-gate:
     name: Scope Lint Gate (§v10 A2)
     runs-on: ubuntu-22.04
