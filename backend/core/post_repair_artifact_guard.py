@@ -34,6 +34,7 @@ TRUEPEAK_LIMIT_DBFS = 0.0      # 0 dBFS — darüber = Clipping
 TRUEPEAK_WARN_DBFS = -0.5      # Warnschwelle
 PUMPING_GAIN_MODULATION_MAX = 0.15  # max. 15% Gain-Modulation pro 100ms
 FORMANT_DRIFT_MAX = 0.08       # max. 8% Formant-Drift
+SPECTRAL_NOISE_RISE_MAX_DB = 1.5  # §v10.850: max. +1.5 dB Rauschfloor-Anstieg (8-20 kHz)
 
 
 @dataclass
@@ -43,6 +44,7 @@ class GuardResult:
     truepeak_dbfs: float
     pumping_index: float         # 0-1, 0 = kein Pumpen
     formant_drift: float         # 0-1, 0 = keine Drift
+    spectral_noise_rise_db: float = 0.0  # §v10.850: Anstieg des Rauschfloors
     violations: list[str] = field(default_factory=list)
     blended_back: bool = False   # Wurde Strength automatisch reduziert?
 
@@ -118,6 +120,13 @@ class PostRepairArtifactGuard:
         if formant_drift > FORMANT_DRIFT_MAX:
             violations.append(f"formant_drift_{formant_drift:.2f}")
 
+        # ── Check 4: Spektraler Rauschfloor (8–20 kHz) ──
+        # §v10.850: Banquet & Co. können spektralen Schaden anrichten, ohne
+        # die Signalenergie zu ändern. Misst den Hochfrequenz-Rauschfloor.
+        spectral_rise = self._measure_spectral_noise_rise(audio_pre, audio_post, sr)
+        if spectral_rise > SPECTRAL_NOISE_RISE_MAX_DB:
+            violations.append(f"spectral_noise_rise_{spectral_rise:+.1f}dB")
+
         passed = len(violations) == 0
 
         return GuardResult(
@@ -125,6 +134,7 @@ class PostRepairArtifactGuard:
             truepeak_dbfs=truepeak_dbfs,
             pumping_index=pumping_index,
             formant_drift=formant_drift,
+            spectral_noise_rise_db=spectral_rise,
             violations=violations,
         )
 
@@ -159,6 +169,41 @@ class PostRepairArtifactGuard:
             pumping = 0.0
 
         return min(pumping, 1.0)
+
+    def _measure_spectral_noise_rise(self, pre: np.ndarray, post: np.ndarray, sr: int) -> float:
+        """Misst den Anstieg des Hochfrequenz-Rauschfloors (8–20 kHz) in dB.
+
+        §v10.850: Banquet & Co. können spektralen Schaden anrichten, ohne die
+        Gesamtenergie zu ändern. Vergleich: 20. Perzentil des HF-Spektrums
+        (Rauschfloor, nicht Signalpeaks) vor/nach dem Schritt.
+        """
+        pre = np.asarray(pre, dtype=np.float64)
+        post = np.asarray(post, dtype=np.float64)
+        if len(pre) < 1024 or len(post) < 1024:
+            return 0.0
+
+        def hf_noise_floor(x: np.ndarray) -> float:
+            n_fft = min(2048, len(x))
+            window = np.hanning(n_fft)
+            n_frames = max(1, len(x) // (n_fft // 2))
+            spec = np.zeros((n_frames, n_fft // 2 + 1))
+            for i in range(n_frames):
+                s = i * (n_fft // 2)
+                if s + n_fft > len(x):
+                    continue  # letzter unvollständiger Frame
+                frame = x[s:s + n_fft] * window
+                spec[i] = np.abs(np.fft.rfft(frame)) + 1e-12
+            freqs = np.fft.rfftfreq(n_fft, 1 / sr)
+            hf_mask = freqs >= 8000
+            hf = spec[:, hf_mask]
+            # 20. Perzentil = Rauschfloor (robust gegen Signal-Peaks)
+            return float(np.percentile(hf, 20))
+
+        floor_pre = hf_noise_floor(pre)
+        floor_post = hf_noise_floor(post)
+        if floor_pre <= 0:
+            return 0.0
+        return float(20 * np.log10(floor_post / floor_pre))
 
     def blend_back(
         self,
