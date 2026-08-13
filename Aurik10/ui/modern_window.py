@@ -12644,6 +12644,9 @@ class ModernMainWindow(QMainWindow):
         # btn_play_restored während laufender Batch-Verarbeitung verwendet.
         self._live_preview_audio: np.ndarray | None = None
         self._live_preview_sr: int = 48000
+        # §v10.999: Live-Mithören — Toggle + Positionsgedächtnis
+        self._playback_is_live_preview: bool = False
+        self._live_playback_frac: float = 0.0
 
         # Drag & Drop aktivieren
         self.setAcceptDrops(True)
@@ -18465,6 +18468,9 @@ class ModernMainWindow(QMainWindow):
             # Persist source for click-to-seek (raw ref — stable id())
             self._playback_source_audio = audio
             self._playback_source_sr = int(sr)
+            # §v10.999: Scrubber-Referenzen — machen den Transport-Scrubber funktionsfähig
+            self._play_audio_ref = audio
+            self._play_sr_ref = int(sr)
 
             ok = _sp.play(
                 audio,
@@ -18503,6 +18509,9 @@ class ModernMainWindow(QMainWindow):
         # Persist source so click-to-seek can restart from the same content.
         self._playback_source_audio = prepared_audio
         self._playback_source_sr = int(sr)
+        # §v10.999: Scrubber-Referenzen (Fallback-Pfad)
+        self._play_audio_ref = prepared_audio
+        self._play_sr_ref = int(sr)
 
         # Thread-sichere Wiedergabe: Lock verhindert Race-Condition bei stop/play/wait
         if not hasattr(self, "_sd_lock"):
@@ -18645,6 +18654,10 @@ class ModernMainWindow(QMainWindow):
         timer = getattr(self, "_playhead_timer", None)
         if timer is not None:
             timer.stop()
+        # §v10.999: Live-Mithören zu Ende gehört → nächster Start von vorn
+        if getattr(self, "_playback_is_live_preview", False):
+            self._live_playback_frac = 0.0
+        self._playback_is_live_preview = False
         if hasattr(self, "waveform_widget"):
             self.waveform_widget.set_playhead_position(-1.0)
         if hasattr(self, "_playback_time_label"):
@@ -18710,15 +18723,31 @@ class ModernMainWindow(QMainWindow):
 
         Die Restaurierung läuft unverändert weiter; Playback und Pipeline laufen
         auf getrennten Threads.
+
+        §v10.999 Live-Mithören:
+          • Toggle: erneutes Drücken STOPPT den Zwischenstand (kein Neustart)
+          • Positionsgedächtnis: erneutes Abspielen startet an der zuletzt
+            gehörten/gesprungenen Stelle
+          • Cursor/Scrubber: Sprung an jede beliebige Position im Song
         """
+        _sp = getattr(self, "_streaming_player", None)
         if self._rest_audio is not None:
+            self._playback_is_live_preview = False
             self._play_audio(self._rest_audio, self._rest_sr, loudness_match_ref=self._orig_audio)
             return
         _preview = getattr(self, "_live_preview_audio", None)
         _preview_sr = int(getattr(self, "_live_preview_sr", 48000))
         if _preview is not None:
+            # §v10.999: Läuft der Zwischenstand bereits? → Stoppen statt Neustart
+            if _sp is not None and _sp.available and _sp.is_playing and getattr(
+                self, "_playback_is_live_preview", False
+            ):
+                self._stop_song_playback_only()
+                return
             _safe_preview = _guard_preview_short_term_loudness(_preview, self._orig_audio, _preview_sr)
-            self._play_audio(_safe_preview, _preview_sr)
+            self._playback_is_live_preview = True
+            _start = float(getattr(self, "_live_playback_frac", 0.0) or 0.0)
+            self._play_audio(_safe_preview, _preview_sr, start_pos_frac=_start)
 
     def _audio_output_ready(self) -> tuple[bool, str]:
         """Prüft, ob ein echtes Ausgabegerät für die A/B-Wiedergabe verfügbar ist."""
@@ -21926,6 +21955,15 @@ class ModernMainWindow(QMainWindow):
 
     def _stop_song_playback_only(self) -> None:
         """Stop only the A/B song playback and never the restoration pipeline."""
+        # §v10.999: Positionsgedächtnis — beim Stoppen des Live-Zwischenstands
+        # merken, wo der Nutzer gerade war (weiterhören an derselben Stelle)
+        if getattr(self, "_playback_is_live_preview", False):
+            _sp = getattr(self, "_streaming_player", None)
+            if _sp is not None and _sp.available and _sp.is_playing:
+                try:
+                    self._live_playback_frac = float(_sp.position_frac)
+                except Exception:
+                    pass
         self._stop_playback()
 
     # ── §v10.207: Transport-Scrubber ──────────────────────────────────
@@ -21938,19 +21976,19 @@ class ModernMainWindow(QMainWindow):
         if self._scrubbing:
             self._scrubbing = False
             _frac = self._transport_scrubber.value() / 1000.0
-            # Seek in aktueller Audio-Quelle
-            _audio = getattr(self, "_play_audio_ref", None)
-            _sr = getattr(self, "_play_sr_ref", 48000)
-            if _audio is not None and _sr > 0:
-                _pos = int(_frac * len(_audio) if _audio.ndim == 1 else _frac * _audio.shape[-1])
-                self._seek_playback(_pos)
+            # §v10.999: Scrubber-Seek — Streaming-Player erwartet eine Fraction
+            self._seek_playback(_frac)
+            if getattr(self, "_playback_is_live_preview", False):
+                self._live_playback_frac = _frac
 
-    def _seek_playback(self, sample_pos: int):
-        """Springt an eine Sample-Position (falls vom Player unterstützt)."""
+    def _seek_playback(self, frac: float):
+        """Springt an eine Fraction-Position (0.0–1.0; vom Player unterstützt)."""
         try:
             _player = getattr(self, "_streaming_player", None)
             if _player is not None and hasattr(_player, "seek"):
-                _player.seek(sample_pos)
+                _player.seek(float(frac))
+            if hasattr(self, "waveform_widget"):
+                self.waveform_widget.set_playhead_position(float(frac))
         except Exception:
             logger.debug("Stiller optionaler Ausnahmefall ignoriert", exc_info=True)
 

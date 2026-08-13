@@ -538,6 +538,45 @@ def test_modern_window_passes_bericht_to_dialog():
     assert "restoration_bericht=_bericht," in src
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.999: Live-Mithören — jederzeit, so lange wie gewollt, Sprung überallhin
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_live_mitheoren_toggle_and_position_memory():
+    """Der Zwischenstand-Knopf stoppt statt neu zu starten; Position bleibt erhalten."""
+    src = _read("Aurik10/ui/modern_window.py")
+    # Toggle: laufender Live-Zwischenstand → Stoppen statt Neustart
+    assert "# §v10.999: Läuft der Zwischenstand bereits? → Stoppen statt Neustart" in src
+    assert "self._playback_is_live_preview = True" in src
+    # Positionsgedächtnis: Start an der zuletzt gehörten Stelle
+    assert "_start = float(getattr(self, \"_live_playback_frac\", 0.0) or 0.0)" in src
+    assert "self._play_audio(_safe_preview, _preview_sr, start_pos_frac=_start)" in src
+    # Beim Stoppen wird die aktuelle Position gemerkt
+    assert "self._live_playback_frac = float(_sp.position_frac)" in src
+    # Zu Ende gehört → nächster Start von vorn
+    assert "self._live_playback_frac = 0.0" in src
+
+
+def test_live_mitheoren_scrubber_seek_works():
+    """Der Transport-Scrubber springt tatsächlich (war vorher toter Code)."""
+    src = _read("Aurik10/ui/modern_window.py")
+    # Scrubber-Referenzen werden in BEIDEN Wiedergabe-Pfaden gesetzt
+    assert src.count("self._play_audio_ref =") >= 2
+    assert src.count("self._play_sr_ref =") >= 2
+    # Scrubber ruft Fraction-Seek (Streaming-Player erwartet Fraction)
+    assert "self._seek_playback(_frac)" in src
+    assert "_player.seek(float(frac))" in src
+    # Live-Sprung merkt sich die Position
+    assert "self._live_playback_frac = _frac" in src
+
+
+def test_live_snapshot_is_full_length():
+    """Der Live-Snapshot ist der VOLLE aktuelle Stand — nicht nur Sekunden."""
+    src = _read("Aurik10/ui/modern_window.py")
+    assert "self._live_preview_audio = _preview.copy()" in src
+
+
 @pytest.mark.gui
 def test_results_summary_dialog_shows_bericht():
     """Funktional: Der Dialog rendert die Bericht-Sektion aus dem data-dict."""
