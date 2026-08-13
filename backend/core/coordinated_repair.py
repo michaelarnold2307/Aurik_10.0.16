@@ -49,6 +49,8 @@ except Exception:  # pragma: no cover — optional
 
 log = logging.getLogger(__name__)
 
+_PROJECT_P = __import__("pathlib").Path(__file__).resolve().parent.parent
+
 SR = 48000
 
 
@@ -429,8 +431,14 @@ class CoordinatedRepair:
                 current_audio = self._execute_step(
                     current_audio, step, manifest, sample_rate, n_channels,
                 )
+                # §v10.950: No-Op-Erkennung — wenn der Schritt nichts geändert
+                # hat, Guards und Perceptual-Loop überspringen (RT-Einsparung)
+                _changed = not np.allclose(
+                    np.asarray(_audio_pre), np.asarray(current_audio), atol=1e-7,
+                )
+
                 # §v10.610: Post-Repair Artifact Guard — Pumping/Verzerrung checken
-                if _guard is not None:
+                if _guard is not None and _changed:
                     _guard_result = _guard.check(
                         audio_pre=_audio_pre,
                         audio_post=current_audio,
@@ -458,7 +466,7 @@ class CoordinatedRepair:
                                 step.phase_id, _violations,
                             )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
-                if _perceptual is not None:
+                if _perceptual is not None and _changed:
                     _percept_result = _perceptual.evaluate(
                         audio_pre=_audio_pre,
                         audio_post=current_audio,
@@ -855,6 +863,67 @@ class CoordinatedRepair:
                 return np.asarray(out, dtype=np.float32)
         except Exception as exc:
             log.warning("Print-Through-Reduktion nicht verfügbar (%s) — Pass-Through", exc)
+        return audio
+
+    def _run_mp_senet_vocal(
+        self, audio: np.ndarray, step: RepairStep,
+        manifest: Optional[Any], sr: int,
+    ) -> np.ndarray:
+        """§v10.950: Vokal-Denoising via MP-SENet ONNX (Opt-In use_mp_senet=True).
+
+        I/O: noisy_amp [B, 201, T] + noisy_pha [B, 201, T] → denoised_amp.
+        n_fft=400 (201 Bins), hop=100 (75% Overlap).
+        """
+        if not step.parameters.get("use_mp_senet", False):
+            return audio
+        try:
+            import onnxruntime as ort
+
+            mono = np.asarray(audio, dtype=np.float32)
+            if mono.ndim > 1:
+                mono = mono.mean(axis=0)
+
+            n_fft, hop = 400, 100
+            window = np.hanning(n_fft).astype(np.float32)
+            n_frames = max(1, 1 + (len(mono) - n_fft) // hop)
+            spec = np.zeros((n_frames, n_fft // 2 + 1), dtype=np.complex64)
+            for i in range(n_frames):
+                s = i * hop
+                if s + n_fft > len(mono):
+                    break
+                spec[i] = np.fft.rfft(mono[s:s + n_fft] * window)
+
+            amp = np.abs(spec).astype(np.float32)          # [T, 201]
+            pha = np.angle(spec).astype(np.float32)
+
+            session = ort.InferenceSession(
+                str(_PROJECT_P / "models" / "mp_senet" / "mp_senet.onnx"),
+                providers=["CPUExecutionProvider"],
+            )
+            denoised_amp = session.run(
+                None, {
+                    "noisy_amp": amp.T[np.newaxis],   # [1, 201, T]
+                    "noisy_pha": pha.T[np.newaxis],
+                },
+            )[0][0].T  # [T, 201]
+
+            # Rekonstruktion mit Original-Phase
+            enhanced_spec = denoised_amp.astype(np.complex64) * np.exp(1j * pha)
+            out = np.zeros(len(mono), dtype=np.float32)
+            wsum = np.zeros(len(mono), dtype=np.float32)
+            for i in range(len(enhanced_spec)):
+                s = i * hop
+                if s + n_fft > len(mono):
+                    break
+                frame = np.fft.irfft(enhanced_spec[i]) * window
+                out[s:s + n_fft] += frame
+                wsum[s:s + n_fft] += window ** 2
+            wsum[wsum < 1e-8] = 1.0
+            out /= wsum
+            log.info("MP-SENet Vokal-Denoising: %d Frames verarbeitet", len(enhanced_spec))
+            return out.astype(np.float32)
+        except Exception as exc:
+            log.warning("MP-SENet nicht verfügbar (%s) — Pass-Through", exc)
         return audio
 
     def _run_pass_through(
