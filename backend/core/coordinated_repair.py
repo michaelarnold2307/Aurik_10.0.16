@@ -128,6 +128,79 @@ def _guard_amp_loudness(denoised: np.ndarray, original: np.ndarray) -> np.ndarra
     return denoised.astype(np.float32)
 
 
+def _spectral_damage_db(pre: np.ndarray, post: np.ndarray, sr: int) -> float:
+    """§v10.998: Mittlere absolute Band-Energie-Abweichung (log-Bänder).
+
+    Erkennt RMS-stabile spektrale Zerstörung (Hum-Befund: −65 dB SNR bei
+    fast unveränderter Gesamtenergie). 10 log-Beabständete Bänder von
+    40 Hz bis Nyquist; MEDIAN der Band-Abweichungen > 9 dB = Schaden.
+    Median statt Mittel: lokalisierte Reparaturen (Dropout-Interpolation,
+    ~3% der Samples) dürfen den Guard NICHT auslösen — nur GLOBALE
+    spektrale Zerstörung tut das.
+    """
+    try:
+        _pre = np.asarray(pre, dtype=np.float64)
+        _post = np.asarray(post, dtype=np.float64)
+        if _pre.ndim > 1:
+            _pre = _pre.mean(axis=0)
+        if _post.ndim > 1:
+            _post = _post.mean(axis=0)
+        n = min(len(_pre), len(_post), 8192)
+        if n < 512:
+            return 0.0
+        _pre, _post = _pre[-n:], _post[-n:]
+        _win = np.hanning(n)
+        _spec_pre = np.abs(np.fft.rfft(_pre * _win))
+        _spec_post = np.abs(np.fft.rfft(_post * _win))
+        _freqs = np.fft.rfftfreq(n, 1.0 / sr)
+        _edges = np.logspace(np.log10(max(40.0, _freqs[1])), np.log10(sr / 2.0), 11)
+        _deltas: list[float] = []
+        for i in range(len(_edges) - 1):
+            _mask = (_freqs >= _edges[i]) & (_freqs < _edges[i + 1])
+            _e_pre = float(np.sum(_spec_pre[_mask] ** 2)) + 1e-12
+            _e_post = float(np.sum(_spec_post[_mask] ** 2)) + 1e-12
+            _deltas.append(abs(10.0 * np.log10(_e_post / _e_pre)))
+        return float(np.median(_deltas))
+    except Exception:
+        return 0.0
+
+
+def _spectral_bands_over_db(pre: np.ndarray, post: np.ndarray, sr: int, threshold_db: float = 12.0) -> int:
+    """§v10.998: Zählt Bänder mit > threshold_db Abweichung (log-Bänder).
+
+    Der Median verfehlt FREQUENZ-lokalisierte Zerstörung (Hum: 3 tiefe Bänder
+    kollabieren, 7 unverändert → Median ≈ 0). Band-Zählung fängt beides:
+    lokalisierte Reparaturen (Dropout) treffen ≤ 2 Bänder, globale/frequenz-
+    lokalisierte Zerstörung trifft ≥ 3.
+    """
+    try:
+        _pre = np.asarray(pre, dtype=np.float64)
+        _post = np.asarray(post, dtype=np.float64)
+        if _pre.ndim > 1:
+            _pre = _pre.mean(axis=0)
+        if _post.ndim > 1:
+            _post = _post.mean(axis=0)
+        n = min(len(_pre), len(_post), 8192)
+        if n < 512:
+            return 0
+        _pre, _post = _pre[-n:], _post[-n:]
+        _win = np.hanning(n)
+        _spec_pre = np.abs(np.fft.rfft(_pre * _win))
+        _spec_post = np.abs(np.fft.rfft(_post * _win))
+        _freqs = np.fft.rfftfreq(n, 1.0 / sr)
+        _edges = np.logspace(np.log10(max(40.0, _freqs[1])), np.log10(sr / 2.0), 11)
+        _count = 0
+        for i in range(len(_edges) - 1):
+            _mask = (_freqs >= _edges[i]) & (_freqs < _edges[i + 1])
+            _e_pre = float(np.sum(_spec_pre[_mask] ** 2)) + 1e-12
+            _e_post = float(np.sum(_spec_post[_mask] ** 2)) + 1e-12
+            if abs(10.0 * np.log10(_e_post / _e_pre)) > threshold_db:
+                _count += 1
+        return _count
+    except Exception:
+        return 0
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # Defect → Phase Mapping
 # ═════════════════════════════════════════════════════════════════════════════
@@ -341,7 +414,14 @@ class RepairPlanner:
                 defect_category=template.defect_category,
                 affected_samples=affected,
                 parameters={
-                    "strength": float(avg_severity * avg_confidence),
+                    # §v10.998: Stärke-Boden — das Severity-Modell meldet
+                    # systematisch zu niedrige Werte (Gesamtmessung: 4 Phasen
+                    # liefen mit strength ≈ 0.03 und taten NICHTS). Bei
+                    # erkannter Defekt-Lage (conf > 0.3) greift ein Boden von
+                    # 0.25 — die Phase muss WIRKEN können.
+                    "strength": float(max(
+                        avg_severity * avg_confidence, 0.25 if avg_confidence > 0.3 else 0.0
+                    )),
                     "confidence": float(avg_confidence),
                     "defect_count": len(phase_defect_list),
                     "coverage_pct": float(
@@ -502,6 +582,12 @@ class CoordinatedRepair:
         _guard = _ArtifactGuard() if _ArtifactGuard is not None else None
         _perceptual = _PerceptualLoop() if _PerceptualLoop is not None else None
 
+        # §v10.998: Kumulativer Spektral-Guard — Vergleichs-Basis ist der
+        # SESSION-INPUT, nicht nur der vorherige Schritt. Hum-Messung:
+        # 8 Phasen schädigten je < 9 dB (kein Einzel-Revert), kumulativ
+        # aber −53 dB. Diese Schleife bricht bei kumulativer Zerstörung ab.
+        _session_audio = current_audio.copy()
+
         # §v10.990: Telemetrie-Akkumulatoren für den RepairReport
         _guard_violations: dict[str, int] = {}
         _guard_peak_delta = 0.0
@@ -577,6 +663,21 @@ class CoordinatedRepair:
                             "§v10.998 Guard: %s kollabierte die Energie (%.0f%% → revert)",
                             step.phase_id, _rms_out / _rms_in * 100,
                         )
+                    else:
+                        # §v10.998: Spektral-Schadens-Guard — Hum-Messung zeigte:
+                        # RMS-stabile Zerstörung ist möglich (Notch-Kette entfernte
+                        # die Musik spektral, −65 dB SNR, RMS fast unverändert).
+                        # Kriterium: mittlere absolute Band-Energie-Abweichung in
+                        # 10 log-Beabständeten Bändern > 9 dB → Revert.
+                        _spec_damage = _spectral_damage_db(_audio_pre, current_audio, sample_rate)
+                        if _spec_damage > 9.0:
+                            current_audio = _audio_pre
+                            _guard_violations["spectral_damage"] = _guard_violations.get("spectral_damage", 0) + 1
+                            log.warning(
+                                "§v10.998 Guard: %s verursachte spektralen Schaden "
+                                "(%.1f dB Band-Abweichung → revert)",
+                                step.phase_id, _spec_damage,
+                            )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
                 if _perceptual is not None and _changed:
                     _percept_result = _perceptual.evaluate(
@@ -622,6 +723,18 @@ class CoordinatedRepair:
 
         elapsed = time.time() - t0
         output_peak = float(np.abs(current_audio).max())
+
+        # §v10.998: Kumulativer Spektral-Guard — finale Prüfung gegen den
+        # Session-Input. Kriterium: ≥ 3 log-Bänder mit > 12 dB Abweichung
+        # (fängt frequenz-lokalisierte Zerstörung wie die Hum-Notch-Kette).
+        _cum_bands = _spectral_bands_over_db(_session_audio, current_audio, sample_rate)
+        if _cum_bands >= 3:
+            _guard_violations["cumulative_spectral"] = _guard_violations.get("cumulative_spectral", 0) + 1
+            current_audio = _session_audio
+            log.warning(
+                "§v10.998 Guard: Kette verursachte kumulativen Spektral-Schaden "
+                "(%d Bänder > 12 dB) → kompletter Revert auf Session-Input", _cum_bands,
+            )
 
         if was_mono and current_audio.shape[0] == 1:
             current_audio = current_audio[0]

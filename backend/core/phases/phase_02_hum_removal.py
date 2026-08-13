@@ -724,15 +724,27 @@ class HumRemovalPhase(PhaseInterface):
                 # Side-chain detection: Check if harmonic overlaps with musical content
                 is_musical = self._detect_musical_content(audio, harmonic_freq)
 
-                if is_musical:
-                    # Reduce notch depth (preserve musical content)
+                # §v10.998: Band-Dominanz — Hum dominiert nur, wenn die
+                # Schmalband-Energie (±2 Hz) den Großteil der Umgebungs-Energie
+                # (±20 Hz) ausmacht. Musik im Band (Jazz-Bass bei 100/200 Hz)
+                # senkt die Ratio unter 0.7 → nur 25% Tiefe.
+                _narrow = self._measure_hum_at_freq(audio, harmonic_freq)
+                _wide = self._measure_band_energy_at(audio, harmonic_freq, 20.0)
+                _dominant = _narrow / (_wide + 1e-12) > 0.7
+
+                if is_musical or not _dominant:
+                    # §v10.998: Musik im Band ODER Hum dominiert nicht →
+                    # sanfte Tiefe (vorher volle Tiefe — die Notch-Kette
+                    # entfernte den Jazz-Bass komplett, −65 dB SNR).
                     q_effective = params["q_factor"] * params["side_chain_ratio"]
+                    depth = 0.25
                 else:
-                    # Full notch depth
+                    # Hum dominiert das Band → volle Tiefe
                     q_effective = params["q_factor"]
+                    depth = 1.0
 
                 # Apply notch filter
-                result = self._apply_notch_filter(result, harmonic_freq, q_effective)
+                result = self._apply_notch_filter(result, harmonic_freq, q_effective, depth=depth)
 
                 total_harmonics_removed += 1
 
@@ -749,10 +761,11 @@ class HumRemovalPhase(PhaseInterface):
 
         return result, stats
 
-    def _apply_notch_filter(self, audio: np.ndarray, freq: float, q_factor: float) -> np.ndarray:
+    def _apply_notch_filter(self, audio: np.ndarray, freq: float, q_factor: float, depth: float = 1.0) -> np.ndarray:
         """
         Wendet an: phase-linear notch filter at specified frequency.
 
+        §v10.998: depth steuert die Notch-Tiefe (0.25 = sanft, 1.0 = voll).
         Uses filtfilt for zero-phase filtering (preserve transients).
         """
         # Normalized frequency
@@ -764,6 +777,8 @@ class HumRemovalPhase(PhaseInterface):
 
         # Design notch filter
         b, a = signal.iirnotch(w0, q_factor, fs=self.sample_rate)
+        # §v10.998: Tiefen-Blend — depth=1.0 ist der klassische Notch
+        depth = float(np.clip(depth, 0.0, 1.0))
 
         # Zero-phase filtering (preserve transients)
         # §v10.18: scipy.signal.filtfilt operiert auf axis=-1 (letzte Achse).
@@ -797,7 +812,12 @@ class HumRemovalPhase(PhaseInterface):
             else:
                 filtered = signal.lfilter(b, a, audio)
 
-        return filtered  # type: ignore[no-any-return]
+        # §v10.998: Tiefen-Blend — bei depth < 1.0 bleibt der Großteil der
+        # Band-Energie (und damit der Musik) erhalten; nur der Notch-Anteil
+        # wird eingemischt.
+        if depth >= 0.999:
+            return filtered  # type: ignore[no-any-return]
+        return (audio + depth * (filtered - audio)).astype(audio.dtype)  # type: ignore[no-any-return]
 
     def _detect_musical_content(self, audio: np.ndarray, freq: float) -> bool:
         """
@@ -891,6 +911,15 @@ class HumRemovalPhase(PhaseInterface):
         spectrum = np.abs(np.fft.rfft(audio[:fft_size]))
 
         return self._measure_band_energy(spectrum, freqs, freq - 2, freq + 2)
+
+    def _measure_band_energy_at(self, audio: np.ndarray, freq: float, half_width: float) -> float:
+        """§v10.998: Band-Energie ±half_width Hz um freq — für die Band-Dominanz."""
+        if audio.ndim == 2 and audio.shape[1] < audio.shape[0]:
+            audio = np.mean(audio, axis=1)
+        fft_size = min(len(audio), int(2 * self.sample_rate))
+        freqs = np.fft.rfftfreq(fft_size, 1 / self.sample_rate)
+        spectrum = np.abs(np.fft.rfft(audio[:fft_size]))
+        return self._measure_band_energy(spectrum, freqs, max(0.0, freq - half_width), freq + half_width)
 
     def supports_material(self, material_type: str) -> bool:  # pylint: disable=unused-argument
         """All materials supported."""
