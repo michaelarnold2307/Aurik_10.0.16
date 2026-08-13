@@ -239,6 +239,11 @@ class RestorationStatusPanel(QFrame):
         self._consent_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         self._consent_label.setVisible(False)
         _outer.addWidget(self._consent_label)
+        # §v10.997: Live-Plan-Tracker-Zustand
+        self._consent_found: list[dict[str, str]] = []
+        self._consent_actions: list[str] = []
+        self._plan_order: list[str] = []
+        self._plan_progress: dict[int, str] = {}  # index → done|current|pending
 
     # ── Public API ──────────────────────────────────────────────────
 
@@ -257,6 +262,9 @@ class RestorationStatusPanel(QFrame):
             self._phase_counter.setText(f"Phase {current}/{total}")
         else:
             self._phase_counter.setText("")
+        # §v10.997: Plan-Fortschritt live nachziehen (✓/▶/○)
+        if phase_id:
+            self._update_consent_progress(phase_id)
 
     def set_material(self, material: str, decade: int = 0, genre: str = "") -> None:
         """Update material/era/genre badges + store material for threshold lookup."""
@@ -326,6 +334,10 @@ class RestorationStatusPanel(QFrame):
         self._phase_icon.setText("✅")
         self._phase_name.setText("Restauration abgeschlossen")
         self._phase_counter.setText("")
+        # §v10.997: Alle Plan-Schritte als erledigt markieren
+        if self._consent_actions:
+            self._plan_progress = {i: "done" for i in range(len(self._consent_actions))}
+            self._render_consent()
 
     # ── §v10.990 SOTA-Kette ─────────────────────────────────────────
 
@@ -368,24 +380,56 @@ class RestorationStatusPanel(QFrame):
         self._set_sota_badge(1, f"🧠 {n} Defekte·{mods} Mod", ok=True)
 
     def set_repair_plan_summary(self, summary: dict) -> None:
-        """§v10.990: Repair-Plan (bridge.get_repair_plan_summary)."""
+        """§v10.990/§v10.997: Repair-Plan (bridge.get_repair_plan_summary).
+
+        Speichert phase_order für den Live-Plan-Tracker; fehlen die
+        Handlungssätze aus der Einwilligung, werden sie hieraus übernommen.
+        """
         if not summary:
             return
         n = int(summary.get("step_count", 0) or 0)
         self._set_sota_badge(2, f"🗺️ {n} Phasen", ok=n > 0)
+        self._plan_order = list(summary.get("phase_order", []) or [])
+        if not self._consent_actions and (summary.get("actions") or []):
+            self._consent_actions = list(summary.get("actions") or [])
+            self._render_consent()
 
     def set_repair_consent(self, consent: dict) -> None:
-        """§v10.992: Einwilligungs-Ansicht — zeigt in Alltagssprache, was Aurik tun wird.
+        """§v10.992/§v10.997: Einwilligungs-Ansicht — zeigt in Alltagssprache, was Aurik tun wird.
 
         KEINE Interaktion (keine Checkboxen, kein Editieren): reine Transparenz.
-        consent = bridge.get_repair_plan_consent(defect_result)
+        Während der Verarbeitung wird dieselbe Zeile zum Live-Plan-Tracker
+        (✓ erledigt · ▶ läuft · ○ wartet).
         """
         if not consent:
+            self._consent_found = []
+            self._consent_actions = []
+            self._plan_progress = {}
             self._consent_label.setVisible(False)
             return
-        found = consent.get("found", []) or []
-        will_do = consent.get("will_do", []) or []
-        if not found and not will_do:
+        self._consent_found = list(consent.get("found", []) or [])
+        self._consent_actions = list(consent.get("will_do", []) or [])
+        self._plan_progress = {}
+        self._render_consent()
+
+    def _update_consent_progress(self, phase_id: str) -> None:
+        """§v10.997: Markiert Plan-Schritte als erledigt/laufend — live."""
+        if not self._consent_actions or not self._plan_order:
+            return
+        if phase_id not in self._plan_order:
+            return  # Phase außerhalb des Plans (z.B. UV3-Zusatzphasen) — Status halten
+        idx = self._plan_order.index(phase_id)
+        self._plan_progress = {
+            i: ("done" if i < idx else "current" if i == idx else "pending")
+            for i in range(len(self._consent_actions))
+        }
+        self._render_consent()
+
+    def _render_consent(self) -> None:
+        """§v10.997: Ein Renderer für statische Einwilligung UND Live-Fortschritt."""
+        found = self._consent_found
+        actions = self._consent_actions
+        if not found and not actions:
             self._consent_label.setVisible(False)
             return
         parts: list[str] = []
@@ -394,8 +438,16 @@ class RestorationStatusPanel(QFrame):
                 f"{f['label']} ({f.get('severity', '')})".rstrip()
                 for f in found[:4]
             ))
-        if will_do:
-            parts.append("Aurik wird: " + " → ".join(will_do[:8]))
+        if actions:
+            _marks = {"done": "✓", "current": "▶", "pending": "○"}
+            if self._plan_progress:
+                _chain = [
+                    f"{_marks.get(self._plan_progress.get(i, ''), '')} {a}".strip()
+                    for i, a in enumerate(actions[:8])
+                ]
+                parts.append("Aurik: " + " → ".join(_chain))
+            else:
+                parts.append("Aurik wird: " + " → ".join(actions[:8]))
         text = "   ·   ".join(parts)
         fm = self._consent_label.fontMetrics()
         _max_w = max(320, self.width() - 48)

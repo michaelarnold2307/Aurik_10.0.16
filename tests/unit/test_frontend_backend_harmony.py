@@ -282,6 +282,69 @@ def test_status_panel_consent_method_and_wiring():
     assert "self._sync_status_panel_sota()" in src_win
 
 
+def test_bridge_repair_plan_summary_has_aligned_actions():
+    """§v10.997: actions[] parallel zu phase_order[] — Basis des Live-Trackers."""
+    from backend.api.bridge import get_repair_plan_summary
+    from backend.core.coordinated_repair import RepairPlan, RepairPriority, RepairStep
+
+    plan = RepairPlan(steps=[
+        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
+                   defect_category="crackle", affected_samples=[]),
+        RepairStep(phase_id="phase_03_denoise", priority=RepairPriority.BREITBAND,
+                   defect_category="hiss", affected_samples=[]),
+    ])
+    summary = get_repair_plan_summary(plan)
+    assert summary["phase_order"] == ["phase_09_crackle_removal", "phase_03_denoise"]
+    assert summary["actions"] == ["Knistern entfernen", "Rauschen reduzieren"]
+    assert len(summary["actions"]) == len(summary["phase_order"])
+
+
+@pytest.mark.gui
+def test_status_panel_live_plan_tracker():
+    """§v10.997: Während der Verarbeitung wird der Plan live als ✓/▶/○ angezeigt."""
+    pytest.importorskip("PyQt5")
+    from PyQt5.QtWidgets import QApplication
+
+    from Aurik10.ui.restoration_status_panel import RestorationStatusPanel
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    panel = RestorationStatusPanel()
+    panel.resize(1200, 120)
+    panel.show()
+    app.processEvents()
+
+    panel.set_repair_consent({
+        "found": [{"label": "Knistern", "severity": "Stark"}],
+        "will_do": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
+    })
+    panel.set_repair_plan_summary({
+        "step_count": 3,
+        "phase_order": ["phase_09_crackle_removal", "phase_03_denoise", "phase_06_frequency_restoration"],
+        "actions": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
+    })
+
+    # Vor dem Start: statische Einwilligung
+    assert "Aurik wird: Knistern entfernen" in panel._consent_label.text()
+
+    # Erste Phase läuft
+    panel.set_phase("phase_09_crackle_removal", 1, 3)
+    assert "▶ Knistern entfernen" in panel._consent_label.text()
+    assert "○ Rauschen reduzieren" in panel._consent_label.text()
+
+    # Zweite Phase läuft → erste ist erledigt
+    panel.set_phase("phase_03_denoise", 2, 3)
+    assert "✓ Knistern entfernen" in panel._consent_label.text()
+    assert "▶ Rauschen reduzieren" in panel._consent_label.text()
+
+    # Abschluss → alles erledigt
+    panel.set_complete()
+    _text = panel._consent_label.text()
+    assert _text.count("✓") == 3
+    assert "▶" not in _text and "○" not in _text
+
+
 @pytest.mark.gui
 def test_status_panel_consent_renders():
     """Funktional: Consent-Zeile wird sichtbar und zeigt laienverständlichen Text."""

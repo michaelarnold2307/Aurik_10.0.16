@@ -3556,14 +3556,31 @@ def get_defect_consensus_summary(manifest: object) -> dict:
 
 
 def get_repair_plan_summary(plan: object) -> dict:
-    """Normalisiert einen RepairPlan zu Frontend-Daten (Phasen-Reihenfolge + Abdeckung)."""
+    """Normalisiert einen RepairPlan zu Frontend-Daten (Phasen-Reihenfolge + Abdeckung).
+
+    §v10.997: `actions` enthält die Handlungssätze in DERSELBEN Reihenfolge wie
+    `phase_order` — damit das Panel den Plan live als ✓/▶/○-Kette rendern kann.
+    """
     if plan is None:
         return {}
     try:
         steps = list(getattr(plan, "steps", []) or [])
+        phase_order = [str(getattr(s, "phase_id", "")) for s in steps]
+        actions: list[str] = []
+        from backend.core.phase_display_formatter import get_phase_display
+
+        for pid in phase_order:
+            action = _PHASE_ACTIONS.get(pid)
+            if not action:
+                action = str(get_phase_display(pid) or pid)
+                parts = action.split(" ", 1)
+                if len(parts) == 2 and any(ord(c) > 127 for c in parts[0]):
+                    action = parts[1]  # Emoji-Präfix entfernen
+            actions.append(action)
         return {
             "step_count": len(steps),
-            "phase_order": [str(getattr(s, "phase_id", "")) for s in steps],
+            "phase_order": phase_order,
+            "actions": actions,
             "priorities": [str(getattr(getattr(s, "priority", ""), "name", "")) for s in steps],
             "total_defects": int(getattr(plan, "total_defects", 0) or 0),
             "total_coverage_samples": int(getattr(plan, "total_coverage_samples", 0) or 0),

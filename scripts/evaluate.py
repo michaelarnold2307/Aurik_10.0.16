@@ -63,6 +63,35 @@ def _make_synthetic_case(index: int, degraded: bool = False) -> EvalCase:
     )
 
 
+def _restore_case(paths: dict) -> str | None:
+    """§v10.998: Führt die SOTA-Kette auf einem Korpus-Fall aus.
+
+    Consensus → RepairPlan → CoordinatedRepair; schreibt das Ergebnis nach
+    corpus/<material>/restored/<name>.wav. Returns Pfad oder None bei Fehler.
+    """
+    import soundfile as sf
+
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlanner
+    from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
+
+    try:
+        damaged, sr = sf.read(paths["damaged_path"], dtype="float32", always_2d=False)
+        manifest = DefectConsensusPipeline().analyze(damaged, sr)
+        plan = RepairPlanner().plan(manifest, len(damaged))
+        audio, report = CoordinatedRepair().execute(damaged, plan, manifest, sr)
+        out = Path(str(paths["damaged_path"]).replace("/damaged/", "/restored/"))
+        out.parent.mkdir(parents=True, exist_ok=True)
+        sf.write(str(out), np.asarray(audio, dtype=np.float32), sr)
+        print(
+            f"  ✅ {paths['case_id']}: {len(getattr(report, 'completed_steps', []))} Schritte "
+            f"(Guards: {getattr(report, 'guard_violations', {})})"
+        )
+        return str(out)
+    except Exception as exc:
+        print(f"  ⚠ {paths.get('case_id', '?')}: Restauration fehlgeschlagen ({exc})")
+        return None
+
+
 def _run_objective(args: argparse.Namespace) -> EvalReport:
     system = EvaluationSystem()
     cases: list[EvalCase] = []
@@ -71,6 +100,11 @@ def _run_objective(args: argparse.Namespace) -> EvalReport:
             cases.append(_make_synthetic_case(i))
     else:
         paths = discover_corpus_cases(Path(args.corpus), limit=int(args.limit or 0))
+        # §v10.998: Echte Restaurationen erzeugen — Proxy wird Messung
+        if args.restore:
+            for p in paths:
+                if not p.get("restored_path"):
+                    p["restored_path"] = _restore_case(p)
         for p in paths:
             case = _load_case(p)
             if case is not None:
@@ -131,6 +165,8 @@ def main() -> int:
     parser.add_argument("--corpus", default="corpus")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--synthetic", action="store_true")
+    parser.add_argument("--restore", action="store_true",
+                        help="§v10.998: Fehlende restored/-Dateien mit der SOTA-Kette erzeugen")
     parser.add_argument("--cases", type=int, default=4)
     parser.add_argument("--out", default=None)
     parser.add_argument("--gate", action="store_true", help="Exit 1 bei FAIL")
