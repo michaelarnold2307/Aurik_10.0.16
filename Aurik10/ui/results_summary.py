@@ -82,6 +82,70 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
         improvements = self._build_improvements()
         layout.addWidget(improvements)
 
+        # ── §v10.996: Konsolidierter Bericht (Plan → Ausführung → Beweis) ──
+        _bericht = d.get("restoration_bericht") or {}
+        _found = _bericht.get("found") or []
+        _planned = _bericht.get("planned") or []
+        if _found or _planned:
+            _report_box = QtWidgets.QFrame()
+            _report_box.setStyleSheet(
+                "QFrame { background: rgba(130, 184, 154, 0.06); border: 1px solid "
+                "rgba(130, 184, 154, 0.25); border-radius: 6px; }"
+            )
+            _report_layout = QtWidgets.QVBoxLayout(_report_box)
+            _report_layout.setContentsMargins(10, 8, 10, 8)
+            _report_layout.setSpacing(4)
+
+            _lines: list[tuple[str, str]] = []
+            if _found:
+                _lines.append((
+                    "🔍 Gefunden: " + ", ".join(
+                        f"{f['label']} ({f.get('severity', '')})".rstrip() for f in _found
+                    ),
+                    "#8894A8",
+                ))
+            if _planned:
+                _done_n = int(_bericht.get("done_count", 0) or 0)
+                _skip_n = int(_bericht.get("skipped_count", 0) or 0)
+                _def_n = int(_bericht.get("deferred_count", 0) or 0)
+                _noeff = int(_bericht.get("no_effect_count", 0) or 0)
+                _lines.append((
+                    "✅ Aurik hat: " + " → ".join(_planned[:6]),
+                    "#82B89A",
+                ))
+                _exec_parts = [f"{_done_n} Schritte ausgeführt"]
+                if _skip_n:
+                    _exec_parts.append(f"{_skip_n} übersprungen")
+                if _noeff:
+                    _exec_parts.append(f"{_noeff} ohne Effekt")
+                if _def_n:
+                    _exec_parts.append(f"{_def_n} zur ML-Veredelung verschoben")
+                _lines.append(("   " + " · ".join(_exec_parts), "#8894A8"))
+
+            _guards = _bericht.get("guards") or {}
+            _g = _guards.get("guards", {}) or {}
+            _fired = (
+                int(_g.get("truepeak", 0) or 0) + int(_g.get("pumping", 0) or 0)
+                + int(_g.get("formant", 0) or 0) + int(_g.get("spectral", 0) or 0)
+            )
+            _iters = int((_guards.get("utmos_loop") or {}).get("iterations", 0) or 0)
+            _guard_text = f"🛡️ Sicherheitsnetz: {_fired} Eingriffe"
+            if _iters:
+                _guard_text += f" · UTMOS-Kontrolle {_iters}×"
+            _lines.append((_guard_text, "#82B89A" if _fired == 0 else "#B8A068"))
+
+            _proof = _bericht.get("proof") or {}
+            _verdict = str(_proof.get("verdict", "") or "")
+            if _verdict:
+                _lines.append(("📊 " + _verdict, "#8894A8"))
+
+            for _text, _color in _lines:
+                _row = QtWidgets.QLabel(_text)
+                _row.setStyleSheet(f"font-size: 10pt; color: {_color};")
+                _row.setWordWrap(True)
+                _report_layout.addWidget(_row)
+            layout.addWidget(_report_box)
+
         # ── Quality indicator ─────────────────────────────────────────────
         # §v10.202: Revert-Prüfung VOR Qualitäts-Anzeige
         was_reverted = d.get("was_reverted", False)
@@ -370,6 +434,7 @@ def build_results_data(
     hpe_before: float = 0,
     hpe_after: float = 0,
     restoration_result: object = None,
+    restoration_bericht: dict | None = None,  # §v10.996: Plan → Ausführung → Beweis
 ) -> dict:
     """Baut das data-dict für den ResultsSummaryDialog."""
     # §v10.201: Echte Qualitätswerte aus RestorationResult.metadata
@@ -423,4 +488,6 @@ def build_results_data(
         "residual_audible_defects": int((_rmeta.get("defect_countdown") or {}).get("remaining_audible", 0)),
         "phases_skipped": len(_phases_skipped),
         "deferred_phase_count": len(_deferred_phases),
+        # §v10.996: Konsolidierter Bericht (bridge.get_restoration_bericht)
+        "restoration_bericht": restoration_bericht or {},
     }

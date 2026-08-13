@@ -21216,11 +21216,21 @@ class ModernMainWindow(QMainWindow):
             from Aurik10.ui.results_summary import ResultsSummaryDialog, build_results_data
 
             _file_name = Path(item.input_file).name if item and item.input_file else ""
+            # §v10.996: Konsolidierter Bericht — Plan (Defekt-Ergebnis) + Ausführung (Result)
+            _bericht = {}
+            try:
+                from backend.api.bridge import get_cached_defect_result, get_restoration_bericht
+
+                _defect = get_cached_defect_result(str(item.input_file) if item else "")
+                _bericht = get_restoration_bericht(restoration_result, _defect)
+            except Exception:
+                logger.debug("Restaurierungs-Bericht nicht verfügbar", exc_info=True)
             data = build_results_data(
                 file_name=_file_name,
                 quality_before=None,
                 quality_after=None,
                 restoration_result=restoration_result,
+                restoration_bericht=_bericht,
             )
             dlg = ResultsSummaryDialog(data, self)
             dlg.play_requested.connect(lambda: self._play_restored_or_preview())

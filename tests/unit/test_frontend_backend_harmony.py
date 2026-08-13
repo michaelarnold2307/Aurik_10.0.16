@@ -211,7 +211,7 @@ def test_bridge_exports_sota_accessors():
     for name in (
         "get_model_zoo_summary", "get_sota_chain_status",
         "get_defect_consensus_summary", "get_repair_plan_summary", "get_guard_report",
-        "get_repair_plan_consent",
+        "get_repair_plan_consent", "get_restoration_bericht",
     ):
         assert f'"{name}"' in body, f"{name} fehlt in __all__"
 
@@ -401,3 +401,115 @@ def test_ci_gui_smoke_gate_exists():
     assert "tests/ui/test_ui_quality.py" in src
     assert "--run-gui-tests" in src
     assert "QT_QPA_PLATFORM: offscreen" in src
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.996: Konsolidierter Restaurierungs-Bericht — der Kreis schließt sich
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_bridge_restoration_bericht_closes_the_loop():
+    """Plan (Defekt-Ergebnis) + Ausführung (Result) → EIN Bericht."""
+    from backend.api.bridge import get_restoration_bericht
+    from backend.core.coordinated_repair import RepairPlan, RepairPriority, RepairStep
+    from backend.core.defect_consensus_pipeline import DefectCategory, DefectHypothesis, DefectManifest
+
+    manifest = DefectManifest(defects=[
+        DefectHypothesis(category=DefectCategory.CRACKLE, start_sample=0, end_sample=1000,
+                         confidence=0.9, severity=0.5, source_module="x"),
+    ])
+    plan = RepairPlan(steps=[
+        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
+                   defect_category="crackle", affected_samples=[]),
+    ])
+
+    class _Defect:
+        _consensus_manifest = manifest
+        repair_plan = plan
+
+    class _Result:
+        quality_estimate = 0.78
+        phases_skipped = ["phase_02_hum_removal"]
+        deferred_phases = ["phase_55_diffusion_inpainting"]
+        metadata = {
+            "phases_total": 6,
+            "restorability_score": 43.0,
+            "no_effect_phase_count": 1,
+            "mushra": {"mushra_score": 84.0},
+            "hpi_score": 0.31,
+            "narrator": {"verdict": "Knistern entfernt, Höhen rekonstruiert."},
+            "do_no_harm": {"reverted": False},
+        }
+
+    bericht = get_restoration_bericht(_Result(), _Defect())
+    assert bericht["found"] == [{"label": "Knistern", "severity": "Stark"}]
+    assert bericht["planned"] == ["Knistern entfernen"]
+    assert bericht["done_count"] == 6
+    assert bericht["skipped_count"] == 1
+    assert bericht["deferred_count"] == 1
+    assert bericht["no_effect_count"] == 1
+    assert bericht["guards"]["guards"]["truepeak"] == 0  # keine Eingriffe = gutes Zeichen
+    assert bericht["proof"]["quality_after"] == 78.0
+    assert bericht["proof"]["mushra"] == 84.0
+    assert bericht["was_reverted"] is False
+
+
+def test_bridge_restoration_bericht_defensive():
+    from backend.api.bridge import get_restoration_bericht
+
+    assert get_restoration_bericht(None) == {}
+    assert get_restoration_bericht(object()) == {}
+
+
+def test_results_summary_renders_bericht_section():
+    src = _read("Aurik10/ui/results_summary.py")
+    assert "restoration_bericht" in src
+    assert "🔍 Gefunden:" in src
+    assert "✅ Aurik hat:" in src
+    assert "🛡️ Sicherheitsnetz:" in src
+
+
+def test_modern_window_passes_bericht_to_dialog():
+    src = _read("Aurik10/ui/modern_window.py")
+    assert "_bericht = get_restoration_bericht(restoration_result, _defect)" in src
+    assert "restoration_bericht=_bericht," in src
+
+
+@pytest.mark.gui
+def test_results_summary_dialog_shows_bericht():
+    """Funktional: Der Dialog rendert die Bericht-Sektion aus dem data-dict."""
+    pytest.importorskip("PyQt5")
+    from PyQt5.QtWidgets import QApplication
+
+    from Aurik10.ui.results_summary import ResultsSummaryDialog
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    dlg = ResultsSummaryDialog({
+        "file_name": "test.wav",
+        "restoration_bericht": {
+            "found": [{"label": "Knistern", "severity": "Stark"}],
+            "planned": ["Knistern entfernen"],
+            "done_count": 3,
+            "skipped_count": 0,
+            "deferred_count": 0,
+            "no_effect_count": 0,
+            "guards": {
+                "guards": {"truepeak": 0, "pumping": 0, "formant": 0, "spectral": 0},
+                "utmos_loop": {"iterations": 5},
+            },
+            "proof": {"verdict": "Knistern entfernt."},
+        },
+        "quality_before": None,
+        "quality_after": None,
+    })
+    dlg.show()
+    app.processEvents()
+    from PyQt5.QtWidgets import QLabel
+
+    texts = [w.text() for w in dlg.findChildren(QLabel)]
+    assert any("Gefunden: Knistern" in t for t in texts)
+    assert any("Aurik hat: Knistern entfernen" in t for t in texts)
+    assert any("UTMOS-Kontrolle 5×" in t for t in texts)
+    dlg.close()

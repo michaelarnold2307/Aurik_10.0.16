@@ -222,6 +222,8 @@ __all__ = [
     # §v10.993: Crash-Report-Sichtbarkeit im Live-Betrieb
     "get_new_crash_reports",
     "mark_crash_reports_seen",
+    # §v10.996: Konsolidierter Restaurierungs-Bericht
+    "get_restoration_bericht",
 ]
 
 # ---------------------------------------------------------------------------
@@ -3743,6 +3745,61 @@ def get_guard_report(result: object) -> dict:
                 "hf_hallucination_fired": _int(meta, "hf_hallucination_guard_fired"),
                 "spectral_tilt_fired": _int(meta, "spectral_tilt_guard_fired"),
             },
+        }
+    except Exception:
+        return {}
+
+
+# ---------------------------------------------------------------------------
+# §v10.996: Konsolidierter Restaurierungs-Bericht — der Kreis schließt sich
+# ---------------------------------------------------------------------------
+
+
+def get_restoration_bericht(result: object, defect_result: object = None) -> dict:
+    """§v10.996: Der EINE Abschluss-Bericht: Plan → Ausführung → Beweis.
+
+    Verbindet die Einwilligungs-Ansicht (§v10.992, Plan) mit der Ausführung
+    (Ergebnis-Metadaten) und dem Sicherheitsnetz (§v10.990 Guards):
+
+      found          — was wurde erkannt (laienverständlich, nach Schwere)
+      planned        — was sollte Aurik tun (Handlungssätze in Reihenfolge)
+      done_count     — wie viele Schritte tatsächlich ausgeführt wurden
+      skipped_count  — übersprungen (kein Effekt / nicht nötig)
+      deferred_count — verschoben (ML-Veredelung)
+      no_effect_count— liefen, änderten aber nichts
+      guards         — Guard-Eingriffe + UTMOS-Kontrolle (get_guard_report)
+      proof          — Qualität vorher/nachher, MUSHRA, HPI, Narrator-Verdict
+      was_reverted   — Do-No-Harm hat zurückgerollt
+    """
+    if result is None:
+        return {}
+    try:
+        # Kein Restorations-Ergebnis (kein metadata, kein quality_estimate) → {}
+        if not hasattr(result, "metadata") and not hasattr(result, "quality_estimate"):
+            return {}
+        consent = get_repair_plan_consent(defect_result) if defect_result is not None else {}
+        meta = getattr(result, "metadata", None) or {}
+        _q_raw = float(getattr(result, "quality_estimate", 0.0) or 0.0)
+        _mushra = float((meta.get("mushra") or {}).get("mushra_score", 0.0) or 0.0)
+        _hpi = float(meta.get("hpi_score", 0.0) or 0.0)
+        _narrator = meta.get("narrator", {}) or {}
+        return {
+            "found": list((consent.get("found") or [])[:4]),
+            "planned": list((consent.get("will_do") or [])[:8]),
+            "done_count": int(meta.get("phases_total", 0) or 0),
+            "skipped_count": len(getattr(result, "phases_skipped", None) or []),
+            "deferred_count": len(getattr(result, "deferred_phases", None) or []),
+            "no_effect_count": int(meta.get("no_effect_phase_count", 0) or 0),
+            "guards": get_guard_report(result),
+            "proof": {
+                "quality_before": float(meta.get("restorability_score", 0.0) or 0.0) or None,
+                "quality_after": round(_q_raw * 100, 1) if _q_raw > 0 else None,
+                "mushra": round(_mushra, 1) if _mushra > 0 else 0.0,
+                "hpi": round(_hpi, 4) if _hpi > 0 else 0.0,
+                "verdict": str(_narrator.get("verdict", "") or ""),
+                "emotional": str(_narrator.get("emotional_summary", "") or ""),
+            },
+            "was_reverted": bool((meta.get("do_no_harm") or {}).get("reverted", False)),
         }
     except Exception:
         return {}
