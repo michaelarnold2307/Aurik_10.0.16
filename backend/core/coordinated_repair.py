@@ -96,6 +96,39 @@ class RepairPlan:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# §v10.994: MP-SENet Norm-Kalibrierung — pegelunabhängige Amplituden-Verarbeitung
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+def _normalize_amp_peak99(amp: np.ndarray) -> tuple[np.ndarray, float]:
+    """99-Perzentil-Peak-Normalisierung: Modell-Eingang auf Referenzpegel.
+
+    Das MP-SENet-Modell wurde auf normalisierten Amplituden trainiert;
+    ohne Norm hängt das Ergebnis vom Eingangspegel ab (Skalenfehler).
+    """
+    amp = np.asarray(amp, dtype=np.float32)
+    p99 = float(np.percentile(amp, 99.0)) if amp.size else 0.0
+    scale = p99 if p99 > 1e-8 else 1.0
+    return (amp / scale).astype(np.float32), scale
+
+
+def _denormalize_amp(amp: np.ndarray, scale: float) -> np.ndarray:
+    """Gain-Kompensation: Modell-Ausgang zurück auf Originalpegel."""
+    return (np.asarray(amp, dtype=np.float32) * scale).astype(np.float32)
+
+
+def _guard_amp_loudness(denoised: np.ndarray, original: np.ndarray) -> np.ndarray:
+    """Loudness-Guard: Ausgangs-Amplitude nie > 1.05× Eingangs-Peak."""
+    denoised = np.asarray(denoised, dtype=np.float32)
+    original = np.asarray(original, dtype=np.float32)
+    in_max = float(np.max(original)) if original.size else 0.0
+    out_max = float(np.max(denoised)) if denoised.size else 0.0
+    if out_max > max(in_max, 1e-6) * 1.05:
+        denoised = denoised * (max(in_max, 1e-6) * 1.05 / out_max)
+    return denoised.astype(np.float32)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # Defect → Phase Mapping
 # ═════════════════════════════════════════════════════════════════════════════
 
@@ -230,13 +263,15 @@ class RepairPlanner:
       5. Harmonic Inpainting IMMER als letzter Schritt
     """
 
-    def plan(self, manifest: Any, audio_length: int) -> RepairPlan:
+    def plan(self, manifest: Any, audio_length: int, metadata: Optional[dict] = None) -> RepairPlan:
         """
         Erstellt einen Reparatur-Plan aus einem Defect Manifest.
 
         Args:
             manifest: DefectManifest aus der Consensus Pipeline
             audio_length: Gesamtlänge des Audios in Samples
+            metadata: Optionaler Kontext (z.B. vocal_confidence) für
+                §v10.994 Model-Zoo-Aktivierung
 
         Returns:
             RepairPlan mit geordneten Schritten
@@ -310,6 +345,13 @@ class RepairPlanner:
                 depends_on=list(template.depends_on),
                 enables=list(template.enables),
             )
+            # §v10.994: Kontextabhängige Model-Zoo-Aktivierung (Opt-In via Plan)
+            _vocal_conf = float((metadata or {}).get("vocal_confidence", 0.0) or 0.0)
+            if step.defect_category in ("hiss", "reverb_tail") and _vocal_conf > 0.5:
+                step.parameters["use_sgmse"] = True
+                step.parameters["sgmse_sigma"] = 0.4 if step.defect_category == "reverb_tail" else 0.5
+            if step.defect_category == "hiss" and _vocal_conf > 0.65:
+                step.parameters["use_mp_senet"] = True
             steps.append(step)
 
         # Schritt 3: Sortiere nach Priority, dann nach Abhängigkeiten
@@ -617,7 +659,34 @@ class CoordinatedRepair:
         self, audio: np.ndarray, step: RepairStep,
         manifest: Optional[Any], sr: int,
     ) -> np.ndarray:
-        """Führt Denoising via SOTA 4-Layer Pipeline aus."""
+        """Führt Denoising via SOTA 4-Layer Pipeline aus.
+
+        §v10.994 Opt-In-Kette: use_mp_senet / use_sgmse aktivieren die
+        Model-Zoo-Modelle VOR dem DSP-Standardpfad. Bei jedem Fehler greift
+        der DSP-Fallback — nie stiller Ausfall.
+        """
+        # 1) MP-SENet Vokal-Denoising (Opt-In, kalibriert)
+        if step.parameters.get("use_mp_senet", False):
+            _mp = self._run_mp_senet_vocal(audio, step, manifest, sr)
+            if np.asarray(_mp).shape == audio.shape and not np.allclose(
+                np.asarray(_mp), audio, atol=1e-7
+            ):
+                log.info("MP-SENet aktiv für %s", step.phase_id)
+                return np.asarray(_mp, dtype=np.float32)
+        # 2) SGMSE+ Sprach-Enhancement-Diffusion (Opt-In, kontextaktiviert)
+        if step.parameters.get("use_sgmse", False):
+            try:
+                from plugins.sgmse_plugin import enhance_sgmse
+
+                _sigma = float(step.parameters.get("sgmse_sigma", 0.5))
+                _res = enhance_sgmse(audio, sr, sigma=_sigma)
+                _out = getattr(_res, "audio", None)
+                if _out is not None and np.asarray(_out).shape == audio.shape:
+                    log.info("SGMSE+ aktiv für %s (σ=%.2f)", step.phase_id, _sigma)
+                    return np.asarray(_out, dtype=np.float32)
+            except Exception as exc:
+                log.warning("SGMSE+ nicht verfügbar (%s) — DSP-Fallback", exc)
+        # 3) Standard: SOTA 4-Layer DSP-Pipeline
         try:
             from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
             pipeline = SOTADenoisePipeline()
@@ -951,16 +1020,23 @@ class CoordinatedRepair:
             amp = np.abs(spec).astype(np.float32)          # [T, 201]
             pha = np.angle(spec).astype(np.float32)
 
+            # §v10.994: Norm-Kalibrierung — das Modell wurde auf 99-Perzentil-
+            # normalisierten Amplituden trainiert. Peak-Norm + Gain-Kompensation
+            # macht die Inferenz pegelfest (Scale-Invarianz).
+            amp_norm, _amp_scale = _normalize_amp_peak99(amp)
+
             session = ort.InferenceSession(
                 str(_PROJECT_P / "models" / "mp_senet" / "mp_senet.onnx"),
                 providers=["CPUExecutionProvider"],
             )
             denoised_amp = session.run(
                 None, {
-                    "noisy_amp": amp.T[np.newaxis],   # [1, 201, T]
+                    "noisy_amp": amp_norm.T[np.newaxis],   # [1, 201, T]
                     "noisy_pha": pha.T[np.newaxis],
                 },
             )[0][0].T  # [T, 201]
+            denoised_amp = _denormalize_amp(denoised_amp, _amp_scale)
+            denoised_amp = _guard_amp_loudness(denoised_amp, amp)
 
             # Rekonstruktion mit Original-Phase
             enhanced_spec = denoised_amp.astype(np.complex64) * np.exp(1j * pha)
@@ -1061,8 +1137,8 @@ class CoordinatedRepairPipeline:
         self.planner = RepairPlanner()
         self.executor = CoordinatedRepair()
 
-    def plan(self, manifest: Any, audio_length: int) -> RepairPlan:
-        return self.planner.plan(manifest, audio_length)
+    def plan(self, manifest: Any, audio_length: int, metadata: Optional[dict] = None) -> RepairPlan:
+        return self.planner.plan(manifest, audio_length, metadata)
 
     def execute(
         self,

@@ -46,8 +46,8 @@ MODEL_ZOO: list[ModelEntry] = [
         purpose="repair",
         input_shapes="IN (noisy_amp [B,201,T], noisy_pha [B,201,T]) → OUT denoised_amp [B,201,T]",
         status="available",
-        integration="coordinated_repair._run_mp_senet_vocal (Opt-In use_mp_senet=True)",
-        notes="Vokal-Denoising. n_fft=400 (201 Bins). Vorverarbeitung: lineare Amplitude+Phase; exakte Norm-Kalibrierung offen.",
+        integration="coordinated_repair._run_mp_senet_vocal (Opt-In use_mp_senet=True, §v10.994)",
+        notes="Vokal-Denoising. n_fft=400 (201 Bins). Norm-Kalibrierung §v10.994: 99-Perzentil-Peak-Norm + Gain-Kompensation + Loudness-Guard.",
     ),
     ModelEntry(
         name="melbandroformer",
@@ -55,7 +55,7 @@ MODEL_ZOO: list[ModelEntry] = [
         purpose="repair",
         input_shapes="IN input [1, duration, 60, 384] → OUT 5-dim",
         status="needs_calibration",
-        notes="Musik-Enhancement. I/O-Format (60×384-Feature-Map) braucht Mel-Band-Konverter — Kalibrierung offen.",
+        notes="BS-RoFormer. plugins/bs_roformer_plugin.py stellt separate_stems() bereit (Stem-Trennung funktionsfähig). Offen: Stem-aware Repair-Flow — Integration der Stems in die Repair-Kette.",
     ),
     ModelEntry(
         name="mdx23c",
@@ -70,8 +70,9 @@ MODEL_ZOO: list[ModelEntry] = [
         path="models/ (kein ONNX — .pth in Plugin)",
         purpose="repair",
         input_shapes="via plugins/sgmse_plugin.py",
-        status="available",
-        notes="Sprach-Enhancement-Diffusion. Phase-Datei referenziert es bereits; CoordinatedRepair-Routing fehlt.",
+        status="active",
+        integration="coordinated_repair._run_denoise (Opt-In use_sgmse, kontextaktiviert bei vocal_confidence>0.5, §v10.994)",
+        notes="Sprach-Enhancement-Diffusion (SGMSE+). Immer mit DSP-Fallback; nie stiller Ausfall.",
     ),
     ModelEntry(
         name="audioldm2",

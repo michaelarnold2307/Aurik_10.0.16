@@ -509,9 +509,16 @@ class RestaurierDenker:
             if _consensus_manifest is not None and _RepairPlanner is not None:
                 try:
                     _planner = _RepairPlanner()
+                    # §v10.994: Vocal-Kontext für Model-Zoo-Aktivierung weitergeben
+                    _vocal_conf = float(
+                        getattr(cached_defect_result, "vocal_confidence", 0.0)
+                        or (getattr(self, "_vocal_confidence", 0.0) if hasattr(self, "_vocal_confidence") else 0.0)
+                        or 0.0
+                    )
                     _repair_plan = _planner.plan(
                         _consensus_manifest,
                         len(audio) if audio.ndim == 1 else audio.shape[1],
+                        metadata={"vocal_confidence": _vocal_conf},
                     )
                     if _repair_plan is not None and getattr(_repair_plan, "steps", None):
                         _uv3_kwargs["repair_plan"] = _repair_plan
@@ -1375,7 +1382,11 @@ def get_restaurier_denker() -> RestaurierDenker:
             if getattr(ctx, "defect_manifest", None) is not None and _RepairPlanner is not None:
                 try:
                     _planner = _RepairPlanner()
-                    _repair_plan = _planner.plan(ctx.defect_manifest, ctx.audio_length or 48000)
+                    _repair_plan = _planner.plan(
+                        ctx.defect_manifest,
+                        ctx.audio_length or 48000,
+                        metadata={"vocal_confidence": float(getattr(ctx, "vocal_confidence", 0.0) or 0.0)},
+                    )
                     if _repair_plan and _repair_plan.steps:
                         logger.info(
                             "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
