@@ -405,6 +405,11 @@ class UTMOSPlugin:
 
         audio_f32 = np.asarray(audio, dtype=np.float32)
         audio_f32 = np.nan_to_num(audio_f32, nan=0.0, posinf=0.0, neginf=0.0)
+        # §v10.920: Shape-Normalisierung — 2D/Stereo-Arrays werden auf Mono
+        # reduziert, BEVOR die Fold-Modelle sie sehen. Vorher führten 2D-Inputs
+        # zu "boolean index did not match" (88× pro Benchmark-Lauf).
+        if audio_f32.ndim > 1:
+            audio_f32 = audio_f32.mean(axis=0).astype(np.float32)
 
         if self._model_loaded and self._session is not None:
             mos, model_name, conf, music_aware, details = self._estimate_utmos(audio_f32, sr)
