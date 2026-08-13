@@ -627,7 +627,18 @@ class CoordinatedRepair:
         self, audio: np.ndarray, step: RepairStep,
         manifest: Optional[Any], sr: int,
     ) -> np.ndarray:
-        """Harmonic Inpainting via feingetuntem DiT."""
+        """Harmonic Inpainting via DiT.
+
+        §v10.880 ABLATION: Ein einzelner Euler-Schritt (x + v·strength) ist
+        für Flow-Matching UNGÜLTIG — das Velocity-Feld ist nur als ODE mit
+        10–50 Integrationsschritten gültig. Die Ablation zeigte -15 bis -20 dB
+        Zerstörung durch den Ein-Schritt-Pfad. → Opt-In bis der ODE-Solver
+        implementiert ist.
+        """
+        use_inpainting = bool(step.parameters.get("use_inpainting", False))
+        if not use_inpainting:
+            log.info("Inpainting übersprungen (Ein-Schritt-Pfad deaktiviert, §v10.880)")
+            return audio
         try:
             # DiT-basiertes Inpainting — verwendet das trainierte Modell
             from models.miipher_dit.dit_model import FlowMatchingDiT
