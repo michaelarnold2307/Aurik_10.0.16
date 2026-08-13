@@ -211,6 +211,12 @@ __all__ = [
     "get_pre_analysis_result_status",
     # Audio-Import — canonical cascade (§11 VERBOTEN: sf.read / librosa.load direkt)
     "get_load_audio_fn",
+    # §v10.990 SOTA-Ketten-Zugänge — Model Zoo, Consensus, Repair-Plan, Guards
+    "get_model_zoo_summary",
+    "get_sota_chain_status",
+    "get_defect_consensus_summary",
+    "get_repair_plan_summary",
+    "get_guard_report",
 ]
 
 # ---------------------------------------------------------------------------
@@ -3455,3 +3461,147 @@ def get_plugin_registry():
     from backend.core.plugin_registry import get_plugin_registry as _get_plugin_registry
 
     return _get_plugin_registry()
+
+
+# ---------------------------------------------------------------------------
+# §v10.990 SOTA-Ketten-Zugänge — Model Zoo, Consensus, Repair-Plan, Guards
+# Reine Datenzugänge für das Frontend. KEINE heavy imports beim Modul-Load.
+# ---------------------------------------------------------------------------
+
+
+def get_model_zoo_summary() -> list[dict[str, str]]:
+    """Model-Zoo als Frontend-taugliche Dict-Liste (name, purpose, status, integration, notes)."""
+    try:
+        from backend.core.model_zoo_registry import MODEL_ZOO
+
+        return [
+            {
+                "name": e.name,
+                "purpose": e.purpose,
+                "status": e.status,
+                "integration": e.integration or "",
+                "notes": e.notes,
+            }
+            for e in MODEL_ZOO
+        ]
+    except Exception:
+        return []
+
+
+def get_sota_chain_status() -> dict:
+    """Gesamtstatus der SOTA-Kette für das Frontend.
+
+    Returns:
+        {
+          "model_zoo": {"total": n, "by_status": {...}},
+          "components": {
+            "defect_consensus": bool,
+            "repair_planner": bool,
+            "artifact_guards": bool,
+            "perceptual_loop": bool,
+          },
+        }
+    """
+    zoo_entries = get_model_zoo_summary()
+    by_status: dict[str, int] = {}
+    for entry in zoo_entries:
+        st = entry.get("status", "unknown")
+        by_status[st] = by_status.get(st, 0) + 1
+
+    def _importable(module: str) -> bool:
+        import importlib.util
+
+        return importlib.util.find_spec(module) is not None
+
+    return {
+        "model_zoo": {"total": len(zoo_entries), "by_status": by_status},
+        "components": {
+            "defect_consensus": _importable("backend.core.defect_consensus_pipeline"),
+            "repair_planner": _importable("backend.core.coordinated_repair"),
+            "artifact_guards": _importable("backend.core.post_repair_artifact_guard"),
+            "perceptual_loop": _importable("backend.core.perceptual_closed_loop"),
+        },
+    }
+
+
+def get_defect_consensus_summary(manifest: object) -> dict:
+    """Normalisiert ein DefectManifest (oder Restorations-Ergebnis) zu Frontend-Daten."""
+    if manifest is None:
+        return {}
+    try:
+        m = getattr(manifest, "consensus_manifest", None) or manifest
+        defects = list(getattr(m, "defects", []) or [])
+        cats: dict[str, int] = {}
+        for d in defects:
+            cat = str(getattr(d, "category", "unknown"))
+            cats[cat] = cats.get(cat, 0) + 1
+        return {
+            "defect_count": len(defects),
+            "categories": cats,
+            "total_hypotheses": int(getattr(m, "total_hypotheses", 0) or 0),
+            "conflicts_resolved": int(getattr(m, "conflicts_resolved", 0) or 0),
+            "merged_defects": int(getattr(m, "merged_defects", 0) or 0),
+            "causal_downgrades": int(getattr(m, "causal_downgrades", 0) or 0),
+            "module_count": int(getattr(m, "module_count", 0) or 0),
+        }
+    except Exception:
+        return {}
+
+
+def get_repair_plan_summary(plan: object) -> dict:
+    """Normalisiert einen RepairPlan zu Frontend-Daten (Phasen-Reihenfolge + Abdeckung)."""
+    if plan is None:
+        return {}
+    try:
+        steps = list(getattr(plan, "steps", []) or [])
+        return {
+            "step_count": len(steps),
+            "phase_order": [str(getattr(s, "phase_id", "")) for s in steps],
+            "priorities": [str(getattr(getattr(s, "priority", ""), "name", "")) for s in steps],
+            "total_defects": int(getattr(plan, "total_defects", 0) or 0),
+            "total_coverage_samples": int(getattr(plan, "total_coverage_samples", 0) or 0),
+            "estimated_duration_s": float(getattr(plan, "estimated_duration_s", 0.0) or 0.0),
+        }
+    except Exception:
+        return {}
+
+
+def get_guard_report(result: object) -> dict:
+    """Guard-Telemetrie (4-Schicht) + UTMOS-Loop aus einem Restorations-Ergebnis.
+
+    Liest §v10.990 RepairReport-Felder (guard_violations, utmos_*) — defensiv:
+    jedes fehlende Feld ergibt 0/leer.
+    """
+    if result is None:
+        return {}
+    try:
+        report = getattr(result, "repair_report", None) or result
+        violations = getattr(report, "guard_violations", None) or {}
+        meta = getattr(result, "metadata", None) or {}
+
+        def _int(d: dict, key: str) -> int:
+            return int(d.get(key, 0) or 0)
+
+        return {
+            "guards": {
+                "truepeak": int(violations.get("truepeak", 0) or 0),
+                "pumping": int(violations.get("pumping", 0) or 0),
+                "formant": int(violations.get("formant", 0) or 0),
+                "spectral": int(violations.get("spectral", 0) or 0),
+                "peak_delta_db": float(
+                    getattr(report, "guard_peak_delta_db", 0.0) or 0.0
+                ),
+            },
+            "utmos_loop": {
+                "iterations": int(getattr(report, "utmos_iterations", 0) or 0),
+                "mos_before": float(getattr(report, "utmos_mos_before", 0.0) or 0.0),
+                "mos_after": float(getattr(report, "utmos_mos_after", 0.0) or 0.0),
+                "blend_back": int(getattr(report, "utmos_blend_count", 0) or 0) > 0,
+            },
+            "legacy_meta": {
+                "hf_hallucination_fired": _int(meta, "hf_hallucination_guard_fired"),
+                "spectral_tilt_fired": _int(meta, "spectral_tilt_guard_fired"),
+            },
+        }
+    except Exception:
+        return {}

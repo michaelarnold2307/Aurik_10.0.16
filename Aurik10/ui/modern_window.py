@@ -106,6 +106,12 @@ except Exception:
     _MLRefinementThread = None  # type: ignore[assignment]
 
 try:
+    # §v10.990: SOTA-Ketten-Status-Panel (Phase, Klangqualität, Model-Zoo, Guards)
+    from Aurik10.ui.restoration_status_panel import RestorationStatusPanel as _RestorationStatusPanel
+except Exception:
+    _RestorationStatusPanel = None  # type: ignore[assignment]
+
+try:
     from batch_processor import BatchProcessor as _BatchProcessor
 except Exception:
     _BatchProcessor = None  # type: ignore[assignment]
@@ -256,6 +262,9 @@ try:
     )
     from backend.api.bridge import (
         get_save_checkpoint_fn as _bridge_get_save_checkpoint_fn,
+    )
+    from backend.api.bridge import (
+        get_sota_chain_status as _bridge_get_sota_chain_status,
     )
     from backend.api.bridge import (
         get_unified_restorer_v3_instance as _bridge_get_unified_restorer_v3_instance,
@@ -4893,6 +4902,15 @@ class WaveformWidget(QWidget):
             self._morph_timer.stop()
         self._morph_timer.start(42)
         return True
+
+    def set_data(self, audio, sample_rate: int = 48000):
+        """§v10.990: Kanonischer Daten-Setter (E2E-Smoke-Kontrakt).
+
+        Alias für update_waveform mit Keyword-Argument sample_rate,
+        damit der §v10.700 Phase-E-Smoke-Test und externe Aufrufer
+        dieselbe API nutzen können.
+        """
+        self.update_waveform(audio, sample_rate)
 
     def update_waveform(self, audio, sr):
         """Aktualisiert waveform data and reset view window.
@@ -15185,12 +15203,28 @@ class ModernMainWindow(QMainWindow):
             self._audio_info_bar.setVisible(True)
 
     def _create_status_bar(self):
-        """Statusbereich: voller Fortschrittsbalken (oben) + transparente Textzeile (unten)."""
+        """Statusbereich: SOTA-Status-Panel + voller Fortschrittsbalken (oben) + transparente Textzeile (unten)."""
         wrapper = QWidget()
         wrapper.setStyleSheet("background: transparent;")
         vbox = QVBoxLayout(wrapper)
         vbox.setContentsMargins(0, 2, 0, 2)
         vbox.setSpacing(4)
+
+        # §v10.990: SOTA-Ketten-Status-Panel (Phase + Klangqualität + Model-Zoo/Guards)
+        self._status_panel = None
+        if _RestorationStatusPanel is not None:
+            try:
+                self._status_panel = _RestorationStatusPanel(wrapper)
+                self._status_panel.setVisible(False)  # erst beim Start sichtbar
+                vbox.addWidget(self._status_panel)
+                if _bridge_get_sota_chain_status is not None:
+                    try:
+                        self._status_panel.set_sota_chain(_bridge_get_sota_chain_status())
+                    except Exception as _sc_err:
+                        logger.debug("SOTA-Chain-Status nicht verfügbar: %s", _sc_err)
+            except Exception as _p_err:
+                logger.warning("RestorationStatusPanel konnte nicht erstellt werden: %s", _p_err)
+                self._status_panel = None
 
         # ── Fortschrittsbalken – volle Breite, ausgeblendet bis Lade-/Verarbeitungsstart ──
         self.progress_bar = ModernProgressBar()
@@ -21223,6 +21257,14 @@ class ModernMainWindow(QMainWindow):
     def _on_all_finished(self):
         """Verarbeitet all items finished."""
         self._processing_transition = False
+        # §v10.990: SOTA-Status-Panel — Consensus/Plan aktualisieren + Abschluss zeigen
+        try:
+            self._sync_status_panel_sota()
+            _panel = getattr(self, "_status_panel", None)
+            if _panel is not None:
+                _panel.set_complete()
+        except Exception as _fin_err:
+            logger.debug("Status-Panel-Abschluss fehlgeschlagen: %s", _fin_err)
         # §v10.306: Träger-Anzeige aus Live-Phase zurück auf Carrier-Info setzen
         if hasattr(self, "_carrier_bg_label") and hasattr(self, "detected_medium_label"):
             _ampel = self._render_ampel_html(int(getattr(self, "_carrier_bg_score", 0) or 0))
@@ -25112,6 +25154,8 @@ class ModernMainWindow(QMainWindow):
             ui_pct=_ui_pct,
             live_hint=_live_hint,
         )
+        # §v10.990: SOTA-Status-Panel synchronisieren (Phase + laufende Nummer)
+        self._sync_status_panel(_eff_step, _eff_total, _live_hint)
         # For UV3 restoration phases (pct >= 20), defer the label until the corresponding
         # audio arrives in _update_waveform_live. This keeps "Stufe X" and the waveform
         # badge synchronized — both always reflect the same completed phase.
@@ -25139,6 +25183,44 @@ class ModernMainWindow(QMainWindow):
             live_hint=_live_hint,
             ui_pct=_ui_pct,
         )
+
+    def _sync_status_panel(self, step: int, total: int, live_hint: dict) -> None:
+        """§v10.990: RestorationStatusPanel mit Phase/Consensus/Plan synchronisieren."""
+        _panel = getattr(self, "_status_panel", None)
+        if _panel is None:
+            return
+        try:
+            _panel.setVisible(True)
+            _phase_id = str(live_hint.get("phase_id", "") or "")
+            if _phase_id:
+                _panel.set_phase(_phase_id, step, total)
+            elif total > 0:
+                _panel.set_phase("", step, total)
+        except Exception as _sp_err:
+            logger.debug("Status-Panel-Sync fehlgeschlagen: %s", _sp_err)
+
+    def _sync_status_panel_sota(self) -> None:
+        """§v10.990: Consensus-/Plan-/Guard-Daten aus dem letzten Defekt-Ergebnis ins Panel."""
+        _panel = getattr(self, "_status_panel", None)
+        _cfp = str(getattr(self, "current_file_path", "") or "")
+        if _panel is None or not _cfp:
+            return
+        try:
+            # lazy bridge imports — §11 Bridge-Bypass-Verbot bleibt gewahrt
+            from backend.api.bridge import (  # noqa: PLC0415
+                get_cached_defect_result,
+                get_defect_consensus_summary,
+                get_repair_plan_summary,
+            )
+
+            _defect = get_cached_defect_result(_cfp)
+            if _defect is not None:
+                _panel.set_consensus_summary(get_defect_consensus_summary(_defect))
+                _plan = getattr(_defect, "repair_plan", None)
+                if _plan is not None:
+                    _panel.set_repair_plan_summary(get_repair_plan_summary(_plan))
+        except Exception as _sota_err:
+            logger.debug("SOTA-Status-Sync fehlgeschlagen: %s", _sota_err)
 
     def showEvent(self, event) -> None:
         """Bind screen-awareness hooks once the window becomes visible."""

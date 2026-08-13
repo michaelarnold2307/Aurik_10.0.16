@@ -37,6 +37,24 @@ from PyQt5.QtWidgets import (
 # §v10.70 Bridge: Phase-Display-Formatter über die Bridge, nicht direkt aus backend.core
 from backend.api.bridge import get_phase_display_formatter_fns
 
+# §v10.990: Zentrale UI-Palette — keine Hex-Werte mehr direkt in diesem Modul
+from Aurik10.ui.ui_constants import (
+    BADGE_ERA_TEXT,
+    BADGE_GENRE_TEXT,
+    BADGE_MATERIAL_TEXT,
+    STATUS_CRIT_BG,
+    STATUS_CRIT_TEXT,
+    STATUS_OK_BG,
+    STATUS_OK_TEXT,
+    STATUS_ORANGE_BG,
+    STATUS_ORANGE_TEXT,
+    STATUS_WARN_BG,
+    STATUS_WARN_TEXT,
+    SURFACE_BG,
+    TEXT_MUTED,
+    TEXT_PRIMARY,
+)
+
 _DISPLAY_FNS = get_phase_display_formatter_fns()
 get_carrier_display: Callable[..., str] = cast(
     Callable[..., str], _DISPLAY_FNS.get("get_carrier_display", lambda *_a, **_kw: "?")
@@ -123,9 +141,9 @@ class RestorationStatusPanel(QFrame):
         self._phase_icon = QLabel("🔄")
         self._phase_icon.setStyleSheet("font-size: 22px;")
         self._phase_name = QLabel("Initialisiere …")
-        self._phase_name.setStyleSheet("font-size: 13px; font-weight: 600; color: #d0d0d0;")
+        self._phase_name.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {TEXT_PRIMARY};")
         self._phase_counter = QLabel("")
-        self._phase_counter.setStyleSheet("font-size: 11px; color: #888;")
+        self._phase_counter.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
 
         _phase_col = QVBoxLayout()
         _phase_col.setSpacing(1)
@@ -149,14 +167,14 @@ class RestorationStatusPanel(QFrame):
         _dim_col = QVBoxLayout()
         _dim_col.setSpacing(1)
         _dim_header = QLabel("Klangqualität")
-        _dim_header.setStyleSheet("font-size: 10px; color: #888;")
+        _dim_header.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         _dim_col.addWidget(_dim_header)
         _dim_row = QHBoxLayout()
         _dim_row.setSpacing(8)
         for dim_key in ["tonal_center", "timbre_authentizitaet", "natuerlichkeit", "authentizitaet"]:
             label = QLabel("—")
             label.setStyleSheet(
-                "font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #2a2a35; color: #888;"
+                f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {SURFACE_BG}; color: {TEXT_MUTED};"
             )
             label.setToolTip(self._DIM_LABELS.get(dim_key, dim_key))
             self._dim_labels[dim_key] = label
@@ -164,19 +182,39 @@ class RestorationStatusPanel(QFrame):
         _dim_col.addLayout(_dim_row)
         layout.addLayout(_dim_col, 2)
 
+        # §v10.990: SOTA-Ketten-Badges (Model Zoo, Consensus, Plan, Guards)
+        self._sota_badges: list[QLabel] = []
+        _sota_col = QVBoxLayout()
+        _sota_col.setSpacing(1)
+        _sota_header = QLabel("SOTA-Kette")
+        _sota_header.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
+        _sota_col.addWidget(_sota_header)
+        _sota_row = QHBoxLayout()
+        _sota_row.setSpacing(6)
+        for _tooltip in ("Model Zoo", "Consensus", "Repair-Plan", "Guards"):
+            _badge = QLabel("—")
+            _badge.setStyleSheet(
+                f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {SURFACE_BG}; color: {TEXT_MUTED};"
+            )
+            _badge.setToolTip(_tooltip)
+            self._sota_badges.append(_badge)
+            _sota_row.addWidget(_badge)
+        _sota_col.addLayout(_sota_row)
+        layout.addLayout(_sota_col, 2)
+
         # Right: Material badge + era + genre
         self._material_badge = QLabel("")
         self._material_badge.setStyleSheet(
-            "background: #2a2a35; color: #b8a068; padding: 3px 10px; "
+            f"background: {SURFACE_BG}; color: {BADGE_MATERIAL_TEXT}; padding: 3px 10px; "
             "border-radius: 4px; font-size: 11px; font-weight: 500;"
         )
         self._era_badge = QLabel("")
         self._era_badge.setStyleSheet(
-            "background: #2a2a35; color: #6890b8; padding: 3px 10px; border-radius: 4px; font-size: 11px;"
+            f"background: {SURFACE_BG}; color: {BADGE_ERA_TEXT}; padding: 3px 10px; border-radius: 4px; font-size: 11px;"
         )
         self._genre_badge = QLabel("")
         self._genre_badge.setStyleSheet(
-            "background: #2a2a35; color: #68a068; padding: 3px 10px; border-radius: 4px; font-size: 11px;"
+            f"background: {SURFACE_BG}; color: {BADGE_GENRE_TEXT}; padding: 3px 10px; border-radius: 4px; font-size: 11px;"
         )
 
         _badge_row = QHBoxLayout()
@@ -238,7 +276,7 @@ class RestorationStatusPanel(QFrame):
             if value is None:
                 label.setText("—")
                 label.setStyleSheet(
-                    "font-size: 11px; padding: 2px 6px; border-radius: 3px; background: #2a2a35; color: #888;"
+                    f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {SURFACE_BG}; color: {TEXT_MUTED};"
                 )
                 continue
 
@@ -247,20 +285,20 @@ class RestorationStatusPanel(QFrame):
 
             if value >= threshold + 0.05:
                 # Grün: deutlich über Schwelle
-                color = "#6ab86a"
-                bg = "#1a2a1a"
+                color = STATUS_OK_TEXT
+                bg = STATUS_OK_BG
             elif value >= threshold:
                 # Gelb: knapp über Schwelle
-                color = "#b8a840"
-                bg = "#2a2a1a"
+                color = STATUS_WARN_TEXT
+                bg = STATUS_WARN_BG
             elif value >= threshold - 0.10:
                 # Orange: knapp unter Schwelle — Warnung
-                color = "#c87830"
-                bg = "#2a2010"
+                color = STATUS_ORANGE_TEXT
+                bg = STATUS_ORANGE_BG
             else:
                 # Rot: deutlich unter Schwelle — kritisch
-                color = "#c84848"
-                bg = "#2a1010"
+                color = STATUS_CRIT_TEXT
+                bg = STATUS_CRIT_BG
 
             label.setText(f"{short_label} {value:.0%}")
             label.setStyleSheet(
@@ -273,3 +311,68 @@ class RestorationStatusPanel(QFrame):
         self._phase_icon.setText("✅")
         self._phase_name.setText("Restauration abgeschlossen")
         self._phase_counter.setText("")
+
+    # ── §v10.990 SOTA-Kette ─────────────────────────────────────────
+
+    def _set_sota_badge(self, index: int, text: str, ok: bool | None = None) -> None:
+        """Setzt ein SOTA-Badge; ok=None → neutral, True → grün, False → orange."""
+        badge = self._sota_badges[index]
+        if ok is None:
+            color, bg = TEXT_MUTED, SURFACE_BG
+        elif ok:
+            color, bg = STATUS_OK_TEXT, STATUS_OK_BG
+        else:
+            color, bg = STATUS_ORANGE_TEXT, STATUS_ORANGE_BG
+        badge.setText(text)
+        badge.setStyleSheet(
+            f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {bg}; color: {color};"
+        )
+
+    def set_sota_chain(self, status: dict) -> None:
+        """§v10.990: Model-Zoo- + Komponenten-Status (bridge.get_sota_chain_status())."""
+        if not status:
+            return
+        zoo = status.get("model_zoo", {})
+        total = int(zoo.get("total", 0) or 0)
+        by_status = zoo.get("by_status", {}) or {}
+        active = int(by_status.get("available", 0) or 0) + int(by_status.get("active", 0) or 0)
+        self._set_sota_badge(0, f"🦁 Zoo {total}·{active}", ok=total > 0)
+
+        comps = status.get("components", {}) or {}
+        all_ready = all(bool(v) for v in comps.values())
+        self._set_sota_badge(1, "🧠 Consensus", ok=bool(comps.get("defect_consensus")))
+        self._set_sota_badge(2, "🗺️ Plan", ok=bool(comps.get("repair_planner")))
+        self._set_sota_badge(3, "🛡️ Guards", ok=all_ready and bool(comps.get("artifact_guards")))
+
+    def set_consensus_summary(self, summary: dict) -> None:
+        """§v10.990: Consensus-Ergebnis (bridge.get_defect_consensus_summary)."""
+        if not summary:
+            return
+        n = int(summary.get("defect_count", 0) or 0)
+        mods = int(summary.get("module_count", 0) or 0)
+        self._set_sota_badge(1, f"🧠 {n} Defekte·{mods} Mod", ok=True)
+
+    def set_repair_plan_summary(self, summary: dict) -> None:
+        """§v10.990: Repair-Plan (bridge.get_repair_plan_summary)."""
+        if not summary:
+            return
+        n = int(summary.get("step_count", 0) or 0)
+        self._set_sota_badge(2, f"🗺️ {n} Phasen", ok=n > 0)
+
+    def set_guard_report(self, report: dict) -> None:
+        """§v10.990: Guard-/Loop-Telemetrie (bridge.get_guard_report)."""
+        if not report:
+            return
+        g = report.get("guards", {}) or {}
+        fired = (
+            int(g.get("truepeak", 0) or 0)
+            + int(g.get("pumping", 0) or 0)
+            + int(g.get("formant", 0) or 0)
+            + int(g.get("spectral", 0) or 0)
+        )
+        loop = report.get("utmos_loop", {}) or {}
+        iters = int(loop.get("iterations", 0) or 0)
+        if fired == 0 and iters == 0:
+            self._set_sota_badge(3, "🛡️ 0", ok=True)
+        else:
+            self._set_sota_badge(3, f"🛡️ {fired}·{iters}×", ok=fired == 0)

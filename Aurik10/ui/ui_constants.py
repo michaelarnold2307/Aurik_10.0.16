@@ -55,7 +55,35 @@ SPACING_WIDE = 10
 MARGIN_CONTENT = 8
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# Farben / Opacity
+# Farben — §v10.990 Zentrale UI-Palette (einzige Quelle für Hex-Werte)
+# ═══════════════════════════════════════════════════════════════════════════════
+# Die bridge-seitigen quality_color-Hex-Werte (backend/api/bridge.py) MÜSSEN mit
+# QUALITY_* übereinstimmen — abgesichert durch tests/unit/test_frontend_backend_harmony.py
+
+SURFACE_BG = "#2a2a35"          # Badge-/Pill-Hintergrund
+TEXT_PRIMARY = "#d0d0d0"        # Primärtext auf dunklem Grund
+TEXT_MUTED = "#888"             # Sekundärtext / Inaktiv
+HEADER_ACCENT = "#B8CCEE"       # Dialog-Header (Plugin-Manager)
+
+QUALITY_STUDIO = "#2196F3"      # depth 1–2: Studio-Qualität (Blau)
+QUALITY_MODERATE = "#4CAF50"    # depth 3: moderate Qualität (Grün)
+QUALITY_DEEP_CHAIN = "#E6A817"  # depth 4+: erwartete Einschränkungen (Bernstein)
+
+STATUS_OK_TEXT = "#6ab86a"
+STATUS_OK_BG = "#1a2a1a"
+STATUS_WARN_TEXT = "#b8a840"
+STATUS_WARN_BG = "#2a2a1a"
+STATUS_ORANGE_TEXT = "#c87830"
+STATUS_ORANGE_BG = "#2a2010"
+STATUS_CRIT_TEXT = "#c84848"
+STATUS_CRIT_BG = "#2a1010"
+
+BADGE_MATERIAL_TEXT = "#b8a068"  # Material-Badge (Gold)
+BADGE_ERA_TEXT = "#6890b8"       # Ära-Badge (Blau)
+BADGE_GENRE_TEXT = "#68a068"     # Genre-Badge (Grün)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Opacity
 # ═══════════════════════════════════════════════════════════════════════════════
 
 OPACITY_DISABLED = 0.4
@@ -88,12 +116,12 @@ class DepthAwareUI:
 
     @property
     def quality_color(self) -> str:
-        """Eingeschränkte Qualitätsfarbe für tiefe Ketten."""
+        """Eingeschränkte Qualitätsfarbe für tiefe Ketten (§v10.990: Palette-Tokens)."""
         if self.chain_depth >= 4:
-            return "#E6A817"  # Bernstein — erwartete Einschränkungen
+            return QUALITY_DEEP_CHAIN  # Bernstein — erwartete Einschränkungen
         elif self.chain_depth >= 3:
-            return "#4CAF50"  # Grün — moderate Qualität
-        return "#2196F3"  # Blau — Studio-Qualität
+            return QUALITY_MODERATE  # Grün — moderate Qualität
+        return QUALITY_STUDIO  # Blau — Studio-Qualität
 
     @property
     def expected_duration_factor(self) -> float:

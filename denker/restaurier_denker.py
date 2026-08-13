@@ -515,6 +515,12 @@ class RestaurierDenker:
                     )
                     if _repair_plan is not None and getattr(_repair_plan, "steps", None):
                         _uv3_kwargs["repair_plan"] = _repair_plan
+                        # §v10.990: Plan auf dem Defekt-Ergebnis ablegen, damit das
+                        # Frontend ihn via bridge.get_repair_plan_summary sehen kann.
+                        try:
+                            cached_defect_result.repair_plan = _repair_plan  # type: ignore[attr-defined]
+                        except Exception:
+                            pass
                         logger.info(
                             "RestaurierDenker: RepairPlan übergeben (%d Schritte: %s)",
                             len(_repair_plan.steps),

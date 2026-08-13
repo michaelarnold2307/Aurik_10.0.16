@@ -390,6 +390,13 @@ class RepairReport:
     total_time: float
     input_peak: float
     output_peak: float
+    # §v10.990: Guard-/Loop-Telemetrie für das Frontend (via bridge.get_guard_report)
+    guard_violations: dict[str, int] = field(default_factory=dict)
+    guard_peak_delta_db: float = 0.0
+    utmos_iterations: int = 0
+    utmos_blend_count: int = 0
+    utmos_mos_before: float = 0.0
+    utmos_mos_after: float = 0.0
 
 
 class CoordinatedRepair:
@@ -439,6 +446,14 @@ class CoordinatedRepair:
         _guard = _ArtifactGuard() if _ArtifactGuard is not None else None
         _perceptual = _PerceptualLoop() if _PerceptualLoop is not None else None
 
+        # §v10.990: Telemetrie-Akkumulatoren für den RepairReport
+        _guard_violations: dict[str, int] = {}
+        _guard_peak_delta = 0.0
+        _utmos_iterations = 0
+        _utmos_blend_count = 0
+        _utmos_mos_before = 0.0
+        _utmos_mos_after = 0.0
+
         for step in plan.steps:
             try:
                 _audio_pre = current_audio.copy()
@@ -463,6 +478,19 @@ class CoordinatedRepair:
                         # §v10.860: Spektrale Verstöße → 100% Reject (kein Blend),
                         # milde Verstöße (truepeak/pumping) → 70/30 Blend.
                         _violations = getattr(_guard_result, "violations", [])
+                        for _v in _violations:
+                            _v_str = str(_v)
+                            _cat = "spectral" if _v_str.startswith(("spectral", "formant_drift")) else (
+                                "pumping" if _v_str.startswith("pumping") else "truepeak"
+                            )
+                            _guard_violations[_cat] = _guard_violations.get(_cat, 0) + 1
+                            if _v_str.startswith("truepeak_rise"):
+                                try:
+                                    _guard_peak_delta = max(
+                                        _guard_peak_delta, abs(float(_v_str.split("_")[-1][:-2]))
+                                    )
+                                except ValueError:
+                                    pass
                         _is_spectral = any(
                             str(v).startswith(("spectral", "formant_drift"))
                             for v in _violations
@@ -487,10 +515,14 @@ class CoordinatedRepair:
                         sr=sample_rate,
                         golden_sample=getattr(self, "_golden_sample", None),
                     )
+                    _utmos_iterations += 1
+                    _utmos_mos_before = float(getattr(_percept_result, "mos_pre", 0.0) or 0.0)
                     if not getattr(_percept_result, "passed", True):
                         current_audio = _perceptual.blend_back(
                             _audio_pre, current_audio, _percept_result,
                         )
+                        _utmos_blend_count += 1
+                        _utmos_mos_after = float(getattr(_percept_result, "mos_post", 0.0) or 0.0)
                         log.warning(
                             "§v10.620 Loop: %s verschlechterte MOS (%.3f → %.3f) — adaptiert",
                             step.phase_id,
@@ -531,6 +563,12 @@ class CoordinatedRepair:
             total_time=elapsed,
             input_peak=input_peak,
             output_peak=output_peak,
+            guard_violations=_guard_violations,
+            guard_peak_delta_db=_guard_peak_delta,
+            utmos_iterations=_utmos_iterations,
+            utmos_blend_count=_utmos_blend_count,
+            utmos_mos_before=_utmos_mos_before,
+            utmos_mos_after=_utmos_mos_after,
         )
 
     def _execute_step(
