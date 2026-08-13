@@ -217,6 +217,8 @@ __all__ = [
     "get_defect_consensus_summary",
     "get_repair_plan_summary",
     "get_guard_report",
+    # §v10.992: Laienverständliche Einwilligungs-Ansicht
+    "get_repair_plan_consent",
 ]
 
 # ---------------------------------------------------------------------------
@@ -3562,6 +3564,117 @@ def get_repair_plan_summary(plan: object) -> dict:
             "total_coverage_samples": int(getattr(plan, "total_coverage_samples", 0) or 0),
             "estimated_duration_s": float(getattr(plan, "estimated_duration_s", 0.0) or 0.0),
         }
+    except Exception:
+        return {}
+
+
+# §v10.992: Laienverständliche Einwilligungs-Ansicht — Defekt-Kategorien in Alltagssprache
+_DEFECT_LAYMAN_LABELS: dict[str, str] = {
+    "click": "Knackser & Klicks",
+    "crackle": "Knistern",
+    "pop": "Ploppen",
+    "hum": "Brummen",
+    "hiss": "Rauschen",
+    "tape_hiss": "Bandrauschen",
+    "vinyl_noise": "Plattenrauschen",
+    "wow_flutter": "Tonhöhenschwankungen",
+    "clipping": "Übersteuerung",
+    "dropout": "Aussetzer",
+    "pre_echo": "Echo-Artefakte",
+    "print_through": "Kopiereffekte",
+    "sibilance": "Zischlaute",
+    "breath": "Atemgeräusche",
+    "de_essing": "verfärbte Zischlaute",
+    "phase_error": "Phasenfehler",
+    "distortion": "Verzerrung",
+    "gate_chatter": "Gate-Flattern",
+    "reverb_tail": "störender Nachhall",
+    "unknown": "unklare Störungen",
+}
+
+# Plan-Phasen → Handlungs-Sätze in Alltagssprache („Aurik wird …")
+_PHASE_ACTIONS: dict[str, str] = {
+    "phase_01_click_removal": "Knackser & Klicks entfernen",
+    "phase_02_hum_removal": "Brummen entfernen",
+    "phase_03_denoise": "Rauschen reduzieren",
+    "phase_06_frequency_restoration": "fehlende Höhen rekonstruieren",
+    "phase_07_declipper": "Übersteuerung reparieren",
+    "phase_09_crackle_removal": "Knistern entfernen",
+    "phase_12_wow_flutter_fix": "Tonhöhenschwankungen begradigen",
+    "phase_14_phase_correction": "Stereo-Phasenlage korrigieren",
+    "phase_19_de_esser": "Zischlaute entschärfen",
+    "phase_20_reverb_reduction": "störenden Hall reduzieren",
+    "phase_24_dropout_repair": "Aussetzer reparieren",
+    "phase_28_surface_noise_profiling": "Plattenrauschen mindern",
+    "phase_29_tape_hiss_reduction": "Bandrauschen mindern",
+    "phase_55_diffusion_inpainting": "fehlende Stellen rekonstruieren",
+    "phase_57_print_through_reduction": "Kopiereffekte entfernen",
+}
+
+
+def _severity_word(value: float) -> str:
+    """Schwere in Alltagssprache — identisch mit DefectCounterWidget._severity_word."""
+    if value >= 0.6:
+        return "Kritisch"
+    if value >= 0.3:
+        return "Stark"
+    if value >= 0.1:
+        return "Mittel"
+    return "Leicht"
+
+
+def get_repair_plan_consent(defect_result: object) -> dict:
+    """§v10.992: Laienverständliche Einwilligungs-Ansicht des automatischen Plans.
+
+    Aus DefektErgebnis (_consensus_manifest, repair_plan) entstehen:
+      found:   [{"label": "Knistern", "severity": "Stark"}, …]  — sortiert nach Schwere
+      will_do: ["Knistern entfernen", "Rauschen reduzieren", …]  — Plan-Reihenfolge
+
+    KEINE Entscheidungs-Oberfläche: reine Transparenz, was Aurik tun wird.
+    """
+    if defect_result is None:
+        return {}
+    try:
+        found: list[dict[str, str]] = []
+        manifest = getattr(defect_result, "_consensus_manifest", None)
+        if manifest is not None:
+            by_cat: dict[str, float] = {}
+            for d in list(getattr(manifest, "defects", []) or []):
+                _cat = getattr(d, "category", "unknown")
+                # Enum-Member (DefectCategory.CLICK) → reiner Wert ("click")
+                cat = str(getattr(_cat, "value", None) or _cat or "unknown")
+                sev = float(getattr(d, "severity", 0.0) or 0.0)
+                by_cat[cat] = max(by_cat.get(cat, 0.0), sev)
+            for cat, sev in sorted(by_cat.items(), key=lambda kv: -kv[1]):
+                found.append({
+                    "label": _DEFECT_LAYMAN_LABELS.get(cat, cat.replace("_", " ")),
+                    "severity": _severity_word(sev),
+                })
+        elif hasattr(defect_result, "defect_scores"):
+            scores = dict(getattr(defect_result, "defect_scores", {}) or {})
+            for key, val in sorted(scores.items(), key=lambda kv: -float(kv[1] or 0.0)):
+                found.append({
+                    "label": _DEFECT_LAYMAN_LABELS.get(str(key), str(key).replace("_", " ")),
+                    "severity": _severity_word(float(val or 0.0)),
+                })
+
+        will_do: list[str] = []
+        plan = getattr(defect_result, "repair_plan", None)
+        if plan is not None:
+            from backend.core.phase_display_formatter import get_phase_display
+
+            for pid in list(getattr(plan, "phase_order", []) or []):
+                pid_str = str(pid)
+                action = _PHASE_ACTIONS.get(pid_str)
+                if not action:
+                    action = str(get_phase_display(pid_str) or pid_str)
+                    parts = action.split(" ", 1)
+                    if len(parts) == 2 and any(ord(c) > 127 for c in parts[0]):
+                        action = parts[1]  # Emoji-Präfix entfernen
+                will_do.append(action)
+        if not found and not will_do:
+            return {}  # Kein Analyse-Material → Frontend blendet die Zeile aus
+        return {"found": found, "will_do": will_do}
     except Exception:
         return {}
 

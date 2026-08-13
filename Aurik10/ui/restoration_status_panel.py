@@ -25,6 +25,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -133,9 +134,13 @@ class RestorationStatusPanel(QFrame):
 
         self._current_material: str = "unknown"
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 6, 12, 6)
+        layout = QHBoxLayout()
         layout.setSpacing(16)
+
+        _outer = QVBoxLayout(self)
+        _outer.setContentsMargins(12, 6, 12, 6)
+        _outer.setSpacing(2)
+        _outer.addLayout(layout)
 
         # Left: Phase icon + name
         self._phase_icon = QLabel("🔄")
@@ -224,6 +229,16 @@ class RestorationStatusPanel(QFrame):
         _badge_row.addWidget(self._era_badge)
         _badge_row.addWidget(self._genre_badge)
         layout.addLayout(_badge_row)
+
+        # §v10.992: Einwilligungs-Zeile — „Gefunden … · Aurik wird …" (reine Transparenz)
+        self._consent_label = QLabel("")
+        self._consent_label.setObjectName("consentLabel")
+        self._consent_label.setStyleSheet(
+            f"font-size: 11px; color: {BADGE_MATERIAL_TEXT}; background: transparent; padding: 2px 2px 0 2px;"
+        )
+        self._consent_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._consent_label.setVisible(False)
+        _outer.addWidget(self._consent_label)
 
     # ── Public API ──────────────────────────────────────────────────
 
@@ -358,6 +373,36 @@ class RestorationStatusPanel(QFrame):
             return
         n = int(summary.get("step_count", 0) or 0)
         self._set_sota_badge(2, f"🗺️ {n} Phasen", ok=n > 0)
+
+    def set_repair_consent(self, consent: dict) -> None:
+        """§v10.992: Einwilligungs-Ansicht — zeigt in Alltagssprache, was Aurik tun wird.
+
+        KEINE Interaktion (keine Checkboxen, kein Editieren): reine Transparenz.
+        consent = bridge.get_repair_plan_consent(defect_result)
+        """
+        if not consent:
+            self._consent_label.setVisible(False)
+            return
+        found = consent.get("found", []) or []
+        will_do = consent.get("will_do", []) or []
+        if not found and not will_do:
+            self._consent_label.setVisible(False)
+            return
+        parts: list[str] = []
+        if found:
+            parts.append("Gefunden: " + ", ".join(
+                f"{f['label']} ({f.get('severity', '')})".rstrip()
+                for f in found[:4]
+            ))
+        if will_do:
+            parts.append("Aurik wird: " + " → ".join(will_do[:8]))
+        text = "   ·   ".join(parts)
+        fm = self._consent_label.fontMetrics()
+        _max_w = max(320, self.width() - 48)
+        shown = fm.elidedText(text, Qt.TextElideMode.ElideRight, _max_w)
+        self._consent_label.setText(shown)
+        self._consent_label.setToolTip(text)
+        self._consent_label.setVisible(True)
 
     def set_guard_report(self, report: dict) -> None:
         """§v10.990: Guard-/Loop-Telemetrie (bridge.get_guard_report)."""

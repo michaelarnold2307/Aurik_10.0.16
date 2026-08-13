@@ -211,8 +211,101 @@ def test_bridge_exports_sota_accessors():
     for name in (
         "get_model_zoo_summary", "get_sota_chain_status",
         "get_defect_consensus_summary", "get_repair_plan_summary", "get_guard_report",
+        "get_repair_plan_consent",
     ):
         assert f'"{name}"' in body, f"{name} fehlt in __all__"
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.992: Laienverständliche Einwilligungs-Ansicht
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_bridge_repair_plan_consent_layman_language():
+    """Consent-Ansicht übersetzt Defekte + Phasen in Alltagssprache."""
+    from backend.api.bridge import get_repair_plan_consent
+    from backend.core.coordinated_repair import RepairPlan, RepairPriority, RepairStep
+    from backend.core.defect_consensus_pipeline import DefectCategory, DefectHypothesis, DefectManifest
+
+    manifest = DefectManifest(
+        defects=[
+            DefectHypothesis(category=DefectCategory.HISS, start_sample=0, end_sample=1000,
+                             confidence=0.8, severity=0.2, source_module="x"),
+            DefectHypothesis(category=DefectCategory.CRACKLE, start_sample=0, end_sample=1000,
+                             confidence=0.9, severity=0.5, source_module="x"),
+            DefectHypothesis(category=DefectCategory.CLICK, start_sample=0, end_sample=1000,
+                             confidence=0.95, severity=0.7, source_module="x"),
+        ],
+    )
+    plan = RepairPlan(steps=[
+        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
+                   defect_category="crackle", affected_samples=[]),
+        RepairStep(phase_id="phase_03_denoise", priority=RepairPriority.BREITBAND,
+                   defect_category="hiss", affected_samples=[]),
+    ])
+
+    class _DefektResult:
+        _consensus_manifest = manifest
+        repair_plan = plan
+
+    consent = get_repair_plan_consent(_DefektResult())
+    # Sortiert nach Schwere: Klick (Kritisch) → Knistern (Stark) → Rauschen (Mittel)
+    assert [f["label"] for f in consent["found"]] == ["Knackser & Klicks", "Knistern", "Rauschen"]
+    assert [f["severity"] for f in consent["found"]] == ["Kritisch", "Stark", "Mittel"]
+    # Kein technisches Phasen-Vokabular in der Einwilligung
+    assert consent["will_do"] == ["Knistern entfernen", "Rauschen reduzieren"]
+    assert not any("phase_" in w for w in consent["will_do"])
+
+
+def test_bridge_repair_plan_consent_fallback_and_defensive():
+    """Legacy defect_scores-Fallback + defensives Verhalten."""
+    from backend.api.bridge import get_repair_plan_consent
+
+    assert get_repair_plan_consent(None) == {}
+    assert get_repair_plan_consent(object()) == {}
+
+    class _LegacyResult:
+        defect_scores = {"tape_hiss": 0.45, "hum": 0.05}
+
+    consent = get_repair_plan_consent(_LegacyResult())
+    assert [f["label"] for f in consent["found"]] == ["Bandrauschen", "Brummen"]
+    assert consent["found"][0]["severity"] == "Stark"
+    assert consent["will_do"] == []
+
+
+def test_status_panel_consent_method_and_wiring():
+    src_panel = _read("Aurik10/ui/restoration_status_panel.py")
+    assert "def set_repair_consent(" in src_panel
+    assert "_consent_label" in src_panel
+    src_win = _read("Aurik10/ui/modern_window.py")
+    assert "_panel.set_repair_consent(get_repair_plan_consent(_defect))" in src_win
+    assert "self._sync_status_panel_sota()" in src_win
+
+
+@pytest.mark.gui
+def test_status_panel_consent_renders():
+    """Funktional: Consent-Zeile wird sichtbar und zeigt laienverständlichen Text."""
+    pytest.importorskip("PyQt5")
+    from PyQt5.QtWidgets import QApplication
+
+    from Aurik10.ui.restoration_status_panel import RestorationStatusPanel
+
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication([])
+    panel = RestorationStatusPanel()
+    panel.resize(1000, 120)
+    panel.show()
+    app.processEvents()
+    panel.set_repair_consent({
+        "found": [{"label": "Knistern", "severity": "Stark"}],
+        "will_do": ["Knistern entfernen", "Rauschen reduzieren"],
+    })
+    assert panel._consent_label.isVisible()
+    assert "Gefunden: Knistern" in panel._consent_label.text()
+    assert "Aurik wird: Knistern entfernen" in panel._consent_label.toolTip()
+    panel.set_repair_consent({})
+    assert panel._consent_label.isHidden()
 
 
 def test_ui_still_bridge_only():

@@ -17481,6 +17481,9 @@ class ModernMainWindow(QMainWindow):
                 if getattr(self, "_preanalysis_finalized_for", None) == _cfk:
                     return  # double-fire guard
                 self._preanalysis_finalized_for = _cfk
+                # §v10.992: Einwilligungs-Ansicht schon vor der Verarbeitung zeigen
+                # („Gefunden: …" — der Repair-Plan folgt mit der ersten Phase)
+                self._sync_status_panel_sota()
                 # §v10.306: Pre-Analysis abgeschlossen → Phase-Bar ausblenden
                 self._preanalysis_pending = False
                 if hasattr(self, "phase_progress_bar"):
@@ -25196,11 +25199,17 @@ class ModernMainWindow(QMainWindow):
                 _panel.set_phase(_phase_id, step, total)
             elif total > 0:
                 _panel.set_phase("", step, total)
+            # §v10.992: Einwilligung zeigen, sobald die erste Phase läuft
+            # (dann liegt der Repair-Plan im Defekt-Ergebnis vor)
+            _cfp_now = str(getattr(self, "current_file_path", "") or "")
+            if step == 1 and getattr(self, "_consent_shown_for", "") != _cfp_now:
+                self._consent_shown_for = _cfp_now
+                self._sync_status_panel_sota()
         except Exception as _sp_err:
             logger.debug("Status-Panel-Sync fehlgeschlagen: %s", _sp_err)
 
     def _sync_status_panel_sota(self) -> None:
-        """§v10.990: Consensus-/Plan-/Guard-Daten aus dem letzten Defekt-Ergebnis ins Panel."""
+        """§v10.990/§v10.992: Consensus-/Plan-/Einwilligungs-Daten aus dem letzten Defekt-Ergebnis ins Panel."""
         _panel = getattr(self, "_status_panel", None)
         _cfp = str(getattr(self, "current_file_path", "") or "")
         if _panel is None or not _cfp:
@@ -25210,6 +25219,7 @@ class ModernMainWindow(QMainWindow):
             from backend.api.bridge import (  # noqa: PLC0415
                 get_cached_defect_result,
                 get_defect_consensus_summary,
+                get_repair_plan_consent,
                 get_repair_plan_summary,
             )
 
@@ -25219,6 +25229,8 @@ class ModernMainWindow(QMainWindow):
                 _plan = getattr(_defect, "repair_plan", None)
                 if _plan is not None:
                     _panel.set_repair_plan_summary(get_repair_plan_summary(_plan))
+                # §v10.992: Laienverständliche Einwilligung („Gefunden … · Aurik wird …")
+                _panel.set_repair_consent(get_repair_plan_consent(_defect))
         except Exception as _sota_err:
             logger.debug("SOTA-Status-Sync fehlgeschlagen: %s", _sota_err)
 
