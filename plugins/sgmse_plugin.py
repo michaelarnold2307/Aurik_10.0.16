@@ -683,6 +683,7 @@ class SGMSEPlusPlugin:
             nperseg=self._win,
             noverlap=_noverlap,
             window="hann",
+            boundary="zeros",
         )
         return Z.astype(np.complex64), n_orig
 
@@ -697,6 +698,7 @@ class SGMSEPlusPlugin:
             nperseg=self._win,
             noverlap=_noverlap,
             window="hann",
+            boundary="zeros",
         )
         x = x.astype(np.float32)
         if len(x) > n_orig:
@@ -880,6 +882,21 @@ class SGMSEPlusPlugin:
             Z_enhanced = np.nan_to_num(Z_enhanced, nan=0.0, posinf=0.0, neginf=0.0)
             result = self._istft(Z_enhanced, n_orig)
             del Z_enhanced
+
+            # §v10.340 Polarity-Guard (do-no-harm): TorchScript/eager-Checkpoints
+            # können global invertierte Ausgaben liefern (Score-Negation oder
+            # abweichende STFT-Phasenkonvention). Deterministischer
+            # Korrelationscheck gegen den Eingang — bei Antikorrelation wird
+            # das Vorzeichen korrigiert. Korrekte Modelle sind unberührt.
+            _res_ok = min(n_orig, len(result))
+            _mono_ref = mono[:_res_ok]
+            _mono_ref = _mono_ref - np.mean(_mono_ref)
+            _res_ref = np.asarray(result)[:_res_ok] - np.mean(np.asarray(result)[:_res_ok])
+            if float(np.dot(_mono_ref, _res_ref)) < 0.0:
+                logger.warning(
+                    "SGMSE+ Polarity-Guard: invertierte Ausgabe erkannt — Vorzeichen korrigiert"
+                )
+                result = -np.asarray(result)
 
             # Aggressive cleanup: GC + malloc_trim to return memory to OS
             gc.collect()
