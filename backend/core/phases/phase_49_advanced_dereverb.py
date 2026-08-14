@@ -848,7 +848,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                 )
                 if _f1_post_49 > 0 and abs(_f1_post_49 - _f1_pre_49) > _f1_pre_49 * 0.15:
                     logger.warning(
-                        "§0p Formant drift Verarbeitungsschritt_49 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
+                        "§0p Formant drift phase_49 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
                         _f1_pre_49,
                         _f1_post_49,
                         abs(_f1_post_49 - _f1_pre_49),

@@ -1050,7 +1050,7 @@ class ReverbReduction(PhaseInterface):
                 )
                 if _f1_post_20 > 0 and abs(_f1_post_20 - _f1_pre_20) > _f1_pre_20 * 0.15:
                     logger.warning(
-                        "§0p Formant drift Verarbeitungsschritt_20 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
+                        "§0p Formant drift phase_20 (F1 %.0f→%.0f Hz, delta=%.0f Hz) — rollback",
                         _f1_pre_20,
                         _f1_post_20,
                         abs(_f1_post_20 - _f1_pre_20),
