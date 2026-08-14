@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 """
-Unit tests for SOTA vocal enhancement improvements (v10.0.0.x):
+Unit tests for SOTA vocal enhancement improvements (v10.14.x):
 
   1. WORLD-based formant correction in FormantCorrector
        - _warp_sp_frame: identity at zero shift, direction of warp, NaN safety

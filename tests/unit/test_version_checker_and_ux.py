@@ -23,7 +23,7 @@ def test_parse_version_simple():
 
 
 def test_parse_version_with_v_prefix():
-    assert _parse_version("v10.0.0") == (10, 0, 0)
+    assert _parse_version("v10.14.0") == (10, 14, 0)
 
 
 def test_parse_version_with_V_prefix():
@@ -31,18 +31,18 @@ def test_parse_version_with_V_prefix():
 
 
 def test_parse_version_non_numeric():
-    assert _parse_version("v10.0.0.beta") == (10, 0, 0)
+    assert _parse_version("v10.14.0.beta") == (10, 14, 0)
 
 
 def test_parse_version_hotfix_suffix():
-    assert _parse_version("v10.0.0-hotfix.2") == (10, 0, 0, 2)
+    assert _parse_version("v10.14.0-hotfix.2") == (10, 14, 0, 2)
 
 
 def test_parse_version_comparison():
     assert _parse_version("9.10.80") > _parse_version("9.10.77")
     assert _parse_version("9.11.0") > _parse_version("9.10.99")
-    assert _parse_version("10.0.0") > _parse_version("9.99.99")
-    assert _parse_version("v10.0.0") > _parse_version("9.10.77")
+    assert _parse_version("10.14.0") > _parse_version("9.99.99")
+    assert _parse_version("v10.14.0") > _parse_version("9.10.77")
     assert _parse_version("9.12.9-hotfix.2") > _parse_version("9.12.9-hotfix.1")
 
 

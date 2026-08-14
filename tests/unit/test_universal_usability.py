@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-"""Tests for universal usability improvements (v10.0.0.x).
+"""Tests for universal usability improvements (v10.14.x).
 
 Covers:
 1. Beat-Reliability-Score (Rubato-Detektor)

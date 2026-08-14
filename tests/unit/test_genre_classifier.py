@@ -672,7 +672,7 @@ def _build_non_schlager_clf(
 ):
     """Setzt alle Schlager-Tier-Scores auf Non-Schlager-Werte.
 
-    Patcht zusätzlich alle 12 seit v10.0.0.x ergänzten Genre-Scorer auf 0.10,
+    Patcht zusätzlich alle 12 seit v10.14.x ergänzten Genre-Scorer auf 0.10,
     damit Test-Klassen (TestNonSchlagerGoldenSamples etc.) ausschließlich die
     explizit über ``monkeypatch.setattr(clf, "_score_<genre>", ...)`` gesetzten
     Scores testen — unabhängig von echten Audio-Feature-Artefakten.
@@ -688,7 +688,7 @@ def _build_non_schlager_clf(
     monkeypatch.setattr(clf, "_detect_vocal_language", lambda _a, _sr: lang_de)
     monkeypatch.setattr(clf, "_compute_lyrics_language_hint", lambda _a, _sr: 0.0)
     monkeypatch.setattr(clf, "_estimate_key", lambda _a, _sr: "C-Dur")
-    # Isolate the 12 new genre scorers (added v10.0.0.x) to a low base score so
+    # Isolate the 12 new genre scorers (added v10.14.x) to a low base score so
     # TestNonSchlagerGoldenSamples tests are not affected by audio-synthesis
     # artefacts (e.g. onset_rate spikes on pure tones).  Tests that deliberately
     # verify one of these genres must override the corresponding patch afterward.

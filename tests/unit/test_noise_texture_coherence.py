@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-"""Unit-Tests für NoiseTextureCoherenceGuard (§4.7, v10.0.0)."""
+"""Unit-Tests für NoiseTextureCoherenceGuard (§4.7, v10.14)."""
 
 
 import numpy as np
@@ -120,7 +120,7 @@ class TestSingleton:
 
 
 class TestNoiseTextureWetReduction60To80Range:
-    """§4.7 v10.0.0 — Per-Phase wet×0.85 im [0.60, 0.80)-Kohärenz-Bereich."""
+    """§4.7 v10.14 — Per-Phase wet×0.85 im [0.60, 0.80)-Kohärenz-Bereich."""
 
     def _make_guard_with_patched_coherence(self, target_coherence: float, monkeypatch):
         """Erstellt Guard, dessen compute-Funktion eine bestimmte Kohärenz simuliert."""
@@ -147,7 +147,7 @@ class TestNoiseTextureWetReduction60To80Range:
         coh, wet = guard.check_per_phase(before, after, 48000, "vinyl")
         assert abs(coh - 0.70) < 1e-6, f"Erwartete Kohärenz 0.70, erhalten {coh}"
         assert abs(wet - 0.85) < 1e-6, (
-            f"Kohärenz 0.70 muss wet_mult=0.85 liefern (§4.7 v10.0.0), erhalten wet_mult={wet}"
+            f"Kohärenz 0.70 muss wet_mult=0.85 liefern (§4.7 v10.14), erhalten wet_mult={wet}"
         )
 
     def test_coherence_065_gives_wet_085(self, monkeypatch):
@@ -188,7 +188,7 @@ class TestNoiseTextureWetReduction60To80Range:
 
 
 class TestNoiseTextureEndGateAdaptiveCompliance:
-    """§4.7 v10.0.0.x — adaptive End-Gate-Schwelle (Dauer/Material/Mode)."""
+    """§4.7 v10.14.x — adaptive End-Gate-Schwelle (Dauer/Material/Mode)."""
 
     def _patch_compute_with_coherence(self, monkeypatch, coherence: float):
         import backend.core.noise_texture_coherence as _ntc_mod

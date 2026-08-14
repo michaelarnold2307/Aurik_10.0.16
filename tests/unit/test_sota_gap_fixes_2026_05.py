@@ -694,7 +694,7 @@ class TestSyntheticGeneratorSosfiltfilt:
 
 class TestDefectPhaseMapperRestorationFilter:
     """§0a RELEASE_MUST — DefectPhaseMapper darf phase_21/35/42 in Restoration
-    nicht vorschlagen (BUG-FIX v10.0.0 §0a)."""
+    nicht vorschlagen (BUG-FIX v10.14 §0a)."""
 
     def test_forbidden_phases_constant_exists(self):
         """_RESTORATION_FORBIDDEN_PHASES muss die drei §0a-Phasen enthalten."""
@@ -733,7 +733,7 @@ class TestDefectPhaseMapperRestorationFilter:
     def test_studio_2026_does_not_over_filter_vs_restoration(self):
         """§0a Mode-Asymmetrie: Studio 2026 darf nie STRENGER filtern als Restoration.
 
-        Nach dem V04-Fix (v10.0.0) sind §0a-verbotene Phasen (phase_21/35/42) bewusst
+        Nach dem V04-Fix (v10.14) sind §0a-verbotene Phasen (phase_21/35/42) bewusst
         komplett aus _PHASE_MAP entfernt — Defense-in-Depth zusätzlich zum Runtime-Filter.
         Der korrekte §0a-Vertrag ist daher NICHT 'Studio enthält verbotene Phasen', sondern
         'der mode-Gate restringiert ausschließlich in Restoration': für jeden DefectType
@@ -771,14 +771,14 @@ class TestDefectPhaseMapperRestorationFilter:
 
 
 # ===========================================================================
-# §Cross-Goal-Recovery (v10.0.0.x fix): hf_recovery_boost_after_phase03
+# §Cross-Goal-Recovery (v10.14.x fix): hf_recovery_boost_after_phase03
 # WIRING FIX: floor enforcement moved from _profiled_phase_call (dead code path)
 # to main phase loop, applied to _combined_strength before wrap_phase call.
 # ===========================================================================
 
 
 class TestCrossGoalRecoveryMainLoopFix:
-    """§Cross-Goal-Recovery (v10.0.0.x) — Strength-Floor für phase_06/07/39 wird in
+    """§Cross-Goal-Recovery (v10.14.x) — Strength-Floor für phase_06/07/39 wird in
     UV3-Hauptschleife auf _combined_strength angewendet (nicht in _profiled_phase_call)."""
 
     def test_uv3_cross_goal_recovery_in_main_loop_source(self):
@@ -833,7 +833,7 @@ class TestCrossGoalRecoveryMainLoopFix:
 
 
 # ---------------------------------------------------------------------------
-# Todo 2 — §4.4 Era-Aware ML-NR Routing (v10.0.0.x)
+# Todo 2 — §4.4 Era-Aware ML-NR Routing (v10.14.x)
 # ---------------------------------------------------------------------------
 
 
@@ -1284,7 +1284,7 @@ class TestConsoleCharacterStudio2026:
 
 
 # ===========================================================================
-# §Gap1 VocalFocusAnalyzer — Emotional Context (v10.0.0.x)
+# §Gap1 VocalFocusAnalyzer — Emotional Context (v10.14.x)
 # ===========================================================================
 
 

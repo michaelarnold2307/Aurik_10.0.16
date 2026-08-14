@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 """
-Tests für RecordingProductionKB und Singer-School-Klassifikation (v10.0.0.x)
+Tests für RecordingProductionKB und Singer-School-Klassifikation (v10.14.x)
 
 Abdeckung:
   - RecordingProductionKB: Profil-Lookup (spezifisch + Fallback + generisch)

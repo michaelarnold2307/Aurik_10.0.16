@@ -1,6 +1,6 @@
 import pytest
 
-"""Tests für v10.0.0 — Perceptual Depth & Musical Presence.
+"""Tests für v10.14 — Perceptual Depth & Musical Presence.
 
 Abgedeckte Verbesserungen:
   - ExcellenceOptimizer: _MODULATION_STRENGTH und _HARM_BOOST_DB erhöht (war zu konservativ vs. iZotope RX11)
@@ -41,7 +41,7 @@ class TestExcellenceOptimizerBoostValues:
         m = self._get_module()
         assert m._MODULATION_STRENGTH >= 0.40, (
             f"_MODULATION_STRENGTH={m._MODULATION_STRENGTH:.3f} < 0.40. "
-            "v10.0.0: Micro-Dynamik-Reinjektion war zu schwach für über-denoisete Signale."
+            "v10.14: Micro-Dynamik-Reinjektion war zu schwach für über-denoisete Signale."
         )
 
     def test_harm_boost_db_increased(self):
@@ -49,7 +49,7 @@ class TestExcellenceOptimizerBoostValues:
         m = self._get_module()
         assert m._HARM_BOOST_DB >= 2.0, (
             f"_HARM_BOOST_DB={m._HARM_BOOST_DB:.2f} < 2.0. "
-            "v10.0.0: Oberton-Brillanz zu konservativ — iZotope RX11 nutzt deutlich stärkere Harmonic Reinforcement."
+            "v10.14: Oberton-Brillanz zu konservativ — iZotope RX11 nutzt deutlich stärkere Harmonic Reinforcement."
         )
 
     def test_shellac_profile_harm_boost(self):
@@ -68,7 +68,7 @@ class TestExcellenceOptimizerBoostValues:
         vinyl = m.MATERIAL_PROFILES.get("vinyl")
         assert vinyl is not None, "Vinyl-Profil fehlt in MATERIAL_PROFILES"
         assert vinyl.harm_boost_db >= 1.5, (
-            f"Vinyl harm_boost_db={vinyl.harm_boost_db:.2f} < 1.5. v10.0.0: Vinyl Obert one-Boost verdoppelt."
+            f"Vinyl harm_boost_db={vinyl.harm_boost_db:.2f} < 1.5. v10.14: Vinyl Obert one-Boost verdoppelt."
         )
 
     def test_tape_profile_harm_boost(self):
@@ -77,7 +77,7 @@ class TestExcellenceOptimizerBoostValues:
         tape = m.MATERIAL_PROFILES.get("tape")
         assert tape is not None, "Tape-Profil fehlt in MATERIAL_PROFILES"
         assert tape.harm_boost_db >= 1.2, (
-            f"Tape harm_boost_db={tape.harm_boost_db:.2f} < 1.2. v10.0.0: Tape-Sättigung stärker betonen."
+            f"Tape harm_boost_db={tape.harm_boost_db:.2f} < 1.2. v10.14: Tape-Sättigung stärker betonen."
         )
 
     def test_shellac_profile_modulation_strength(self):
@@ -139,7 +139,7 @@ class TestEmotionalArcArousalFormula:
         for line in arousal_lines:
             assert "zcr" not in line.lower(), (
                 f"ZCR taucht noch in Arousal-Berechnung auf: {line.strip()!r}. "
-                "v10.0.0: ZCR durch Spektral-Centroid ersetzen (pitch-invariantes Arousal)."
+                "v10.14: ZCR durch Spektral-Centroid ersetzen (pitch-invariantes Arousal)."
             )
 
     def test_spectral_centroid_in_arousal(self):
@@ -148,7 +148,7 @@ class TestEmotionalArcArousalFormula:
         # Look for centroid-related keyword in the arousal section
         assert "_centroid_norm" in src or "centroid_norm" in src, (
             "Kein Spektral-Centroid in Arousal-Formel gefunden. "
-            "v10.0.0: arousal(t) = rms * 0.55 + centroid_norm * 0.45."
+            "v10.14: arousal(t) = rms * 0.55 + centroid_norm * 0.45."
         )
 
     def test_arousal_uses_rfft(self):
@@ -243,31 +243,31 @@ class TestPhase37BassEnhancementMix:
         """Shellac mix muss ≥ 0.60 sein (war 0.50)."""
         cfg, MT = self._get_config()
         val = cfg[MT.SHELLAC]["mix"]
-        assert val >= 0.60, f"Shellac mix={val:.2f} < 0.60. v10.0.0: Shellac-Bass muss deutlich stärker hörbar sein."
+        assert val >= 0.60, f"Shellac mix={val:.2f} < 0.60. v10.14: Shellac-Bass muss deutlich stärker hörbar sein."
 
     def test_vinyl_mix_increased(self):
         """Vinyl mix muss ≥ 0.55 sein (war 0.45)."""
         cfg, MT = self._get_config()
         val = cfg[MT.VINYL]["mix"]
-        assert val >= 0.55, f"Vinyl mix={val:.2f} < 0.55. v10.0.0."
+        assert val >= 0.55, f"Vinyl mix={val:.2f} < 0.55. v10.14."
 
     def test_cd_digital_mix_increased(self):
         """CD_DIGITAL mix muss ≥ 0.58 sein (war 0.50)."""
         cfg, MT = self._get_config()
         val = cfg[MT.CD_DIGITAL]["mix"]
-        assert val >= 0.58, f"CD_DIGITAL mix={val:.2f} < 0.58. v10.0.0."
+        assert val >= 0.58, f"CD_DIGITAL mix={val:.2f} < 0.58. v10.14."
 
     def test_tape_mix_increased(self):
         """Tape mix muss ≥ 0.45 sein (war 0.35)."""
         cfg, MT = self._get_config()
         val = cfg[MT.TAPE]["mix"]
-        assert val >= 0.45, f"Tape mix={val:.2f} < 0.45. v10.0.0."
+        assert val >= 0.45, f"Tape mix={val:.2f} < 0.45. v10.14."
 
     def test_streaming_mix_increased(self):
         """Streaming mix muss ≥ 0.50 sein (war 0.45)."""
         cfg, MT = self._get_config()
         val = cfg[MT.STREAMING]["mix"]
-        assert val >= 0.50, f"Streaming mix={val:.2f} < 0.50. v10.0.0."
+        assert val >= 0.50, f"Streaming mix={val:.2f} < 0.50. v10.14."
 
     def test_mix_values_in_valid_range(self):
         """Alle mix-Werte müssen im Bereich [0.0, 1.0] liegen."""
@@ -306,43 +306,43 @@ class TestPhase38PresenceBoostConfig:
         """Shellac lower_gain_db muss ≥ 4.0 sein (war 3.0)."""
         cfg, MT = self._get_config()
         val = cfg[MT.SHELLAC]["lower_gain_db"]
-        assert val >= 4.0, f"Shellac lower_gain_db={val:.1f} < 4.0. v10.0.0."
+        assert val >= 4.0, f"Shellac lower_gain_db={val:.1f} < 4.0. v10.14."
 
     def test_shellac_upper_gain_increased(self):
         """Shellac upper_gain_db muss ≥ 5.0 sein (war 4.0)."""
         cfg, MT = self._get_config()
         val = cfg[MT.SHELLAC]["upper_gain_db"]
-        assert val >= 5.0, f"Shellac upper_gain_db={val:.1f} < 5.0. v10.0.0."
+        assert val >= 5.0, f"Shellac upper_gain_db={val:.1f} < 5.0. v10.14."
 
     def test_vinyl_lower_gain_increased(self):
         """Vinyl lower_gain_db muss ≥ 3.0 sein (war 2.5)."""
         cfg, MT = self._get_config()
         val = cfg[MT.VINYL]["lower_gain_db"]
-        assert val >= 3.0, f"Vinyl lower_gain_db={val:.1f} < 3.0. v10.0.0."
+        assert val >= 3.0, f"Vinyl lower_gain_db={val:.1f} < 3.0. v10.14."
 
     def test_vinyl_upper_gain_increased(self):
         """Vinyl upper_gain_db muss ≥ 4.0 sein (war 3.5)."""
         cfg, MT = self._get_config()
         val = cfg[MT.VINYL]["upper_gain_db"]
-        assert val >= 4.0, f"Vinyl upper_gain_db={val:.1f} < 4.0. v10.0.0."
+        assert val >= 4.0, f"Vinyl upper_gain_db={val:.1f} < 4.0. v10.14."
 
     def test_tape_presence_increased(self):
         """Tape upper_gain_db muss ≥ 3.5 sein (war 3.0)."""
         cfg, MT = self._get_config()
         val = cfg[MT.TAPE]["upper_gain_db"]
-        assert val >= 3.5, f"Tape upper_gain_db={val:.1f} < 3.5. v10.0.0."
+        assert val >= 3.5, f"Tape upper_gain_db={val:.1f} < 3.5. v10.14."
 
     def test_cd_digital_presence_increased(self):
         """CD_DIGITAL lower_gain_db muss ≥ 4.0 sein (war 3.5)."""
         cfg, MT = self._get_config()
         val = cfg[MT.CD_DIGITAL]["lower_gain_db"]
-        assert val >= 4.0, f"CD_DIGITAL lower_gain_db={val:.1f} < 4.0. v10.0.0."
+        assert val >= 4.0, f"CD_DIGITAL lower_gain_db={val:.1f} < 4.0. v10.14."
 
     def test_streaming_presence_increased(self):
         """Streaming lower_gain_db muss ≥ 3.5 sein (war 3.0)."""
         cfg, MT = self._get_config()
         val = cfg[MT.STREAMING]["lower_gain_db"]
-        assert val >= 3.5, f"Streaming lower_gain_db={val:.1f} < 3.5. v10.0.0."
+        assert val >= 3.5, f"Streaming lower_gain_db={val:.1f} < 3.5. v10.14."
 
     def test_era_cap_increased_in_source(self):
         """Era-Cap für ≤1950-Material muss ≥ 3.5/4.0 dB sein (war 2.5/3.0)."""
@@ -352,7 +352,7 @@ class TestPhase38PresenceBoostConfig:
         # The vintage cap should be 3.5 or higher (was 2.5)
         assert "3.5" in src or "4.0" in src or "4.5" in src, (
             "Era-Cap für ≤1950-Material nicht auf ≥ 3.5/4.0 angehoben. "
-            "v10.0.0: Auch Vintage-Material soll mehr Presence erhalten."
+            "v10.14: Auch Vintage-Material soll mehr Presence erhalten."
         )
 
     def test_gain_values_positive(self):
@@ -389,7 +389,7 @@ class TestPhase39AirBandConfig:
         val = cfg[MT.TAPE]["shelf_gain_db"]
         assert val >= 4.5, (
             f"Tape shelf_gain_db={val:.1f} < 4.5 dB. "
-            "v10.0.0: Nach Tape-Hiss-Reduktion ist aggressivere HF-Restaurierung sicher."
+            "v10.14: Nach Tape-Hiss-Reduktion ist aggressivere HF-Restaurierung sicher."
         )
 
     def test_cd_digital_shelf_gain_increased(self):
@@ -397,14 +397,14 @@ class TestPhase39AirBandConfig:
         cfg, MT = self._get_config()
         val = cfg[MT.CD_DIGITAL]["shelf_gain_db"]
         assert val >= 4.5, (
-            f"CD_DIGITAL shelf_gain_db={val:.1f} < 4.5 dB. v10.0.0: CD hat klare HF-Basis, mehr Air-Boost sicher."
+            f"CD_DIGITAL shelf_gain_db={val:.1f} < 4.5 dB. v10.14: CD hat klare HF-Basis, mehr Air-Boost sicher."
         )
 
     def test_streaming_shelf_gain_increased(self):
         """Streaming shelf_gain_db muss ≥ 4.0 sein (war 4.0 — jetzt mindestens 4.5)."""
         cfg, MT = self._get_config()
         val = cfg[MT.STREAMING]["shelf_gain_db"]
-        assert val >= 4.0, f"Streaming shelf_gain_db={val:.1f} < 4.0 dB. v10.0.0."
+        assert val >= 4.0, f"Streaming shelf_gain_db={val:.1f} < 4.0 dB. v10.14."
 
     def test_shellac_shelf_gain_unchanged_or_higher(self):
         """Shellac shelf_gain_db muss ≥ 6.0 bleiben (stark bandwidth-limitiert)."""
@@ -416,7 +416,7 @@ class TestPhase39AirBandConfig:
         """Vinyl shelf_gain_db muss ≥ 4.0 bleiben."""
         cfg, MT = self._get_config()
         val = cfg[MT.VINYL]["shelf_gain_db"]
-        assert val >= 4.0, f"Vinyl shelf_gain_db={val:.1f} < 4.0. v10.0.0."
+        assert val >= 4.0, f"Vinyl shelf_gain_db={val:.1f} < 4.0. v10.14."
 
     def test_shelf_gain_not_excessive(self):
         """shelf_gain_db darf nicht > 8.0 dB sein (HF-Kumulativ-Limit §8.2)."""

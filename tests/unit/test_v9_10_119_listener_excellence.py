@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-v10.0.0 — Musikliebhaber-Exzellenz: 5 weitere audible Defizite behoben.
+v10.14 — Musikliebhaber-Exzellenz: 5 weitere audible Defizite behoben.
 
 Fix 1: HPSS Kernel (31→17/13) — schärfere Transient-Trennung
 Fix 2: ExcellenceOptimizer PGHI — Phasenkonsistenz nach Magnitude-Modifikation
@@ -343,7 +343,7 @@ class TestEmotionalArcCentroidFix:
 
 
 class TestIntegration119:
-    """Cross-cutting tests for v10.0.0."""
+    """Cross-cutting tests for v10.14."""
 
     def test_23_tdp_recombine_preserves_energy(self):
         """TDP recombine: perc + harmonic should ≈ original energy."""

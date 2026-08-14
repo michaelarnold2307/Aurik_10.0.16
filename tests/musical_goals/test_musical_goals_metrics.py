@@ -437,7 +437,7 @@ class TestMusicalGoalsChecker:
             "micro_dynamics",  # Micro dynamics
             "separation_fidelity",  # Separation fidelity
             "artikulation",  # Articulation
-            "transient_energie",  # §1.4.6 v10.0.0: Transient-Energie-Ziel
+            "transient_energie",  # §1.4.6 v10.14: Transient-Energie-Ziel
         }
         assert set(scores.keys()) == expected_goals, (
             f"Missing or extra goals. \nGot: {sorted(scores.keys())}\nExpected: {sorted(expected_goals)}"
@@ -505,8 +505,8 @@ class TestRegressionPrevention:
             + 0.2 * np.sin(2 * np.pi * 8000 * t)
         )
 
-        # Expected baseline scores — UPDATED v10.0.0 after §9.7.12/13/14 metric algorithm changes
-        # Changes vs v10.0.0:
+        # Expected baseline scores — UPDATED v10.14 after §9.7.12/13/14 metric algorithm changes
+        # Changes vs v10.14:
         #   - brillanz:    §9.7.12 HF Crest Factor (2-16 kHz): 8000 Hz tone in HF band →
         #                  strong tonal peak → high crest → score near 1.0
         #   - waerme:      §9.7.14 (§2.54 fix: /4.0 not /1.5) E(200-800)/E(800-3000) ratio:
@@ -521,8 +521,8 @@ class TestRegressionPrevention:
             "waerme": (0.15, 0.30),  # §9.7.14 (§2.54 fix /4.0): 500 Hz warm-band vs 2000 Hz cool-band;
             # ratio/4.0 → realistic ~0.22 for mixed tonal signal
             "natuerlichkeit": (0.94, 1.01),  # Low flatness (pure tones) → high naturalness
-            "authentizitaet": (0.94, 1.01),  # v10.0.0: flatness≈0 for pure tones → tonal_score≈1.0
-            "emotionalitaet": (0.24, 0.40),  # v10.0.0: crest_score denom 12→9; 4-tone crest ~8.9 dB
+            "authentizitaet": (0.94, 1.01),  # v10.14: flatness≈0 for pure tones → tonal_score≈1.0
+            "emotionalitaet": (0.24, 0.40),  # v10.14: crest_score denom 12→9; 4-tone crest ~8.9 dB
             "transparenz": (0.40, 0.65),  # §9.7.13 + short-form blend: _neutral_prior=0.50 für 2s → score≈0.50
         }
 
@@ -1000,7 +1000,7 @@ class TestSeparationFidelitySIRProxy:
 
 
 class TestGrooveMetricNoReferenceCalibration:
-    """Regression-Tests für GrooveMetric ohne Referenz (v10.0.0-Fix).
+    """Regression-Tests für GrooveMetric ohne Referenz (v10.14-Fix).
 
     Bug: ioi_std als DTW-Proxy lieferte 0.62 für alle Musik mit hoher IOI-Varianz
     (Rubato, Jazz, Klassik) — d.h. 9/10 AMRB-Szenarien. Fix: dtw_score=1.0 ohne
@@ -1066,7 +1066,7 @@ class TestGrooveMetricNoReferenceCalibration:
 
 
 class TestBrillanzMetricV913Calibration:
-    """Regression-Tests für BrillanzMetric Crest-Factor-Kalibrierung v10.0.0.
+    """Regression-Tests für BrillanzMetric Crest-Factor-Kalibrierung v10.14.
 
     §9.7.12: HF-Energie-Ratio (ISO-226) ersetzt durch p95/p50 Crest-Factor
     im 2-16 kHz Band.  Harmonic-rich signals (sawtooth, guitar) score near 1.0;
@@ -1137,7 +1137,7 @@ class TestBrillanzMetricV913Calibration:
 
 
 class TestAuthentizitaetMetricV913Calibration:
-    """Regression-Tests für AuthentizitaetMetric spectral_flatness-Proxy v10.0.0.
+    """Regression-Tests für AuthentizitaetMetric spectral_flatness-Proxy v10.14.
 
     Bug: chroma_std * 1.5 bestrafte harmonisch reiche Musik (hohe chroma_std =
     viele aktive Tonhöhenklassen = musikalisch gut), was systematisch 0.63-0.73
@@ -1193,7 +1193,7 @@ class TestAuthentizitaetMetricV913Calibration:
 
 @pytest.mark.ml
 class TestEmotionalitaetMetricV913Calibration:
-    """Regression-Tests für EmotionalitaetMetric crest_score-Kalibrierung v10.0.0.
+    """Regression-Tests für EmotionalitaetMetric crest_score-Kalibrierung v10.14.
 
     Bug: Nenner 12 → restore audio typischerweise 8-11 dB crest → score 0.50-0.75,
     systematisch unter Schwelle 0.87. Fix: Nenner 9 → 11 dB = 1.0.
@@ -1262,7 +1262,7 @@ class TestEmotionalitaetMetricV913Calibration:
 
 
 class TestEmotionalitaetMetricMERTBlend:
-    """Tests für EmotionalitaetMetric MERT-Blend (v10.0.0).
+    """Tests für EmotionalitaetMetric MERT-Blend (v10.14).
 
     MERT naturalness_score wird als 15 %-Blend eingemischt, wenn MERT ML-Modell
     geladen ist.  DSP-only-Pfad (dsp_fallback) bleibt unverändert.
@@ -1379,7 +1379,7 @@ class TestEmotionalitaetMetricMERTBlend:
     def test_waerme_mert_guard_uses_model_type(self):
         """Regression: WaermeMetric guard must use _model_type (not _session).
 
-        Before v10.0.0, the guard was `hasattr(mert, '_session') and mert._session is not None`.
+        Before v10.14, the guard was `hasattr(mert, '_session') and mert._session is not None`.
         MertPlugin has no _session attribute → blend was never executed (dead code).
         Fixed guard: `mert._model_type != 'dsp_fallback'`.
         Note: WaermeMetric MERT blend runs only in the reference-aware path (not when
@@ -1412,7 +1412,7 @@ class TestEmotionalitaetMetricMERTBlend:
 
 
 class TestTransparenzMetricV913Calibration:
-    """Regression-Tests für TransparenzMetric contrast_score-Kalibrierung v10.0.0.
+    """Regression-Tests für TransparenzMetric contrast_score-Kalibrierung v10.14.
 
     Bug: Nenner 22 → 30 dB für score=1.0; typische Musik hat 20-25 dB Kontrast
     → scores 0.54-0.77, systematisch unter Schwelle 0.89. Fix: Nenner 14 → 22 dB = 1.0.
@@ -1495,12 +1495,12 @@ class TestTransparenzMetricV913Calibration:
 
 
 # ---------------------------------------------------------------------------
-# §perf-v10.0.0 Audio-Cap-Performanz-Tests
+# §perf-v10.14 Audio-Cap-Performanz-Tests
 # ---------------------------------------------------------------------------
 
 
 class TestMetricAudioCapPerformance:
-    """Validiert §perf-v10.0.0: NatuerlichkeitMetric und BassKraftMetric
+    """Validiert §perf-v10.14: NatuerlichkeitMetric und BassKraftMetric
     verarbeiten lange Signale innerhalb des Performance-Budgets (< 5 s)."""
 
     SR = 48_000
@@ -1515,7 +1515,7 @@ class TestMetricAudioCapPerformance:
         return sig  # type: ignore[no-any-return]
 
     def test_natuerlichkeit_audio_cap_is_5s(self):
-        """_MAX_NAT_SAMPLES = sr*5 — §perf-v10.0.0 konstantenprüfung."""
+        """_MAX_NAT_SAMPLES = sr*5 — §perf-v10.14 konstantenprüfung."""
         import inspect
         import re
 
@@ -1525,10 +1525,10 @@ class TestMetricAudioCapPerformance:
         m = re.search(r"_MAX_NAT_SAMPLES\s*=\s*int\(sr\s*\*\s*(\d+)\)", src)
         assert m, "_MAX_NAT_SAMPLES = int(sr * N) nicht in NatuerlichkeitMetric.measure() gefunden"
         cap_s = int(m.group(1))
-        assert cap_s <= 5, f"_MAX_NAT_SAMPLES muss ≤ 5 s sein (§perf-v10.0.0), gefunden: {cap_s} s"
+        assert cap_s <= 5, f"_MAX_NAT_SAMPLES muss ≤ 5 s sein (§perf-v10.14), gefunden: {cap_s} s"
 
     def test_bass_kraft_audio_cap_is_5s(self):
-        """_MAX_BASS_STFT_SAMPLES = sr*5 — §perf-v10.0.0 konstantenprüfung."""
+        """_MAX_BASS_STFT_SAMPLES = sr*5 — §perf-v10.14 konstantenprüfung."""
         import inspect
         import re
 
@@ -1538,7 +1538,7 @@ class TestMetricAudioCapPerformance:
         m = re.search(r"_MAX_BASS_STFT_SAMPLES\s*=\s*int\(sr\s*\*\s*(\d+)\)", src)
         assert m, "_MAX_BASS_STFT_SAMPLES = int(sr * N) nicht in BassKraftMetric.measure() gefunden"
         cap_s = int(m.group(1))
-        assert cap_s <= 5, f"_MAX_BASS_STFT_SAMPLES muss ≤ 5 s sein (§perf-v10.0.0), gefunden: {cap_s} s"
+        assert cap_s <= 5, f"_MAX_BASS_STFT_SAMPLES muss ≤ 5 s sein (§perf-v10.14), gefunden: {cap_s} s"
 
     def test_natuerlichkeit_long_audio_inside_budget(self):
         """NatuerlichkeitMetric(30s input) terminiert in < 5 s nach Cap-Reduktion."""
@@ -1552,7 +1552,7 @@ class TestMetricAudioCapPerformance:
         score = m.measure(audio, self.SR)
         elapsed = time.perf_counter() - t0
         assert 0.0 <= score <= 1.0
-        assert elapsed < 5.0, f"NatuerlichkeitMetric zu langsam: {elapsed:.2f} s (Budget: 5 s) — §perf-v10.0.0 verletzt"
+        assert elapsed < 5.0, f"NatuerlichkeitMetric zu langsam: {elapsed:.2f} s (Budget: 5 s) — §perf-v10.14 verletzt"
 
     def test_bass_kraft_long_audio_inside_budget(self):
         """BassKraftMetric(30s input) terminiert in < 3 s nach Cap-Reduktion."""
@@ -1566,7 +1566,7 @@ class TestMetricAudioCapPerformance:
         score = m.measure(audio, self.SR)
         elapsed = time.perf_counter() - t0
         assert 0.0 <= score <= 1.0
-        assert elapsed < 3.0, f"BassKraftMetric zu langsam: {elapsed:.2f} s (Budget: 3 s) — §perf-v10.0.0 verletzt"
+        assert elapsed < 3.0, f"BassKraftMetric zu langsam: {elapsed:.2f} s (Budget: 3 s) — §perf-v10.14 verletzt"
 
 
 class TestVQIMaterialFloor:

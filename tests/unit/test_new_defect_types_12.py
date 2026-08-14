@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-"""Tests for 12 new defect types added in v10.0.0.x.
+"""Tests for 12 new defect types added in v10.14.x.
 
 Covers: DefectType enum presence, MATERIAL_SENSITIVITY entries,
 detection methods in DefectScanner, CausalDefectReasoner integration

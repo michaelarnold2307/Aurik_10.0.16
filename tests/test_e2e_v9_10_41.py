@@ -12,7 +12,7 @@ Anforderungen:
     Audio-Testdatei: audio_examples/Elke Best - Du wolltest nur ein Abenteuer, aber ich suchte einen Freund.mp3
     Fallback:        audio_examples/Elke_Best_Freund.mp3
 
-Spec-Referenz: §0, §2.44, §2.45, §2.49, §8.1, §8.2 (copilot-instructions.md v10.0.0.x)
+Spec-Referenz: §0, §2.44, §2.45, §2.49, §8.1, §8.2 (copilot-instructions.md v10.14.x)
 """
 
 
