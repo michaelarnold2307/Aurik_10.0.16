@@ -143,13 +143,27 @@ class StemTargetedNRPhase(PhaseInterface):
 
     @staticmethod
     def _get_dfn():
-        """Lazy-load DeepFilterNet v3 II Plugin."""
+        """Lazy-load DeepFilterNet v3 II Plugin; §v10.20 Whisper-Denoiser als ML-Fallback.
+
+        Reihenfolge: DFN (primär) → Whisper-Denoiser (selbst trainiert, MUSDB18-HQ)
+        → None (OMLSA-DSP-Fallback in _apply_dsp_nr).
+        """
         try:
             from plugins.deepfilternet_v3_ii_plugin import DeepFilterNetV3IIPlugin
 
             return DeepFilterNetV3IIPlugin()
         except Exception as _e:
             logger.debug("Verarbeitungsschritt_66: DFN nicht verfügbar: %s", _e)
+        try:
+            from plugins.whisper_denoiser_plugin import get_whisper_denoiser_plugin
+
+            _wd = get_whisper_denoiser_plugin()
+            if _wd.is_loaded:
+                logger.info("Verarbeitungsschritt_66 §v10.20: Whisper-Denoiser als ML-Fallback aktiv")
+                return _wd
+            logger.debug("Verarbeitungsschritt_66: Whisper-Denoiser nicht geladen — OMLSA-Fallback")
+        except Exception as _we:
+            logger.debug("Verarbeitungsschritt_66: Whisper-Denoiser nicht verfügbar: %s", _we)
         return None
 
     # ------------------------------------------------------------------

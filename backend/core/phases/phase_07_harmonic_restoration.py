@@ -741,6 +741,52 @@ class HarmonicRestorationPhase(PhaseInterface):
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("§C5 DDSP-Inversion uebersprungen (nicht blockierend): %s", _ddsp_exc)
 
+        # §v10.300 ML Harmonic Inpainting (selbst trainiertes DiT-Finetune, Rectified Flow).
+        # Compliance: §G88 (ML nur depth≤4, sonst DSP), §G101 (perceptual_blend
+        # statt skalarem Blend), §G136 (deterministische Inferenz), §G104
+        # (JND-Gate greift zentral in UV3 nach der Phase).
+        _additive_scale = 1.0
+        if _effective_strength >= 0.3 and not _flashsr_applied and not _is_fc_pass:
+            try:
+                _depth_07 = int(kwargs.get("transfer_chain_depth", kwargs.get("_transfer_depth", 1)) or 1)
+                if _depth_07 <= 4:
+                    from plugins.harmonic_inpainting_plugin import get_harmonic_inpainting_plugin
+
+                    _hp = get_harmonic_inpainting_plugin()
+                    _ml_enhanced = _hp.enhance(_mono, sample_rate)
+                    if _ml_enhanced is not None and np.all(np.isfinite(_ml_enhanced)):
+                        from backend.core.dsp.perceptual_blend import perceptual_blend
+
+                        _blended = perceptual_blend(
+                            _mono,
+                            _ml_enhanced,
+                            sample_rate,
+                            scalar_wet=float(np.clip(params["blend"] * 0.5, 0.0, 0.35)),
+                        )
+                        _delta = _blended - _mono
+                        if audio.ndim == 2:
+                            _sqrt2 = np.sqrt(2.0)
+                            _mid07 = (audio[:, 0] + audio[:, 1]) / _sqrt2
+                            _side07 = (audio[:, 0] - audio[:, 1]) / _sqrt2
+                            _mid07 = np.clip(_mid07 + _delta, -1.0, 1.0)
+                            audio = np.column_stack(
+                                [(_mid07 + _side07) / _sqrt2, (_mid07 - _side07) / _sqrt2]
+                            )
+                        else:
+                            audio = np.clip(audio + _delta, -1.0, 1.0)
+                        _mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio
+                        # DSP-Additiv-Synthese halbieren: ML hat Obertöne bereits rekonstruiert
+                        _additive_scale = 0.5
+                        logger.info(
+                            "Verarbeitungsschritt_07 §v10.300: ML Harmonic Inpainting angewendet (depth=%d)",
+                            _depth_07,
+                        )
+            except Exception as _hp_exc:
+                logger.debug(
+                    "Verarbeitungsschritt_07 §v10.300 ML-Inpainting nicht verfuegbar — DSP-Synthese bleibt: %s",
+                    _hp_exc,
+                )
+
         # Step 2: Apply multi-mode saturation — §2.51 M/S: harmonics only on Mid channel.
         if audio.ndim == 2:
             # M/S encode: Mid = (L+R)/√2, Side = (L-R)/√2
@@ -752,7 +798,7 @@ class HarmonicRestorationPhase(PhaseInterface):
             _harmonics_mid = self._extract_harmonics(_saturated_mid, _mid, params)
             # Additive synthesis on Mid only
             additive = self._synthesize_missing_overtones(_mono, f0_info, params)
-            fill_gain = float(params["blend"]) * 0.40
+            fill_gain = float(params["blend"]) * 0.40 * _additive_scale
             # Blend harmonics into Mid, keep Side intact
             _out_mid = _mid + _harmonics_mid * params["blend"] + fill_gain * additive
             # M/S decode back to L/R
@@ -775,7 +821,7 @@ class HarmonicRestorationPhase(PhaseInterface):
             # Step 4: Blend with original (parallel processing)
             restored = audio + harmonics * params["blend"]
             # Fill-in missing overtones at 40 % of saturation blend (conservative)
-            fill_gain = float(params["blend"]) * 0.40
+            fill_gain = float(params["blend"]) * 0.40 * _additive_scale
             restored += fill_gain * additive
 
         # Step 5: Safety clip (no peak normalization)

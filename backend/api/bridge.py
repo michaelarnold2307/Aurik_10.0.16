@@ -3726,6 +3726,16 @@ def mark_crash_reports_seen() -> None:
         pass
 
 
+def install_crash_handler() -> None:
+    """Installiert den globalen Exception-Hook (Spec 08 §11: UI via Bridge)."""
+    try:
+        from backend.core.crash_reporter import install_crash_handler as _install
+
+        _install()
+    except Exception:
+        pass
+
+
 def get_guard_report(result: object) -> dict:
     """Guard-Telemetrie (4-Schicht) + UTMOS-Loop aus einem Restorations-Ergebnis.
 

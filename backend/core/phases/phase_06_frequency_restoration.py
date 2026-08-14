@@ -1209,6 +1209,79 @@ class FrequencyRestorationPhase(PhaseInterface):
             except Exception as _nvsr_exc:
                 logger.warning("Verarbeitungsschritt 06: NVSR-Fehler → FlashSR-Ersatzpfad: %s", _nvsr_exc)
 
+        # ── BW-v5-Pfad (§v10.19 L1: selbst trainiertes Mel-U-Net, deterministisch) ──
+        # Greift, wenn der deterministische NVSR-Weg nicht verfügbar oder fehlgeschlagen
+        # ist — VOR dem diffusiven FlashSR-Fallback, weil BW-v5 NVSR-Charakter hat
+        # (deterministische Bandbreiten-Rekonstruktion, kein Diffusion-Halluzinieren).
+        # §G101/§G104/§8.2: hybrid_ml_apply als perzeptuelle Blend-Naht.
+        if _use_nvsr:
+            try:
+                from plugins.bw_reconstructor_plugin import BWReconstructorStage
+
+                _bw_stage_06 = BWReconstructorStage(cutoff_hz=None, blend_strength=0.85)
+                if _bw_stage_06.available:
+                    # Plugin erwartet channels-first [2, N]; Phase läuft channels-last [N, 2]
+                    _bw_in_06 = dsp_restored
+                    _bw_was_cf_06 = dsp_restored.ndim == 2 and dsp_restored.shape[1] == 2
+                    if _bw_was_cf_06:
+                        _bw_in_06 = dsp_restored.T.copy()
+                    _bw_res_06 = _bw_stage_06.process(
+                        _bw_in_06,
+                        self.sample_rate,
+                        cutoff_hz=_rolloff_hz_routing,
+                        blend_strength=0.85,
+                    )
+                    _bw_audio_06 = np.asarray(_bw_res_06.get("audio", _bw_in_06), dtype=np.float32)
+                    if _bw_was_cf_06 and _bw_audio_06.ndim == 2:
+                        _bw_audio_06 = _bw_audio_06.T
+                    if _bw_audio_06.shape != dsp_restored.shape:
+                        logger.debug(
+                            "Verarbeitungsschritt 06: BW-v5 Shape-Mismatch (%s vs %s) → FlashSR-Ersatzpfad",
+                            _bw_audio_06.shape,
+                            dsp_restored.shape,
+                        )
+                    else:
+                        # §v10.19 HF-Akzeptanz-Gate: v5 wurde auf synthetischen Daten
+                        # trainiert, die oberhalb des Cutoffs fast keinen Inhalt hatten —
+                        # das Modell darf NUR übernommen werden, wenn es nachweislich
+                        # HF-Energie hinzufügt (§G88: keine ungeprüfte ML-Inferenz).
+                        _hf_dsp_06 = self._measure_hf_energy(dsp_restored, float(_rolloff_hz_routing))
+                        _hf_bw_06 = self._measure_hf_energy(_bw_audio_06, float(_rolloff_hz_routing))
+                        if _hf_bw_06 < _hf_dsp_06 * 1.02:
+                            logger.info(
+                                "Verarbeitungsschritt 06: BW-v5 abgelehnt (HF-Gain %.2fx < 1.02) → FlashSR/DSP",
+                                _hf_bw_06 / max(_hf_dsp_06, 1e-12),
+                            )
+                        else:
+                            from backend.core.dsp.hybrid_ml_blend import hybrid_ml_apply
+
+                            _bw_blended_06 = hybrid_ml_apply(
+                                dsp_restored,
+                                _bw_audio_06,
+                                self.sample_rate,
+                                scalar_wet=0.85,
+                                material_type=str(material_type),
+                            )
+                            _bw_meta_06 = _bw_res_06.get("metadata", {}) if isinstance(_bw_res_06, dict) else {}
+                            logger.info(
+                                "Verarbeitungsschritt 06: BW-v5 aktiv (rolloff=%.0f Hz, HF-Gain=%.2fx, cutoff_est=%.0f Hz)",
+                                _rolloff_hz_routing,
+                                _hf_bw_06 / max(_hf_dsp_06, 1e-12),
+                                float(_bw_meta_06.get("estimated_cutoff_hz", 0.0)),
+                            )
+                            return _bw_blended_06, {
+                                "ml_hybrid_available": True,
+                                "nvsr_available": False,
+                                "quality_mode": quality_mode,
+                                "strategy_used": "bw_v5",
+                                "bw_v5_cutoff_hz": _bw_meta_06.get("estimated_cutoff_hz", 0.0),
+                                "bw_v5_applied_cutoff_hz": _bw_meta_06.get("applied_cutoff_hz", 0.0),
+                                "bw_v5_blend_strength": _bw_meta_06.get("blend_strength", 0.85),
+                                "bw_v5_hf_gain": round(_hf_bw_06 / max(_hf_dsp_06, 1e-12), 3),
+                            }
+            except Exception as _bw_exc:
+                logger.debug("Verarbeitungsschritt 06: BW-v5 nicht verfügbar → FlashSR-Ersatzpfad: %s", _bw_exc)
+
         # ── FlashSR-Pfad (0–8 kHz: Shellac/Wax oder NVSR-Fallback) ──────────
         if _get_flashsr_plugin is None:
             return dsp_restored, {

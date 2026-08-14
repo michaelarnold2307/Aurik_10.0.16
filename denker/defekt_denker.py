@@ -93,8 +93,6 @@ class DefektErgebnis:
     """Wahrscheinlichste Ursache (z. B. 'tape_hiss')."""
 
     confidence: float
-    # §v10.220: Consensus-Manifest der DefectConsensusPipeline (30 Module)
-    _consensus_manifest: Any | None = None
     """Konfidenz der Ursachen-Aussage ∈ [0, 1]."""
 
     material_context: str
@@ -105,6 +103,9 @@ class DefektErgebnis:
 
     reasoning: str
     """Kausal-Begründung (laienverständlich)."""
+
+    # §v10.220: Consensus-Manifest der DefectConsensusPipeline (30 Module)
+    _consensus_manifest: Any | None = None
 
     overall_severity: float = 0.0
     """Mittlere Defekt-Schwere ∈ [0, 1]."""

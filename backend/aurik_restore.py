@@ -178,7 +178,16 @@ def restaurierung(audio: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
 
     logger.info("[3] Restaurierung...")
     audio, sr = ensure_sr(audio, sr, 48000)
-    audio = enhance_audio(audio, sr)
+    _dry = np.asarray(audio, dtype=np.float32).copy()
+    _wet = enhance_audio(audio, sr)
+    # §v10.101 Hybrid-Naht: DFN (ML) auf DSP-Basis nur perzeptuell geblendet
+    # (JND-Gate + Bark-Blend + Energie-Guard — §G101/§G104/§8.2).
+    if _wet is not None and np.asarray(_wet).shape == _dry.shape:
+        from backend.core.dsp.hybrid_ml_blend import hybrid_ml_apply
+
+        audio = hybrid_ml_apply(_dry, np.asarray(_wet, dtype=np.float32), sr, scalar_wet=0.9)
+    else:
+        audio = _wet if _wet is not None else _dry
     # NaN/Inf-Guard am Ausgang (§3.1)
     audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
     audio = np.clip(audio, -1.0, 1.0)
@@ -195,8 +204,17 @@ def reparatur(audio: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
 
     logger.info("[4] Reparatur...")
     audio, sr = ensure_sr(audio, sr, 48000)
+    _dry_r4 = np.asarray(audio, dtype=np.float32).copy()
     plugin = DiffwavePlugin()
-    audio = plugin.inpaint(audio, sr, mask=None)
+    _wet_r4 = plugin.inpaint(audio, sr, mask=None)
+    # §v10.101 Hybrid-Naht: DiffWave-Inpainting (ML) perzeptuell geblendet —
+    # nur hörbare Gap-Rekonstruktionen werden übernommen (§G101/§G104/§8.2).
+    if _wet_r4 is not None and np.asarray(_wet_r4).shape == _dry_r4.shape:
+        from backend.core.dsp.hybrid_ml_blend import hybrid_ml_apply
+
+        audio = hybrid_ml_apply(_dry_r4, np.asarray(_wet_r4, dtype=np.float32), sr, scalar_wet=1.0)
+    else:
+        audio = _wet_r4 if _wet_r4 is not None else _dry_r4
     # NaN/Inf-Guard am Ausgang (§3.1)
     audio = np.nan_to_num(audio, nan=0.0, posinf=0.0, neginf=0.0)
     audio = np.clip(audio, -1.0, 1.0)

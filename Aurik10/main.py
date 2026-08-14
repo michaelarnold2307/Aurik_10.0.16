@@ -34,7 +34,8 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
-os.environ["MIOPEN_LOG_LEVEL"] = "1"
+# Release-Start: Framework-Warnungen ohne Nutzerwert ausblenden (§release_invariants).
+os.environ.setdefault("MIOPEN_LOG_LEVEL", "1")
 
 # Release-Start: bekannte Framework-Hinweise ohne Nutzerwert ausblenden.
 warnings.filterwarnings(
@@ -190,7 +191,7 @@ def _enable_crash_forensics() -> None:
     # landen sonst nur unsichtbar in stderr. Ohne diesen Hook ist der
     # Crash-Reporter toter Code für die GUI.
     try:
-        from backend.core.crash_reporter import install_crash_handler
+        from backend.api.bridge import install_crash_handler
 
         install_crash_handler()
     except Exception as exc:
