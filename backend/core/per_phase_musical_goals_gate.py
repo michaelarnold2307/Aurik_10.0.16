@@ -1819,8 +1819,6 @@ FAST_GOALS_SUBSET: list[str] = [
     "micro_dynamics",
     "separation_fidelity",
     "artikulation",
-    # §v10.15: Listening Fatigue — misst Hörermüdung
-    "listening_fatigue",
 ]
 
 
