@@ -153,6 +153,20 @@ def _is_localized_change(pre: np.ndarray, post: np.ndarray, max_fraction: float 
         return False
 
 
+def _get_protection():
+    """§v10.998: Zentraler Kalibrierungs-Zugriff für das Schutznetz (§V25–§V28).
+
+    §V28: Scheitert die Kalibrierung, wird das explizit geloggt.
+    """
+    try:
+        from backend.core.calibrated_constants import get_protection_calibration
+
+        return get_protection_calibration()
+    except Exception as exc:
+        log.warning("uncalibrated fallback: protection-calibration=%s — §v10.998-Defaults aktiv", exc)
+        return None
+
+
 def _spectral_damage_db(pre: np.ndarray, post: np.ndarray, sr: int) -> float:
     """§v10.998: Mittlere absolute Band-Energie-Abweichung (log-Bänder).
 
@@ -361,6 +375,13 @@ class RepairPlanner:
       5. Harmonic Inpainting IMMER als letzter Schritt
     """
 
+    def __init__(self) -> None:
+        # §v10.998: Schwellwerte aus der zentralen Kalibrierung (§V25–§V28)
+        _prot = _get_protection()
+        self._sev_min = float(getattr(_prot, "defect_severity_min", 0.05))
+        self._strength_floor = float(getattr(_prot, "repair_strength_floor", 0.25))
+        self._confidence_floor = float(getattr(_prot, "repair_confidence_floor", 0.30))
+
     def plan(self, manifest: Any, audio_length: int, metadata: Optional[dict] = None) -> RepairPlan:
         """
         Erstellt einen Reparatur-Plan aus einem Defect Manifest.
@@ -388,8 +409,9 @@ class RepairPlanner:
             # §v10.998: Null-Schwere-Fehlalarme dürfen keine Phasen triggern.
             # (Diagnose: severity 0.00 auf hum-freiem Hip-Hop → Phase 02 lief
             # mit voller Stärke und kollabierte das Signal um 62 dB.)
+            # Schwelle aus der zentralen Kalibrierung (§V25–§V28).
             _sev = float(getattr(d, 'severity', 0.5) or 0.0)
-            if _sev < 0.05:
+            if _sev < self._sev_min:
                 continue
             cat_str = cat.value if hasattr(cat, 'value') else str(cat)
             mapping = DEFECT_TO_PHASE.get(cat_str)
@@ -442,10 +464,11 @@ class RepairPlanner:
                     # §v10.998: Stärke-Boden — das Severity-Modell meldet
                     # systematisch zu niedrige Werte (Gesamtmessung: 4 Phasen
                     # liefen mit strength ≈ 0.03 und taten NICHTS). Bei
-                    # erkannter Defekt-Lage (conf > 0.3) greift ein Boden von
-                    # 0.25 — die Phase muss WIRKEN können.
+                    # erkannter Defekt-Lage greift ein Boden aus der zentralen
+                    # Kalibrierung — die Phase muss WIRKEN können.
                     "strength": float(max(
-                        avg_severity * avg_confidence, 0.25 if avg_confidence > 0.3 else 0.0
+                        avg_severity * avg_confidence,
+                        self._strength_floor if avg_confidence > self._confidence_floor else 0.0,
                     )),
                     "confidence": float(avg_confidence),
                     "defect_count": len(phase_defect_list),
@@ -609,8 +632,9 @@ class CoordinatedRepair:
 
         # §v10.998: Kumulativer Spektral-Guard — Vergleichs-Basis ist der
         # SESSION-INPUT, nicht nur der vorherige Schritt. Hum-Messung:
-        # 8 Phasen schädigten je < 9 dB (kein Einzel-Revert), kumulativ
-        # aber −53 dB. Diese Schleife bricht bei kumulativer Zerstörung ab.
+        # 8 Phasen schädigten je < Schwelle (kein Einzel-Revert), kumulativ
+        # aber massiv. Schwelle aus der zentralen Kalibrierung (§V25–§V28).
+        _prot = _get_protection()
         _session_audio = current_audio.copy()
 
         # §v10.990: Telemetrie-Akkumulatoren für den RepairReport
@@ -681,7 +705,7 @@ class CoordinatedRepair:
                 if _changed:
                     _rms_in = float(np.sqrt(np.mean(np.square(_audio_pre))) + 1e-12)
                     _rms_out = float(np.sqrt(np.mean(np.square(current_audio))) + 1e-12)
-                    if _rms_out < _rms_in * 0.25:
+                    if _rms_out < _rms_in * float(getattr(_prot, "energy_collapse_ratio", 0.25)):
                         current_audio = _audio_pre
                         _guard_violations["energy_collapse"] = _guard_violations.get("energy_collapse", 0) + 1
                         log.warning(
@@ -695,9 +719,12 @@ class CoordinatedRepair:
                         # Kriterium: mittlere absolute Band-Energie-Abweichung in
                         # 10 log-Beabständeten Bändern > 9 dB → Revert.
                         # LOKALE Reparaturen (Dropout/Klick) sind ausgenommen.
-                        if not _is_localized_change(_audio_pre, current_audio):
+                        if not _is_localized_change(
+                            _audio_pre, current_audio,
+                            float(getattr(_prot, "localized_change_fraction", 0.10)),
+                        ):
                             _spec_damage = _spectral_damage_db(_audio_pre, current_audio, sample_rate)
-                            if _spec_damage > 9.0:
+                            if _spec_damage > float(getattr(_prot, "spectral_damage_step_db", 9.0)):
                                 current_audio = _audio_pre
                                 _guard_violations["spectral_damage"] = _guard_violations.get("spectral_damage", 0) + 1
                                 log.warning(
@@ -755,15 +782,18 @@ class CoordinatedRepair:
         # Session-Input. Kriterium: ≥ 3 log-Bänder mit > 12 dB Abweichung
         # (fängt frequenz-lokalisierte Zerstörung wie die Hum-Notch-Kette).
         # Lokale Reparaturen sind ausgenommen.
-        if not _is_localized_change(_session_audio, current_audio):
+        if not _is_localized_change(
+            _session_audio, current_audio,
+            float(getattr(_prot, "localized_change_fraction", 0.10)),
+        ):
             # §v10.998: Summen-Kriterium — die Hum-Kette verteilt Schaden
-            # breitbandig (viele Bänder je 5-10 dB); eine reine Band-Zählung
-            # (> 12 dB je Band) verfehlt das. Summe der Band-Abweichungen
-            # > 30 dB = Zerstörung.
+            # breitbandig; eine reine Band-Zählung mit hoher Schwelle verfehlt
+            # das. Schwelle und Bandzahl aus der zentralen Kalibrierung.
             _cum_sum = _spectral_bands_over_db(
-                _session_audio, current_audio, sample_rate, threshold_db=4.0
+                _session_audio, current_audio, sample_rate,
+                threshold_db=float(getattr(_prot, "spectral_band_delta_db", 4.0)),
             )
-            if _cum_sum >= 6:
+            if _cum_sum >= int(getattr(_prot, "spectral_bands_over_min", 6)):
                 _guard_violations["cumulative_spectral"] = _guard_violations.get("cumulative_spectral", 0) + 1
                 current_audio = _session_audio
                 log.warning(
@@ -1135,8 +1165,10 @@ class CoordinatedRepair:
         Zischlaut-Befunde haben hörbar höhere Confidence; unter 0.4 wird
         übersprungen (Primum non nocere).
         """
-        if float(step.parameters.get("confidence", 0.0) or 0.0) < 0.4:
-            log.info("De-Esser übersprungen (§v10.998: Sibilanz-Confidence %.2f < 0.4)",
+        if float(step.parameters.get("confidence", 0.0) or 0.0) < float(
+            getattr(_get_protection(), "sibilance_confidence_min", 0.40)
+        ):
+            log.info("De-Esser übersprungen (§v10.998: Sibilanz-Confidence %.2f < kalibrierter Schwelle)",
                      float(step.parameters.get("confidence", 0.0) or 0.0))
             return audio
         try:

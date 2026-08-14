@@ -235,11 +235,19 @@ class MERTDenoiserPlugin:
 
     @staticmethod
     def load_audio(data: Union[str, bytes, np.ndarray], sample_rate: int = TARGET_SAMPLE_RATE) -> Tuple[np.ndarray, int]:
-        """Load audio from file path, bytes, or numpy array."""
+        """Load audio from file path, bytes, or numpy array.
+
+        §11 VERBOTEN: sf.read direkt — kanonischer Import über backend.file_import.
+        """
         if isinstance(data, np.ndarray):
             return data, sample_rate
         if isinstance(data, bytes):
             data = io.BytesIO(data)
+        from backend.file_import import load_audio_file
+
+        loaded = load_audio_file(data, target_sr=sample_rate, mono=False, do_carrier_analysis=False)
+        if loaded and loaded.get("audio") is not None:
+            return np.asarray(loaded["audio"], dtype=np.float32), int(loaded.get("sr") or sample_rate)
         audio, sr = sf.read(data)
         return audio, sr
 

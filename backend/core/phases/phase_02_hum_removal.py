@@ -717,11 +717,17 @@ class HumRemovalPhase(PhaseInterface):
                 initial_hum_energy += self._measure_hum_at_freq(audio, harmonic_freq)  # type: ignore[assignment]
 
         # §v10.998: Hum-Budget — die Notch-Kette darf NIE mehr Band-Energie
-        # entfernen als der Hum selbst (×1.5 Sicherheitsfaktor). Überschreitet
-        # die kumulierte Entfernung das Budget, wird abgebrochen und das
-        # Ergebnis zurückgemischt. Damit ist Hum-Entfernung mathematisch
-        # daran gebunden, was tatsächlich an Hum vorhanden ist.
-        hum_budget = initial_hum_energy * 1.5 + 1e-12
+        # entfernen als der Hum selbst (×Faktor aus der zentralen Kalibrierung,
+        # §V25–§V28). Überschreitet die kumulierte Entfernung das Budget, wird
+        # abgebrochen und das Ergebnis zurückgemischt.
+        try:
+            from backend.core.calibrated_constants import get_protection_calibration
+
+            _pcal = get_protection_calibration()
+        except Exception as _pe:
+            logger.warning("uncalibrated fallback: hum-budget — %s", _pe)
+            _pcal = None
+        hum_budget = initial_hum_energy * float(getattr(_pcal, "hum_budget_factor", 1.5)) + 1e-12
         removed_energy = 0.0
 
         # Apply notch filter for each harmonic
@@ -735,17 +741,16 @@ class HumRemovalPhase(PhaseInterface):
                 # §v10.998: Band-Dominanz — Hum dominiert nur, wenn die
                 # Schmalband-Energie (±2 Hz) den Großteil der Umgebungs-Energie
                 # (±20 Hz) ausmacht. Musik im Band (Jazz-Bass bei 100/200 Hz)
-                # senkt die Ratio unter 0.7 → nur 25% Tiefe.
+                # senkt die Ratio → nur reduzierte Tiefe (zentral kalibriert).
                 _narrow = self._measure_hum_at_freq(audio, harmonic_freq)
                 _wide = self._measure_band_energy_at(audio, harmonic_freq, 20.0)
-                _dominant = _narrow / (_wide + 1e-12) > 0.7
+                _dominant = _narrow / (_wide + 1e-12) > float(getattr(_pcal, "hum_dominance_ratio", 0.7))
 
                 if is_musical or not _dominant:
                     # §v10.998: Musik im Band ODER Hum dominiert nicht →
-                    # sanfte Tiefe (vorher volle Tiefe — die Notch-Kette
-                    # entfernte den Jazz-Bass komplett, −65 dB SNR).
+                    # sanfte Tiefe aus der zentralen Kalibrierung.
                     q_effective = params["q_factor"] * params["side_chain_ratio"]
-                    depth = 0.25
+                    depth = float(getattr(_pcal, "hum_musical_depth", 0.25))
                 else:
                     # Hum dominiert das Band → volle Tiefe
                     q_effective = params["q_factor"]

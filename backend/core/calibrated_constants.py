@@ -395,6 +395,146 @@ _ANALOG_MATERIALS: frozenset[str] = frozenset(
 _GDD_BASE_MS = 5.0  # 5ms: minimale STFT-Gruppenlaufzeit bei 48kHz/2048
 _GDD_SPECTRAL_BASE_MS = 10.0  # 10ms: NR-Phasen entfernen Rausch-Phaseninhalt
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# §v10.998: Schutznetz-Kalibrierung — kontinuierliche Funktionen statt
+# hartcodierter Schwellwerte (§V25–§V28 Kalibrierungs-Hoheit)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _rs01(cal: "CalibratedConstants") -> float:
+    """Restorability 0–100 auf 0.0–1.0 (kontinuierlich)."""
+    return float(np.clip(cal.restorability_score, 0.0, 100.0) / 100.0)
+
+
+class _ProtectionCalibration:
+    """§v10.998: Alle Schutznetz-Schwellwerte — EIN zentraler Ort.
+
+    Jede Schwelle ist eine kontinuierliche Funktion des CalibrationContext
+    (restorability_score, transfer_chain_depth, material_type) — KEINE
+    diskreten Stützstellen, KEINE hartcodierten Werte im Code (§V25–§V28).
+    """
+
+    def __init__(self, cal: CalibratedConstants):
+        self._cal = cal
+
+    @property
+    def defect_severity_min(self) -> float:
+        """Planner-Gate: Unterhalb dieser Schwere triggert ein Befund keine Phase.
+
+        Gutes Material (hohe Restorability) braucht konservativere Befunde:
+        kontinuierlich von 0.03 (rs=0) bis 0.08 (rs=100).
+        """
+        rs01 = _rs01(self._cal)
+        return float(0.03 + 0.05 * rs01)
+
+    @property
+    def repair_strength_floor(self) -> float:
+        """Stärke-Boden: erkannte Defekte müssen WIRKEN können.
+
+        Tiefe Ketten (mehr Vorschädigung) erlauben mehr Eingriff:
+        0.20 + depth×0.05, geklammert auf [0.20, 0.45].
+        """
+        depth = max(1, int(self._cal.transfer_chain_depth))
+        return float(np.clip(0.20 + depth * 0.05, 0.20, 0.45))
+
+    @property
+    def repair_confidence_floor(self) -> float:
+        """Confidence-Schwelle, ab der der Stärke-Boden greift.
+
+        Schlechtes Material toleriert unsicherere Befunde:
+        0.35 − 0.15×rs01, geklammert auf [0.20, 0.35].
+        """
+        return float(np.clip(0.35 - 0.15 * _rs01(self._cal), 0.20, 0.35))
+
+    @property
+    def energy_collapse_ratio(self) -> float:
+        """RMS-Ausgang < Verhältnis×RMS-Eingang → Revert.
+
+        Konservativer auf gutem Material: 0.20 + 0.15×rs01 (0.20…0.35).
+        """
+        return float(0.20 + 0.15 * _rs01(self._cal))
+
+    @property
+    def spectral_damage_step_db(self) -> float:
+        """Per-Schritt-Spektral-Guard: Median der Band-Abweichung > Schwelle → Revert.
+
+        Gutes Material verträgt weniger: 10.0 − 4.0×rs01 (6.0…10.0 dB).
+        """
+        return float(10.0 - 4.0 * _rs01(self._cal))
+
+    @property
+    def spectral_band_delta_db(self) -> float:
+        """Kumulativer Guard: Band-Abweichung pro Band.
+
+        Konservativer auf gutem Material: 5.0 − 2.0×rs01 (3.0…5.0 dB).
+        """
+        return float(5.0 - 2.0 * _rs01(self._cal))
+
+    @property
+    def spectral_bands_over_min(self) -> int:
+        """Kumulativer Guard: Anzahl Bänder über der Schwelle → Revert.
+
+        Tiefe Ketten erlauben mehr verteilte Änderung: 5 + depth (5…9).
+        """
+        return int(5 + max(1, int(self._cal.transfer_chain_depth)))
+
+    @property
+    def localized_change_fraction(self) -> float:
+        """Lokalitäts-Kriterium: < Anteil der Samples trägt 90% der Änderung."""
+        depth = max(1, int(self._cal.transfer_chain_depth))
+        return float(np.clip(0.08 + depth * 0.01, 0.08, 0.15))
+
+    @property
+    def sibilance_confidence_min(self) -> float:
+        """De-Esser-Gate: minimale Sibilanz-Confidence.
+
+        Analog-Material (echte Zischlaute) toleriert weniger: 0.45 − 0.10×rs01
+        minus 0.05 für Analogträger.
+        """
+        val = 0.45 - 0.10 * _rs01(self._cal)
+        if str(self._cal.material_type).lower() in _ANALOG_MATERIALS:
+            val -= 0.05
+        return float(np.clip(val, 0.30, 0.45))
+
+    @property
+    def hum_budget_factor(self) -> float:
+        """Hum-Budget: max. Entfernung = Faktor × gemessene Hum-Energie.
+
+        Konservativer auf gutem Material: 1.8 − 0.6×rs01 (1.2…1.8).
+        """
+        return float(1.8 - 0.6 * _rs01(self._cal))
+
+    @property
+    def hum_musical_depth(self) -> float:
+        """Notch-Tiefe, wenn Musik im Band liegt.
+
+        Schlechtes Material verträgt mehr: 0.15 + 0.15×(1−rs01) (0.15…0.30).
+        """
+        return float(0.15 + 0.15 * (1.0 - _rs01(self._cal)))
+
+    @property
+    def hum_dominance_ratio(self) -> float:
+        """Band-Dominanz: Schmalband/Umgebung > Ratio → Hum dominiert.
+
+        Kontinuierlich 0.65…0.80 (tiefe Ketten: lockerer).
+        """
+        depth = max(1, int(self._cal.transfer_chain_depth))
+        return float(np.clip(0.65 + depth * 0.03, 0.65, 0.80))
+
+
+_protection_cache: dict[int, _ProtectionCalibration] = {}
+
+
+def get_protection_calibration(cal: CalibratedConstants | None = None) -> _ProtectionCalibration:
+    """§v10.998: Zentraler Zugriff auf die Schutznetz-Kalibrierung.
+
+    Alle Guards (CoordinatedRepair, Planner, Phasen) beziehen ihre
+    Schwellwerte AUSSCHLIESSLICH hieraus — §V27 kein Kalibrierungs-Silo.
+    """
+    if cal is None:
+        cal = get_constants()
+    return _ProtectionCalibration(cal)
+
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Thread-lokaler Cache
