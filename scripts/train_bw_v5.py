@@ -41,7 +41,12 @@ _NOTES = np.array([130.81, 164.81, 196.00, 220.00, 261.63, 329.63, 392.00, 523.2
 
 
 def make_synthetic(n_samples, sr):
-    """Generate rich audio: harmonics + transients + noise."""
+    """Generate rich audio: harmonics + transients + noise + HF-Layer.
+
+    §v10.19-Fix: Frühere Versionen erzeugten oberhalb der Trainings-Cutoffs
+    (3000–11000 Hz) fast keinen Inhalt — das Modell lernte dort Stille statt
+    Rekonstruktion. Der HF-Layer garantiert rekonstruierbare Ziele > 8 kHz.
+    """
     t = np.arange(n_samples, dtype=np.float64) / sr
     y = np.zeros(n_samples, dtype=np.float64)
 
@@ -51,6 +56,14 @@ def make_synthetic(n_samples, sr):
         for h in range(1, np.random.randint(2, 8)):
             amp = 0.4 / (h ** np.random.uniform(0.5, 1.5))
             y += amp * np.sin(2 * np.pi * f0 * h * t + np.random.uniform(0, 2 * np.pi))
+
+    # HF-Layer (§v10.19): echte Ziele oberhalb der Cutoffs (8–11 kHz),
+    # damit 8000/11000-Hz-Bandbegrenzungen rekonstruierbaren Inhalt haben.
+    for _ in range(np.random.randint(2, 5)):
+        _f_hf = np.random.uniform(8_000, 10_900)
+        _a_hf = np.random.uniform(0.02, 0.10)
+        _k = np.random.uniform(1.0, 2.5)  # leichte Inharmonizität
+        y += _a_hf * np.sin(2 * np.pi * _f_hf * _k * t + np.random.uniform(0, 2 * np.pi))
 
     # Transients (drum-like)
     for _ in range(np.random.randint(0, 3)):
@@ -240,6 +253,27 @@ def mr_stft_loss(pred_wave, target_wave):
     return loss / 6.0  # Average over 6 combinations
 
 
+def hf_band_loss(pred_wave, target_wave, cutoff_hz=8000.0, sr=SR):
+    """Hochband-Loss (§v10.19): erzwingt HF-Rekonstruktion über cutoff_hz.
+
+    Ohne diesen Term wird die Loss vom dominanten Tief-/Mittelband bestimmt —
+    das Modell lernt, den fainten HF-Anteil zu ignorieren (HF-Gain-Gate schlug
+    mit 0.21x fehl). Maskiert alle STFT-Bins > cutoff und gewichtet sie hart.
+    """
+    n_fft = 1024
+    hop = n_fft // 4
+    win = torch.hann_window(n_fft, device=pred_wave.device)
+    pred_spec = torch.stft(pred_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
+                           window=win, return_complex=True)
+    target_spec = torch.stft(target_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
+                             window=win, return_complex=True)
+    freqs = torch.fft.rfftfreq(n_fft, 1 / sr).to(pred_wave.device)
+    mask = (freqs > cutoff_hz).float().unsqueeze(-1)  # [F, 1]
+    pred_hf = pred_spec.abs() * mask
+    target_hf = target_spec.abs() * mask
+    return F.mse_loss(pred_hf, target_hf)
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Training
 # ═══════════════════════════════════════════════════════════════════════════
@@ -316,7 +350,8 @@ def train(epochs=200, batch_size=4, lr=1e-4, base_ch=32, steps_per_epoch=200):
 
             loss_wave = F.l1_loss(pred, y)
             loss_stft = mr_stft_loss(pred, y)
-            loss = loss_wave + 0.5 * loss_stft
+            loss_hf = hf_band_loss(pred, y, cutoff_hz=8000.0)  # §v10.19: HF-Rekonstruktion erzwingen
+            loss = loss_wave + 0.5 * loss_stft + 6.0 * loss_hf
 
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)

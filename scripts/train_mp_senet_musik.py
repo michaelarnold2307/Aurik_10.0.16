@@ -94,17 +94,25 @@ def load_mpnet(device):
 
     model = MPNet(H()).to(device)
 
-    # Try loading pre-trained weights from ONNX companion checkpoint
-    pretrained = _PROJECT / "models" / "mp_senet" / "best_ckpt" / "g_01000000"
-    if pretrained.exists():
-        print(f"Loading pre-trained weights from {pretrained}")
-        state = torch.load(pretrained, map_location=device, weights_only=True)
-        if "generator" in state:
-            state = state["generator"]
-        model.load_state_dict(state, strict=False)
+    # Try loading pre-trained weights from ONNX companion checkpoint.
+    # §v10.19-Fix: Offizielle MP-SENet-Releases heißen g_best_dns (DNS-Pretrained)
+    # bzw. g_best_vb (VoiceBank) — „g_01000000" existierte hier nie, wodurch das
+    # Finetune stillschweigend von Scratch lief.
+    _pretrained_candidates = [
+        _PROJECT / "models" / "mp_senet" / "best_ckpt" / "g_best_dns",
+        _PROJECT / "models" / "mp_senet" / "best_ckpt" / "g_best_vb",
+        _PROJECT / "models" / "mp_senet" / "best_ckpt" / "g_01000000",
+    ]
+    for pretrained in _pretrained_candidates:
+        if pretrained.exists():
+            print(f"Loading pre-trained weights from {pretrained}")
+            state = torch.load(pretrained, map_location=device, weights_only=True)
+            if "generator" in state:
+                state = state["generator"]
+            model.load_state_dict(state, strict=False)
+            break
     else:
         print("WARNING: No pre-trained checkpoint found — training from scratch")
-        print(f"  Expected: {pretrained}")
 
     return model
 
@@ -238,7 +246,8 @@ def train(epochs=100, batch_size=8, lr=3e-5, steps_per_epoch=200, resume=None):
                 optimizer.step()
             else:
                 enh_mag, enh_pha, enh_com = model(mag_n, pha_n)
-                spectral_loss(enh_mag, mag_c, enh_com, com_c).backward()
+                loss = spectral_loss(enh_mag, mag_c, enh_com, com_c)  # §v10.19-Fix: loss zuweisen (CPU-Pfad)
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 2.0)
                 optimizer.step()
 

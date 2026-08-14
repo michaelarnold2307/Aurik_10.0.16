@@ -38,6 +38,37 @@ sys.path.insert(0, str(_PROJECT))
 sys.path.insert(0, str(_PROJECT / "models" / "sgmse_plus"))
 
 
+# §v10.19-Fix: Offline-Lightning-Stub. Die SGMSE+-Release-Checkpoints sind
+# PyTorch-Lightning-Dateien, deren Unpickling `pytorch_lightning` referenziert.
+# Die venv-torchvision ist ROCm-inkompatibel (zirkulärer Import) — für die
+# reine state_dict-Extraktion genügen Platzhalter-Klassen.
+def _install_lightning_stub() -> None:
+    import types
+
+    if "pytorch_lightning" in sys.modules:
+        return
+    _pl = types.ModuleType("pytorch_lightning")
+    for _n in ("LightningModule", "LightningDataModule", "Callback", "Trainer", "LightningLite"):
+        setattr(_pl, _n, type(_n, (), {}))
+    sys.modules["pytorch_lightning"] = _pl
+    for _sub in (
+        "pytorch_lightning.core",
+        "pytorch_lightning.core.module",
+        "pytorch_lightning.core.saving",
+        "pytorch_lightning.callbacks",
+        "pytorch_lightning.utilities",
+        "pytorch_lightning.plugins",
+    ):
+        _m = types.ModuleType(_sub)
+        _m.LightningModule = _pl.LightningModule
+        _m.LightningDataModule = _pl.LightningDataModule
+        _m.Callback = _pl.Callback
+        sys.modules[_sub] = _m
+
+
+_install_lightning_stub()
+
+
 # ── SDE (Ornstein-Uhlenbeck Variance Exploding) ────────────────────────────
 
 class OUVESDE:
@@ -55,10 +86,32 @@ class OUVESDE:
         return x + sigma * noise, noise
 
     def loss_fn(self, model, x_clean, x_noisy, t):
-        """Score-matching loss: ||score + noise/sigma||^2"""
+        """Score-matching loss: ||score + noise/sigma||^2
+
+        §v10.19-Fix: SGMSE+-Backbone erwartet [B, 2, F, T] komplex —
+        Kanal 0 = perturbierter Zustand x_t, Kanal 1 = Bedingung (verrauschte
+        Beobachtung y). Vorher wurde x_noisy ignoriert → IndexError im Forward.
+        """
         sigma = self.sigma_min * (self.sigma_max / self.sigma_min) ** t.view(-1, 1, 1, 1)
+        # Shape-Normalisierung auf [B, 1, F, T] (komplex)
+        if x_clean.dim() == 5:
+            x_clean = x_clean.squeeze(2)
+            x_noisy = x_noisy.squeeze(2)
+        if x_clean.dim() == 3:
+            x_clean = x_clean.unsqueeze(1)
+            x_noisy = x_noisy.unsqueeze(1)
+        # §v10.19-Fix: Zeitachse auf Vielfaches von 32 padden (pad_spec-Äquivalent)
+        # — Gesamt-Downsample der U-Net-Kette ist 32; sonst kollidieren
+        # Encoder-Floor/Decoder-Ceil in den Skip-Connections.
+        _T = x_clean.shape[-1]
+        _pad_t = (32 - _T % 32) % 32
+        if _pad_t:
+            x_clean = F.pad(x_clean, (0, _pad_t))
+            x_noisy = F.pad(x_noisy, (0, _pad_t))
         x_t = x_clean + sigma * torch.randn_like(x_clean)
-        score_pred = model(x_t, t)
+        # cat (nicht stack!) entlang Kanal-Dim → [B, 2, F, T] komplex
+        cond = torch.cat([x_t, x_noisy], dim=1)
+        score_pred = model(cond, t)
         target = -(x_t - x_clean) / (sigma ** 2 + 1e-8)
         return F.mse_loss(score_pred.real, target.real) + F.mse_loss(score_pred.imag, target.imag)
 
@@ -171,18 +224,23 @@ def train(
     ckpt = Path(ckpt_path)
     if ckpt.exists():
         print(f"Loading pre-trained weights from {ckpt}")
-        state = torch.load(ckpt, map_location=device, weights_only=True)
-        # Lightning checkpoint structure: state_dict has "model." prefix
+        # §v10.19-Fix: SGMSE+-Releases sind PyTorch-Lightning-Checkpoints mit
+        # Nicht-Tensor-Globals (SpecsDataModule) — weights_only=True scheitert.
+        # Lokale, vertrauenswürdige Datei aus models/ → weights_only=False.
+        state = torch.load(ckpt, map_location=device, weights_only=False)
+        # Lightning checkpoint structure: state_dict has "model."/"dnn." prefix
         if "state_dict" in state:
-            sd = {k.replace("model.", "").replace("_orig_mod.", ""): v
-                  for k, v in state["state_dict"].items()}
+            sd = {
+                k.replace("model.", "").replace("dnn.", "").replace("_orig_mod.", ""): v
+                for k, v in state["state_dict"].items()
+            }
         elif "model_state_dict" in state:
             sd = state["model_state_dict"]
         else:
             sd = state
-        # Filter to backbone parameters only
+        # Filter to backbone parameters only (NCSNpp hält alles in all_modules)
         model_sd = {k: v for k, v in sd.items() if any(
-            k.startswith(p) for p in ["enc", "dec", "output", "act", "norm"])}
+            k.startswith(p) for p in ["all_modules", "enc", "dec", "output", "act", "norm"])}
         if model_sd:
             model.load_state_dict(model_sd, strict=False)
             print(f"  Loaded {len(model_sd)} backbone parameters")
