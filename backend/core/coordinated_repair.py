@@ -1127,7 +1127,18 @@ class CoordinatedRepair:
         self, audio: np.ndarray, step: RepairStep,
         manifest: Optional[Any], sr: int,
     ) -> np.ndarray:
-        """§v10.940: De-Essing via Phase 19."""
+        """§v10.940: De-Essing via Phase 19.
+
+        §v10.998: Sibilanz-Gate — Messung: Der De-Esser zerstörte
+        Jazz-Instrumentalmusik (Hiss −10.8 dB, Pre-Echo −6.9 dB), weil der
+        Fallback-Severity-Befund (conf ≈ 0.26) den Schritt plante. Echte
+        Zischlaut-Befunde haben hörbar höhere Confidence; unter 0.4 wird
+        übersprungen (Primum non nocere).
+        """
+        if float(step.parameters.get("confidence", 0.0) or 0.0) < 0.4:
+            log.info("De-Esser übersprungen (§v10.998: Sibilanz-Confidence %.2f < 0.4)",
+                     float(step.parameters.get("confidence", 0.0) or 0.0))
+            return audio
         try:
             from backend.core.phases.phase_19_de_esser import DeEsserPhase
             mat_str = getattr(self, "_material", "") or "unknown"
