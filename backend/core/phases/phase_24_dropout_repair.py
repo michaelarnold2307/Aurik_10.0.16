@@ -997,6 +997,7 @@ class DropoutRepairPhase(PhaseInterface):
                 warnings=["Dropout repair skipped due to zero effective strength"],
                 metadata={
                     "algorithm": "skipped_zero_strength",
+                    "inpainting_runtime_profile": inpainting_runtime_profile,
                     "phase_locality_factor": phase_locality_factor,
                     "effective_strength": _effective_strength,
                     "execution_time_seconds": time.time() - start_time,
