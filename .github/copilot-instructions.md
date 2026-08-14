@@ -192,3 +192,48 @@ Das CD-Rauschprofil simuliert das thermische Rauschen eines 16-bit CD-Wandlers:
 ---
 
 *Letzte Änderung: 2026-07-30 — v10.0.14: §v10.305 Startup-Integration, Unified Progress, Context-Aware Communication*
+
+---
+
+## Linter-Codes Referenz (normativ, aus VERBOTEN.md)
+
+Jede Session MUSS diese Codes kennen (vollständige Liste der Linter-Referenz-Tabelle):
+
+| V01 | V02 | V03 | V04 | V05 | V08 | V09 | V11 | V12 | V13 | V27 | V29 | V31 | V32 | V33 | V39 | V40 | V41 | V42 | V43 | V44 | V45 | V46 | V47 | V48 | V49 | V50 | V51 | V52 | V53 | V54 | V55 | V56 | V57 | V58 | V70 | V71 | V72 | V73 | V74 | V75 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+## [RELEASE_MUST] Autonomer Magic-Button-Betrieb
+
+Der Magic-Button (One-Button-Restauration) MUSS im autonomen Betrieb folgende
+Kette ohne Benutzer-Interaktion durchlaufen: Preflight → DefectScan → Phasen-Plan →
+Restauration → MQA-Gate → Export-Gate → GUI-Narrativ. Jede Gate-Entscheidung MUSS
+im Narrativ begründet werden (§G155).
+
+## §0a Normativ verbotene Phasen (Restoration-Guard)
+
+Folgende Phasen sind im Restoration-Modus normativ VERBOTEN (§0a/UV3-Forbidden-Set):
+
+- `phase_21_exciter`
+- `phase_35_multiband_compression`
+- `phase_42_vocal_enhancement`
+
+## Performance-Budget (pro Minute Audio, synchron zu Spec 07 §9)
+
+| Operation | Limit / Minute Audio |
+| --- | --- |
+| DefectScanner | <= **4 s** |
+| Phase-Pipeline gesamt | <= **240 s** |
+| FeedbackChain (alle Iterationen) | <= **120 s** |
+| ExcellenceOptimizer | <= **60 s** |
+| RestorabilityEstimator | <= **5 s** |
+| Export (FLAC 24-bit) | <= 10 s |
+
+## Bug-Klassen (normativ, synchron zu Spec 10)
+
+| Klasse | Bedeutung | Priorität |
+| --- | --- | --- |
+| R-BLOCKER | Korrektheit-kritisch: Export-Fehler, Crash, Daten-Verlust, Clipping-Artefakt | Sofort (P0) |
+| AUDIO-QUALITY | Hörbar schlechteres Ergebnis als möglich | Nächster Commit (P1) |
+| SPEC-GAP | Spec-Anforderung implementiert aber nicht getestet oder nur partiell | P2 |
+| TYPE-SAFETY | mypy-Fehler (no-any-return, override, etc.) | P3 |
+| TEST-DESIGN | Test-Assertion bricht durch nichtlineare Guards (deterministisch) | P2 |

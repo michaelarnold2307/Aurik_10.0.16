@@ -2,7 +2,7 @@
 
 **Datum:** Juli 2026
 **Version:** 10.0.14 (§v10.305 Startup-Integration + Unified Progress + Context-Aware Communication)
-**Status:** ✅ Produktionsbereit | GPU-Detection failsafe | Dual-Progress live | Kontextbewusste Kommunikation | 10 GEBOTE (G71–G80) | Startup-Smoke-Test | 12 neue i18n-Keys
+**Status:** ⚠️ Produktionsbereit NUR relativiert: gültig ausschließlich für die synthetische Unit-Test-Ebene; real-audio-Korpus-Evidenz und das externe Quality Gate (MUSHRA) stehen noch aus (Commitment C2) | GPU-Detection failsafe | Dual-Progress live | Kontextbewusste Kommunikation | 10 GEBOTE (G71–G80) | Startup-Smoke-Test | 12 neue i18n-Keys
 
 > Verbindlicher Ist-Stand: `.github/specs/01-14`, `.github/specs/v10.303.17_phase0_architecture.md`, `.github/specs/v10.304_ast_and_deep_chain_correction.md`, `.github/copilot-instructions.md`, `CLAUDE.md`.
 
