@@ -6689,7 +6689,19 @@ class UnifiedRestorerV3:
         }
     )
     # Alias für Abwärtskompatibilität (wird in Tests und phase_selection referenziert)
-    _restoration_forbidden_stem_enhancement = set(_RESTORATION_FORBIDDEN)
+    # §0a: LITERALES Set — der normative CI-Gate extrahiert es per AST.
+    _restoration_forbidden_stem_enhancement = {
+        "phase_17_mastering_polish",
+        "phase_21_exciter",
+        "phase_35_multiband_compression",
+        "phase_36_transient_shaper",
+        "phase_42_vocal_enhancement",
+        "phase_44_guitar_enhancement",
+        "phase_45_brass_enhancement",
+        "phase_51_drums_enhancement",
+        "phase_52_piano_restoration",
+        "phase_56_reference_mastering",
+    }
     _RESTORATION_FORBIDDEN_COALITION_PHASES: frozenset[str] = _RESTORATION_FORBIDDEN
 
     # Explicit SOTA intervention taxonomy: every canonical phase (01–64) maps to
@@ -36550,7 +36562,7 @@ class UnifiedRestorerV3:
                     _best_alpha = 0.0
                     _best_cost = float(_cost_base)
                     logger.info(
-                        "ActiveIntervention %s REJECTED: no beneficial Wert delta (Betriebsart=%s, alpha=%.2f)",
+                        "ActiveIntervention %s REJECTED: no beneficial score delta (Betriebsart=%s, alpha=%.2f)",
                         phase_id,
                         _best_mode,
                         _best_alpha,
@@ -37620,7 +37632,7 @@ class UnifiedRestorerV3:
                         continue
                     if _pipeline_non_exempt_elapsed_s > _pipeline_wall_budget:
                         logger.info(
-                            "§Wall-Time-Grenze: %.0f s non-exempt > %.0f s"
+                            "§Wall-Time-Budget: %.0f s non-exempt > %.0f s"
                             " (material=%s) — %s als Passthrough übersprungen",
                             _pipeline_non_exempt_elapsed_s,
                             _pipeline_wall_budget,

@@ -732,8 +732,9 @@ class SemanticGoalsEngine:
             import madmom  # type: ignore[import-untyped]
 
             logger.info("madmom structure analyzer geladen")
-        except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            # Leichtes Wrapper-Objekt: Analyse nutzt madmom lazy in
+            # analyze_structure(); dieses Objekt markiert nur die Verfügbarkeit.
+            return type("MadmomStructureAnalyzer", (), {"available": True})()
         except ImportError:
             if not self._structure_fallback_logged:
                 logger.warning(

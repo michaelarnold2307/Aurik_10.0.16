@@ -667,12 +667,7 @@ class NoiseGate(PhaseInterface):
                     _dry_ratio = float(np.clip((_nt18_d - 0.10) / 0.50, 0.0, 0.80))
                     _wet_ratio = 1.0 - _dry_ratio
                     gated_audio = (_wet_ratio * gated_audio + _dry_ratio * audio).astype(np.float32)
-                    logger.info(
-                        "§V19 Verarbeitungsschritt_18: noise_texture_dist=%.3f → %.0f/%.0f wet/dry-blend",
-                        _nt18_d,
-                        _wet_ratio * 100,
-                        _dry_ratio * 100,
-                    )
+                    logger.info("§V19 phase_18: noise_texture_dist=%.3f", _nt18_d)
         except Exception as _nt18_exc:
             logger.debug("§V19 Verarbeitungsschritt_18 noise_texture nicht blockierend: %s", _nt18_exc)
 
