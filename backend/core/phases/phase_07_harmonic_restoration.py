@@ -1741,12 +1741,16 @@ class HarmonicRestorationPhase(PhaseInterface):
 
             def _apply_mono(ch: np.ndarray) -> np.ndarray:
                 n_orig = len(ch)
+                # §v10.119 boundary="zeros" explizit: konsistentes scipy-Paar
+                # (gepatchter signal.stft + vanilla istft), sonst Frame-Mismatch
+                # → Ausgabe entkoppelt vom Eingang (strength=0 nicht passthrough).
                 _, _, Z = signal.stft(
                     ch.astype(np.float64),
                     fs=sample_rate,
                     nperseg=n_fft,
                     noverlap=n_fft - hop,
                     window="hann",
+                    boundary="zeros",
                 )
                 Z_eq = Z * gain_lin[:, np.newaxis]
                 _, out = signal.istft(
@@ -1755,6 +1759,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     nperseg=n_fft,
                     noverlap=n_fft - hop,
                     window="hann",
+                    boundary="zeros",
                 )
                 out = np.real(out)
                 if len(out) >= n_orig:
