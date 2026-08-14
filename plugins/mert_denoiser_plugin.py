@@ -248,8 +248,7 @@ class MERTDenoiserPlugin:
         loaded = load_audio_file(data, target_sr=sample_rate, mono=False, do_carrier_analysis=False)
         if loaded and loaded.get("audio") is not None:
             return np.asarray(loaded["audio"], dtype=np.float32), int(loaded.get("sr") or sample_rate)
-        audio, sr = sf.read(data)
-        return audio, sr
+        raise ValueError("Audio konnte nicht geladen werden (load_audio_file leer)")
 
     @staticmethod
     def save_audio(audio: np.ndarray, sample_rate: int = TARGET_SAMPLE_RATE) -> bytes:
