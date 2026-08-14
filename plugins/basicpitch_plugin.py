@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 _ROOT = Path(__file__).parent.parent
 _ONNX_PATH = _ROOT / "models" / "basicpitch" / "basicpitch.onnx"
+_ONNX_PATH_NMP = _ROOT / "models" / "basicpitch" / "basicpitch_nmp.onnx"
 
 _MODEL_SR: int = 22_050
 _N_FFT: int = 4096
@@ -76,11 +77,16 @@ class BasicPitchPlugin:
     def __init__(self) -> None:
         self._session = None
         self._model_loaded: bool = False
+        self._using_nmp: bool = False
         self._load_model()
 
     def _load_model(self) -> None:
+        # §v10.30: Primär = basicpitch.onnx, robuste NMP-Variante als Fallback-Tier.
+        # NMP (Non-Mel-Peak) ist auf degradiertem Material robuster — genau
+        # Auriks Kern-Domäne. Gleiche ONNX-Schnittstelle, gleicher Decoder.
         if not _ONNX_PATH.exists():
             logger.info("BasicPitch ONNX nicht gefunden (%s) — DSP-Fallback aktiv.", _ONNX_PATH)
+            self._try_load_nmp()
             return
         try:
             import onnxruntime as ort
@@ -116,13 +122,48 @@ class BasicPitchPlugin:
             except Exception as _exc:
                 logger.debug("Plugin operation failed (non-critical): %s", _exc)
         except Exception as exc:
-            logger.warning("BasicPitch ONNX-Init fehlgeschlagen (%s) — DSP-Fallback.", exc)
+            logger.warning("BasicPitch ONNX-Init fehlgeschlagen (%s) — NMP-Variante als Fallback.", exc)
             try:
                 from backend.core.ml_memory_budget import release as _release
 
                 _release("BasicPitch")
             except Exception as _exc:
                 logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            self._try_load_nmp()
+
+    def _try_load_nmp(self) -> bool:
+        """Lädt die NMP-Variante (Non-Mel-Peak) — robuster auf degradiertem Material.
+
+        Returns True wenn die NMP-Session aktiv ist.
+        """
+        if not _ONNX_PATH_NMP.exists():
+            logger.info("BasicPitch NMP-Variante nicht gefunden (%s) — DSP-Fallback bleibt.", _ONNX_PATH_NMP)
+            return False
+        try:
+            import onnxruntime as ort
+
+            opts = ort.SessionOptions()
+            opts.intra_op_num_threads = 4
+            opts.inter_op_num_threads = 1
+            opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+            self._session = ort.InferenceSession(
+                str(_ONNX_PATH_NMP),
+                sess_options=opts,
+                providers=["CPUExecutionProvider"],
+            )
+            self._model_loaded = True
+            self._using_nmp = True
+            logger.info("🎼 BasicPitch NMP-Variante geladen: %s", _ONNX_PATH_NMP.name)
+            return True
+        except Exception as exc:
+            logger.warning("BasicPitch NMP-Init fehlgeschlagen (%s) — DSP-Fallback.", exc)
+            try:
+                from backend.core.ml_memory_budget import release as _release
+
+                _release("BasicPitch")
+            except Exception as _exc:
+                logger.debug("Plugin operation failed (non-critical): %s", _exc)
+            return False
 
     def analyze(self, audio: np.ndarray, sr: int, max_polyphony: int = _DEFAULT_MAX_POLYPHONY) -> BasicPitchResult:
         """Schätzt polyphonic pitches.
@@ -145,10 +186,27 @@ class BasicPitchPlugin:
 
         if self._session is not None:
             try:
-                return self._analyze_onnx(audio, sr, max_polyphony)
+                _res = self._analyze_onnx(audio, sr, max_polyphony)
+                # §v10.30 Zweitmeinung: schwache Primärantwort (< 0.05 Konfidenz)
+                # → NMP-Variante probieren (robuster auf degradiertem Material).
+                _max_conf = float(np.max(_res.confidences)) if _res.confidences.size else 0.0
+                if _max_conf < 0.05 and not self._using_nmp:
+                    if self._try_load_nmp():
+                        _res2 = self._analyze_onnx(audio, sr, max_polyphony)
+                        _res2.model_used = "basicpitch_nmp"
+                        return _res2
+                return _res
             except Exception as exc:
+                # §v10.30: Vor DSP-Fallback erst die NMP-Variante probieren.
+                logger.debug("BasicPitch ONNX-Inferenz fehlgeschlagen (%s) — NMP-Variante.", exc)
+                if not self._using_nmp and self._try_load_nmp():
+                    try:
+                        _res_nmp = self._analyze_onnx(audio, sr, max_polyphony)
+                        _res_nmp.model_used = "basicpitch_nmp"
+                        return _res_nmp
+                    except Exception as _nmp_exc:
+                        logger.debug("BasicPitch NMP-Inferenz fehlgeschlagen (%s) — DSP-Fallback.", _nmp_exc)
                 logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-                logger.debug("BasicPitch ONNX-Inferenz fehlgeschlagen (%s) — DSP-Fallback.", exc)
 
         return self._analyze_dsp(audio, sr, max_polyphony)
 

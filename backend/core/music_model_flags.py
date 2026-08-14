@@ -21,10 +21,14 @@ Usage:
 # ── Feature Flags ───────────────────────────────────────────────────────────
 # Set to True after training + ONNX export + A/B test passed.
 
-use_df_musik: bool = False       # DFN Musik (§v10.15) replaces DeepFilterNet v3
-use_sgmse_musik: bool = False    # SGMSE+ Musik (§v10.16) replaces SGMSE+ Speech
-use_mp_senet_musik: bool = False # MP-SENet Musik (§v10.17) replaces MP-SENet Speech
-use_miipher_dit: bool = False    # MIIPHER-DiT (§v10.14) replaces proprietary MIIPHER
+use_df_musik: bool = True        # DFN Musik (§v10.15) replaces DeepFilterNet v3 (finetuned enc/dec/erb_dec)
+use_sgmse_musik: bool = False    # SGMSE+ Musik (§v10.16) — kein Finetune-Checkpoint vorhanden
+use_mp_senet_musik: bool = False # MP-SENet Musik (§v10.17) — kein Finetune-Checkpoint vorhanden
+use_miipher_dit: bool = True     # MIIPHER-DiT (§v10.14) replaces proprietary MIIPHER (flow_matching_dit.onnx)
+use_bw_v5: bool = False          # BW-Reconstructor v5 — A1: HF-Gain-Gate nicht bestanden (0.73 < 1.02);
+                                 # redundant zu FlashSR/NVSR/DSP-SBR in Phase_06. Gated-Forschungsmodell.
+use_harmonic_inpainting: bool = True  # Harmonic-Inpainting-DiT (§v10.300) — DiT-Finetune für gedämpfte Obertöne
+use_whisper_denoiser: bool = False    # Whisper-Denoiser (§v10.20) — A/B-Gate; Aktivierung wenn HF-Encoder lokal verfügbar
 use_resemble_enhance: bool = True  # Resemble Enhance — set to False after §v10.19
 
 # ── Model Paths (relative to project root) ──────────────────────────────────
@@ -44,6 +48,16 @@ MUSIC_MODEL_PATHS: dict[str, Path] = {
     "mp_senet":    _PROJECT_ROOT / "models" / "mp_senet" / "finetuned" / "mp_senet_musik.onnx",
     # MIIPHER-DiT — ONNX
     "miipher_dit": _PROJECT_ROOT / "models" / "miipher_dit" / "flow_matching_dit.onnx",
+    # BW-Reconstructor v5 — bestes selbst trainiertes U-Net
+    "bw":          _PROJECT_ROOT / "models" / "bw_reconstructor" / "bw_reconstructor_v5.onnx",
+    # Harmonic-Inpainting-DiT (§v10.300) — DiT-Finetune (FlowMatchingDiT state_dict)
+    "harmonic_inpainting": _PROJECT_ROOT / "models" / "harmonic_inpainting" / "inpainting_best.pt",
+    # Whisper-Denoiser (§v10.20) — Whisper-tiny (frozen) + 2M-Decoder (unet/decoder state_dicts)
+    "whisper_denoiser": _PROJECT_ROOT / "models" / "miipher_dit" / "whisper_denoiser_best.pt",
+    # Whisper-Encoder-Ersatz für MIIPHER-DiT (semantische Bedingung)
+    "whisper_encoder": _PROJECT_ROOT / "models" / "whisper" / "whisper_tiny.onnx",
+    # BigVGAN-Ersatz für MIIPHER-DiT-Vocoder
+    "bigvgan":       _PROJECT_ROOT / "models" / "bigvgan" / "bigvgan_v2.pth",
 }
 
 # ── Legacy paths (fallback) ─────────────────────────────────────────────────
@@ -55,6 +69,13 @@ LEGACY_MODEL_PATHS: dict[str, Path] = {
     "sgmse":       _PROJECT_ROOT / "models" / "sgmse_plus" / "sgmse_plus.ts",
     "mp_senet":    _PROJECT_ROOT / "models" / "mp_senet" / "mp_senet.onnx",
     "miipher_dit": _PROJECT_ROOT / "models" / "miipher_dit" / "flow_matching_dit.onnx",
+    # BW v1 als Fallback, falls v5 fehlt
+    "bw":          _PROJECT_ROOT / "models" / "bw_reconstructor" / "bw_reconstructor.onnx",
+    # Harmonic-Inpainting: kein Legacy-Modell — DSP-Fallback (Phase_07 bestehende Synthese)
+    # Whisper-Denoiser: kein Legacy-Modell — DFN bleibt primärer Denoiser
+    # whisper_encoder/bigvgan: einziger bekannter lokaler Pfad — auch als Legacy hinterlegt
+    "whisper_encoder": _PROJECT_ROOT / "models" / "whisper" / "whisper_tiny.onnx",
+    "bigvgan":       _PROJECT_ROOT / "models" / "bigvgan" / "bigvgan_v2.pth",
 }
 
 
@@ -74,6 +95,12 @@ def resolve_model_path(model_key: str) -> Path | None:
         "sgmse": use_sgmse_musik,
         "mp_senet": use_mp_senet_musik,
         "miipher_dit": use_miipher_dit,
+        "bw": use_bw_v5,
+        "harmonic_inpainting": use_harmonic_inpainting,
+        "whisper_denoiser": use_whisper_denoiser,
+        # Ersatzpfade folgen dem DiT-Flag: nur aktiv wenn DiT selbst aktiv ist
+        "whisper_encoder": use_miipher_dit,
+        "bigvgan": use_miipher_dit,
     }
     use_music = flag_map.get(model_key, False)
     music_path = MUSIC_MODEL_PATHS.get(model_key)

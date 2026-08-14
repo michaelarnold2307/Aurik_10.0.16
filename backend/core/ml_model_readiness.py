@@ -310,6 +310,15 @@ def _register_all() -> None:
         "ConvTasNet", _probe_plugin("plugins.convtasnet_plugin", "get_convtasnet_plugin", "_model_loaded")
     )
     register_ml_check("MP-SENet", _probe_plugin("plugins.mp_senet_plugin", "get_mp_senet_plugin", "_model_loaded"))
+    # --- Selbst trainierte Modelle (§v10.19) ---
+    register_ml_check(
+        "HarmonicInpaintingDiT",
+        _probe_plugin("plugins.harmonic_inpainting_plugin", "get_harmonic_inpainting_plugin", "is_loaded"),
+    )
+    register_ml_check(
+        "WhisperDenoiser",
+        _probe_plugin("plugins.whisper_denoiser_plugin", "get_whisper_denoiser_plugin", "is_loaded"),
+    )
     # --- Music Demixing ---
     register_ml_check("MDX23C", _probe_plugin("plugins.mdx23c_plugin", "get_mdx23c_plugin", "_model_loaded"))
     register_ml_check(

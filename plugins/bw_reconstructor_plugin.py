@@ -45,6 +45,29 @@ except ImportError:
 _DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models" / "bw_reconstructor"
 _DEFAULT_ONNX_PATH = _DEFAULT_MODEL_DIR / "bw_reconstructor.onnx"
 
+# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+try:
+    from backend.core.music_model_flags import resolve_model_path as _resolve_model_path_flag
+
+    _FLAGS_AVAILABLE = True
+except Exception as _flags_exc:
+    _FLAGS_AVAILABLE = False
+    _resolve_model_path_flag = None  # type: ignore[assignment]
+    logger.debug("BWReconstructor: music_model_flags nicht ladbar: %s", _flags_exc)
+
+
+def _resolve_default_path() -> Path:
+    """§v10.19 Feature-Flag-Routing: BW-v5 (selbst trainiert) vor v1 (Legacy).
+
+    use_bw_v5=True und v5-ONNX vorhanden → bestes trainiertes Modell aktiv.
+    Sonst v1 — identisches U-Net-Interface, kein Risiko.
+    """
+    if _FLAGS_AVAILABLE and _resolve_model_path_flag is not None:
+        _p = _resolve_model_path_flag("bw")
+        if _p is not None and Path(_p).exists():
+            return Path(_p)
+    return _DEFAULT_ONNX_PATH
+
 
 class BWReconstructorPlugin:
     """Bandwidth Reconstructor: U-Net im Mel-Spektrogramm-Raum via ONNX.
@@ -70,12 +93,13 @@ class BWReconstructorPlugin:
     def __init__(self, model_path: str | None = None):
         self._session: ort.InferenceSession | None = None
         self._model_path: Path | None = None
+        self._is_v5: bool = False  # v5 = Waveform-Domäne (waveform+cutoff Inputs)
 
         if not _ONNX_AVAILABLE:
             logger.warning("BWReconstructorPlugin: onnxruntime fehlt — Plugin inaktiv.")
             return
 
-        path = Path(model_path) if model_path else _DEFAULT_ONNX_PATH
+        path = Path(model_path) if model_path else _resolve_default_path()
         if not path.exists():
             logger.warning(
                 "BWReconstructorPlugin: ONNX-Modell nicht gefunden unter %s. "
@@ -104,6 +128,16 @@ class BWReconstructorPlugin:
 
             self._session = ort.InferenceSession(str(path), opts, providers=["CPUExecutionProvider"])
             self._model_path = path
+
+            # §v10.19 Interface-Detektion: v5 ist ein Waveform-U-Net
+            # (Inputs waveform+cutoff), v1–v4 sind Mel-Domäne (Input input).
+            try:
+                _in_names = [i.name for i in self._session.get_inputs()]
+                self._is_v5 = _in_names == ["waveform", "cutoff"]
+                if self._is_v5:
+                    logger.info("BWReconstructor: v5-Waveform-Interface erkannt (FiLM-Cutoff-Conditioning)")
+            except Exception:
+                self._is_v5 = False
 
             # Plugin-Lifecycle registrieren
             try:
@@ -172,18 +206,24 @@ class BWReconstructorPlugin:
             cutoff_hz = self._estimate_cutoff(audio_22k, self._SR)
             logger.debug("BWReconstructor: geschätzte Bandbreitengrenze = %.0f Hz", cutoff_hz)
 
-        # Mel-Spektrogramm
-        mel_input = self._audio_to_mel(audio_22k)
+        # §v10.19 v5-Zweig: Waveform-Domäne (train_bw_v5.py-Konventionen)
+        if self._is_v5:
+            audio_reconstructed = self._reconstruct_v5_waveform(
+                audio_22k, cutoff_hz, blend_strength
+            )
+        else:
+            # Mel-Spektrogramm
+            mel_input = self._audio_to_mel(audio_22k)
 
-        # Verarbeitung in überlappenden Segmenten
-        mel_reconstructed = self._process_segments(mel_input)
+            # Verarbeitung in überlappenden Segmenten
+            mel_reconstructed = self._process_segments(mel_input)
 
-        # Blend: Original <-> Rekonstruktion
-        if blend_strength < 1.0:
-            mel_reconstructed = blend_strength * mel_reconstructed + (1.0 - blend_strength) * mel_input
+            # Blend: Original <-> Rekonstruktion
+            if blend_strength < 1.0:
+                mel_reconstructed = blend_strength * mel_reconstructed + (1.0 - blend_strength) * mel_input
 
-        # Zurück zu Audio
-        audio_reconstructed = self._mel_to_audio(mel_reconstructed)
+            # Zurück zu Audio
+            audio_reconstructed = self._mel_to_audio(mel_reconstructed)
 
         # Resampling zurück zur Original-Samplerate
         if sr != self._SR:
@@ -209,6 +249,78 @@ class BWReconstructorPlugin:
             audio_out = audio_reconstructed
 
         return np.nan_to_num(audio_out, nan=0.0, posinf=0.0, neginf=0.0)
+
+    # ── v5-Waveform-Pfad (§v10.19, train_bw_v5.py-Konventionen) ─────────────
+
+    _V5_CHUNK: int = 66160  # 3 s @ 22050, multiple von 16 (4 Downsampling-Stufen)
+    _V5_HOP: int = 33080    # 50 % Überlapp für Crossfade
+
+    def _reconstruct_v5_waveform(
+        self,
+        audio_22k: np.ndarray,
+        cutoff_hz: float,
+        blend_strength: float,
+    ) -> np.ndarray:
+        """Waveform-Domäne Inferenz: bandbegrenztes Audio → Vollband-Waveform.
+
+        Trainingskonventionen (train_bw_v5.py):
+          - SR 22050, Chunk 3 s (66160 Samples, multiple von 16)
+          - Input: Butterworth-lowpass-bandbegrenzt bei cutoff_hz
+          - Condition: cutoff_hz / 11025.0 (FiLM)
+          - Output: rekonstruierte Vollband-Waveform (L1 + MR-STFT trainiert)
+        """
+        if self._session is None:
+            return audio_22k.copy()
+
+        n = len(audio_22k)
+        # Cutoff normalisieren + auf Trainingsbereich klammern (3000–11000 Hz)
+        c_norm = float(np.clip(cutoff_hz / 11025.0, 3000.0 / 11025.0, 11000.0 / 11025.0))
+
+        from scipy.signal import butter, sosfilt
+
+        _sos = butter(6, max(cutoff_hz, 3000.0) / (self._SR / 2.0), btype="low", output="sos")
+
+        out_accum = np.zeros(n, dtype=np.float64)
+        out_weight = np.zeros(n, dtype=np.float64)
+        pos = 0
+        ramp = np.linspace(0.0, 1.0, self._V5_HOP, endpoint=False)  # lineare Crossfade-Rampe
+
+        while pos < n:
+            chunk = audio_22k[pos : pos + self._V5_CHUNK]
+            if len(chunk) < self._V5_CHUNK:
+                chunk = np.pad(chunk, (0, self._V5_CHUNK - len(chunk)), mode="reflect")
+
+            # Training-identische Bandbegrenzung (y_lim = butter_lp(y, cutoff))
+            x_lim = sosfilt(_sos, chunk.astype(np.float64)).astype(np.float32)
+
+            feed = {
+                "waveform": x_lim[None, None, :],
+                "cutoff": np.array([[c_norm]], dtype=np.float32),
+            }
+            pred = self._session.run(None, feed)[0][0, 0, :].astype(np.float64)  # [T]
+
+            chunk_out = blend_strength * pred + (1.0 - blend_strength) * chunk.astype(np.float64)
+
+            # Overlap-Add mit linearer Crossfade (§G136 deterministisch):
+            # Chunk = exakt 2 Hops → Fade-in über ersten Hop, Fade-out über
+            # zweiten Hop; im Überlapp summieren sich die Rampen zu 1.
+            valid = min(len(chunk_out), n - pos)
+            is_first = pos == 0
+            is_last = pos + self._V5_HOP >= n
+            w = np.ones(valid, dtype=np.float64)
+            if not is_first:
+                _n_in = min(self._V5_HOP, valid)
+                w[:_n_in] = ramp[:_n_in]
+            if not is_last:
+                _n_out = min(self._V5_HOP, valid)
+                w[valid - _n_out :] = 1.0 - ramp[-_n_out:]
+            out_accum[pos : pos + valid] += chunk_out[:valid] * w
+            out_weight[pos : pos + valid] += w
+
+            pos += self._V5_HOP
+
+        out = np.where(out_weight > 1e-9, out_accum / np.maximum(out_weight, 1e-9), audio_22k)
+        return np.asarray(out, dtype=np.float64)
 
     # ── Interne Hilfsfunktionen ────────────────────────────────────────────
 

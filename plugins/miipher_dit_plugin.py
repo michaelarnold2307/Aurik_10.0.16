@@ -1,12 +1,13 @@
 """MIIPHER-DiT Plugin — Flow-Matching Singing Voice Enhancement für Aurik.
 
 §v10.14: Ersetzt das proprietäre Google MIIPHER durch ein offenes
-Flow-Matching-DiT-Modell mit Whisper-Semantik-Encoder.
+Flow-Matching-DiT-Modell.
 
-Architektur:
+Architektur (§v10.19 A6 — verifiziert am exportierten ONNX):
   - FlowMatchingDiT (Transformer, 18 Layer, 768-dim, 12 Heads)
-  - Whisper Encoder für Phonem-Bewusstsein
-  - BigVGAN Vocoder für Gesang-optimierte Ausgabe
+  - UNKONDITIONIERT: Inputs sind x [B,T,1] + t [B] — kein Whisper-/Vocoder-Pfad
+    im Inferenz-ONNX. Die früheren Whisper-Encoder/BigVGAN-Deklarationen waren
+    Planungs-Doku, nie exportiert.
   - ONNX-kompatibel (OpSet 14+, Dynamic Axes)
 
 Aurik-Integration:
@@ -15,7 +16,7 @@ Aurik-Integration:
   - DSP-Fallback (§V6): IMCRA/Wiener bei Modell-Fehler
   - M/S-Processing: Stereo→Mono(Mid)→Enhance→Stereo
   - Sample-Rate-Adapter: 48kHz ↔ Modell-SR
-  - RAM-Budget: 2.5 GB (DiT + Whisper encoder)
+  - RAM-Budget: 2.5 GB (DiT)
 """
 
 from __future__ import annotations
@@ -29,6 +30,29 @@ from pathlib import Path
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+try:
+    from backend.core.music_model_flags import resolve_model_path as _resolve_flag
+
+    _FLAGS_AVAILABLE = True
+except Exception as _flags_exc:
+    _FLAGS_AVAILABLE = False
+    _resolve_flag = None  # type: ignore[assignment]
+    logger.debug("MIIPHER-DiT: music_model_flags nicht ladbar: %s", _flags_exc)
+
+
+def _resolve_or(fallback: Path, model_key: str) -> Path:
+    """§v10.19 Feature-Flag-Routing: aufgelöster Pfad, sonst Fallback.
+
+    Liefert den via music_model_flags.resolve_model_path aufgelösten
+    Pfad (z. B. whisper_tiny.onnx als Encoder-Ersatz), falls vorhanden.
+    """
+    if _FLAGS_AVAILABLE and _resolve_flag is not None:
+        _p = _resolve_flag(model_key)
+        if _p is not None and Path(_p).exists():
+            return Path(_p)
+    return fallback
 
 # ── Lazy imports für optionale Abhängigkeiten ────────────────────────────
 try:
@@ -105,11 +129,11 @@ class MiipherDiTPlugin:
         self._device: str = "cpu"
         self._ort_session: object | None = None  # onnxruntime.InferenceSession
 
-        # Modell-Pfade
+        # Modell-Pfade (§v10.19 Feature-Flag-Routing)
         _model_dir = Path(__file__).parent.parent / "models" / "miipher_dit"
-        self._dit_onnx_path: Path = _model_dir / "flow_matching_dit.onnx"
-        self._whisper_onnx_path: Path = _model_dir / "whisper_encoder.onnx"
-        self._bigvgan_onnx_path: Path = _model_dir / "bigvgan_vocoder.onnx"
+        self._dit_onnx_path: Path = _resolve_or(_model_dir / "flow_matching_dit.onnx", "miipher_dit")
+        self._whisper_onnx_path: Path = _resolve_or(_model_dir / "whisper_encoder.onnx", "whisper_encoder")
+        self._bigvgan_onnx_path: Path = _resolve_or(_model_dir / "bigvgan_vocoder.onnx", "bigvgan")
 
         # Budget-Registrierung
         self._try_load_model()

@@ -24,11 +24,38 @@ from typing import Any
 import numpy as np
 
 logger = logging.getLogger(__name__)
+
+# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+try:
+    from backend.core.music_model_flags import MUSIC_MODEL_PATHS, use_df_musik
+
+    _FLAGS_AVAILABLE = True
+except Exception as _flags_exc:
+    _FLAGS_AVAILABLE = False
+    MUSIC_MODEL_PATHS = {}  # type: ignore[assignment]
+    use_df_musik = False
+    logger.debug("DeepFilterNet: music_model_flags nicht ladbar: %s", _flags_exc)
+
 _lock = threading.Lock()
 _inst: DeepFilterNetV3Plugin | None = None
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _DIR = os.path.join(_ROOT, "models", "deepfilternet_v3_ii")
+
+
+def _resolve_model_dir(default_dir: str) -> str:
+    """§v10.19 Feature-Flag-Routing: Musik-Finetune vor Legacy.
+
+    use_df_musik=True und vollständiges Finetune-Verzeichnis
+    (enc/dec/erb_dec) → selbst trainiertes Musik-Modell aktiv.
+    Sonst Legacy (speech-trainiert) — identisches Interface, kein Risiko.
+    """
+    if not _FLAGS_AVAILABLE:
+        return default_dir
+    _fin = MUSIC_MODEL_PATHS["dfn_enc"].parent
+    if use_df_musik and all((_fin / f).exists() for f in ("enc.onnx", "dec.onnx", "erb_dec.onnx")):
+        return str(_fin)
+    return default_dir
 
 # DeepFilterNet processing constants (48 kHz)
 _SR = 48_000
@@ -80,6 +107,8 @@ class DeepFilterNetV3Plugin:
         d = model_dir or _DIR
         if root:
             d = os.path.join(root, "models", "deepfilternet_v3_ii")
+        elif model_dir is None:
+            d = _resolve_model_dir(d)
         self._enc: Any = None
         self._dec: Any = None
         self._erb_dec: Any = None
@@ -406,14 +435,19 @@ class DeepFilterNetV3Plugin:
         n_fft = 1024
         hop = n_fft // 4
         _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
-        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", padded=True)
+        # §v10.19-Fix: Längen-erhaltende STFT/iSTFT (scipy-Defaults kürzten 48000→47104)
+        _n = len(mono)
+        _frames_needed = max(0, int(np.ceil((_n - n_fft) / hop)))
+        _n_pad = max(n_fft + _frames_needed * hop, _n)
+        _mono_p = np.pad(mono, (0, _n_pad - _n))
+        _, _, Zxx = stft(_mono_p, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", boundary=None, padded=False)
         mag = np.abs(Zxx)
         noise_est = np.percentile(mag, 20, axis=1, keepdims=True)
         noise_est = np.maximum(noise_est, 1e-8)
         mask = np.clip((mag - 1.25 * noise_est) / (mag + 1e-10), 0.05, 1.0)
         Zxx_out = mask * mag * np.exp(1j * np.angle(Zxx))
-        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
-        out = np.nan_to_num(out[: len(mono)], nan=0.0, posinf=0.0, neginf=0.0)
+        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", boundary=False)
+        out = np.nan_to_num(out[:_n], nan=0.0, posinf=0.0, neginf=0.0)
         return np.clip(out, -1.0, 1.0).astype(np.float32)  # type: ignore[no-any-return]
 
     @staticmethod
@@ -434,7 +468,12 @@ class DeepFilterNetV3Plugin:
         n_fft = 1024
         hop = n_fft // 4
         _noverlap = min(n_fft - hop, max(0, n_fft - 1))  # §v10.113
-        _, _, Zxx = stft(mono, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", padded=True)
+        # §v10.19-Fix: Längen-erhaltende STFT/iSTFT (scipy-Defaults kürzten 48000→47104)
+        _n = len(mono)
+        _frames_needed = max(0, int(np.ceil((_n - n_fft) / hop)))
+        _n_pad = max(n_fft + _frames_needed * hop, _n)
+        _mono_p = np.pad(mono, (0, _n_pad - _n))
+        _, _, Zxx = stft(_mono_p, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", boundary=None, padded=False)
 
         mag = np.abs(Zxx)
         # MCRA-Rauschschätzung: Minima in gleitenden Fenstern (5 Frames)
@@ -456,8 +495,8 @@ class DeepFilterNetV3Plugin:
             gain = np.clip(gain * _ebias_factor, 0.0, 1.0)
 
         Zxx_out = gain * mag * np.exp(1j * np.angle(Zxx))
-        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann")
-        return out[: len(mono)].astype(np.float32)  # type: ignore[no-any-return]
+        _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", boundary=False)
+        return out[:_n].astype(np.float32)  # type: ignore[no-any-return]
 
     @staticmethod
     def _omlsa_fallback(mono: np.ndarray, sr: int) -> np.ndarray:
