@@ -2319,7 +2319,9 @@ class TestPhase03BsRoformerVocalStemNR:
             material_type="vinyl",
             sample_rate=48000,
             panns_singing=0.50,
-            strength=0.1,
+            # §DENKER-CONTROL/§2.70: BS-RoFormer-Gate verlangt strength > 0.55
+            # (und > DSP-only-Schwelle 0.10+panns×0.30) — sonst DSP-only-Pfad.
+            strength=0.60,
             decade=1930,
             quality_mode="fast",
         )
