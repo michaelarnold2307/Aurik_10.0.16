@@ -14,11 +14,36 @@ import time
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 _PROJECT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(_PROJECT))
 
 SR = 48000
+
+
+@pytest.fixture(scope="module")
+def manifest():
+    """Stufe-1-Manifest als Fixture — wird von den Folge-Stufen wiederverwendet."""
+    from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
+
+    audio, _ = _make_test_audio()
+    pipeline = DefectConsensusPipeline()
+    _manifest = pipeline.analyze(audio, SR)
+    assert _manifest is not None, "Manifest ist None"
+    return _manifest
+
+
+@pytest.fixture(scope="module")
+def plan(manifest):
+    """Stufe-2-Repair-Plan als Fixture — wird von Stufe 4 wiederverwendet."""
+    from backend.core.coordinated_repair import RepairPlanner
+
+    audio, _ = _make_test_audio()
+    planner = RepairPlanner()
+    _plan = planner.plan(manifest, len(audio))
+    assert _plan is not None, "Plan ist None"
+    return _plan
 
 
 def _make_test_audio(duration_s: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
