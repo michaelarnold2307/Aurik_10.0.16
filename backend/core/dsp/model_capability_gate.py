@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 CapabilityStatus = Literal[
     "sota_real", "sota_fallback", "dsp_fallback", "unavailable"
-]  # §V6: logger.warning handled at call site
+]  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
 
 class CapabilitySummary(TypedDict):
@@ -153,7 +153,7 @@ class ModelCapabilityGate:
                 model_path=path_str,
                 loaded=loaded,
                 bundled=bundled,
-                fallback="demucs_v4 -> mdx23c -> dsp",  # §V6: logger.warning handled at call site
+                fallback="demucs_v4 -> mdx23c -> dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason="bundled_or_loaded" if bundled or loaded else "model_file_missing_or_not_loaded",
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -197,7 +197,7 @@ class ModelCapabilityGate:
                 model_path=path_str,
                 loaded=loaded,
                 bundled=bundled,
-                fallback="sgmse_plus -> deepfilternet_v3_ii -> dsp",  # §V6: logger.warning handled at call site
+                fallback="sgmse_plus -> deepfilternet_v3_ii -> dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason=reason,
                 metadata={
                     "compensation_chain_ready": compensation_ready,
@@ -263,11 +263,11 @@ class ModelCapabilityGate:
                 role="vocal_nr",
                 status="sota_fallback"
                 if bundled or loaded
-                else "dsp_fallback",  # §V6: logger.warning handled at call site
+                else "dsp_fallback",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 model_path=ts_path,
                 loaded=loaded,
                 bundled=bundled,
-                fallback="deepfilternet_v3_ii -> dsp",  # §V6: logger.warning handled at call site
+                fallback="deepfilternet_v3_ii -> dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason="model_available" if bundled or loaded else "model_file_missing",
                 metadata={"checkpoint_available": ckpt_exists},
             )
@@ -303,11 +303,11 @@ class ModelCapabilityGate:
                 role="music_nr",
                 status="sota_fallback"
                 if bundled or loaded
-                else "dsp_fallback",  # §V6: logger.warning handled at call site
+                else "dsp_fallback",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 model_path=str(model_dir),
                 loaded=loaded,
                 bundled=bundled,
-                fallback="omlsa_dsp",  # §V6: logger.warning handled at call site
+                fallback="omlsa_dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason="model_available" if bundled or loaded else "model_files_missing",
             )
         except Exception as exc:  # pylint: disable=broad-except
@@ -316,7 +316,7 @@ class ModelCapabilityGate:
                 "deepfilternet_v3_ii",
                 "music_nr",
                 "unavailable",
-                fallback="omlsa_dsp",  # §V6: logger.warning handled at call site
+                fallback="omlsa_dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason=type(exc).__name__,
             )
 
@@ -332,11 +332,11 @@ class ModelCapabilityGate:
                 role="separation",
                 status="sota_fallback"
                 if bundled or loaded
-                else "dsp_fallback",  # §V6: logger.warning handled at call site
+                else "dsp_fallback",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 model_path=path_str,
                 loaded=loaded,
                 bundled=bundled,
-                fallback="mdx23c -> hpss_dsp",  # §V6: logger.warning handled at call site
+                fallback="mdx23c -> hpss_dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 reason="model_available" if bundled or loaded else "model_file_missing",
             )
         except Exception as exc:  # pylint: disable=broad-except

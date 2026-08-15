@@ -138,7 +138,7 @@ _MIN_STRENGTH: dict[str, float] = {
     "phase_07_harmonic_restoration": 0.10,
     "phase_06_frequency_restoration": 0.10,
 }
-_DEFAULT_MIN_STRENGTH = 0.25  # §v10.44: angehoben von 0.05 auf Joint-Calibration-Minimum (§G73)
+_DEFAULT_MIN_STRENGTH = 0.25  # §v10.44: angehoben von 0.05 auf Joint-Calibration-Minimum (§G73 (GEBOTE.md))
 
 
 class PhaseConductor:

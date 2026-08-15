@@ -127,12 +127,16 @@ def test_b13_time_major_stereo_normalisierung():
     right = np.linspace(1.0, 0.0, n, dtype=np.float32)
     audio_tm = np.stack([left, right], axis=1)  # [T, 2] — time-major
 
-    plan = RepairPlan(steps=[
-        RepairStep(
-            phase_id="phase_99_test_pass", priority=RepairPriority.TRANSIENT,
-            defect_category="test", affected_samples=[],
-        )
-    ])
+    plan = RepairPlan(
+        steps=[
+            RepairStep(
+                phase_id="phase_99_test_pass",
+                priority=RepairPriority.TRANSIENT,
+                defect_category="test",
+                affected_samples=[],
+            )
+        ]
+    )
     out, report = CoordinatedRepair().execute(audio_tm, plan, None, 48000)
     assert out.shape == (n, 2)  # Orientierung bleibt [T, C]
     assert np.allclose(out[:, 0], left)

@@ -467,8 +467,8 @@ class HarmonicRestorationPhase(PhaseInterface):
         _pmgg_strength = float(kwargs.get("strength", 1.0))
         _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
 
-        # §G78 CalibrationContext: Kalibrierter Stärke-Cap aus Pre-Analysis-Messwerten.
-        # Kontinuierlich abgeleitet aus bandwidth_loss + Crest-Verlust (§G77).
+        # §G78 (GEBOTE.md) CalibrationContext: Kalibrierter Stärke-Cap aus Pre-Analysis-Messwerten.
+        # Kontinuierlich abgeleitet aus bandwidth_loss + Crest-Verlust (§G77 (GEBOTE.md)).
         _calib_cap = kwargs.get("phase07_strength_cap")
         if _calib_cap is not None:
             _effective_strength = min(_effective_strength, float(_calib_cap))
@@ -738,7 +738,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                     audio = np.clip(audio + _ddsp_wet * (_ddsp_audio - audio), -1.0, 1.0)
                 _mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio  # re-derive mono
         except Exception as _ddsp_exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("§C5 DDSP-Inversion uebersprungen (nicht blockierend): %s", _ddsp_exc)
 
         # §v10.300 ML Harmonic Inpainting (selbst trainiertes DiT-Finetune, Rectified Flow).
@@ -769,9 +769,7 @@ class HarmonicRestorationPhase(PhaseInterface):
                             _mid07 = (audio[:, 0] + audio[:, 1]) / _sqrt2
                             _side07 = (audio[:, 0] - audio[:, 1]) / _sqrt2
                             _mid07 = np.clip(_mid07 + _delta, -1.0, 1.0)
-                            audio = np.column_stack(
-                                [(_mid07 + _side07) / _sqrt2, (_mid07 - _side07) / _sqrt2]
-                            )
+                            audio = np.column_stack([(_mid07 + _side07) / _sqrt2, (_mid07 - _side07) / _sqrt2])
                         else:
                             audio = np.clip(audio + _delta, -1.0, 1.0)
                         _mono = np.mean(audio, axis=1) if audio.ndim == 2 else audio

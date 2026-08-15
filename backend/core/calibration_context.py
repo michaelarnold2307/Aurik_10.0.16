@@ -1,4 +1,4 @@
-"""§G76 Zentraler Kalibrierungs-Kontext — Single Source of Truth.
+"""§G76 (GEBOTE.md) Zentraler Kalibrierungs-Kontext — Single Source of Truth.
 
 CALIBRATION_CONTEXT ist die EINZIGE Quelle für alle kalibrierten Schwellwerte,
 Caps, Floors und Blend-Faktoren in Aurik.
@@ -57,14 +57,14 @@ class _UnsetType:
         raise RuntimeError(
             "UNSET CalibrationContext-Wert wurde als int verwendet. "
             "Der CalibrationContext wurde nicht korrekt injiziert. "
-            "§G76: Jedes Modul MUSS den CalibrationContext explizit erhalten."
+            "§G76 (GEBOTE.md): Jedes Modul MUSS den CalibrationContext explizit erhalten."
         )
 
     def __float__(self) -> float:
         raise RuntimeError(
             "UNSET CalibrationContext-Wert wurde als float verwendet. "
             "Der CalibrationContext wurde nicht korrekt injiziert. "
-            "§G76: Jedes Modul MUSS den CalibrationContext explizit erhalten."
+            "§G76 (GEBOTE.md): Jedes Modul MUSS den CalibrationContext explizit erhalten."
         )
 
     def __eq__(self, other: object) -> bool:
@@ -85,7 +85,7 @@ UNSET: Any = _UnsetType()
 
 @dataclass(slots=True, frozen=True)
 class CalibrationContext:
-    """§G76 Zentraler Kalibrierungs-Kontext.
+    """§G76 (GEBOTE.md) Zentraler Kalibrierungs-Kontext.
 
     Bündelt ALLE Pre-Analysis-Messwerte in EINEM Objekt.
     JEDES Modul, das einen Schwellwert benötigt, MUSS diesen
@@ -132,12 +132,12 @@ class CalibrationContext:
         if self.transfer_chain_depth is UNSET:
             raise ValueError(
                 "CalibrationContext.transfer_chain_depth ist UNSET. "
-                "§G76: transfer_chain_depth MUSS aus MediumDetector stammen."
+                "§G76 (GEBOTE.md): transfer_chain_depth MUSS aus MediumDetector stammen."
             )
         if self.restorability_score is UNSET:
             raise ValueError(
                 "CalibrationContext.restorability_score ist UNSET. "
-                "§G76: restorability_score MUSS aus RestorabilityEstimator stammen."
+                "§G76 (GEBOTE.md): restorability_score MUSS aus RestorabilityEstimator stammen."
             )
 
         # Abgeleitete Werte (via object.__setattr__ wegen frozen=True)
@@ -292,6 +292,17 @@ def set_calibration_context(ctx: CalibrationContext) -> None:
     _calibration_context.value = ctx
 
 
+def reset_calibration_context() -> None:
+    """Setzt den thread-lokalen CalibrationContext zurück.
+
+    §G1 (copilot-instructions.md)/V8 Song-Isolation: Aufruf am Song-Ende und
+    in Test-Teardowns — verhindert, dass ein Pipeline-Lauf (oder Test) den
+    Kontext des nächsten Songs/Tests kontaminiert.
+    """
+    if hasattr(_calibration_context, "value"):
+        del _calibration_context.value
+
+
 def get_calibration_context() -> CalibrationContext | None:
     """Gibt den aktuellen CalibrationContext zurück (oder None)."""
     return getattr(_calibration_context, "value", None)
@@ -312,7 +323,7 @@ def require_calibration_context() -> CalibrationContext:
     if ctx is None:
         raise RuntimeError(
             "CalibrationContext ist nicht gesetzt. "
-            "§G76: set_calibration_context() MUSS vor Pipeline-Start aufgerufen werden. "
+            "§G76 (GEBOTE.md): set_calibration_context() MUSS vor Pipeline-Start aufgerufen werden. "
             "Module, die require_calibration_context() verwenden, "
             "dürfen NUR innerhalb einer laufenden Pipeline aufgerufen werden."
         )

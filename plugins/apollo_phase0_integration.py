@@ -451,7 +451,7 @@ class ResembleEnhanceGuard:
     Läuft als EINZIGER Pre-Processor für nicht-Codec-Material.
 
     Modell: models/resemble_enhance/model.onnx (ONNX, CPU, 722 MB)
-    Fallback: Wiener-DSP (eingebauter Fallback im ResembleEnhancePlugin)  # §V6: logger.warning handled at call site
+    Fallback: Wiener-DSP (eingebauter Fallback im ResembleEnhancePlugin)  # §V6 (copilot-instructions.md): logger.warning handled at call site
     """
 
     def __init__(self, hallucination_threshold: float = 0.40):
@@ -996,7 +996,7 @@ class DeepFilterNetGuard:
     Entfernt Breitbandrauschen OHNE Atmung im Gesang zu unterdrücken.
 
     Modell: models/deepfilternet_v3_ii/{enc,dec,erb_dec}.onnx (34 MB total)
-    Fallback: Passthrough (kein DSP — DeepFilterNet ist leichtgewichtig)  # §V6: logger.warning handled at call site
+    Fallback: Passthrough (kein DSP — DeepFilterNet ist leichtgewichtig)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
     Atmungserhalt (§2.8):
         - BreathDetector erkennt Atemsegmente via ZCR + Energie

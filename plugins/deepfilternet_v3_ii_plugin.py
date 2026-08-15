@@ -25,7 +25,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+# Modulebene (§G174): Flags ohne Backend-Abhängigkeiten.
 try:
     from backend.core.music_model_flags import MUSIC_MODEL_PATHS, use_df_musik
 
@@ -56,6 +56,7 @@ def _resolve_model_dir(default_dir: str) -> str:
     if use_df_musik and all((_fin / f).exists() for f in ("enc.onnx", "dec.onnx", "erb_dec.onnx")):
         return str(_fin)
     return default_dir
+
 
 # DeepFilterNet processing constants (48 kHz)
 _SR = 48_000
@@ -112,6 +113,7 @@ class DeepFilterNetV3Plugin:
         self._enc: Any = None
         self._dec: Any = None
         self._erb_dec: Any = None
+        self._current_energy_bias_db: float = 0.0  # §0j (dsp.instructions.md); Default §v10.15/§v10.19
         self._try_load(d)
 
     def _try_load(self, d: str) -> None:
@@ -191,11 +193,14 @@ class DeepFilterNetV3Plugin:
         Args:
             audio:           float32 mono [n] oder stereo [n,2].
             sr:              Sample-Rate in Hz.
-            energy_bias_db:  Standard-Modus (Musik-trainiert, §v10.15) (§4.4 Spec).
-                             Negativer Wert → Gain-Floor erhöht → mehr harmonische
-                             Energie erhalten. Standard: 0.0 dB (Musik-Modell braucht kein Bias;
-                             schützt harmonische Strukturen besser als −4.0 dB).
-                             0.0 = Standard — DFN Musik versteht Harmonische nativ.
+            energy_bias_db:  §0j (dsp.instructions.md): verschiebt die
+                             Noise-Floor-Entscheidungsgrenze der NR.
+                             Negativer Wert hebt den Gain-Floor → harmonische
+                             Energie wird nicht als Rauschen abgetragen.
+                             Vokal-Pfade übergeben −6 dB (register-adaptiv
+                             −3…−9 dB), Instrumental −9 dB.
+                             Standard: 0.0 dB (§v10.15 Musik-Finetune;
+                             §v10.19: statischer Bias-Workaround entfernt).
 
         Returns:
             Denoisiertes Audio, selbe Form, float32 ∈ [-1, 1].
@@ -256,7 +261,7 @@ class DeepFilterNetV3Plugin:
                     except Exception:
                         logger.warning("deepfilternet_v3_ii_plugin.py::_verbessern_channel Ersatzpfad", exc_info=True)
         else:
-            out = self._omlsa_fallback(mono, _SR)
+            out = self._omlsa_fallback(mono, _SR, energy_bias_db=self._current_energy_bias_db)
 
         # Rückresampling auf Original-SR
         if sr != _SR:
@@ -347,6 +352,21 @@ class DeepFilterNetV3Plugin:
 
         return result
 
+    @staticmethod
+    def _apply_energy_bias_to_gain(gain: np.ndarray, energy_bias_db: float) -> np.ndarray:
+        """§0j (dsp.instructions.md): Energy-Bias auf der Gain-Maske anwenden.
+
+        Der ONNX-Graph hat keinen Noise-Floor-Input; die
+        Entscheidungsgrenzen-Verschiebung ``noise_floor_estimate *=
+        10^(energy_bias/20)`` wird äquivalent auf der Gain-Maske umgesetzt:
+        negativer Bias hebt den Gain-Floor (Harmonik-Schutz), positiver
+        senkt ihn (aggressivere NR). bias=0 → Identität.
+        """
+        if energy_bias_db == 0.0:
+            return gain
+        _bias_lin = float(10.0 ** (energy_bias_db / 20.0))
+        return np.clip(gain + (1.0 - gain) * (1.0 - _bias_lin), 0.0, 1.0)
+
     def _infer_onnx(self, mono: np.ndarray) -> np.ndarray:
         """Vollständige 3-Modell ONNX-Inferenz-Pipeline."""
         feat_erb, feat_spec, spec_cx = self._compute_features(mono)
@@ -373,6 +393,9 @@ class DeepFilterNetV3Plugin:
             # Mappe ERB → linear (inverse des Filterbank-Produkts)
             gain_lin = _ERB_FB.T @ m.T  # [481, S]
             gain_lin = np.clip(gain_lin, 0.0, 1.0)
+            # §0j (dsp.instructions.md): Energy-Bias auf der Gain-Maske
+            # anwenden (ONNX-Graph bietet keinen Noise-Floor-Input).
+            gain_lin = self._apply_energy_bias_to_gain(gain_lin, float(getattr(self, "_current_energy_bias_db", 0.0)))
 
             # ERB-Gain anwenden
             spec_filtered = spec_cx * gain_lin
@@ -383,9 +406,9 @@ class DeepFilterNetV3Plugin:
             spec_filtered = self._apply_df_filter(spec_filtered, coefs_np, alpha_np)
 
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("DeepFilterNet ONNX-Inferenz-Fehler: %s — DSP-Ersatzpfad.", exc)
-            return self._omlsa_fallback(mono, _SR)
+            return self._omlsa_fallback(mono, _SR, energy_bias_db=float(getattr(self, "_current_energy_bias_db", 0.0)))
 
         # ISTFT (vectorized batch-IRFFT + overlap-add)
         win = np.hanning(_N_FFT).astype(np.float32)
@@ -461,8 +484,12 @@ class DeepFilterNetV3Plugin:
         return DeepFilterNetV3Plugin._spectral_gating_fallback(mono, sr)
 
     @staticmethod
-    def _omlsa_primary_fallback(mono: np.ndarray, sr: int) -> np.ndarray:
-        """OMLSA-Wiener-Filter Primärfallback (Cohen 2002)."""
+    def _omlsa_primary_fallback(mono: np.ndarray, sr: int, energy_bias_db: float = 0.0) -> np.ndarray:
+        """OMLSA-Wiener-Filter Primärfallback (Cohen 2002).
+
+        §0j (dsp.instructions.md): energy_bias verschiebt die
+        Noise-Floor-Schätzung (noise_floor_estimate *= 10^(bias/20)).
+        """
         from scipy.signal import istft, stft
 
         n_fft = 1024
@@ -481,28 +508,28 @@ class DeepFilterNetV3Plugin:
 
         noise_est = uniform_filter(mag, size=(1, 5))
         noise_est = np.minimum(noise_est, mag)
+        # §0j (dsp.instructions.md): energy_bias verschiebt die
+        # Noise-Floor-Schätzung → noise_floor_estimate *= 10^(bias/20).
+        # Negativer Bias senkt den geschätzten Noise-Floor → weniger
+        # Suppression an Harmonik-Regionen (Vokal −6 dB, Instrumental −9 dB).
+        if energy_bias_db != 0.0:
+            noise_est = noise_est * (10.0 ** (energy_bias_db / 20.0))
         noise_est = np.maximum(noise_est, 1e-8)
 
         # MMSE-LSA Gain
         snr = np.maximum(mag**2 / (noise_est**2 + 1e-10), 0)
         gain = snr / (snr + 1)
-        gain = np.maximum(gain, 0.1)  # G_floor = 0.1
-        # §4.4 Musik-Modus: energy_bias_db=−4.0 dB → Gain-Floor anheben
-        # 10^(|bias|/20): −4 dB → Faktor ≈1.585 → weniger Suppression an Harmonik-Regionen
-        _ebias_db: float = -4.0  # Statischer Fallback-Konstante (kein self in @staticmethod)
-        if _ebias_db != 0.0:
-            _ebias_factor = 10.0 ** (abs(_ebias_db) / 20.0)
-            gain = np.clip(gain * _ebias_factor, 0.0, 1.0)
+        gain = np.maximum(gain, 0.1)  # G_floor = 0.1 (§2.62)
 
         Zxx_out = gain * mag * np.exp(1j * np.angle(Zxx))
         _, out = istft(Zxx_out, fs=sr, nperseg=n_fft, noverlap=_noverlap, window="hann", boundary=False)
         return out[:_n].astype(np.float32)  # type: ignore[no-any-return]
 
     @staticmethod
-    def _omlsa_fallback(mono: np.ndarray, sr: int) -> np.ndarray:
+    def _omlsa_fallback(mono: np.ndarray, sr: int, energy_bias_db: float = 0.0) -> np.ndarray:
         """OMLSA/IMCRA Primärfallback mit Spectral-Gating/Dry als Letztfallback."""
         try:
-            return DeepFilterNetV3Plugin._omlsa_primary_fallback(mono, sr)
+            return DeepFilterNetV3Plugin._omlsa_primary_fallback(mono, sr, energy_bias_db)
         except Exception as exc:
             logger.warning("DeepFilterNet OMLSA-Ersatzpfad fehlgeschlagen: %s — Sekundärfallback aktiv.", exc)
             return DeepFilterNetV3Plugin._secondary_fallback(mono, sr)

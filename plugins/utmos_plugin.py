@@ -11,7 +11,7 @@ Referenz:
 SOTA-Entscheidungsmatrix (§4.4 Aurik-Spec):
     Primär:   UTMOS (für Musik-MOS ohne Referenz)
               + VERSA (Chang 2024) als Ergänzung
-    Fallback: PQS-DSP (Gammatone+NSIM, musik-orientiert)  # §V6: logger.warning handled at call site
+    Fallback: PQS-DSP (Gammatone+NSIM, musik-orientiert)  # §V6 (copilot-instructions.md): logger.warning handled at call site
     VERBOTEN: CDPAM (Sprachkorpus-Training, §4.4)
 
 ⚠ VERBOTENE Sprach-Metriken (niemals für Musik verwenden):
@@ -51,7 +51,7 @@ class MOSResult:
     Attribute:
         mos:          MOS-Score ∈ [1.0, 5.0] (Mean Opinion Score)
         confidence:   Konfidenz der Schätzung ∈ [0, 1]
-        model_used:   "utmos" | "pqs_dsp_fallback" | "pqs_dsp_fallback"  # §V6: logger.warning handled at call site
+        model_used:   "utmos" | "pqs_dsp_fallback" | "pqs_dsp_fallback"  # §V6 (copilot-instructions.md): logger.warning handled at call site
         grade:        Qualitäts-Stufe: "Excellent"|"Good"|"Fair"|"Poor"|"Bad"
         music_aware:  True wenn Modell auf Musik-Daten evaluiert wurde
         details:      Zusätzliche Metriken (spectral_flatness, harmonicity usw.)
@@ -111,7 +111,7 @@ class UTMOSPlugin:
         4. Musik-Bias-Korrektur: +0.3 Punkte wegen systematischer Sprach-Untergewichtung
            (UTMOS wurde auf VoiceMOS-Challenge trainiert, nicht auf Musikkorpus)
 
-    DSP-Fallback (Gammatone + NSIM — PQS-DSP, musik-orientiert):  # §V6: logger.warning handled at call site
+    DSP-Fallback (Gammatone + NSIM — PQS-DSP, musik-orientiert):  # §V6 (copilot-instructions.md): logger.warning handled at call site
         1. Gammatone-Filterbank (25 Bänder, 50–8000 Hz)
         2. NSIM-Selbstähnlichkeit (kein Referenz-Signal nötig)
         3. Spektrale Flatness → Tonal vs. Rausch-Indikator
@@ -665,7 +665,7 @@ class UTMOSPlugin:
             )
 
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("torch nicht verfügbar — UTMOS DSP-Fallback")
             return self._estimate_pqs_dsp(audio, sr)
         except Exception as exc:

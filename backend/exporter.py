@@ -141,7 +141,7 @@ def _apply_powr3_dither(
 
     lsb = 2.0 / (2**bit_depth)
     if cd_active:
-        lsb *= 0.7071  # -3 dB (§V5: Dither-Doppelung vermeiden)
+        lsb *= 0.7071  # -3 dB (§V5 (copilot-instructions.md): Dither-Doppelung vermeiden)
 
     mono_input = audio.ndim == 1
     if mono_input:
@@ -189,7 +189,7 @@ def _apply_tpdf_dither(
         return audio
     lsb = 2.0 / (2**bit_depth)
     if cd_active:
-        lsb *= 0.7071  # -3 dB (§V5: Dither-Doppelung vermeiden)
+        lsb *= 0.7071  # -3 dB (§V5 (copilot-instructions.md): Dither-Doppelung vermeiden)
     rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng()
     noise = (rng.random(audio.shape) + rng.random(audio.shape) - 1.0) * lsb
     out = np.clip((audio + noise).astype(np.float32), -1.0, 1.0)
@@ -683,7 +683,7 @@ def export_audio(
     # §V15: Deterministischer Dither-Seed aus Audio-Hash
     dither_seed = int(hashlib.sha256(audio.tobytes()[:4096]).hexdigest()[:16], 16) % (2**31)
 
-    # 2c. §G8 CD-Rauschprofil-Pflicht: Psychoakustisch maskiert injizieren
+    # 2c. §G8 (GEBOTE.md) CD-Rauschprofil-Pflicht: Psychoakustisch maskiert injizieren
     #     §G15, §G30–§G39, §V11, §V14–§V17
     #     §G63: Idempotent — überspringen wenn CD-Rauschen bereits aktiv
     try:

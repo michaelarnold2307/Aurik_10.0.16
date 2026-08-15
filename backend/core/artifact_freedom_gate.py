@@ -671,7 +671,7 @@ class ArtifactFreedomGate:
         _depth_factor = float(np.clip(1.0 - max(0, _depth_veto - 1) * 0.03, 0.82, 1.0))
         _veto = float(np.clip(_veto_base * _rs_factor * _depth_factor, 0.35, 0.97))
 
-        # §G79 Calibration-Audit: dokumentiere adaptiven Veto-Threshold
+        # §G79 (GEBOTE.md) Calibration-Audit: dokumentiere adaptiven Veto-Threshold
         logger.info(
             "§CALIB af_veto: rs=%.0f depth=%d mat=%s → veto=%.4f (base=%.2f)",
             _rs_veto,

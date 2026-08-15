@@ -73,7 +73,7 @@ def joint_calibrate(
         codec_avg_discount: ∅ Diskont-Faktor aus Codec-Kette
         terminal_codec: Terminal-Codec-Typ oder None
         min_strength: Minimale Phasen-Stärke (None = auto aus restorability_score)
-        restorability_score: Restorability 0-100 für adaptive min_strength (§G71)
+        restorability_score: Restorability 0-100 für adaptive min_strength (§G71 (GEBOTE.md))
         default_strength: Standard wenn kein Profil
 
     Returns:
@@ -81,7 +81,7 @@ def joint_calibrate(
     """
     from backend.core.phase_effect_catalog import PHASE_EFFECT_CATALOG
 
-    # §G71 Adaptive min_strength aus Restorability
+    # §G71 (GEBOTE.md) Adaptive min_strength aus Restorability
     if min_strength is None:
         _rs = float(np.clip(restorability_score, 0.0, 100.0))
         if _rs >= 90:

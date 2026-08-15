@@ -126,8 +126,7 @@ class PostProcessingGate:
                     continue
                 _scores_after = self._measure(_processed, sr, goals)
                 _regression = any(
-                    _scores_after.get(g, 0.5) - self._measure(audio, sr, (g,)).get(g, 0.5) < -threshold
-                    for g in goals
+                    _scores_after.get(g, 0.5) - self._measure(audio, sr, (g,)).get(g, 0.5) < -threshold for g in goals
                 )
                 if _regression:
                     _hi = _mid
@@ -139,7 +138,11 @@ class PostProcessingGate:
 
         logger.debug(
             "PostGate [%s] binary search: optimal=%.4f (iter=%d, range=[%.4f,%.4f])",
-            label, _best, iterations, _lo, _hi,
+            label,
+            _best,
+            iterations,
+            _lo,
+            _hi,
         )
         return float(_best)
 
@@ -179,7 +182,12 @@ class PostProcessingGate:
         # §v10.16: Binäre Suche für optimale Stärke
         if binary_search_strength and strength is not None:
             _optimal = self._binary_search_strength(
-                component_fn, audio, sr, label, goals, _thresh,
+                component_fn,
+                audio,
+                sr,
+                label,
+                goals,
+                _thresh,
                 initial=float(strength),
             )
             if _optimal > 0.001:

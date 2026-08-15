@@ -246,7 +246,7 @@ class MiipherPlugin:
             }
             return result
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             fallback_chain.append(f"sgmse_plus:{type(exc).__name__}")
             logger.debug("MIIPHER adapter SGMSE+ nicht verfuegbar: %s — DeepFilterNet Ersatzpfad.", exc)
 
@@ -268,8 +268,7 @@ class MiipherPlugin:
                 "energy_bias_db": _used_bias,
                 "activation_reason": "deepfilternet_fallback",
             }
-        except Exception:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            return result
         except Exception as exc:  # pylint: disable=broad-except
             fallback_chain.append(f"deepfilternet_v3_ii:{type(exc).__name__}")
             logger.warning("DeepFilterNet Ersatzpfad fehlgeschlagen: %s — Wiener DSP Ersatzpfad.", exc)

@@ -30,22 +30,23 @@ log = logging.getLogger(__name__)
 SR = 48000
 
 # Schwellwerte
-MOS_DEGRADATION_TOLERANCE = 0.05   # Max. 0.05 MOS Verschlechterung pro Schritt
-MOS_MIN_ABSOLUTE = 1.5             # Unter diesem MOS immer zurückblenden
-GOLDEN_DISTANCE_TOLERANCE = 0.3    # Max. MOS-Abstand zum Golden Sample
+MOS_DEGRADATION_TOLERANCE = 0.05  # Max. 0.05 MOS Verschlechterung pro Schritt
+MOS_MIN_ABSOLUTE = 1.5  # Unter diesem MOS immer zurückblenden
+GOLDEN_DISTANCE_TOLERANCE = 0.3  # Max. MOS-Abstand zum Golden Sample
 
 
 @dataclass
 class PerceptualResult:
     """Ergebnis einer Wahrnehmungs-Prüfung."""
+
     passed: bool
     mos_pre: float
     mos_post: float
     mos_delta: float
-    golden_mos: Optional[float] = None
-    golden_distance: Optional[float] = None
-    adapted: bool = False          # Wurde Strength adaptiert?
-    blend_ratio: float = 1.0       # 1.0 = kein Blend
+    golden_mos: float | None = None
+    golden_distance: float | None = None
+    adapted: bool = False  # Wurde Strength adaptiert?
+    blend_ratio: float = 1.0  # 1.0 = kein Blend
 
 
 class PerceptualClosedLoop:
@@ -66,6 +67,7 @@ class PerceptualClosedLoop:
     def _init_utmos(self):
         try:
             from plugins.utmos_plugin import get_utmos
+
             self._utmos = get_utmos()
             log.info("Perceptual Loop: UTMOS v2 geladen")
         except Exception as exc:
@@ -94,7 +96,7 @@ class PerceptualClosedLoop:
         audio_pre: np.ndarray,
         audio_post: np.ndarray,
         sr: int = SR,
-        golden_sample: Optional[np.ndarray] = None,
+        golden_sample: np.ndarray | None = None,
     ) -> PerceptualResult:
         """
         Vergleicht wahrgenommene Qualität vor/nach einem Repair-Schritt.
@@ -149,19 +151,20 @@ class PerceptualClosedLoop:
     ) -> np.ndarray:
         """Blendet basierend auf dem PerceptualResult zurück."""
         ratio = result.blend_ratio
-        blended = (ratio * audio_pre + (1 - ratio) * audio_post)
+        blended = ratio * audio_pre + (1 - ratio) * audio_post
         return blended.astype(np.float32)
 
 
 @dataclass
 class LoopReport:
     """Gesamtbericht des Regelkreises."""
+
     steps_evaluated: int = 0
     steps_adapted: int = 0
     final_mos: float = 0.0
     initial_mos: float = 0.0
     mos_improvement: float = 0.0
-    golden_distance_final: Optional[float] = None
+    golden_distance_final: float | None = None
     details: list[dict[str, Any]] = field(default_factory=list)
 
 
@@ -169,7 +172,7 @@ def run_closed_loop(
     audio_original: np.ndarray,
     audio_processed: np.ndarray,
     sr: int = SR,
-    golden_sample: Optional[np.ndarray] = None,
+    golden_sample: np.ndarray | None = None,
     max_iterations: int = 3,
     strength_decay: float = 0.7,
 ) -> tuple[np.ndarray, LoopReport]:
@@ -198,14 +201,16 @@ def run_closed_loop(
     for iteration in range(max_iterations):
         report.steps_evaluated += 1
         result = loop.evaluate(prev, current, sr, golden_sample)
-        report.details.append({
-            "iteration": iteration,
-            "mos_pre": result.mos_pre,
-            "mos_post": result.mos_post,
-            "mos_delta": result.mos_delta,
-            "passed": result.passed,
-            "blend_ratio": result.blend_ratio,
-        })
+        report.details.append(
+            {
+                "iteration": iteration,
+                "mos_pre": result.mos_pre,
+                "mos_post": result.mos_post,
+                "mos_delta": result.mos_delta,
+                "passed": result.passed,
+                "blend_ratio": result.blend_ratio,
+            }
+        )
 
         if result.passed:
             break
@@ -220,9 +225,7 @@ def run_closed_loop(
 
     if golden_sample is not None:
         try:
-            report.golden_distance_final = abs(
-                report.final_mos - loop.estimate_mos(golden_sample, sr)
-            )
+            report.golden_distance_final = abs(report.final_mos - loop.estimate_mos(golden_sample, sr))
         except Exception:
             pass
 

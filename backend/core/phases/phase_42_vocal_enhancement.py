@@ -320,7 +320,7 @@ class VocalEnhancement(PhaseInterface):
             2. Fallback: demucs_v4 separate_vocals()
             3. Enhance only the vocal stem (DSP chain below)
             4. StemRemixBalancer.balance_remix() → LUFS-korrekter Re-Mix
-            5. Fallback: full-audio DSP enhancement (kein Stem-Sep verfügbar)  # §V6: logger.warning handled at call site
+            5. Fallback: full-audio DSP enhancement (kein Stem-Sep verfügbar)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
         Args:
             audio: Input audio (mono or stereo, 48 000 Hz)
@@ -365,17 +365,11 @@ class VocalEnhancement(PhaseInterface):
                 # je Kanal verarbeiten und Originallayout wiederherstellen.
                 if audio.shape[0] == 2 and audio.shape[1] != 2:
                     _chunks = [audio[0], audio[1]]  # channels-first (2, N)
-                    _res = [
-                        _vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate))
-                        for _c in _chunks
-                    ]
+                    _res = [_vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate)) for _c in _chunks]
                     audio = np.stack([_r.audio for _r in _res], axis=0).astype(np.float32)
                 else:
                     _chunks = [audio[:, 0], audio[:, 1]]  # channels-last (N, 2)
-                    _res = [
-                        _vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate))
-                        for _c in _chunks
-                    ]
+                    _res = [_vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate)) for _c in _chunks]
                     audio = np.stack([_r.audio for _r in _res], axis=1).astype(np.float32)
                 _vocal_result = _res[0]
             else:
@@ -391,16 +385,12 @@ class VocalEnhancement(PhaseInterface):
         except Exception:
             pass  # SOTA Vocal optional — Fallback auf bestehende DSP-Kette
 
-
         # §v10.14: MIIPHER-DiT Early-Exit — wenn Phase 03 bereits
         # Flow-Matching-DiT angewandt hat, ist Phase 42 redundant.
         # Doppeltes Enhancement = Overprocessing → Primum non nocere.
         _route_taken = str(kwargs.get("vocal_route_taken", "") or "")
         if _route_taken == "miipher_dit":
-            logger.info(
-                "Phase 42: MIIPHER-DiT bereits in Phase 03 gelaufen — "
-                "überspringe (kein Doppel-Enhancement)"
-            )
+            logger.info("Phase 42: MIIPHER-DiT bereits in Phase 03 gelaufen — überspringe (kein Doppel-Enhancement)")
             return PhaseResult(
                 audio=audio,
                 sample_rate=sample_rate,

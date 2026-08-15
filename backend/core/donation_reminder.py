@@ -87,7 +87,7 @@ def validate_donation_configuration() -> dict:
 
     PayPal-Spenden via Browser-Redirect lassen sich serverseitig nicht kryptografisch
     verifizieren — `payment_verification`/`guaranteed_capture` dokumentieren diese
-    Grenze transparent statt sie zu verschweigen (§G8 Transparenz).
+    Grenze transparent statt sie zu verschweigen (§G8 (GEBOTE.md) Transparenz).
     """
     return {
         "primary_ok": PAYPAL_URL.startswith("https://"),

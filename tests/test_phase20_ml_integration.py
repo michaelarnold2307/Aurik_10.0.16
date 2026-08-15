@@ -138,7 +138,9 @@ def test_phase20_ml_routing():
     print("=" * 80)
     print("✓ Phase 20 ML-Hybrid integration functional")
     print("✓ Quality mode routing working (fast → DSP, balanced → adaptive ML)")
-    print("✓ Graceful fallback to DSP if ML unavailable")  # §V6: logger.warning handled at call site
+    print(
+        "✓ Graceful fallback to DSP if ML unavailable"
+    )  # §V6 (copilot-instructions.md): logger.warning handled at call site
     print("\nIntegration Status: SUCCESS ✅")
 
 

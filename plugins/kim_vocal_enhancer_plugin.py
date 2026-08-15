@@ -7,7 +7,11 @@ Format: STFT-Maske wie mdx23c (SR=44100, n_fft=6144, hop=1024, dim_t=256)
 
 from __future__ import annotations
 
-import logging, os, threading, numpy as np
+import logging
+import os
+import threading
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 _lock = threading.Lock()
@@ -25,6 +29,7 @@ OVERLAP = 128
 
 def _get_session():
     import onnxruntime as ort
+
     if not hasattr(_get_session, "_sess"):
         with _lock:
             if not hasattr(_get_session, "_sess"):
@@ -56,8 +61,8 @@ def _istft_stereo(spec_L: np.ndarray, spec_R: np.ndarray, orig_len: int) -> np.n
         for i in range(spec.shape[1]):
             frame = np.fft.irfft(spec[:, i], n=N_FFT).real
             start = i * HOP
-            audio[start:start+N_FFT] += frame * window
-            weight[start:start+N_FFT] += window ** 2
+            audio[start : start + N_FFT] += frame * window
+            weight[start : start + N_FFT] += window**2
         out[ch_idx] = audio[:orig_len] / np.maximum(weight[:orig_len], 1e-8)
     return out
 
@@ -70,15 +75,19 @@ def enhance_vocals(audio: np.ndarray) -> np.ndarray:
     is_stereo = audio.ndim == 2 and audio.shape[0] == 2
     if is_stereo:
         try:
-            from backend.core.stereo_aware_vocal_processor import to_mid_side, from_mid_side
+            from backend.core.stereo_aware_vocal_processor import from_mid_side, to_mid_side
+
             ms = to_mid_side(audio)
             if len(ms.mid) < N_FFT:
                 return audio
             mid_enhanced = _process(session, ms.mid)
             result = from_mid_side(type(ms)(mid=mid_enhanced, side=ms.side, correlation=ms.correlation))
             return result.astype(np.float32)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
+            logger.warning(
+                "KIM Vocal Enhancer: Mid/Side-Pfad fehlgeschlagen (%s) — Fallback auf Stereo-Direktpfad.", exc
+            )
 
     return _process(session, audio)
 
@@ -100,10 +109,15 @@ def _process(session, audio: np.ndarray) -> np.ndarray:
             sl_L = np.pad(sl_L, ((0, 0), (0, pad_t)), mode="edge")
             sl_R = np.pad(sl_R, ((0, 0), (0, pad_t)), mode="edge")
 
-        inp = np.stack([
-            sl_L.real.astype(np.float32), sl_L.imag.astype(np.float32),
-            sl_R.real.astype(np.float32), sl_R.imag.astype(np.float32),
-        ], axis=0)[np.newaxis, :, :, :]
+        inp = np.stack(
+            [
+                sl_L.real.astype(np.float32),
+                sl_L.imag.astype(np.float32),
+                sl_R.real.astype(np.float32),
+                sl_R.imag.astype(np.float32),
+            ],
+            axis=0,
+        )[np.newaxis, :, :, :]
 
         mask = session.run(None, {"input": inp})[0]
         mask = np.squeeze(mask)
@@ -113,14 +127,12 @@ def _process(session, audio: np.ndarray) -> np.ndarray:
         mL_real, mL_imag = mask[0], mask[1]
         mR_real, mR_imag = mask[2], mask[3]
 
-        enhanced_L = (sl_L.real * mL_real - sl_L.imag * mL_imag) + \
-                     1j * (sl_L.real * mL_imag + sl_L.imag * mL_real)
-        enhanced_R = (sl_R.real * mR_real - sl_R.imag * mR_imag) + \
-                     1j * (sl_R.real * mR_imag + sl_R.imag * mR_real)
+        enhanced_L = (sl_L.real * mL_real - sl_L.imag * mL_imag) + 1j * (sl_L.real * mL_imag + sl_L.imag * mL_real)
+        enhanced_R = (sl_R.real * mR_real - sl_R.imag * mR_imag) + 1j * (sl_R.real * mR_imag + sl_R.imag * mR_real)
 
         actual = min(DIM_T, n_frames - pos)
-        out_L[:DIM_F, pos:pos+actual] = enhanced_L[:, :actual]
-        out_R[:DIM_F, pos:pos+actual] = enhanced_R[:, :actual]
+        out_L[:DIM_F, pos : pos + actual] = enhanced_L[:, :actual]
+        out_R[:DIM_F, pos : pos + actual] = enhanced_R[:, :actual]
         pos += OVERLAP
 
     orig_len = audio.shape[-1] if audio.ndim == 2 else len(audio)

@@ -1361,7 +1361,7 @@ class EraClassifier:
 
     Invarianten:
         - Konfidenz < 0.4 → material_prior = "unknown" (konservative Priors)
-        - CLAP-Fallback auf DSP-Fingerprint wenn Import fehlschlägt  # §V6: logger.warning handled at call site
+        - CLAP-Fallback auf DSP-Fingerprint wenn Import fehlschlägt  # §V6 (copilot-instructions.md): logger.warning handled at call site
         - Decade-Label wird in RestorationResult.era_decade gespeichert
         - Ergebnisse werden ausschließlich im RAM gecacht (kein Disk-I/O)
     """
@@ -1901,7 +1901,7 @@ class EraClassifier:
                 hf_rolloff_hz=rolloff_hz,
             )
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.warning("§G23 EraClassifier Tier-1 fehlgeschlagen — DSP-Ersatzpfad: %s", exc, exc_info=True)
             return None
 

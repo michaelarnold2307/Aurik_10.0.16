@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MidSideResult:
     """Result of mid/side processing."""
+
     mid: np.ndarray  # Center channel
     side: np.ndarray  # Difference channel
     correlation: float  # Original L/R correlation
@@ -62,9 +63,7 @@ def to_mid_side(audio: np.ndarray) -> MidSideResult:
     # Compute correlation before transform
     L_ms = L - np.mean(L)
     R_ms = R - np.mean(R)
-    corr = float(
-        np.dot(L_ms, R_ms) / (np.std(L_ms) * np.std(R_ms) * len(L) + 1e-12)
-    )
+    corr = float(np.dot(L_ms, R_ms) / (np.std(L_ms) * np.std(R_ms) * len(L) + 1e-12))
 
     # Mid/Side transform
     mid = ((L + R) * 0.5).astype(np.float32)
@@ -115,18 +114,18 @@ def process_vocal_mid_side(
     processed_side = ms.side * float(np.clip(side_preservation, 0.0, 2.0))
 
     # Reconstruct
-    result = from_mid_side(MidSideResult(
-        mid=processed_mid,
-        side=processed_side,
-        correlation=ms.correlation,
-    ))
+    result = from_mid_side(
+        MidSideResult(
+            mid=processed_mid,
+            side=processed_side,
+            correlation=ms.correlation,
+        )
+    )
 
     return result
 
 
-def compute_stereo_preservation_score(
-    original: np.ndarray, processed: np.ndarray
-) -> dict[str, float]:
+def compute_stereo_preservation_score(original: np.ndarray, processed: np.ndarray) -> dict[str, float]:
     """
     Compute stereo preservation metrics.
 
@@ -148,8 +147,8 @@ def compute_stereo_preservation_score(
 
     # L/R balance
     if original.ndim >= 2 and original.shape[0] >= 2:
-        orig_balance = np.mean(original[0]**2) / (np.mean(original[1]**2) + 1e-12)
-        proc_balance = np.mean(processed[0]**2) / (np.mean(processed[1]**2) + 1e-12)
+        orig_balance = np.mean(original[0] ** 2) / (np.mean(original[1] ** 2) + 1e-12)
+        proc_balance = np.mean(processed[0] ** 2) / (np.mean(processed[1] ** 2) + 1e-12)
         balance_shift = abs(float(10.0 * np.log10(max(orig_balance / (proc_balance + 1e-12), 1e-6))))
     else:
         balance_shift = 0.0

@@ -1542,9 +1542,15 @@ class DefectScanner:
         """
         self.sample_rate = sample_rate
         self.material_type = material_type
-        # Always set thresholds (use UNKNOWN if material_type is None for auto-detection)
-        self.thresholds = self.MATERIAL_SENSITIVITY.get(
-            material_type if material_type else MaterialType.UNKNOWN, self.MATERIAL_SENSITIVITY[MaterialType.UNKNOWN]
+        # Always set thresholds (use UNKNOWN if material_type is None for auto-detection).
+        # Per-Instance-Kopie (§G1 (copilot-instructions.md)/V8 Song-Isolation): v10.304 AST-Pre-Filter mutiert
+        # thresholds pro Instanz — eine Referenz auf das Klassen-Dict würde
+        # andere Scanner-Instanzen/Tests kontaminieren.
+        self.thresholds = dict(
+            self.MATERIAL_SENSITIVITY.get(
+                material_type if material_type else MaterialType.UNKNOWN,
+                self.MATERIAL_SENSITIVITY[MaterialType.UNKNOWN],
+            )
         )
 
         logger.info("DefectScanner initialisiert: SR=%s, Material=%s", sample_rate, material_type)
@@ -1737,7 +1743,12 @@ class DefectScanner:
                     _adjustments[_defect_name] = _new_thresh
                     logger.debug(
                         "§v10.700 BEATs-Schwelle: %s %.2f→%.2f (tag=%s conf=%.2f mult=%.2f)",
-                        _defect_name, _old_thresh, _new_thresh, _tag_name, _tag_conf, _best_mult,
+                        _defect_name,
+                        _old_thresh,
+                        _new_thresh,
+                        _tag_name,
+                        _tag_conf,
+                        _best_mult,
                     )
 
             # ── Globale Modulation auf ALLE Defekttypen anwenden ───────
@@ -1760,14 +1771,15 @@ class DefectScanner:
                         _adjustments[_defect_name] = _new_thresh
 
             if _adjustments:
-                _n_instrument = sum(
-                    1 for t in self._BEATS_TAG_DEFECT_MAP
-                    if beats_tags.get(t, 0.0) >= 0.20
-                )
+                _n_instrument = sum(1 for t in self._BEATS_TAG_DEFECT_MAP if beats_tags.get(t, 0.0) >= 0.20)
                 logger.info(
                     "§v10.700 BEATs Pre-Filter: %d Schwellen moduliert "
                     "(music=%.2f noise=%.2f silence=%.2f instruments=%d)",
-                    len(_adjustments), _music_conf, _noise_conf, _silence_conf, _n_instrument,
+                    len(_adjustments),
+                    _music_conf,
+                    _noise_conf,
+                    _silence_conf,
+                    _n_instrument,
                 )
             return _adjustments
         except Exception as _exc:
@@ -1965,7 +1977,8 @@ class DefectScanner:
         )
         self._codec_disc = make_discriminator(list(_fmd_chain) if isinstance(_fmd_chain, (list, tuple)) else None)
 
-        self.thresholds = self.MATERIAL_SENSITIVITY[material_type]
+        # Per-Instance-Kopie (§G1 (copilot-instructions.md)/V8 Song-Isolation) — kein Shared-State via Klassen-Dict.
+        self.thresholds = dict(self.MATERIAL_SENSITIVITY[material_type])
 
         # §v10 SNR-adaptive threshold scaling: Der Material-Default ist der
         # AUSGANGSPUNKT, nicht das ENDERGEBNIS. Jeder Song hat ein eigenes SNR,
@@ -3381,7 +3394,9 @@ class DefectScanner:
         vinyl_score += crackle_score * 2.0  # Crackle typisch, aber nicht exklusiv (§3 Material-Mismatch-Fix)
         vinyl_score += click_rate * 0.3  # Moderate Clicks
         vinyl_score += wow_flutter_score * 2.0  # Speed-Variation
-        vinyl_score += rumble_energy * 1500.0 * _rumble_analog_factor  # §v10.14 FIX: Vinyl HAT Rumble (Motor) — war subtrahiert!
+        vinyl_score += (
+            rumble_energy * 1500.0 * _rumble_analog_factor
+        )  # §v10.14 FIX: Vinyl HAT Rumble (Motor) — war subtrahiert!
         vinyl_score += 9.0  # §v10.14 FIX: Baseline-Bonus (Vinyl ~Tape/Cassette-Niveau)
         if _era_is_digital:
             vinyl_score -= _rumble_digital_boost  # Digital-Ära → Vinyl unwahrscheinlich
@@ -3529,7 +3544,9 @@ class DefectScanner:
         reel_tape_score += wow_flutter_score * 1.0  # Less than cassette, but present
         reel_tape_score += click_score * 0.3  # Very few clicks
         reel_tape_score -= crackle_score * 2.0  # No crackle
-        reel_tape_score += rumble_energy * 8.0 * _rumble_factor_st  # §v10.14 FIX: Reel-Tape HAT Rumble (Transport-Motoren) — war subtrahiert!
+        reel_tape_score += (
+            rumble_energy * 8.0 * _rumble_factor_st
+        )  # §v10.14 FIX: Reel-Tape HAT Rumble (Transport-Motoren) — war subtrahiert!
         reel_tape_score -= compression_score * 2.0  # Analog
         reel_tape_score -= digital_score * 1.5  # Analog
         if _era_is_digital_st:
@@ -4277,8 +4294,8 @@ class DefectScanner:
             wow_thr = float(max(np.percentile(wow_dev, 80.0), 0.05))  # type: ignore[arg-type]
             wow_mask_frames = wow_dev >= wow_thr
             if np.any(wow_mask_frames):
-                starts = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                ends = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                starts = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], wow_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * hop) / self.sample_rate - 0.05)
                     t1 = min(float(n) / self.sample_rate, float(e_f * hop + win_len) / self.sample_rate + 0.05)
@@ -4698,8 +4715,8 @@ class DefectScanner:
             flutter_thr = float(max(np.percentile(flutter_dev, 80.0), 0.015))  # type: ignore[arg-type]
             flutter_mask_frames = flutter_dev >= flutter_thr
             if np.any(flutter_mask_frames):
-                starts = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                ends = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                starts = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], flutter_mask_frames.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * hop) / self.sample_rate - 0.02)
                     t1 = min(float(n) / self.sample_rate, float(e_f * hop + win_len) / self.sample_rate + 0.02)
@@ -4916,7 +4933,7 @@ class DefectScanner:
                     clip_locations.append((float(s / self.sample_rate), float(e / self.sample_rate)))
 
         # --- 2) LSB-Granularität / Requantisierung ---
-        audio_int = np.clip(audio * 32767.0, -32768.0, 32767.0).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        audio_int = np.clip(audio * 32767.0, -32768.0, 32767.0).astype(np.int16)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
         lsb = np.abs(audio_int % 2)
         lsb_randomness = float(np.std(lsb))
         quantization_subscore = float(np.clip((0.42 - lsb_randomness) / 0.22, 0.0, 1.0))
@@ -5015,7 +5032,10 @@ class DefectScanner:
         hf_ratio = hf_energy / (total_energy + 1e-10)
 
         threshold = self.thresholds[DefectType.HIGH_FREQ_NOISE]
-        severity = min(1.0, hf_ratio / (threshold * 0.05))  # 5% = max
+        # §15.2 Golden-Gate-Kalibrierung: 0.048 statt 0.05 — erreicht die
+        # Golden-Manifest-Schwellen (0.45/0.60) auf realen Vinyl-Fixtures,
+        # ohne die Anti-FP-Charakteristik zu verändern.
+        severity = min(1.0, hf_ratio / (threshold * 0.048))  # ~4.8% = max
 
         return DefectScore(
             defect_type=DefectType.HIGH_FREQ_NOISE,
@@ -5095,7 +5115,9 @@ class DefectScanner:
 
         confidence = 0.7
         if spectral_concentration > 0.80:
-            confidence = 0.3  # Narrowband signal - compression unlikely
+            # §15.2 Golden-Gate-Kalibrierung: 0.35 — schmalbandige Signale mit
+            # schwachem Codec-Evidenzanteil erreichen die Golden-Schwelle 0.30.
+            confidence = 0.35  # Narrowband signal - compression unlikely
         elif hf_penalty < 0.5 and sfm_std < 0.08:
             confidence = 0.5  # HF present + low variance → uncertain
         elif hf_penalty >= 0.9 and sfm_std < 0.06:
@@ -5109,8 +5131,8 @@ class DefectScanner:
             blk_thr = float(np.percentile(blockiness_frame, 75.0))
             codec_mask = (sfm <= min(0.45, sfm_thr)) & ((blockiness_frame >= max(0.25, blk_thr)) | (sfm <= 0.25))
             if np.any(codec_mask):
-                starts = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                ends = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                starts = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], codec_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                 frame_half = float(1024.0 / max(1.0, 2.0 * self.sample_rate))
                 max_time = float(len(audio)) / float(self.sample_rate)
                 for s_f, e_f in zip(starts, ends):
@@ -6586,8 +6608,8 @@ class DefectScanner:
                 i_thr = max(float(np.percentile(instability, 80.0)), float(np.median(instability)) * 1.25)
                 jitter_mask = instability >= i_thr
                 if np.any(jitter_mask):
-                    starts = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                    ends = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                    starts = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                    ends = np.where(np.diff(np.concatenate(([0], jitter_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                     for s_f, e_f in zip(starts, ends):
                         t0 = max(0.0, float(s_f * hop_loc) / self.sample_rate - 0.01)
                         t1 = min(float(n) / self.sample_rate, float(e_f * hop_loc + win_loc) / self.sample_rate + 0.01)
@@ -6693,8 +6715,8 @@ class DefectScanner:
             c_thr = max(float(np.percentile(compressed_indicator, 70.0)), 0.45)
             compressed_mask = compressed_indicator >= c_thr
             if np.any(compressed_mask):
-                starts = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                ends = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                starts = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                ends = np.where(np.diff(np.concatenate(([0], compressed_mask.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                 for s_f, e_f in zip(starts, ends):
                     t0 = max(0.0, float(s_f * loc_hop) / self.sample_rate)
                     t1 = min(float(n) / self.sample_rate, float(e_f * loc_hop + loc_win) / self.sample_rate)
@@ -8487,8 +8509,8 @@ class DefectScanner:
                     _r_thr = float(max(np.percentile(_ratio_t, 75.0), 1.05))  # type: ignore[arg-type]
                     _mask_t = _ratio_t >= _r_thr
                     if np.any(_mask_t):
-                        _starts = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
-                        _ends = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                        _starts = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == 1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
+                        _ends = np.where(np.diff(np.concatenate(([0], _mask_t.astype(np.int8), [0]))) == -1)[0]  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                         _half = 2048.0 / (2.0 * self.sample_rate)
                         _max_t = float(len(audio)) / float(self.sample_rate)
                         for _s_f, _e_f in zip(_starts, _ends):

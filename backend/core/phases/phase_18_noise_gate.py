@@ -667,9 +667,11 @@ class NoiseGate(PhaseInterface):
                     _dry_ratio = float(np.clip((_nt18_d - 0.10) / 0.50, 0.0, 0.80))
                     _wet_ratio = 1.0 - _dry_ratio
                     gated_audio = (_wet_ratio * gated_audio + _dry_ratio * audio).astype(np.float32)
-                    logger.info("§V19 phase_18: noise_texture_dist=%.3f", _nt18_d)
+                    logger.info("§V19 (Spec-Vintage-Guard) phase_18: noise_texture_dist=%.3f", _nt18_d)
         except Exception as _nt18_exc:
-            logger.debug("§V19 Verarbeitungsschritt_18 noise_texture nicht blockierend: %s", _nt18_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_18 noise_texture nicht blockierend: %s", _nt18_exc
+            )
 
         if _p18_panns >= 0.25:
             try:
@@ -701,7 +703,7 @@ class NoiseGate(PhaseInterface):
             except Exception as _v21_18_exc:
                 logger.debug("§V21 Verarbeitungsschritt_18 noise_floor nicht blockierend: %s", _v21_18_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (
                 check_spectral_color_preservation as _scg_18,
@@ -709,10 +711,12 @@ class NoiseGate(PhaseInterface):
 
             _sc_result_18 = _scg_18(audio, gated_audio, sample_rate)
             if not _sc_result_18.ok:
-                _sc_wet_18 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_18 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 gated_audio = (_sc_wet_18 * gated_audio + (1.0 - _sc_wet_18) * audio).astype(np.float32)
         except Exception as _sc_exc_18:
-            logger.debug("§V24 Verarbeitungsschritt_18 spectral_color nicht blockierend: %s", _sc_exc_18)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_18 spectral_color nicht blockierend: %s", _sc_exc_18
+            )
 
         try:
             from backend.core.dsp.onset_guard import (

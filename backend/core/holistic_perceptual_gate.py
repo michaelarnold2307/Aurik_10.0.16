@@ -927,7 +927,7 @@ class HolisticPerceptualGate:
         # §v10.14: Guard gegen None-Input (fail-closed auf Originalsignal)
         if original is None or restored is None:
             return 1.0
-        if not hasattr(original, 'astype') or not hasattr(restored, 'astype'):
+        if not hasattr(original, "astype") or not hasattr(restored, "astype"):
             return 1.0
         orig_clean = np.nan_to_num(original.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
         rest_clean = np.nan_to_num(restored.astype(np.float32), nan=0.0, posinf=0.0, neginf=0.0)
@@ -1299,7 +1299,7 @@ class HolisticPerceptualGate:
             proxy = 0.35 * sfm_score + 0.40 * snr_score + 0.25 * harmonic_coh
             return float(np.clip(proxy, 0.0, 1.0))
         except Exception as _exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("NORESQA DSP-proxy error (nicht blockierend): %s", _exc)
             return 1.0  # neutral: don't penalise when guard fails
 

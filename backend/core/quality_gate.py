@@ -230,6 +230,11 @@ class QualityGate:
             5. Musical Goals ≥ Pflicht-Schwellwerte (§1.2, sekundär)
         """
         try:
+            # §5.9 (Spec 07) [RELEASE_MUST] Early-Exit: teure STFT/SNR-Analysen
+            # erst nach positiver Musical-Goals-Prüfung. Goal-Failure → sofort False.
+            if not self._check_musical_goals(dsp_result, "DSP"):
+                return False
+
             audio = self._extract_audio(dsp_result)
 
             # Technische Basis-Checks
@@ -242,18 +247,9 @@ class QualityGate:
                 if not hpe_passed:
                     return False
 
-            # Musical Goals (sekundär, nur wenn HPE ok)
-            if not self._check_musical_goals(dsp_result, "DSP"):
-                # Bei HPE ok aber Musical-Goal-Schwelle knapp verfehlt:
-                # Nur warnen, nicht ablehnen — das Ohr entscheidet
-                logger.warning(
-                    "[QualityGate/DSP] Musical Goals unter Schwellwert, "
-                    "aber HPE akzeptiert — Ergebnis wird NICHT abgelehnt."
-                )
-
             return True
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.exception("[QualityGate/DSP] Unerwarteter Fehler – Fallback True")
             return True
 
@@ -287,7 +283,7 @@ class QualityGate:
                     logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)
 
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         except Exception:
             logger.exception("[QualityGate/ML] Unerwarteter Fehler – Fallback True")
             return True
@@ -309,7 +305,7 @@ class QualityGate:
                 logger.warning("[QualityGate/GUI] Unbekannter Modus '%s' – abgelehnt.", mode)
                 return False
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             return True
         except Exception:
             logger.exception("[QualityGate/GUI] Unerwarteter Fehler – Fallback True")

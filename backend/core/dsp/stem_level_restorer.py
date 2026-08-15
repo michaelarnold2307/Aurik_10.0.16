@@ -326,7 +326,7 @@ class StemLevelRestorer:
                 return route.vocal.astype(np.float32), route.instrumental.astype(np.float32), route.model_used
             logger.debug("§SLR-1 separation router Ersatzpfad chain: %s", route.fallback_chain)
         except Exception as _router_exc:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("§SLR-1 separation router Ersatzpfad to DSP: %s", _router_exc)
         _vocal, _instr = self._dsp_stem_split(audio, sample_rate)
         return _vocal, _instr, "dsp_bandpass_residual"
@@ -376,7 +376,7 @@ class StemLevelRestorer:
             _instr = (audio - _vocal).astype(np.float32)
             return _vocal, _instr
         except Exception as _sos_exc:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("§SLR-1 DSP stem split fehlgeschlagen: %s", _sos_exc)
             # Last resort: equal split
             _half = (audio * 0.5).astype(np.float32)

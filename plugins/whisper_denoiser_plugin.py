@@ -29,7 +29,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+# Modulebene (§G174): Flags ohne Backend-Abhängigkeiten.
 try:
     from backend.core.music_model_flags import resolve_model_path, use_whisper_denoiser
 
@@ -63,9 +63,7 @@ def _load_trainer_module() -> Any:
     if not _trainer_path.exists():
         return None
     try:
-        _spec = importlib.util.spec_from_file_location(
-            "aurik_whisper_denoiser_trainer", str(_trainer_path)
-        )
+        _spec = importlib.util.spec_from_file_location("aurik_whisper_denoiser_trainer", str(_trainer_path))
         if _spec is None or _spec.loader is None:
             return None
         _mod = importlib.util.module_from_spec(_spec)
@@ -91,7 +89,7 @@ def _load_trainer_module() -> Any:
         return None
 
 
-# Modulebene laden (§SC-G72: kein Import unter Lock). Das Trainings-Skript
+# Modulebene laden (§G174: kein Import unter Lock). Das Trainings-Skript
 # importiert nur leichte Abhängigkeiten (transformers wird erst in
 # WhisperFeatureExtractor.__init__ lazy geladen).
 _TRAINER = _load_trainer_module()
@@ -206,7 +204,7 @@ class WhisperDenoiserPlugin:
 
         _chunks: list[np.ndarray] = []
         for _start in range(0, _orig_len, _CHUNK_SAMPLES):
-            _c = _x[_start:_start + _CHUNK_SAMPLES]
+            _c = _x[_start : _start + _CHUNK_SAMPLES]
             if len(_c) < _CHUNK_SAMPLES:
                 _c = np.pad(_c, (0, _CHUNK_SAMPLES - len(_c)), mode="reflect")
             _chunks.append(_c)

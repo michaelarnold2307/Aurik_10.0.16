@@ -18,8 +18,10 @@ def _sine(freq: float = 440.0, dur: float = 1.0, amp: float = 0.5) -> np.ndarray
 
 
 def _clean_tone() -> np.ndarray:
-    return (0.5 * np.sin(2 * np.pi * 440 * np.linspace(0, 1, SR, endpoint=False))
-            + 0.15 * np.sin(2 * np.pi * 880 * np.linspace(0, 1, SR, endpoint=False))).astype(np.float32)
+    return (
+        0.5 * np.sin(2 * np.pi * 440 * np.linspace(0, 1, SR, endpoint=False))
+        + 0.15 * np.sin(2 * np.pi * 880 * np.linspace(0, 1, SR, endpoint=False))
+    ).astype(np.float32)
 
 
 def _noisy_tone() -> np.ndarray:

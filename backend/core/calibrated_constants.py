@@ -1,4 +1,4 @@
-"""§V25/§G76/§G77 Kalibrierte Konstanten — Single Source of Truth.
+"""§V25/§G76 (GEBOTE.md)/§G77 (GEBOTE.md) Kalibrierte Konstanten — Single Source of Truth.
 
 JEDER Schwellwert, Floor, Cap, Blend-Faktor in Aurik MUSS
 AUSSCHLIESSLICH aus diesem Modul bezogen werden.
@@ -7,7 +7,7 @@ Keine numerische Konstante in irgendeinem anderen Modul.
 Keine diskreten Buckets. Keine Lookup-Tabellen.
 
 Alle Werte werden als kontinuierliche Funktionen aus dem
-CalibrationContext abgeleitet (§G77).
+CalibrationContext abgeleitet (§G77 (GEBOTE.md)).
 
 Verwendung:
     from backend.core.calibrated_constants import get_constants
@@ -186,7 +186,7 @@ class CalibratedConstants:
 
     @property
     def min_phase_strength(self) -> float:
-        """§G71 Adaptive min_strength aus Restorability."""
+        """§G71 (GEBOTE.md) Adaptive min_strength aus Restorability."""
         rs = float(np.clip(self.restorability_score, 0.0, 100.0))
         if rs >= 90:
             return 0.20
@@ -254,13 +254,13 @@ class CalibratedConstants:
 
     @property
     def sft_wet_ceiling_nonrepair(self) -> float:
-        """§G71 SFT-Wet-Ceiling für Nicht-Reparatur-Phasen."""
+        """§G71 (GEBOTE.md) SFT-Wet-Ceiling für Nicht-Reparatur-Phasen."""
         depth = max(1, int(self.transfer_chain_depth))
         return float(np.clip(0.72 + (depth - 1) * 0.05, 0.65, 0.90))
 
     @property
     def sft_wet_ceiling_repair(self) -> float:
-        """§G71 SFT-Wet-Ceiling für Reparatur-Phasen."""
+        """§G71 (GEBOTE.md) SFT-Wet-Ceiling für Reparatur-Phasen."""
         depth = max(1, int(self.transfer_chain_depth))
         return float(np.clip(0.82 + (depth - 1) * 0.05, 0.75, 0.95))
 
@@ -401,7 +401,7 @@ _GDD_SPECTRAL_BASE_MS = 10.0  # 10ms: NR-Phasen entfernen Rausch-Phaseninhalt
 # ═══════════════════════════════════════════════════════════════════════════════
 
 
-def _rs01(cal: "CalibratedConstants") -> float:
+def _rs01(cal: CalibratedConstants) -> float:
     """Restorability 0–100 auf 0.0–1.0 (kontinuierlich)."""
     return float(np.clip(cal.restorability_score, 0.0, 100.0) / 100.0)
 

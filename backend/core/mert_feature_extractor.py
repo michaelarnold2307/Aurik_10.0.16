@@ -34,7 +34,7 @@ class MERTFeatureExtractor:
 
         self._session = ort.InferenceSession(
             str(_MODEL_PATH),
-            providers=['ROCMExecutionProvider', 'CPUExecutionProvider'],
+            providers=["ROCMExecutionProvider", "CPUExecutionProvider"],
         )
         self._provider = self._session.get_providers()[0]
         logger.info("MERT geladen: %s (117M params, %s)", _MODEL_PATH.name, self._provider)
@@ -62,7 +62,7 @@ class MERTFeatureExtractor:
         audio_batch = audio[np.newaxis, :]
 
         # Inferenz
-        outputs = self._session.run(None, {'input_values': audio_batch})
+        outputs = self._session.run(None, {"input_values": audio_batch})
         features = outputs[0]  # [1, frames, 768]
         return features[0]  # [frames, 768]
 
@@ -74,8 +74,7 @@ class MERTFeatureExtractor:
         features = self.extract(audio, sample_rate)
         return features.mean(axis=0).astype(np.float32)  # [768]
 
-    def extract_segments(self, audio: np.ndarray, sample_rate: int = 48000,
-                         segment_s: float = 5.0) -> np.ndarray:
+    def extract_segments(self, audio: np.ndarray, sample_rate: int = 48000, segment_s: float = 5.0) -> np.ndarray:
         """Extrahiert MERT-Features in Segmenten (für lange Audiodateien).
 
         Args:
@@ -119,9 +118,9 @@ def compute_music_context(audio: np.ndarray, sample_rate: int = 48000) -> dict:
 
         # Heuristische Mappings (vereinfacht, aber nützlich)
         # MERT-Dimensionen korrelieren mit musikalischen Eigenschaften
-        low_dim = mean_feat[:256]   # Untere Dimensionen → Rhythmus, Bass
+        low_dim = mean_feat[:256]  # Untere Dimensionen → Rhythmus, Bass
         mid_dim = mean_feat[256:512]  # Mittlere → Harmonik, Instrumentierung
-        high_dim = mean_feat[512:]    # Obere → Textur, Vocals
+        high_dim = mean_feat[512:]  # Obere → Textur, Vocals
 
         return {
             # Rhythmische Dichte (Varianz in unteren Dimensionen)

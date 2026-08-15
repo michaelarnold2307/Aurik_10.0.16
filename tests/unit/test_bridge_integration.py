@@ -12,6 +12,18 @@ import pytest
 
 from backend.core.calibration_context import CalibrationContext, set_calibration_context
 
+
+@pytest.fixture(autouse=True)
+def _reset_calibration_context():
+    """§G1 (copilot-instructions.md)/V8 Song-Isolation: thread-lokalen CalibrationContext nach jedem Test
+    zurücksetzen, damit Folge-Tests (z.B. CIG-Adaptiv-Toleranz) keinen
+    veralteten Kontext erben."""
+    from backend.core.calibration_context import reset_calibration_context
+
+    yield
+    reset_calibration_context()
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Test 1: BridgeCalibrationData Struktur
 # ═══════════════════════════════════════════════════════════════════════════════

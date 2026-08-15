@@ -753,7 +753,7 @@ class SpectralRepairPhase(PhaseInterface):
             except Exception as _hnr_exc_p50:
                 logger.debug("§0p HNR-Blend Verarbeitungsschritt_50 (nicht blockierend): %s", _hnr_exc_p50)
 
-        # §V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach STFT-Inpainting (RELEASE_MUST §0p V19-V26)
+        # §V19 (Spec-Vintage-Guard)/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach STFT-Inpainting (RELEASE_MUST §0p V19-V26)
         _mat50_guards = str(kwargs.get("material_type", _material_50) or "unknown").lower()
         _nt50_residual = audio - repaired_audio
         try:
@@ -766,10 +766,13 @@ class SpectralRepairPhase(PhaseInterface):
                 if _nt50_d > 0.25:
                     repaired_audio = (0.5 * repaired_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§V19 Verarbeitungsschritt_50: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt50_d
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_50: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend",
+                        _nt50_d,
                     )
         except Exception as _nt50_exc:
-            logger.debug("§V19 Verarbeitungsschritt_50 noise_texture nicht blockierend: %s", _nt50_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_50 noise_texture nicht blockierend: %s", _nt50_exc
+            )
 
         if _p50_panns >= 0.25:
             try:
@@ -805,7 +808,7 @@ class SpectralRepairPhase(PhaseInterface):
             except Exception as _v21_50_exc:
                 logger.debug("§V21 Verarbeitungsschritt_50 noise_floor nicht blockierend: %s", _v21_50_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_50,
@@ -813,10 +816,12 @@ class SpectralRepairPhase(PhaseInterface):
 
             _sc_result_50 = _scg_50(audio, repaired_audio, sample_rate)
             if not _sc_result_50.ok:
-                _sc_wet_50 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_50 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 repaired_audio = (_sc_wet_50 * repaired_audio + (1.0 - _sc_wet_50) * audio).astype(np.float32)
         except Exception as _sc_exc_50:  # pylint: disable=broad-except
-            logger.debug("§V24 Verarbeitungsschritt_50 spectral_color nicht blockierend: %s", _sc_exc_50)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_50 spectral_color nicht blockierend: %s", _sc_exc_50
+            )
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel

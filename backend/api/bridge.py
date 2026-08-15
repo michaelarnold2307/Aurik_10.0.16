@@ -2608,14 +2608,14 @@ def _get_ml_availability() -> dict[str, Any]:
 
         models["speaker_identity"] = "ecapa_tdnn"
     except ImportError:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         models["speaker_identity"] = "mfcc_dsp"
     # PANNs (Genre/Audio tagging)
     try:
         pass
 
     except ImportError:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
     except ImportError:
         models["panns"] = "dsp"
     # LAION-CLAP
@@ -2629,7 +2629,7 @@ def _get_ml_availability() -> dict[str, Any]:
     try:
         import torch
     except ImportError:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         models["sgmse_dereverb"] = "torchscript" if torch else "dsp_wpe"
     except ImportError:
         models["sgmse_dereverb"] = "dsp_wpe"
@@ -2637,7 +2637,7 @@ def _get_ml_availability() -> dict[str, Any]:
     try:
         models["rmvpe_pitch"] = "onnx"
     except ImportError:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         models["rmvpe_pitch"] = "pyin_dsp"
 
     any_ml = any(v not in ("dsp", "dsp_wpe", "pyin_dsp", "mfcc_dsp", "unavailable") for v in models.values())
@@ -3299,7 +3299,7 @@ def get_pipeline_ab_snapshots(*, include_audio: bool = True, max_duration_s: flo
                     if len(arr) == 0:
                         entry[key] = ""
                         continue
-                    arr_16 = np.clip(arr * 32767, -32768, 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                    arr_16 = np.clip(arr * 32767, -32768, 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                     buf = io.BytesIO()
                     with _wave.open(buf, "wb") as wf:
                         wf.setnchannels(1)
@@ -3404,7 +3404,7 @@ def get_donation_reminder() -> dict[str, str]:
 
 
 def should_show_donation_reminder() -> bool:
-    """§V4: Bridge-Wrapper für donation_reminder.should_show_reminder()."""
+    """§V4 (copilot-instructions.md): Bridge-Wrapper für donation_reminder.should_show_reminder()."""
     try:
         from backend.core.donation_reminder import should_show_reminder
 
@@ -3414,7 +3414,7 @@ def should_show_donation_reminder() -> bool:
 
 
 def mark_donation_reminder_shown() -> None:
-    """§V4: Bridge-Wrapper für donation_reminder.mark_reminder_shown()."""
+    """§V4 (copilot-instructions.md): Bridge-Wrapper für donation_reminder.mark_reminder_shown()."""
     try:
         from backend.core.donation_reminder import mark_reminder_shown
 
@@ -3424,7 +3424,7 @@ def mark_donation_reminder_shown() -> None:
 
 
 def open_donation_reminder_link() -> bool:
-    """§V4: Bridge-Wrapper für donation_reminder.open_donation_link()."""
+    """§V4 (copilot-instructions.md): Bridge-Wrapper für donation_reminder.open_donation_link()."""
     try:
         from backend.core.donation_reminder import open_donation_link
 
@@ -3434,7 +3434,7 @@ def open_donation_reminder_link() -> bool:
 
 
 def get_donation_reminder_info() -> dict:
-    """§V4: Bridge-Wrapper für donation_reminder.get_donation_info()."""
+    """§V4 (copilot-instructions.md): Bridge-Wrapper für donation_reminder.get_donation_info()."""
     try:
         from backend.core.donation_reminder import get_donation_info
 
@@ -3459,7 +3459,7 @@ def inject_cd_noise_profile(audio, sample_rate: int, material_type: str = "vinyl
 
 
 # ---------------------------------------------------------------------------
-# Plugin-Registry — via bridge (§V4 Bridge-Bypass-Verbot)
+# Plugin-Registry — via bridge (§V4 (copilot-instructions.md) Bridge-Bypass-Verbot)
 # ---------------------------------------------------------------------------
 
 
@@ -3668,17 +3668,21 @@ def get_repair_plan_consent(defect_result: object) -> dict:
                 sev = float(getattr(d, "severity", 0.0) or 0.0)
                 by_cat[cat] = max(by_cat.get(cat, 0.0), sev)
             for cat, sev in sorted(by_cat.items(), key=lambda kv: -kv[1]):
-                found.append({
-                    "label": _DEFECT_LAYMAN_LABELS.get(cat, cat.replace("_", " ")),
-                    "severity": _severity_word(sev),
-                })
+                found.append(
+                    {
+                        "label": _DEFECT_LAYMAN_LABELS.get(cat, cat.replace("_", " ")),
+                        "severity": _severity_word(sev),
+                    }
+                )
         elif hasattr(defect_result, "defect_scores"):
             scores = dict(getattr(defect_result, "defect_scores", {}) or {})
             for key, val in sorted(scores.items(), key=lambda kv: -float(kv[1] or 0.0)):
-                found.append({
-                    "label": _DEFECT_LAYMAN_LABELS.get(str(key), str(key).replace("_", " ")),
-                    "severity": _severity_word(float(val or 0.0)),
-                })
+                found.append(
+                    {
+                        "label": _DEFECT_LAYMAN_LABELS.get(str(key), str(key).replace("_", " ")),
+                        "severity": _severity_word(float(val or 0.0)),
+                    }
+                )
 
         will_do: list[str] = []
         plan = getattr(defect_result, "repair_plan", None)
@@ -3758,9 +3762,7 @@ def get_guard_report(result: object) -> dict:
                 "pumping": int(violations.get("pumping", 0) or 0),
                 "formant": int(violations.get("formant", 0) or 0),
                 "spectral": int(violations.get("spectral", 0) or 0),
-                "peak_delta_db": float(
-                    getattr(report, "guard_peak_delta_db", 0.0) or 0.0
-                ),
+                "peak_delta_db": float(getattr(report, "guard_peak_delta_db", 0.0) or 0.0),
             },
             "utmos_loop": {
                 "iterations": int(getattr(report, "utmos_iterations", 0) or 0),

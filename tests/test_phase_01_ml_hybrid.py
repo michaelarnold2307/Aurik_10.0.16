@@ -100,7 +100,9 @@ print("\nStrategy: DSP-Detection + ML-Inpainting")
 print("  - DSP detects clicks (multi-scale analysis)")
 print("  - Severity calculated: amplitude × 0.5 + duration × 0.5")
 print("  - Routing: severity >0.6 → ML (DeepFilterNet), else DSP")
-print("  - Graceful fallback: DSP if ML unavailable")  # §V6: logger.warning handled at call site
+print(
+    "  - Graceful fallback: DSP if ML unavailable"
+)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 print("\nExpected Improvement:")
 print("  - Current (DSP): Natürlichkeit 0.50")
 print("  - With ML: Natürlichkeit 0.80 (+0.30)")

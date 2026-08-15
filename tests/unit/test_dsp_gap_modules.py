@@ -768,7 +768,7 @@ class TestBreathEmotionClassifier:
 
 
 class TestCheckFormantShiftDb:
-    """§G1/§G5 Formant ±2 dB Guard — check_formant_shift_db()."""
+    """§G1 (GEBOTE.md)/§G5 (GEBOTE.md) Formant ±2 dB Guard — check_formant_shift_db()."""
 
     def _sine_audio(self, freq_hz: float, dur_s: float = 3.0) -> np.ndarray:
         """Mono sine at given frequency, 3 seconds."""
@@ -863,7 +863,7 @@ class TestCheckFormantShiftDb:
 
 
 class TestBreathSegmentProtection:
-    """§G2 Breath-Segment Protection — EMOTIONAL_TENSION blend-back."""
+    """§G2 (GEBOTE.md) Breath-Segment Protection — EMOTIONAL_TENSION blend-back."""
 
     def _make_breath_seg(
         self, start: float, end: float, category_value: str = "emotional_tension", g_floor: float = 0.85
@@ -926,7 +926,7 @@ class TestBreathSegmentProtection:
 
 
 class TestOmlsaPostDfnSmoother:
-    """§G3 OMLSA post-DFN Residual Smoother — light Wiener gain."""
+    """§G3 (GEBOTE.md) OMLSA post-DFN Residual Smoother — light Wiener gain."""
 
     def test_imcra_returns_array(self):
         """compute_imcra_noise_estimate() gibt 2D-Array zurück."""
@@ -964,7 +964,7 @@ class TestOmlsaPostDfnSmoother:
 
 
 class TestSingMosGate:
-    """§G4 SingMOS Naturalness Gate — get_singmos_predictor().predict()."""
+    """§G4 (GEBOTE.md) SingMOS Naturalness Gate — get_singmos_predictor().predict()."""
 
     def test_singmos_predictor_returns_float(self):
         """SingMOS predict() gibt float MOS 1.0–5.0 zurück."""

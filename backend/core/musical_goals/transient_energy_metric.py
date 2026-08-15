@@ -435,7 +435,7 @@ def _hpss_percussive(
         hpss_result = np.asarray(perc_audio, dtype=np.float32)
         return hpss_result
     except Exception:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         fallback_result: np.ndarray = np.asarray(mono.copy(), dtype=np.float32)
         return fallback_result
 

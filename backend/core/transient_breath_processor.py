@@ -70,8 +70,7 @@ def classify_breath_frame(
     n = len(frame)
     if n < 16:
         return BreathClassification(
-            is_breath=False, is_consonant=False, is_sibilance=False,
-            confidence=0.0, spectral_tilt=0.0
+            is_breath=False, is_consonant=False, is_sibilance=False, confidence=0.0, spectral_tilt=0.0
         )
 
     # 1. ZCR + Energy baseline (same as original)
@@ -105,15 +104,20 @@ def classify_breath_frame(
     is_sibilance = spectral_tilt < -SIBILANCE_SPECTRAL_TILT_THRESHOLD  # Negative tilt = high energy in high freqs
     if is_sibilance:
         return BreathClassification(
-            is_breath=False, is_consonant=False, is_sibilance=True,
-            confidence=0.95, spectral_tilt=spectral_tilt,
+            is_breath=False,
+            is_consonant=False,
+            is_sibilance=True,
+            confidence=0.95,
+            spectral_tilt=spectral_tilt,
         )
 
     # Consonant: has sharp onset (attack phase)
     is_consonant = has_onset and zcr > 0.1
     if is_consonant:
         return BreathClassification(
-            is_breath=False, is_consonant=True, is_sibilance=False,
+            is_breath=False,
+            is_consonant=True,
+            is_sibilance=False,
             confidence=0.8 + 0.2 * onset_strength if onset_strength else 0.8,
             spectral_tilt=spectral_tilt,
         )

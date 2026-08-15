@@ -304,7 +304,7 @@ class ABCompareManager:
         """
         try:
             # §v10.14: Guard gegen None/Skalar-Eingaben
-            if original is None or restored is None or not hasattr(original, 'ndim') or not hasattr(restored, 'ndim'):
+            if original is None or restored is None or not hasattr(original, "ndim") or not hasattr(restored, "ndim"):
                 return 0.5
             # Mono-Konversion (nur Kanal 0 wenn Stereo)
             orig_m = original.flatten() if original.ndim == 1 else original[:, 0]

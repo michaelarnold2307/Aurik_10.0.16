@@ -1,4 +1,4 @@
-"""§G124 Integrationstest: Pipeline-Simulation mit depth=4.
+"""§G124 (GEBOTE.md) Integrationstest: Pipeline-Simulation mit depth=4.
 
 Simuliert eine Kassetten-Pipeline (chain_depth=4) und prüft dass:
 - CIG keinen False-Rollback auslöst (GDD-Schwelle 58.5ms > typischer Drift)
@@ -46,7 +46,7 @@ def _set_depth4_context():
 
 
 def test_calibration_context_is_set(_set_depth4_context):
-    """§G122: CalibrationContext muss nach set_ erreichbar sein."""
+    """§G122 (GEBOTE.md): CalibrationContext muss nach set_ erreichbar sein."""
     from backend.core.calibration_context import get_calibration_context
 
     ctx = get_calibration_context()

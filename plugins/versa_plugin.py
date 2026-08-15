@@ -6,7 +6,7 @@ Primär:  SingMOS Pro (South-Twilight/SingMOS v1.1.1, via torch.hub)
          Hub-Cache: models/versa/hub_cache/ (offline nach Installation)
          Referenz: https://arxiv.org/abs/2510.01812
 
-Fallback: PQS-DSP-Gammatone (Bark-Filterbank + Sigmoid-MOS-Mapping)  # §V6: logger.warning handled at call site
+Fallback: PQS-DSP-Gammatone (Bark-Filterbank + Sigmoid-MOS-Mapping)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
 VERBOTEN laut Spec §4.4: PESQ, DNSMOS, NISQA, STOI, CDPAM.
 

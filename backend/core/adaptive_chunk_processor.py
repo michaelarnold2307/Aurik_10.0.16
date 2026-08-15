@@ -373,9 +373,7 @@ def process_in_adaptive_chunks(
 
                 _overlap_region = processed[:fade_samples]
                 if not should_skip_alignment(_overlap_region, sr):
-                    _align = compute_optimal_alignment(
-                        _prev_tail, processed, fade_samples, sr
-                    )
+                    _align = compute_optimal_alignment(_prev_tail, processed, fade_samples, sr)
                     if _align.was_adjusted:
                         from scipy.ndimage import shift as _nd_shift
 

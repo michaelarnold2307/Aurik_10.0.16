@@ -21,8 +21,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import shutil
-import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -58,9 +58,9 @@ class EvalCase:
 
     case_id: str
     material: str = "unknown"
-    damaged: Optional[np.ndarray] = None
-    clean: Optional[np.ndarray] = None
-    restored: Optional[np.ndarray] = None
+    damaged: np.ndarray | None = None
+    clean: np.ndarray | None = None
+    restored: np.ndarray | None = None
     sample_rate: int = 48000
     meta: dict[str, Any] = field(default_factory=dict)
 
@@ -74,11 +74,11 @@ class CaseMetrics:
     case_id: str
     snr_delta_db: float = 0.0
     mse_reduction_pct: float = 0.0
-    utmos_delta: Optional[float] = None      # None = Modell nicht verfügbar
-    musical_goals_passed: Optional[int] = None  # None = Checker nicht verfügbar
-    musical_goals_total: Optional[int] = None
+    utmos_delta: float | None = None  # None = Modell nicht verfügbar
+    musical_goals_passed: int | None = None  # None = Checker nicht verfügbar
+    musical_goals_total: int | None = None
     bandwidth_delta_hz: float = 0.0
-    verdict: str = "neutral"                 # improved | neutral | degraded
+    verdict: str = "neutral"  # improved | neutral | degraded
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -160,7 +160,7 @@ class EvalReport:
         return out
 
     @classmethod
-    def load(cls, path: Path | str) -> "EvalReport":
+    def load(cls, path: Path | str) -> EvalReport:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         report = cls(
             schema_version=data.get("schema_version", SCHEMA_VERSION),
@@ -232,7 +232,7 @@ def compute_objective_metrics(case: EvalCase) -> CaseMetrics:
     return metrics
 
 
-def _compute_utmos_delta(damaged: np.ndarray, restored: np.ndarray, sr: int) -> Optional[float]:
+def _compute_utmos_delta(damaged: np.ndarray, restored: np.ndarray, sr: int) -> float | None:
     """UTMOS-MOS-Delta — None wenn Modell nicht ladbar (CI ohne ML-Gewichte)."""
     try:
         from plugins.utmos_plugin import get_utmos_plugin
@@ -248,7 +248,7 @@ def _compute_utmos_delta(damaged: np.ndarray, restored: np.ndarray, sr: int) -> 
         return None
 
 
-def _compute_musical_goals(restored: np.ndarray, clean: np.ndarray, sr: int) -> Optional[tuple[int, int]]:
+def _compute_musical_goals(restored: np.ndarray, clean: np.ndarray, sr: int) -> tuple[int, int] | None:
     """Musical-Goals-Passrate — None wenn Checker nicht verfügbar."""
     try:
         from backend.core.musical_goals.musical_goals_metrics import MusicalGoalsChecker
@@ -334,8 +334,7 @@ def gate_competitive_multi(scenario_results: list[tuple[str, float, float]]) -> 
             "of": len(scenario_results),
             "required": int(len(scenario_results) * COMPETITIVE_WIN_RATIO_REQUIRED + 0.5),
             "scenarios": [
-                {"name": n, "aurik": round(a, 1), "rx11": round(r, 1), "won": a >= r}
-                for n, a, r in scenario_results
+                {"name": n, "aurik": round(a, 1), "rx11": round(r, 1), "won": a >= r} for n, a, r in scenario_results
             ],
         },
     )
@@ -409,7 +408,14 @@ class ListeningTestExporter:
         """Schreibt A.wav/B.wav (randomisiert) + führt den Decoder-Schlüssel."""
         import wave
 
-        rng = np.random.default_rng(int(time.time() * 1000) % (2**32))
+        # §G5 (copilot-instructions.md): Seeds pro Session — kein time.time() in
+        # Entscheidungslogik. Session-Seed einmalig (os.urandom); pro Fall
+        # deterministisch ableitbar, damit die A/B-Zuordnung reproduzierbar
+        # über den Decoder-Schlüssel auflösbar bleibt.
+        if not hasattr(self, "_session_seed"):
+            self._session_seed = int.from_bytes(os.urandom(4), "little")
+        _case_seed = (self._session_seed + sum(case_id.encode("utf-8"))) % (2**32)
+        rng = np.random.default_rng(_case_seed)
         swapped = bool(rng.integers(0, 2))
         pair_dir = self.out_dir / case_id
         pair_dir.mkdir(parents=True, exist_ok=True)
@@ -424,8 +430,10 @@ class ListeningTestExporter:
                 wf.setsampwidth(2)
                 wf.setframerate(sr)
                 wf.writeframes(pcm.tobytes())
-        self._key[case_id] = {"A": "restored" if not swapped else "reference",
-                              "B": "reference" if not swapped else "restored"}
+        self._key[case_id] = {
+            "A": "restored" if not swapped else "reference",
+            "B": "reference" if not swapped else "restored",
+        }
         return pair_dir
 
     def write_scoresheet(self) -> Path:

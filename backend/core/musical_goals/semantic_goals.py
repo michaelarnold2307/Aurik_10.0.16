@@ -707,7 +707,7 @@ class SemanticGoalsEngine:
             return (model, feature_extractor)
 
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             if not self._instrument_fallback_logged:
                 logger.warning(
                     "⚠️ SOTA SemanticGoals: transformers nicht verfügbar — akustischer Offline-Ersatzpfad aktiv"

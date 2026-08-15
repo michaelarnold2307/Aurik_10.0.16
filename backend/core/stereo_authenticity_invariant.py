@@ -186,9 +186,15 @@ class StereoAuthenticitiyInvariant:
     # §v10.14: Material-adaptive Toleranz — degradierte Medien haben inhärent
     # instabileres Stereofeld (Kassetten-Dropouts, Azimut-Fehler).
     PHANTOM_CENTER_MAX_DEG_RELAXED: float = 5.0
-    PHANTOM_CENTER_RELAXED_MATERIALS: frozenset[str] = frozenset({
-        "cassette", "mp3_low", "mp3_mid", "aac", "streaming",
-    })
+    PHANTOM_CENTER_RELAXED_MATERIALS: frozenset[str] = frozenset(
+        {
+            "cassette",
+            "mp3_low",
+            "mp3_mid",
+            "aac",
+            "streaming",
+        }
+    )
     DECCA_DECADE_START: int = 1952
     DECCA_DECADE_END: int = 1965
     ABBEY_ROAD_DECADE_START: int = 1967
@@ -301,8 +307,7 @@ class StereoAuthenticitiyInvariant:
                 result.passed = False
                 result.rule_triggered = "abbey_road_phantom_center"
                 result.message = (
-                    f"Abbey-Road-Stereo: Phantom-Center um {azimuth_dev:.1f}° "
-                    f"verschoben (max. {_max_deg:.1f}°)."
+                    f"Abbey-Road-Stereo: Phantom-Center um {azimuth_dev:.1f}° verschoben (max. {_max_deg:.1f}°)."
                 )
                 logger.warning("⚠️ StereoAuth: %s", result.message)
                 return result

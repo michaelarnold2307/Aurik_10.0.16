@@ -638,7 +638,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             except Exception as _npa31_exc:
                 logger.debug("§2.46f Verarbeitungsschritt31 NPA-Guard (nicht blockierend): %s", _npa31_exc)
 
-            # §V24 Spektralfarbe-Prüfung nach Pitch-/Speed-Korrektur (§2.74, non-blocking)
+            # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach Pitch-/Speed-Korrektur (§2.74, non-blocking)
             try:
                 from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                     check_spectral_color_preservation as _scg_31,
@@ -646,10 +646,12 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
 
                 _sc_result_31 = _scg_31(audio, result_audio, sample_rate)
                 if not _sc_result_31.ok:
-                    _sc_wet_31 = 0.70  # Phase-Strength −30 % (§V24)
+                    _sc_wet_31 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                     result_audio = (_sc_wet_31 * result_audio + (1.0 - _sc_wet_31) * audio).astype(np.float32)
             except Exception as _sc_exc_31:
-                logger.debug("§V24 Verarbeitungsschritt_31 spectral_color nicht blockierend: %s", _sc_exc_31)
+                logger.debug(
+                    "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_31 spectral_color nicht blockierend: %s", _sc_exc_31
+                )
 
             # V26 Onset-Guard (§2.77): Transients nach Pitch-Korrektur schützen (non-blocking)
             try:
@@ -936,7 +938,7 @@ class SpeedPitchCorrectionPhase(PhaseInterface):
             return pitch_hz, confidence
 
         except Exception as e:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("pYIN fehlgeschlagen (%s), DSP-Notfall-Ersatzpfad: librosa.yin", e)
             try:
                 # Notfall-Fallback: librosa.yin (einfaches YIN — nur als letzter Ausweg)

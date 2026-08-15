@@ -322,7 +322,9 @@ class ModelDownloader:
                         sha256=raw.get("sha256", ""),
                         size_bytes=int(raw.get("size_bytes", 0)),
                         required=bool(raw.get("required", False)),
-                        fallback=raw.get("fallback", "dsp"),  # §V6: logger.warning handled at call site
+                        fallback=raw.get(
+                            "fallback", "dsp"
+                        ),  # §V6 (copilot-instructions.md): logger.warning handled at call site
                         sota_upgrade=raw.get("sota_upgrade"),
                         license=raw.get("license", ""),
                         reference=raw.get("reference", ""),
@@ -400,7 +402,9 @@ class ModelDownloader:
                 sha256=entry.get("sha256", ""),
                 size_bytes=int(entry.get("size_bytes", 0)),
                 required=bool(entry.get("required", False)),
-                fallback=entry.get("fallback", "dsp"),  # §V6: logger.warning handled at call site
+                fallback=entry.get(
+                    "fallback", "dsp"
+                ),  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 sota_upgrade=entry.get("sota_upgrade"),
             )
         else:

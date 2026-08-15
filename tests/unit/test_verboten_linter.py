@@ -3,7 +3,7 @@
 Scannt den gesamten Code auf:
 - Modul-Level-Konstanten die wie Schwellwerte/Caps/Floors aussehen
 - NUMERISCHE Defaults in Funktionssignaturen
-- Diskrete Buckets/Lookup-Tabellen (§G77)
+- Diskrete Buckets/Lookup-Tabellen (§G77 (GEBOTE.md))
 
 NUR die kanonischen Definitionsdateien sind ausgenommen.
 """
@@ -46,7 +46,7 @@ SIGNATURE_NUMERIC_DEFAULT = re.compile(
     re.IGNORECASE,
 )
 
-# Diskrete Buckets/Lookup-Tabellen (§G77 verboten)
+# Diskrete Buckets/Lookup-Tabellen (§G77 (GEBOTE.md) verboten)
 BUCKET_PATTERN = re.compile(
     r"(?:if|elif)\s+.*\b(?:transfer_chain_depth|restorability_score|"
     r"material_type|snr_db|bandwidth)\b.*[<>]=?\s*[\d.]+",
@@ -120,7 +120,7 @@ def _scan_file(filepath: Path) -> dict[str, list[dict[str, Any]]]:
                 }
             )
 
-        # 3. Diskrete Buckets (§G77)
+        # 3. Diskrete Buckets (§G77 (GEBOTE.md))
         if BUCKET_PATTERN.search(stripped):
             # Nur wenn es nach Bucket-Logik aussieht (mehrere elifs mit gleicher Variable)
             results["buckets"].append(
@@ -164,7 +164,7 @@ def _scan_all() -> dict[str, dict]:
 
 
 def test_no_new_hardcoded_thresholds() -> None:
-    """§V25/§G123: Keine NEUEN hartcodierten Schwellwerte.
+    """§V25/§G123 (GEBOTE.md): Keine NEUEN hartcodierten Schwellwerte.
 
     Scannt auf Modul-Level-Threshold-Konstanten und numerische Defaults.
     Kanonische Definitionsdateien sind ausgenommen.

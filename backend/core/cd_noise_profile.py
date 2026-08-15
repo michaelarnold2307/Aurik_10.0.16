@@ -1,5 +1,5 @@
 """
-SOTA CD-Rauschprofil-Generator (§G8, §G15–§G19, §G30–§G45)
+SOTA CD-Rauschprofil-Generator (§G8 (GEBOTE.md), §G15–§G19, §G30–§G45)
 
 Nicht von einer echten CD-Produktion (1982–2000) unterscheidbar.
 
@@ -336,7 +336,7 @@ def inject_cd_noise_profile(
     bit_depth: int = 16,
     seed: int | None = None,
 ) -> np.ndarray:
-    """§G8: Injiziert SOTA CD-Rauschprofil mit psychoakustischer Maskierung.
+    """§G8 (GEBOTE.md): Injiziert SOTA CD-Rauschprofil mit psychoakustischer Maskierung.
 
     Das Rauschprofil wird NUR dort appliziert, wo das menschliche Ohr
     es wahrnimmt — d.h. in leisen Passagen unterhalb -70 dBFS (§G44).

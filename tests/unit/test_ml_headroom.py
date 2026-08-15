@@ -288,7 +288,7 @@ class TestGuardEventContract:
             "available_gb": 6.8,
             "channels": 2,
             "duration_s": 245.3,
-            "fallback": "wpe_dsp",  # §V6: logger.warning handled at call site
+            "fallback": "wpe_dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         for key in self._MANDATORY_FIELDS:
             assert key in event, f"ml_guard_event missing mandatory key: {key}"

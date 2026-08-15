@@ -124,3 +124,57 @@ def test_omlsa_fallback_uses_spectral_gating_when_secondary_snr_is_low(monkeypat
 
     assert out.shape == audio.shape
     assert np.all(out == 0.0)
+
+
+# ── §0j (dsp.instructions.md): energy_bias wirkt auf die NR-Entscheidungsgrenze ──
+
+
+def test_apply_energy_bias_to_gain_identity():
+    """§0j: bias=0.0 → identische Gain-Maske (v10.15/v10.19-Default)."""
+    gain = np.random.RandomState(0).uniform(0.0, 1.0, (64, 32)).astype(np.float32)
+    out = DeepFilterNetV3IIPlugin._apply_energy_bias_to_gain(gain, 0.0)
+    np.testing.assert_array_equal(out, gain)
+
+
+def test_apply_energy_bias_to_gain_negative_bias_raises_floor():
+    """§0j: negativer Bias hebt den Gain-Floor (Harmonik-Schutz), nie über 1."""
+    gain = np.random.RandomState(1).uniform(0.0, 0.6, (64, 32)).astype(np.float32)
+    out = DeepFilterNetV3IIPlugin._apply_energy_bias_to_gain(gain, -6.0)
+    assert np.all(out >= gain - 1e-6)
+    assert np.all(out <= 1.0)
+    floor = 1.0 - 10.0 ** (-6.0 / 20.0)
+    assert np.all(out >= floor - 1e-6)
+    assert np.all(np.isfinite(out))
+
+
+def test_apply_energy_bias_to_gain_positive_bias_suppresses():
+    """§0j: positiver Bias senkt den Gain (aggressivere NR), nie unter 0."""
+    gain = np.random.RandomState(2).uniform(0.4, 1.0, (64, 32)).astype(np.float32)
+    out = DeepFilterNetV3IIPlugin._apply_energy_bias_to_gain(gain, 6.0)
+    assert np.all(out <= gain + 1e-6)
+    assert np.all(out >= 0.0)
+
+
+def test_omlsa_fallback_honors_negative_energy_bias():
+    """§0j: energy_bias_db=-9 dB im OMLSA-Fallback → weniger Suppression."""
+    rng = np.random.RandomState(3)
+    t = np.arange(48_000) / 48_000
+    audio = (0.1 * rng.randn(48_000) + 0.3 * np.sin(2 * np.pi * 440 * t)).astype(np.float32)
+    out_neutral = DeepFilterNetV3IIPlugin._omlsa_primary_fallback(audio, 48_000, energy_bias_db=0.0)
+    out_biased = DeepFilterNetV3IIPlugin._omlsa_primary_fallback(audio, 48_000, energy_bias_db=-9.0)
+    assert np.all(np.isfinite(out_biased))
+    # Vorbestehendes scipy-ISTFT-Kantenartefakt (NOLA-Warnung) ausschließen:
+    # nur das Signalinnere vergleichen.
+    assert np.sqrt(np.mean(out_biased[2048:-2048] ** 2)) > np.sqrt(np.mean(out_neutral[2048:-2048] ** 2))
+
+
+def test_enhance_propagates_bias_into_omlsa_fallback():
+    """§0j: enhance() reicht energy_bias_db an den OMLSA-Fallback durch."""
+    plugin = DeepFilterNetV3IIPlugin()
+    plugin._enc = None  # Force OMLSA fallback
+    audio = np.random.RandomState(4).randn(48_000).astype(np.float32) * 0.3
+    out_neutral = plugin.enhance(audio, sr=48_000)
+    out_biased = plugin.enhance(audio, sr=48_000, energy_bias_db=-9.0)
+    assert np.all(np.isfinite(out_biased))
+    assert np.sqrt(np.mean(out_biased[2048:-2048] ** 2)) >= np.sqrt(np.mean(out_neutral[2048:-2048] ** 2))
+    assert plugin._current_energy_bias_db == pytest.approx(-9.0)

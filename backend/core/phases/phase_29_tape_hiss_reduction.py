@@ -718,7 +718,7 @@ class TapeHissReductionPhase(PhaseInterface):
         _goal_hint_scalar = self._goal_hint_strength_scalar(kwargs)
         _effective_strength = float(np.clip(_effective_strength * _goal_hint_scalar, 0.0, 1.0))
 
-        # §G78 CalibrationContext: Kalibrierter Cap aus Messwerten.
+        # §G78 (GEBOTE.md) CalibrationContext: Kalibrierter Cap aus Messwerten.
         _calib_cap = kwargs.get("phase29_strength_cap")
         if _calib_cap is not None:
             _effective_strength = min(_effective_strength, float(_calib_cap))
@@ -1090,7 +1090,7 @@ class TapeHissReductionPhase(PhaseInterface):
                     "VQI per-Verarbeitungsschritt Verarbeitungsschritt29 (nicht blockierend): %s", _vqi_exc_p29
                 )
 
-        # §G5 Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-Tape-NR.
+        # §G5 (GEBOTE.md) Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-Tape-NR.
         # Tape-NR (OMLSA) kann bei starker Glättung Formant-Regionen beschädigen;
         # Spektralenergie-Shift an F1–F4 direkt messen.
         if _p29_panns >= 0.25:
@@ -1117,16 +1117,18 @@ class TapeHissReductionPhase(PhaseInterface):
                 if _fg_rollback_p29:
                     audio_processed = audio.copy()
                     logger.warning(
-                        "§G5 FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB > %.1f dB → Rollback",
+                        "§G5 (GEBOTE.md) FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB > %.1f dB → Rollback",
                         _fg_shift_p29,
                         _fg_tol_p29,
                     )
                 else:
-                    logger.debug("§G5 FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB — OK", _fg_shift_p29)
+                    logger.debug(
+                        "§G5 (GEBOTE.md) FormantGuard Verarbeitungsschritt_29: max F-shift %.2f dB — OK", _fg_shift_p29
+                    )
             except Exception as _fg_p29_exc:
-                logger.debug("§G5 FormantGuard Verarbeitungsschritt_29 nicht blockierend: %s", _fg_p29_exc)
+                logger.debug("§G5 (GEBOTE.md) FormantGuard Verarbeitungsschritt_29 nicht blockierend: %s", _fg_p29_exc)
 
-        # §G2 Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
+        # §G2 (GEBOTE.md) Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
         # mit Original zurückblenden — Tape-NR glättet sonst Natur-Artefakte weg.
         _breath_segs_p29 = list(kwargs.get("breath_segments", []) or []) if hasattr(kwargs, "get") else []
         if _breath_segs_p29:
@@ -1166,10 +1168,11 @@ class TapeHissReductionPhase(PhaseInterface):
                 if _blended_any_p29:
                     audio_processed = np.clip(np.nan_to_num(_result_blend_p29, nan=0.0), -1.0, 1.0).astype(np.float32)
                     logger.debug(
-                        "§G2 BreathProtect Verarbeitungsschritt_29: %d tension-segs geschützt", len(_breath_segs_p29)
+                        "§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_29: %d tension-segs geschützt",
+                        len(_breath_segs_p29),
                     )
             except Exception as _g2_p29_exc:
-                logger.debug("§G2 BreathProtect Verarbeitungsschritt_29 nicht blockierend: %s", _g2_p29_exc)
+                logger.debug("§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_29 nicht blockierend: %s", _g2_p29_exc)
 
         # §Gap3 PhraseBoundaryGuard — taper artifacts at phrase transitions (§0p Vocal-Supremacy)
         try:
@@ -1249,7 +1252,7 @@ class TapeHissReductionPhase(PhaseInterface):
             except Exception as _nf29_exc:
                 logger.debug("Verarbeitungsschritt29 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf29_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (
                 check_spectral_color_preservation as _scg_29,
@@ -1257,10 +1260,12 @@ class TapeHissReductionPhase(PhaseInterface):
 
             _sc_result_29 = _scg_29(audio, audio_processed, sample_rate)
             if not _sc_result_29.ok:
-                _sc_wet_29 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_29 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 audio_processed = (_sc_wet_29 * audio_processed + (1.0 - _sc_wet_29) * audio).astype(np.float32)
         except Exception as _sc_exc_29:
-            logger.debug("§V24 Verarbeitungsschritt_29 spectral_color nicht blockierend: %s", _sc_exc_29)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_29 spectral_color nicht blockierend: %s", _sc_exc_29
+            )
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # Tape-Hiss-NR nicht energetisch beeinflusst werden (VERBOTEN-V26).

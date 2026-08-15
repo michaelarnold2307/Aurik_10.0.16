@@ -45,7 +45,7 @@ except ImportError:
 _DEFAULT_MODEL_DIR = Path(__file__).resolve().parent.parent / "models" / "bw_reconstructor"
 _DEFAULT_ONNX_PATH = _DEFAULT_MODEL_DIR / "bw_reconstructor.onnx"
 
-# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+# Modulebene (§G174): Flags ohne Backend-Abhängigkeiten.
 try:
     from backend.core.music_model_flags import resolve_model_path as _resolve_model_path_flag
 
@@ -208,9 +208,7 @@ class BWReconstructorPlugin:
 
         # §v10.19 v5-Zweig: Waveform-Domäne (train_bw_v5.py-Konventionen)
         if self._is_v5:
-            audio_reconstructed = self._reconstruct_v5_waveform(
-                audio_22k, cutoff_hz, blend_strength
-            )
+            audio_reconstructed = self._reconstruct_v5_waveform(audio_22k, cutoff_hz, blend_strength)
         else:
             # Mel-Spektrogramm
             mel_input = self._audio_to_mel(audio_22k)
@@ -253,7 +251,7 @@ class BWReconstructorPlugin:
     # ── v5-Waveform-Pfad (§v10.19, train_bw_v5.py-Konventionen) ─────────────
 
     _V5_CHUNK: int = 66160  # 3 s @ 22050, multiple von 16 (4 Downsampling-Stufen)
-    _V5_HOP: int = 33080    # 50 % Überlapp für Crossfade
+    _V5_HOP: int = 33080  # 50 % Überlapp für Crossfade
 
     def _reconstruct_v5_waveform(
         self,

@@ -579,7 +579,7 @@ class AdvancedDereverbPhase(PhaseInterface):
                             )
                     _release_49("SGMSE+_phase49")
         except Exception as _imp_err:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("Verarbeitungsschritt 49: SGMSE+-Import nicht verfügbar (%s) → WPE DSP-Ersatzpfad", _imp_err)
 
         if not _sgmse_used:
@@ -971,7 +971,7 @@ class AdvancedDereverbPhase(PhaseInterface):
             except Exception as _vqi_exc_p49:
                 logger.debug("Verarbeitungsschritt_49 VQI-Gate (nicht blockierend): %s", _vqi_exc_p49)
 
-        # §V19/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach Advanced Dereverb (RELEASE_MUST §0p V19-V26)
+        # §V19 (Spec-Vintage-Guard)/V20/V21/V26/§2.72 Vokal- + Textur-Guards nach Advanced Dereverb (RELEASE_MUST §0p V19-V26)
         _mat49_guards = str(self._current_material or "unknown").lower()
         _nt49_residual = audio - processed
         try:
@@ -984,10 +984,13 @@ class AdvancedDereverbPhase(PhaseInterface):
                 if _nt49_d > 0.25:
                     processed = (0.5 * processed + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§V19 Verarbeitungsschritt_49: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt49_d
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_49: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend",
+                        _nt49_d,
                     )
         except Exception as _nt49_exc:
-            logger.debug("§V19 Verarbeitungsschritt_49 noise_texture nicht blockierend: %s", _nt49_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_49 noise_texture nicht blockierend: %s", _nt49_exc
+            )
 
         if _p49_panns >= 0.25:
             try:
@@ -1019,7 +1022,7 @@ class AdvancedDereverbPhase(PhaseInterface):
             except Exception as _v21_49_exc:
                 logger.debug("§V21 Verarbeitungsschritt_49 noise_floor nicht blockierend: %s", _v21_49_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_49,
@@ -1027,10 +1030,12 @@ class AdvancedDereverbPhase(PhaseInterface):
 
             _sc_result_49 = _scg_49(audio, processed, sample_rate)
             if not _sc_result_49.ok:
-                _sc_wet_49 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_49 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 processed = (_sc_wet_49 * processed + (1.0 - _sc_wet_49) * audio).astype(np.float32)
         except Exception as _sc_exc_49:  # pylint: disable=broad-except
-            logger.debug("§V24 Verarbeitungsschritt_49 spectral_color nicht blockierend: %s", _sc_exc_49)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_49 spectral_color nicht blockierend: %s", _sc_exc_49
+            )
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel

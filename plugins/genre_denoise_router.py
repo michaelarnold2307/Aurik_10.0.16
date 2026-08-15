@@ -27,7 +27,58 @@ log = logging.getLogger(__name__)
 # AudioSet label indices for genre detection
 AUDIOSET_GENRE_MAP = {
     # Classical family
-    "classical": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49],
+    "classical": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29,
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+    ],
     "orchestra": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
     "opera": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
     "choir": [0, 1, 2, 3],
@@ -66,33 +117,33 @@ AUDIOSET_GENRE_MAP = {
 # Denoising presets per genre
 # Format: (df_strength, erb_smoothing, transient_protection, harmonic_boost)
 GENRE_DENOISE_PRESETS = {
-    "classical":        (0.20, 0.10, 0.90, 0.05),  # Very light, preserve dynamics
-    "orchestra":        (0.25, 0.15, 0.85, 0.10),
-    "opera":            (0.30, 0.20, 0.80, 0.15),
-    "choir":            (0.35, 0.25, 0.75, 0.10),
-    "rock":             (0.55, 0.40, 0.60, 0.30),
-    "pop":              (0.50, 0.35, 0.65, 0.35),
-    "metal":            (0.45, 0.30, 0.70, 0.40),
-    "punk":             (0.60, 0.45, 0.55, 0.25),
-    "indie":            (0.45, 0.30, 0.70, 0.20),
-    "electronic":       (0.25, 0.20, 0.85, 0.15),
-    "techno":           (0.20, 0.15, 0.90, 0.20),
-    "house":            (0.25, 0.20, 0.85, 0.25),
-    "ambient":          (0.40, 0.30, 0.70, 0.10),
-    "drum_and_bass":    (0.35, 0.25, 0.80, 0.30),
-    "hip_hop":          (0.30, 0.25, 0.80, 0.35),
-    "rnb":              (0.35, 0.25, 0.75, 0.40),
-    "jazz":             (0.25, 0.15, 0.85, 0.10),
-    "blues":            (0.35, 0.25, 0.75, 0.20),
-    "folk":             (0.40, 0.30, 0.70, 0.15),
-    "world":            (0.40, 0.30, 0.70, 0.20),
-    "latin":            (0.45, 0.35, 0.65, 0.30),
-    "reggae":           (0.40, 0.30, 0.70, 0.25),
-    "speech":           (0.75, 0.50, 0.40, 0.10),
-    "singing":          (0.50, 0.35, 0.65, 0.45),
-    "field_recording":  (0.65, 0.45, 0.50, 0.05),
-    "nature":           (0.55, 0.40, 0.55, 0.05),
-    "urban":            (0.60, 0.45, 0.50, 0.10),
+    "classical": (0.20, 0.10, 0.90, 0.05),  # Very light, preserve dynamics
+    "orchestra": (0.25, 0.15, 0.85, 0.10),
+    "opera": (0.30, 0.20, 0.80, 0.15),
+    "choir": (0.35, 0.25, 0.75, 0.10),
+    "rock": (0.55, 0.40, 0.60, 0.30),
+    "pop": (0.50, 0.35, 0.65, 0.35),
+    "metal": (0.45, 0.30, 0.70, 0.40),
+    "punk": (0.60, 0.45, 0.55, 0.25),
+    "indie": (0.45, 0.30, 0.70, 0.20),
+    "electronic": (0.25, 0.20, 0.85, 0.15),
+    "techno": (0.20, 0.15, 0.90, 0.20),
+    "house": (0.25, 0.20, 0.85, 0.25),
+    "ambient": (0.40, 0.30, 0.70, 0.10),
+    "drum_and_bass": (0.35, 0.25, 0.80, 0.30),
+    "hip_hop": (0.30, 0.25, 0.80, 0.35),
+    "rnb": (0.35, 0.25, 0.75, 0.40),
+    "jazz": (0.25, 0.15, 0.85, 0.10),
+    "blues": (0.35, 0.25, 0.75, 0.20),
+    "folk": (0.40, 0.30, 0.70, 0.15),
+    "world": (0.40, 0.30, 0.70, 0.20),
+    "latin": (0.45, 0.35, 0.65, 0.30),
+    "reggae": (0.40, 0.30, 0.70, 0.25),
+    "speech": (0.75, 0.50, 0.40, 0.10),
+    "singing": (0.50, 0.35, 0.65, 0.45),
+    "field_recording": (0.65, 0.45, 0.50, 0.05),
+    "nature": (0.55, 0.40, 0.55, 0.05),
+    "urban": (0.60, 0.45, 0.50, 0.10),
 }
 
 DEFAULT_PRESET = (0.45, 0.30, 0.70, 0.20)
@@ -101,6 +152,7 @@ DEFAULT_PRESET = (0.45, 0.30, 0.70, 0.20)
 @dataclass
 class GenreResult:
     """Result of genre classification and denoising recommendation."""
+
     primary_genre: str
     confidence: float
     top3_genres: list[tuple[str, float]]
@@ -123,8 +175,7 @@ class GenreAwareDenoiseRouter:
                     self._index_to_genre[idx] = genre
                 # Keep first assignment (most specific)
 
-        log.info(f"Genre Router: {len(self._genre_labels)} genres, "
-                 f"{len(self._index_to_genre)} AudioSet indices mapped")
+        log.info(f"Genre Router: {len(self._genre_labels)} genres, {len(self._index_to_genre)} AudioSet indices mapped")
 
     def classify(self, audioset_scores: np.ndarray) -> GenreResult:
         """
@@ -190,7 +241,4 @@ class GenreAwareDenoiseRouter:
         """Linearly interpolate between two genre presets."""
         p1 = self.get_preset(genre1)
         p2 = self.get_preset(genre2)
-        return tuple(
-            round(p1[i] * (1 - alpha) + p2[i] * alpha, 3)
-            for i in range(4)
-        )
+        return tuple(round(p1[i] * (1 - alpha) + p2[i] * alpha, 3) for i in range(4))

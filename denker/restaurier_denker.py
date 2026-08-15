@@ -498,7 +498,7 @@ class RestaurierDenker:
                         _bw,
                         _gaps,
                     )
-            # §G1: Pre-Repair-Referenz für referenz-basierte Musical Goals
+            # §G1 (GEBOTE.md): Pre-Repair-Referenz für referenz-basierte Musical Goals
             if pre_repair_reference is not None:
                 _uv3_kwargs["pre_repair_reference"] = pre_repair_reference
             # §PID: PhaseInteractionDenker-Plan weitergeben (UV3 wird reiner Executor)
@@ -1390,7 +1390,8 @@ def get_restaurier_denker() -> RestaurierDenker:
                     if _repair_plan and _repair_plan.steps:
                         logger.info(
                             "RestaurierDenker: RepairPlanner optimiert %d Phasen (%d Defekte)",
-                            len(_repair_plan.steps), _repair_plan.total_defects,
+                            len(_repair_plan.steps),
+                            _repair_plan.total_defects,
                         )
                         decision.repair_plan = _repair_plan
                 except Exception as exc:

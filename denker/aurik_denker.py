@@ -1872,7 +1872,7 @@ class AurikDenker:
                             )
                             return
 
-                        # §G1: Pre-Repair-Referenz sichern — echtes Original VOR
+                        # §G1 (GEBOTE.md): Pre-Repair-Referenz sichern — echtes Original VOR
                         # ReparaturDenker/RekonstruktionsDenker für referenz-basierte
                         # Musical Goals (Authentizität, Groove, Timbre, Artikulation).
                         _pre_repair_reference = _work_audio.copy()

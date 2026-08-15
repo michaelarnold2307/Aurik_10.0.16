@@ -6,7 +6,7 @@ Problem: 12 Reparatur-Phasen arbeiten isoliert. Jede erkennt Defekte NEU,
 statt das fertige Consensus-Manifest zu nutzen. Die Reihenfolge ist fix —
 nicht vom tatsächlichen Defekt-Profil abhängig.
 
-Lösung: 
+Lösung:
   1. Repair Planner analysiert das Defect Manifest und plant die OPTIMALE
      Reihenfolge. "Klick vor Rauschen", "Hum vor Denoise", "Inpainting zum Schluss".
   2. Coordinated Repair führt den Plan aus. Jede Phase bekommt das Manifest
@@ -58,34 +58,38 @@ SR = 48000
 # Repair Strategy Model
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class RepairPriority(int, Enum):
     """Reparatur-Priorität (niedriger = zuerst ausführen)."""
-    TRANSIENT = 1      # Klicks, Knackser, Dropouts
-    TONAL = 2          # Hum, Brummen, Pfeifen
-    MODULATION = 3     # Wow/Flutter, Phasenfehler
-    BREITBAND = 4      # Rauschen, Hiss, Tape-Noise
-    DISTORTION = 5     # Clipping, De-Essing-Artefakte
-    INPAINTING = 6     # Harmonic Reconstruction — IMMER ZULETZT
+
+    TRANSIENT = 1  # Klicks, Knackser, Dropouts
+    TONAL = 2  # Hum, Brummen, Pfeifen
+    MODULATION = 3  # Wow/Flutter, Phasenfehler
+    BREITBAND = 4  # Rauschen, Hiss, Tape-Noise
+    DISTORTION = 5  # Clipping, De-Essing-Artefakte
+    INPAINTING = 6  # Harmonic Reconstruction — IMMER ZULETZT
 
 
 @dataclass
 class RepairStep:
     """Ein einzelner Reparatur-Schritt im Plan."""
-    phase_id: str                      # z.B. "phase_01_click_removal"
+
+    phase_id: str  # z.B. "phase_01_click_removal"
     priority: RepairPriority
-    defect_category: str               # Welcher Defekt-Typ wird repariert
+    defect_category: str  # Welcher Defekt-Typ wird repariert
     affected_samples: list[tuple[int, int]]  # (start, end) Sample-Bereiche
     parameters: dict[str, Any] = field(default_factory=dict)
     depends_on: list[str] = field(default_factory=list)  # Phase-IDs, die VORHER laufen müssen
-    enables: list[str] = field(default_factory=list)      # Phase-IDs, die NACHHER möglich sind
+    enables: list[str] = field(default_factory=list)  # Phase-IDs, die NACHHER möglich sind
 
 
 @dataclass
 class RepairPlan:
     """Kompletter Reparatur-Plan mit geordneten Schritten."""
+
     steps: list[RepairStep] = field(default_factory=list)
     total_defects: int = 0
-    total_coverage_samples: int = 0   # Wie viele Samples insgesamt betroffen
+    total_coverage_samples: int = 0  # Wie viele Samples insgesamt betroffen
     estimated_duration_s: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -145,7 +149,7 @@ def _is_localized_change(pre: np.ndarray, post: np.ndarray, max_fraction: float 
             _post = _post.mean(axis=0)
         _diff = np.abs(_post - _pre).flatten()
         _sorted = np.sort(_diff)[::-1]
-        _cum = np.cumsum(_sorted ** 2)
+        _cum = np.cumsum(_sorted**2)
         _total = _cum[-1] + 1e-12
         _n90 = int(np.searchsorted(_cum, _total * 0.9))
         return (_n90 + 1) / max(len(_sorted), 1) < max_fraction
@@ -363,6 +367,7 @@ DEFECT_TO_PHASE: dict[str, RepairStep] = {
 # Repair Planner
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class RepairPlanner:
     """
     Analysiert das Defect Manifest und erstellt einen optimierten Reparatur-Plan.
@@ -382,7 +387,7 @@ class RepairPlanner:
         self._strength_floor = float(getattr(_prot, "repair_strength_floor", 0.25))
         self._confidence_floor = float(getattr(_prot, "repair_confidence_floor", 0.30))
 
-    def plan(self, manifest: Any, audio_length: int, metadata: Optional[dict] = None) -> RepairPlan:
+    def plan(self, manifest: Any, audio_length: int, metadata: dict | None = None) -> RepairPlan:
         """
         Erstellt einen Reparatur-Plan aus einem Defect Manifest.
 
@@ -395,7 +400,7 @@ class RepairPlanner:
         Returns:
             RepairPlan mit geordneten Schritten
         """
-        if not manifest or not hasattr(manifest, 'defects') or not manifest.defects:
+        if not manifest or not hasattr(manifest, "defects") or not manifest.defects:
             return RepairPlan(total_defects=0)
 
         defects = manifest.defects
@@ -403,17 +408,17 @@ class RepairPlanner:
         # Schritt 1: Gruppiere Defekte nach Phase
         phase_defects: dict[str, list[Any]] = {}
         for d in defects:
-            cat = getattr(d, 'category', None)
+            cat = getattr(d, "category", None)
             if cat is None:
                 continue
             # §v10.998: Null-Schwere-Fehlalarme dürfen keine Phasen triggern.
             # (Diagnose: severity 0.00 auf hum-freiem Hip-Hop → Phase 02 lief
             # mit voller Stärke und kollabierte das Signal um 62 dB.)
             # Schwelle aus der zentralen Kalibrierung (§V25–§V28).
-            _sev = float(getattr(d, 'severity', 0.5) or 0.0)
+            _sev = float(getattr(d, "severity", 0.5) or 0.0)
             if _sev < self._sev_min:
                 continue
-            cat_str = cat.value if hasattr(cat, 'value') else str(cat)
+            cat_str = cat.value if hasattr(cat, "value") else str(cat)
             mapping = DEFECT_TO_PHASE.get(cat_str)
             if mapping is None:
                 continue
@@ -431,7 +436,7 @@ class RepairPlanner:
             # Nimm die erste Defect-Mapping als Template
             template = None
             for d in phase_defect_list:
-                cat_str = d.category.value if hasattr(d.category, 'value') else str(d.category)
+                cat_str = d.category.value if hasattr(d.category, "value") else str(d.category)
                 if cat_str in DEFECT_TO_PHASE:
                     template = DEFECT_TO_PHASE[cat_str]
                     break
@@ -442,18 +447,14 @@ class RepairPlanner:
             # Sammle betroffene Sample-Bereiche
             affected = []
             for d in phase_defect_list:
-                start = getattr(d, 'start_sample', 0)
-                end = getattr(d, 'end_sample', start + 1000)
+                start = getattr(d, "start_sample", 0)
+                end = getattr(d, "end_sample", start + 1000)
                 if end > start:
                     affected.append((int(start), int(end)))
 
             # Berechne adaptive Parameter aus Defekt-Schwere
-            avg_confidence = np.mean([
-                float(getattr(d, 'confidence', 0.5)) for d in phase_defect_list
-            ])
-            avg_severity = np.mean([
-                float(getattr(d, 'severity', 0.5)) for d in phase_defect_list
-            ])
+            avg_confidence = np.mean([float(getattr(d, "confidence", 0.5)) for d in phase_defect_list])
+            avg_severity = np.mean([float(getattr(d, "severity", 0.5)) for d in phase_defect_list])
 
             step = RepairStep(
                 phase_id=phase_id,
@@ -466,15 +467,15 @@ class RepairPlanner:
                     # liefen mit strength ≈ 0.03 und taten NICHTS). Bei
                     # erkannter Defekt-Lage greift ein Boden aus der zentralen
                     # Kalibrierung — die Phase muss WIRKEN können.
-                    "strength": float(max(
-                        avg_severity * avg_confidence,
-                        self._strength_floor if avg_confidence > self._confidence_floor else 0.0,
-                    )),
+                    "strength": float(
+                        max(
+                            avg_severity * avg_confidence,
+                            self._strength_floor if avg_confidence > self._confidence_floor else 0.0,
+                        )
+                    ),
                     "confidence": float(avg_confidence),
                     "defect_count": len(phase_defect_list),
-                    "coverage_pct": float(
-                        sum(e - s for s, e in affected) / max(audio_length, 1) * 100
-                    ),
+                    "coverage_pct": float(sum(e - s for s, e in affected) / max(audio_length, 1) * 100),
                 },
                 depends_on=list(template.depends_on),
                 enables=list(template.enables),
@@ -495,9 +496,7 @@ class RepairPlanner:
         ordered = self._topological_sort(steps)
 
         # Schritt 5: Harmonic Inpainting als finalen Schritt hinzufügen
-        total_coverage = sum(
-            sum(e - s for s, e in step.affected_samples) for step in ordered
-        )
+        total_coverage = sum(sum(e - s for s, e in step.affected_samples) for step in ordered)
         if total_coverage > 0:
             inpainting_step = RepairStep(
                 phase_id="phase_55_diffusion_inpainting",
@@ -535,10 +534,7 @@ class RepairPlanner:
             # Finde Schritt ohne unerfüllte Abhängigkeiten
             progress = False
             for step in list(remaining):
-                unmet_deps = [
-                    d for d in step.depends_on
-                    if d in phase_ids and d not in [s.phase_id for s in ordered]
-                ]
+                unmet_deps = [d for d in step.depends_on if d in phase_ids and d not in [s.phase_id for s in ordered]]
                 if not unmet_deps:
                     ordered.append(step)
                     remaining.remove(step)
@@ -557,9 +553,11 @@ class RepairPlanner:
 # Coordinated Repair Executor
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class RepairReport:
     """Bericht nach koordinierter Reparatur."""
+
     plan: RepairPlan
     completed_steps: list[str]
     failed_steps: list[tuple[str, str]]  # (phase_id, error_message)
@@ -589,7 +587,7 @@ class CoordinatedRepair:
         self,
         audio: np.ndarray,
         plan: RepairPlan,
-        manifest: Optional[Any] = None,
+        manifest: Any | None = None,
         sample_rate: int = SR,
         material: str = "",
     ) -> tuple[np.ndarray, RepairReport]:
@@ -614,9 +612,7 @@ class CoordinatedRepair:
         # §v10.998: Time-major Stereo ([T, C] aus sf.read) → [C, T] normalisieren.
         # Ohne diese Normalisierung werden Frames statt Kanäle iteriert —
         # Live-Betriebs-Bug, aufgedeckt durch die erste echte Korpus-Messung.
-        was_time_major = (
-            audio.ndim == 2 and audio.shape[0] > 2 and audio.shape[1] in (1, 2)
-        )
+        was_time_major = audio.ndim == 2 and audio.shape[0] > 2 and audio.shape[1] in (1, 2)
         if was_time_major:
             audio = np.ascontiguousarray(audio.T)
         n_channels = audio.shape[0]
@@ -649,12 +645,18 @@ class CoordinatedRepair:
             try:
                 _audio_pre = current_audio.copy()
                 current_audio = self._execute_step(
-                    current_audio, step, manifest, sample_rate, n_channels,
+                    current_audio,
+                    step,
+                    manifest,
+                    sample_rate,
+                    n_channels,
                 )
                 # §v10.950: No-Op-Erkennung — wenn der Schritt nichts geändert
                 # hat, Guards und Perceptual-Loop überspringen (RT-Einsparung)
                 _changed = not np.allclose(
-                    np.asarray(_audio_pre), np.asarray(current_audio), atol=1e-7,
+                    np.asarray(_audio_pre),
+                    np.asarray(current_audio),
+                    atol=1e-7,
                 )
 
                 # §v10.610: Post-Repair Artifact Guard — Pumping/Verzerrung checken
@@ -671,32 +673,31 @@ class CoordinatedRepair:
                         _violations = getattr(_guard_result, "violations", [])
                         for _v in _violations:
                             _v_str = str(_v)
-                            _cat = "spectral" if _v_str.startswith(("spectral", "formant_drift")) else (
-                                "pumping" if _v_str.startswith("pumping") else "truepeak"
+                            _cat = (
+                                "spectral"
+                                if _v_str.startswith(("spectral", "formant_drift"))
+                                else ("pumping" if _v_str.startswith("pumping") else "truepeak")
                             )
                             _guard_violations[_cat] = _guard_violations.get(_cat, 0) + 1
                             if _v_str.startswith("truepeak_rise"):
                                 try:
-                                    _guard_peak_delta = max(
-                                        _guard_peak_delta, abs(float(_v_str.split("_")[-1][:-2]))
-                                    )
+                                    _guard_peak_delta = max(_guard_peak_delta, abs(float(_v_str.split("_")[-1][:-2])))
                                 except ValueError:
                                     pass
-                        _is_spectral = any(
-                            str(v).startswith(("spectral", "formant_drift"))
-                            for v in _violations
-                        )
+                        _is_spectral = any(str(v).startswith(("spectral", "formant_drift")) for v in _violations)
                         if _is_spectral:
                             current_audio = _audio_pre
                             log.warning(
                                 "§v10.860 Guard: %s SPEKTRALER Schaden (%s) — Schritt verworfen",
-                                step.phase_id, _violations,
+                                step.phase_id,
+                                _violations,
                             )
                         else:
                             current_audio = _guard.blend_back(_audio_pre, current_audio, 0.7)
                             log.warning(
                                 "§v10.610 Guard: %s erzeugte Artefakte (%s) — zurückgeblendet",
-                                step.phase_id, _violations,
+                                step.phase_id,
+                                _violations,
                             )
                 # §v10.998: Energy-Collapse-Guard — katastrophale Signalvernichtung
                 # (z.B. -62 dB durch Phase 02 auf Null-Schwere-Fehlalarm) wird
@@ -710,7 +711,8 @@ class CoordinatedRepair:
                         _guard_violations["energy_collapse"] = _guard_violations.get("energy_collapse", 0) + 1
                         log.warning(
                             "§v10.998 Guard: %s kollabierte die Energie (%.0f%% → revert)",
-                            step.phase_id, _rms_out / _rms_in * 100,
+                            step.phase_id,
+                            _rms_out / _rms_in * 100,
                         )
                     else:
                         # §v10.998: Spektral-Schadens-Guard — Hum-Messung zeigte:
@@ -720,7 +722,8 @@ class CoordinatedRepair:
                         # 10 log-Beabständeten Bändern > 9 dB → Revert.
                         # LOKALE Reparaturen (Dropout/Klick) sind ausgenommen.
                         if not _is_localized_change(
-                            _audio_pre, current_audio,
+                            _audio_pre,
+                            current_audio,
                             float(getattr(_prot, "localized_change_fraction", 0.10)),
                         ):
                             _spec_damage = _spectral_damage_db(_audio_pre, current_audio, sample_rate)
@@ -730,7 +733,8 @@ class CoordinatedRepair:
                                 log.warning(
                                     "§v10.998 Guard: %s verursachte spektralen Schaden "
                                     "(%.1f dB Band-Abweichung → revert)",
-                                    step.phase_id, _spec_damage,
+                                    step.phase_id,
+                                    _spec_damage,
                                 )
                 # §v10.620: Perceptual Closed-Loop — UTMOS-basierte Qualitätsprüfung
                 if _perceptual is not None and _changed:
@@ -744,7 +748,9 @@ class CoordinatedRepair:
                     _utmos_mos_before = float(getattr(_percept_result, "mos_pre", 0.0) or 0.0)
                     if not getattr(_percept_result, "passed", True):
                         current_audio = _perceptual.blend_back(
-                            _audio_pre, current_audio, _percept_result,
+                            _audio_pre,
+                            current_audio,
+                            _percept_result,
                         )
                         _utmos_blend_count += 1
                         _utmos_mos_after = float(getattr(_percept_result, "mos_post", 0.0) or 0.0)
@@ -755,8 +761,8 @@ class CoordinatedRepair:
                             _percept_result.mos_post,
                         )
                 # §v10.820: Do-No-Harm-Gate — SNR-Verschlechterung → Schritt zurückrollen
-                _snr_pre = float(np.mean(_audio_pre ** 2) + 1e-10)
-                _snr_post = float(np.mean(current_audio ** 2) + 1e-10)
+                _snr_pre = float(np.mean(_audio_pre**2) + 1e-10)
+                _snr_post = float(np.mean(current_audio**2) + 1e-10)
                 if _snr_post < _snr_pre * 0.7 and len(step.affected_samples) == 0:
                     # Signalenergie um >30% reduziert ohne lokale Defekt-Bereiche
                     current_audio = _audio_pre
@@ -783,14 +789,17 @@ class CoordinatedRepair:
         # (fängt frequenz-lokalisierte Zerstörung wie die Hum-Notch-Kette).
         # Lokale Reparaturen sind ausgenommen.
         if not _is_localized_change(
-            _session_audio, current_audio,
+            _session_audio,
+            current_audio,
             float(getattr(_prot, "localized_change_fraction", 0.10)),
         ):
             # §v10.998: Summen-Kriterium — die Hum-Kette verteilt Schaden
             # breitbandig; eine reine Band-Zählung mit hoher Schwelle verfehlt
             # das. Schwelle und Bandzahl aus der zentralen Kalibrierung.
             _cum_sum = _spectral_bands_over_db(
-                _session_audio, current_audio, sample_rate,
+                _session_audio,
+                current_audio,
+                sample_rate,
                 threshold_db=float(getattr(_prot, "spectral_band_delta_db", 4.0)),
             )
             if _cum_sum >= int(getattr(_prot, "spectral_bands_over_min", 6)):
@@ -798,7 +807,8 @@ class CoordinatedRepair:
                 current_audio = _session_audio
                 log.warning(
                     "§v10.998 Guard: Kette verursachte kumulativen Spektral-Schaden "
-                    "(%d Bänder > 4 dB) → kompletter Revert auf Session-Input", _cum_sum,
+                    "(%d Bänder > 4 dB) → kompletter Revert auf Session-Input",
+                    _cum_sum,
                 )
 
         if was_mono and current_audio.shape[0] == 1:
@@ -825,7 +835,7 @@ class CoordinatedRepair:
         self,
         audio: np.ndarray,
         step: RepairStep,
-        manifest: Optional[Any],
+        manifest: Any | None,
         sample_rate: int,
         n_channels: int,
     ) -> np.ndarray:
@@ -864,8 +874,11 @@ class CoordinatedRepair:
         return np.stack(outputs)
 
     def _run_denoise(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """Führt Denoising via SOTA 4-Layer Pipeline aus.
 
@@ -876,9 +889,7 @@ class CoordinatedRepair:
         # 1) MP-SENet Vokal-Denoising (Opt-In, kalibriert)
         if step.parameters.get("use_mp_senet", False):
             _mp = self._run_mp_senet_vocal(audio, step, manifest, sr)
-            if np.asarray(_mp).shape == audio.shape and not np.allclose(
-                np.asarray(_mp), audio, atol=1e-7
-            ):
+            if np.asarray(_mp).shape == audio.shape and not np.allclose(np.asarray(_mp), audio, atol=1e-7):
                 log.info("MP-SENet aktiv für %s", step.phase_id)
                 return np.asarray(_mp, dtype=np.float32)
         # 2) SGMSE+ Sprach-Enhancement-Diffusion (Opt-In, kontextaktiviert)
@@ -897,6 +908,7 @@ class CoordinatedRepair:
         # 3) Standard: SOTA 4-Layer DSP-Pipeline
         try:
             from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
+
             pipeline = SOTADenoisePipeline()
             strength = step.parameters.get("strength", 0.4)
             result = pipeline.process(audio, sr, override_strength=strength)
@@ -905,8 +917,11 @@ class CoordinatedRepair:
             return audio
 
     def _run_banquet_vinyl(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """Vinyl-Crackle/Oberflächenrauschen via Banquet ONNX.
 
@@ -929,6 +944,7 @@ class CoordinatedRepair:
             return self._run_transient_repair(audio, step, manifest, sr)
         try:
             from plugins.banquet_vinyl_plugin import get_banquet_plugin
+
             strength = float(step.parameters.get("strength", 0.5))
             plugin = get_banquet_plugin()
             result = plugin.process(audio, sr, strength)
@@ -940,8 +956,11 @@ class CoordinatedRepair:
         return self._run_transient_repair(audio, step, manifest, sr)
 
     def _run_transient_repair(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """Transient-Reparatur via DirectDefectRepair (spektrale Interpolation).
 
@@ -950,6 +969,7 @@ class CoordinatedRepair:
         """
         try:
             from backend.core.direct_defect_repair import DirectDefectRepair
+
             repairer = DirectDefectRepair()
             repaired, report = repairer.repair(audio, sr)
             if repaired is not None and repaired.shape == audio.shape:
@@ -964,8 +984,11 @@ class CoordinatedRepair:
         return audio
 
     def _run_inpainting(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """Harmonic Inpainting via DiT mit korrektem Flow-Matching-ODE-Solver.
 
@@ -979,15 +1002,16 @@ class CoordinatedRepair:
             return audio
         try:
             # DiT-basiertes Inpainting — verwendet das trainierte Modell
-            from models.miipher_dit.dit_model import FlowMatchingDiT
             import torch
 
-            base_dir = __import__('pathlib').Path(__file__).parent.parent / "models" / "harmonic_inpainting"
+            from models.miipher_dit.dit_model import FlowMatchingDiT
+
+            base_dir = __import__("pathlib").Path(__file__).parent.parent / "models" / "harmonic_inpainting"
             mask_ckpt = base_dir / "inpainting_mask_best.pt"
             if mask_ckpt.exists():
                 # §v10.910: Mask-konditioniertes Modell (2 Kanäle: Audio+Maske)
                 model = FlowMatchingDiT(in_channels=2)
-                ckpt = torch.load(str(mask_ckpt), map_location='cpu', weights_only=True)
+                ckpt = torch.load(str(mask_ckpt), map_location="cpu", weights_only=True)
                 model.load_state_dict(ckpt.get("model_state_dict", ckpt))
                 use_mask_channel = True
             else:
@@ -995,10 +1019,10 @@ class CoordinatedRepair:
                 ckpt_path = base_dir / "inpainting_best.pt"
                 use_mask_channel = False
                 if ckpt_path.exists():
-                    ckpt = torch.load(str(ckpt_path), map_location='cpu', weights_only=True)
+                    ckpt = torch.load(str(ckpt_path), map_location="cpu", weights_only=True)
                     model.load_state_dict(ckpt.get("model_state_dict", ckpt))
 
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
             model.to(device)
             model.eval()
 
@@ -1021,7 +1045,7 @@ class CoordinatedRepair:
                     # 2. Kanal: Maske (1 in Inpaint-Regionen)
                     ch_mask = torch.zeros_like(x_audio)
                     for s_smp, e_smp in step.affected_samples or []:
-                        ch_mask[:, s_smp:min(e_smp, x_audio.shape[1]), :] = 1.0
+                        ch_mask[:, s_smp : min(e_smp, x_audio.shape[1]), :] = 1.0
                     if not step.affected_samples or ch_mask.sum() == 0:
                         ch_mask = torch.ones_like(x_audio)
                     x = torch.cat([x_audio, ch_mask], dim=-1)
@@ -1036,7 +1060,7 @@ class CoordinatedRepair:
                 affected = step.affected_samples or []
                 mask = torch.zeros_like(x0)
                 for s_smp, e_smp in affected:
-                    mask[:, s_smp:min(e_smp, x0.shape[1]), :] = 1.0
+                    mask[:, s_smp : min(e_smp, x0.shape[1]), :] = 1.0
                 if not affected or mask.sum() == 0:
                     mask = torch.ones_like(x0)  # ganzes Chunk
 
@@ -1059,7 +1083,7 @@ class CoordinatedRepair:
 
                 out_len = min(chunk_samples, len(audio) - start)
                 window = np.hanning(chunk_samples)
-                output[start:start + out_len] += inpainted_chunk[:out_len] * window[:out_len] / 2
+                output[start : start + out_len] += inpainted_chunk[:out_len] * window[:out_len] / 2
 
             return output.astype(np.float32)
         except Exception:
@@ -1067,8 +1091,11 @@ class CoordinatedRepair:
             return audio
 
     def _run_hum_removal(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: Hum-Entfernung via Phase 02 (echte Implementierung).
 
@@ -1078,6 +1105,7 @@ class CoordinatedRepair:
         """
         try:
             from backend.core.phases.phase_02_hum_removal import HumRemovalPhase
+
             mat = getattr(self, "_material", "") or "unknown"
             # §v10.998: Do-no-harm-Gate — liegt MUSIK im Hum-Band (Bass etc.),
             # überspringt die Notch-Kette KOMPLETT. Messung: Phase 02 zerstörte
@@ -1089,7 +1117,10 @@ class CoordinatedRepair:
                 log.info("Hum-Removal übersprungen (§v10.998: Musik im Hum-Band)")
                 return audio
             result = _phase.process(
-                audio=audio, sample_rate=sr, material_type=mat, auto_detect=True,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
+                auto_detect=True,
                 strength=float(step.parameters.get("strength", 1.0)),
             )
             out = getattr(result, "audio", result)
@@ -1100,15 +1131,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_declipper(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: De-Clipping via Phase 07."""
         try:
             from backend.core.phases.phase_07_declipper import DeclipperPhase
+
             strength = float(step.parameters.get("strength", 0.5))
             result = DeclipperPhase().process(
-                audio=audio, sample_rate=sr, strength=strength,
+                audio=audio,
+                sample_rate=sr,
+                strength=strength,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1118,15 +1155,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_wow_flutter(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: Wow/Flutter-Korrektur via Phase 12."""
         try:
             from backend.core.phases.phase_12_wow_flutter_fix import WowFlutterFix
+
             mat = getattr(self, "_material", "") or "unknown"
             result = WowFlutterFix().process(
-                audio=audio, sample_rate=sr, material_type=mat,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1136,15 +1179,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_phase_correction(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: Phasenkorrektur via Phase 14."""
         try:
             from backend.core.phases.phase_14_phase_correction import PhaseCorrection
+
             mat = getattr(self, "_material", "") or "unknown"
             result = PhaseCorrection().process(
-                audio=audio, sample_rate=sr, material_type=mat,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1154,8 +1203,11 @@ class CoordinatedRepair:
         return audio
 
     def _run_de_esser(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: De-Essing via Phase 19.
 
@@ -1168,19 +1220,26 @@ class CoordinatedRepair:
         if float(step.parameters.get("confidence", 0.0) or 0.0) < float(
             getattr(_get_protection(), "sibilance_confidence_min", 0.40)
         ):
-            log.info("De-Esser übersprungen (§v10.998: Sibilanz-Confidence %.2f < kalibrierter Schwelle)",
-                     float(step.parameters.get("confidence", 0.0) or 0.0))
+            log.info(
+                "De-Esser übersprungen (§v10.998: Sibilanz-Confidence %.2f < kalibrierter Schwelle)",
+                float(step.parameters.get("confidence", 0.0) or 0.0),
+            )
             return audio
         try:
             from backend.core.phases.phase_19_de_esser import DeEsserPhase
+
             mat_str = getattr(self, "_material", "") or "unknown"
             try:
                 from backend.core.defect_scanner import MaterialType as _MT
+
                 mat = _MT("tape" if mat_str == "cassette" else mat_str)
             except Exception:
                 mat = mat_str
             result = DeEsserPhase().process(
-                audio=audio, sample_rate=sr, material_type=mat, gender="unknown",
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
+                gender="unknown",
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1190,15 +1249,22 @@ class CoordinatedRepair:
         return audio
 
     def _run_tape_hiss(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: Tape-Hiss-Reduktion via Phase 29."""
         try:
             from backend.core.phases.phase_29_tape_hiss_reduction import TapeHissReductionPhase
+
             mat = getattr(self, "_material", "") or "unknown"
             result = TapeHissReductionPhase().process(
-                audio=audio, sample_rate=sr, material=mat, quality_mode="quality",
+                audio=audio,
+                sample_rate=sr,
+                material=mat,
+                quality_mode="quality",
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1208,15 +1274,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_print_through(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.940: Print-Through-Reduktion via Phase 57."""
         try:
             from backend.core.phases.phase_57_print_through_reduction import PrintThroughReductionPhase
+
             mat = getattr(self, "_material", "") or "unknown"
             result = PrintThroughReductionPhase().process(
-                audio=audio, sample_rate=sr, material_type=mat,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1226,8 +1298,11 @@ class CoordinatedRepair:
         return audio
 
     def _run_mp_senet_vocal(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.950: Vokal-Denoising via MP-SENet ONNX (Opt-In use_mp_senet=True).
 
@@ -1251,9 +1326,9 @@ class CoordinatedRepair:
                 s = i * hop
                 if s + n_fft > len(mono):
                     break
-                spec[i] = np.fft.rfft(mono[s:s + n_fft] * window)
+                spec[i] = np.fft.rfft(mono[s : s + n_fft] * window)
 
-            amp = np.abs(spec).astype(np.float32)          # [T, 201]
+            amp = np.abs(spec).astype(np.float32)  # [T, 201]
             pha = np.angle(spec).astype(np.float32)
 
             # §v10.994: Norm-Kalibrierung — das Modell wurde auf 99-Perzentil-
@@ -1266,8 +1341,9 @@ class CoordinatedRepair:
                 providers=["CPUExecutionProvider"],
             )
             denoised_amp = session.run(
-                None, {
-                    "noisy_amp": amp_norm.T[np.newaxis],   # [1, 201, T]
+                None,
+                {
+                    "noisy_amp": amp_norm.T[np.newaxis],  # [1, 201, T]
                     "noisy_pha": pha.T[np.newaxis],
                 },
             )[0][0].T  # [T, 201]
@@ -1283,8 +1359,8 @@ class CoordinatedRepair:
                 if s + n_fft > len(mono):
                     break
                 frame = np.fft.irfft(enhanced_spec[i]) * window
-                out[s:s + n_fft] += frame
-                wsum[s:s + n_fft] += window ** 2
+                out[s : s + n_fft] += frame
+                wsum[s : s + n_fft] += window**2
             wsum[wsum < 1e-8] = 1.0
             out /= wsum
             log.info("MP-SENet Vokal-Denoising: %d Frames verarbeitet", len(enhanced_spec))
@@ -1294,8 +1370,11 @@ class CoordinatedRepair:
         return audio
 
     def _run_reverb_reduction(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.960: Hall-Reduktion via Phase 20 (RX-11 De-reverb-Äquivalent).
 
@@ -1305,9 +1384,12 @@ class CoordinatedRepair:
         """
         try:
             from backend.core.phases.phase_20_reverb_reduction import ReverbReduction
+
             mat = getattr(self, "_material", "") or "unknown"
             result = ReverbReduction().process(
-                audio=audio, sample_rate=sr, material=mat,
+                audio=audio,
+                sample_rate=sr,
+                material=mat,
                 strength=float(step.parameters.get("strength", 1.0)),
             )
             out = getattr(result, "audio", result)
@@ -1318,15 +1400,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_advanced_dereverb(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.960: Advanced De-Reverb via Phase 49 (für stark verhallte Aufnahmen)."""
         try:
             from backend.core.phases.phase_49_advanced_dereverb import AdvancedDereverbPhase
+
             mat = getattr(self, "_material", "") or "unknown"
             result = AdvancedDereverbPhase().process(
-                audio=audio, sample_rate=sr, material_type=mat,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1336,15 +1424,21 @@ class CoordinatedRepair:
         return audio
 
     def _run_frequency_restoration(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """§v10.970: Bandwidth-Extension via Phase 06 (RX-11 Spectral-Recovery-Äquivalent)."""
         try:
             from backend.core.phases.phase_06_frequency_restoration import FrequencyRestorationPhase
+
             mat = getattr(self, "_material", "") or "unknown"
             result = FrequencyRestorationPhase().process(
-                audio=audio, sample_rate=sr, material_type=mat,
+                audio=audio,
+                sample_rate=sr,
+                material_type=mat,
             )
             out = getattr(result, "audio", result)
             if out is not None and np.asarray(out).shape == audio.shape:
@@ -1354,8 +1448,11 @@ class CoordinatedRepair:
         return audio
 
     def _run_pass_through(
-        self, audio: np.ndarray, step: RepairStep,
-        manifest: Optional[Any], sr: int,
+        self,
+        audio: np.ndarray,
+        step: RepairStep,
+        manifest: Any | None,
+        sr: int,
     ) -> np.ndarray:
         """Pass-through für Phasen, die noch nicht integriert sind."""
         return audio
@@ -1364,6 +1461,7 @@ class CoordinatedRepair:
 # ═════════════════════════════════════════════════════════════════════════════
 # Full Pipeline
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class CoordinatedRepairPipeline:
     """
@@ -1379,14 +1477,14 @@ class CoordinatedRepairPipeline:
         self.planner = RepairPlanner()
         self.executor = CoordinatedRepair()
 
-    def plan(self, manifest: Any, audio_length: int, metadata: Optional[dict] = None) -> RepairPlan:
+    def plan(self, manifest: Any, audio_length: int, metadata: dict | None = None) -> RepairPlan:
         return self.planner.plan(manifest, audio_length, metadata)
 
     def execute(
         self,
         audio: np.ndarray,
         plan: RepairPlan,
-        manifest: Optional[Any] = None,
+        manifest: Any | None = None,
         sample_rate: int = SR,
         material: str = "",
     ) -> tuple[np.ndarray, RepairReport]:

@@ -129,7 +129,7 @@ def _out_of_phase_stereo(audio: np.ndarray) -> np.ndarray:
     return np.stack([audio, -audio], axis=0)
 
 
-# ─── §V19 Noise-Textur-Guard ─────────────────────────────────────────────────
+# ─── §V19 (Spec-Vintage-Guard) Noise-Textur-Guard ─────────────────────────────────────────────────
 
 
 class TestNoiseTextureGuard:
@@ -465,7 +465,7 @@ class TestTransientGuard:
         gc.collect(0)
 
 
-# ─── §V24 Spektralfarbe-Guard ────────────────────────────────────────────────
+# ─── §V24 (Spec-Vintage-Guard) Spektralfarbe-Guard ────────────────────────────────────────────────
 
 
 class TestSpectralColorGuard:

@@ -27,6 +27,7 @@ Latency: ~30ms per 2s chunk (GPU) or ~100ms (CPU)
 from __future__ import annotations
 
 import logging
+import math
 import time
 from pathlib import Path
 from typing import Optional
@@ -34,7 +35,6 @@ from typing import Optional
 import numpy as np
 import onnxruntime as ort
 from scipy.signal import resample_poly
-import math
 
 log = logging.getLogger(__name__)
 
@@ -46,9 +46,9 @@ CHUNK_SEC = 2.0
 OVERLAP = 0.5
 
 # Quality thresholds
-QUALITY_HEAVY = 40   # Below this: aggressive denoising
+QUALITY_HEAVY = 40  # Below this: aggressive denoising
 QUALITY_MEDIUM = 70  # 40-70: moderate denoising
-QUALITY_LIGHT = 90   # 70-90: light touch-up
+QUALITY_LIGHT = 90  # 70-90: light touch-up
 
 
 class MERTQualityGate:
@@ -60,11 +60,7 @@ class MERTQualityGate:
         device: str = "cuda",
         gpu_id: int = 0,
     ):
-        providers = (
-            ["ROCMExecutionProvider", "CPUExecutionProvider"]
-            if device == "cuda"
-            else ["CPUExecutionProvider"]
-        )
+        providers = ["ROCMExecutionProvider", "CPUExecutionProvider"] if device == "cuda" else ["CPUExecutionProvider"]
         provider_options = [{"device_id": str(gpu_id)}, {}] if device == "cuda" else []
 
         mert_path = Path(mert_onnx)
@@ -80,7 +76,7 @@ class MERTQualityGate:
         )
 
         # Reference "clean music" embedding centroid (pre-computed from clean corpus)
-        self._clean_centroid: Optional[np.ndarray] = None  # [768]
+        self._clean_centroid: np.ndarray | None = None  # [768]
         self._load_or_compute_centroid()
 
         self._warmed = False

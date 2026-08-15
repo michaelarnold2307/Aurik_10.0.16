@@ -413,9 +413,15 @@ class ClickPopRemoval(PhaseInterface):
                 )
                 if _nt27_d > 0.25:
                     cleaned_audio = (0.5 * cleaned_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 Verarbeitungsschritt_27 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt27_d)
+                    logger.warning(
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_27 noise_texture dist=%.3f > 0.25 → 50%%-Blend",
+                        _nt27_d,
+                    )
         except Exception as _nt27_exc:
-            logger.debug("§V19 Verarbeitungsschritt_27 noise_texture_guard (nicht blockierend): %s", _nt27_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_27 noise_texture_guard (nicht blockierend): %s",
+                _nt27_exc,
+            )
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -428,7 +434,10 @@ class ClickPopRemoval(PhaseInterface):
                 if not _sc27.ok:
                     cleaned_audio = (0.70 * cleaned_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc27_exc:
-            logger.debug("§V24 Verarbeitungsschritt_27 spectral_color_guard (nicht blockierend): %s", _sc27_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_27 spectral_color_guard (nicht blockierend): %s",
+                _sc27_exc,
+            )
 
         return PhaseResult(
             success=True,

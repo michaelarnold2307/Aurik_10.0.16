@@ -7,7 +7,7 @@ from backend.core.excellence_optimizer import ExcellenceOptimizer
 
 
 class _DummyChecker:
-    def __init__(self):
+    def __init__(self, custom_thresholds: dict[str, float] | None = None):
         self._calls = 0
 
     def measure_all(self, _audio: np.ndarray, _sr: int) -> dict[str, float]:

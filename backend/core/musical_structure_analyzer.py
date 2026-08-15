@@ -454,7 +454,7 @@ class MusicalStructureAnalyzer:
         valid = (freqs >= 27.5) & (freqs <= min(float(sr) * 0.5, 5000.0))
         chroma = np.zeros(12, dtype=np.float32)
         if np.any(valid):
-            pitch_classes = np.rint(12.0 * np.log2(freqs[valid] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
+            pitch_classes = np.rint(12.0 * np.log2(freqs[valid] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
             np.add.at(chroma, pitch_classes, spectrum[valid])
         norm = float(np.linalg.norm(chroma))
         if norm < 1e-8:

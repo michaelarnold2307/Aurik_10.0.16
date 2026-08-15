@@ -846,19 +846,19 @@ class PhaseInteractionDenker:
 
             _catalog = get_phase_effect_catalog()
             _audio_ctx = {
-                "snr_db": signal_signature.get("snr_db"),  # type: ignore[union-attr]
-                "panns_singing": signal_signature.get("panns_singing", 0.0),  # type: ignore[union-attr]
-                "bandwidth_hz": signal_signature.get("bandwidth_hz"),  # type: ignore[union-attr]
-                "era_decade": signal_signature.get("era_decade", 1970) if signal_signature else 1970,
+                "snr_db": (signal_signature or {}).get("snr_db"),
+                "panns_singing": (signal_signature or {}).get("panns_singing", 0.0),
+                "bandwidth_hz": (signal_signature or {}).get("bandwidth_hz"),
+                "era_decade": (signal_signature or {}).get("era_decade", 1970),
                 "material_type": str(material).lower() if material else "unknown",
                 "restorability": restorability_score / 100.0 if restorability_score else 0.5,
-                "defect_severity": signal_signature.get("severity", 0.5),  # type: ignore[union-attr]
+                "defect_severity": (signal_signature or {}).get("severity", 0.5),
                 # §2.60 L1-Max: Alle Signal-Signature-Felder
-                "crest_db": signal_signature.get("crest_db", 12.0),  # type: ignore[union-attr]
-                "hf_ratio": signal_signature.get("hf_ratio", 0.0),  # type: ignore[union-attr]
-                "transient_ratio": signal_signature.get("transient_ratio", 0.0),  # type: ignore[union-attr]
-                "micro_dynamic_db": signal_signature.get("micro_dynamic_db", 6.0),  # type: ignore[union-attr]
-                "rms_dbfs": signal_signature.get("rms_dbfs", -20.0),  # type: ignore[union-attr]
+                "crest_db": (signal_signature or {}).get("crest_db", 12.0),
+                "hf_ratio": (signal_signature or {}).get("hf_ratio", 0.0),
+                "transient_ratio": (signal_signature or {}).get("transient_ratio", 0.0),
+                "micro_dynamic_db": (signal_signature or {}).get("micro_dynamic_db", 6.0),
+                "rms_dbfs": (signal_signature or {}).get("rms_dbfs", -20.0),
                 "chain_has_cassette": "cassette" in str(chain_info.get("chain_str", "")).lower()
                 if chain_info
                 else False,
@@ -914,6 +914,17 @@ class PhaseInteractionDenker:
             conflict_notes.append(f"§ROADMAP-4 DAG-Reorder: {len(ordered)} Phasen topologisch sortiert")
         except Exception as _dag_exc:
             logger.debug("§ROADMAP-4 DAG-Reorder nicht blockierend: %s", _dag_exc)
+
+        # §IV (copilot-instructions.md) + §2.46/§7.2: HARTE Reihenfolge-Constraints
+        # (EBU R128: LUFS vor RLP; RLP immer letztes Glied der Export-Kette) müssen
+        # auch nach §U- und DAG-Optimierungen gelten. Weiche Optimierungen dürfen
+        # harte Constraints nie verletzen → finaler Durchsetzungs-Pass.
+        ordered, _final_order_applied = self._apply_order_constraints(ordered)
+        if _final_order_applied:
+            ordering_applied = list(_final_order_applied) + (ordering_applied or [])
+            conflict_notes.append(
+                f"§ORDER final: {len(_final_order_applied)} harte Constraints nach §U/DAG wiederhergestellt"
+            )
 
         return PhasePlan(
             phases=ordered,

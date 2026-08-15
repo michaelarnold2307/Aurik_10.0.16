@@ -147,7 +147,7 @@ class ProcessingConfig:
     spectral_repair_hole_threshold_db: float = -60.0
     """Threshold for detecting spectral holes in dB below peak."""
 
-    # === CD Noise Profile (§G8, §V14) ===
+    # === CD Noise Profile (§G8 (GEBOTE.md), §V14) ===
 
     enable_cd_noise_profile: bool = True
     """Enable CD-characteristic noise profile injection on export.
@@ -298,7 +298,7 @@ PROCESSING_CONFIGS: dict[ProcessingMode, ProcessingConfig] = {
         enable_spectral_repair=False,
         spectral_repair_strength=0.7,
         spectral_repair_hole_threshold_db=-60.0,
-        # CD Noise Profile (§G8, §V14)
+        # CD Noise Profile (§G8 (GEBOTE.md), §V14)
         enable_cd_noise_profile=True,
         # Enhancement
         enable_enhancement=True,
@@ -340,7 +340,7 @@ PROCESSING_CONFIGS: dict[ProcessingMode, ProcessingConfig] = {
         enable_spectral_repair=True,
         spectral_repair_strength=0.8,  # Strong repair for professional quality
         spectral_repair_hole_threshold_db=-60.0,
-        # CD Noise Profile (§G8, §V14)
+        # CD Noise Profile (§G8 (GEBOTE.md), §V14)
         enable_cd_noise_profile=True,
         # Strong enhancement
         enable_enhancement=True,

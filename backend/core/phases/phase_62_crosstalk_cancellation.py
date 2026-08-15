@@ -526,9 +526,15 @@ class CrosstalkCancellationPhase(PhaseInterface):
                 )
                 if _nt62_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 Verarbeitungsschritt_62 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt62_d)
+                    logger.warning(
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_62 noise_texture dist=%.3f > 0.25 → 50%%-Blend",
+                        _nt62_d,
+                    )
         except Exception as _nt62_exc:
-            logger.debug("§V19 Verarbeitungsschritt_62 noise_texture_guard (nicht blockierend): %s", _nt62_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_62 noise_texture_guard (nicht blockierend): %s",
+                _nt62_exc,
+            )
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -541,7 +547,10 @@ class CrosstalkCancellationPhase(PhaseInterface):
                 if not _sc62.ok:
                     result_audio = (0.70 * result_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc62_exc:
-            logger.debug("§V24 Verarbeitungsschritt_62 spectral_color_guard (nicht blockierend): %s", _sc62_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_62 spectral_color_guard (nicht blockierend): %s",
+                _sc62_exc,
+            )
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

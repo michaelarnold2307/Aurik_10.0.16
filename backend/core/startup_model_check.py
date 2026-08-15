@@ -157,7 +157,9 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
                 "path": bundled_path,
                 "size_gb": entry.get("size_gb", 0.0),
                 "description": entry.get("description", ""),
-                "fallback": entry.get("fallback", "DSP"),  # §V6: logger.warning handled at call site
+                "fallback": entry.get(
+                    "fallback", "DSP"
+                ),  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
             if name in _PRIMARY_MODEL_NAMES:
                 missing_primary.append(info)
@@ -235,6 +237,7 @@ def check_models(app_root: Path | None = None) -> ModelCheckResult:
     # §v10.950: Model Zoo Registry — alle Modelle sichtbar machen
     try:
         from backend.core.model_zoo_registry import report as _zoo_report
+
         logger.info("Start_Pruefung: %s", _zoo_report())
     except Exception:
         pass
@@ -265,7 +268,7 @@ def _log_summary(result: ModelCheckResult) -> None:
                     "  MISSING PRIMARY: %s → %s (Ersatzpfad: %s)",
                     m["name"],
                     m["path"],
-                    m.get("fallback", "DSP"),  # §V6: logger.warning handled at call site
+                    m.get("fallback", "DSP"),  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 )
 
 

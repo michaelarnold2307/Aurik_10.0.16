@@ -1764,10 +1764,17 @@ def _phase20_is_ml_active() -> bool:
         return False  # Safe default: DSP path — must re-run
 
 
+def _resolve_transfer_chain_depth(value: int | None) -> int:
+    """§G86 (GEBOTE.md): Default nur aus CalibrationContext."""
+    from backend.core.defect_to_audibility import _resolve_transfer_chain_depth as _resolve
+
+    return _resolve(value)
+
+
 def _get_adaptive_threshold(
     restorability_score: float,
     material_type: str = "unknown",
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> float:
     """§2.29/§2.54 Material- und Restorability-adaptiver REGRESSION_THRESHOLD.
 
@@ -1781,6 +1788,7 @@ def _get_adaptive_threshold(
         Analog/physische Träger erhalten einen Material-Bonus, da Carrier-Repair-
         Phasen das Signal intentional ändern (Referenz-Paradoxon §2.44).
     """
+    transfer_chain_depth = _resolve_transfer_chain_depth(transfer_chain_depth)
     # Restorability-tier Basis
     if restorability_score >= 70.0:
         base = REGRESSION_THRESHOLD_GOOD
@@ -2561,7 +2569,7 @@ def _measure_quick(
             _kb = np.where((freqs_k > 27.5) & (freqs_k < 4186.0))[0]
             if len(_kb) == 0:
                 continue
-            _kn = np.round(12.0 * np.log2(freqs_k[_kb] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
+            _kn = np.round(12.0 * np.log2(freqs_k[_kb] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
             _chroma_seg = np.zeros(12, dtype=np.float64)
             np.add.at(_chroma_seg, _kn, spec[_kb].astype(np.float64))
             seg_sum = _chroma_seg.sum()
@@ -2622,7 +2630,7 @@ def _measure_quick(
             _chroma_abs = np.zeros(12, dtype=np.float32)
             _kb2 = np.where((_freqs_abs > 27.5) & (_freqs_abs < 4186.0))[0]
             if len(_kb2) > 0:
-                _kn2 = np.round(12.0 * np.log2(_freqs_abs[_kb2] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                _kn2 = np.round(12.0 * np.log2(_freqs_abs[_kb2] / 440.0 + 1e-12)).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                 np.add.at(_chroma_abs, _kn2, _spec_abs[_kb2])
             _s2 = _chroma_abs.sum()
             if _s2 > 1e-8:
@@ -4977,6 +4985,28 @@ class PerPhaseMusicalGoalsGate:
         best_regression = regression
         best_strength = initial_strength
         best_action = "best_effort"
+
+        # §2.29: Katastrophaler Content-Verlust darf NIE in einen Skip münden.
+        # CausalDefectReasoner hat die Phase als notwendig bestimmt — der beste
+        # Versuch wird verwendet, statt den Verarbeitungsschritt zu verwerfen.
+        try:
+            _final_pen_29, _final_pen_meta_29 = _content_integrity_penalty(
+                np.asarray(audio, dtype=np.float32),
+                np.asarray(best_audio, dtype=np.float32),
+                skip_corr_check=bool(phase_id in _TIMING_CORR_EXCLUDE),
+            )
+        except Exception:
+            _final_pen_29 = 0.0
+            _final_pen_meta_29 = {}
+        if float(_final_pen_29) >= 0.90:
+            logger.warning(
+                "PMGG Content-Guard: %s final penalty=%.2f (rms_drop=%.1f dB corr=%.3f) → best_effort statt Skip (§2.29)",
+                phase_id,
+                float(_final_pen_29),
+                float(_final_pen_meta_29.get("rms_drop_db", 0.0) or 0.0),
+                float(_final_pen_meta_29.get("corr", 0.0) or 0.0),
+            )
+            return best_audio, best_scores, "best_effort", best_strength
 
         # §v10 HPE-GATE: Nicht binär skip, sondern ultra-low strength versuchen.
         # Manchmal ist weniger besser als gar nichts.

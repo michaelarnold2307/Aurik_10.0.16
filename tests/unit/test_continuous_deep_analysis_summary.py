@@ -311,10 +311,11 @@ def test_compute_hpi_material_ceiling_cassette_mp3_low_vocal() -> None:
         panns_singing=0.6,
         is_studio_mode=False,
     )
-    # cassette: timbral=0.72, mert=0.82, vqi=0.78; mp3_low: timbral=0.82, mert=0.86, vqi=0.82
-    # worst-case: timbral=0.72, mert=0.82, vqi=0.78
-    # ceiling ≈ 0.82 × 0.72 × 0.78 × 0.98 × 0.95 ≈ 0.437
-    assert 0.35 < ceiling < 0.60, f"Unerwartet: {ceiling}"
+    # §G76/§G77 (GEBOTE.md) kontinuierliches Modell (ersetzt die alten diskreten
+    # Per-Metrik-Buckets): Basis(cassette)=0.82, Depth=len(chain)=1 → depth_factor=1.0,
+    # vocal=True (0.6 ≥ adaptive Schwelle 0.304) → vocal_factor=0.94
+    # ceiling = 0.82 × 1.0 × 0.94 = 0.7708
+    assert abs(ceiling - 0.7708) < 1e-6, f"Unerwartet: {ceiling}"
 
 
 def test_compute_hpi_material_ceiling_cd_instrumental() -> None:

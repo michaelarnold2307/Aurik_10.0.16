@@ -94,8 +94,8 @@ class TestG3ConservativeGoalWeights:
         src = pathlib.Path(
             "/media/michael/Software 4TB/Aurik_Standalone/backend/core/unified_restorer_v3.py"
         ).read_text(encoding="utf-8")
-        assert "Label-stage fallback also failed" in src
-        assert "conservative uniform weights" in src.lower() or "conservative" in src
+        assert "Label-Stufe Ersatzpfad also fehlgeschlagen" in src
+        assert "conservative uniform weights" in src
 
 
 # ---------------------------------------------------------------------------
@@ -151,13 +151,15 @@ class TestG4FeedbackChainConflictBoost:
     """§Gap G4: PMGG best_effort-Phasen triggern erhöhte FC-Iterationen."""
 
     def test_conflict_boost_logic_in_source(self):
-        """UV3-Quelltext enthält §G4 conflict-boost Logik."""
+        """UV3-Quelltext enthält §G4 (GEBOTE.md) conflict-boost Logik."""
         import pathlib
 
         src = pathlib.Path(
             "/media/michael/Software 4TB/Aurik_Standalone/backend/core/unified_restorer_v3.py"
         ).read_text(encoding="utf-8")
-        assert "§G4 FeedbackChain conflict-boost" in src, "G4-Fix fehlt: conflict-boost Kommentar nicht in UV3 gefunden"
+        assert "§G4 (GEBOTE.md) FeedbackChain conflict-boost" in src, (
+            "G4-Fix fehlt: conflict-boost Kommentar nicht in UV3 gefunden"
+        )
         assert "_fc_conflict_phases" in src
         assert "best_effort" in src
 
@@ -176,7 +178,7 @@ class TestG4FeedbackChainConflictBoost:
     def test_boost_respects_short_audio_cap(self):
         """Boost findet VOR dem is_very_short-Check statt — korrekte Reihenfolge prüfen.
 
-        _fc_max_iter = 5 → §G4 boost → _is_very_short cap → PhysicalCeiling cap.
+        _fc_max_iter = 5 → §G4 (GEBOTE.md) boost → _is_very_short cap → PhysicalCeiling cap.
         So the final cap from _is_very_short (min(x, 2)) still limits the boosted value.
         This is by design: short audio never gets more than 2 FC iterations.
         """
@@ -185,8 +187,8 @@ class TestG4FeedbackChainConflictBoost:
         src = pathlib.Path(
             "/media/michael/Software 4TB/Aurik_Standalone/backend/core/unified_restorer_v3.py"
         ).read_text(encoding="utf-8")
-        # §G4 block should appear before _is_very_short cap
-        idx_g4 = src.find("§G4 FeedbackChain conflict-boost")
+        # §G4 (GEBOTE.md) block should appear before _is_very_short cap
+        idx_g4 = src.find("§G4 (GEBOTE.md) FeedbackChain conflict-boost")
         idx_short = src.find("§2.31d: Audio < 10s → FeedbackChain max_iter")
         assert idx_g4 != -1
         assert idx_short != -1

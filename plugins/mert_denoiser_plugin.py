@@ -12,15 +12,16 @@ Training: 8,572 music files (FMA-Small + MUSDB18 + MTG-Jamendo).
 Best Val Loss: 0.0001 (normalized STFT MSE).
 """
 
-import numpy as np
-import onnxruntime as ort
-import soundfile as sf
 import io
 import logging
 import math
 import time
 from pathlib import Path
 from typing import Optional, Tuple, Union
+
+import numpy as np
+import onnxruntime as ort
+import soundfile as sf
 
 log = logging.getLogger(__name__)
 
@@ -55,11 +56,7 @@ class MERTDenoiserPlugin:
         if not enable:
             return
 
-        providers = (
-            ["ROCMExecutionProvider", "CPUExecutionProvider"]
-            if device == "cuda"
-            else ["CPUExecutionProvider"]
-        )
+        providers = ["ROCMExecutionProvider", "CPUExecutionProvider"] if device == "cuda" else ["CPUExecutionProvider"]
         provider_options = [{"device_id": str(gpu_id)}, {}] if device == "cuda" else []
 
         # Load MERT ONNX
@@ -140,8 +137,8 @@ class MERTDenoiserPlugin:
             # Overlap-add
             chunk_len = min(len(clean_chunk), total - pos)
             w = window[:chunk_len]
-            output[pos:pos + chunk_len] += clean_chunk[:chunk_len] * w
-            weight[pos:pos + chunk_len] += w
+            output[pos : pos + chunk_len] += clean_chunk[:chunk_len] * w
+            weight[pos : pos + chunk_len] += w
             pos += hop
 
         # Normalize by overlap weight
@@ -168,7 +165,7 @@ class MERTDenoiserPlugin:
         spec = np.zeros((n_frames, N_FFT // 2 + 1), dtype=np.complex64)
         for i in range(n_frames):
             start = i * HOP_LEN
-            frame = audio_48k[start:start + N_FFT] * self.window
+            frame = audio_48k[start : start + N_FFT] * self.window
             spec[i] = np.fft.rfft(frame)
 
         # Build real/imag input [1, 2, F, T]
@@ -197,7 +194,7 @@ class MERTDenoiserPlugin:
         n_frames, n_freq = stft_matrix.shape
         hop = HOP_LEN
         result = np.zeros(output_length, dtype=np.float32)
-        window_sq = self.window ** 2 if np.sum(self.window ** 2) > 0 else self.window
+        window_sq = self.window**2 if np.sum(self.window**2) > 0 else self.window
         norm_window = np.zeros(output_length, dtype=np.float32)
 
         for i in range(n_frames):
@@ -206,8 +203,8 @@ class MERTDenoiserPlugin:
             frame = frame * self.window
             frame = frame[:N_FFT]
             end = min(start + N_FFT, output_length)
-            result[start:end] += frame[:end - start]
-            norm_window[start:end] += window_sq[:end - start]
+            result[start:end] += frame[: end - start]
+            norm_window[start:end] += window_sq[: end - start]
 
         norm_window[norm_window < 1e-8] = 1.0
         result /= norm_window
@@ -219,6 +216,7 @@ class MERTDenoiserPlugin:
         if orig_sr == target_sr:
             return audio
         from scipy import signal as scipy_signal
+
         # Use polyphase resampling for quality
         gcd = math.gcd(orig_sr, target_sr)
         up = target_sr // gcd
@@ -229,12 +227,12 @@ class MERTDenoiserPlugin:
     def _overlap_window(chunk_size: int, hop: int) -> np.ndarray:
         """Create overlapping Hann windows for smooth chunk blending."""
         window = np.hanning(chunk_size)
-        return window ** 2  # Hann^2 for perfect reconstruction with 50% overlap
+        return window**2  # Hann^2 for perfect reconstruction with 50% overlap
 
     # ── Static helpers for compatibility ──
 
     @staticmethod
-    def load_audio(data: Union[str, bytes, np.ndarray], sample_rate: int = TARGET_SAMPLE_RATE) -> Tuple[np.ndarray, int]:
+    def load_audio(data: str | bytes | np.ndarray, sample_rate: int = TARGET_SAMPLE_RATE) -> tuple[np.ndarray, int]:
         """Load audio from file path, bytes, or numpy array.
 
         §11 VERBOTEN: sf.read direkt — kanonischer Import über backend.file_import.

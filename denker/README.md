@@ -403,7 +403,6 @@ scipy (direkt)                  (ReparaturDenker — self-contained Fallback)
 
 Spec-Version: Aurik 10.0.0 — Stand: Februar 2026
 
-
 ## §v10.900: SOTA-Ketten-Integration (2026-08)
 
 Die Denker sind das zentrale Räderwerk der SOTA-Reparatur-Kette:
@@ -423,6 +422,7 @@ UnifiedRestorerV3.restore(repair_plan=...)
 ```
 
 **Neue Pipelines (siehe .github/specs/v10.900_sota_pipeline_architecture.md):**
+
 - Defect Consensus: 5 aktive Detektoren, 5 kontextabhängige (sichtbar geloggt)
 - Repair Planner: 6 Prioritätsstufen, Inpainting immer zuletzt
 - Guards: 4-Schicht (TruePeak-relativ, Pumping, Formant, Spektral) + UTMOS-Loop

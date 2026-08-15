@@ -1040,7 +1040,7 @@ class DropoutRepairPhase(PhaseInterface):
                 _mask_mono_p24 = _silence_mask_p24.ravel()[:_n_samples_p24]
                 _is_sil_p24 = _mask_mono_p24 < 0.5
                 if np.any(_is_sil_p24):
-                    _sil_padded = np.concatenate(([False], _is_sil_p24, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                    _sil_padded = np.concatenate(([False], _is_sil_p24, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                     _sil_changes = np.diff(_sil_padded)
                     _sil_zone_starts = np.where(_sil_changes == 1)[0].tolist()
                     _sil_zone_ends = np.where(_sil_changes == -1)[0].tolist()
@@ -1297,7 +1297,7 @@ class DropoutRepairPhase(PhaseInterface):
         except Exception as _hg_exc_24:
             logger.debug("Verarbeitungsschritt24 §2.46e Hallucination-Guard (nicht blockierend): %s", _hg_exc_24)
 
-        # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Dropout-Reparatur darf Spektralfarbe nicht verändern
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung (§2.74, non-blocking): Dropout-Reparatur darf Spektralfarbe nicht verändern
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg24,
@@ -1307,9 +1307,13 @@ class DropoutRepairPhase(PhaseInterface):
             if not _sc24.ok:
                 _sc24_wet = 0.70
                 repaired_audio = (_sc24_wet * repaired_audio + (1.0 - _sc24_wet) * audio).astype(np.float32)
-                logger.warning("§V24 Verarbeitungsschritt_24 spectral_color non-ok → strength −30%%")
+                logger.warning(
+                    "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_24 spectral_color non-ok → strength −30%%"
+                )
         except Exception as _sc24_exc:
-            logger.debug("§V24 Verarbeitungsschritt_24 spectral_color (nicht blockierend): %s", _sc24_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_24 spectral_color (nicht blockierend): %s", _sc24_exc
+            )
 
         return create_phase_result(
             audio=repaired_audio,

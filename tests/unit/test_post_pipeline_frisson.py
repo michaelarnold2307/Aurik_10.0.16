@@ -69,11 +69,13 @@ class TestPostPipelineFrisson:
         audio = _make_frisson_signal()
         np.sqrt(np.mean(audio**2) + 1e-12)
 
-        # Simuliere leichte Dynamik-Glättung (wie Phase 54)
+        # Simuliere leichte Dynamik-Glättung (wie Phase 54): nur 30% der
+        # Hüllkurve in Richtung lokaler Glättung — keine Voll-Normalisierung.
         from scipy.ndimage import uniform_filter1d
 
         smoothed = uniform_filter1d(np.abs(audio), size=int(0.03 * SR))
-        processed = audio * (smoothed / (np.abs(audio) + 1e-12))
+        _gain = smoothed / (np.abs(audio) + 1e-12)
+        processed = audio * (1.0 + 0.30 * (_gain - 1.0))
         processed = np.clip(processed, -1.0, 1.0)
 
         # Hüllkurven-Korrelation

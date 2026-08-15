@@ -552,7 +552,7 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
             corrected_audio = audio + _effective_strength * (corrected_audio - audio)
             corrected_audio = np.clip(corrected_audio, -1.0, 1.0)
 
-        # §V24 Spektralfarbe-Prüfung nach Azimuth-Korrektur (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach Azimuth-Korrektur (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_25,
@@ -560,10 +560,12 @@ class AzimuthCorrectionPhaseV2(PhaseInterface):
 
             _sc_result_25 = _scg_25(audio, corrected_audio, sample_rate)
             if not _sc_result_25.ok:
-                _sc_wet_25 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_25 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 corrected_audio = (_sc_wet_25 * corrected_audio + (1.0 - _sc_wet_25) * audio).astype(np.float32)
         except Exception as _sc_exc_25:
-            logger.debug("§V24 Verarbeitungsschritt_25 spectral_color nicht blockierend: %s", _sc_exc_25)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_25 spectral_color nicht blockierend: %s", _sc_exc_25
+            )
 
         # V26 Onset-Guard (§2.77): Transient-Fenster nach Azimuth-Korrektur schützen (non-blocking)
         try:

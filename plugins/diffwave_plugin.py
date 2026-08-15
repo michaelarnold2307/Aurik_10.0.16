@@ -130,8 +130,7 @@ class DiffwavePlugin:
             logger.debug("DiffWave denoise: model not loaded, returning original")
             return np.asarray(audio, dtype=np.float32)
 
-        audio = np.nan_to_num(np.asarray(audio, dtype=np.float32),
-                              nan=0.0, posinf=0.0, neginf=0.0)
+        audio = np.nan_to_num(np.asarray(audio, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
         _was_channels_first = audio.ndim == 2 and audio.shape[0] <= 8 and audio.shape[1] > audio.shape[0]
         if audio.ndim == 2:
             mono = audio.mean(axis=0) if _was_channels_first else audio.mean(axis=1)
@@ -162,6 +161,7 @@ class DiffwavePlugin:
         _plm = None
         try:
             from backend.core.plugin_lifecycle_manager import get_plugin_lifecycle_manager
+
             _plm = get_plugin_lifecycle_manager()
             _plm.set_active("DiffWave", True)
         except Exception:
@@ -193,11 +193,16 @@ class DiffwavePlugin:
                     step_in = np.array([[step]], dtype=np.int64)
                     try:
                         out = np.asarray(
-                            self._session.run(None, {
-                                "audio": audio_in,
-                                "step": step_in,
-                                "spectrogram": mel_in,
-                            })[0], dtype=np.float32)
+                            self._session.run(
+                                None,
+                                {
+                                    "audio": audio_in,
+                                    "step": step_in,
+                                    "spectrogram": mel_in,
+                                },
+                            )[0],
+                            dtype=np.float32,
+                        )
                         out = np.nan_to_num(out, nan=0.0, posinf=0.0, neginf=0.0)
                         audio_in = out[:, 0:1, :] if out.ndim == 3 else out
                     except Exception as exc:
@@ -208,7 +213,7 @@ class DiffwavePlugin:
                 out_chunks.append(denoised_chunk)
                 start = end
 
-            out_mono = np.concatenate(out_chunks)[:len(m22)].astype(np.float32)
+            out_mono = np.concatenate(out_chunks)[: len(m22)].astype(np.float32)
             result = _resamp(out_mono, _SR, sr)[:n]
 
             if audio.ndim == 2:
@@ -216,7 +221,9 @@ class DiffwavePlugin:
 
             logger.info(
                 "DiffWave denoise: strength=%.2f start_step=%d/%d",
-                strength, start_step, _N_STEPS,
+                strength,
+                start_step,
+                _N_STEPS,
             )
             return np.clip(result, -1.0, 1.0).astype(np.float32)
 
@@ -479,7 +486,7 @@ def inpaint(audio: np.ndarray, gap_start: int, gap_end: int, sr: int, n_steps: i
             out = np.clip(plugin_result, -1.0, 1.0).astype(np.float32)
             return out.T if (_was_channels_first and out.ndim == 2) else out
     except Exception as _e:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         logger.debug("DiffWave plugin inpaint fehlgeschlagen, DSP-Fallback: %s", _e)
 
     # ── Fallback: DSP cubic/linear interpolation ──────────────────────────────

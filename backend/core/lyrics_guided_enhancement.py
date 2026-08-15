@@ -686,7 +686,7 @@ class LyricsGuidedEnhancement:
         """Lädt wav2vec2_forced_alignment.onnx (§2.36 PFLICHT: Phonem-Alignment).
 
         Model: 125 MB, CPUExecutionProvider, no network access.
-        Fallback: DSP energy-threshold segmentation + Whisper token ID phoneme prior.  # §V6: logger.warning handled at call site
+        Fallback: DSP energy-threshold segmentation + Whisper token ID phoneme prior.  # §V6 (copilot-instructions.md): logger.warning handled at call site
         """
         # [RELEASE_MUST] memory budget guard before InferenceSession (§2.37 Checkliste)
         _release_on_fail: Callable[[], None] | None = None
@@ -758,7 +758,7 @@ class LyricsGuidedEnhancement:
         Dies ist der PREFERRED Pfad — der Decoder liefert echte Wort-Transkripte
         für NLP-Sentiment-Analyse und semantik-gesteuertes DSP.
 
-        Fallback: ONNX whisper_tiny.onnx (encoder-only) + DSP-Energie-Segmentierung.  # §V6: logger.warning handled at call site
+        Fallback: ONNX whisper_tiny.onnx (encoder-only) + DSP-Energie-Segmentierung.  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
         Privacy: Das HF-Modell läuft vollständig lokal. Kein Text verlässt den RAM.
         """
@@ -873,7 +873,7 @@ class LyricsGuidedEnhancement:
             Updated list of WordTimestamp with refined phoneme_type labels.
         """
         if self._aligner_session is None or not words:
-            return words  # fallback: keep DSP classification  # §V6: logger.warning handled at call site
+            return words  # fallback: keep DSP classification  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
         try:
             # Wav2vec2 expects float32 input of shape [1, T]
@@ -994,7 +994,7 @@ class LyricsGuidedEnhancement:
                 )
             return updated
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("LyricsGuidedEnhancement._align_phonemes fehlgeschlagen (%s) — DSP Ersatzpfad", exc)
             return words
 
@@ -1751,7 +1751,7 @@ class LyricsGuidedEnhancement:
                 if fricative_ratio >= 0.30:
                     return "fricative_stressed" if is_stressed else "fricative_unstressed"
         except Exception as _phoneme_exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("LGE phoneme DSP classifier nicht verfuegbar (unkritisch): %s", _phoneme_exc)
 
         # --- Plosive: very short burst (< 30 ms) with high peak/RMS ratio ---

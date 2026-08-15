@@ -561,7 +561,7 @@ def calibrate_watchdog_thresholds(
     """§v10.46 Zentrale Watchdog-Schwellwert-Kalibrierung aus CalibrationContext.
 
     Passt alle Watchdog-Parameter kontinuierlich an die Song-Charakteristik an.
-    Kein hartcodierter Default (§V25, §G78).
+    Kein hartcodierter Default (§V25, §G78 (GEBOTE.md)).
     """
     global CUMULATIVE_STRENGTH_WARN, CUMULATIVE_STRENGTH_CRITICAL, RMS_CRITICAL_DROP_DB, CREST_MIN_NATURAL
 

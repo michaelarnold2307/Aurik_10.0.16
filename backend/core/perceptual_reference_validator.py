@@ -82,7 +82,7 @@ class PerceptualValidationResult:
 
 class PerceptualReferenceValidator:
     def __init__(self) -> None:
-        # §V8: einziges Stateful-Feld — MUSS pro Song via calibrate_and_store()
+        # §V8 (copilot-instructions.md): einziges Stateful-Feld — MUSS pro Song via calibrate_and_store()
         # komplett überschrieben werden, bevor validate() für diesen Song genutzt wird.
         self._anchor: PerceptualAnchor | None = None
 
@@ -91,7 +91,7 @@ class PerceptualReferenceValidator:
         return self._anchor
 
     def calibrate_and_store(self, audio: np.ndarray, sr: int, label: str = "original") -> PerceptualAnchor:
-        """§V8 Song-Cross-Contamination-Verbot: setzt den Anker NEU für diesen Song.
+        """§V8 (copilot-instructions.md) Song-Cross-Contamination-Verbot: setzt den Anker NEU für diesen Song.
 
         Muss einmalig VOR der Phasen-Schleife mit dem Original-Audio DIESES Songs
         aufgerufen werden (überschreibt einen ggf. vorhandenen Anker vollständig).
@@ -267,7 +267,7 @@ _validator_instance: PerceptualReferenceValidator | None = None
 def get_perceptual_validator() -> PerceptualReferenceValidator:
     """Gibt die globale PerceptualReferenceValidator-Instanz zurück (Singleton).
 
-    §V8: Der Anker-Zustand wird NICHT hier zurückgesetzt — jeder Aufrufer MUSS
+    §V8 (copilot-instructions.md): Der Anker-Zustand wird NICHT hier zurückgesetzt — jeder Aufrufer MUSS
     `calibrate_and_store()` einmal pro Song aufrufen, bevor `validate()` benutzt wird
     (geschieht in `unified_restorer_v3.py` direkt bei der Pipeline-Initialisierung).
     """

@@ -1093,7 +1093,7 @@ class ReverbReduction(PhaseInterface):
                     "VQI per-Verarbeitungsschritt Verarbeitungsschritt_20 (nicht blockierend): %s", _vqi_exc_p20
                 )
 
-        # §G2 Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
+        # §G2 (GEBOTE.md) Breath-Segment Protection (§2.46f): EMOTIONAL_TENSION Atemgeräusche
         # mit Original zurückblenden — Dereverb glättet sonst natürliche Atemräume.
         _breath_segs_p20 = list(kwargs.get("breath_segments", []) or [])
         if _breath_segs_p20:
@@ -1132,10 +1132,11 @@ class ReverbReduction(PhaseInterface):
                 if _blended_any_p20:
                     reduced = np.clip(np.nan_to_num(_result_blend_p20, nan=0.0), -1.0, 1.0).astype(np.float32)
                     logger.debug(
-                        "§G2 BreathProtect Verarbeitungsschritt_20: %d tension-segs geschützt", len(_breath_segs_p20)
+                        "§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_20: %d tension-segs geschützt",
+                        len(_breath_segs_p20),
                     )
             except Exception as _g2_p20_exc:
-                logger.debug("§G2 BreathProtect Verarbeitungsschritt_20 nicht blockierend: %s", _g2_p20_exc)
+                logger.debug("§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_20 nicht blockierend: %s", _g2_p20_exc)
 
         # V19 Noise-Textur-Invariante (§NTI): Residual nach Reverb-Reduction darf kein
         # material-fremdes Spektralprofil (Whitening) aufweisen (VERBOTEN-V19).
@@ -1192,7 +1193,7 @@ class ReverbReduction(PhaseInterface):
             except Exception as _nf20_exc:
                 logger.debug("Verarbeitungsschritt20 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf20_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_20,
@@ -1200,10 +1201,12 @@ class ReverbReduction(PhaseInterface):
 
             _sc_result_20 = _scg_20(audio, reduced, sample_rate)
             if not _sc_result_20.ok:
-                _sc_wet_20 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_20 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 reduced = (_sc_wet_20 * reduced + (1.0 - _sc_wet_20) * audio).astype(np.float32)
         except Exception as _sc_exc_20:  # pylint: disable=broad-except
-            logger.debug("§V24 Verarbeitungsschritt_20 spectral_color nicht blockierend: %s", _sc_exc_20)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_20 spectral_color nicht blockierend: %s", _sc_exc_20
+            )
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # Reverb-Reduction nicht energetisch beeinflusst werden (VERBOTEN-V26).

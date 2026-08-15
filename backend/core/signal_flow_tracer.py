@@ -1117,7 +1117,7 @@ def calibrate_sft_thresholds(
         _ECHO_CORR_THRESH = 0.35  # Studio-Master: strikt
     # §G125 CalibratedConstants-Integration: zentrale Konstanten als Fallback.
     # Wenn CalibratedConstants verfügbar ist, überschreiben dessen Werte
-    # die lokalen Berechnungen (Single Source of Truth, §G76).
+    # die lokalen Berechnungen (Single Source of Truth, §G76 (GEBOTE.md)).
     try:
         from backend.core.calibrated_constants import get_constants
 
@@ -1136,10 +1136,10 @@ def calibrate_sft_thresholds(
             _WET_CEILING_REPAIR,
         )
     except Exception:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         pass  # Fallback: lokale Berechnungen bleiben aktiv
 
-    # §G71 Wet-Ceilings: depth-adaptiv für effektive Phasen-Wirkung ≥ 0.15
+    # §G71 (GEBOTE.md) Wet-Ceilings: depth-adaptiv für effektive Phasen-Wirkung ≥ 0.15
     _depth = max(1, int(transfer_chain_depth))
     # §v10.119: Extreme Transfer-Chains (depth≥5) warnen und konservativ cappen.
     # 5+ Stufen (z.B. Wachswalze→Schellack→Tonband→Kassette→MP3) haben
@@ -1158,7 +1158,7 @@ def calibrate_sft_thresholds(
     _WET_CEILING_NONREPAIR = float(np.clip(0.72 + max(0, _depth_effective - 1) * 0.05, 0.65, 0.90))
     _WET_CEILING_REPAIR = float(np.clip(0.82 + max(0, _depth_effective - 1) * 0.05, 0.75, 0.95))
     logger.info(
-        "§G71 SFT-Wet-Ceilings: depth=%d rs=%.0f → nonrepair=%.2f repair=%.2f",
+        "§G71 (GEBOTE.md) SFT-Wet-Ceilings: depth=%d rs=%.0f → nonrepair=%.2f repair=%.2f",
         _depth,
         restorability_score,
         _WET_CEILING_NONREPAIR,
@@ -1186,13 +1186,13 @@ def calibrate_sft_thresholds(
     logger.info("§v10.43 SFT-HNR: vocal=%.2f → WARN=%.0fdB KRIT=%.0fdB", vocal_confidence, _HNR_WARN_DB, _HNR_CRIT_DB)
 
 
-# §G71 Wet-Ceilings: depth-adaptiv, von calibrate_sft_thresholds() gesetzt
+# §G71 (GEBOTE.md) Wet-Ceilings: depth-adaptiv, von calibrate_sft_thresholds() gesetzt
 _WET_CEILING_NONREPAIR: float = 0.70
 _WET_CEILING_REPAIR: float = 0.80
 
 
 def get_sft_wet_ceilings() -> tuple[float, float]:
-    """§G71 Gibt die kalibrierten Wet-Ceilings zurück (non-repair, repair)."""
+    """§G71 (GEBOTE.md) Gibt die kalibrierten Wet-Ceilings zurück (non-repair, repair)."""
     return (_WET_CEILING_NONREPAIR, _WET_CEILING_REPAIR)
 
 

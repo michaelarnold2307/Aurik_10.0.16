@@ -33,7 +33,7 @@ def test_ui_status_and_phase_labels_use_eliding_labels() -> None:
 def test_ui_top_row_refresh_prevents_collisions_on_narrow_widths() -> None:
     src = GUI_FILE.read_text(encoding="utf-8")
     assert "def _refresh_top_info_row(self, window_width: int | None = None) -> None:" in src
-    assert '_btn_cancel.setText("■ Stoppen" if _compact else "■  Restaurierung stoppen")' in src
+    assert '_btn_cancel.setText(t("action.cancel_compact") if _compact else t("action.cancel_full"))' in src
     assert "_stats_should_hide = _very_compact and _running" in src
     assert "self._refresh_top_info_row(w)" in src
     assert "self._refresh_top_info_row()" in src

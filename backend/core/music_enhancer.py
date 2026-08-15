@@ -25,13 +25,13 @@ from scipy.ndimage import uniform_filter1d
 logger = logging.getLogger(__name__)
 
 # ── Crossover-Frequenzen (4. Ordnung Linkwitz-Riley, linear-phase via forward-backward) ──
-LOW_CROSSOVER: float = 250.0   # Hz — Kick/Bass
+LOW_CROSSOVER: float = 250.0  # Hz — Kick/Bass
 HIGH_CROSSOVER: float = 4000.0  # Hz — Vocals/Gitarre → Hi-Hat/Cymbals
 
 # ── Default-Parameter (für "balanced" Preset) ──
-LOW_PUNCH_DB: float = 2.0       # dB Verstärkung für Kick-Transienten
-MID_CLARITY_DB: float = 1.5     # dB Anhebung der Präsenz
-HIGH_AIR_DB: float = 1.0        # dB Air/Luft
+LOW_PUNCH_DB: float = 2.0  # dB Verstärkung für Kick-Transienten
+MID_CLARITY_DB: float = 1.5  # dB Anhebung der Präsenz
+HIGH_AIR_DB: float = 1.0  # dB Air/Luft
 
 
 @dataclass
@@ -67,7 +67,7 @@ def _transient_emphasis(audio: np.ndarray, sr: int, gain_db: float) -> np.ndarra
     diff = np.diff(audio, prepend=audio[0])
     # Smooth envelope
     envelope = uniform_filter1d(np.abs(diff), size=int(sr * 0.005))  # 5ms smoothing
-    envelope /= (envelope.max() + 1e-10)
+    envelope /= envelope.max() + 1e-10
 
     # Apply gain only to transient regions (envelope > 0.3)
     gain = 10.0 ** (gain_db / 20.0)
@@ -176,6 +176,6 @@ def _enhance_mono(
     # Auto-gain: match RMS of input
     input_rms = np.sqrt(np.mean(audio**2)) + 1e-10
     output_rms = np.sqrt(np.mean(result**2)) + 1e-10
-    result *= (input_rms / output_rms)
+    result *= input_rms / output_rms
 
     return result.astype(np.float32)

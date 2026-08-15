@@ -893,9 +893,7 @@ class SGMSEPlusPlugin:
             _mono_ref = _mono_ref - np.mean(_mono_ref)
             _res_ref = np.asarray(result)[:_res_ok] - np.mean(np.asarray(result)[:_res_ok])
             if float(np.dot(_mono_ref, _res_ref)) < 0.0:
-                logger.warning(
-                    "SGMSE+ Polarity-Guard: invertierte Ausgabe erkannt — Vorzeichen korrigiert"
-                )
+                logger.warning("SGMSE+ Polarity-Guard: invertierte Ausgabe erkannt — Vorzeichen korrigiert")
                 result = -np.asarray(result)
 
             # Aggressive cleanup: GC + malloc_trim to return memory to OS

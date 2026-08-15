@@ -33,7 +33,7 @@ def _get_available_ram_gb() -> float:
 
         return float(psutil.virtual_memory().available) / (1024**3)
     except Exception:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         return 8.0  # Konservativer Fallback
 
 

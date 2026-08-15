@@ -7,20 +7,20 @@ Wenn DefectScanner "Klick" sagt und SurgicalAnalyzer "Transient",
 gibt es keine Konfliktlösung. Falsche Defekte korrumpieren alle Folge-Phasen.
 
 Lösung: Consensus-Pipeline mit 3 Stufen:
-  
+
   Stufe 1 – PARALLEL SCANNING:
     Alle 30 Module laufen parallel. Jedes liefert Defect-Hypothesen
     mit Typ, Zeitstempel, Konfidenz und Begründung.
-  
+
   Stufe 2 – CONFLICT RESOLUTION:
     Überlappende/konfligierende Hypothesen werden per Weighted Voting
     aufgelöst. Module mit höherer historischer Präzision bekommen
     mehr Gewicht. Zeitliche Überschneidungen werden gemerged.
-  
+
   Stufe 3 – CAUSAL REASONING:
     CausalDefectReasoner prüft kausale Ketten (z.B. Klick → Pre-Echo →
     harmonische Lücke). Defekte ohne kausale Basis werden gedowngraded.
-  
+
   Output: Ein einziges DefectManifest — widerspruchsfrei, gewichtet,
   kausal validiert. Alle Folge-Phasen arbeiten mit DEMSELBEN Manifest.
 
@@ -35,7 +35,8 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 import numpy as np
 
@@ -48,48 +49,52 @@ SR = 48000
 # Unified Defect Model
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class DefectCategory(str, Enum):
     """Standardisierte Defekt-Kategorien — alle Module mappen hierhin."""
-    CLICK = "click"                    # Einzelimpuls < 10ms
-    CRACKLE = "crackle"               # Dichte Mikro-Impulse
-    POP = "pop"                        # Starker Einzelimpuls > 10ms
-    HUM = "hum"                        # 50/60 Hz Brummen
-    HISS = "hiss"                      # Breitband-Rauschen
-    TAPE_HISS = "tape_hiss"           # Bandrauschen (spektrale Färbung)
-    VINYL_NOISE = "vinyl_noise"       # Oberflächenrauschen
-    WOW_FLUTTER = "wow_flutter"       # Geschwindigkeitsschwankungen
-    CLIPPING = "clipping"              # Digitale/analoge Übersteuerung
-    DROPOUT = "dropout"               # Signalaussetzer
-    PRE_ECHO = "pre_echo"             # Band-Übersprechen
-    PRINT_THROUGH = "print_through"   # Magnetische Kopie
-    SIBILANCE = "sibilance"           # Übermäßige Zischlaute
-    BREATH = "breath"                  # Störende Atemgeräusche
+
+    CLICK = "click"  # Einzelimpuls < 10ms
+    CRACKLE = "crackle"  # Dichte Mikro-Impulse
+    POP = "pop"  # Starker Einzelimpuls > 10ms
+    HUM = "hum"  # 50/60 Hz Brummen
+    HISS = "hiss"  # Breitband-Rauschen
+    TAPE_HISS = "tape_hiss"  # Bandrauschen (spektrale Färbung)
+    VINYL_NOISE = "vinyl_noise"  # Oberflächenrauschen
+    WOW_FLUTTER = "wow_flutter"  # Geschwindigkeitsschwankungen
+    CLIPPING = "clipping"  # Digitale/analoge Übersteuerung
+    DROPOUT = "dropout"  # Signalaussetzer
+    PRE_ECHO = "pre_echo"  # Band-Übersprechen
+    PRINT_THROUGH = "print_through"  # Magnetische Kopie
+    SIBILANCE = "sibilance"  # Übermäßige Zischlaute
+    BREATH = "breath"  # Störende Atemgeräusche
     DE_ESSING_ARTIFACT = "de_essing"  # De-Essing-Artefakte
-    PHASE_ERROR = "phase_error"       # Phasenfehler/Stereo-Imbalance
-    DISTORTION = "distortion"          # Nichtlineare Verzerrung
+    PHASE_ERROR = "phase_error"  # Phasenfehler/Stereo-Imbalance
+    DISTORTION = "distortion"  # Nichtlineare Verzerrung
     NOISE_GATE_CHATTER = "gate_chatter"  # Noise-Gate-Flattern
-    REVERB_TAIL = "reverb_tail"       # Unerwünschter Nachhall
+    REVERB_TAIL = "reverb_tail"  # Unerwünschter Nachhall
     UNKNOWN = "unknown"
 
 
 @dataclass
 class DefectHypothesis:
     """Eine Defekt-Hypothese von einem Detektor-Modul."""
+
     category: DefectCategory
     start_sample: int
     end_sample: int
-    confidence: float            # 0.0–1.0
-    severity: float              # 0.0–1.0
-    source_module: str           # welches Modul hat detektiert
+    confidence: float  # 0.0–1.0
+    severity: float  # 0.0–1.0
+    source_module: str  # welches Modul hat detektiert
     evidence: dict[str, Any] = field(default_factory=dict)
     # Kausale Verknüpfungen
-    caused_by: list[str] = field(default_factory=list)   # Defect-IDs upstream
-    causes: list[str] = field(default_factory=list)       # Defect-IDs downstream
+    caused_by: list[str] = field(default_factory=list)  # Defect-IDs upstream
+    causes: list[str] = field(default_factory=list)  # Defect-IDs downstream
 
 
 @dataclass
 class DefectManifest:
     """Widerspruchsfreies, gewichtetes Defekt-Manifest."""
+
     defects: list[DefectHypothesis] = field(default_factory=list)
     total_hypotheses: int = 0
     conflicts_resolved: int = 0
@@ -151,17 +156,27 @@ DEFAULT_WEIGHT = 0.70
 # §v10.840: Impuls-Detektor — Klicks/Knackser direkt auf der Waveform
 # ═════════════════════════════════════════════════════════════════════════════
 
-_ANALOG_ONLY_CATEGORIES = frozenset({
-    DefectCategory.UNKNOWN,
-})
+_ANALOG_ONLY_CATEGORIES = frozenset(
+    {
+        DefectCategory.UNKNOWN,
+    }
+)
 
 # Analog-Detektoren, die auf digitalem Material physikalisch unmöglich sind
-_ANALOG_ONLY_NAMES = frozenset({
-    "bandwidth_loss", "riaa_curve_error", "soft_saturation",
-    "speed_calibration_error", "print_through", "wow_flutter",
-    "flutter_spectral_sidebands", "room_mode_resonance",
-    "proximity_effect_excess", "reverb_excess",
-})
+_ANALOG_ONLY_NAMES = frozenset(
+    {
+        "bandwidth_loss",
+        "riaa_curve_error",
+        "soft_saturation",
+        "speed_calibration_error",
+        "print_through",
+        "wow_flutter",
+        "flutter_spectral_sidebands",
+        "room_mode_resonance",
+        "proximity_effect_excess",
+        "reverb_excess",
+    }
+)
 
 
 def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]:
@@ -180,8 +195,8 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
     if audio.ndim > 1:
         audio = audio.mean(axis=0)
 
-    hop = max(1, sr // 1000)          # 1 ms Hops
-    win = max(4, sr // 250)           # 4 ms Fenster
+    hop = max(1, sr // 1000)  # 1 ms Hops
+    win = max(4, sr // 250)  # 4 ms Fenster
     n = 1 + (len(audio) - win) // hop
     if n < 4:
         return []
@@ -190,7 +205,7 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
     energy = np.zeros(n, dtype=np.float64)
     for i in range(n):
         s = i * hop
-        energy[i] = np.mean(audio[s:s + win] ** 2) + 1e-12
+        energy[i] = np.mean(audio[s : s + win] ** 2) + 1e-12
 
     # Median-Filter (51 ms = 51 Hops) als lokale Referenz
     med_k = 51
@@ -223,15 +238,17 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
                 click_count += 1
                 s_smp = start_i * hop
                 e_smp = min(len(audio), i * hop + win)
-                hypotheses.append(DefectHypothesis(
-                    category=DefectCategory.CLICK,
-                    start_sample=int(s_smp),
-                    end_sample=int(e_smp),
-                    confidence=min(0.95, 0.5 + click_count * 0.02),
-                    severity=float(min(1.0, ratio[start_i] / 20.0)),
-                    source_module="impulse_detector",
-                    evidence={"method": "waveform_spike", "ratio": float(ratio[start_i])},
-                ))
+                hypotheses.append(
+                    DefectHypothesis(
+                        category=DefectCategory.CLICK,
+                        start_sample=int(s_smp),
+                        end_sample=int(e_smp),
+                        confidence=min(0.95, 0.5 + click_count * 0.02),
+                        severity=float(min(1.0, ratio[start_i] / 20.0)),
+                        source_module="impulse_detector",
+                        evidence={"method": "waveform_spike", "ratio": float(ratio[start_i])},
+                    )
+                )
         else:
             i += 1
 
@@ -255,15 +272,17 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
         for bs in burst_starts:
             s_smp = int(bs * hop)
             e_smp = min(len(audio), int((bs + 100) * hop))
-            hypotheses.append(DefectHypothesis(
-                category=DefectCategory.CRACKLE,
-                start_sample=s_smp,
-                end_sample=e_smp,
-                confidence=0.7,
-                severity=0.6,
-                source_module="impulse_detector",
-                evidence={"method": "crackle_burst"},
-            ))
+            hypotheses.append(
+                DefectHypothesis(
+                    category=DefectCategory.CRACKLE,
+                    start_sample=s_smp,
+                    end_sample=e_smp,
+                    confidence=0.7,
+                    severity=0.6,
+                    source_module="impulse_detector",
+                    evidence={"method": "crackle_burst"},
+                )
+            )
 
     return hypotheses
 
@@ -271,6 +290,7 @@ def detect_impulse_defects(audio: np.ndarray, sr: int) -> list[DefectHypothesis]
 # ═════════════════════════════════════════════════════════════════════════════
 # Stage 1: Parallel Scanning
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 def detect_reverb_tail(audio: np.ndarray, sr: int = SR) -> dict:
     """§v10.998: Reverb-Tail-Detektor — Late-Tail-Energy (SOTA-Lücken-Schluss).
@@ -344,14 +364,16 @@ def detect_reverb_tail(audio: np.ndarray, sr: int = SR) -> dict:
     start_s = float(peak_idx * 0.020)
     end_s = float(min(len(audio) / sr, start_s + 2.0))
     return {
-        "defects": [{
-            "type": "reverb_tail",
-            "start": start_s,
-            "end": end_s,
-            "severity": severity,
-            "confidence": confidence,
-            "evidence": {"late_direct_ratio": round(ratio, 3)},
-        }]
+        "defects": [
+            {
+                "type": "reverb_tail",
+                "start": start_s,
+                "end": end_s,
+                "severity": severity,
+                "confidence": confidence,
+                "evidence": {"late_direct_ratio": round(ratio, 3)},
+            }
+        ]
     }
 
 
@@ -388,7 +410,8 @@ class ParallelDefectScanner:
                     )
                     log.warning(
                         "Defect Consensus: %s NICHT registriert (%s)",
-                        name, "braucht Zusatz-Kontext" if context_needed else "API nicht verfügbar",
+                        name,
+                        "braucht Zusatz-Kontext" if context_needed else "API nicht verfügbar",
                     )
             except Exception as exc:
                 self._registration_report.append({"name": name, "status": "failed"})
@@ -397,31 +420,41 @@ class ParallelDefectScanner:
         # 1. DefectScanner (primary)
         def _load_defect_scanner():
             from backend.core.defect_scanner import get_defect_scanner
+
             return get_defect_scanner().scan
+
         _reg("defect_scanner", _load_defect_scanner)
 
         # 2. Clipping Detection — classify_clipping(audio, sr)
         def _load_clipping():
             from backend.core.clipping_detection import classify_clipping
+
             return classify_clipping
+
         _reg("clipping_detection", _load_clipping)
 
         # 3. Artifact Detector — ArtifactDetector().scan(audio)
         def _load_artifact():
             from backend.core.artifact_detector import ArtifactDetector
+
             return ArtifactDetector().scan
+
         _reg("artifact_detector", _load_artifact)
 
         # 4. Psychoacoustic — Detector().analyze(audio, sr)
         def _load_psychoacoustic():
             from backend.core.psychoacoustic_artifact_detector import PsychoacousticArtifactDetector
+
             return PsychoacousticArtifactDetector().analyze
+
         _reg("psychoacoustic_artifact_detector", _load_psychoacoustic)
 
         # 5. Remaster Detector — analyse(audio, sr)
         def _load_remaster():
             from backend.core.remaster_detector import RemasterDetector
+
             return RemasterDetector().analyse
+
         _reg("remaster_detector", _load_remaster)
 
         # §v10.998: Reverb-Tail-Detektor (Late-Tail-Energy) — schließt die
@@ -434,7 +467,9 @@ class ParallelDefectScanner:
         # 6. Precision Locator — refine_edges(audio, sr, defects): braucht Defekte als Input
         def _load_precision():
             from backend.core.precision_defect_locator import PrecisionDefectLocator
+
             return None  # refine_edges braucht Defects-Liste → Stufe 2
+
         _reg("precision_defect_locator", _load_precision, context_needed=True)
 
         # 7. Attack Type — classify(audio, sr, onset_sample): braucht Onset-Positionen
@@ -454,14 +489,17 @@ class ParallelDefectScanner:
         _failed = sum(1 for r in self._registration_report if r["status"] == "failed")
         log.info(
             "Defect Consensus: %d registriert, %d brauchen Kontext, %d fehlgeschlagen (von %d)",
-            _registered, _needs, _failed, len(self._registration_report),
+            _registered,
+            _needs,
+            _failed,
+            len(self._registration_report),
         )
 
     def scan_all(
         self,
         audio: np.ndarray,
         sample_rate: int = SR,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> list[DefectHypothesis]:
         """
         Führt ALLE registrierten Detektoren parallel aus (konzeptionell —
@@ -472,8 +510,10 @@ class ParallelDefectScanner:
         """
         all_hypotheses: list[DefectHypothesis] = []
 
-        is_digital = (metadata or {}).get("is_digital", False) or \
-            str((metadata or {}).get("material", "")).lower() in ("digital", "cd_digital")
+        is_digital = (metadata or {}).get("is_digital", False) or str((metadata or {}).get("material", "")).lower() in (
+            "digital",
+            "cd_digital",
+        )
 
         for name, detector_fn in self._detectors:
             try:
@@ -487,10 +527,7 @@ class ParallelDefectScanner:
                 # auf digitalem Material physikalisch unmöglich und würden
                 # die echten Defekte (Klicks/Knackser) übertönen.
                 if is_digital:
-                    hypotheses = [
-                        h for h in hypotheses
-                        if h.category.value not in _ANALOG_ONLY_NAMES
-                    ]
+                    hypotheses = [h for h in hypotheses if h.category.value not in _ANALOG_ONLY_NAMES]
 
                 all_hypotheses.extend(hypotheses)
 
@@ -544,14 +581,14 @@ class ParallelDefectScanner:
                     hypotheses.append(hyp)
 
         # Handle DefectAnalysisResult with .scores (from defect_scanner)
-        elif hasattr(result, 'scores'):
+        elif hasattr(result, "scores"):
             scores = result.scores
             if isinstance(scores, dict):
                 for key, score_obj in scores.items():
-                    cat_str = key.value if hasattr(key, 'value') else str(key)
-                    severity = float(getattr(score_obj, 'severity', 0.0))
-                    confidence = float(getattr(score_obj, 'confidence', 0.0))
-                    locations = getattr(score_obj, 'locations', None) or []
+                    cat_str = key.value if hasattr(key, "value") else str(key)
+                    severity = float(getattr(score_obj, "severity", 0.0))
+                    confidence = float(getattr(score_obj, "confidence", 0.0))
+                    locations = getattr(score_obj, "locations", None) or []
                     if not locations:
                         # Kein Ort → Defekt überall / nicht lokalisierbar
                         locations = [(0, 4800)]  # 100ms default
@@ -569,7 +606,7 @@ class ParallelDefectScanner:
                             confidence=confidence,
                             severity=severity,
                             source_module=module_name,
-                            evidence={"metadata": getattr(score_obj, 'metadata', {})},
+                            evidence={"metadata": getattr(score_obj, "metadata", {})},
                         )
                         hypotheses.append(hyp)
 
@@ -580,8 +617,8 @@ class ParallelDefectScanner:
         module: str,
         d: dict,
         sr: int,
-        category_override: Optional[str] = None,
-    ) -> Optional[DefectHypothesis]:
+        category_override: str | None = None,
+    ) -> DefectHypothesis | None:
         """Konvertiert Dict-basierte Defekt-Erkennung in Hypothesis."""
         try:
             cat_str = category_override or d.get("type", d.get("category", "unknown"))
@@ -609,25 +646,25 @@ class ParallelDefectScanner:
         module: str,
         d: Any,
         sr: int,
-    ) -> Optional[DefectHypothesis]:
+    ) -> DefectHypothesis | None:
         """Konvertiert Objekt-basierte Defekt-Erkennung in Hypothesis."""
         try:
-            cat_str = getattr(d, 'type', getattr(d, 'category', 'unknown'))
+            cat_str = getattr(d, "type", getattr(d, "category", "unknown"))
             cat = self._map_category(cat_str)
 
-            start_s = getattr(d, 'start', getattr(d, 'start_s', 0))
-            end_s = getattr(d, 'end', getattr(d, 'end_s', start_s + 0.01))
+            start_s = getattr(d, "start", getattr(d, "start_s", 0))
+            end_s = getattr(d, "end", getattr(d, "end_s", start_s + 0.01))
 
             return DefectHypothesis(
                 category=cat,
                 start_sample=int(start_s * sr),
                 end_sample=int(end_s * sr),
-                confidence=float(getattr(d, 'confidence', getattr(d, 'score', 0.5))),
-                severity=float(getattr(d, 'severity', getattr(d, 'strength', 0.5))),
+                confidence=float(getattr(d, "confidence", getattr(d, "score", 0.5))),
+                severity=float(getattr(d, "severity", getattr(d, "strength", 0.5))),
                 source_module=module,
-                evidence=getattr(d, 'evidence', getattr(d, 'details', {})),
-                caused_by=getattr(d, 'caused_by', []),
-                causes=getattr(d, 'causes', []),
+                evidence=getattr(d, "evidence", getattr(d, "details", {})),
+                caused_by=getattr(d, "caused_by", []),
+                causes=getattr(d, "causes", []),
             )
         except Exception:
             return None
@@ -668,6 +705,7 @@ class ParallelDefectScanner:
 # ═════════════════════════════════════════════════════════════════════════════
 # Stage 2: Conflict Resolution (Weighted Voting + Temporal Merging)
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class ConflictResolver:
     """
@@ -711,10 +749,7 @@ class ConflictResolver:
             for j, h2 in enumerate(hypotheses):
                 if j in used or j <= i:
                     continue
-                if (
-                    h1.category == h2.category
-                    and self._overlap_ratio(h1, h2) > self.overlap_threshold
-                ):
+                if h1.category == h2.category and self._overlap_ratio(h1, h2) > self.overlap_threshold:
                     group.append(h2)
                     used.add(j)
 
@@ -773,9 +808,7 @@ class ConflictResolver:
     def _merge_group(self, group: list[DefectHypothesis]) -> DefectHypothesis:
         """Merged eine Gruppe gleichartiger Defekte in einen."""
         # Weighted average of confidence and severity
-        weights = np.array([
-            MODULE_WEIGHTS.get(h.source_module, DEFAULT_WEIGHT) for h in group
-        ])
+        weights = np.array([MODULE_WEIGHTS.get(h.source_module, DEFAULT_WEIGHT) for h in group])
         total_weight = weights.sum()
 
         avg_confidence = sum(h.confidence * w for h, w in zip(group, weights)) / total_weight
@@ -790,7 +823,7 @@ class ConflictResolver:
         for h in group:
             combined_evidence.update(h.evidence)
 
-        sources = list(set(h.source_module for h in group))
+        sources = list({h.source_module for h in group})
 
         return DefectHypothesis(
             category=group[0].category,
@@ -838,6 +871,7 @@ class ConflictResolver:
 # Stage 3: Causal Validation
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class CausalValidator:
     """
     Validiert Defekte auf kausale Plausibilität via CausalDefectReasoner.
@@ -853,6 +887,7 @@ class CausalValidator:
     def _init_reasoner(self):
         try:
             from backend.core.causal_defect_reasoner import get_reasoner
+
             self._reasoner = get_reasoner()
         except Exception:
             pass
@@ -876,7 +911,7 @@ class CausalValidator:
                 audio_length,
             )
 
-            if causal_result and hasattr(causal_result, 'validated_defects'):
+            if causal_result and hasattr(causal_result, "validated_defects"):
                 validated = causal_result.validated_defects
                 downgrade_set = set(validated.get("downgraded", []))
 
@@ -896,6 +931,7 @@ class CausalValidator:
 # ═════════════════════════════════════════════════════════════════════════════
 # Full Pipeline
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class DefectConsensusPipeline:
     """
@@ -918,7 +954,7 @@ class DefectConsensusPipeline:
         self,
         audio: np.ndarray,
         sample_rate: int = SR,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> DefectManifest:
         """
         Führt die vollständige 3-Stufen-Defekt-Analyse durch.
@@ -943,17 +979,15 @@ class DefectConsensusPipeline:
 
         if not all_hypotheses:
             return DefectManifest(
-                defects=[], total_hypotheses=0,
+                defects=[],
+                total_hypotheses=0,
                 processing_time=time.time() - t0,
                 module_count=0,
             )
 
         # ── Stage 2: Conflict Resolution ──
         resolved, conflicts, merged = self.resolver.resolve(all_hypotheses)
-        log.info(
-            f"Stage 2: {len(resolved)} Defekte nach Resolution "
-            f"({conflicts} Konflikte, {merged} Merges)"
-        )
+        log.info(f"Stage 2: {len(resolved)} Defekte nach Resolution ({conflicts} Konflikte, {merged} Merges)")
 
         # ── Stage 3: Causal Validation ──
         validated, downgrades = self.validator.validate(resolved, len(audio))

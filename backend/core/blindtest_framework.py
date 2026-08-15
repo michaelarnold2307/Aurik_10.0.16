@@ -1,4 +1,4 @@
-"""§G124 Blindtest-Framework: Automatisierte perzeptuelle Validierung.
+"""§G124 (GEBOTE.md) Blindtest-Framework: Automatisierte perzeptuelle Validierung.
 
 Ermöglicht den Vergleich von Aurik-Restaurierungen mit Referenz-Signalen
 durch automatisierte Hörvergleiche mit psychoakustischen Metriken.
@@ -85,7 +85,7 @@ class BlindTestResult:
 
 
 class BlindTestFramework:
-    """§G124 Automatisierte perzeptuelle Validierung.
+    """§G124 (GEBOTE.md) Automatisierte perzeptuelle Validierung.
 
     Vergleicht Restaurierungsergebnisse mit Referenzsignalen durch
     psychoakustische Proxy-Metriken. Ersetzt teure, langsame menschliche

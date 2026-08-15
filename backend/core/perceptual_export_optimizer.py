@@ -9,7 +9,7 @@ Integriert alle verfügbaren ML-Modelle für maximale Export-Qualität:
 Architektur:
   - Psychoakustische Maskierung (ISO 11172-3) als Gate für alle Reparaturen
   - ML-Modelle werden nur geladen wenn RAM-Budget es erlaubt
-  - RAM-freundliche Fallbacks: DSP wenn ML nicht verfügbar  # §V6: logger.warning handled at call site
+  - RAM-freundliche Fallbacks: DSP wenn ML nicht verfügbar  # §V6 (copilot-instructions.md): logger.warning handled at call site
   - Hörumgebungs-Adaption: Kopfhörer/Nahfeld/Fernfeld/Auto
 """
 

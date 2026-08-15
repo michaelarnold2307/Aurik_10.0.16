@@ -222,26 +222,26 @@ class WowFlutterFix(PhaseInterface):
         _yin_base = float(WowFlutterFix.YIN_THRESHOLD)
 
         _ml_conf_base_by_mat = {
-            MaterialType.SHELLAC: 0.62,
-            MaterialType.WAX_CYLINDER: 0.64,
-            MaterialType.VINYL: 0.60,
-            MaterialType.TAPE: 0.56,
-            MaterialType.REEL_TAPE: 0.56,
-            MaterialType.CD_DIGITAL: 0.58,
-            MaterialType.STREAMING: 0.60,
+            "shellac": 0.62,
+            "wax_cylinder": 0.64,
+            "vinyl": 0.60,
+            "tape": 0.56,
+            "reel_tape": 0.56,
+            "cd_digital": 0.58,
+            "streaming": 0.60,
         }
-        _ml_conf_base = float(_ml_conf_base_by_mat.get(_mk, 0.60))  # type: ignore[call-overload]
+        _ml_conf_base = float(_ml_conf_base_by_mat.get(_mk, 0.60))
 
         _min_conf_base_by_mat = {
-            MaterialType.SHELLAC: 0.30,
-            MaterialType.WAX_CYLINDER: 0.28,
-            MaterialType.VINYL: 0.26,
-            MaterialType.TAPE: 0.22,
-            MaterialType.REEL_TAPE: 0.22,
-            MaterialType.CD_DIGITAL: 0.30,
-            MaterialType.STREAMING: 0.32,
+            "shellac": 0.30,
+            "wax_cylinder": 0.28,
+            "vinyl": 0.26,
+            "tape": 0.22,
+            "reel_tape": 0.22,
+            "cd_digital": 0.30,
+            "streaming": 0.32,
         }
-        _min_conf_base = float(_min_conf_base_by_mat.get(_mk, 0.26))  # type: ignore[call-overload]
+        _min_conf_base = float(_min_conf_base_by_mat.get(_mk, 0.26))
 
         _mode_det_adj = {
             "fast": +0.25,
@@ -499,18 +499,30 @@ class WowFlutterFix(PhaseInterface):
         # Wenn weder Wow noch Flutter vom DefectScanner detektiert wurden,
         # ist die teure ML-Hybrid-Pitch-Detektion (221 s) unnötig.
         # Transport-Bump-Repair (135 Bumps, ~5 s) läuft trotzdem — ist schnell.
-        _wow_sev_defect = float(kwargs.get("wow_severity", kwargs.get("wow", 0.0)) or 0.0)
-        _flutter_sev_defect = float(kwargs.get("flutter_severity", kwargs.get("flutter", 0.0)) or 0.0)
+        _wow_kw = kwargs.get("wow_severity", kwargs.get("wow"))
+        _flutter_kw = kwargs.get("flutter_severity", kwargs.get("flutter"))
+        _explicit_defect_data = _wow_kw is not None or _flutter_kw is not None
+        _wow_sev_defect = float(_wow_kw or 0.0)
+        _flutter_sev_defect = float(_flutter_kw or 0.0)
         # §v10.200 Fallback: DefectScanner-Daten aus _restoration_context abrufen,
         # da kwargs nach Resampling (44100→48000) die Werte verlieren können.
-        if _wow_sev_defect <= 0.0 and _flutter_sev_defect <= 0.0:
+        if not _explicit_defect_data:
             _rctx_fb = kwargs.get("_restoration_context", {}) or {}
             _defect_scores_fb = _rctx_fb.get("defect_scores", _rctx_fb.get("defect_focus_scores", {})) or {}
-            _wow_sev_defect = float(_defect_scores_fb.get("wow", _defect_scores_fb.get("wow_severity", 0.0)) or 0.0)
-            _flutter_sev_defect = float(
-                _defect_scores_fb.get("flutter", _defect_scores_fb.get("flutter_severity", 0.0)) or 0.0
+            if isinstance(_defect_scores_fb, dict) and any(
+                _k in _defect_scores_fb for _k in ("wow", "flutter", "wow_severity", "flutter_severity")
+            ):
+                _explicit_defect_data = True
+            _wow_sev_defect = float(
+                _defect_scores_fb.get("wow", _defect_scores_fb.get("wow_severity", _wow_sev_defect)) or 0.0
             )
-        _wow_flutter_skip = _wow_sev_defect < 0.15 and _flutter_sev_defect < 0.15
+            _flutter_sev_defect = float(
+                _defect_scores_fb.get("flutter", _defect_scores_fb.get("flutter_severity", _flutter_sev_defect)) or 0.0
+            )
+        # §v10.96: Nur skippen, wenn der DefectScanner WOW/FLUTTER EXPLIZIT als
+        # abwesend (< 0.15) gemeldet hat. Ohne Defect-Daten (Direktaufruf/Unit)
+        # fail-open — die Phase läuft normal.
+        _wow_flutter_skip = _explicit_defect_data and _wow_sev_defect < 0.15 and _flutter_sev_defect < 0.15
         if _wow_flutter_skip:
             # §v10.303: Erste Meldung als INFO, Wiederholungen als DEBUG (Log-Spam-Prävention)
             _log_fn = logger.info if not getattr(self, "_wow_skip_logged", False) else logger.debug
@@ -542,9 +554,7 @@ class WowFlutterFix(PhaseInterface):
                     confirmed_tape_dip=_has_dip_z,
                     protected_zones=self._collect_vfa_protected_zones(kwargs),
                 )
-                passthrough = np.clip(
-                    np.nan_to_num(passthrough, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0
-                )
+                passthrough = np.clip(np.nan_to_num(passthrough, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0)
             return PhaseResult(
                 success=True,
                 audio=passthrough,
@@ -634,7 +644,7 @@ class WowFlutterFix(PhaseInterface):
                         material.value,
                     )
                 except Exception as _poly_exc:
-                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
                     _poly_fallback = True
                     logger.warning(
                         "PolyphonicSpeedCurveEstimator fehlgeschlagen (%s) — ML-Hybrid-Ersatzpfad",
@@ -1401,8 +1411,16 @@ class WowFlutterFix(PhaseInterface):
                     _chroma_rest[_b] += np.sum(_sp_r[_mask_c] ** 2)
             _norm_o = np.sqrt(np.sum(_chroma_orig**2)) + 1e-10
             _norm_r = np.sqrt(np.sum(_chroma_rest**2)) + 1e-10
+            # §2.44: Pearson-Korrelation der 12 Chroma-Bins (tonal-center guard).
+            _co_mean = float(_chroma_orig.mean())
+            _cr_mean = float(_chroma_rest.mean())
+            _pearson_num = float(np.sum((_chroma_orig - _co_mean) * (_chroma_rest - _cr_mean)))
+            _pearson_den = float(
+                np.sqrt(np.sum((_chroma_orig - _co_mean) ** 2) * np.sum((_chroma_rest - _cr_mean) ** 2))
+            )
+            _chroma_pearson = _pearson_num / _pearson_den if _pearson_den > 1e-12 else 1.0
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             _chroma_pearson = 1.0  # fallback: assume OK
 
         if _chroma_pearson < 0.95:
@@ -1748,7 +1766,7 @@ class WowFlutterFix(PhaseInterface):
             MaterialType.MP3_HIGH: 2.0,
             MaterialType.AAC: 2.0,
             MaterialType.STREAMING: 2.0,
-        }.get(material.name if isinstance(material, MaterialType) else str(material), 1.8)
+        }.get(material if isinstance(material, MaterialType) else material, 1.8)
         _max_rms_lift_db = 1.0
 
         # §2.45a-I: Gated RMS — only frames > -50 dBFS (kein Stille-inflationierter RMS)
@@ -3659,7 +3677,7 @@ class WowFlutterFix(PhaseInterface):
             blend = 0.18
             result = (1.0 - blend) * audio_f + blend * out
         except Exception as _c3_fallback_exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             if "result" in locals():
                 return result.astype(audio.dtype, copy=False)  # type: ignore[no-any-return]
             logger.debug("§C3 emergency smoothing Ersatzpfad fehlgeschlagen: %s", _c3_fallback_exc)

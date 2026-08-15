@@ -923,7 +923,7 @@ _validator: PerceptualValidator | None = None
 def get_perceptual_validator() -> PerceptualValidator:
     """Gibt die globale PerceptualValidator-Instanz zurück (Singleton).
 
-    Kein per-Song-Zustand (§V8): `ab_test_samples`/`listening_test_requests` sind
+    Kein per-Song-Zustand (§V8 (copilot-instructions.md)): `ab_test_samples`/`listening_test_requests` sind
     projektweite Trainingsdaten-Sammlung, keine Song-spezifischen Audio-Daten —
     ein Singleton ist hier architektonisch korrekt, analog `get_ast_classifier()`.
     """

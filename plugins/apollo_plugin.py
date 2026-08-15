@@ -255,7 +255,7 @@ class ApolloPlugin:
                 )
                 self._fallback_active = True
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("torch nicht verfügbar — Apollo DSP-Ersatzpfad aktiv")
             self._fallback_active = True
             try:

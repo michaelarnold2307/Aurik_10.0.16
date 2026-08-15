@@ -71,7 +71,7 @@ def enhance_vocals(
     if is_stereo:
         # ── Mid/Side → bearbeite nur M-Kanal ──
         try:
-            from backend.core.stereo_aware_vocal_processor import to_mid_side, from_mid_side
+            from backend.core.stereo_aware_vocal_processor import from_mid_side, to_mid_side
 
             ms = to_mid_side(audio)
             mid_processed = _process_vocal_mono(ms.mid, sr, breath_reduction_db, sibilance_reduction_db)
@@ -156,7 +156,7 @@ def _simple_breath_gate(audio: np.ndarray, sr: int, reduction_db: float) -> np.n
 
 def _deess(audio: np.ndarray, sr: int, reduction_db: float) -> np.ndarray:
     """Improved de-essing: percentile-thresholded 4-8 kHz band attenuation.
-    
+
     Verbesserungen gegenüber Aurik-Original (GenderAwareDeEsser):
     - Percentil-basierte Schwelle statt fixem 0.3-Verhältnis
     - 6. Ordnung Butterworth für schärfere Band-Trennung
@@ -169,7 +169,11 @@ def _deess(audio: np.ndarray, sr: int, reduction_db: float) -> np.ndarray:
 
     # 6th-order bandpass for sharper sibilance isolation
     sos = sp_signal.butter(6, [4000, 8000], btype="band", fs=sr, output="sos")
-    sibilance_band = sp_signal.sosfilt(sos, audio)
+    # V11: zero-phase (sosfiltfilt) fuer zeitrichtig ausgerichtete Huellkurve
+    try:
+        sibilance_band = sp_signal.sosfiltfilt(sos, audio)
+    except ValueError:
+        sibilance_band = sp_signal.sosfilt(sos, audio)
 
     # Envelope with 5ms smoothing
     envelope = np.abs(sibilance_band)
@@ -194,11 +198,11 @@ def _deess(audio: np.ndarray, sr: int, reduction_db: float) -> np.ndarray:
     release_samples = int(sr * 0.015)
     gain_smooth = np.ones_like(gain)
     for i in range(1, len(gain)):
-        if gain[i] < gain_smooth[i-1]:
+        if gain[i] < gain_smooth[i - 1]:
             alpha = np.exp(-1.0 / attack_samples)
         else:
             alpha = np.exp(-1.0 / release_samples)
-        gain_smooth[i] = alpha * gain_smooth[i-1] + (1.0 - alpha) * gain[i]
+        gain_smooth[i] = alpha * gain_smooth[i - 1] + (1.0 - alpha) * gain[i]
 
     return (audio * gain_smooth).astype(np.float32)
 
@@ -215,7 +219,11 @@ def _deplosive(audio: np.ndarray, sr: int, reduction_db: float = 3.0) -> np.ndar
 
     # Lowpass 100 Hz for plosive detection
     sos = sp_signal.butter(4, 100, btype="low", fs=sr, output="sos")
-    low_band = sp_signal.sosfilt(sos, audio)
+    # V11: zero-phase (sosfiltfilt) fuer zeitrichtig ausgerichtete Huellkurve
+    try:
+        low_band = sp_signal.sosfiltfilt(sos, audio)
+    except ValueError:
+        low_band = sp_signal.sosfilt(sos, audio)
 
     # Envelope with 1ms smoothing (plosives are very fast)
     envelope = np.abs(low_band)
@@ -239,10 +247,10 @@ def _deplosive(audio: np.ndarray, sr: int, reduction_db: float = 3.0) -> np.ndar
     release_samples = max(1, int(sr * 0.010))
     gain_smooth = np.ones_like(gain)
     for i in range(1, len(gain)):
-        if gain[i] < gain_smooth[i-1]:
+        if gain[i] < gain_smooth[i - 1]:
             alpha = np.exp(-1.0 / attack_samples)
         else:
             alpha = np.exp(-1.0 / release_samples)
-        gain_smooth[i] = alpha * gain_smooth[i-1] + (1.0 - alpha) * gain[i]
+        gain_smooth[i] = alpha * gain_smooth[i - 1] + (1.0 - alpha) * gain[i]
 
     return (audio * gain_smooth).astype(np.float32)

@@ -440,7 +440,7 @@ class BigVGANv2Plugin:
                 if self._usable_vocoder_output(audio, out):
                     return out, "vocos_fallback", 0.86
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("BigVGAN-v2: Vocos fallback unavailable: %s", exc)
 
         try:
@@ -452,7 +452,7 @@ class BigVGANv2Plugin:
                 if self._usable_vocoder_output(audio, out):
                     return out, "hifigan_fallback", 0.78
         except Exception:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
 
         return self._synthesize_phase_coherent_istft_fallback(audio, sr)
 

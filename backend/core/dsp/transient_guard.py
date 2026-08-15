@@ -33,13 +33,11 @@ except Exception:  # pragma: no cover - optionale Abhängigkeit
 logger = logging.getLogger(__name__)
 
 # Toleranzgrenzwert für Onset-Verschiebung
-# §v10.35: 2.0→3.5 ms — Harmonische Restauration verschiebt Transienten
-# physikalisch um 5-30 ms. 2 ms war zu aggressiv und unterdrückte legitime
-# Harmonic-Restauration komplett (blend_reduction=1.00 bei 26 ms Shift).
-TRANSIENT_SHIFT_THRESHOLD_MS = 3.5
+# §01 (Spec 01/07): Attack-Zeiten ≤ ±2 ms Änderung — normative Grenze.
+TRANSIENT_SHIFT_THRESHOLD_MS = 2.0
 # §v10.52 Pre-Echo-Calibration: Blend-Divisor 2.0→5.0 + Max-Cap 0.60.
-# 21ms Shift: 21/(3.5×5.0)=1.20→0.60 (vorher 1.00=100%)
-# 5ms Shift: 5/(3.5×5.0)=0.29→29% (vorher 71%)
+# 21ms Shift: 21/(2.0×5.0)=2.10→0.60 (Cap)
+# 5ms Shift: 5/(2.0×5.0)=0.50→50%
 _BLEND_DIVISOR = 5.0
 _MAX_BLEND_REDUCTION = 0.60
 # §v10.53 XCorr-Fenster: ±512 Samples ≈ ±10.7 ms bei 48 kHz.

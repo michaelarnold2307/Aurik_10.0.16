@@ -47,7 +47,9 @@ def test_failed_summary_is_violation(tmp_path: Path):
 
 
 def test_stale_artifact_is_violation(tmp_path: Path):
-    log_p, sum_p = _write(tmp_path, "=== VOLLSUITE ENDE — Exit 0 ===\n", _GREEN_SUMMARY, age_days=MAX_ARTIFACT_AGE_DAYS + 1)
+    log_p, sum_p = _write(
+        tmp_path, "=== VOLLSUITE ENDE — Exit 0 ===\n", _GREEN_SUMMARY, age_days=MAX_ARTIFACT_AGE_DAYS + 1
+    )
     ok, violations = evaluate_artifact(log_p, sum_p, now=_NOW)
     assert ok is False
     assert any("zu alt" in v for v in violations)

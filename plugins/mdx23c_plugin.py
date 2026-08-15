@@ -336,7 +336,7 @@ class MDX23CModel:
         try:
             from sklearn.decomposition import NMF as _NMF
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             return MDX23CModel._hpss_fallback(audio, is_vocals)
 
         try:

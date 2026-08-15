@@ -79,7 +79,7 @@ class ClapMaterialClassifier:
     4-source consensus framework. Physical inference has veto power (§6.8).
     """
 
-    def __init__(self, model_path: Optional[str | Path] = None) -> None:
+    def __init__(self, model_path: str | Path | None = None) -> None:
         self._model_path = Path(model_path) if model_path else None
         self._weights: dict[str, np.ndarray] = {}
         self._is_trained = False
@@ -127,9 +127,7 @@ class ClapMaterialClassifier:
 
         return {MATERIAL_CLASSES[i]: float(probs[i]) for i in range(len(MATERIAL_CLASSES))}
 
-    def predict_top(
-        self, embedding: np.ndarray, top_k: int = 5
-    ) -> list[tuple[str, float]]:
+    def predict_top(self, embedding: np.ndarray, top_k: int = 5) -> list[tuple[str, float]]:
         """Return top-k materials with probabilities."""
         probs = self.predict(embedding)
         return sorted(probs.items(), key=lambda x: -x[1])[:top_k]
@@ -192,14 +190,17 @@ class ClapMaterialClassifier:
 
 # ── Integration helper ──────────────────────────────────────────────────
 
+
 def get_clap_material_classifier(
-    model_path: Optional[str | Path] = None,
+    model_path: str | Path | None = None,
 ) -> ClapMaterialClassifier:
     """Factory for ClapMaterialClassifier with default model path."""
     if model_path is None:
         from pathlib import Path as _Path
 
-        model_path = _Path(__file__).resolve().parent.parent.parent.parent / "models" / "forensics" / "clap_material_head.npz"
+        model_path = (
+            _Path(__file__).resolve().parent.parent.parent.parent / "models" / "forensics" / "clap_material_head.npz"
+        )
     return ClapMaterialClassifier(model_path)
 
 

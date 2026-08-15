@@ -101,13 +101,14 @@ def test_severity_fallback_for_zero_severity_detections():
 
     class _FakeScanner(ParallelDefectScanner):
         def _register_detectors(self):
-            self._detectors = [(
-                "fake",
-                lambda audio, sr: {"defects": [
-                    {"type": "crackle", "start": 0.0, "end": 0.1,
-                     "severity": 0.0, "confidence": 0.8}
-                ]},
-            )]
+            self._detectors = [
+                (
+                    "fake",
+                    lambda audio, sr: {
+                        "defects": [{"type": "crackle", "start": 0.0, "end": 0.1, "severity": 0.0, "confidence": 0.8}]
+                    },
+                )
+            ]
             self._registration_report = []
 
     hypotheses = _FakeScanner().scan_all(np.zeros(SR, dtype=np.float32), SR)

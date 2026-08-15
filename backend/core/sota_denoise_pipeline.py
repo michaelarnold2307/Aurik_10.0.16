@@ -30,6 +30,7 @@ Latency: ~2× RT (GPU) / ~8× RT (CPU) für Full-Pipeline
 from __future__ import annotations
 
 import logging
+import math
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -37,7 +38,6 @@ from typing import Optional
 
 import numpy as np
 from scipy import signal as scipy_signal
-import math
 
 log = logging.getLogger(__name__)
 
@@ -55,12 +55,14 @@ PROJECT = Path(__file__).resolve().parent.parent
 # Layer 1: Noise Profiling (DSP)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class NoiseProfile:
     """Spektrales Rauschprofil aus analysierten Audio-Regionen."""
-    spectrum: np.ndarray      # [F] gemitteltes Rauschspektrum (linear)
-    confidence: float         # 0-1, wie sicher das Profil ist
-    frequency_bins: int       # Anzahl Frequenzbins
+
+    spectrum: np.ndarray  # [F] gemitteltes Rauschspektrum (linear)
+    confidence: float  # 0-1, wie sicher das Profil ist
+    frequency_bins: int  # Anzahl Frequenzbins
     is_valid: bool = True
 
 
@@ -104,7 +106,7 @@ class SpectralNoiseProfiler:
             start = i * actual_hop
             if start + self.n_fft > len(noise_audio):
                 break
-            frame = noise_audio[start:start + self.n_fft] * window
+            frame = noise_audio[start : start + self.n_fft] * window
             spec = np.abs(np.fft.rfft(frame))
             spectra.append(spec)
 
@@ -142,14 +144,16 @@ class SpectralNoiseProfiler:
         if n_frames < 2:
             return NoiseProfile(
                 spectrum=np.ones(self.freq_bins, dtype=np.float32),
-                confidence=0.0, frequency_bins=self.freq_bins, is_valid=False,
+                confidence=0.0,
+                frequency_bins=self.freq_bins,
+                is_valid=False,
             )
 
         window = np.hanning(self.n_fft)
         specgram = np.zeros((n_frames, self.freq_bins), dtype=np.float32)
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio[start : start + self.n_fft] * window
             specgram[i] = np.abs(np.fft.rfft(frame)) + 1e-10
 
         # Median pro Frequenzbin — robuster als 5. Perzentil
@@ -168,6 +172,7 @@ class SpectralNoiseProfiler:
 # ═════════════════════════════════════════════════════════════════════════════
 # Layer 2: Adaptive Subtraktion (DSP)
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class AdaptiveSpectralSubtractor:
     """
@@ -192,18 +197,32 @@ class AdaptiveSpectralSubtractor:
         weights = np.ones(self.freq_bins, dtype=np.float32)
         # Höhere Gewichtung in kritischen Bändern (1-4 kHz)
         bark_bands = [
-            (80, 150), (150, 250), (250, 400), (400, 550),
-            (550, 700), (700, 900), (900, 1100), (1100, 1350),
-            (1350, 1650), (1650, 2000), (2000, 2400), (2400, 2850),
-            (2850, 3400), (3400, 4000), (4000, 4650), (4650, 5400),
-            (5400, 6200), (6200, 7050), (7050, 8000),
+            (80, 150),
+            (150, 250),
+            (250, 400),
+            (400, 550),
+            (550, 700),
+            (700, 900),
+            (900, 1100),
+            (1100, 1350),
+            (1350, 1650),
+            (1650, 2000),
+            (2000, 2400),
+            (2400, 2850),
+            (2850, 3400),
+            (3400, 4000),
+            (4000, 4650),
+            (4650, 5400),
+            (5400, 6200),
+            (6200, 7050),
+            (7050, 8000),
         ]
         for low, high in bark_bands:
             mask = (freqs >= low) & (freqs < high)
             if mask.any():
                 # Höhere Empfindlichkeit in den Mitten
                 center_freq = (low + high) / 2
-                sensitivity = 1.0 + 0.5 * np.exp(-((center_freq - 2000) / 1000) ** 2)
+                sensitivity = 1.0 + 0.5 * np.exp(-(((center_freq - 2000) / 1000) ** 2))
                 weights[mask] = sensitivity
         return weights
 
@@ -231,7 +250,7 @@ class AdaptiveSpectralSubtractor:
     ) -> np.ndarray:
         """
         Spektrale Subtraktion mit Bark-Gewichtung + Wiener Gain.
-        
+
         Verwendet Zero-Padding + Post-Trim für artefaktfreie Overlap-Add-Rekonstruktion.
         """
         if not noise_profile.is_valid or strength <= 0.0:
@@ -239,20 +258,20 @@ class AdaptiveSpectralSubtractor:
 
         # ── Zero-padding für saubere Overlap-Add-Kanten ──
         pad = self.n_fft // 2
-        audio_padded = np.pad(audio.astype(np.float64), pad, mode='reflect')
+        audio_padded = np.pad(audio.astype(np.float64), pad, mode="reflect")
 
         window = np.hanning(self.n_fft)
         output = np.zeros(len(audio_padded), dtype=np.float64)
         weight = np.zeros(len(audio_padded), dtype=np.float64)
 
         # Noise power (Amplitude → Power)
-        noise_power = (noise_profile.spectrum[:self.freq_bins].astype(np.float64) ** 2)
+        noise_power = noise_profile.spectrum[: self.freq_bins].astype(np.float64) ** 2
         band_strength = np.clip(strength * self._bark_weights.astype(np.float64), 0.0, 2.0)
 
         n_frames = 1 + (len(audio_padded) - self.n_fft) // self.hop
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio_padded[start:start + self.n_fft] * window
+            frame = audio_padded[start : start + self.n_fft] * window
             spec = np.fft.rfft(frame)
 
             # Wiener Gain: G = max(S² - N², floor) / S²
@@ -263,15 +282,15 @@ class AdaptiveSpectralSubtractor:
 
             clean_frame = np.fft.irfft(spec * gain) * window
             end = min(start + self.n_fft, len(audio_padded))
-            output[start:end] += clean_frame[:end - start]
-            weight[start:end] += window[:end - start] ** 2
+            output[start:end] += clean_frame[: end - start]
+            weight[start:end] += window[: end - start] ** 2
 
         # ── Normalize overlap-add ──
         weight[weight < 1e-8] = 1.0
         output /= weight
 
         # ── Trim padding ──
-        result_padded = output[pad:pad + len(audio)]
+        result_padded = output[pad : pad + len(audio)]
 
         # ── Crossfade: original + cleaned ──
         crossfade = 1.0 - strength * noise_profile.confidence
@@ -283,6 +302,7 @@ class AdaptiveSpectralSubtractor:
 # ═════════════════════════════════════════════════════════════════════════════
 # Layer 3: Transient Protection (DSP)
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class TransientProtector:
     """
@@ -310,7 +330,7 @@ class TransientProtector:
 
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio[start : start + self.n_fft] * window
             mag = np.abs(np.fft.rfft(frame))
 
             if prev_mag is not None:
@@ -341,6 +361,7 @@ class TransientProtector:
 # Layer 4: Genre-Adaptive Routing (ML)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class GenreAdaptiveRouter:
     """
     Erkennt Genre via PANNs/BEATs und wählt Denoising-Parameter.
@@ -349,18 +370,18 @@ class GenreAdaptiveRouter:
 
     # Presets: (spectral_strength, harmonic_boost, transient_protection, ambience_preserve)
     GENRE_PRESETS = {
-        "classical":    (0.20, 0.05, 0.90, 0.95),
-        "orchestra":    (0.25, 0.10, 0.85, 0.90),
-        "jazz":         (0.25, 0.10, 0.85, 0.90),
-        "blues":        (0.35, 0.15, 0.80, 0.85),
-        "rock":         (0.55, 0.30, 0.60, 0.70),
-        "pop":          (0.50, 0.35, 0.65, 0.75),
-        "metal":        (0.45, 0.40, 0.70, 0.60),
-        "electronic":   (0.25, 0.15, 0.85, 0.80),
-        "hip_hop":      (0.30, 0.20, 0.80, 0.75),
-        "speech":       (0.75, 0.10, 0.40, 0.50),
-        "singing":      (0.50, 0.45, 0.60, 0.70),
-        "ambient":      (0.40, 0.05, 0.70, 0.95),
+        "classical": (0.20, 0.05, 0.90, 0.95),
+        "orchestra": (0.25, 0.10, 0.85, 0.90),
+        "jazz": (0.25, 0.10, 0.85, 0.90),
+        "blues": (0.35, 0.15, 0.80, 0.85),
+        "rock": (0.55, 0.30, 0.60, 0.70),
+        "pop": (0.50, 0.35, 0.65, 0.75),
+        "metal": (0.45, 0.40, 0.70, 0.60),
+        "electronic": (0.25, 0.15, 0.85, 0.80),
+        "hip_hop": (0.30, 0.20, 0.80, 0.75),
+        "speech": (0.75, 0.10, 0.40, 0.50),
+        "singing": (0.50, 0.45, 0.60, 0.70),
+        "ambient": (0.40, 0.05, 0.70, 0.95),
     }
 
     DEFAULT_PRESET = (0.40, 0.20, 0.75, 0.80)
@@ -394,6 +415,7 @@ class GenreAdaptiveRouter:
     def _init_panns(self):
         try:
             from plugins.panns_plugin import get_panns_plugin
+
             self._panns = get_panns_plugin()
             log.info("Genre Router: PANNs verbunden")
         except Exception as e:
@@ -406,7 +428,7 @@ class GenreAdaptiveRouter:
 
         try:
             result = self._panns.predict(audio, sample_rate)
-            if result and hasattr(result, 'tags'):
+            if result and hasattr(result, "tags"):
                 tags = result.tags[:3]  # Top 3 AudioSet-Tags
 
                 # Map AudioSet-Tags → Genres
@@ -461,9 +483,11 @@ class GenreAdaptiveRouter:
 # Full 4-Layer SOTA Pipeline
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class DenoiseResult:
     """Ergebnis der Denoising-Pipeline."""
+
     audio: np.ndarray
     noise_profile: NoiseProfile
     genre: str
@@ -494,7 +518,7 @@ class SOTADenoisePipeline:
         audio: np.ndarray,
         sample_rate: int = SR,
         auto_params: bool = True,
-        override_strength: Optional[float] = None,
+        override_strength: float | None = None,
     ) -> DenoiseResult:
         """
         Führt die vollständige 4-Ebenen-Denoising-Pipeline aus.
@@ -518,10 +542,7 @@ class SOTADenoisePipeline:
 
         # Resample auf 48kHz
         if sample_rate != SR:
-            audio = np.stack([
-                self._resample(audio[ch], sample_rate, SR)
-                for ch in range(n_channels)
-            ])
+            audio = np.stack([self._resample(audio[ch], sample_rate, SR) for ch in range(n_channels)])
 
         # Verarbeite pro Kanal
         outputs = []
@@ -542,11 +563,18 @@ class SOTADenoisePipeline:
 
         return DenoiseResult(
             audio=result_audio.astype(np.float32),
-            noise_profile=getattr(self, '_last_profile', NoiseProfile(
-                spectrum=np.ones(1), confidence=0.0, frequency_bins=1, is_valid=False,
-            )),
-            genre=getattr(self, '_last_genre', "unknown"),
-            params=getattr(self, '_last_params', {}),
+            noise_profile=getattr(
+                self,
+                "_last_profile",
+                NoiseProfile(
+                    spectrum=np.ones(1),
+                    confidence=0.0,
+                    frequency_bins=1,
+                    is_valid=False,
+                ),
+            ),
+            genre=getattr(self, "_last_genre", "unknown"),
+            params=getattr(self, "_last_params", {}),
             processing_time=elapsed,
             layers_applied=layers,
         )
@@ -555,7 +583,7 @@ class SOTADenoisePipeline:
         self,
         audio: np.ndarray,
         auto_params: bool,
-        override_strength: Optional[float],
+        override_strength: float | None,
         layers_applied: list,
     ) -> np.ndarray:
         """Verarbeitet einen einzelnen Audiokanal durch alle 4 Ebenen."""
@@ -569,8 +597,12 @@ class SOTADenoisePipeline:
             layers_applied.append("layer4_genre")
         else:
             genre = "manual"
-            params = {"spectral_strength": 0.4, "harmonic_boost": 0.2,
-                      "transient_protection": 0.75, "ambience_preserve": 0.8}
+            params = {
+                "spectral_strength": 0.4,
+                "harmonic_boost": 0.2,
+                "transient_protection": 0.75,
+                "ambience_preserve": 0.8,
+            }
 
         spectral_strength = override_strength if override_strength is not None else params["spectral_strength"]
         transient_prot = params["transient_protection"]

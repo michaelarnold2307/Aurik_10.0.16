@@ -11,7 +11,11 @@ Model: models/kim_inst/kim_inst.onnx (64 MB, vortrainiert)
 
 from __future__ import annotations
 
-import logging, os, threading, numpy as np
+import logging
+import os
+import threading
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 _lock = threading.Lock()
@@ -29,6 +33,7 @@ OVERLAP = 128  # DIM_T // 2
 
 def _get_session():
     import onnxruntime as ort
+
     if not hasattr(_get_session, "_sess"):
         with _lock:
             if not hasattr(_get_session, "_sess"):
@@ -63,8 +68,8 @@ def _istft_stereo(spec_L: np.ndarray, spec_R: np.ndarray, orig_len: int) -> np.n
         for i in range(spec.shape[1]):
             frame = np.fft.irfft(spec[:, i], n=N_FFT).real
             start = i * HOP
-            audio[start:start+N_FFT] += frame * window
-            weight[start:start+N_FFT] += window ** 2
+            audio[start : start + N_FFT] += frame * window
+            weight[start : start + N_FFT] += window**2
         audio = audio[:orig_len] / np.maximum(weight[:orig_len], 1e-8)
         out[ch_idx] = audio
     return out
@@ -92,12 +97,15 @@ def enhance_music(audio: np.ndarray) -> np.ndarray:
             sl_R = np.pad(sl_R, ((0, 0), (0, pad_t)), mode="edge")
 
         # Build [1, 4, DIM_F, DIM_T]: L-real, L-imag, R-real, R-imag
-        inp = np.stack([
-            sl_L.real.astype(np.float32),
-            sl_L.imag.astype(np.float32),
-            sl_R.real.astype(np.float32),
-            sl_R.imag.astype(np.float32),
-        ], axis=0)[np.newaxis, :, :, :]
+        inp = np.stack(
+            [
+                sl_L.real.astype(np.float32),
+                sl_L.imag.astype(np.float32),
+                sl_R.real.astype(np.float32),
+                sl_R.imag.astype(np.float32),
+            ],
+            axis=0,
+        )[np.newaxis, :, :, :]
 
         mask = session.run(None, {"input": inp})[0]  # [1, 4, DIM_F, DIM_T]
         mask = np.squeeze(mask)  # [4, DIM_F, DIM_T]
@@ -105,18 +113,18 @@ def enhance_music(audio: np.ndarray) -> np.ndarray:
             mask = np.stack([mask, mask, mask, mask], axis=0)
 
         # Apply mask: multiply input spectrogram by mask
-        mL_real = mask[0]; mL_imag = mask[1]
-        mR_real = mask[2]; mR_imag = mask[3]
+        mL_real = mask[0]
+        mL_imag = mask[1]
+        mR_real = mask[2]
+        mR_imag = mask[3]
 
         # Complex multiplication: (a+bi)(c+di) = (ac-bd) + (ad+bc)i
-        enhanced_L = (sl_L.real * mL_real - sl_L.imag * mL_imag) + \
-                     1j * (sl_L.real * mL_imag + sl_L.imag * mL_real)
-        enhanced_R = (sl_R.real * mR_real - sl_R.imag * mR_imag) + \
-                     1j * (sl_R.real * mR_imag + sl_R.imag * mR_real)
+        enhanced_L = (sl_L.real * mL_real - sl_L.imag * mL_imag) + 1j * (sl_L.real * mL_imag + sl_L.imag * mL_real)
+        enhanced_R = (sl_R.real * mR_real - sl_R.imag * mR_imag) + 1j * (sl_R.real * mR_imag + sl_R.imag * mR_real)
 
         actual = min(DIM_T, n_frames - pos)
-        out_L[:DIM_F, pos:pos+actual] = enhanced_L[:, :actual]
-        out_R[:DIM_F, pos:pos+actual] = enhanced_R[:, :actual]
+        out_L[:DIM_F, pos : pos + actual] = enhanced_L[:, :actual]
+        out_R[:DIM_F, pos : pos + actual] = enhanced_R[:, :actual]
 
         pos += OVERLAP
 

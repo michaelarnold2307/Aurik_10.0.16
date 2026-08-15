@@ -104,7 +104,7 @@ class TrackFingerprint:
     genre: str = "unknown"
     era_decade: int = 2000
     material: str = "unknown"
-    transfer_chain_depth: int = 1
+    transfer_chain_depth: int | None = None
     typical_defects: list[str] = field(default_factory=list)
     bandwidth_hz: float = 20000.0
     snr_db: float = 60.0
@@ -112,6 +112,13 @@ class TrackFingerprint:
     dynamic_range_db: float = 30.0
     last_updated: float = 0.0
     restoration_count: int = 0
+
+    def __post_init__(self) -> None:
+        """§G86 (GEBOTE.md): transfer_chain_depth-Default nur aus CalibrationContext."""
+        if self.transfer_chain_depth is None:
+            from backend.core.defect_to_audibility import _resolve_transfer_chain_depth
+
+            self.transfer_chain_depth = _resolve_transfer_chain_depth(None)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -400,7 +407,7 @@ def extract_track_fingerprint(
     genre: str = "unknown",
     era_decade: int = 2000,
     material: str = "unknown",
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
     defects: list[str] | None = None,
 ) -> TrackFingerprint:
     """Extrahiert ein Track-Fingerprint aus Audio-Daten."""
@@ -437,7 +444,7 @@ def extract_track_fingerprint(
             corr = float(np.corrcoef(audio[:, 0], audio[:, 1])[0, 1])
             fp.stereo_width = max(0.0, min(1.0, 1.0 - abs(corr)))
     except Exception as e:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         logger.debug("Track-Fingerprint extraction fallback: %s", e)
 
     return fp

@@ -177,7 +177,7 @@ class ModelManager:
                 self._log_fallback(fallback)
                 return self.active_model
         # DSP-Fallback
-        self._log_fallback("DSP-Fallback")  # §V6: logger.warning handled at call site
+        self._log_fallback("DSP-Fallback")  # §V6 (copilot-instructions.md): logger.warning handled at call site
         return None
 
     def reload_model(self, name: str, new_model_obj: Any, new_metadata: dict[str, Any]):

@@ -699,7 +699,7 @@ class DeEsserPhase(PhaseInterface):
 
         # §2.8 Vocal-Chain: Pipeline-weite Gender-Info aus kwargs bevorzugen
         # (einmalige Detektion in UV3 _select_phases, via _restoration_context injiziert)
-        _external_gender = kwargs.get("vocal_gender")
+        _external_gender = kwargs.get("vocal_gender") or kwargs.get("pipeline_gender")
         if _external_gender and _external_gender in VOCAL_PROFILES and self.gender == VocalGender.AUTO:
             self.gender = _external_gender
             self.vocal_profile = VOCAL_PROFILES[_external_gender]
@@ -1085,6 +1085,7 @@ class DeEsserPhase(PhaseInterface):
                         "fricative_snr_invariant_met": True,
                         "fricative_snr_before_deessing_db": 0.0,
                         "fricative_snr_after_chain_db": 0.0,
+                        "gender": self.gender,
                     },
                     metrics={
                         "sibilance_reduction_db": 0.0,
@@ -1992,9 +1993,15 @@ class DeEsserPhase(PhaseInterface):
             _nt19_d = _nt19_fn(_a19cf - _d19cf, _mat19_str, sr=sample_rate)
             if _nt19_d > 0.25:
                 deessed_audio = (0.5 * deessed_audio + 0.5 * audio).astype(np.float32)
-                logger.warning("§V19 Verarbeitungsschritt_19 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt19_d)
+                logger.warning(
+                    "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_19 noise_texture dist=%.3f > 0.25 → 50%%-Blend",
+                    _nt19_d,
+                )
         except Exception as _nt19_exc:
-            logger.debug("§V19 Verarbeitungsschritt_19 noise_texture_guard (nicht blockierend): %s", _nt19_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_19 noise_texture_guard (nicht blockierend): %s",
+                _nt19_exc,
+            )
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -2016,7 +2023,10 @@ class DeEsserPhase(PhaseInterface):
             if not _sc19.ok:
                 deessed_audio = (0.70 * deessed_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc19_exc:
-            logger.debug("§V24 Verarbeitungsschritt_19 spectral_color_guard (nicht blockierend): %s", _sc19_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_19 spectral_color_guard (nicht blockierend): %s",
+                _sc19_exc,
+            )
 
         return _phase_result(
             success=True,
@@ -3831,7 +3841,7 @@ def _find_contiguous_segments(mask: np.ndarray, hop: int, sample_rate: int) -> l
     segments: list[tuple[float, float]] = []
     if not np.any(mask):
         return segments
-    edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))  # type: ignore[arg-type]  # §V5 Dither applied at export level
+    edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
     starts = np.where(edges == 1)[0]
     ends = np.where(edges == -1)[0]
     for s, e in zip(starts, ends):

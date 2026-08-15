@@ -1411,6 +1411,7 @@ class MusicalQualityAssurance:
                 logger.info("  → %s", rec)
 
         return report
+
     # ═══════════════════════════════════════════════════════════════════════════
     # §v10.703 Step 2: Export-Garantie — Zero Audible Defects Gate
     # ═══════════════════════════════════════════════════════════════════════════

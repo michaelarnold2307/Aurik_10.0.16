@@ -123,37 +123,37 @@ class TapeSaturation(PhaseInterface):
             "side_drive_fraction": side_drive_fraction,
         }
 
-    # Material-adaptive saturation drive
+    # Material-adaptive saturation drive (§v10.113: Lookup per material.value-String)
     SATURATION_DRIVE = {
-        MaterialType.SHELLAC: 0.0,  # No tape (era mismatch)
-        MaterialType.VINYL: 0.30,  # Moderate analog warmth
-        MaterialType.TAPE: 0.55,  # Strong (authentic cassette tape)
-        MaterialType.REEL_TAPE: 0.45,  # Professional reel-to-reel (slightly less than cassette)
-        MaterialType.CASSETTE: 0.55,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
-        MaterialType.CD_DIGITAL: 0.20,  # Subtle analogizing
-        MaterialType.STREAMING: 0.25,  # Light warmth
+        "shellac": 0.0,  # No tape (era mismatch)
+        "vinyl": 0.30,  # Moderate analog warmth
+        "tape": 0.55,  # Strong (authentic cassette tape)
+        "reel_tape": 0.45,  # Professional reel-to-reel (slightly less than cassette)
+        "cassette": 0.55,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
+        "cd_digital": 0.20,  # Subtle analogizing
+        "streaming": 0.25,  # Light warmth
     }
 
     # Mix amount (wet/dry)
     SATURATION_MIX = {
-        MaterialType.SHELLAC: 0.0,
-        MaterialType.VINYL: 0.40,  # 40% saturated
-        MaterialType.TAPE: 0.60,  # 60% saturated (cassette)
-        MaterialType.REEL_TAPE: 0.50,  # 50% -- pro tape, fuller sound
-        MaterialType.CASSETTE: 0.60,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
-        MaterialType.CD_DIGITAL: 0.25,  # 25%
-        MaterialType.STREAMING: 0.30,  # 30%
+        "shellac": 0.0,
+        "vinyl": 0.40,  # 40% saturated
+        "tape": 0.60,  # 60% saturated (cassette)
+        "reel_tape": 0.50,  # 50% -- pro tape, fuller sound
+        "cassette": 0.60,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
+        "cd_digital": 0.25,  # 25%
+        "streaming": 0.30,  # 30%
     }
 
     # Tape speed (affects HF response and saturation)
     TAPE_SPEED = {
-        MaterialType.SHELLAC: None,
-        MaterialType.VINYL: "7.5_ips",  # Standard
-        MaterialType.TAPE: "3.75_ips",  # Cassette tape: significant HF roll-off
-        MaterialType.REEL_TAPE: "15_ips",  # Professional studio reel-to-reel
-        MaterialType.CASSETTE: "3.75_ips",  # v10.0.0: IEC 60094-1 — Kassette läuft auf 3,75 ips (4,75 cm/s)
-        MaterialType.CD_DIGITAL: "15_ips",
-        MaterialType.STREAMING: "7.5_ips",
+        "shellac": None,
+        "vinyl": "7.5_ips",  # Standard
+        "tape": "3.75_ips",  # Cassette tape: significant HF roll-off
+        "reel_tape": "15_ips",  # Professional studio reel-to-reel
+        "cassette": "3.75_ips",  # v10.0.0: IEC 60094-1 — Kassette läuft auf 3,75 ips (4,75 cm/s)
+        "cd_digital": "15_ips",
+        "streaming": "7.5_ips",
     }
 
     # Tape speed HF roll-off frequencies
@@ -183,13 +183,13 @@ class TapeSaturation(PhaseInterface):
 
     # Hysteresis amount (asymmetric saturation)
     HYSTERESIS_AMOUNT = {
-        MaterialType.SHELLAC: 0.0,
-        MaterialType.VINYL: 0.12,
-        MaterialType.TAPE: 0.25,  # Tape-typical (cassette)
-        MaterialType.REEL_TAPE: 0.20,  # Professional reel: wider tape, less hysteresis
-        MaterialType.CASSETTE: 0.25,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
-        MaterialType.CD_DIGITAL: 0.08,
-        MaterialType.STREAMING: 0.10,
+        "shellac": 0.0,
+        "vinyl": 0.12,
+        "tape": 0.25,  # Tape-typical (cassette)
+        "reel_tape": 0.20,  # Professional reel: wider tape, less hysteresis
+        "cassette": 0.25,  # v10.0.0: IEC 60094-1 — gleiche Capstan-Physik wie TAPE
+        "cd_digital": 0.08,
+        "streaming": 0.10,
     }
 
     def __init__(self):
@@ -442,7 +442,7 @@ class TapeSaturation(PhaseInterface):
         mixed = np.nan_to_num(mixed, nan=0.0, posinf=0.0, neginf=0.0)
         mixed = np.clip(mixed, -1.0, 1.0)
 
-        # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): EQ-ähnliche Sättigungs-Änderung muss Spektralfarbe bewahren
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung (§2.74, non-blocking): EQ-ähnliche Sättigungs-Änderung muss Spektralfarbe bewahren
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg22,
@@ -452,9 +452,13 @@ class TapeSaturation(PhaseInterface):
             if not _sc22.ok:
                 _sc22_wet = 0.70
                 mixed = (_sc22_wet * mixed + (1.0 - _sc22_wet) * audio).astype(np.float32)
-                logger.warning("§V24 Verarbeitungsschritt_22 spectral_color non-ok → strength −30%%")
+                logger.warning(
+                    "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_22 spectral_color non-ok → strength −30%%"
+                )
         except Exception as _sc22_exc:
-            logger.debug("§V24 Verarbeitungsschritt_22 spectral_color (nicht blockierend): %s", _sc22_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_22 spectral_color (nicht blockierend): %s", _sc22_exc
+            )
 
         return PhaseResult(
             success=True,

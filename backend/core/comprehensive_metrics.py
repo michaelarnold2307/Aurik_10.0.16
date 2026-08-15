@@ -138,11 +138,7 @@ class PsychoAcousticMetrics:
         _d = result.to_dict()
         # Nur endliche Zahlen zurückgeben — to_dict() kann verschachtelte
         # Objekt-Referenzen enthalten, die math.isfinite() crashen lassen.
-        return {
-            str(k): float(v)
-            for k, v in _d.items()
-            if isinstance(v, (int, float)) and not isinstance(v, bool)
-        }
+        return {str(k): float(v) for k, v in _d.items() if isinstance(v, (int, float)) and not isinstance(v, bool)}
 
     def calculate_temporal_smoothness(self, audio: np.ndarray) -> float:
         """Zeitliche Glätte: 1 − normalisierte Streuung der Frame-RMS (0–1)."""

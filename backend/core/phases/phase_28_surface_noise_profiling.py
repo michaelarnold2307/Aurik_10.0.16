@@ -509,10 +509,13 @@ class SurfaceNoiseProfiling(PhaseInterface):
                 if _nt28_d > 0.25:
                     denoised_audio = (0.5 * denoised_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§V19 Verarbeitungsschritt_28: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt28_d
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_28: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend",
+                        _nt28_d,
                     )
         except Exception as _nt28_exc:
-            logger.debug("§V19 Verarbeitungsschritt_28 noise_texture nicht blockierend: %s", _nt28_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_28 noise_texture nicht blockierend: %s", _nt28_exc
+            )
 
         if _p28_panns >= 0.25:
             try:
@@ -545,7 +548,7 @@ class SurfaceNoiseProfiling(PhaseInterface):
             except Exception as _v21_28_exc:
                 logger.debug("§V21 Verarbeitungsschritt_28 noise_floor nicht blockierend: %s", _v21_28_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (
                 check_spectral_color_preservation as _scg_28,
@@ -553,10 +556,12 @@ class SurfaceNoiseProfiling(PhaseInterface):
 
             _sc_result_28 = _scg_28(audio, denoised_audio, sample_rate)
             if not _sc_result_28.ok:
-                _sc_wet_28 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_28 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 denoised_audio = (_sc_wet_28 * denoised_audio + (1.0 - _sc_wet_28) * audio).astype(np.float32)
         except Exception as _sc_exc_28:
-            logger.debug("§V24 Verarbeitungsschritt_28 spectral_color nicht blockierend: %s", _sc_exc_28)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_28 spectral_color nicht blockierend: %s", _sc_exc_28
+            )
 
         try:
             from backend.core.dsp.onset_guard import (

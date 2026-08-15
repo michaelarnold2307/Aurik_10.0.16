@@ -472,7 +472,13 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 audio=audio.copy() if isinstance(audio, np.ndarray) else np.asarray(audio, dtype=np.float32),
                 success=True,
                 execution_time_seconds=_time.perf_counter() - t0,
-                metadata={"splice_count": 0, "skip_reason": "no_splice_zones"},
+                metadata={
+                    "splice_count": 0,
+                    "skip_reason": "no_splice_zones",
+                    "splice_profile": dict(_profile_64),
+                    "min_splice_score": float(_profile_64["min_splice_score"]),
+                    "crossfade_ms": float(_profile_64["crossfade_ms"]),
+                },
             )
 
         # Schutzzonen für per-Splice individuelle Stärke zusammenstellen (§0p Vocal-Supremacy + §0l)
@@ -540,9 +546,15 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 )
                 if _nt64_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
-                    logger.warning("§V19 Verarbeitungsschritt_64 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt64_d)
+                    logger.warning(
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_64 noise_texture dist=%.3f > 0.25 → 50%%-Blend",
+                        _nt64_d,
+                    )
         except Exception as _nt64_exc:
-            logger.debug("§V19 Verarbeitungsschritt_64 noise_texture_guard (nicht blockierend): %s", _nt64_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_64 noise_texture_guard (nicht blockierend): %s",
+                _nt64_exc,
+            )
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -555,7 +567,10 @@ class TapeSpliceRepairPhase(PhaseInterface):
                 if not _sc64.ok:
                     result_audio = (0.70 * result_audio + 0.30 * audio).astype(np.float32)
         except Exception as _sc64_exc:
-            logger.debug("§V24 Verarbeitungsschritt_64 spectral_color_guard (nicht blockierend): %s", _sc64_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_64 spectral_color_guard (nicht blockierend): %s",
+                _sc64_exc,
+            )
 
         _rms_out_db = _rms_dbfs_gated(result_audio)
         _rms_drop = (_rms_out_db - _rms_in_db) if _rms_in_db > -80.0 else 0.0

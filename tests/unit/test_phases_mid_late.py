@@ -458,9 +458,7 @@ class TestPhase20ReverbReduction:
 
         # §v10.14 Universal-Passthrough verlangt Reverb-Evidenz (severity ≥ 0.02) —
         # der Test injiziert sie über defect_result, damit der ML-Pfad erreichbar ist.
-        _dr = types.SimpleNamespace(
-            defects=[types.SimpleNamespace(defect_type="reverb", severity=0.6)]
-        )
+        _dr = types.SimpleNamespace(defects=[types.SimpleNamespace(defect_type="reverb", severity=0.6)])
 
         # First call hits ML failure once and should switch phase instance to DSP-only.
         result1 = self.phase.process(mono, SR, MaterialType.TAPE, quality_mode="quality", defect_result=_dr)

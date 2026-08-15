@@ -39,8 +39,12 @@ def _synthetic_case(seed: int = 0, *, mode: str = "improved") -> EvalCase:
     else:
         restored = damaged.copy()
     return EvalCase(
-        case_id=f"syn_{seed}", material="synthetic",
-        damaged=damaged, clean=clean, restored=restored, sample_rate=48000,
+        case_id=f"syn_{seed}",
+        material="synthetic",
+        damaged=damaged,
+        clean=clean,
+        restored=restored,
+        sample_rate=48000,
     )
 
 
@@ -131,8 +135,7 @@ def test_report_json_roundtrip(tmp_path):
 def test_report_verdict_fails_with_degraded_case(tmp_path):
     system = EvaluationSystem()
     report = system.run_objective(
-        [_synthetic_case(i, mode="improved") for i in range(2)]
-        + [_synthetic_case(9, mode="degraded")]
+        [_synthetic_case(i, mode="improved") for i in range(2)] + [_synthetic_case(9, mode="degraded")]
     )
     assert report.verdict == "FAIL"
 

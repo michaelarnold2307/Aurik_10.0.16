@@ -175,19 +175,13 @@ def _build_weight(length: int, fade_samples: int, *, is_first: bool) -> np.ndarr
     """Build weight envelope for a chunk."""
     w = np.ones(length, dtype=np.float32)
     if is_first and fade_samples < length:
-        w[-fade_samples:] = (
-            0.5 * (1.0 + np.cos(np.pi * np.arange(fade_samples) / fade_samples))
-        ).astype(np.float32)
+        w[-fade_samples:] = (0.5 * (1.0 + np.cos(np.pi * np.arange(fade_samples) / fade_samples))).astype(np.float32)
     elif not is_first and fade_samples < length:
-        w[:fade_samples] = (
-            0.5 * (1.0 - np.cos(np.pi * np.arange(fade_samples) / fade_samples))
-        ).astype(np.float32)
+        w[:fade_samples] = (0.5 * (1.0 - np.cos(np.pi * np.arange(fade_samples) / fade_samples))).astype(np.float32)
     return w
 
 
-def should_skip_alignment(
-    overlap: np.ndarray, sr: int, erb_masker=None
-) -> bool:
+def should_skip_alignment(overlap: np.ndarray, sr: int, erb_masker=None) -> bool:
     """Check if phase alignment can be skipped because artifacts are inaudible.
 
     Uses ERB auditory masking model: if the crossfade residual energy falls

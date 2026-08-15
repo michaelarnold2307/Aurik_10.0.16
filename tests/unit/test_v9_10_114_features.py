@@ -147,8 +147,7 @@ class TestEmotionalArcArousalFormula:
         src = self._get_source()
         # Look for centroid-related keyword in the arousal section
         assert "_centroid_norm" in src or "centroid_norm" in src, (
-            "Kein Spektral-Centroid in Arousal-Formel gefunden. "
-            "v10.14: arousal(t) = rms * 0.55 + centroid_norm * 0.45."
+            "Kein Spektral-Centroid in Arousal-Formel gefunden. v10.14: arousal(t) = rms * 0.55 + centroid_norm * 0.45."
         )
 
     def test_arousal_uses_rfft(self):

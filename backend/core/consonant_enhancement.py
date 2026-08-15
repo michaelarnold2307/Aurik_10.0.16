@@ -154,7 +154,7 @@ class ConsonantEnhancement:
            b. Höhenanhebung via High-Shelf EQ (stimmtyp-adaptiv)
            c. Boost-Stärke clippen auf ≤ +6 dB (§2.8)
            d. SNR-Verbesserung prüfen (≥ +3 dB Invariante)
-        4. Crossfade 200  # §G3: Minimum 200ms ms (Hanning) an Voiced/Unvoiced-Übergängen
+        4. Crossfade 200  # §G3 (GEBOTE.md): Minimum 200ms ms (Hanning) an Voiced/Unvoiced-Übergängen
         5. NaN/Inf-Guard + clip(-1, 1)
 
     Invarianten:
@@ -390,7 +390,7 @@ class ConsonantEnhancement:
         Algorithmus:
             1. Frikativband via Butterworth-Bandpass extrahieren
             2. Lineare Gain-Maske aus sib_mask erzeugen (0 → 1)
-            3. Crossfade 200  # §G3: Minimum 200ms ms (Hanning) an Segment-Übergängen
+            3. Crossfade 200  # §G3 (GEBOTE.md): Minimum 200ms ms (Hanning) an Segment-Übergängen
             4. Frikativband × (gain - 1.0) zum Original addieren
 
         Args:
@@ -427,11 +427,11 @@ class ConsonantEnhancement:
         # ── Gain-Maske aus sib_mask ─────────────────────────────────── #
         gain_mask = sib_mask.astype(np.float32)
 
-        # Crossfade 200  # §G3: Minimum 200ms ms (Hanning) an Übergängen (§2.8)
+        # Crossfade 200  # §G3 (GEBOTE.md): Minimum 200ms ms (Hanning) an Übergängen (§2.8)
         cf_samples = max(2, int(CROSSFADE_MS / 1000.0 * sr))
         hanning = np.hanning(2 * cf_samples)[:cf_samples]
         # Übergänge: False→True (Onset) und True→False (Offset)
-        diff = np.diff(gain_mask.astype(np.int8), prepend=0, append=0)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        diff = np.diff(gain_mask.astype(np.int8), prepend=0, append=0)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
         onsets = np.where(diff == 1)[0]
         offsets = np.where(diff == -1)[0]
         for onset in onsets:

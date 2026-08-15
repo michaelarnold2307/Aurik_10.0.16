@@ -111,6 +111,7 @@ class PreAnalysisResult:
     # Ersetzt den einzelnen defect_scanner durch die Consensus-Pipeline
     try:
         from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
+
         _consensus_pipeline = DefectConsensusPipeline()
         _consensus_manifest = _consensus_pipeline.analyze(audio, sample_rate)
         if _consensus_manifest and _consensus_manifest.defects:
@@ -127,7 +128,6 @@ class PreAnalysisResult:
             _defect_list_consensus = _consensus_manifest.defects
     except Exception:
         _defect_list_consensus = None
-
 
     # Metadata
     native_sr: int = 0
@@ -589,10 +589,13 @@ def run_pre_analysis(
                 else:
                     _era_boost = 0.3
 
-                _md_detector = cast(Callable[[], Any], _load_symbol("forensics.medium_detector", "get_medium_detector"))()
+                _md_detector = cast(
+                    Callable[[], Any], _load_symbol("forensics.medium_detector", "get_medium_detector")
+                )()
                 _posteriors = dict(getattr(result.medium, "bayesian_scores", {}) or {})
                 if _posteriors:
                     import math
+
                     _consistent = getattr(_md_detector, "_ERA_CONSISTENT", {})
                     _impossible = getattr(_md_detector, "_ERA_IMPOSSIBLE", {})
                     _log_posts = {}
@@ -630,15 +633,20 @@ def run_pre_analysis(
                         logger.info(
                             "pre_Analyse: Era-Prior applied — decade=%d boost=%.1f nat "
                             "→ %s posterior %.3f→%.3f, confidence %.3f→%.3f",
-                            _era_decade, _era_boost, _primary,
-                            _posteriors.get(_primary, 0.0), _primary_era_post,
-                            _old_conf, _new_conf,
+                            _era_decade,
+                            _era_boost,
+                            _primary,
+                            _posteriors.get(_primary, 0.0),
+                            _primary_era_post,
+                            _old_conf,
+                            _new_conf,
                         )
                     else:
                         logger.debug(
                             "pre_Analyse: Era-Prior applied — decade=%d, but primary=%s "
                             "still at zero posterior (no era tables entry)",
-                            _era_decade, _primary,
+                            _era_decade,
+                            _primary,
                         )
         except Exception as _era_adj_exc:
             logger.debug("Era-Prior-Adjustment uebersprungen: %s", _era_adj_exc)
@@ -659,6 +667,7 @@ def run_pre_analysis(
                 _phys_strong = [(m, c) for m, c in _phys_iter if c > 0.15]
                 if _phys_strong:
                     import math
+
                     _N = len(_post_iter)
                     _phys_set = {m for m, _ in _phys_strong}
                     # Neue Priors: P(physical)=0.90/n, P(other)=(0.10-p_unknown)/(N-n-1)
@@ -701,9 +710,12 @@ def run_pre_analysis(
                         logger.info(
                             "pre_Analyse: Iterative-Physical-Bayesian — %s → "
                             "%s posterior %.3f→%.3f, confidence %.3f→%.3f",
-                            _phys_names, _primary2,
-                            _post_iter.get(_primary2, 0.0), _primary_phys_post,
-                            _old_conf2, _new_conf2,
+                            _phys_names,
+                            _primary2,
+                            _post_iter.get(_primary2, 0.0),
+                            _primary_phys_post,
+                            _old_conf2,
+                            _new_conf2,
                         )
         except Exception as _iter_exc:
             logger.debug("Iterative-Physical-Bayesian uebersprungen: %s", _iter_exc)
@@ -741,13 +753,17 @@ def run_pre_analysis(
                     if _clap_mat in _chain_clap and _clap_conf > 0.30:
                         logger.info(
                             "CLAP-Consensus: %s (%.3f) bestätigt Tonträgerkette %s",
-                            _clap_mat, _clap_conf, " → ".join(_chain_clap),
+                            _clap_mat,
+                            _clap_conf,
+                            " → ".join(_chain_clap),
                         )
                     elif _clap_conf > 0.50 and _clap_mat not in _chain_clap:
                         logger.info(
                             "CLAP-Consensus: %s (%.3f) NICHT in Kette %s — "
                             "semantische vs. physikalische Diskrepanz (Physical hat Vorrang §6.8)",
-                            _clap_mat, _clap_conf, " → ".join(_chain_clap),
+                            _clap_mat,
+                            _clap_conf,
+                            " → ".join(_chain_clap),
                         )
         except Exception as _clap_exc:
             logger.debug("CLAP-Material-Consensus uebersprungen: %s", _clap_exc)
@@ -993,9 +1009,11 @@ def run_pre_analysis(
                     logger.info("pre_Analyse: Lacquer-Disc-Inference — %s → lacquer_disc eingefügt", _reason)
 
                 _md.is_multi_generation = len(_chain) > 1  # type: ignore[attr-defined]
-                _analog_in = [m for m in _chain if m in _analog]
-                if _analog_in:
-                    _md.primary_material = _analog_in[-1]  # type: ignore[attr-defined]
+                # §v10.304.14: Inferenz fügt TRÄGER in die Kette ein — sie überschreibt
+                # das vom MediumDetector gemeldete primary_material NICHT. Die
+                # Material-Adjudikation obliegt dem Material-Konsens (später Schritt).
+                # (Kein _md.primary_material = _analog_in[-1] — das verfälschte den
+                # Handover-Kontrakt und demotierte hochkonfidente Detector-Ergebnisse.)
                 # Chronological sort after all injections (§v10.306: robust, kein Singleton-Try)
                 # 1930+++++1950+++++1960+++++1980+++++1990+++++++++2000++
                 # MUST run BEFORE _md.transfer_chain assignment — §v10.307 Bugfix:
@@ -1116,7 +1134,10 @@ def run_pre_analysis(
                 # Bei niedriger Confidence kurze Ketten (Sicherheit), bei höherer
                 # Confidence tiefe Ketten erlauben (depth 4-5 für Kassetten etc.).
                 # §v10.19: effective_confidence nutzt Physical-Boost.
-                _max_chain_depth = {True: 2, False: (3 if _effective_confidence < 0.55 else (4 if _effective_confidence < 0.60 else 99))}[_effective_confidence < 0.50]
+                _max_chain_depth = {
+                    True: 2,
+                    False: (3 if _effective_confidence < 0.55 else (4 if _effective_confidence < 0.60 else 99)),
+                }[_effective_confidence < 0.50]
                 if len(_chain) > _max_chain_depth:
                     # §v10.14: Letzten Eintrag (Endformat, z.B. mp3_high) IMMER behalten.
                     # Aus den analogen Zwischenträgern den Ära-plausibelsten wählen.

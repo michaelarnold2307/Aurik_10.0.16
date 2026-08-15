@@ -1041,16 +1041,23 @@ class TestPreventFirstQuietEdges:
         audio_in = np.concatenate([intro, middle, outro]).astype(np.float32)
         quiet_profile = UnifiedRestorerV3._compute_quiet_edge_prevention_profile(audio_in, SR, material_key="vinyl")
 
-        out, executed, _sk, _def = restorer._execute_pipeline(
-            audio=audio_in,
-            sample_rate=SR,
-            material_type=MaterialType.VINYL,
-            defect_result=types.SimpleNamespace(scores={}),
-            selected_phases=["phase_99_gain_a", "phase_99_gain_b"],
-            no_rt_limit=True,
-            original_audio_reference=audio_in.copy(),
-            quiet_edge_profile=quiet_profile,
-        )
+        # §v10.303 Phase-0 (Apollo/DFN/Resemble) ist reales ML — im Mock-Test
+        # wie die Phasen selbst stubben (die Phasen sind ebenfalls gemockt).
+        class _P0Noop:
+            def process(self, audio, sample_rate, material_type):
+                return types.SimpleNamespace(applied=False, audio=audio, metadata={})
+
+        with patch("plugins.apollo_phase0_integration.ChainedPhase0Preprocessor", return_value=_P0Noop()):
+            out, executed, _sk, _def = restorer._execute_pipeline(
+                audio=audio_in,
+                sample_rate=SR,
+                material_type=MaterialType.VINYL,
+                defect_result=types.SimpleNamespace(scores={}),
+                selected_phases=["phase_99_gain_a", "phase_99_gain_b"],
+                no_rt_limit=True,
+                original_audio_reference=audio_in.copy(),
+                quiet_edge_profile=quiet_profile,
+            )
 
         ref_edge_peak = float(np.percentile(np.abs(audio_in[:SR]), 99.9))
         out_intro_peak = float(np.percentile(np.abs(out[:SR]), 99.9))

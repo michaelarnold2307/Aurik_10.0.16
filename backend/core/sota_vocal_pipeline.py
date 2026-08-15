@@ -43,44 +43,47 @@ SR = 48000
 # Vocal Analysis Context (shared across all layers)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class VocalProfile:
     """Ganzheitliches Stimmprofil — einmal analysiert, von allen Layern genutzt."""
+
     # Register
-    register: str = "unknown"          # chest/head/fry/whisper
+    register: str = "unknown"  # chest/head/fry/whisper
     register_confidence: float = 0.0
 
     # Style
-    vibrato_rate_hz: float = 5.5       # typisches Vibrato
+    vibrato_rate_hz: float = 5.5  # typisches Vibrato
     vibrato_extent_semitones: float = 0.5
-    breathiness_index: float = 0.0     # 0=trocken, 1=hauchig
+    breathiness_index: float = 0.0  # 0=trocken, 1=hauchig
     formant_f1_hz: float = 500.0
     formant_f2_hz: float = 1500.0
     formant_f3_hz: float = 2500.0
 
     # Intonation
     intonation_style: str = "neutral"  # intentional/defect/neutral
-    pitch_stability: float = 1.0       # 0=unstabil, 1=perfekt
+    pitch_stability: float = 1.0  # 0=unstabil, 1=perfekt
 
     # Emotion
-    breath_emotion: str = "neutral"    # tension/relief/neutral
+    breath_emotion: str = "neutral"  # tension/relief/neutral
     emotional_intensity: float = 0.0
 
     # Phoneme
-    is_sibilant_frame: Optional[np.ndarray] = None  # [T] boolean
+    is_sibilant_frame: np.ndarray | None = None  # [T] boolean
     sibilance_pathology: str = "natural"
-    phoneme_boundaries: Optional[np.ndarray] = None  # sample indices
+    phoneme_boundaries: np.ndarray | None = None  # sample indices
 
     # NR calibration (derived from all above)
-    nr_strength: float = 0.5            # adaptive, 0-1
+    nr_strength: float = 0.5  # adaptive, 0-1
     deess_strength: float = 0.3
-    harmonic_protection: float = 0.7    # how much harmonics are protected
-    breath_preservation: float = 0.5    # 0=remove breath, 1=preserve
+    harmonic_protection: float = 0.7  # how much harmonics are protected
+    breath_preservation: float = 0.5  # 0=remove breath, 1=preserve
 
 
 @dataclass
 class VocalEnhanceResult:
     """Ergebnis der Vocal Enhancement Pipeline."""
+
     audio: np.ndarray
     profile: VocalProfile
     processing_time: float
@@ -94,12 +97,13 @@ class VocalEnhanceResult:
 # Layer 1: Vocal Analysis
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class VocalAnalyzer:
     """Analysiert alle Stimmeigenschaften und erstellt ein VocalProfile."""
 
     def __init__(self):
-        self._f0_cache: Optional[np.ndarray] = None
-        self._f0_times: Optional[np.ndarray] = None
+        self._f0_cache: np.ndarray | None = None
+        self._f0_times: np.ndarray | None = None
 
     def analyze(self, audio: np.ndarray, sample_rate: int = SR) -> VocalProfile:
         """Führt alle 5 Analyse-Module aus und aggregiert zu einem Profil."""
@@ -108,6 +112,7 @@ class VocalAnalyzer:
         # 1. Register Detection
         try:
             from backend.core.dsp.vocal_register_detector import detect_vocal_register
+
             reg = detect_vocal_register(audio, sample_rate)
             profile.register = reg.get("register", "unknown")
             profile.register_confidence = reg.get("confidence", 0.0)
@@ -117,6 +122,7 @@ class VocalAnalyzer:
         # 2. Style Profiler
         try:
             from backend.core.dsp.vocal_style_profiler import VocalStyleProfiler
+
             styler = VocalStyleProfiler()
             style = styler.profile(audio, sample_rate)
             profile.vibrato_rate_hz = style.get("vibrato_rate_hz", 5.5)
@@ -128,6 +134,7 @@ class VocalAnalyzer:
         # 3. Formant Tracking (LPC-based)
         try:
             from backend.core.dsp.lpc_formant_tracker import LPCFormantTracker
+
             lpc = LPCFormantTracker()
             formants = lpc.track(audio, sample_rate)
             if formants:
@@ -140,6 +147,7 @@ class VocalAnalyzer:
         # 4. Intonation Classification
         try:
             from backend.core.dsp.intonation_classifier import classify_intonation
+
             into = classify_intonation(audio, sample_rate)
             profile.intonation_style = into.get("style", "neutral")
             profile.pitch_stability = into.get("stability", 1.0)
@@ -149,6 +157,7 @@ class VocalAnalyzer:
         # 5. Breath Emotion
         try:
             from backend.core.dsp.breath_emotion_classifier import classify_breath_emotion
+
             breath = classify_breath_emotion(audio, sample_rate)
             profile.breath_emotion = breath.get("emotion", "neutral")
             profile.emotional_intensity = breath.get("intensity", 0.0)
@@ -214,6 +223,7 @@ class VocalAnalyzer:
 # Layer 2: Phoneme-Aware De-Essing
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class PhonemeAwareDeEsser:
     """
     Adaptives De-Essing mit Sibilanten-Pathologie und Phonem-Konsistenz.
@@ -243,6 +253,7 @@ class PhonemeAwareDeEsser:
         # Detect sibilant frames
         try:
             from backend.core.dsp.sibilance_pathology import classify_sibilance
+
             sib_result = classify_sibilance(audio, sample_rate)
             pathology = sib_result.get("pathology", "natural")
             sib_mask = sib_result.get("sibilant_mask", None)
@@ -275,7 +286,7 @@ class PhonemeAwareDeEsser:
 
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio[start : start + self.n_fft] * window
             spec = np.fft.rfft(frame)
 
             # Check if this frame is sibilant
@@ -294,8 +305,8 @@ class PhonemeAwareDeEsser:
 
             frame_out = np.fft.irfft(spec) * window
             end = min(start + self.n_fft, len(audio))
-            output[start:end] += frame_out[:end - start]
-            weight[start:end] += window[:end - start] ** 2
+            output[start:end] += frame_out[: end - start]
+            weight[start:end] += window[: end - start] ** 2
 
         weight[weight < 1e-8] = 1.0
         result = (output / weight).astype(np.float32)
@@ -310,6 +321,7 @@ class PhonemeAwareDeEsser:
 # ═════════════════════════════════════════════════════════════════════════════
 # Layer 3: Harmonic Protection
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class HarmonicProtector:
     """
@@ -347,7 +359,7 @@ class HarmonicProtector:
 
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio[start : start + self.n_fft] * window
             spec = np.fft.rfft(frame)
             mag = np.abs(spec)
             phase = np.angle(spec)
@@ -372,8 +384,8 @@ class HarmonicProtector:
 
             frame_out = np.fft.irfft(spec) * window
             end = min(start + self.n_fft, len(audio))
-            output[start:end] += frame_out[:end - start]
-            weight[start:end] += window[:end - start] ** 2
+            output[start:end] += frame_out[: end - start]
+            weight[start:end] += window[: end - start] ** 2
 
         weight[weight < 1e-8] = 1.0
         result = (output / weight).astype(np.float32)
@@ -388,6 +400,7 @@ class HarmonicProtector:
 # ═════════════════════════════════════════════════════════════════════════════
 # Full 3-Layer Vocal Enhancement Pipeline
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class SOTAVocalPipeline:
     """
@@ -437,7 +450,9 @@ class SOTAVocalPipeline:
 
         # ── Layer 3: Harmonic Protection ──
         audio_protected, harmonic_preservation = self.harmonic_protector.process(
-            audio, profile, sample_rate,
+            audio,
+            profile,
+            sample_rate,
         )
         layers.append("layer3_harmonic_protection")
         audio = audio_protected

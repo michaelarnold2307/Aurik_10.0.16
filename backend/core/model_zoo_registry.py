@@ -31,10 +31,10 @@ _PROJECT = Path(__file__).resolve().parent.parent
 class ModelEntry:
     name: str
     path: str
-    purpose: str                  # "repair" | "generation" | "separation" | "vocoder"
-    input_shapes: str             # gemessene I/O-Beschreibung
-    status: str                   # "active" | "available" | "needs_calibration" | "generation_only"
-    integration: Optional[str] = None   # wo/wie aktiviert
+    purpose: str  # "repair" | "generation" | "separation" | "vocoder"
+    input_shapes: str  # gemessene I/O-Beschreibung
+    status: str  # "active" | "available" | "needs_calibration" | "generation_only"
+    integration: str | None = None  # wo/wie aktiviert
     notes: str = ""
 
 
@@ -123,7 +123,7 @@ def probe_models() -> dict[str, str]:
     return results
 
 
-def get_model(name: str) -> Optional[ModelEntry]:
+def get_model(name: str) -> ModelEntry | None:
     for entry in MODEL_ZOO:
         if entry.name == name:
             return entry

@@ -465,7 +465,7 @@ class StemTargetedNRPhase(PhaseInterface):
         except Exception as _nt66_exc:
             logger.debug("Verarbeitungsschritt66 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt66_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach Stem-NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach Stem-NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_66,
@@ -473,10 +473,12 @@ class StemTargetedNRPhase(PhaseInterface):
 
             _sc_result_66 = _scg_66(audio, audio_combined, sample_rate)
             if not _sc_result_66.ok:
-                _sc_wet_66 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_66 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 audio_combined = (_sc_wet_66 * audio_combined + (1.0 - _sc_wet_66) * audio).astype(np.float32)
         except Exception as _sc_exc_66:
-            logger.debug("§V24 Verarbeitungsschritt_66 spectral_color nicht blockierend: %s", _sc_exc_66)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_66 spectral_color nicht blockierend: %s", _sc_exc_66
+            )
 
         # V26 Onset-Guard (§2.77): Transients nach Stem-NR schützen (non-blocking)
         try:

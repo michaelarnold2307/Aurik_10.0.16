@@ -126,6 +126,11 @@ def log_restoration_summary(
     phases_count: int = 0,
     mushra_score: float = 0.0,
     hpi_score: float = 0.0,
+    degradation_status: str = "ok",
+    fail_reason: str = "",
+    oqs_threshold: float | None = None,
+    residual_audible_defects: int = 0,
+    no_effect_count: int = 0,
 ) -> None:
     """Post-restoration summary in plain German for non-expert users.
 
@@ -135,11 +140,27 @@ def log_restoration_summary(
     W = 72
     quality_label = _quality_label_de(quality_pct)
     chain_story = _chain_story_de(chain) if chain else ""
+    _degraded = str(degradation_status or "ok").lower() in {"degraded", "eingeschraenkt", "eingeschränkt"}
 
     lines = []
     lines.append("┌" + "─" * (W - 2) + "┐")
-    lines.append(_center("✨ AURIK RESTAURATION ABGESCHLOSSEN ✨", W))
+    if _degraded:
+        lines.append(_center("✨ AURIK RESTAURATION MIT EINSCHRÄNKUNG ✨", W))
+    else:
+        lines.append(_center("✨ AURIK RESTAURATION ABGESCHLOSSEN ✨", W))
     lines.append("│" + " " * (W - 2) + "│")
+
+    # ── Degradations-Status (§v10.201/§v10.202): Einschraenkung + Ursache sichtbar machen ──
+    if _degraded:
+        if fail_reason:
+            lines.append(_center(f"⚠️  Grund: {fail_reason}", W))
+        if oqs_threshold is not None:
+            lines.append(_center(f"📏 OQS-Floor: {oqs_threshold:.0f}", W))
+        if residual_audible_defects > 0:
+            lines.append(_center(f"👂 {residual_audible_defects} hörbare Restdefekte verblieben", W))
+        if no_effect_count > 0:
+            lines.append(_center(f"🛑 {no_effect_count} ohne Wirkung", W))
+        lines.append("│" + " " * (W - 2) + "│")
 
     # ── Technische Qualität (objektive Signalanalyse) ──
     _qa_explanation = _quality_explanation_de(quality_pct)

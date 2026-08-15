@@ -96,12 +96,11 @@ class InferenceSessionManager:
             ``onnxruntime.InferenceSession``.
 
         Raises:
-            FileNotFoundError: Wenn model_path nicht existiert.
             RuntimeError: Wenn onnxruntime nicht importiert werden kann.
+            onnxruntime.capi.onnxruntime_pybind11_state.InvalidProtobuf/
+                Fail: Wenn die Modelldatei nicht ladbar ist.
         """
         model_path = Path(model_path)
-        if not model_path.exists():
-            raise FileNotFoundError(f"ONNX-Modell nicht gefunden: {model_path}")
 
         with self._lock:
             # ── Cache-Hit? ────────────────────────────────────────────────
@@ -217,6 +216,7 @@ class InferenceSessionManager:
         # Try MIGraphX GPU backend if available (gfx1100 / RDNA3 support)
         try:
             from backend.core.migraphx_adapter import MIGraphXSession, is_migraphx_available
+
             if is_migraphx_available():
                 logger.debug("SessionManager: trying MIGraphX GPU for %s", model_path.name)
                 session = MIGraphXSession(
@@ -245,6 +245,15 @@ class InferenceSessionManager:
             size_mb = 0.0
 
         return session, size_mb
+
+    def get_active_count(self) -> int:
+        """Anzahl aktuell gecachter Sessions (Spec 15 §9.5)."""
+        with self._lock:
+            return len(self._cache)
+
+    def clear(self) -> None:
+        """Alle Sessions freigeben (Spec 15 §9.5, Alias fuer release_all)."""
+        self.release_all()
 
     def __len__(self) -> int:
         """Anzahl gecachter Sessions."""

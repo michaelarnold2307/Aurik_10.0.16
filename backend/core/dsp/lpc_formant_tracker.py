@@ -399,7 +399,7 @@ def check_formant_shift_db(
     threshold_db: float = 2.0,
     max_formants: int = 4,
 ) -> tuple[bool, float]:
-    """§G1/§G5 Formant ±2 dB Guard (§0p RELEASE_MUST).
+    """§G1 (GEBOTE.md)/§G5 (GEBOTE.md) Formant ±2 dB Guard (§0p RELEASE_MUST).
 
     Compares spectral energy at F1–F4 formant frequencies between pre-NR and
     post-NR audio. Returns (rollback_needed, max_shift_db).

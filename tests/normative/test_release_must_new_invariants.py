@@ -106,7 +106,7 @@ def test_release_startup_suppresses_expected_framework_and_remediation_warnings(
 
     assert 'logger.info(\n                        "§2.50 Quellmaterial-Baseline' in afg_src
     assert 'logger.info(\n                        "§2.50 Stereo-Notfall-Remediation' in uv3_src
-    assert 'logger.info("§V19 phase_18: noise_texture_dist=' in phase18_src
+    assert 'logger.info("§V19 (Spec-Vintage-Guard) phase_18: noise_texture_dist=' in phase18_src
     assert 'logger.info(\n                            "§SFT ArtifactRescue' in uv3_src
     assert 'logger.info(\n                    "§2.45a QuietZone-Guard' in uv3_src
     assert 'logger.info(\n                        "ActiveIntervention %s REJECTED: no beneficial score delta' in uv3_src

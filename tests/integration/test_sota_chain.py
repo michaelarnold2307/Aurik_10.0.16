@@ -52,10 +52,10 @@ def _make_test_audio(duration_s: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
 
     # Harmonisches Grundsignal (C-Dur Akkord)
     clean = (
-        0.3 * np.sin(2 * np.pi * 261.63 * t) +  # C4
-        0.2 * np.sin(2 * np.pi * 329.63 * t) +  # E4
-        0.15 * np.sin(2 * np.pi * 392.00 * t) +  # G4
-        0.1 * np.sin(2 * np.pi * 523.25 * t)  # C5
+        0.3 * np.sin(2 * np.pi * 261.63 * t)  # C4
+        + 0.2 * np.sin(2 * np.pi * 329.63 * t)  # E4
+        + 0.15 * np.sin(2 * np.pi * 392.00 * t)  # G4
+        + 0.1 * np.sin(2 * np.pi * 523.25 * t)  # C5
     ).astype(np.float32)
 
     # Defekte einbauen
@@ -63,7 +63,7 @@ def _make_test_audio(duration_s: float = 2.0) -> tuple[np.ndarray, np.ndarray]:
 
     # 1. Klick bei 0.5s
     click_pos = int(0.5 * SR)
-    noisy[click_pos:click_pos + 50] += 0.8 * np.exp(-np.arange(50) / 5).astype(np.float32)
+    noisy[click_pos : click_pos + 50] += 0.8 * np.exp(-np.arange(50) / 5).astype(np.float32)
 
     # 2. Hum (50 Hz)
     noisy += 0.02 * np.sin(2 * np.pi * 50 * t).astype(np.float32)
@@ -83,8 +83,10 @@ def test_1_defect_consensus():
     manifest = pipeline.analyze(audio, SR)
 
     assert manifest is not None, "Manifest ist None"
-    print(f"  ✅ Stufe 1: Manifest erstellt ({manifest.total_hypotheses} Hypothesen, "
-          f"{manifest.conflicts_resolved} Konflikte, {len(manifest.defects)} Defekte)")
+    print(
+        f"  ✅ Stufe 1: Manifest erstellt ({manifest.total_hypotheses} Hypothesen, "
+        f"{manifest.conflicts_resolved} Konflikte, {len(manifest.defects)} Defekte)"
+    )
     return manifest
 
 
@@ -98,8 +100,7 @@ def test_2_repair_planner(manifest):
 
     assert plan is not None, "Plan ist None"
     assert plan.total_defects >= 0, "Defekt-Zähler ungültig"
-    print(f"  ✅ Stufe 2: Plan mit {len(plan.steps)} Schritten, "
-          f"Reihenfolge: {plan.phase_order[:4]}...")
+    print(f"  ✅ Stufe 2: Plan mit {len(plan.steps)} Schritten, Reihenfolge: {plan.phase_order[:4]}...")
     return plan
 
 
@@ -119,8 +120,7 @@ def test_3_sota_denoise():
 
     mse_noisy = np.mean((audio - clean) ** 2)
     mse_clean = np.mean((result.audio - clean) ** 2)
-    print(f"  ✅ Stufe 3: Denoise OK (Power {power_in:.4f} → {power_out:.4f}, "
-          f"MSE {mse_noisy:.6f} → {mse_clean:.6f})")
+    print(f"  ✅ Stufe 3: Denoise OK (Power {power_in:.4f} → {power_out:.4f}, MSE {mse_noisy:.6f} → {mse_clean:.6f})")
     return result.audio
 
 
@@ -134,14 +134,16 @@ def test_4_coordinated_repair(manifest, plan):
 
     assert repaired.shape == audio.shape, "Shape-Mismatch"
     assert report is not None, "Report fehlt"
-    print(f"  ✅ Stufe 4: {len(report.completed_steps)} Schritte abgeschlossen, "
-          f"{len(report.failed_steps)} fehlgeschlagen, {report.total_time:.2f}s")
+    print(
+        f"  ✅ Stufe 4: {len(report.completed_steps)} Schritte abgeschlossen, "
+        f"{len(report.failed_steps)} fehlgeschlagen, {report.total_time:.2f}s"
+    )
     return repaired
 
 
 def test_5_harmonic_inpainting():
     """Stufe 5: Harmonic Inpainting (fallback wenn DiT nicht verfügbar)."""
-    from backend.core.coordinated_repair import RepairStep, RepairPriority, CoordinatedRepair
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPriority, RepairStep
 
     audio, clean = _make_test_audio()
     executor = CoordinatedRepair()
@@ -156,8 +158,7 @@ def test_5_harmonic_inpainting():
     result = executor._run_inpainting(audio, step, None, SR)
 
     assert result.shape == audio.shape, "Shape-Mismatch"
-    print(f"  ✅ Stufe 5: Inpainting OK (Shape {result.shape}, "
-          f"Power {np.mean(result**2):.4f})")
+    print(f"  ✅ Stufe 5: Inpainting OK (Shape {result.shape}, Power {np.mean(result**2):.4f})")
     return result
 
 
@@ -166,8 +167,8 @@ def test_6_full_chain():
     audio, clean = _make_test_audio()
 
     # Stufe 1+2
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlanner
     from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
-    from backend.core.coordinated_repair import RepairPlanner, CoordinatedRepair
 
     consensus = DefectConsensusPipeline()
     manifest = consensus.analyze(audio, SR)
@@ -182,8 +183,10 @@ def test_6_full_chain():
     assert repaired.shape == audio.shape
     assert report.completed_steps or report.failed_steps, "Kein einziger Schritt ausgeführt"
 
-    print(f"  ✅ Stufe 6 (Kette): {len(report.completed_steps)} von "
-          f"{len(plan.steps)} Schritten erfolgreich in {report.total_time:.2f}s")
+    print(
+        f"  ✅ Stufe 6 (Kette): {len(report.completed_steps)} von "
+        f"{len(plan.steps)} Schritten erfolgreich in {report.total_time:.2f}s"
+    )
     return repaired
 
 

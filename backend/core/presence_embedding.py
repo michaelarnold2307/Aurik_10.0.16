@@ -82,7 +82,7 @@ class PresenceEmbedding:
         embedder = PresenceEmbedding()
         score = embedder.compute(restored_audio, original_audio, sr=48000)
         if score.is_hearable_improvement:
-            print(f"Hoerbare Verbesserung: {score.overall:.2f}")
+            logger.info("Hoerbare Verbesserung: %.2f", score.overall)
     """
 
     def __init__(self) -> None:
@@ -228,7 +228,7 @@ class PresenceEmbedding:
 
             return float(np.mean(coherence_scores))
         except Exception as e:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("PresenceEmbedding: vocal_formant_coherence fallback: %s", e)
             return 0.5
 
@@ -382,13 +382,11 @@ class PresenceEmbedding:
             # R^2 der Regression: wie gut passt die Kurve?
             predicted = slope * log_freqs + intercept
             ss_res = float(np.sum((log_env - predicted) ** 2))
-        except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            ss_tot = float(np.sum((log_env - float(np.mean(log_env))) ** 2))
             r_squared = 1.0 - ss_res / (ss_tot + 1e-12)
-
             return float(np.clip(slope_score * 0.5 + r_squared * 0.5, 0.0, 1.0))
         except Exception as e:
-            logger.debug("PresenceEmbedding: spectral_air_authenticity fallback: %s", e)
+            logger.warning("ML→DSP-Fallback aktiviert: %s", e, exc_info=True)  # §V6 (copilot-instructions.md)
             return 0.5
 
 

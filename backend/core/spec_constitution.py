@@ -674,7 +674,7 @@ REQUIRED_PATTERNS: list[RequiredPattern] = [
         "ML",
         "DSP.*fallback|cpu.*fallback|CPUExecutionProvider",
         "ML-Plugins brauchen DSP-Fallback",
-        "critical",  # §V6: logger.warning handled at call site
+        "critical",  # §V6 (copilot-instructions.md): logger.warning handled at call site
     ),
     RequiredPattern("G10", "Test", r"test_.*\.py|def test_", "Jede Spec-$-Referenz MUSS einen Test haben", "warning"),
     RequiredPattern("G11", "Loudness", "loudness|LUFS|lufs", "Ausgabe MUSS LUFS-normalisiert sein", "warning"),
@@ -709,7 +709,7 @@ REQUIRED_PATTERNS: list[RequiredPattern] = [
     RequiredPattern("G38", "Path", r"Path\(|pathlib", "pathlib.Path Pflicht", "warning"),
     RequiredPattern("G39", "Encoding", "encoding.*utf", "UTF-8 Pflicht", "warning"),
     RequiredPattern("G40", "License", "Aurik 10|Copyright.*Aurik", "Lizenzheader Pflicht", "warning"),
-    # ── §v10.305 Startup-Integrations-Vertrag (§G71–§G80) ──────────────
+    # ── §v10.305 Startup-Integrations-Vertrag (§G71 (GEBOTE.md)–§G80 (GEBOTE.md)) ──────────────
     RequiredPattern(
         "G71",
         "StartupEvent",

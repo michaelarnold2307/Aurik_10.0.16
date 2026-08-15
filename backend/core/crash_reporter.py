@@ -171,12 +171,14 @@ def get_new_reports() -> list[dict[str, Any]]:  # type: ignore[name-defined]
             with open(report_file, encoding="utf-8") as f:
                 data = json.load(f)
             exc = data.get("exception", {}) or {}
-            reports.append({
-                "_file": str(report_file),
-                "type": str(exc.get("type", "unknown")),
-                "message": str(exc.get("message", ""))[:200],
-                "timestamp": report_file.stat().st_mtime,
-            })
+            reports.append(
+                {
+                    "_file": str(report_file),
+                    "type": str(exc.get("type", "unknown")),
+                    "message": str(exc.get("message", ""))[:200],
+                    "timestamp": report_file.stat().st_mtime,
+                }
+            )
         except Exception:
             logger.debug("Konnte Report nicht lesen: %s", report_file)
     return reports

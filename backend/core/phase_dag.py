@@ -117,6 +117,28 @@ HARD_BEFORE_CONSTRAINTS: list[PhaseConstraint] = [
         "phase_41_output_format_optimization",
         "TruePeak-Limiter vor Ausgabeformat/Dither (finaler Peak-Schutz vor Exportformat)",
     ),
+    # §III (copilot-instructions.md): Glue Stage als vorletzte Phase in ALLEN Modi —
+    # nach TruePeak/LUFS, vor Dithering/Output-Format.
+    PhaseConstraint(
+        "phase_47_truepeak_limiter",
+        "phase_glue_stage",
+        "Glue Stage nach TruePeak-Limiter (keine Bus-Kompression nach finalem Peak-Schutz)",
+    ),
+    PhaseConstraint(
+        "phase_40_loudness_normalization",
+        "phase_glue_stage",
+        "Glue Stage nach LUFS-/Gain-Normierung auch wenn TruePeak nicht aktiv ist",
+    ),
+    PhaseConstraint(
+        "phase_17_mastering_polish",
+        "phase_glue_stage",
+        "Glue Stage nach Mastering-Polish (Studio-Modus)",
+    ),
+    PhaseConstraint(
+        "phase_glue_stage",
+        "phase_41_output_format_optimization",
+        "Glue Stage vor Ausgabeformat/Dither (vorletzte Phase in ALLEN Modi)",
+    ),
     PhaseConstraint(
         "phase_40_loudness_normalization",
         "phase_41_output_format_optimization",

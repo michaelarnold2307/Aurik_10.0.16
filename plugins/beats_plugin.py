@@ -88,7 +88,7 @@ class BeatsResult:
     Attributes:
         tags:       Dict[tag_name, confidence ∈ [0,1]]
         embeddings: 768-dim Feature-Embedding (für Downstream-Aufgaben)
-        model_used: "beats_onnx" | "panns_fallback" | "spectral_dsp"  # §V6: logger.warning handled at call site
+        model_used: "beats_onnx" | "panns_fallback" | "spectral_dsp"  # §V6 (copilot-instructions.md): logger.warning handled at call site
         top_k:      Top-K Tags sortiert nach Konfidenz
     """
 

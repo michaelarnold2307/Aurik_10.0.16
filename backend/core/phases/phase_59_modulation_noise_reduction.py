@@ -543,10 +543,13 @@ class ModulationNoiseReductionPhase(PhaseInterface):
                 if _nt59_d > 0.25:
                     result_audio = (0.5 * result_audio + 0.5 * audio).astype(np.float32)
                     logger.warning(
-                        "§V19 Verarbeitungsschritt_59: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend", _nt59_d
+                        "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_59: noise_texture_dist=%.3f > 0.25 → 50%% dry-blend",
+                        _nt59_d,
                     )
         except Exception as _nt59_exc:
-            logger.debug("§V19 Verarbeitungsschritt_59 noise_texture nicht blockierend: %s", _nt59_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_59 noise_texture nicht blockierend: %s", _nt59_exc
+            )
 
         if _p59_panns >= 0.25:
             try:
@@ -578,7 +581,7 @@ class ModulationNoiseReductionPhase(PhaseInterface):
             except Exception as _v21_59_exc:
                 logger.debug("§V21 Verarbeitungsschritt_59 noise_floor nicht blockierend: %s", _v21_59_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_59,
@@ -586,10 +589,12 @@ class ModulationNoiseReductionPhase(PhaseInterface):
 
             _sc_result_59 = _scg_59(audio, result_audio, sample_rate)
             if not _sc_result_59.ok:
-                _sc_wet_59 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_59 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 result_audio = (_sc_wet_59 * result_audio + (1.0 - _sc_wet_59) * audio).astype(np.float32)
         except Exception as _sc_exc_59:  # pylint: disable=broad-except
-            logger.debug("§V24 Verarbeitungsschritt_59 spectral_color nicht blockierend: %s", _sc_exc_59)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_59 spectral_color nicht blockierend: %s", _sc_exc_59
+            )
 
         try:
             from backend.core.dsp.onset_guard import (  # pylint: disable=import-outside-toplevel

@@ -258,7 +258,7 @@ def _lms_bilateral_subtraction(
     # LMS konvergiert in Sekundenbruchteilen; die Block-Approximation mit
     # konstantem Alpha pro Block ist für die Echo-Schätzung numerisch stabil.
     BLOCK = 128
-    leak_block = leak ** BLOCK  # äquivalente Leakage pro Block
+    leak_block = leak**BLOCK  # äquivalente Leakage pro Block
     # §v10.998: Block-LMS-Schrittweite — mu gilt pro SAMPLE; im Block-Update
     # wird sie mit der Blocklänge skaliert (Standard-Skalierung), sonst
     # konvergiert Alpha kaum (gemessen: corr 0.449 → 0.438 statt → ~0).
@@ -664,7 +664,7 @@ class PrintThroughReductionPhase(PhaseInterface):
         except Exception as _pm57_exc:
             logging.getLogger(__name__).debug("\u00a72.36 phase_57 Phonem-Mask (non-blocking): %s", _pm57_exc)
 
-        # §V19 Noise-Texture-Invariante: Residual darf Material-Spektralprofil nicht whitten.
+        # §V19 (Spec-Vintage-Guard) Noise-Texture-Invariante: Residual darf Material-Spektralprofil nicht whitten.
         _nt57_residual = audio - result_audio
         _mat57_str = str(material_type or kwargs.get("material_type", kwargs.get("material", "unknown"))).lower()
         try:

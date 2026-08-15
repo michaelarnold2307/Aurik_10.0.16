@@ -12,9 +12,9 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
-from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

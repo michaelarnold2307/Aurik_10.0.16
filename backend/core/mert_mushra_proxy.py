@@ -661,30 +661,15 @@ class MertMushraProxy:
             vocal_prob,
         )
 
-        # --- Stage 2/3: Calibrated weights (auto-load + bootstrap) ---
+        # --- Stage 2/3: Calibrated weights (nur explizit via
+        # calibrate_from_panel() oder bootstrap_from_internal_metrics();
+        # §3.6/v10.700: kein impliziter Auto-Load/Bootstrap in evaluate() —
+        # unkalibriert bleibt Stage 1 (Literatur-Gewichte).) ---
         cal_stage = 1
-        if _calibrated_weights is None:
-            # §3.6: Versuche Kalibrierungsartefakt zu laden (CI-Proxy)
-            try:
-                MertMushraProxy.load_calibration_artifact()
-            except Exception:
-                logger.debug("§3.6 auto-laden: noch nicht verfügbar", exc_info=True)
-
         if _calibrated_weights is not None:
             effective_weights = dict(_calibrated_weights)
             confidence = _calibrated_confidence or confidence
             cal_stage = 2
-        else:
-            # §3.6: Auto-Bootstrap — initiale Kalibrierung aus Literatur-Gewichten
-            logger.info("§3.6: Keine Kalibrierung gefunden — führe Bootstrap durch")
-            try:
-                MertMushraProxy.bootstrap_from_internal_metrics(n_samples=100)
-                if _calibrated_weights is not None:
-                    effective_weights = dict(_calibrated_weights)
-                    confidence = _calibrated_confidence or confidence
-                    cal_stage = 3  # Bootstrap = Stage 3
-            except Exception:
-                logger.debug("§3.6 bootstrap: übersprungen", exc_info=True)
 
         # Weighted combination → [0, 1] then scale to [0, 100]
         raw = sum(effective_weights[k] * component_scores[k] for k in effective_weights)
@@ -1521,7 +1506,7 @@ class MertMushraProxy:
 
         For HF models: temporal mean of last hidden state → 768-dim vector.
         For ONNX models: mean of output tensor → N-dim vector.
-        For DSP fallback: 512-dim DSP feature vector (MFCCs + chroma + spectral).  # §V6: logger.warning handled at call site
+        For DSP fallback: 512-dim DSP feature vector (MFCCs + chroma + spectral).  # §V6 (copilot-instructions.md): logger.warning handled at call site
         """
         try:
             import scipy.signal as spsig  # pylint: disable=import-outside-toplevel

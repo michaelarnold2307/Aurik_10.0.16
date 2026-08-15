@@ -97,7 +97,7 @@ class HybridDereverb:
     SOTA-Priorität gemäß §4.4 DSP-Mindeststandards (Vocal Enhancement / Dereverb):
         Primär:    SGMSE+ ONNX         (sgmse_plugin,          ~120 MB)
         Fallback 1: Resemble-Enhance ONNX (resemble_enhance_plugin, ~722 MB)
-        Fallback 2: WPE DSP             (kein ML erforderlich)  # §V6: logger.warning handled at call site
+        Fallback 2: WPE DSP             (kein ML erforderlich)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
     Combines fast DSP spectral gating with SGMSE+ ML refinement.
     SGMSE+ (Score-Based Generative Model for Speech Enhancement, Richter 2022)
@@ -151,7 +151,7 @@ class HybridDereverb:
             self._sgmse_active = False
             logger.info("ResembleEnhance ML-Stufe für Dereverb geladen (§4.4 Ersatzpfad 1)")
         except ImportError as e:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.info("ResembleEnhance nicht verfügbar (%s) — WPE-DSP-Ersatzpfad 2 aktiv", e)
             self.dccrn = None
         except Exception as e:

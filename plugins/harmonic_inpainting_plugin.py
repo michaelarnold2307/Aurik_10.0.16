@@ -30,7 +30,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Modulebene (nicht unter Lock! §SC-G72) — music_model_flags hat keine Backend-Abhängigkeiten.
+# Modulebene (nicht unter Lock! §G174) — music_model_flags hat keine Backend-Abhängigkeiten.
 try:
     from backend.core.music_model_flags import resolve_model_path, use_harmonic_inpainting
 
@@ -41,7 +41,7 @@ except Exception as _flags_exc:
     use_harmonic_inpainting = False
     logger.debug("HarmonicInpainting: music_model_flags nicht ladbar: %s", _flags_exc)
 
-# dit_model-Import ebenfalls auf Modulebene (§SC-G72); kein Backend-Import.
+# dit_model-Import ebenfalls auf Modulebene (§G174); kein Backend-Import.
 try:
     _DIT_DIR = str(Path(__file__).resolve().parent.parent / "models" / "miipher_dit")
     if _DIT_DIR not in sys.path:
@@ -87,14 +87,14 @@ def _mask_generate_deterministic(audio: np.ndarray) -> tuple[np.ndarray, np.ndar
     specgram = np.zeros((n_frames, _N_FFT // 2 + 1), dtype=np.float32)
     for i in range(n_frames):
         start = i * _HOP
-        specgram[i] = np.abs(np.fft.rfft(audio[start:start + _N_FFT] * window))
+        specgram[i] = np.abs(np.fft.rfft(audio[start : start + _N_FFT] * window))
 
     median_spec = np.median(specgram, axis=0)
     median_global = float(np.median(median_spec))
     harmonic_mask_freq = np.zeros(_N_FFT // 2 + 1, dtype=bool)
     for freq_bin in range(1, _N_FFT // 2 + 1):
         if median_spec[freq_bin] > median_global * 2.5:
-            harmonic_mask_freq[max(0, freq_bin - 2):freq_bin + 3] = True
+            harmonic_mask_freq[max(0, freq_bin - 2) : freq_bin + 3] = True
 
     frame_energy = specgram.mean(axis=1)
     loud_frames = frame_energy > np.median(frame_energy)
@@ -104,7 +104,7 @@ def _mask_generate_deterministic(audio: np.ndarray) -> tuple[np.ndarray, np.ndar
         if loud_frames[i]:
             start = i * _HOP
             end = min(start + _N_FFT, len(audio))
-            mask[start:end] = _FIXED_ATTENUATION * window[:end - start]
+            mask[start:end] = _FIXED_ATTENUATION * window[: end - start]
 
     attenuated = audio * (1.0 - mask)
     inpainting_mask = np.clip(mask, 0.0, 1.0).astype(np.float32)
@@ -148,7 +148,7 @@ class HarmonicInpaintingPlugin:
             logger.warning("HarmonicInpainting: dit_model fehlt — DSP-Ersatzpfad.")
             return
         try:
-            model = FlowMatchingDiT(dropout=0.0)  # Modulebene importiert (§SC-G72)
+            model = FlowMatchingDiT(dropout=0.0)  # Modulebene importiert (§G174)
             ckpt = torch.load(str(_p), map_location="cpu", weights_only=True)
             sd = ckpt.get("model_state_dict", ckpt) if isinstance(ckpt, dict) else ckpt
             model.load_state_dict(sd)
@@ -202,7 +202,7 @@ class HarmonicInpaintingPlugin:
         if self._model is None:
             return None
         if len(chunk) != _CHUNK_SAMPLES:
-            chunk = np.pad(chunk, (0, _CHUNK_SAMPLES - len(chunk)), mode="reflect")[: _CHUNK_SAMPLES]
+            chunk = np.pad(chunk, (0, _CHUNK_SAMPLES - len(chunk)), mode="reflect")[:_CHUNK_SAMPLES]
         peak = float(np.abs(chunk).max() + 1e-10)
         if peak < 1e-8:
             return None
@@ -249,7 +249,7 @@ class HarmonicInpaintingPlugin:
             energies: list[float] = []
             for i in order:
                 start = i * _CHUNK_SAMPLES
-                seg = audio[start:start + _CHUNK_SAMPLES]
+                seg = audio[start : start + _CHUNK_SAMPLES]
                 if len(seg) < _CHUNK_SAMPLES:
                     seg = np.pad(seg, (0, _CHUNK_SAMPLES - len(seg)), mode="reflect")
                 _, m = _mask_generate_deterministic(seg)
@@ -262,10 +262,10 @@ class HarmonicInpaintingPlugin:
             out = audio.copy()
             for i in chosen:
                 start = i * _CHUNK_SAMPLES
-                seg = audio[start:start + _CHUNK_SAMPLES]
+                seg = audio[start : start + _CHUNK_SAMPLES]
                 res = self._inpaint_chunk(seg)
                 if res is not None:
-                    out[start:start + _CHUNK_SAMPLES] = res[: len(seg)]
+                    out[start : start + _CHUNK_SAMPLES] = res[: len(seg)]
 
             if sr != _SR:
                 import librosa

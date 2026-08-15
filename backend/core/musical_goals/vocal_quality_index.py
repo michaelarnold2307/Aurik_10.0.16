@@ -220,7 +220,7 @@ def _compute_singer_identity_dsp(
         # Altes Formel (cosine − 0.70) / 0.30: raw 0.93 → 0.767 — falscher Rollback bei unveränderter Stimme.
         return float(np.clip((cosine * 8.0 - 1.0) / 7.0, 0.0, 1.0))
     except Exception as exc:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         logger.debug("singer_identity_dsp fehlgeschlagen: %s", exc)
         return 0.80  # conservatively neutral
 
@@ -246,7 +246,7 @@ def _compute_singer_identity(
         cosine = plugin.cosine_similarity(emb_pre, emb_post)
         return cosine, False  # ML-Pfad aktiv (kein DSP-Fallback)
     except Exception as exc:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         logger.debug("Resemblyzer not verfuegbar (%s) — DSP Ersatzpfad", exc)
         return _compute_singer_identity_dsp(vocal_pre, vocal_post, sr), True
 
@@ -577,7 +577,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
                     # are less precise than Resemblyzer embeddings)
                     _srl_mapped = float(np.clip(0.85 + (_srl_cosine - 0.5) * 0.30, 0.80, 1.0))
                     singer_cosine = _srl_mapped
-                    dsp_fallback = True  # DSP-basiert, kein ML  # §V6: logger.warning handled at call site
+                    dsp_fallback = True  # DSP-basiert, kein ML  # §V6 (copilot-instructions.md): logger.warning handled at call site
                     _srl_singer_identity_done = True
                     _reference_audio_used = True  # Signal: nicht degraded-Input-Anker
                     logger.debug(
@@ -679,7 +679,7 @@ def compute_vqi(  # pylint: disable=too-many-positional-arguments
         "articulation_score": float(np.clip(articulation, 0.0, 1.0)),
         "proximity_score": float(np.clip(proximity, 0.0, 1.0)),
         "sibilance_naturalness": float(np.clip(sibilance, 0.0, 1.0)),
-        "singer_id_dsp_fallback": dsp_fallback,  # §V6: logger.warning handled at call site
+        "singer_id_dsp_fallback": dsp_fallback,  # §V6 (copilot-instructions.md): logger.warning handled at call site
         "vqi_tier": tier,  # type: ignore[dict-item]
         "reference_audio_used": _reference_audio_used,  # §P1 Artist-Voice-Reference anchor used
         "genre_weights_used": _genre_used,  # type: ignore[dict-item]  # None = default weights

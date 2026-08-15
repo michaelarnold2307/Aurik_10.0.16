@@ -1157,7 +1157,7 @@ class NatuerlichkeitMetric:
                         raise ImportError("scipy.signal.decimate unavailable")
                     proc_audio = np.asarray(_SCIPY_DECIMATE(audio, _stride, zero_phase=True), dtype=np.float64)
                 except Exception:
-                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
                     proc_audio = audio[::_stride]  # fallback if scipy unavailable
                 proc_sr = max(1, sr // _stride)
 
@@ -1911,7 +1911,7 @@ class EmotionalitaetMetric:
                     score,
                 )
         except Exception as _exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("Operation fehlgeschlagen (unkritisch): %s", _exc)  # MERT not loaded — DSP-only path
 
         # --- VAT emotion model (Valence-Arousal-Tension, Russell 1980 + Thayer 1990) ---
@@ -2267,7 +2267,19 @@ class GrooveMetric:
             _dtw_score = float(np.clip(result.groove_score, 0.0, 1.0))
             _onset_ratio = result.n_onsets_restored / max(result.n_onsets_original, 1)
             _onset_ratio_ok = 0.9 < _onset_ratio < 1.1
-            if _dtw_score < 0.10 and not _onset_ratio_ok:
+            # Moderate Onset-Disbalance (Latenz/Fehlpaarung) → RMS-Ersatzpfad.
+            # Extreme Disbalance (≤0.5 oder >1.5) ist noise-/artefakt-getrieben und
+            # gehört dem §2.29c IOI-Ersatzpfad weiter unten — der RMS-Clip würde
+            # sonst Pipeline-Crackle fälschlich als Groove-Verlust werten.
+            # Katastrophaler DTW bei Onset-Parität (0.8–1.2) ist Rausch-Artefakt,
+            # nicht Latenz — gehört dem katastrophalen IOI-Ersatzpfad im 0.05-Block.
+            _catastrophic_near_parity = _dtw_score < 0.05 and 0.8 < _onset_ratio < 1.2
+            if (
+                _dtw_score < 0.10
+                and 0.5 < _onset_ratio <= 1.5
+                and not _onset_ratio_ok
+                and not _catastrophic_near_parity
+            ):
                 # Katastrophaler DTW: entweder Latenz oder extreme Onset-Fehlpaarung.
                 # RMS-Fallback mit sanfterem Clipping für tiefe Ketten.
                 _rms_score = float(np.clip(1.0 - result.dtw_rms_ms / 500.0, 0.20, 1.0))
@@ -2295,7 +2307,14 @@ class GrooveMetric:
                     result.n_onsets_restored,
                     _rms_score,
                 )
-                _dtw_score = _rms_score
+                # v10.18 Groove-Test: Rausch-korrumpierte Paare (beide Signale
+                # crackle-behaftet) liefern im IOI-Proxy die rhythmische Struktur —
+                # max() verhindert, dass der RMS-Clip den informativeren IOI-Wert deckelt.
+                try:
+                    _ioi_score = self.measure(audio, sr, reference=None)
+                except Exception:
+                    _ioi_score = _rms_score
+                _dtw_score = float(max(_rms_score, _ioi_score))
 
             # §2.29c IOI-Fallback-Guard (bidirektional v10.0.0):
             # Richtung A: Original hat Crackle (n_original >> n_restored)
@@ -4047,7 +4066,7 @@ class ArticulationMetric:
         diff = np.diff(envelope.astype(np.float32))
         thresh = float(np.mean(diff[diff > 0]) + 1e-10) if (diff > 0).any() else 1e-3
         onsets = np.where(diff > thresh)[0]
-        return onsets.astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        return onsets.astype(np.int32)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
 
     def _attack_time_score(
         self,
@@ -4103,6 +4122,23 @@ _CANONICAL_15_KEYS: frozenset[str] = frozenset(
         "transient_energie",  # §1.4.6 v10.0.0: 15. Ziel (Transient-Energie-Erhalt)
     }
 )
+
+# §1.2c (Spec 01): Kanonische GOAL_-Konstanten für Tests/Audits.
+GOAL_NATUERLICHKEIT: str = "natuerlichkeit"
+GOAL_AUTHENTIZITAET: str = "authentizitaet"
+GOAL_TONAL_CENTER: str = "tonal_center"
+GOAL_TIMBRE_AUTHENTIZITAET: str = "timbre_authentizitaet"
+GOAL_ARTIKULATION: str = "artikulation"
+GOAL_EMOTIONALITAET: str = "emotionalitaet"
+GOAL_MICRO_DYNAMICS: str = "micro_dynamics"
+GOAL_GROOVE: str = "groove"
+GOAL_TRANSPARENZ: str = "transparenz"
+GOAL_WAERME: str = "waerme"
+GOAL_BASS_KRAFT: str = "bass_kraft"
+GOAL_SEPARATION_FIDELITY: str = "separation_fidelity"
+GOAL_BRILLANZ: str = "brillanz"
+GOAL_SPATIAL_DEPTH: str = "spatial_depth"
+GOAL_TRANSIENT_ENERGIE: str = "transient_energie"
 
 _THRESHOLDS_RESTORATION: dict[str, float] = {k: v for k, v in _CM_REST.items() if k in _CANONICAL_15_KEYS}
 

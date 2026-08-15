@@ -13,7 +13,7 @@ Architektur (§v10.19 A6 — verifiziert am exportierten ONNX):
 Aurik-Integration:
   - PLM-registriert (§4.6b): set_active("MIIPHER_DiT", True)
   - Hallucination-Guard (§2.46e): spectral_novelty > 0.35 → Rollback
-  - DSP-Fallback (§V6): IMCRA/Wiener bei Modell-Fehler
+  - DSP-Fallback (§V6 (copilot-instructions.md)): IMCRA/Wiener bei Modell-Fehler
   - M/S-Processing: Stereo→Mono(Mid)→Enhance→Stereo
   - Sample-Rate-Adapter: 48kHz ↔ Modell-SR
   - RAM-Budget: 2.5 GB (DiT)
@@ -31,7 +31,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-# Modulebene (§SC-G72): Flags ohne Backend-Abhängigkeiten.
+# Modulebene (§G174): Flags ohne Backend-Abhängigkeiten.
 try:
     from backend.core.music_model_flags import resolve_model_path as _resolve_flag
 
@@ -53,6 +53,7 @@ def _resolve_or(fallback: Path, model_key: str) -> Path:
         if _p is not None and Path(_p).exists():
             return Path(_p)
     return fallback
+
 
 # ── Lazy imports für optionale Abhängigkeiten ────────────────────────────
 try:
@@ -82,8 +83,8 @@ except ImportError:
     _PLM_AVAILABLE = False
 
 try:
-    from backend.core.ml_memory_budget import try_allocate as _ml_budget_try_allocate
     from backend.core.ml_memory_budget import release as _ml_budget_release
+    from backend.core.ml_memory_budget import try_allocate as _ml_budget_try_allocate
 except ImportError:
     _ml_budget_try_allocate = None
     _ml_budget_release = None
@@ -119,9 +120,7 @@ class MiipherDiTPlugin:
     _HALLUCINATION_THRESHOLD: float = 0.35
 
     # Materialien, für die MIIPHER-DiT aktiviert wird
-    _TARGET_MATERIALS: frozenset[str] = frozenset(
-        {"mp3_low", "streaming", "aac", "minidisc"}
-    )
+    _TARGET_MATERIALS: frozenset[str] = frozenset({"mp3_low", "streaming", "aac", "minidisc"})
 
     def __init__(self) -> None:
         self._model_loaded: bool = False
@@ -210,7 +209,7 @@ class MiipherDiTPlugin:
 
     @staticmethod
     def _dsp_fallback(audio: np.ndarray, sr: int) -> np.ndarray:
-        """§V6: Deterministischer DSP-Ersatzpfad wenn ML nicht verfügbar.
+        """§V6 (copilot-instructions.md): Deterministischer DSP-Ersatzpfad wenn ML nicht verfügbar.
 
         Nutzt Wiener-Filter + sanfte HF-Anhebung für minimale hörbare Verbesserung
         ohne Artefakt-Risiko. Kein aggressives Denoising — Primum non nocere.
@@ -369,12 +368,12 @@ class MiipherDiTPlugin:
             _hf_delta = 0.0
 
         return MiipherDiTResult(
-                audio=_final,
-                applied=True,
-                model_used=_model_used,
-                novelty=_novelty,
-                hf_delta_db=_hf_delta,
-                processing_time_s=time.time() - t_start,
+            audio=_final,
+            applied=True,
+            model_used=_model_used,
+            novelty=_novelty,
+            hf_delta_db=_hf_delta,
+            processing_time_s=time.time() - t_start,
         )
 
     # ── §v10.14: Chunked Processing für lange Songs ────────────────────
@@ -446,6 +445,4 @@ def repair_vocal_miipher(
     restorability_score: float = 50.0,
 ) -> MiipherDiTResult:
     """Convenience-Wrapper für MIIPHER-DiT Gesangsverbesserung."""
-    return get_miipher_dit().enhance(
-        audio, sr, material, restorability_score=restorability_score
-    )
+    return get_miipher_dit().enhance(audio, sr, material, restorability_score=restorability_score)

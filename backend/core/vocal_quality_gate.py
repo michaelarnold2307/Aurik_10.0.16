@@ -209,7 +209,7 @@ class VocalDetector:
             # Heuristik: ratio > 2.0 = wahrscheinlich Gesang
             return float(np.clip((_ratio - 1.0) / 3.0, 0.0, 1.0))
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             raise  # Weiterreichen an energy-Fallback
 
     def _energy_vocal_proxy(self, mono: np.ndarray, sr: int) -> float:

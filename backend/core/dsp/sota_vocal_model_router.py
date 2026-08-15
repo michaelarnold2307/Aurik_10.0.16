@@ -113,7 +113,7 @@ class SotaVocalModelRouter:
                         raise RuntimeError("roformer_fallback_result")
                     attempts.append("bs_roformer:empty_stems")
                 except Exception as exc:  # pylint: disable=broad-except
-                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
                     if str(exc) != "roformer_fallback_result":
                         attempts.append(f"bs_roformer:{type(exc).__name__}")
                     logger.debug("§SMR-1 BS-RoFormer separation nicht verfuegbar: %s", exc)
@@ -454,11 +454,16 @@ class SotaVocalModelRouter:
             _dit_fallback = getattr(_miipher_dit, "_fallback_active", True)
             if _dit_loaded and not _dit_fallback:
                 _dit_result = _miipher_dit.enhance(
-                    reference, sr, material="unknown", restorability_score=20.0,
+                    reference,
+                    sr,
+                    material="unknown",
+                    restorability_score=20.0,
                 )
                 if _dit_result.applied and _dit_result.model_used == "miipher_dit":
                     attempts.append("miipher_dit:primary")
-                    logger.info("§v10.14 MIIPHER-DiT: Gesangsverbesserung erfolgreich (novelty=%.3f)", _dit_result.novelty)
+                    logger.info(
+                        "§v10.14 MIIPHER-DiT: Gesangsverbesserung erfolgreich (novelty=%.3f)", _dit_result.novelty
+                    )
                     return EnhancementRouteResult(
                         audio=np.asarray(_dit_result.audio, dtype=np.float32),
                         route_taken="miipher_dit",
@@ -516,7 +521,7 @@ class SotaVocalModelRouter:
                 },
             )
         except Exception as exc:  # pylint: disable=broad-except
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             if str(exc) not in {"miipher_model_not_loaded", "miipher_adapter_dsp_fallback"}:
                 attempts.append(f"miipher:{type(exc).__name__}")
             logger.debug("§SMR-1 MIIPHER nicht verfuegbar: %s", exc)

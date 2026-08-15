@@ -67,7 +67,7 @@ def test_validate_final_quality_uses_unique_modules_for_intensity(monkeypatch):
     """Duplicate module names must not inflate processing intensity."""
     mqa = MusicalQualityAssurance()
 
-    monkeypatch.setattr(mqa.analyzer, "analyze_quality", lambda _audio, _sr: _quality())
+    monkeypatch.setattr(mqa.analyzer, "analyze_quality", lambda _audio, _sr, **_kw: _quality())
     monkeypatch.setattr(mqa, "check_quality_gate", lambda *_args, **_kwargs: (True, "ok"))
     monkeypatch.setattr(mqa, "check_musical_integrity", lambda *_args, **_kwargs: _integrity_ok())
 

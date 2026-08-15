@@ -439,6 +439,9 @@ def _estimate_warmth(mono: np.ndarray, sr: int) -> float:
 
         Clip auf [0, 1]. Fallback 0.5 bei zu kurzem Signal oder Fehler.
     """
+    if not np.isfinite(mono).all():
+        # §3.1 (NaN/Inf-Schutz): NaN-Input nicht durchschlagen lassen.
+        mono = np.nan_to_num(mono, nan=0.0, posinf=0.0, neginf=0.0)
     if len(mono) < 512:
         # §v10.92: Statt hartem 0.5 — Zeitdomain-Wärme aus RMS-Ratio
         # Kurze Signale: Low/Mid-Approximation via subsample-Energie

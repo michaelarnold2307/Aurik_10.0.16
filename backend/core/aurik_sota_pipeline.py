@@ -37,7 +37,7 @@ def denoise(audio: np.ndarray, sample_rate: int = 48000) -> tuple[np.ndarray, fl
         denoiser = DFNExpandedDenoiser()
         result = denoiser.denoise(audio, sample_rate)
         # Estimate SNR improvement (simplified)
-        noise_before = np.mean((audio - result[:len(audio)])**2)
+        noise_before = np.mean((audio - result[: len(audio)]) ** 2)
         snr_db = float(10 * np.log10((np.mean(audio**2) + 1e-12) / (noise_before + 1e-12)))
         logger.info("DFN Expanded: %.1f dB SNR", snr_db)
         return result.astype(np.float32), snr_db
@@ -49,20 +49,27 @@ def denoise(audio: np.ndarray, sample_rate: int = 48000) -> tuple[np.ndarray, fl
 def enhance_music(audio: np.ndarray, sample_rate: int = 44100) -> np.ndarray:
     """Step 2: MelBandRoformer Music Enhancement (860M, ONNX GPU)."""
     try:
-        import onnxruntime as ort
         from pathlib import Path
 
-        model_path = Path(__file__).resolve().parent.parent.parent / "models" / "melbandroformer" / "melbandroformer_optimized.onnx"
+        import onnxruntime as ort
+
+        model_path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "models"
+            / "melbandroformer"
+            / "melbandroformer_optimized.onnx"
+        )
         if not model_path.exists():
             logger.debug("MelBandRoformer nicht gefunden")
             return audio
 
-        session = ort.InferenceSession(str(model_path), providers=['ROCMExecutionProvider', 'CPUExecutionProvider'])
+        session = ort.InferenceSession(str(model_path), providers=["ROCMExecutionProvider", "CPUExecutionProvider"])
         logger.info("MelBandRoformer: %s", session.get_providers()[0])
 
         # MelBandRoformer needs Mel spectrogram [1, duration, 60, 384]
         # Simplified path: use librosa mel transformation
         import librosa
+
         mel = librosa.feature.melspectrogram(y=audio.astype(np.float64), sr=sample_rate, n_mels=60, hop_length=512)
         mel_db = np.log1p(mel).astype(np.float32)
 
@@ -76,21 +83,19 @@ def enhance_music(audio: np.ndarray, sample_rate: int = 44100) -> np.ndarray:
             end = min(pos + chunk_size, T)
             chunk = mel_db[:, pos:end]
             if chunk.shape[1] < chunk_size:
-                chunk = np.pad(chunk, ((0, 0), (0, chunk_size - chunk.shape[1])), mode='edge')
+                chunk = np.pad(chunk, ((0, 0), (0, chunk_size - chunk.shape[1])), mode="edge")
             inp = chunk[np.newaxis, np.newaxis, :, :]
-            out = session.run(None, {'input': inp})[0]
+            out = session.run(None, {"input": inp})[0]
             actual = min(chunk_size, T - pos)
-            out_mel[:, pos:pos+actual] = out[0, 0, :, :actual]
+            out_mel[:, pos : pos + actual] = out[0, 0, :, :actual]
 
         # Inverse mel to audio
-        enhanced = librosa.feature.inverse.mel_to_audio(
-            np.exp(out_mel) - 1, sr=sample_rate, hop_length=512, n_fft=2048
-        )
+        enhanced = librosa.feature.inverse.mel_to_audio(np.exp(out_mel) - 1, sr=sample_rate, hop_length=512, n_fft=2048)
         # Match length
         if len(enhanced) < len(audio):
             enhanced = np.pad(enhanced, (0, len(audio) - len(enhanced)))
         else:
-            enhanced = enhanced[:len(audio)]
+            enhanced = enhanced[: len(audio)]
 
         logger.info("MelBandRoformer: enhancement applied")
         return enhanced.astype(np.float32)
@@ -106,7 +111,7 @@ def enhance_vocals(audio: np.ndarray, sample_rate: int = 48000) -> np.ndarray:
         from backend.core.vocal_enhancer import enhance_vocals as _enhance_vocals
 
         result = _enhance_vocals(audio, sr=sample_rate, breath_reduction_db=3.0, sibilance_reduction_db=2.0)
-        if hasattr(result, 'audio'):
+        if hasattr(result, "audio"):
             result = result.audio
         logger.info("Vocal Enhancer: applied")
         return result.astype(np.float32)
@@ -115,9 +120,10 @@ def enhance_vocals(audio: np.ndarray, sample_rate: int = 48000) -> np.ndarray:
         # Fallback: Aurik's built-in vocal enhancer
         try:
             from backend.core.vocal_ai_enhancement import UnifiedVocalAIEnhancer
+
             ve = UnifiedVocalAIEnhancer(sample_rate=sample_rate)
             result = ve.enhance(audio, breath_preservation=0.7, sibilance_reduction=True)
-            if hasattr(result, 'audio'):
+            if hasattr(result, "audio"):
                 result = result.audio
             logger.info("Vocal Enhancer: Aurik fallback applied")
             return result.astype(np.float32)
@@ -126,10 +132,13 @@ def enhance_vocals(audio: np.ndarray, sample_rate: int = 48000) -> np.ndarray:
             return audio
 
 
-def process(audio: np.ndarray, sample_rate: int = 48000,
-            enable_denoiser: bool = True,
-            enable_music_enhancer: bool = True,
-            enable_vocal_enhancer: bool = True) -> PipelineResult:
+def process(
+    audio: np.ndarray,
+    sample_rate: int = 48000,
+    enable_denoiser: bool = True,
+    enable_music_enhancer: bool = True,
+    enable_vocal_enhancer: bool = True,
+) -> PipelineResult:
     """Full Aurik SOTA Pipeline.
 
     Args:
@@ -153,6 +162,7 @@ def process(audio: np.ndarray, sample_rate: int = 48000,
         sr_music = 44100
         if sample_rate != sr_music:
             import librosa
+
             audio_44k = librosa.resample(result.audio.astype(np.float64), orig_sr=sample_rate, target_sr=sr_music)
         else:
             audio_44k = result.audio
@@ -162,6 +172,7 @@ def process(audio: np.ndarray, sample_rate: int = 48000,
             # Resample back
             if sample_rate != sr_music:
                 import librosa
+
                 enhanced = librosa.resample(enhanced.astype(np.float64), orig_sr=sr_music, target_sr=sample_rate)
             result.audio = enhanced.astype(np.float32)
             result.music_enhancer_active = True

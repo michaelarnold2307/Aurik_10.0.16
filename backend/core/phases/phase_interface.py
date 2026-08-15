@@ -140,6 +140,9 @@ class PhaseResult:
     # §v10.18: Defekte, die diese Phase behoben hat (DefectType → neue Severity)
     # Wird vom UV3/Denker konsumiert, um den Defect-Context für Folgephasen zu aktualisieren
     resolved_defects: dict[str, float] = field(default_factory=dict)
+    # §0a Passthrough-Semantik: Zero-Strength-/Skip-Pfade dürfen das Signal bit-identisch
+    # zurückgeben (kein §v10.62-Soft-Clip). Nur für echte Passthrough-Ergebnisse setzen.
+    _skip_soft_clip: bool = field(default=False, repr=False)
 
     def __post_init__(self) -> None:
         # Sicherheits-Invarianten: NaN/Inf bereinigen, soft-clipping (§v10.62)
@@ -154,15 +157,16 @@ class PhaseResult:
             else:
                 self.audio = np.asarray(self.audio, dtype=np.float32)
         self.audio = np.nan_to_num(self.audio, nan=0.0, posinf=0.0, neginf=0.0)
-        # §v10.62: apply_soft_clip statt Hard-Clamp — verhindert hörbare
-        # Rechteck-Clipping-Artefakte in allen 68 Phasen.
-        try:
-            from backend.core.audio_utils import apply_soft_clip
+        if not self._skip_soft_clip:
+            # §v10.62: apply_soft_clip statt Hard-Clamp — verhindert hörbare
+            # Rechteck-Clipping-Artefakte in allen 68 Phasen.
+            try:
+                from backend.core.audio_utils import apply_soft_clip
 
-            self.audio = apply_soft_clip(self.audio, ceiling=1.0)
-        except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-            self.audio = np.clip(self.audio, -1.0, 1.0)  # Fallback
+                self.audio = apply_soft_clip(self.audio, ceiling=1.0)
+            except ImportError:
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
+                self.audio = np.clip(self.audio, -1.0, 1.0)  # Fallback
         if self.audio.dtype != np.float32:
             self.audio = self.audio.astype(np.float32)
         # metrics und metadata synchronisieren: metrics erhaelt Vorrang

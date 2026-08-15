@@ -323,7 +323,15 @@ class MediumDetector:
         "wax_cylinder": [1890, 1900, 1910, 1920],
         "wire_recording": [1900, 1910, 1920, 1930, 1940],
         "shellac": [1900, 1910, 1920, 1930, 1940, 1950],
-        "lacquer_disc": [1920, 1930, 1940, 1950, 1960, 1970, 1980],  # §v10.19: +1970,1980 — Lackfolie bis Ende Vinyl-Ära
+        "lacquer_disc": [
+            1920,
+            1930,
+            1940,
+            1950,
+            1960,
+            1970,
+            1980,
+        ],  # §v10.19: +1970,1980 — Lackfolie bis Ende Vinyl-Ära
         "vinyl": [1950, 1960, 1970, 1980],
         "reel_tape": [1940, 1950, 1960, 1970, 1980],
         "cassette": [1970, 1980, 1990],
@@ -2770,13 +2778,23 @@ class MediumDetector:
             # §2.46a AUSNAHME 2: Wenn Physical-Inference zusätzliche Tape-Stufen in
             # eine Disc→Tape→Codec-Kette einfügt (z.B. vinyl→reel_tape→mp3), bleibt
             # der Disc-Träger als Primary erhalten — er ist der ursprüngliche Träger.
-            if not _best_analog_set_by_physical_gate:
-                _disc_types_local = {"vinyl", "shellac", "lacquer_disc"}
-                _disc_in_chain = [m for m in chain if m in _disc_types_local]
+            _disc_types_local = {"vinyl", "shellac", "lacquer_disc"}
+            _disc_in_chain = [m for m in chain if m in _disc_types_local]
+            if _best_analog_set_by_physical_gate and _disc_in_chain:
+                # §2.46a: Disc-Träger (zuletzt produzierte Disc) bleibt Primary;
+                # Transfer-Chain beginnt mit dem Primary (Carrier-First).
+                primary = _disc_in_chain[-1]
+            elif not _best_analog_set_by_physical_gate:
                 if _disc_in_chain and _analog_in_chain[0] == _disc_in_chain[0]:
                     primary = _disc_in_chain[0]
                 else:
                     primary = _analog_in_chain[-1]
+            # §2.46a Carrier-First: Disc-Primary steht an Position 0 der Transfer-Chain
+            # (Produktionsfall vinyl→reel_tape→mp3 aus Backend-Logs).
+            if primary in _disc_types_local and primary in chain and chain[0] != primary:
+                chain.remove(primary)
+                chain.insert(0, primary)
+                logger.debug("MediumDetector: §2.46a Disc-Primary carrier-first: %s", " → ".join(chain))
         is_multi = len(chain) > 1
         # Confidence wird aus Minimum, Mittelwert und Primärposterior geblendet:
         # der schwächste Link bleibt wichtig, aber solide Mehrfach-Evidenz darf
@@ -2801,7 +2819,9 @@ class MediumDetector:
                 _primary_post = max(_primary_post, _phys_dict[primary])
                 logger.debug(
                     "MediumDetector: Physical-Posterior-Override primary=%s bayes=%.4f→phys=%.4f",
-                    primary, float(posteriors.get(primary, 0.0)), _phys_dict[primary],
+                    primary,
+                    float(posteriors.get(primary, 0.0)),
+                    _phys_dict[primary],
                 )
         # Adaptives SNR-Gewicht: Bei niedrigem SNR (kurze/stark degradierte Clips) ist
         # chain_min weniger zuverlässig (Detektor-Scores unstabil bei < 5 s oder SNR < 20 dB).

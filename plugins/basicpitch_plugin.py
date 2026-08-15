@@ -206,7 +206,7 @@ class BasicPitchPlugin:
                         return _res_nmp
                     except Exception as _nmp_exc:
                         logger.debug("BasicPitch NMP-Inferenz fehlgeschlagen (%s) — DSP-Fallback.", _nmp_exc)
-                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
 
         return self._analyze_dsp(audio, sr, max_polyphony)
 

@@ -196,7 +196,7 @@ class FrissonCandidateDetector:
         valid_mask = (freqs > 27.5) & (freqs < 8372.0)
         if np.any(valid_mask):
             midi_raw = 69.0 + 12.0 * np.log2(np.maximum(freqs[valid_mask], 1.0) / 440.0)
-            chroma_map[valid_mask] = np.round(midi_raw).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 Dither applied at export level
+            chroma_map[valid_mask] = np.round(midi_raw).astype(np.int32) % 12  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
 
         # --- Mel filterbank (8 bands, 150 Hz – 8 kHz) -----------------------
         _mel_low = 2595.0 * np.log10(1.0 + 150.0 / 700.0)

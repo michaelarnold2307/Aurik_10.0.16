@@ -23,8 +23,12 @@ def _manifest_with(category: DefectCategory) -> DefectManifest:
     return DefectManifest(
         defects=[
             DefectHypothesis(
-                category=category, start_sample=0, end_sample=48000,
-                confidence=0.8, severity=0.4, source_module="test",
+                category=category,
+                start_sample=0,
+                end_sample=48000,
+                confidence=0.8,
+                severity=0.4,
+                source_module="test",
             )
         ]
     )
@@ -79,8 +83,11 @@ def _make_step(**params: object) -> object:
     from backend.core.coordinated_repair import RepairPriority, RepairStep
 
     return RepairStep(
-        phase_id="phase_03_denoise", priority=RepairPriority.BREITBAND,
-        defect_category="hiss", affected_samples=[], parameters=params,
+        phase_id="phase_03_denoise",
+        priority=RepairPriority.BREITBAND,
+        defect_category="hiss",
+        affected_samples=[],
+        parameters=params,
     )
 
 
@@ -94,8 +101,9 @@ def test_denoise_uses_sgmse_when_opted_in(monkeypatch):
     calls: list = []
     monkeypatch.setattr(
         "plugins.sgmse_plugin.enhance_sgmse",
-        lambda audio, sr, sigma: type("R", (), {"audio": _fake_dsp(audio, factor=0.3)})()
-        if calls.append(sigma) is None else None,
+        lambda audio, sr, sigma: (
+            type("R", (), {"audio": _fake_dsp(audio, factor=0.3)})() if calls.append(sigma) is None else None
+        ),
     )
     audio = np.ones(4096, dtype=np.float32) * 0.5
     step = _make_step(use_sgmse=True, sgmse_sigma=0.5)
@@ -212,19 +220,39 @@ def test_planner_skips_zero_severity_false_alarms():
     """severity < 0.05 darf keine Phase triggern (Kassetten-Diagnose-Befund)."""
     from backend.core.coordinated_repair import RepairPlanner
 
-    manifest = DefectManifest(defects=[
-        DefectHypothesis(category=DefectCategory.HUM, start_sample=0, end_sample=48000,
-                         confidence=0.26, severity=0.0, source_module="x"),
-        DefectHypothesis(category=DefectCategory.CLIPPING, start_sample=0, end_sample=48000,
-                         confidence=0.79, severity=0.0, source_module="x"),
-        DefectHypothesis(category=DefectCategory.HISS, start_sample=0, end_sample=48000,
-                         confidence=0.8, severity=0.4, source_module="x"),
-    ])
+    manifest = DefectManifest(
+        defects=[
+            DefectHypothesis(
+                category=DefectCategory.HUM,
+                start_sample=0,
+                end_sample=48000,
+                confidence=0.26,
+                severity=0.0,
+                source_module="x",
+            ),
+            DefectHypothesis(
+                category=DefectCategory.CLIPPING,
+                start_sample=0,
+                end_sample=48000,
+                confidence=0.79,
+                severity=0.0,
+                source_module="x",
+            ),
+            DefectHypothesis(
+                category=DefectCategory.HISS,
+                start_sample=0,
+                end_sample=48000,
+                confidence=0.8,
+                severity=0.4,
+                source_module="x",
+            ),
+        ]
+    )
     plan = RepairPlanner().plan(manifest, 48000)
     phase_ids = [s.phase_id for s in plan.steps]
     assert "phase_02_hum_removal" not in phase_ids  # sev 0.0 → kein Hum-Schritt
-    assert "phase_07_declipper" not in phase_ids    # sev 0.0 trotz conf 0.79
-    assert "phase_03_denoise" in phase_ids          # sev 0.4 → läuft
+    assert "phase_07_declipper" not in phase_ids  # sev 0.0 trotz conf 0.79
+    assert "phase_03_denoise" in phase_ids  # sev 0.4 → läuft
 
 
 def test_hum_handler_passes_strength_from_step(monkeypatch):
@@ -243,12 +271,13 @@ def test_hum_handler_passes_strength_from_step(monkeypatch):
             captured.update(kwargs)
             return type("R", (), {"audio": kwargs["audio"]})()
 
-    monkeypatch.setattr(
-        "backend.core.phases.phase_02_hum_removal.HumRemovalPhase", _FakePhase
-    )
+    monkeypatch.setattr("backend.core.phases.phase_02_hum_removal.HumRemovalPhase", _FakePhase)
     step = RepairStep(
-        phase_id="phase_02_hum_removal", priority=RepairPriority.TONAL,
-        defect_category="hum", affected_samples=[], parameters={"strength": 0.02},
+        phase_id="phase_02_hum_removal",
+        priority=RepairPriority.TONAL,
+        defect_category="hum",
+        affected_samples=[],
+        parameters={"strength": 0.02},
     )
     audio = np.ones(4096, dtype=np.float32) * 0.1
     CoordinatedRepair()._run_hum_removal(audio, step, None, 48000)
@@ -261,14 +290,21 @@ def test_energy_collapse_guard_reverts_destruction(monkeypatch):
 
     from backend.core.coordinated_repair import CoordinatedRepair, RepairPlan, RepairPriority, RepairStep
 
-    plan = RepairPlan(steps=[
-        RepairStep(phase_id="phase_99_collapse_test", priority=RepairPriority.TRANSIENT,
-                   defect_category="test", affected_samples=[]),
-    ])
+    plan = RepairPlan(
+        steps=[
+            RepairStep(
+                phase_id="phase_99_collapse_test",
+                priority=RepairPriority.TRANSIENT,
+                defect_category="test",
+                affected_samples=[],
+            ),
+        ]
+    )
     audio = np.ones(48000, dtype=np.float32) * 0.5
     executor = CoordinatedRepair()
     monkeypatch.setattr(
-        executor, "_execute_step",
+        executor,
+        "_execute_step",
         lambda audio, step, manifest, sr, n_channels: audio * 0.01,  # kollabiert auf 1%
     )
     out, report = executor.execute(audio, plan, None, 48000)

@@ -140,8 +140,8 @@ def compute_export_transparency(
         result.true_peak_dbtp = round(float(tp), 2) if tp != float("-inf") else -120.0
         result.true_peak_ok = result.true_peak_dbtp <= -1.0
     except ImportError:
-        # Fallback: einfacher Peak
-        peak = float(np.max(np.abs(audio)))
+        # Fallback: robuster Peak (V08: np.percentile(99.9) statt np.max(abs))
+        peak = float(np.percentile(np.abs(audio), 99.9))
         result.true_peak_dbtp = round(float(20.0 * np.log10(max(peak, 1e-10))), 2)
         result.true_peak_ok = result.true_peak_dbtp <= -1.0
 
@@ -170,7 +170,7 @@ def compute_export_transparency(
             # Prüfe ob POW-r verfügbar ist
             result.dither_method = "POW-r Type 3"  # Primär via AudioExporter
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             result.dither_method = "TPDF (Fallback)"
     elif bit_depth >= 24:
         result.dither_method = "none (24-bit — kein Dithering nötig)"

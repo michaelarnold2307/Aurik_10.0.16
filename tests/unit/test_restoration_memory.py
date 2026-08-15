@@ -270,12 +270,12 @@ class TestFixAbcCassetteHissNoveltyFlutter:
         )
 
     def test_uv3_sft_novelty_crit_high_triggers_full_rollback_in_restoration(self):
-        """Fix B / §G71: SFT NOVELTY_CRIT verwendet dynamische Wet-Ceilings aus CalibrationContext.
+        """Fix B / §G71 (GEBOTE.md): SFT NOVELTY_CRIT verwendet dynamische Wet-Ceilings aus CalibrationContext.
 
         §v10.35: NIEMALS wet=0.0 für NOVELTY_CRIT — selbst kritische Novelty behält min. 20% Phase-Output.
         LEVEL_COLLAPSE löst wet=0.0 aus (Prioritätskette §G70).
-        NOVELTY_CRIT verwendet depth-adaptive Ceilings aus calibrate_sft_thresholds() (§G71).
-        min_strength skaliert mit restorability_score (§G71).
+        NOVELTY_CRIT verwendet depth-adaptive Ceilings aus calibrate_sft_thresholds() (§G71 (GEBOTE.md)).
+        min_strength skaliert mit restorability_score (§G71 (GEBOTE.md)).
         """
         import pathlib
 
@@ -295,16 +295,16 @@ class TestFixAbcCassetteHissNoveltyFlutter:
             "Fix B fehlt: is_studio_mode()-Check in SFT ArtifactRescue nicht vorhanden! "
             "Restoration-only Rollback muss via not self.is_studio_mode() gesichert sein."
         )
-        # §G71 Dynamische Wet-Ceilings aus CalibrationContext (nicht mehr hartcodiert 0.80/0.70)
+        # §G71 (GEBOTE.md) Dynamische Wet-Ceilings aus CalibrationContext (nicht mehr hartcodiert 0.80/0.70)
         assert "get_sft_wet_ceilings" in source, (
-            "§G71 fehlt: get_sft_wet_ceilings() nicht in UV3! "
+            "§G71 (GEBOTE.md) fehlt: get_sft_wet_ceilings() nicht in UV3! "
             "Wet-Ceilings müssen aus calibrate_sft_thresholds() kommen, nicht hartcodiert 0.70/0.80."
         )
-        # §G71 min_strength aus Restorability (joint_calibrator)
+        # §G71 (GEBOTE.md) min_strength aus Restorability (joint_calibrator)
         jcal_path = pathlib.Path(__file__).parent.parent.parent / "backend" / "core" / "joint_calibrator.py"
         jcal_source = jcal_path.read_text(encoding="utf-8") if jcal_path.exists() else ""
         assert "restorability_score" in jcal_source, (
-            "§G71 fehlt: joint_calibrator muss restorability_score für adaptive min_strength akzeptieren."
+            "§G71 (GEBOTE.md) fehlt: joint_calibrator muss restorability_score für adaptive min_strength akzeptieren."
         )
 
     def test_phase12_cassette_has_same_confidence_threshold_as_tape(self):

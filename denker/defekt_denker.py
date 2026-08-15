@@ -307,7 +307,9 @@ class DefektDenker:
             except Exception as exc:
                 logger.warning("DefektDenker: reason() fehlgeschlagen (%s).", exc)
 
-        result = DefektErgebnis.from_bericht(self._to_bericht(defect_scores, plan, material), raw_scan_result=scan_result)
+        result = DefektErgebnis.from_bericht(
+            self._to_bericht(defect_scores, plan, material), raw_scan_result=scan_result
+        )
         if _consensus_manifest is not None:
             result._consensus_manifest = _consensus_manifest
         return result

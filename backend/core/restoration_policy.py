@@ -12,7 +12,7 @@ def _clamp(value: Any, lower: float, upper: float, fallback: float = 0.0) -> flo
     try:
         number = float(value)
     except Exception:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         number = fallback
     if number != number:
         number = fallback

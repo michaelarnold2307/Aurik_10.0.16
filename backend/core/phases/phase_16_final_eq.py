@@ -350,7 +350,7 @@ class FinalEQ(PhaseInterface):
             except Exception as _pm_exc:
                 logger.debug("Verarbeitungsschritt16 masking clamp nicht blockierend: %s", _pm_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_p16,
@@ -358,10 +358,12 @@ class FinalEQ(PhaseInterface):
 
             _sc_result_p16 = _scg_p16(audio, eq_audio, sample_rate)
             if not _sc_result_p16.ok:
-                _sc_wet_p16 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_p16 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 eq_audio = (_sc_wet_p16 * eq_audio + (1.0 - _sc_wet_p16) * audio).astype(np.float32)
         except Exception as _sc_exc_p16:
-            logger.debug("§V24 Verarbeitungsschritt_16 spectral_color nicht blockierend: %s", _sc_exc_p16)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_16 spectral_color nicht blockierend: %s", _sc_exc_p16
+            )
 
         # §V26 Onset-Schutz nach EQ (§2.77, non-blocking)
         try:

@@ -134,6 +134,7 @@ class ONNXInferenceSession:
             if "MIGraphXExecutionProvider" in self.providers:
                 try:
                     from backend.core.migraphx_adapter import MIGraphXSession
+
                     self.session = MIGraphXSession(
                         self.model_path,
                         providers=self.providers,
@@ -142,13 +143,9 @@ class ONNXInferenceSession:
                     logger.info("ONNX Sitzung via MIGraphX (GPU): %s", self.model_path.name)
                 except Exception as _mgx_exc:
                     logger.debug("MIGraphX session fallback: %s", _mgx_exc)
-                    self.session = ort.InferenceSession(
-                        str(self.model_path), sess_options, providers=self.providers
-                    )
+                    self.session = ort.InferenceSession(str(self.model_path), sess_options, providers=self.providers)
             else:
-                self.session = ort.InferenceSession(
-                    str(self.model_path), sess_options, providers=self.providers
-                )
+                self.session = ort.InferenceSession(str(self.model_path), sess_options, providers=self.providers)
 
             # Cache input/output names and shapes
             self.input_name = self.session.get_inputs()[0].name

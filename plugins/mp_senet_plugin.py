@@ -192,7 +192,11 @@ class MpSenetPlugin:
                 if fail_reason is not None:
                     return enhanced, fail_reason, "omlsa_dsp_fallback"
                 return enhanced, None, "mp_senet_onnx"
-            return self._omlsa_fallback(ch, sr), None, "omlsa_dsp_fallback"  # §V6: logger.warning handled at call site
+            return (
+                self._omlsa_fallback(ch, sr),
+                None,
+                "omlsa_dsp_fallback",
+            )  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
         if stereo:
             left, fail_left, used_left = process_channel(audio[:, 0])

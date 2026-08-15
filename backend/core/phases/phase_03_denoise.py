@@ -518,7 +518,7 @@ class DenoisePhase(PhaseInterface):
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
         effective_strength = float(np.clip(effective_strength * phase_locality_factor, 0.0, 1.0))
 
-        # §G78 CalibrationContext: Kalibrierter Stärke-Cap aus Messwerten.
+        # §G78 (GEBOTE.md) CalibrationContext: Kalibrierter Stärke-Cap aus Messwerten.
         _calib_cap = kwargs.get("phase03_strength_cap")
         if _calib_cap is not None:
             effective_strength = min(effective_strength, float(_calib_cap))
@@ -717,9 +717,7 @@ class DenoisePhase(PhaseInterface):
             # von breitbandigem Rauschen (→1): flatness < 0.05 = tonal/sauber.
             try:
                 _snr_win_f = min(2048, max(64, len(_snr_chunk) // 2))
-                _snr_freqs, _snr_psd = signal.welch(
-                    _snr_chunk, fs=sample_rate, nperseg=_snr_win_f, window="hann"
-                )
+                _snr_freqs, _snr_psd = signal.welch(_snr_chunk, fs=sample_rate, nperseg=_snr_win_f, window="hann")
                 _snr_band = np.sqrt(np.maximum(_snr_psd[_snr_freqs >= 100.0], 1e-12))
                 _snr_flatness = float(np.exp(np.mean(np.log(_snr_band))) / (np.mean(_snr_band) + 1e-12))
                 if _snr_flatness < 0.05:
@@ -1497,12 +1495,15 @@ class DenoisePhase(PhaseInterface):
         if _sota_eligible:
             try:
                 from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
+
                 _sota_pipeline = SOTADenoisePipeline()
                 _sota_result = _sota_pipeline.process(audio, int(sample_rate))
                 audio = _sota_result.audio
                 logger.info(
                     "§v10.200 SOTA 4-Layer Denoiser applied: genre=%s layers=%s time=%.1fs",
-                    _sota_result.genre, _sota_result.layers_applied, _sota_result.processing_time,
+                    _sota_result.genre,
+                    _sota_result.layers_applied,
+                    _sota_result.processing_time,
                 )
             except Exception as e:
                 logger.debug("SOTA 4-Layer not available, falling back to DFN: %s", e)
@@ -2189,7 +2190,7 @@ class DenoisePhase(PhaseInterface):
                 "§TimbralCoherence noise_texture_resynth Verarbeitungsschritt03 (nicht blockierend): %s", _ntr_exc_p03
             )
 
-        # §G3 OMLSA post-DFN Restglätter (SOTA Matrix: "DFN v3 + OMLSA Restglätter danach").
+        # §G3 (GEBOTE.md) OMLSA post-DFN Restglätter (SOTA Matrix: "DFN v3 + OMLSA Restglätter danach").
         # Nach DFN verbleiben spektrale Gain-Ripple (Musical Noise). IMCRA Noise-PSD → Wiener-
         # Gain mit G_floor=0.10 → 25 % Wet-Blend. Nur wenn DFN tatsächlich aktiv war.
         if _dfn_applied and _panns_singing >= 0.10:
@@ -2292,10 +2293,12 @@ class DenoisePhase(PhaseInterface):
                     if np.isfinite(_g3_result).all():
                         result_audio = np.clip(_g3_result.astype(np.float32), -1.0, 1.0)
                         logger.debug(
-                            "§G3 OMLSA post-DFN: G_floor=%.2f wet=%.2f (Musical-Noise-Glättung)", _G_floor_g3, _wet_g3
+                            "§G3 (GEBOTE.md) OMLSA post-DFN: G_floor=%.2f wet=%.2f (Musical-Noise-Glättung)",
+                            _G_floor_g3,
+                            _wet_g3,
                         )
             except Exception as _g3_exc:
-                logger.debug("§G3 OMLSA post-DFN nicht blockierend: %s", _g3_exc)
+                logger.debug("§G3 (GEBOTE.md) OMLSA post-DFN nicht blockierend: %s", _g3_exc)
 
         # §0p VQI per-Phase Gate: Bei Vokalaufnahmen VQI messen und bei Rollback-Grenzwert
         # auf Eingangs-Audio zurückfallen, um Stimmqualitätsverlust durch NR zu verhindern.
@@ -2347,7 +2350,7 @@ class DenoisePhase(PhaseInterface):
                     "VQI per-Verarbeitungsschritt Verarbeitungsschritt03 (nicht blockierend): %s", _vqi_exc_p03
                 )
 
-        # §G1 Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-NR.
+        # §G1 (GEBOTE.md) Formant ±2 dB Guard (§0p RELEASE_MUST): F1–F4 via LPC post-NR.
         # VQI allein erkennt keine subtilen Formantverschiebungen < 2 dB —
         # hier direkt Spektralenergie-Shift an Formant-Bändern messen.
         if _is_vocal_material and _panns_singing >= 0.25:
@@ -2369,16 +2372,18 @@ class DenoisePhase(PhaseInterface):
                 if _fg_rollback_p03:
                     result_audio = _post_nr_guard_ref_audio.copy()
                     logger.warning(
-                        "§G1 FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB > %.1f dB → Rollback",
+                        "§G1 (GEBOTE.md) FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB > %.1f dB → Rollback",
                         _fg_shift_p03,
                         _fg_tol_p03,
                     )
                 else:
-                    logger.debug("§G1 FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB — OK", _fg_shift_p03)
+                    logger.debug(
+                        "§G1 (GEBOTE.md) FormantGuard Verarbeitungsschritt_03: max F-shift %.2f dB — OK", _fg_shift_p03
+                    )
             except Exception as _fg_p03_exc:
-                logger.debug("§G1 FormantGuard Verarbeitungsschritt_03 nicht blockierend: %s", _fg_p03_exc)
+                logger.debug("§G1 (GEBOTE.md) FormantGuard Verarbeitungsschritt_03 nicht blockierend: %s", _fg_p03_exc)
 
-        # §G2 Breath-Segment Protection (§2.46f + §Frisson): EMOTIONAL_TENSION Atemgeräusche
+        # §G2 (GEBOTE.md) Breath-Segment Protection (§2.46f + §Frisson): EMOTIONAL_TENSION Atemgeräusche
         # sind Naturalness-Marker — NR-Output in diesen Zonen mit Original zurückblenden.
         # breath_segments aus _restoration_context (über UV3 injiziert, §0p).
         _breath_segs_p03 = list(kwargs.get("breath_segments", []) or [])
@@ -2424,10 +2429,11 @@ class DenoisePhase(PhaseInterface):
                 if _blended_any_p03:
                     result_audio = np.clip(np.nan_to_num(_result_blend_p03, nan=0.0), -1.0, 1.0).astype(np.float32)
                     logger.debug(
-                        "§G2 BreathProtect Verarbeitungsschritt_03: %d tension-segs geschützt", len(_breath_segs_p03)
+                        "§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_03: %d tension-segs geschützt",
+                        len(_breath_segs_p03),
                     )
             except Exception as _g2_p03_exc:
-                logger.debug("§G2 BreathProtect Verarbeitungsschritt_03 nicht blockierend: %s", _g2_p03_exc)
+                logger.debug("§G2 (GEBOTE.md) BreathProtect Verarbeitungsschritt_03 nicht blockierend: %s", _g2_p03_exc)
 
         # §Gap3 PhraseBoundaryGuard — taper DSP artifacts at phrase transitions (§0p Vocal-Supremacy)
         try:
@@ -2519,7 +2525,7 @@ class DenoisePhase(PhaseInterface):
             except Exception as _nf03_exc:
                 logger.debug("Verarbeitungsschritt03 V21 Noise-Floor-Guard (nicht blockierend): %s", _nf03_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach NR (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_03,
@@ -2529,12 +2535,14 @@ class DenoisePhase(PhaseInterface):
             _sc_threshold_03 = float(np.clip(0.97 - (_transfer_depth_p03 - 1) * 0.08, 0.65, 0.97))
             _sc_result_03 = _scg_03(_post_nr_guard_ref_audio, result_audio, sample_rate, threshold=_sc_threshold_03)
             if not _sc_result_03.ok:
-                _sc_wet_03 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_03 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 result_audio = (_sc_wet_03 * result_audio + (1.0 - _sc_wet_03) * _post_nr_guard_ref_audio).astype(
                     np.float32
                 )
         except Exception as _sc_exc_03:  # pylint: disable=broad-except
-            logger.debug("§V24 Verarbeitungsschritt_03 spectral_color nicht blockierend: %s", _sc_exc_03)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_03 spectral_color nicht blockierend: %s", _sc_exc_03
+            )
 
         # V26 Onset-Guard (§2.77): HPSS-Onset-Fenster (0–20 ms nach Transient) dürfen durch
         # NR nicht energetisch beeinflusst werden (VERBOTEN-V26).
@@ -3579,7 +3587,7 @@ class DenoisePhase(PhaseInterface):
         e_min = float(_hz_to_cam(np.array([100.0]))[0])
         e_max = float(_hz_to_cam(np.array([float(sr) / 2.0]))[0])
         erb_edges = np.linspace(e_min, e_max, N_ERB + 1)
-        band_idx = np.clip(np.searchsorted(erb_edges[1:], _hz_to_cam(freqs)), 0, N_ERB - 1).astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        band_idx = np.clip(np.searchsorted(erb_edges[1:], _hz_to_cam(freqs)), 0, N_ERB - 1).astype(np.int32)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
         return band_idx  # type: ignore[no-any-return]
 
     def _estimate_noise_profile_adaptive(  # pylint: disable=unused-argument

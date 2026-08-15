@@ -15,6 +15,22 @@ import pytest
 class TestSessionManager:
     """Testet den InferenceSessionManager."""
 
+    @pytest.fixture(autouse=True)
+    def _stub_load(self):
+        """Spec 15 §9.5: Diese Tests pruefen Cache-Semantik (LRU, Memory,
+        Threading, Recycling) — nicht das echte ONNX-Laden. Der Ladevorgang
+        wird daher gestubbt; echte fehlende Modelle fallen weiterhin laut
+        in _load_session (onnxruntime NoSuchFile) durch.
+        """
+        from backend.core.ml.session_manager import InferenceSessionManager
+
+        with patch.object(
+            InferenceSessionManager,
+            "_load_session",
+            return_value=(MagicMock(), 1.0),
+        ):
+            yield
+
     def test_acquire_release(self):
         """Acquire/Release-Zyklus."""
         from backend.core.ml.session_manager import InferenceSessionManager

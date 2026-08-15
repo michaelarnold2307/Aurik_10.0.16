@@ -100,7 +100,7 @@ class TestVocalExcellencePipelineWiring:
             in content
         )
         assert (
-            '"singer_id_dsp_fallback": (self._phase_metadata_accumulator or {}).get("singer_id_dsp_fallback")'  # §V6: logger.warning handled at call site
+            '"singer_id_dsp_fallback": (self._phase_metadata_accumulator or {}).get("singer_id_dsp_fallback")'  # §V6 (copilot-instructions.md): logger.warning handled at call site
             in content
         )
         assert '"vqi_tier": (self._phase_metadata_accumulator or {}).get("vqi_tier")' in content
@@ -145,7 +145,7 @@ class TestVocalExcellencePipelineWiring:
 
         assert "_singmos_needs_phase65 = _singmos_val < 2.5" in content
         assert "singmos_phase65_recovery" in content
-        assert "§G4 SingMOS Phase_65-Recovery" in content
+        assert "§G4 (GEBOTE.md) SingMOS Phase_65-Recovery" in content
 
     def test_import_temporal_coherence_failure_is_repair_driver_not_export_judgment(self) -> None:
         content = _UV3.read_text(encoding="utf-8")

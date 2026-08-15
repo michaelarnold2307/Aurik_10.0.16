@@ -238,7 +238,10 @@ class AlbumConsistencyPass:
         if abs(correction_db) < 1e-6:
             return audio.copy()
 
-        sos = self._build_shelf_sos(correction_db, 3000.0, sr)
+        # V11: zero-phase (sosfiltfilt) statt kausalem sosfilt — keine
+        # Phasendrehung/destruktive Interferenz. Halbe Gain-Designierung
+        # kompensiert die doppelte Anwendung (|H|²), Gesamtkorrektur ≈ correction_db.
+        sos = self._build_shelf_sos(correction_db / 2.0, 3000.0, sr)
 
         was_1d = audio.ndim == 1
         work = np.atleast_2d(audio)
@@ -247,7 +250,12 @@ class AlbumConsistencyPass:
 
         import scipy.signal as _sig
 
-        out = _sig.sosfilt(sos, work, axis=0)
+        try:
+            out = _sig.sosfiltfilt(sos, work, axis=0)
+        except ValueError:
+            # Kurzsignal (z.B. Test-Segmente): filtfilt-Padding nicht möglich —
+            # kausale Phase ist bei dieser Länge vernachlässigbar.
+            out = _sig.sosfilt(sos, work, axis=0)
         if was_1d:
             out = out.flatten()
 

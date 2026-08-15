@@ -553,7 +553,7 @@ class DynamicRangeExpansion(PhaseInterface):
         except Exception as _hg26_exc:
             logger.debug("§2.46e Verarbeitungsschritt_26 Hallucination-Guard (nicht blockierend): %s", _hg26_exc)
 
-        # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Dynamic-Expansion darf Spektralfarbe nicht verändern
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung (§2.74, non-blocking): Dynamic-Expansion darf Spektralfarbe nicht verändern
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg26,
@@ -563,9 +563,13 @@ class DynamicRangeExpansion(PhaseInterface):
             if not _sc26.ok:
                 _sc26_wet = 0.70
                 expanded_audio = (_sc26_wet * expanded_audio + (1.0 - _sc26_wet) * audio).astype(np.float32)
-                logger.warning("§V24 Verarbeitungsschritt_26 spectral_color non-ok → strength −30%%")
+                logger.warning(
+                    "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_26 spectral_color non-ok → strength −30%%"
+                )
         except Exception as _sc26_exc:
-            logger.debug("§V24 Verarbeitungsschritt_26 spectral_color (nicht blockierend): %s", _sc26_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_26 spectral_color (nicht blockierend): %s", _sc26_exc
+            )
 
         return PhaseResult(
             success=True,
@@ -868,5 +872,5 @@ class DynamicRangeExpansion(PhaseInterface):
             noise_floor_rms = float(np.percentile(rms, 5))
             return float(20.0 * np.log10(max(noise_floor_rms, 1e-12)))
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             return -40.0  # safe fallback

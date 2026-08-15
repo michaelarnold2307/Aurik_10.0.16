@@ -728,6 +728,10 @@ class BreathPreservingProcessor:
         #   2. Onset detection → excludes consonants (sharp attack)
         #   3. Spectral tilt → separates breath (falling) from sibilance (rising)
         # Result: only true breath segments are reduced, consonants/sibilance untouched.
+        # Detector/Classifier liefern die künstlerische Breath-Maske — sie gilt in
+        # BEIDEN Pfaden (§Artistic-Breath-Contract), nicht nur im Fallback.
+        breath_mask = self._detect_breath_regions(audio, characteristics)
+        artistic_breath = self._classify_breath_artistic(audio, breath_mask, characteristics)
         try:
             from backend.core.transient_breath_processor import (
                 classify_breath_frame,
@@ -743,17 +747,14 @@ class BreathPreservingProcessor:
             )
         except Exception as _tb_exc:
             logger.debug("Transient-Breath nicht verfügbar, fallback: %s", _tb_exc)
-            # Fallback to original binary ZCR/energy processing (no regression)
-            breath_mask = self._detect_breath_regions(audio, characteristics)
-            artistic_breath = self._classify_breath_artistic(audio, breath_mask, characteristics)
             processed = audio.copy()
-            for start, end in breath_mask:
-                is_artistic = artistic_breath.get((start, end), True)
-                if is_artistic:
-                    reduction_factor = 1.0 - ((1.0 - preservation_ratio) * 0.2)
-                else:
-                    reduction_factor = 1.0 - (1 - preservation_ratio) * 0.8
-                processed[start:end] *= reduction_factor
+        for start, end in breath_mask:
+            is_artistic = artistic_breath.get((start, end), True)
+            if is_artistic:
+                reduction_factor = 1.0 - ((1.0 - preservation_ratio) * 0.2)
+            else:
+                reduction_factor = 1.0 - (1 - preservation_ratio) * 0.8
+            processed[start:end] *= reduction_factor
 
         return processed, preservation_ratio
 
@@ -926,8 +927,8 @@ class UnifiedVocalAIEnhancer:
             # Mid/Side-Transformation: bearbeite nur M-Kanal, S-Kanal unberührt.
             try:
                 from backend.core.stereo_aware_vocal_processor import (
-                    process_vocal_mid_side,
                     compute_stereo_preservation_score,
+                    process_vocal_mid_side,
                 )
 
                 result_audio = process_vocal_mid_side(

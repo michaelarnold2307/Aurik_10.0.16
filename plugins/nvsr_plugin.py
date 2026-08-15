@@ -287,7 +287,7 @@ class NvsrPlugin:
             _e_out = float(np.mean(np.abs(_Zout[_hf_mask]) ** 2)) + 1e-20
             hf_added_db = float(10.0 * np.log10(_e_out / _e_in))
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("nvsr_plugin.py::_verarbeiten_dsp_sbr energy calc Ersatzpfad", exc_info=True)
 
         self._last_route_metadata = self._metadata(
@@ -514,7 +514,7 @@ class NvsrPlugin:
                 )
                 self._onnx_available = True
             except Exception as _onnx_load_exc:
-                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             except Exception as _onnx_load_exc:
                 logger.debug("NvsrPlugin: ONNX-Modell nicht verfügbar (DSP-SBR aktiv): %s", _onnx_load_exc)
                 self._onnx_available = False

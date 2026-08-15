@@ -452,7 +452,7 @@ class SemanticAudioPhase(PhaseInterface):
                 finally:
                     _release_ml_budget("BEATs_phase53")
         except Exception as _imp_err:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("Verarbeitungsschritt 53: BEATs-Import nicht verfügbar (%s) — DSP-only", _imp_err)
 
         meta = {

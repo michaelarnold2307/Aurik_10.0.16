@@ -56,7 +56,7 @@ def test_bridge_quality_colors_match_ui_palette():
     bridge_src = _read("backend/api/bridge.py")
     palette_src = _read("Aurik10/ui/ui_constants.py")
 
-    palette_hexes = set(re.findall(r'#[0-9A-Fa-f]{6}', palette_src))
+    palette_hexes = set(re.findall(r"#[0-9A-Fa-f]{6}", palette_src))
     # Bridge-seitige Qualitätsfarben (nur die drei depth-Abstufungen)
     bridge_colors = re.findall(r'color = "(#[0-9A-Fa-f]{6})" if depth >= \d else "\1"', bridge_src)
     # einfacher: alle Hex-Werte im _build_bridge_calibration_dict-Block
@@ -164,9 +164,15 @@ def test_status_panel_has_sota_methods():
 def test_ui_constants_palette_defined():
     src = _read("Aurik10/ui/ui_constants.py")
     for token in (
-        "SURFACE_BG", "TEXT_PRIMARY", "TEXT_MUTED",
-        "QUALITY_STUDIO", "QUALITY_MODERATE", "QUALITY_DEEP_CHAIN",
-        "STATUS_OK_TEXT", "STATUS_CRIT_BG", "BADGE_MATERIAL_TEXT",
+        "SURFACE_BG",
+        "TEXT_PRIMARY",
+        "TEXT_MUTED",
+        "QUALITY_STUDIO",
+        "QUALITY_MODERATE",
+        "QUALITY_DEEP_CHAIN",
+        "STATUS_OK_TEXT",
+        "STATUS_CRIT_BG",
+        "BADGE_MATERIAL_TEXT",
     ):
         assert f"{token} =" in src, f"Palette-Token {token} fehlt"
 
@@ -209,9 +215,13 @@ def test_bridge_exports_sota_accessors():
     assert m, "__all__ fehlt in bridge.py"
     body = m.group(1)
     for name in (
-        "get_model_zoo_summary", "get_sota_chain_status",
-        "get_defect_consensus_summary", "get_repair_plan_summary", "get_guard_report",
-        "get_repair_plan_consent", "get_restoration_bericht",
+        "get_model_zoo_summary",
+        "get_sota_chain_status",
+        "get_defect_consensus_summary",
+        "get_repair_plan_summary",
+        "get_guard_report",
+        "get_repair_plan_consent",
+        "get_restoration_bericht",
     ):
         assert f'"{name}"' in body, f"{name} fehlt in __all__"
 
@@ -229,20 +239,48 @@ def test_bridge_repair_plan_consent_layman_language():
 
     manifest = DefectManifest(
         defects=[
-            DefectHypothesis(category=DefectCategory.HISS, start_sample=0, end_sample=1000,
-                             confidence=0.8, severity=0.2, source_module="x"),
-            DefectHypothesis(category=DefectCategory.CRACKLE, start_sample=0, end_sample=1000,
-                             confidence=0.9, severity=0.5, source_module="x"),
-            DefectHypothesis(category=DefectCategory.CLICK, start_sample=0, end_sample=1000,
-                             confidence=0.95, severity=0.7, source_module="x"),
+            DefectHypothesis(
+                category=DefectCategory.HISS,
+                start_sample=0,
+                end_sample=1000,
+                confidence=0.8,
+                severity=0.2,
+                source_module="x",
+            ),
+            DefectHypothesis(
+                category=DefectCategory.CRACKLE,
+                start_sample=0,
+                end_sample=1000,
+                confidence=0.9,
+                severity=0.5,
+                source_module="x",
+            ),
+            DefectHypothesis(
+                category=DefectCategory.CLICK,
+                start_sample=0,
+                end_sample=1000,
+                confidence=0.95,
+                severity=0.7,
+                source_module="x",
+            ),
         ],
     )
-    plan = RepairPlan(steps=[
-        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
-                   defect_category="crackle", affected_samples=[]),
-        RepairStep(phase_id="phase_03_denoise", priority=RepairPriority.BREITBAND,
-                   defect_category="hiss", affected_samples=[]),
-    ])
+    plan = RepairPlan(
+        steps=[
+            RepairStep(
+                phase_id="phase_09_crackle_removal",
+                priority=RepairPriority.TRANSIENT,
+                defect_category="crackle",
+                affected_samples=[],
+            ),
+            RepairStep(
+                phase_id="phase_03_denoise",
+                priority=RepairPriority.BREITBAND,
+                defect_category="hiss",
+                affected_samples=[],
+            ),
+        ]
+    )
 
     class _DefektResult:
         _consensus_manifest = manifest
@@ -287,12 +325,22 @@ def test_bridge_repair_plan_summary_has_aligned_actions():
     from backend.api.bridge import get_repair_plan_summary
     from backend.core.coordinated_repair import RepairPlan, RepairPriority, RepairStep
 
-    plan = RepairPlan(steps=[
-        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
-                   defect_category="crackle", affected_samples=[]),
-        RepairStep(phase_id="phase_03_denoise", priority=RepairPriority.BREITBAND,
-                   defect_category="hiss", affected_samples=[]),
-    ])
+    plan = RepairPlan(
+        steps=[
+            RepairStep(
+                phase_id="phase_09_crackle_removal",
+                priority=RepairPriority.TRANSIENT,
+                defect_category="crackle",
+                affected_samples=[],
+            ),
+            RepairStep(
+                phase_id="phase_03_denoise",
+                priority=RepairPriority.BREITBAND,
+                defect_category="hiss",
+                affected_samples=[],
+            ),
+        ]
+    )
     summary = get_repair_plan_summary(plan)
     assert summary["phase_order"] == ["phase_09_crackle_removal", "phase_03_denoise"]
     assert summary["actions"] == ["Knistern entfernen", "Rauschen reduzieren"]
@@ -315,15 +363,19 @@ def test_status_panel_live_plan_tracker():
     panel.show()
     app.processEvents()
 
-    panel.set_repair_consent({
-        "found": [{"label": "Knistern", "severity": "Stark"}],
-        "will_do": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
-    })
-    panel.set_repair_plan_summary({
-        "step_count": 3,
-        "phase_order": ["phase_09_crackle_removal", "phase_03_denoise", "phase_06_frequency_restoration"],
-        "actions": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
-    })
+    panel.set_repair_consent(
+        {
+            "found": [{"label": "Knistern", "severity": "Stark"}],
+            "will_do": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
+        }
+    )
+    panel.set_repair_plan_summary(
+        {
+            "step_count": 3,
+            "phase_order": ["phase_09_crackle_removal", "phase_03_denoise", "phase_06_frequency_restoration"],
+            "actions": ["Knistern entfernen", "Rauschen reduzieren", "Höhen rekonstruieren"],
+        }
+    )
 
     # Vor dem Start: statische Einwilligung
     assert "Aurik wird: Knistern entfernen" in panel._consent_label.text()
@@ -360,10 +412,12 @@ def test_status_panel_consent_renders():
     panel.resize(1000, 120)
     panel.show()
     app.processEvents()
-    panel.set_repair_consent({
-        "found": [{"label": "Knistern", "severity": "Stark"}],
-        "will_do": ["Knistern entfernen", "Rauschen reduzieren"],
-    })
+    panel.set_repair_consent(
+        {
+            "found": [{"label": "Knistern", "severity": "Stark"}],
+            "will_do": ["Knistern entfernen", "Rauschen reduzieren"],
+        }
+    )
     assert panel._consent_label.isVisible()
     assert "Gefunden: Knistern" in panel._consent_label.text()
     assert "Aurik wird: Knistern entfernen" in panel._consent_label.toolTip()
@@ -437,9 +491,13 @@ def test_bridge_crash_report_accessors():
 
 
 def test_main_installs_crash_handler():
-    """§v10.993: Der GUI-Start MUSS den Exception-Hook installieren (sonst toter Code)."""
+    """§v10.993: Der GUI-Start MUSS den Exception-Hook installieren (sonst toter Code).
+
+    §11-UI-Bridge (normativ): Der Import läuft über backend.api.bridge — direkte
+    backend.core-Importe in Aurik10/ sind verboten (test_ui_bridge_only_imports).
+    """
     src = _read("Aurik10/main.py")
-    assert "from backend.core.crash_reporter import install_crash_handler" in src
+    assert "from backend.api.bridge import install_crash_handler" in src
     assert "install_crash_handler()" in src
 
 
@@ -477,14 +535,28 @@ def test_bridge_restoration_bericht_closes_the_loop():
     from backend.core.coordinated_repair import RepairPlan, RepairPriority, RepairStep
     from backend.core.defect_consensus_pipeline import DefectCategory, DefectHypothesis, DefectManifest
 
-    manifest = DefectManifest(defects=[
-        DefectHypothesis(category=DefectCategory.CRACKLE, start_sample=0, end_sample=1000,
-                         confidence=0.9, severity=0.5, source_module="x"),
-    ])
-    plan = RepairPlan(steps=[
-        RepairStep(phase_id="phase_09_crackle_removal", priority=RepairPriority.TRANSIENT,
-                   defect_category="crackle", affected_samples=[]),
-    ])
+    manifest = DefectManifest(
+        defects=[
+            DefectHypothesis(
+                category=DefectCategory.CRACKLE,
+                start_sample=0,
+                end_sample=1000,
+                confidence=0.9,
+                severity=0.5,
+                source_module="x",
+            ),
+        ]
+    )
+    plan = RepairPlan(
+        steps=[
+            RepairStep(
+                phase_id="phase_09_crackle_removal",
+                priority=RepairPriority.TRANSIENT,
+                defect_category="crackle",
+                affected_samples=[],
+            ),
+        ]
+    )
 
     class _Defect:
         _consensus_manifest = manifest
@@ -550,7 +622,7 @@ def test_live_mitheoren_toggle_and_position_memory():
     assert "# §v10.999: Läuft der Zwischenstand bereits? → Stoppen statt Neustart" in src
     assert "self._playback_is_live_preview = True" in src
     # Positionsgedächtnis: Start an der zuletzt gehörten Stelle
-    assert "_start = float(getattr(self, \"_live_playback_frac\", 0.0) or 0.0)" in src
+    assert '_start = float(getattr(self, "_live_playback_frac", 0.0) or 0.0)' in src
     assert "self._play_audio(_safe_preview, _preview_sr, start_pos_frac=_start)" in src
     # Beim Stoppen wird die aktuelle Position gemerkt
     assert "self._live_playback_frac = float(_sp.position_frac)" in src
@@ -588,24 +660,26 @@ def test_results_summary_dialog_shows_bericht():
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
-    dlg = ResultsSummaryDialog({
-        "file_name": "test.wav",
-        "restoration_bericht": {
-            "found": [{"label": "Knistern", "severity": "Stark"}],
-            "planned": ["Knistern entfernen"],
-            "done_count": 3,
-            "skipped_count": 0,
-            "deferred_count": 0,
-            "no_effect_count": 0,
-            "guards": {
-                "guards": {"truepeak": 0, "pumping": 0, "formant": 0, "spectral": 0},
-                "utmos_loop": {"iterations": 5},
+    dlg = ResultsSummaryDialog(
+        {
+            "file_name": "test.wav",
+            "restoration_bericht": {
+                "found": [{"label": "Knistern", "severity": "Stark"}],
+                "planned": ["Knistern entfernen"],
+                "done_count": 3,
+                "skipped_count": 0,
+                "deferred_count": 0,
+                "no_effect_count": 0,
+                "guards": {
+                    "guards": {"truepeak": 0, "pumping": 0, "formant": 0, "spectral": 0},
+                    "utmos_loop": {"iterations": 5},
+                },
+                "proof": {"verdict": "Knistern entfernt."},
             },
-            "proof": {"verdict": "Knistern entfernt."},
-        },
-        "quality_before": None,
-        "quality_after": None,
-    })
+            "quality_before": None,
+            "quality_after": None,
+        }
+    )
     dlg.show()
     app.processEvents()
     from PyQt5.QtWidgets import QLabel

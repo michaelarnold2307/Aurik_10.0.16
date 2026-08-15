@@ -539,7 +539,7 @@ class ReparaturDenker:
             mask = mask & location_mask
 
         # Clicks zählen (verbundene Regionen)
-        clicks = int(np.sum(np.diff(mask.astype(np.int8)) > 0))  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        clicks = int(np.sum(np.diff(mask.astype(np.int8)) > 0))  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
 
         if clicks == 0:
             return audio, 0

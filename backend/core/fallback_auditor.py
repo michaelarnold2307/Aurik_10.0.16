@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 class FallbackEvent:
     component: str  # "SingMOS", "UV3", "HPE", etc.
     gold_standard: str  # "versa_singmos_pro", "unified_restorer_v3", etc.
-    fallback_used: str  # "pqs_dsp", "passthrough", etc.  # §V6: logger.warning handled at call site
+    fallback_used: (
+        str  # "pqs_dsp", "passthrough", etc.  # §V6 (copilot-instructions.md): logger.warning handled at call site
+    )
     reason: str  # "device_mismatch", "syntax_error", "timeout", etc.
     severity: str = "warning"  # "info", "warning", "error"
 
@@ -110,8 +112,18 @@ class FallbackAuditor:
 
     _fallback_patterns: list[tuple[str, str, str, str]] = [
         # (keyword_in_message, component, gold_standard, fallback_name)
-        ("DSP-Fallback", "ML-Model", "GPU", "DSP"),  # §V6: logger.warning handled at call site
-        ("DSP fallback", "ML-Model", "GPU", "DSP"),  # §V6: logger.warning handled at call site
+        (
+            "DSP-Fallback",
+            "ML-Model",
+            "GPU",
+            "DSP",
+        ),  # §V6 (copilot-instructions.md): logger.warning handled at call site
+        (
+            "DSP fallback",
+            "ML-Model",
+            "GPU",
+            "DSP",
+        ),  # §V6 (copilot-instructions.md): logger.warning handled at call site
         ("pYIN-Fallback", "PitchDetection", "FCPE/CREPE", "pYIN"),
         ("passthrough", "Pipeline", "FullRestoration", "Passthrough"),
         ("nicht verfügbar", "Plugin", "FullML", "DSP"),

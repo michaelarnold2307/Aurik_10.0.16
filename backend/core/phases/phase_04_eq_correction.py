@@ -766,7 +766,7 @@ class EQCorrectionPhase(PhaseInterface):
         except Exception as _sot_exc:
             logger.debug("§C7 Spectral-OT nicht blockierend: %s", _sot_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach EQ (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_p04,
@@ -774,10 +774,12 @@ class EQCorrectionPhase(PhaseInterface):
 
             _sc_result_p04 = _scg_p04(audio, result_audio, sample_rate)
             if not _sc_result_p04.ok:
-                _sc_wet_p04 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_p04 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 result_audio = (_sc_wet_p04 * result_audio + (1.0 - _sc_wet_p04) * audio).astype(np.float32)
         except Exception as _sc_exc_p04:
-            logger.debug("§V24 Verarbeitungsschritt_04 spectral_color nicht blockierend: %s", _sc_exc_p04)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_04 spectral_color nicht blockierend: %s", _sc_exc_p04
+            )
 
         # §V26 Onset-Schutz nach EQ (§2.77, non-blocking)
         try:

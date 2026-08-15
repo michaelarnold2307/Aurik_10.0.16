@@ -30,23 +30,24 @@ log = logging.getLogger(__name__)
 SR = 48000
 
 # Schwellwerte
-TRUEPEAK_LIMIT_DBFS = 0.0      # 0 dBFS — darüber = Clipping
-TRUEPEAK_WARN_DBFS = -0.5      # Warnschwelle
+TRUEPEAK_LIMIT_DBFS = 0.0  # 0 dBFS — darüber = Clipping
+TRUEPEAK_WARN_DBFS = -0.5  # Warnschwelle
 PUMPING_GAIN_MODULATION_MAX = 0.15  # max. 15% Gain-Modulation pro 100ms
-FORMANT_DRIFT_MAX = 0.08       # max. 8% Formant-Drift
+FORMANT_DRIFT_MAX = 0.08  # max. 8% Formant-Drift
 SPECTRAL_NOISE_RISE_MAX_DB = 1.5  # §v10.850: max. +1.5 dB Rauschfloor-Anstieg (8-20 kHz)
 
 
 @dataclass
 class GuardResult:
     """Ergebnis einer Artefakt-Prüfung."""
+
     passed: bool
     truepeak_dbfs: float
-    pumping_index: float         # 0-1, 0 = kein Pumpen
-    formant_drift: float         # 0-1, 0 = keine Drift
+    pumping_index: float  # 0-1, 0 = kein Pumpen
+    formant_drift: float  # 0-1, 0 = keine Drift
     spectral_noise_rise_db: float = 0.0  # §v10.850: Anstieg des Rauschfloors
     violations: list[str] = field(default_factory=list)
-    blended_back: bool = False   # Wurde Strength automatisch reduziert?
+    blended_back: bool = False  # Wurde Strength automatisch reduziert?
 
 
 class PostRepairArtifactGuard:
@@ -67,6 +68,7 @@ class PostRepairArtifactGuard:
     def _init_detectors(self):
         try:
             from backend.core.vocal_overprocessing_detector import VocalOverprocessingDetector
+
             self._overprocessing = VocalOverprocessingDetector()
             log.debug("Artifact Guard: VocalOverprocessingDetector geladen")
         except Exception as exc:
@@ -197,7 +199,7 @@ class PostRepairArtifactGuard:
                 s = i * (n_fft // 2)
                 if s + n_fft > len(x):
                     continue  # letzter unvollständiger Frame
-                frame = x[s:s + n_fft] * window
+                frame = x[s : s + n_fft] * window
                 spec[i] = np.abs(np.fft.rfft(frame)) + 1e-12
             freqs = np.fft.rfftfreq(n_fft, 1 / sr)
             hf_mask = freqs >= 8000
@@ -238,6 +240,7 @@ class PostRepairArtifactGuard:
 # Integration in Coordinated Repair
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 def run_post_repair_guard(
     audio_pre: np.ndarray,
     audio_post: np.ndarray,
@@ -260,7 +263,8 @@ def run_post_repair_guard(
         result.blended_back = True
         log.warning(
             "Artifact Guard %s: Verstöße %s → Strength reduziert (Blend 70/30)",
-            phase_id, result.violations,
+            phase_id,
+            result.violations,
         )
         return corrected, result
 

@@ -36,11 +36,11 @@ from scipy.special import exp1
 logger = logging.getLogger(__name__)
 
 # IMCRA/OMLSA-Konstanten (Cohen 2003 / Cohen & Berdugo 2002)
-_ALPHA_SMOOTH = 0.85      # Zeitglättung der Periodogramm-Schätzung
-_ALPHA_DD = 0.98          # Decision-Directed Gewicht (a-priori-SNR)
-_XI_MIN = 10 ** (-2.5)    # Floor a-priori-SNR (~-25 dB)
+_ALPHA_SMOOTH = 0.85  # Zeitglättung der Periodogramm-Schätzung
+_ALPHA_DD = 0.98  # Decision-Directed Gewicht (a-priori-SNR)
+_XI_MIN = 10 ** (-2.5)  # Floor a-priori-SNR (~-25 dB)
 _GAMMA_FLOOR = 1e-3
-_SPEECH_DELTA = 5.0       # Lokale-Minimum-Ratio-Schwelle für Sprach-Präsenz (≈7 dB)
+_SPEECH_DELTA = 5.0  # Lokale-Minimum-Ratio-Schwelle für Sprach-Präsenz (≈7 dB)
 _TONAL_PROTECT_DB = 25.0  # Bins > 25 dB über Median/Rauschboden gelten als tonal
 
 

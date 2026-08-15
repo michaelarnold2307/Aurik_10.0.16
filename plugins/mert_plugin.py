@@ -103,9 +103,7 @@ class MertAnalysis:
     spectral_flux_coherence: float = 0.0  # [0, 1] — Ev. Flux-Kohärenz
     estimated_f0_hz: float = 0.0  # Gemittelte Grundfrequenz in Hz
     naturalness_score: float = 0.0  # Kombinierter NAT-Score [0, 1]
-    model_used: str = (
-        "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"  # §V6: logger.warning handled at call site
-    )
+    model_used: str = "dsp_fallback"  # "mert_onnx", "mert_hf", "dsp_fallback"  # §V6 (copilot-instructions.md): logger.warning handled at call site
     analysis_frames: int = 0  # Anzahl analysierter Frames
     extra: dict = field(default_factory=dict)
 
@@ -641,7 +639,8 @@ class MertPlugin:
                     if not ml_budget_try_allocate(_budget_key, size_gb=_budget_gb):
                         logger.warning(
                             "MERT ONNX %s: ML-Budget erschöpft (%.2f GB) → nächster Versuch",
-                            _model_type, _budget_gb,
+                            _model_type,
+                            _budget_gb,
                         )
                         continue
             except Exception as _exc:
@@ -654,9 +653,11 @@ class MertPlugin:
                 self._model_type = _model_type
                 logger.info("MERT ONNX geladen (%s): %s", _model_type, _onnx_path.name)
                 try:
+
                     def _unload_mert_model() -> None:
                         self._model = None
                         self._model_type = "dsp"
+
                     register_plugin(
                         _budget_key,
                         size_gb=_budget_gb,
@@ -986,7 +987,7 @@ def unload_mert() -> None:
     """Entlädt das MERT-Modell aus dem RAM und gibt das Budget frei.
 
     Nach dem Entladen fällt jeder nachfolgende Aufruf automatisch auf
-    DSP-Fallback zurück (MertPlugin._model_type == 'dsp_fallback').  # §V6: logger.warning handled at call site
+    DSP-Fallback zurück (MertPlugin._model_type == 'dsp_fallback').  # §V6 (copilot-instructions.md): logger.warning handled at call site
     Aufruf: nach Abschluss der Analyse-Phase in der Pipeline.
     """
     plugin = _mert_state["default"]

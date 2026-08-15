@@ -41,7 +41,9 @@ class DFNExpandedDenoiser:
     """PyTorch GPU Denoiser mit DFN Expanded Gewichten (0.298 Val Loss)."""
 
     def __init__(self):
-        from df.config import config; config.use_defaults()
+        from df.config import config
+
+        config.use_defaults()
         from df.deepfilternet3 import init_model
 
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -49,8 +51,7 @@ class DFNExpandedDenoiser:
 
         ckpt = torch.load(str(_CHECKPOINT), map_location=self._device, weights_only=True)
         self._model.load_state_dict(ckpt["model_state_dict"])
-        logger.info("DFN Expanded geladen: epoch %s, val_loss=%.4f",
-                     ckpt.get("epoch", "?"), ckpt.get("val_loss", 0.0))
+        logger.info("DFN Expanded geladen: epoch %s, val_loss=%.4f", ckpt.get("epoch", "?"), ckpt.get("val_loss", 0.0))
 
         self._window = torch.hann_window(N_FFT, device=self._device)
         self._erb_fb = torch.from_numpy(self._build_erb()).to(self._device)
@@ -59,19 +60,22 @@ class DFNExpandedDenoiser:
     def _build_erb() -> np.ndarray:
         n_bins = N_FFT // 2 + 1
         freqs = np.linspace(0, SR / 2, n_bins)
-        def hz2erb(f): return 21.4 * np.log10(1.0 + f / 229.0 + 1e-9)
+
+        def hz2erb(f):
+            return 21.4 * np.log10(1.0 + f / 229.0 + 1e-9)
+
         erb_max = hz2erb(np.array([SR / 2]))[0]
         edges = np.linspace(hz2erb(np.array([0.0]))[0], erb_max, N_ERB + 1)
         fb = np.zeros((N_ERB, n_bins), dtype=np.float32)
         for b in range(N_ERB):
             lo, hi = edges[b], edges[b + 1]
             mask = (hz2erb(freqs) >= lo) & (hz2erb(freqs) < hi)
-            if mask.sum() > 0: fb[b, mask] = 1.0 / mask.sum()
+            if mask.sum() > 0:
+                fb[b, mask] = 1.0 / mask.sum()
         return fb
 
     def _extract_features(self, audio: torch.Tensor) -> tuple:
-        spec = torch.stft(audio, n_fft=N_FFT, hop_length=HOP,
-                          window=self._window, return_complex=True)
+        spec = torch.stft(audio, n_fft=N_FFT, hop_length=HOP, window=self._window, return_complex=True)
         mag = spec.abs()
         erb_e = torch.matmul(self._erb_fb, mag)
         feat_erb = torch.log1p(erb_e).unsqueeze(1).transpose(2, 3)
@@ -125,9 +129,9 @@ class DFNExpandedDenoiser:
             if len(chunk) < CHUNK_SAMPLES:
                 chunk = np.pad(chunk, (0, CHUNK_SAMPLES - len(chunk)), mode="reflect")
             processed = self._process_chunk(chunk, CHUNK_SAMPLES)
-            w = window[:len(processed)]
-            result[pos:pos+len(processed)] += processed * w
-            weight[pos:pos+len(processed)] += w
+            w = window[: len(processed)]
+            result[pos : pos + len(processed)] += processed * w
+            weight[pos : pos + len(processed)] += w
 
         weight = np.maximum(weight, 1e-8)
         return (result / weight).astype(np.float32)
@@ -140,6 +144,5 @@ class DFNExpandedDenoiser:
             enh, _, _, _ = self._model.forward(spec=spec, feat_erb=feb, feat_spec=fsp)
 
         enhanced = torch.complex(enh[0, 0, :, :, 0], enh[0, 0, :, :, 1]).T.unsqueeze(0)
-        out = torch.istft(enhanced, n_fft=N_FFT, hop_length=HOP,
-                          window=self._window, length=target_len)
+        out = torch.istft(enhanced, n_fft=N_FFT, hop_length=HOP, window=self._window, length=target_len)
         return out.cpu().numpy().squeeze()

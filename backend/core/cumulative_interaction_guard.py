@@ -586,12 +586,19 @@ MAX_CUMULATIVE_DRIFT = -0.05
 MAX_CONSECUTIVE_ROLLBACKS = 5
 
 
+def _resolve_transfer_chain_depth(value: int | None) -> int:
+    """§G86 (GEBOTE.md): Default nur aus CalibrationContext."""
+    from backend.core.defect_to_audibility import _resolve_transfer_chain_depth as _resolve
+
+    return _resolve(value)
+
+
 def compute_adaptive_drift_tolerance(
     restorability_score: float = 50.0,
     material_type: str = "cd_digital",
     defect_severity_mean: float = 0.0,
     n_active_phases: int = 10,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> float:
     """§2.54 Adaptive Drift-Toleranz — ersetzt feste -0.05-Konstante.
 
@@ -604,6 +611,7 @@ def compute_adaptive_drift_tolerance(
     Returns:
         Negative float, e.g. -0.03 (CD, light) to -0.25 (shellac, heavily degraded).
     """
+    transfer_chain_depth = _resolve_transfer_chain_depth(transfer_chain_depth)
     # Base tolerance by material class
     _MATERIAL_BASE: dict[str, float] = {
         "cd_digital": -0.03,
@@ -656,7 +664,7 @@ def compute_adaptive_drift_tolerance(
 
 def compute_adaptive_max_rollbacks(
     n_carrier_phases: int = 3,
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
 ) -> int:
     """§2.54 Adaptive max consecutive rollbacks.
 
@@ -667,6 +675,7 @@ def compute_adaptive_max_rollbacks(
     §v10.120: Deeper transfer chains have more phases running at full
     strength → more legitimate rollbacks expected. +1 per depth above 2.
     """
+    transfer_chain_depth = _resolve_transfer_chain_depth(transfer_chain_depth)
     _depth = max(1, int(transfer_chain_depth))
     _depth_bonus = max(0, _depth - 2)
     return max(5, n_carrier_phases + 2 + _depth_bonus)
@@ -821,7 +830,12 @@ class InteractionGuardState:
     # §2.56 Song-Goal-Importance: per-goal weights for weighted drift
     goal_weights: dict[str, float] | None = None
     # §v10.117 Chain-Depth für GDD-Schwelle
-    transfer_chain_depth: int = 1
+    transfer_chain_depth: int | None = None
+
+    def __post_init__(self) -> None:
+        """§G86 (GEBOTE.md): transfer_chain_depth-Default nur aus CalibrationContext."""
+        if self.transfer_chain_depth is None:
+            self.transfer_chain_depth = _resolve_transfer_chain_depth(None)
 
 
 class CumulativeInteractionGuard:
@@ -847,7 +861,7 @@ class CumulativeInteractionGuard:
         n_active_phases: int = 10,
         n_carrier_phases: int = 3,
         goal_weights: dict[str, float] | None = None,
-        transfer_chain_depth: int = 1,
+        transfer_chain_depth: int | None = None,
     ) -> None:
         """Set the pre-pipeline P1/P2 baseline scores before any phases run.
 
@@ -862,6 +876,7 @@ class CumulativeInteractionGuard:
         §2.54: Computes material-adaptive drift tolerance and max rollbacks
         from the concrete song context — not hard-coded constants.
         """
+        transfer_chain_depth = _resolve_transfer_chain_depth(transfer_chain_depth)
         # §2.29c canonical thresholds (Restoration — Pareto-Differenzierung §9.10.77)
         # Keys müssen mit measure_all()-Output übereinstimmen (deutsch).
         _CANONICAL_BASELINES: dict[str, float] = {

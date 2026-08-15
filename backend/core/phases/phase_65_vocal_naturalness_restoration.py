@@ -595,7 +595,7 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
         _p65_meta["vqi_before"] = round(_vqi_before, 4)
         _p65_meta["vqi_after"] = round(_vqi_after, 4)
 
-        # §V24 Spektralfarbe-Prüfung nach Vokal-Naturalness-Restaurierung (§2.74, non-blocking)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach Vokal-Naturalness-Restaurierung (§2.74, non-blocking)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_65,
@@ -603,10 +603,12 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
 
             _sc_result_65 = _scg_65(audio, result, sample_rate)
             if not _sc_result_65.ok:
-                _sc_wet_65 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_65 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 result = (_sc_wet_65 * result + (1.0 - _sc_wet_65) * audio).astype(np.float32)
         except Exception as _sc_exc_65:
-            logger.debug("§V24 Verarbeitungsschritt_65 spectral_color nicht blockierend: %s", _sc_exc_65)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_65 spectral_color nicht blockierend: %s", _sc_exc_65
+            )
 
         # V26 Onset-Guard (§2.77): Vokal-Onset-Transients schützen (non-blocking)
         try:
@@ -672,12 +674,14 @@ class VocalNaturalnessRestorationPhase(PhaseInterface):
             if _nt65_d > _nt65_thr:
                 result = (0.5 * result + 0.5 * audio).astype(np.float32)
                 logger.warning(
-                    "§V19 Verarbeitungsschritt_65 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
+                    "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_65 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
                     _nt65_d,
                     _nt65_thr,
                 )
         except Exception as _nt65_exc:
-            logger.debug("§V19 Verarbeitungsschritt_65 noise_texture (nicht blockierend): %s", _nt65_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_65 noise_texture (nicht blockierend): %s", _nt65_exc
+            )
 
         if _p65_transposed:
             result = result.T

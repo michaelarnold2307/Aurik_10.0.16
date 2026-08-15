@@ -5,7 +5,7 @@ LyricsTranscriber Plugin — Whisper-Tiny ONNX (§2.36 Aurik Spec v10.0.0b)
 Transkribiert Gesangs-Audio zu Wort-Zeitstempeln. Kein Netzwerkzugriff.
 
 Modell:   models/whisper/whisper_tiny.onnx (39 MB, MIT, lokal gebündelt)
-Fallback: DSP-Energiesegmentierung — stiller Fallback, kein Absturz  # §V6: logger.warning handled at call site
+Fallback: DSP-Energiesegmentierung — stiller Fallback, kein Absturz  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
 Spec §2.36:
     - WordTimestamp (word, start_s, end_s, confidence, is_stressed, phoneme_type)
@@ -58,7 +58,7 @@ class LyricsTranscriptionResult:
     language: str  # ISO 639-1 (z. B. "de", "en")
     overall_confidence: float  # Mittlere Konfidenz aller Wörter ∈ [0, 1]
     duration_s: float  # Audio-Länge in Sekunden
-    fallback_used: bool  # True wenn DSP-Fallback (kein Whisper)  # §V6: logger.warning handled at call site
+    fallback_used: bool  # True wenn DSP-Fallback (kein Whisper)  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +162,7 @@ class LyricsTranscriber:
                 logger.debug("Operation failed (non-critical): %s", _exc)
 
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.info("Whisper-ONNX nicht verfügbar — DSP-Energie-Fallback aktiv: %s", exc)
             try:
                 from backend.core.ml_memory_budget import release as _rel
@@ -208,7 +208,7 @@ class LyricsTranscriber:
                 result = self._session.run(None, {"input": mono})
                 return self._decode_result(result, sr, duration_s)
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("Whisper-Inferenz fehlgeschlagen, DSP-Fallback: %s", exc)
 
         return self._transcribe_dsp_fallback(mono, sr, duration_s)

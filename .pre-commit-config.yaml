@@ -397,6 +397,22 @@ repos:
         pass_filenames: false
         files: ^(backend|plugins|denker|Aurik10|cli|tests/unit)/.*\.py$
 
+      # ID-Registry — R1/R2 fail-closed (Zitierdisziplin AGENTS.md §5)
+      - id: aurik-id-registry
+        name: "ID-Registry-Check (R1 unbekannt / R2 nackt-ambig fail-closed)"
+        entry: .venv_aurik/bin/python scripts/id_registry_check.py --strict
+        language: system
+        pass_filenames: true
+        files: \.py$
+
+      # Ear-Critical-Parität — Ohr-Schutzregeln müssen Code+Test haben (fail-closed)
+      - id: aurik-ear-parity
+        name: "Ear-Critical-Parity (Regel→Code→Test; deferred nur mit Begründung)"
+        entry: .venv_aurik/bin/python scripts/ear_critical_parity_check.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
       # §v10.15 Gebote-Verifier — Non-Plus-Ultra-Compliance
       - id: gebote-verifier
         name: "§v10.15 Gebote-Verifier — 25/25 GEBOTE-Compliance"

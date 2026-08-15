@@ -2286,6 +2286,11 @@ def _build_reverse_phase_map() -> dict[str, list[DefectType]]:
         # Loudness-Normalisierung ist kein defektgebundener Repair-Step für
         # die severity-proportionale Wet/Dry-Skalierung.
         "phase_40_loudness_normalization",
+        # §0a/§Test: Enhancement-Phasen gehören NICHT in die Reverse-Map —
+        # sie sind klangverbessernd, nicht defektgebunden (keine Severity-Skalierung).
+        "phase_13_stereo_enhancement",
+        "phase_21_exciter",
+        "phase_17_mastering_polish",
     }
     for defect_type, assignment in _PHASE_MAP.items():
         for phase_id in assignment.primary_phases:

@@ -403,7 +403,7 @@ def _pghi_phase_reconstruction(mag: np.ndarray, n_fft: int, hop: int) -> np.ndar
     PGHI Phase Gradient Heap Integration (Perraudin et al. 2013).
 
     Primary path: uses PGHIReconstructor from dsp/pghi.py (full algorithm).
-    Fallback: Instantaneous Frequency estimation if dsp/pghi not available.  # §V6: logger.warning handled at call site
+    Fallback: Instantaneous Frequency estimation if dsp/pghi not available.  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
     Args:
         mag: [n_bins × n_frames] float32
@@ -778,9 +778,16 @@ class SpectralBandGapRepairPhase(PhaseInterface):
                 logger.debug("Verarbeitungsschritt56 §V41 ForwardMaskingGuard nicht blockierend: %s", _fmg_exc_56)
 
         if effective_strength <= 1e-6:
-            return create_phase_result(
-                audio,
-                modifications={"skipped_zero_strength": True},
+            # §0a Zero-Strength-Passthrough: bit-identische Rueckgabe (kein Soft-Clip, das die
+            # Peaks des Originals ändern würde). §3.1: nur NaN/Inf-Bereinigung.
+            _passthrough_56 = np.nan_to_num(np.asarray(audio, dtype=np.float32), nan=0.0, posinf=0.0, neginf=0.0)
+            return PhaseResult(
+                audio=_passthrough_56,
+                success=True,
+                execution_time_seconds=0.0,
+                ml_used=False,
+                quality_estimate=1.0,
+                _skip_soft_clip=True,  # §0a: bit-identischer Passthrough
                 metadata={
                     "algorithm": "skipped_zero_strength",
                     "phase_locality_factor": phase_locality_factor,

@@ -1,8 +1,8 @@
 """Export-Pipeline-Integrationstest. 10.0.20 Upgrade #5.
 
 Verifiziert die vollständige Export-Pipeline:
-- CD-Rauschprofil-Injektion (§G4)
-- POW-r Type 3 Dither (§V5)
+- CD-Rauschprofil-Injektion (§G4 (GEBOTE.md))
+- POW-r Type 3 Dither (§V5 (copilot-instructions.md))
 - Atomic Write
 - Alle Formate (FLAC, WAV, MP3, OGG)
 """

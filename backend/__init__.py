@@ -85,10 +85,11 @@ def _safe_stft(
     )
 
 
-_scipy_signal.stft = _safe_stft
-# §v10.115 DEPRECATED: safe_stft/safe_istft monkey-patches bleiben für Rückwärtskompatibilität.
-# Alle Phasen verwenden jetzt explizit `from backend.core.audio_utils import safe_stft, safe_istft`.
-# Diese Monkey-Patches werden in v10.18 entfernt. Siehe Spec 22 (M1 Safe-STFT-Wrapper).
+# §22/v10.115: Kein globaler scipy.signal.stft-Monkey-Patch mehr.
+# Der globale Patch verfälschte die Frame-Geometrie für Fremd-Consumer
+# (z. B. dsp/advanced_dereverb, scipy-Nutzer in Tests) → STFT/ISTFT-Versatz.
+# Phasen verwenden explizit `from backend.core.audio_utils import safe_stft, safe_istft`.
+# Der attribut-basierte Zugriff bleibt für Rückwärtskompatibilität erhalten:
 _scipy_signal.safe_stft = _safe_stft
 
 

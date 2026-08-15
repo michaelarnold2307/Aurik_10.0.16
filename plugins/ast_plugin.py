@@ -155,8 +155,7 @@ class AstPlugin:
             top_k=list(top),
             embeddings=np.zeros(768, dtype=np.float32),
             model_used="ast_onnx",
-            raw_scores=np.asarray(scores, dtype=np.float32) if scores is not None
-            else np.zeros(527, dtype=np.float32),
+            raw_scores=np.asarray(scores, dtype=np.float32) if scores is not None else np.zeros(527, dtype=np.float32),
         )
 
     def get_tags(self, audio: np.ndarray, sr: int = 48000, top_k: int = 15) -> dict[str, float]:

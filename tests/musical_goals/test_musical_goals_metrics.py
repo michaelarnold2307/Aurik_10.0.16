@@ -1324,7 +1324,9 @@ class TestEmotionalitaetMetricMERTBlend:
         audio = self._dynamic_audio()
 
         # Get DSP-only baseline (dsp_fallback → no blend)
-        mock_fallback, _ = self._mock_mert("dsp_fallback", 0.0)  # §V6: logger.warning handled at call site
+        mock_fallback, _ = self._mock_mert(
+            "dsp_fallback", 0.0
+        )  # §V6 (copilot-instructions.md): logger.warning handled at call site
         with patch("plugins.mert_plugin.get_mert_plugin", return_value=mock_fallback):
             dsp_baseline = EmotionalitaetMetric().measure(audio, self.SR)
 
@@ -1364,7 +1366,9 @@ class TestEmotionalitaetMetricMERTBlend:
         audio = self._dynamic_audio()
 
         # Reference: dsp_fallback (blend skipped)
-        mock_fallback, _ = self._mock_mert("dsp_fallback", 0.99)  # §V6: logger.warning handled at call site
+        mock_fallback, _ = self._mock_mert(
+            "dsp_fallback", 0.99
+        )  # §V6 (copilot-instructions.md): logger.warning handled at call site
         with patch("plugins.mert_plugin.get_mert_plugin", return_value=mock_fallback):
             score_ref = EmotionalitaetMetric().measure(audio, self.SR)
 

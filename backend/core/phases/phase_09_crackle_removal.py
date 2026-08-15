@@ -1255,9 +1255,15 @@ class CrackleRemovalPhase(PhaseInterface):
                 # Wenn die Rauschtextur nach Crackle-Entfernung zu stark vom
                 # Original abweicht (>0.25), wird per 50%-Blend zurückgeregelt —
                 # "do no harm" für den natürlichen Noise-Charakter.
-                logger.info("§V19 Verarbeitungsschritt_09 noise_texture dist=%.3f > 0.25 → 50%%-Blend", _nt09_d)
+                logger.info(
+                    "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_09 noise_texture dist=%.3f > 0.25 → 50%%-Blend",
+                    _nt09_d,
+                )
         except Exception as _nt09_exc:
-            logger.debug("§V19 Verarbeitungsschritt_09 noise_texture_guard (nicht blockierend): %s", _nt09_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_09 noise_texture_guard (nicht blockierend): %s",
+                _nt09_exc,
+            )
 
         # §V24 Spektralfarbe-Prüfung (VERBOTEN-V24): 1/3-Oktav-Profil darf nicht verfärbt werden
         try:
@@ -1284,7 +1290,10 @@ class CrackleRemovalPhase(PhaseInterface):
             if not _sc09.ok:
                 restored = (0.70 * restored + 0.30 * audio).astype(np.float32)
         except Exception as _sc09_exc:
-            logger.debug("§V24 Verarbeitungsschritt_09 spectral_color_guard (nicht blockierend): %s", _sc09_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_09 spectral_color_guard (nicht blockierend): %s",
+                _sc09_exc,
+            )
 
         # §2.71 Strength-Envelope: Chirurgische Crackle-Entfernung
         _strength_env = kwargs.get("strength_envelope")
@@ -1427,7 +1436,7 @@ class CrackleRemovalPhase(PhaseInterface):
                 predicted = lfilter([1.0], a_filter, filtered)
                 residual = filtered - predicted
             except Exception:
-                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
                 residual = filtered  # Fallback: residual = filtered signal
         else:
             residual = filtered

@@ -85,7 +85,11 @@ def test_block_lms_removes_echo():
     x[delay:] += alpha_true * clean[:-delay]
 
     out = _lms_bilateral_subtraction(
-        x=x, delay_pre=0, delay_post=delay, alpha_pre_max=0.1, alpha_post_max=0.9,
+        x=x,
+        delay_pre=0,
+        delay_post=delay,
+        alpha_pre_max=0.1,
+        alpha_post_max=0.9,
     )
     # Echo-Energie im Ausgang deutlich reduziert (Korrelation mit verschobenem Signal sinkt)
     residual_echo = np.corrcoef(out[delay:], clean[:-delay])[0, 1]

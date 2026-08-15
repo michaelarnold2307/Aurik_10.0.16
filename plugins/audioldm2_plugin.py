@@ -657,10 +657,11 @@ class AudioLDM2Plugin:
         # Resample to 16 kHz for AudioLDM2
         if sr != self.TARGET_SR:
             from math import gcd
+
             from scipy.signal import resample_poly
+
             g = gcd(sr, self.TARGET_SR)
-            mono_16k = resample_poly(mono.astype(np.float64),
-                                     self.TARGET_SR // g, sr // g).astype(np.float32)
+            mono_16k = resample_poly(mono.astype(np.float64), self.TARGET_SR // g, sr // g).astype(np.float32)
         else:
             mono_16k = mono.astype(np.float32)
 
@@ -672,6 +673,7 @@ class AudioLDM2Plugin:
             prompt = "clean high quality audio, studio recording, professional mastering"
             try:
                 from plugins.panns_plugin import get_panns_plugin
+
                 _panns = get_panns_plugin()
                 _panns_tags = _panns.get_tags(audio, sr)
                 _top_tag = max(_panns_tags.items(), key=lambda x: x[1], default=("", 0.0))
@@ -694,10 +696,9 @@ class AudioLDM2Plugin:
             generated = self.generate_array(prompt=prompt, duration=duration, guidance=3.0)
             # Match length to original
             if len(generated) > len(mono_16k):
-                generated = generated[:len(mono_16k)]
+                generated = generated[: len(mono_16k)]
             elif len(generated) < len(mono_16k):
-                generated = np.pad(generated, (0, len(mono_16k) - len(generated)),
-                                   mode='edge')
+                generated = np.pad(generated, (0, len(mono_16k) - len(generated)), mode="edge")
 
             # Crossfade: blend generated clean with original
             # strength=0 → all original, strength=1 → all generated
@@ -711,14 +712,15 @@ class AudioLDM2Plugin:
             # Resample back to original sample rate
             if sr != self.TARGET_SR:
                 g2 = gcd(self.TARGET_SR, sr)
-                denoised = resample_poly(denoised_16k.astype(np.float64),
-                                         sr // g2, self.TARGET_SR // g2).astype(np.float32)
+                denoised = resample_poly(denoised_16k.astype(np.float64), sr // g2, self.TARGET_SR // g2).astype(
+                    np.float32
+                )
                 # Match original length
                 orig_len = audio.shape[-1] if audio.ndim == 2 else len(audio)
                 if len(denoised) > orig_len:
                     denoised = denoised[:orig_len]
                 elif len(denoised) < orig_len:
-                    denoised = np.pad(denoised, (0, orig_len - len(denoised)), mode='edge')
+                    denoised = np.pad(denoised, (0, orig_len - len(denoised)), mode="edge")
             else:
                 denoised = denoised_16k
 
@@ -728,7 +730,9 @@ class AudioLDM2Plugin:
 
             logger.info(
                 "AudioLDM2 denoise: strength=%.2f duration=%.1fs prompt='%s'",
-                strength, duration, prompt,
+                strength,
+                duration,
+                prompt,
             )
             return denoised.astype(np.float32)
 

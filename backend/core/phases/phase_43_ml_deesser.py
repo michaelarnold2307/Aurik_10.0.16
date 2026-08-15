@@ -989,7 +989,7 @@ class AdaptiveDeEsserPhase(PhaseInterface):
         except Exception as _nt43_exc:
             logger.debug("Verarbeitungsschritt43 V19 Noise-Textur-Guard (nicht blockierend): %s", _nt43_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach De-Essing (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach De-Essing (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_43,
@@ -997,10 +997,12 @@ class AdaptiveDeEsserPhase(PhaseInterface):
 
             _sc_result_43 = _scg_43(audio, processed, sample_rate)
             if not _sc_result_43.ok:
-                _sc_wet_43 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_43 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 processed = (_sc_wet_43 * processed + (1.0 - _sc_wet_43) * audio).astype(np.float32)
         except Exception as _sc_exc_43:
-            logger.debug("§V24 Verarbeitungsschritt_43 spectral_color nicht blockierend: %s", _sc_exc_43)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_43 spectral_color nicht blockierend: %s", _sc_exc_43
+            )
 
         # V26 Onset-Guard (§2.77): Sibilanten-Transients nach De-Essing schützen (non-blocking)
         try:

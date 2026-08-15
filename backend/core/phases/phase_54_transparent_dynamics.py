@@ -605,7 +605,7 @@ class TransparentDynamicsV1(PhaseInterface):
         except Exception as _npa54_exc:
             logger.debug("§2.46f Verarbeitungsschritt_54 NPA-Guard (nicht blockierend): %s", _npa54_exc)
 
-        # §V24 Spektralfarbe-Prüfung nach Dynamik-Kompression (§2.74, non-blocking WARNING)
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung nach Dynamik-Kompression (§2.74, non-blocking WARNING)
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg_54,
@@ -613,10 +613,12 @@ class TransparentDynamicsV1(PhaseInterface):
 
             _sc_result_54 = _scg_54(audio, audio_out, sample_rate)
             if not _sc_result_54.ok:
-                _sc_wet_54 = 0.70  # Phase-Strength −30 % (§V24)
+                _sc_wet_54 = 0.70  # Phase-Strength −30 % (§V24 (Spec-Vintage-Guard))
                 audio_out = (_sc_wet_54 * audio_out + (1.0 - _sc_wet_54) * audio).astype(np.float32)
         except Exception as _sc_exc_54:
-            logger.debug("§V24 Verarbeitungsschritt_54 spectral_color nicht blockierend: %s", _sc_exc_54)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_54 spectral_color nicht blockierend: %s", _sc_exc_54
+            )
 
         # V26 Onset-Guard (§2.77): Transients nach Dynamik-Kompression schützen (non-blocking)
         try:

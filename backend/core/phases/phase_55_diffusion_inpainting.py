@@ -25,7 +25,7 @@ ALGORITHMUS — Dreistufige Masked Diffusion:
   3. **Plugin-Pfad** (optional, wenn DiffWave-Gewichte vorhanden):
      - Lädt `plugins/diffwave_plugin.py` dynamisch
      - Konditioniert mit linkem+rechtem Kontext-Mel-Spektrogramm
-     - Fallback auf DSP-Diffusion bei fehlenden Gewichten  # §V6: logger.warning handled at call site
+     - Fallback auf DSP-Diffusion bei fehlenden Gewichten  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
 METRIKEN:
   - n_gaps_detected: Anzahl erkannter Lücken
@@ -1401,7 +1401,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
                 _mask_mono_p55 = _silence_mask_p55.ravel()[:_n_samp_p55]
                 _is_sil_p55 = _mask_mono_p55 < 0.5
                 if np.any(_is_sil_p55):
-                    _padded_p55 = np.concatenate(([False], _is_sil_p55, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+                    _padded_p55 = np.concatenate(([False], _is_sil_p55, [False])).astype(np.int8)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
                     _changes_p55 = np.diff(_padded_p55)
                     _sil_starts_p55 = np.where(_changes_p55 == 1)[0].tolist()
                     _sil_ends_p55 = np.where(_changes_p55 == -1)[0].tolist()
@@ -1687,7 +1687,7 @@ class DiffusionInpaintingPhase(PhaseInterface):
         except Exception as _guard55_exc:
             logger.debug("§2.46f/§2.46e Verarbeitungsschritt55 guards (nicht blockierend): %s", _guard55_exc)
 
-        # §V19 Noise-Textur-Invariante (§NTI): Residual-Rauschen darf Material-Profil nicht ändern (non-blocking)
+        # §V19 (Spec-Vintage-Guard) Noise-Textur-Invariante (§NTI): Residual-Rauschen darf Material-Profil nicht ändern (non-blocking)
         try:
             from backend.core.dsp.noise_texture_guard import (  # pylint: disable=import-outside-toplevel
                 compute_noise_texture_distance as _nt55_fn,
@@ -1698,14 +1698,16 @@ class DiffusionInpaintingPhase(PhaseInterface):
             if _nt55_d > _nt55_thr:
                 repaired = (0.5 * repaired + 0.5 * source_audio).astype(np.float32)
                 logger.warning(
-                    "§V19 Verarbeitungsschritt_55 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
+                    "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_55 noise_texture_distance=%.3f > %.2f → 50%% Dry-Blend",
                     _nt55_d,
                     _nt55_thr,
                 )
         except Exception as _nt55_exc:
-            logger.debug("§V19 Verarbeitungsschritt_55 noise_texture (nicht blockierend): %s", _nt55_exc)
+            logger.debug(
+                "§V19 (Spec-Vintage-Guard) Verarbeitungsschritt_55 noise_texture (nicht blockierend): %s", _nt55_exc
+            )
 
-        # §V24 Spektralfarbe-Prüfung (§2.74, non-blocking): Inpainting darf Spektralfarbe nicht verändern
+        # §V24 (Spec-Vintage-Guard) Spektralfarbe-Prüfung (§2.74, non-blocking): Inpainting darf Spektralfarbe nicht verändern
         try:
             from backend.core.dsp.spectral_color_guard import (  # pylint: disable=import-outside-toplevel
                 check_spectral_color_preservation as _scg55,
@@ -1715,9 +1717,13 @@ class DiffusionInpaintingPhase(PhaseInterface):
             if not _sc55.ok:
                 _sc55_wet = 0.70
                 repaired = (_sc55_wet * repaired + (1.0 - _sc55_wet) * source_audio).astype(np.float32)
-                logger.warning("§V24 Verarbeitungsschritt_55 spectral_color non-ok → strength −30%%")
+                logger.warning(
+                    "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_55 spectral_color non-ok → strength −30%%"
+                )
         except Exception as _sc55_exc:
-            logger.debug("§V24 Verarbeitungsschritt_55 spectral_color (nicht blockierend): %s", _sc55_exc)
+            logger.debug(
+                "§V24 (Spec-Vintage-Guard) Verarbeitungsschritt_55 spectral_color (nicht blockierend): %s", _sc55_exc
+            )
 
         return PhaseResult(
             success=True,

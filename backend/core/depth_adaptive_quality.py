@@ -6,7 +6,7 @@ Depth-4 cassettes never achieve AF 0.95 → memory stays empty → HPI falls bac
 to default → quality assessment underestimates good restorations.
 
 Solution: Depth-dependent AF threshold modulated by transfer chain depth and
-restorability score. Same calibration pattern as SFT novelty (§G71).
+restorability score. Same calibration pattern as SFT novelty (§G71 (GEBOTE.md)).
 
 Also includes: VERSA degradation-aware fallback for SNR < 10 dB material.
 
@@ -17,8 +17,16 @@ Usage:
     )
 """
 
+
+def _resolve_transfer_chain_depth(value: int | None) -> int:
+    """§G86 (GEBOTE.md): Default nur aus CalibrationContext."""
+    from backend.core.defect_to_audibility import _resolve_transfer_chain_depth as _resolve
+
+    return _resolve(value)
+
+
 def depth_adaptive_af_threshold(
-    transfer_chain_depth: int = 1,
+    transfer_chain_depth: int | None = None,
     restorability_score: float = 50.0,
 ) -> float:
     """Compute the minimum acceptable artifact_freedom for a given restoration context.
@@ -37,6 +45,7 @@ def depth_adaptive_af_threshold(
 
     Returns threshold in [0.50, 0.95].
     """
+    transfer_chain_depth = _resolve_transfer_chain_depth(transfer_chain_depth)
     # Base threshold by depth
     if transfer_chain_depth <= 1:
         base = 0.95

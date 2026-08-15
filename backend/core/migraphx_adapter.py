@@ -114,15 +114,15 @@ def _load_bridge() -> ctypes.CDLL:
 
     # -- mgx_run (multi-input) -----------------------------------------------
     lib.mgx_run.argtypes = [
-        ctypes.c_void_p,                           # handle
-        ctypes.c_int,                              # input_count
-        ctypes.POINTER(ctypes.c_char_p),           # input_names
-        ctypes.POINTER(ctypes.c_void_p),           # input_data (float*[])
+        ctypes.c_void_p,  # handle
+        ctypes.c_int,  # input_count
+        ctypes.POINTER(ctypes.c_char_p),  # input_names
+        ctypes.POINTER(ctypes.c_void_p),  # input_data (float*[])
         ctypes.POINTER(ctypes.POINTER(ctypes.c_int64)),  # input_shapes
-        ctypes.POINTER(ctypes.c_int),              # input_ndims
-        ctypes.POINTER(ctypes.c_void_p),           # output_data (float**)
-        ctypes.POINTER(ctypes.c_int64),            # output_shape (int64_t[8])
-        ctypes.POINTER(ctypes.c_int),              # output_ndim
+        ctypes.POINTER(ctypes.c_int),  # input_ndims
+        ctypes.POINTER(ctypes.c_void_p),  # output_data (float**)
+        ctypes.POINTER(ctypes.c_int64),  # output_shape (int64_t[8])
+        ctypes.POINTER(ctypes.c_int),  # output_ndim
     ]
     lib.mgx_run.restype = ctypes.c_int
 
@@ -142,6 +142,7 @@ def is_migraphx_available() -> bool:
 # ---------------------------------------------------------------------------
 # Inference session
 # ---------------------------------------------------------------------------
+
 
 class MIGraphXSession:
     """GPU-accelerated ONNX inference via AMD MIGraphX.
@@ -164,9 +165,9 @@ class MIGraphXSession:
         self,
         model_path: str | Path,
         default_dim: int = 256,
-        providers: list[str] | None = None,       # ORT-compat: ignored, always MIGraphX
-        sess_options: Any = None,                  # ORT-compat: ignored
-        **kwargs: Any,                             # additional ORT kwargs (ignored)
+        providers: list[str] | None = None,  # ORT-compat: ignored, always MIGraphX
+        sess_options: Any = None,  # ORT-compat: ignored
+        **kwargs: Any,  # additional ORT kwargs (ignored)
     ) -> None:
         self._model_path = str(model_path)
         self._default_dim = default_dim
@@ -183,9 +184,7 @@ class MIGraphXSession:
             (self._shape_hints or "").encode(),
         )
         if not self._handle:
-            raise RuntimeError(
-                f"MIGraphX failed to load model: {self._model_path}"
-            )
+            raise RuntimeError(f"MIGraphX failed to load model: {self._model_path}")
 
         self._discover_inputs()
 
@@ -286,10 +285,14 @@ class MIGraphXSession:
         for s in shape_out:
             total *= s
 
-        result = np.ctypeslib.as_array(
-            ctypes.cast(out_data, ctypes.POINTER(ctypes.c_float)),
-            shape=(total,),
-        ).copy().reshape(shape_out)
+        result = (
+            np.ctypeslib.as_array(
+                ctypes.cast(out_data, ctypes.POINTER(ctypes.c_float)),
+                shape=(total,),
+            )
+            .copy()
+            .reshape(shape_out)
+        )
 
         return [result]
 
@@ -299,22 +302,20 @@ class MIGraphXSession:
 
     def get_inputs(self) -> list[Any]:
         """Return input metadata (name + shape)."""
+
         # Build a simple named-tuple-like list
         class InputMeta:
             def __init__(self, name: str, shape: tuple[int, ...]):
                 self.name = name
                 self.shape = shape
 
-        return [
-            InputMeta(n, s)
-            for n, s in zip(self._input_names, self._input_shapes)
-        ]
+        return [InputMeta(n, s) for n, s in zip(self._input_names, self._input_shapes)]
 
     # -- cleanup -------------------------------------------------------------
 
     def close(self) -> None:
         """Release GPU resources."""
-        if hasattr(self, '_handle') and self._handle is not None and self._bridge is not None:
+        if hasattr(self, "_handle") and self._handle is not None and self._bridge is not None:
             try:
                 self._bridge.mgx_destroy(self._handle)
             except Exception:
@@ -324,7 +325,7 @@ class MIGraphXSession:
     def __del__(self) -> None:
         self.close()
 
-    def __enter__(self) -> "MIGraphXSession":
+    def __enter__(self) -> MIGraphXSession:
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -334,6 +335,7 @@ class MIGraphXSession:
 # ---------------------------------------------------------------------------
 # Convenience factory
 # ---------------------------------------------------------------------------
+
 
 def create_migraphx_session(
     model_path: str | Path,
@@ -349,7 +351,7 @@ def create_migraphx_session(
 def create_session_with_fallback(
     model_path: str | Path,
     default_dim: int = 256,
-) -> "MIGraphXSession | Any":
+) -> MIGraphXSession | Any:
     """Create a session with automatic GPU→CPU fallback.
 
     Tries MIGraphX (GPU) first; falls back to ONNX Runtime CPU.

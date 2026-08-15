@@ -723,7 +723,7 @@ class MLDeviceManager:
           - _gpu_available = True
         """
         try:
-            from backend.core.migraphx_adapter import is_migraphx_available, get_migraphx_device_info
+            from backend.core.migraphx_adapter import get_migraphx_device_info, is_migraphx_available
 
             if not is_migraphx_available():
                 return
@@ -1059,6 +1059,9 @@ class MLDeviceManager:
         if plugin_name and plugin_name not in self._ort_gpu_compatible_plugins:
             return False
         if plugin_name and self._is_tier_excluded(plugin_name):
+            return False
+        # RX 5xx-Serie (GCN4): DirectML/ONNX-DML wird nicht unterstützt → CPU-only.
+        if self._backend == GPUBackend.DIRECTML and self._gpu_architecture == AMDArchitecture.GCN4:
             return False
         return True
 

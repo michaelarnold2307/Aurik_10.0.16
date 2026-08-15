@@ -48,7 +48,7 @@ class InpaintingResult:
         sr:             Sample-Rate (48000 Hz)
         kl_divergence:  KL-Divergenz Spektrum vor/nach (soll < 0.15 sein)
         chroma_corr:    Chroma-Pearson-Korrelation mit Phrasenkontext (≥ 0.92)
-        model_used:     "cqtdiff_plus" | "diffwave_fallback" | "nmf_dsp_fallback"  # §V6: logger.warning handled at call site
+        model_used:     "cqtdiff_plus" | "diffwave_fallback" | "nmf_dsp_fallback"  # §V6 (copilot-instructions.md): logger.warning handled at call site
         confidence:     Konfidenz der Rekonstruktion ∈ [0, 1]
         groove_dtw_ms:  Onset-DTW-Distanz original/rekonstruiert [ms] (≤ 8 ms RMS)
     """
@@ -164,6 +164,7 @@ class CQTdiffPlusPlugin:
                     logger.info("CQTdiff: score_network.onnx nicht gefunden — lade TorchScript direkt")
                     try:
                         import torch
+
                         self._ts_model = torch.jit.load(str(ts_path), map_location="cpu")
                         self._ts_model.eval()
                         self._model_loaded = True
@@ -177,7 +178,7 @@ class CQTdiffPlusPlugin:
                 )
                 self._fallback_active = True
         except ImportError:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("onnxruntime nicht verfügbar — CQTdiff+ Fallback aktiv")
             self._fallback_active = True
         except Exception as exc:
@@ -363,7 +364,7 @@ class CQTdiffPlusPlugin:
                 )
                 return result
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         except Exception as exc:
             logger.debug("CQTdiff+ DiffWave-Fallback Fehler: %s — lineare Interpolation", exc)
 

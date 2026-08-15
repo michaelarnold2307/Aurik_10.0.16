@@ -161,7 +161,7 @@ class TestLoadBundled:
                 "sha256": sha,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
             result = dl.load_bundled(entry)
         assert result is not None
@@ -176,7 +176,7 @@ class TestLoadBundled:
             "sha256": "a" * 64,
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         result = dl.load_bundled(entry)
         assert result is None
@@ -191,7 +191,7 @@ class TestLoadBundled:
             "sha256": "ff" * 32,
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         result = dl.load_bundled(entry)
         assert result is None
@@ -206,7 +206,7 @@ class TestLoadBundled:
             "sha256": "",
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         result = dl.load_bundled(entry)
         # Leere SHA → Prüfung übersprungen → Pfad zurückgegeben
@@ -221,7 +221,7 @@ class TestLoadBundled:
             "sha256": "",
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         result = dl.load_bundled(entry)
         assert result is None
@@ -235,7 +235,7 @@ class TestLoadBundled:
             "sha256": "a" * 64,
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         with patch.object(_md_module.logger, "info") as info_mock:
             dl.load_bundled(entry)
@@ -254,7 +254,7 @@ class TestLoadBundled:
             sha256=sha,
             size_bytes=0,
             required=False,
-            fallback="dsp",  # §V6: logger.warning handled at call site
+            fallback="dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         )
         result = dl.load_bundled(entry)
         assert result == path
@@ -283,7 +283,7 @@ class TestEnsureAll:
                 "sha256": sha,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
         ]
         manifest = _make_manifest(models, tmp_path)
@@ -301,7 +301,7 @@ class TestEnsureAll:
                 "sha256": "a" * 64,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
         ]
         manifest = _make_manifest(models, tmp_path)
@@ -320,7 +320,7 @@ class TestEnsureAll:
                 "sha256": sha,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             },
             {
                 "name": "bad_model",
@@ -329,7 +329,7 @@ class TestEnsureAll:
                 "sha256": "0" * 64,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             },
         ]
         manifest = _make_manifest(models, tmp_path)
@@ -347,7 +347,7 @@ class TestEnsureAll:
                 "sha256": "0" * 64,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
         ]
         manifest = _make_manifest(models, tmp_path)
@@ -388,7 +388,7 @@ class TestScheduleSotaUpgrade:
             "sha256": "",
             "size_bytes": 0,
             "required": False,
-            "fallback": "dsp",  # §V6: logger.warning handled at call site
+            "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
         }
         # Darf nicht crashen
         dl.schedule_sota_upgrade(entry)
@@ -517,7 +517,7 @@ class TestSingletonAndConvenience:
                 "sha256": sha,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
         ]
         manifest = _make_manifest(models, tmp_path)
@@ -611,7 +611,7 @@ class TestManifestRobustness:
                 "sha256": sha,
                 "size_bytes": 0,
                 "required": False,
-                "fallback": "dsp",  # §V6: logger.warning handled at call site
+                "fallback": "dsp",  # §V6 (copilot-instructions.md): logger.warning handled at call site
             }
         ]
         manifest = _make_manifest(models, tmp_path)

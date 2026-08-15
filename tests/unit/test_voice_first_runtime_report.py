@@ -299,7 +299,7 @@ def test_build_runtime_report_dsp_ml_guard_is_non_blocking(tmp_path: Path) -> No
                     "metadata": {
                         "ml_guard_events": [{"phase_id": "phase_23"}] * 100,
                         "ml_fallbacks_used": [{"phase": "phase_24", "fallback": "dsp"}]
-                        * 40,  # §V6: logger.warning handled at call site
+                        * 40,  # §V6 (copilot-instructions.md): logger.warning handled at call site
                     },
                 }
             ]

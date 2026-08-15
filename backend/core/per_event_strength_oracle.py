@@ -40,7 +40,7 @@ logger = logging.getLogger(__name__)
 VFA_PROTECTION_CAPS = {
     "vibrato": 0.20,
     "frisson": 0.30,
-    "fluester": 0.25,    # Flüster-Passagen
+    "fluester": 0.25,  # Flüster-Passagen
     "passaggio": 0.35,
 }
 
@@ -54,7 +54,7 @@ def compute_local_strength(
     event_end: int,
     sample_rate: int,
     base_strength: float = 0.5,
-    protected_zones: Optional[list[tuple[int, int, str, float]]] = None,
+    protected_zones: list[tuple[int, int, str, float]] | None = None,
     context_ms: float = DEFAULT_CONTEXT_MS,
 ) -> float:
     """Compute per-event local strength.
@@ -98,7 +98,10 @@ def compute_local_strength(
                 cap = max_cap if max_cap > 0 else VFA_PROTECTION_CAPS.get(zone_type, 0.25)
                 logger.debug(
                     "VFA protection: event [%.2fs-%.2fs] in %s zone → capped at %.2f",
-                    event_start_s, event_end_s, zone_type, cap,
+                    event_start_s,
+                    event_end_s,
+                    zone_type,
+                    cap,
                 )
                 return min(base_strength, cap)
 
@@ -172,10 +175,12 @@ def build_protected_zones_from_vfa(
         if max_cap < 0:
             max_cap = VFA_PROTECTION_CAPS.get(zone_type, 0.25)
 
-        zones.append((
-            int(start_s * sample_rate),
-            int(end_s * sample_rate),
-            zone_type,
-            max_cap,
-        ))
+        zones.append(
+            (
+                int(start_s * sample_rate),
+                int(end_s * sample_rate),
+                zone_type,
+                max_cap,
+            )
+        )
     return zones
