@@ -34,21 +34,15 @@ class PhaseReportWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self._summary_label = QLabel("")
-        self._summary_label.setStyleSheet(
-            "color: #AFC3DA; font-size: 9pt; padding: 4px 0;"
-        )
+        self._summary_label.setStyleSheet("color: #AFC3DA; font-size: 9pt; padding: 4px 0;")
         self._summary_label.setWordWrap(True)
         layout.addWidget(self._summary_label)
 
         self._table = QTableWidget()
         self._table.setColumnCount(5)
-        self._table.setHorizontalHeaderLabels(
-            ["Phase", "Dauer", "Δ Qualität", "HPI", "Status"]
-        )
+        self._table.setHorizontalHeaderLabels(["Phase", "Dauer", "Δ Qualität", "HPI", "Status"])
         self._table.horizontalHeader().setStretchLastSection(True)
-        self._table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.ResizeMode.Stretch
-        )
+        self._table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         self._table.setSelectionMode(QTableWidget.SelectionMode.NoSelection)
         self._table.setStyleSheet(
             "QTableWidget { background: transparent; border: none; gridline-color: #2A3040; }"
@@ -58,8 +52,13 @@ class PhaseReportWidget(QWidget):
         layout.addWidget(self._table)
         self.setMaximumHeight(400)
 
-    def load(self, phases_executed: list[str], phases_skipped: list[str],
-             phase_deltas: dict | None = None, total_time_s: float = 0.0) -> None:
+    def load(
+        self,
+        phases_executed: list[str],
+        phases_skipped: list[str],
+        phase_deltas: dict | None = None,
+        total_time_s: float = 0.0,
+    ) -> None:
         """Befüllt den Report mit Phasen-Daten.
 
         Args:
@@ -74,8 +73,7 @@ class PhaseReportWidget(QWidget):
         n_skip = len(phases_skipped)
 
         self._summary_label.setText(
-            f"{n_exec} Phasen ausgeführt · {n_skip} übersprungen · "
-            f"Gesamtzeit {_format_seconds(total_time_s)}"
+            f"{n_exec} Phasen ausgeführt · {n_skip} übersprungen · Gesamtzeit {_format_seconds(total_time_s)}"
         )
 
         self._table.setRowCount(len(all_phases))

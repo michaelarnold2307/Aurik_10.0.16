@@ -98,21 +98,23 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
 
             _lines: list[tuple[str, str]] = []
             if _found:
-                _lines.append((
-                    "🔍 Gefunden: " + ", ".join(
-                        f"{f['label']} ({f.get('severity', '')})".rstrip() for f in _found
-                    ),
-                    "#8894A8",
-                ))
+                _lines.append(
+                    (
+                        "🔍 Gefunden: " + ", ".join(f"{f['label']} ({f.get('severity', '')})".rstrip() for f in _found),
+                        "#8894A8",
+                    )
+                )
             if _planned:
                 _done_n = int(_bericht.get("done_count", 0) or 0)
                 _skip_n = int(_bericht.get("skipped_count", 0) or 0)
                 _def_n = int(_bericht.get("deferred_count", 0) or 0)
                 _noeff = int(_bericht.get("no_effect_count", 0) or 0)
-                _lines.append((
-                    "✅ Aurik hat: " + " → ".join(_planned[:6]),
-                    "#82B89A",
-                ))
+                _lines.append(
+                    (
+                        "✅ Aurik hat: " + " → ".join(_planned[:6]),
+                        "#82B89A",
+                    )
+                )
                 _exec_parts = [f"{_done_n} Schritte ausgeführt"]
                 if _skip_n:
                     _exec_parts.append(f"{_skip_n} übersprungen")
@@ -125,8 +127,10 @@ class ResultsSummaryDialog(QtWidgets.QDialog):
             _guards = _bericht.get("guards") or {}
             _g = _guards.get("guards", {}) or {}
             _fired = (
-                int(_g.get("truepeak", 0) or 0) + int(_g.get("pumping", 0) or 0)
-                + int(_g.get("formant", 0) or 0) + int(_g.get("spectral", 0) or 0)
+                int(_g.get("truepeak", 0) or 0)
+                + int(_g.get("pumping", 0) or 0)
+                + int(_g.get("formant", 0) or 0)
+                + int(_g.get("spectral", 0) or 0)
             )
             _iters = int((_guards.get("utmos_loop") or {}).get("iterations", 0) or 0)
             _guard_text = f"🛡️ Sicherheitsnetz: {_fired} Eingriffe"

@@ -309,7 +309,9 @@ def _run_restoration_job(
         except Exception as e:
             logger.debug("SharedAudioRing write fehlgeschlagen: %s", e)
 
-    def _progress_callback(pct: float, phase_name: str, phase_idx: int = 0, total: int = 0, metrics: dict | None = None) -> None:
+    def _progress_callback(
+        pct: float, phase_name: str, phase_idx: int = 0, total: int = 0, metrics: dict | None = None
+    ) -> None:
         """Wird bei Fortschrittsänderungen aufgerufen.
 
         §v10.14 P1: Akzeptiert optionalen metrics-Dict mit Live-Qualitätsdaten

@@ -60,13 +60,13 @@ MARGIN_CONTENT = 8
 # Die bridge-seitigen quality_color-Hex-Werte (backend/api/bridge.py) MÜSSEN mit
 # QUALITY_* übereinstimmen — abgesichert durch tests/unit/test_frontend_backend_harmony.py
 
-SURFACE_BG = "#2a2a35"          # Badge-/Pill-Hintergrund
-TEXT_PRIMARY = "#d0d0d0"        # Primärtext auf dunklem Grund
-TEXT_MUTED = "#888"             # Sekundärtext / Inaktiv
-HEADER_ACCENT = "#B8CCEE"       # Dialog-Header (Plugin-Manager)
+SURFACE_BG = "#2a2a35"  # Badge-/Pill-Hintergrund
+TEXT_PRIMARY = "#d0d0d0"  # Primärtext auf dunklem Grund
+TEXT_MUTED = "#888"  # Sekundärtext / Inaktiv
+HEADER_ACCENT = "#B8CCEE"  # Dialog-Header (Plugin-Manager)
 
-QUALITY_STUDIO = "#2196F3"      # depth 1–2: Studio-Qualität (Blau)
-QUALITY_MODERATE = "#4CAF50"    # depth 3: moderate Qualität (Grün)
+QUALITY_STUDIO = "#2196F3"  # depth 1–2: Studio-Qualität (Blau)
+QUALITY_MODERATE = "#4CAF50"  # depth 3: moderate Qualität (Grün)
 QUALITY_DEEP_CHAIN = "#E6A817"  # depth 4+: erwartete Einschränkungen (Bernstein)
 
 STATUS_OK_TEXT = "#6ab86a"
@@ -79,8 +79,8 @@ STATUS_CRIT_TEXT = "#c84848"
 STATUS_CRIT_BG = "#2a1010"
 
 BADGE_MATERIAL_TEXT = "#b8a068"  # Material-Badge (Gold)
-BADGE_ERA_TEXT = "#6890b8"       # Ära-Badge (Blau)
-BADGE_GENRE_TEXT = "#68a068"     # Genre-Badge (Grün)
+BADGE_ERA_TEXT = "#6890b8"  # Ära-Badge (Blau)
+BADGE_GENRE_TEXT = "#68a068"  # Genre-Badge (Grün)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Opacity

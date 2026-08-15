@@ -35,8 +35,7 @@ from PyQt5.QtWidgets import (
     QWidget,
 )  # pylint: disable=no-name-in-module
 
-# §v10.70 Bridge: Phase-Display-Formatter über die Bridge, nicht direkt aus backend.core
-from backend.api.bridge import get_phase_display_formatter_fns
+from Aurik10.i18n import t
 
 # §v10.990: Zentrale UI-Palette — keine Hex-Werte mehr direkt in diesem Modul
 from Aurik10.ui.ui_constants import (
@@ -55,6 +54,9 @@ from Aurik10.ui.ui_constants import (
     TEXT_MUTED,
     TEXT_PRIMARY,
 )
+
+# §v10.70 Bridge: Phase-Display-Formatter über die Bridge, nicht direkt aus backend.core
+from backend.api.bridge import get_phase_display_formatter_fns
 
 _DISPLAY_FNS = get_phase_display_formatter_fns()
 get_carrier_display: Callable[..., str] = cast(
@@ -145,7 +147,7 @@ class RestorationStatusPanel(QFrame):
         # Left: Phase icon + name
         self._phase_icon = QLabel("🔄")
         self._phase_icon.setStyleSheet("font-size: 22px;")
-        self._phase_name = QLabel("Initialisiere …")
+        self._phase_name = QLabel(t("status_panel.initializing"))
         self._phase_name.setStyleSheet(f"font-size: 13px; font-weight: 600; color: {TEXT_PRIMARY};")
         self._phase_counter = QLabel("")
         self._phase_counter.setStyleSheet(f"font-size: 11px; color: {TEXT_MUTED};")
@@ -171,7 +173,7 @@ class RestorationStatusPanel(QFrame):
         self._dim_labels: dict[str, QLabel] = {}
         _dim_col = QVBoxLayout()
         _dim_col.setSpacing(1)
-        _dim_header = QLabel("Klangqualität")
+        _dim_header = QLabel(t("status_panel.quality_header"))
         _dim_header.setStyleSheet(f"font-size: 10px; color: {TEXT_MUTED};")
         _dim_col.addWidget(_dim_header)
         _dim_row = QHBoxLayout()
@@ -181,7 +183,13 @@ class RestorationStatusPanel(QFrame):
             label.setStyleSheet(
                 f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {SURFACE_BG}; color: {TEXT_MUTED};"
             )
-            label.setToolTip(self._DIM_LABELS.get(dim_key, dim_key))
+            label.setToolTip(
+                t(
+                    f"status_panel.dimension.{dim_key}"
+                    if dim_key in self._DIM_LABELS
+                    else "status_panel.dimension_tooltip"
+                )
+            )
             self._dim_labels[dim_key] = label
             _dim_row.addWidget(label)
         _dim_col.addLayout(_dim_row)
@@ -259,7 +267,7 @@ class RestorationStatusPanel(QFrame):
             self._phase_icon.setText("🔄")
             self._phase_name.setText(display)
         if current > 0 and total > 0:
-            self._phase_counter.setText(f"Phase {current}/{total}")
+            self._phase_counter.setText(t("status_panel.phase_counter", current=current, total=total))
         else:
             self._phase_counter.setText("")
         # §v10.997: Plan-Fortschritt live nachziehen (✓/▶/○)
@@ -332,11 +340,11 @@ class RestorationStatusPanel(QFrame):
     def set_complete(self) -> None:
         """Show completion state."""
         self._phase_icon.setText("✅")
-        self._phase_name.setText("Restauration abgeschlossen")
+        self._phase_name.setText(t("status_panel.complete"))
         self._phase_counter.setText("")
         # §v10.997: Alle Plan-Schritte als erledigt markieren
         if self._consent_actions:
-            self._plan_progress = {i: "done" for i in range(len(self._consent_actions))}
+            self._plan_progress = dict.fromkeys(range(len(self._consent_actions)), "done")
             self._render_consent()
 
     # ── §v10.990 SOTA-Kette ─────────────────────────────────────────
@@ -351,9 +359,7 @@ class RestorationStatusPanel(QFrame):
         else:
             color, bg = STATUS_ORANGE_TEXT, STATUS_ORANGE_BG
         badge.setText(text)
-        badge.setStyleSheet(
-            f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {bg}; color: {color};"
-        )
+        badge.setStyleSheet(f"font-size: 11px; padding: 2px 6px; border-radius: 3px; background: {bg}; color: {color};")
 
     def set_sota_chain(self, status: dict) -> None:
         """§v10.990: Model-Zoo- + Komponenten-Status (bridge.get_sota_chain_status())."""
@@ -420,8 +426,7 @@ class RestorationStatusPanel(QFrame):
             return  # Phase außerhalb des Plans (z.B. UV3-Zusatzphasen) — Status halten
         idx = self._plan_order.index(phase_id)
         self._plan_progress = {
-            i: ("done" if i < idx else "current" if i == idx else "pending")
-            for i in range(len(self._consent_actions))
+            i: ("done" if i < idx else "current" if i == idx else "pending") for i in range(len(self._consent_actions))
         }
         self._render_consent()
 
@@ -434,16 +439,14 @@ class RestorationStatusPanel(QFrame):
             return
         parts: list[str] = []
         if found:
-            parts.append("Gefunden: " + ", ".join(
-                f"{f['label']} ({f.get('severity', '')})".rstrip()
-                for f in found[:4]
-            ))
+            parts.append(
+                "Gefunden: " + ", ".join(f"{f['label']} ({f.get('severity', '')})".rstrip() for f in found[:4])
+            )
         if actions:
             _marks = {"done": "✓", "current": "▶", "pending": "○"}
             if self._plan_progress:
                 _chain = [
-                    f"{_marks.get(self._plan_progress.get(i, ''), '')} {a}".strip()
-                    for i, a in enumerate(actions[:8])
+                    f"{_marks.get(self._plan_progress.get(i, ''), '')} {a}".strip() for i, a in enumerate(actions[:8])
                 ]
                 parts.append("Aurik: " + " → ".join(_chain))
             else:

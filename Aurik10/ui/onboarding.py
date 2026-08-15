@@ -127,12 +127,12 @@ class OnboardingWizard(QtWidgets.QDialog):
 
         nav_layout.addStretch()
 
-        self._btn_back = QtWidgets.QPushButton(t("onboarding.back") if False else "← Zurück")
+        self._btn_back = QtWidgets.QPushButton(t("onboarding.back"))
         self._btn_back.setVisible(False)
         self._btn_back.clicked.connect(self._prev_page)
         nav_layout.addWidget(self._btn_back)
 
-        self._btn_next = QtWidgets.QPushButton(t("onboarding.next") if False else "Weiter →")
+        self._btn_next = QtWidgets.QPushButton(t("onboarding.next"))
         self._btn_next.clicked.connect(self._next_page)
         nav_layout.addWidget(self._btn_next)
 
@@ -144,21 +144,17 @@ class OnboardingWizard(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(page)
         layout.setContentsMargins(40, 40, 40, 20)
 
-        title = QtWidgets.QLabel("🎵 Willkommen bei Aurik!")
+        title = QtWidgets.QLabel(t("onboarding.welcome.title"))
         title.setStyleSheet("font-size: 22px; font-weight: bold;")
         layout.addWidget(title)
 
-        subtitle = QtWidgets.QLabel("Deine Musik verdient den besten Klang.")
+        subtitle = QtWidgets.QLabel(t("onboarding.welcome.subtitle"))
         subtitle.setStyleSheet("font-size: 14px; color: #8894A8; margin-top: 8px;")
         layout.addWidget(subtitle)
 
         layout.addSpacing(20)
 
-        intro = QtWidgets.QLabel(
-            "Aurik entfernt Knackser, Rauschen und andere Störungen\n"
-            "aus deinen Aufnahmen – vollautomatisch, direkt auf deinem\n"
-            "Computer, ohne Internet."
-        )
+        intro = QtWidgets.QLabel(t("onboarding.welcome.body"))
         intro.setWordWrap(True)
         intro.setStyleSheet("font-size: 13px; line-height: 1.6;")
         layout.addWidget(intro)
@@ -192,7 +188,7 @@ class OnboardingWizard(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(page)
         layout.setContentsMargins(40, 40, 40, 20)
 
-        title = QtWidgets.QLabel("⚡ So einfach geht's")
+        title = QtWidgets.QLabel(t("onboarding.how.title"))
         title.setStyleSheet("font-size: 22px; font-weight: bold;")
         layout.addWidget(title)
 
@@ -231,9 +227,7 @@ class OnboardingWizard(QtWidgets.QDialog):
         layout.addSpacing(15)
 
         steps = QtWidgets.QLabel(
-            "1. 📂  Datei öffnen oder hierher ziehen\n"
-            "2. 🎯  Modus wählen (Restoration oder Studio 2026)\n"
-            "3. ▶  Starten – Aurik macht den Rest!"
+            t("onboarding.how.step_1") + "\n" + t("onboarding.how.step_2") + "\n" + t("onboarding.how.step_3")
         )
         steps.setStyleSheet("font-size: 13px; line-height: 1.8;")
         layout.addWidget(steps)
@@ -246,24 +240,20 @@ class OnboardingWizard(QtWidgets.QDialog):
         layout = QtWidgets.QVBoxLayout(page)
         layout.setContentsMargins(40, 40, 40, 20)
 
-        title = QtWidgets.QLabel("🚀 Bereit!")
+        title = QtWidgets.QLabel(t("onboarding.ready.title"))
         title.setStyleSheet("font-size: 22px; font-weight: bold;")
         layout.addWidget(title)
 
         layout.addSpacing(15)
 
-        msg = QtWidgets.QLabel(
-            "Alles klar! Du kannst jederzeit auf ❓  Hilfe klicken,\n"
-            "wenn du Fragen hast.\n\n"
-            "Viel Spaß mit deiner Musik! 🎵"
-        )
+        msg = QtWidgets.QLabel(t("onboarding.ready.body"))
         msg.setWordWrap(True)
         msg.setStyleSheet("font-size: 14px; line-height: 1.6;")
         layout.addWidget(msg)
 
         layout.addSpacing(20)
 
-        self._chk_skip = QtWidgets.QCheckBox("Beim nächsten Start nicht mehr anzeigen")
+        self._chk_skip = QtWidgets.QCheckBox(t("onboarding.show_again"))
         layout.addWidget(self._chk_skip)
 
         layout.addStretch()
@@ -276,7 +266,7 @@ class OnboardingWizard(QtWidgets.QDialog):
             self._update_dots()
 
             if self._current_page == 2:
-                self._btn_next.setText("Fertig ✓")
+                self._btn_next.setText(t("onboarding.finish"))
                 try:
                     self._btn_next.clicked.disconnect()
                 except TypeError:
@@ -297,7 +287,9 @@ class OnboardingWizard(QtWidgets.QDialog):
             dot.setStyleSheet(f"font-size: 14px; color: {color};")
         self._btn_back.setVisible(self._current_page > 0)
         if self._current_page < 2:
-            self._btn_next.setText("Weiter →")
+            self._btn_next.setText(t("onboarding.next"))
+        else:
+            self._btn_next.setText(t("onboarding.finish"))
 
     def _finish(self):
         if self._chk_skip.isChecked():

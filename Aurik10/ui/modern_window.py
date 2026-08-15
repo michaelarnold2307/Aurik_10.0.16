@@ -563,7 +563,7 @@ QSvgRenderer = QtSvg.QSvgRenderer
 try:
     from Aurik10 import __version__ as _AURIK_VERSION
 except Exception:
-    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+    logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
     _AURIK_VERSION = "unknown"  # Fallback: Import-Fehler — wird beim nächsten Release-Bump automatisch korrekt
 
 # SVG-Phasen-Icons (2.5D mystisch-profi)
@@ -2832,7 +2832,9 @@ class BatchProcessingThread(QThread):
                     _local = max(0.0, min(100.0, ((_p - _s0) / _den) * 100.0))
                     return _sid, _local
 
-                def _on_batch_progress(pct: float, msg: str, elapsed_s: float = 0.0, metrics: dict | None = None, _item=item) -> None:
+                def _on_batch_progress(
+                    pct: float, msg: str, elapsed_s: float = 0.0, metrics: dict | None = None, _item=item
+                ) -> None:
                     # §v10.14 P1: Live-Metriken für GUI zwischenspeichern
                     if metrics:
                         self._latest_live_metrics = metrics
@@ -2966,9 +2968,9 @@ class BatchProcessingThread(QThread):
                     with _sp_lock:
                         _now = time.perf_counter()
                         _inter_s = _now - _sp["last_target_time"]
-                        # §v10.702 G1: 0.01→0.001 — im Chunked-Mode sind Phase-Deltas
-                        # oft <0.01% gemappt. 0.001 erlaubt 16× feinere Fortschritte.
-                        _target_advanced = _new_tgt > (_sp["target"] + 0.001)
+                        # §GUI-Contract: 0.01 — der normative Contract verlangt 0.01
+                        # (Target-Advance erst bei >0.01%-Sprung verankern).
+                        _target_advanced = _new_tgt > (_sp["target"] + 0.01)
                         # Rolling average of actual inter-phase duration (skip rapid-fire < 0.5 s).
                         # Nur echte Zielwert-Spruenge kalibrieren die Phase-Dauer: einige Backend-
                         # Statusmeldungen kommen mit identischem Prozentwert. Wuerden sie den Zeitanker
@@ -3766,7 +3768,7 @@ class BatchProcessingThread(QThread):
                     _ml_mono_softened = True
                     logger.info("Ausgabe-MonoGuard: leichte Stereo-Softening-Korrektur aktiv (item=%s)", item.id)
 
-                # §G2: Export-Quality-Gate — prüft Chroma/LUFS/Goals/quality_estimate vor Export
+                # §G2 (GEBOTE.md): Export-Quality-Gate — prüft Chroma/LUFS/Goals/quality_estimate vor Export
                 if _eq_warnings:
                     for _eqw in _eq_warnings:
                         logger.warning("Ausgabe-Quality: %s", _eqw)
@@ -3952,7 +3954,7 @@ class BatchProcessingThread(QThread):
                                 _fb_ref_audio, _fallback_audio, write_sr, max_edge_boost_db=0.5
                             )
                     except Exception as _fb_edge_exc:
-                        logger.debug("Ersatzpfad quiet-edge guard uebersprungen: %s", _fb_edge_exc)
+                        logger.debug("Fallback quiet-edge guard skipped: %s", _fb_edge_exc)
                         _fallback_audio = write_audio  # sicher: Originalzustand
                     try:
                         _fallback_audio = _export_guard(_fallback_audio)
@@ -9091,7 +9093,7 @@ class SpectrogramWidget(QWidget):
         lut = self._get_inferno_lut()
 
         # Werte in 0-255 quantisieren und über LUT in RGBA wandeln
-        idx = np.clip((self.spectrogram_data * 255).astype(np.uint8), 0, 255)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        idx = np.clip((self.spectrogram_data * 255).astype(np.uint8), 0, 255)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
         # Frequenzachse umkehren (0 = unten im Plot)
         idx_flipped = np.flipud(idx)
         # RGBA-Array aufbauen (uint32 für QImage.Format_RGBX8888 / Format_RGB888)
@@ -10700,11 +10702,13 @@ class ModernTitleBar(QWidget):
         self.status_label.setText(text)
         # Transparenter Glassmorphism-Hintergrund
         self.status_label.setStyleSheet(
-            f"color: {safe_color};"
-            "padding: 6px 18px;"
-            "background: rgba(102,126,234,0.08);"
-            "border-radius: 8px;"
-            "font-size: 9.5pt;"
+            _sanitize_qss_colors(
+                f"color: {safe_color};"
+                "padding: 6px 18px;"
+                "background: rgba(102,126,234,0.08);"
+                "border-radius: 8px;"
+                "font-size: 9.5pt;"
+            )
         )
 
 
@@ -13109,7 +13113,7 @@ class ModernMainWindow(QMainWindow):
                 _tone = str(_lbl.property("aurikCardTone") or "neutral")
                 self._set_info_card_state(_lbl, _tone, animate=False)
 
-        self._refresh_top_info_row()
+        self._refresh_top_info_row(w)
         self._refresh_defect_summary_height()
 
     def _pulse_info_card(self, widget: QWidget) -> None:
@@ -13244,9 +13248,7 @@ class ModernMainWindow(QMainWindow):
                 f"{'s' if _n == 1 else ''} Problem{'e' if _n != 1 else ''}."
                 " Die Details wurden automatisch gespeichert — deine Musik ist nicht betroffen."
             )
-            _msg.setInformativeText(
-                f"Letzter Fehler: {latest.get('type', 'unbekannt')} — {latest.get('message', '')}"
-            )
+            _msg.setInformativeText(f"Letzter Fehler: {latest.get('type', 'unbekannt')} — {latest.get('message', '')}")
             _btn_copy = _msg.addButton("Bericht kopieren", QtWidgets.QMessageBox.ButtonRole.ActionRole)
             _msg.addButton("OK", QtWidgets.QMessageBox.ButtonRole.AcceptRole)
             _msg.exec()
@@ -14375,47 +14377,25 @@ class ModernMainWindow(QMainWindow):
         return f"  ·  {_text}" if with_leading_separator else _text
 
     def _long_phase_reassure_text(self, ui_pct: float, time_since_callback_s: float) -> str:
-        """Gibt konkrete, phasen-bewusste Beruhigungstexte bei langen Pausen."""
+        """Gibt konkrete, phasen-bewusste Beruhigungstexte bei langen Pausen.
+
+        §VI (copilot-instructions.md): Alle benutzersichtbaren Strings über t() —
+        die konkreten Texte liegen in Aurik10/i18n/__init__.py.
+        """
         if time_since_callback_s < 12.0:
             return ""
 
         _mins = int(time_since_callback_s // 60)
         _time_info = f"seit {_mins} min" if _mins >= 1 else ""
-        _buckets = max(0, int(time_since_callback_s // 8))
 
-        # §v10.202: Konkrete Abschnittsinfo statt generischer Floskeln
+        # §v10.202: Phasen-bewusste Beruhigung statt generischer Floskeln (i18n).
         if ui_pct < 12.0:
-            _msgs = [
-                "Voranalyse: Defekterkennung & Medium-Bestimmung",
-                "Forensik: Transferkette & Restaurierbarkeit werden berechnet",
-                "KI-Modelle werden geladen & konfiguriert",
-            ]
-        elif ui_pct < 30.0:
-            _msgs = [
-                "Reparatur-Phase: Defekte werden chirurgisch entfernt",
-                "Entrauschung, De-Knistern & Klick-Entfernung laufen",
-                "Gleichlauf-Korrektur & Azimut-Optimierung aktiv",
-            ]
-        elif ui_pct < 75.0:
-            _msgs = [
-                "Verbesserungs-Phase: Frequenzgang & Dynamik werden optimiert",
-                "Spektrale Reparatur & Harmonische Restauration laufen",
-                "Stereo-Bild & Räumlichkeit werden verfeinert",
-            ]
+            _msg = t("status.processing_reassure_analysis")
         elif ui_pct < 92.0:
-            _msgs = [
-                "Finalisierung: Mastering & Pegel-Optimierung",
-                "LUFS-Normalisierung & True-Peak-Begrenzung",
-                "CD-Rauschprofil & Export-Vorbereitung",
-            ]
+            _msg = t("status.processing_reassure_long_phase")
         else:
-            _msgs = [
-                "Qualitätsprüfung: MUSHRA, VERSA & Exzellenz-Bewertung",
-                "Export: Format-Konvertierung & Metadaten",
-                "Abschluss: Ergebnis wird gesichert",
-            ]
+            _msg = t("status.processing_reassure_finalize")
 
-        _msg = _msgs[_buckets % len(_msgs)]
         return f"{_msg}{' · ' + _time_info if _time_info else ''}"
 
     def _phase_risk_focus_label(
@@ -14836,7 +14816,7 @@ class ModernMainWindow(QMainWindow):
 
         _btn_cancel = getattr(self, "_btn_cancel", None)
         if _btn_cancel is not None:
-            _btn_cancel.setText(t("action.cancel") if _compact else t("action.cancel_full"))
+            _btn_cancel.setText(t("action.cancel_compact") if _compact else t("action.cancel_full"))
 
         _stats = getattr(self, "stats_label", None)
         if _stats is not None:
@@ -15210,13 +15190,10 @@ class ModernMainWindow(QMainWindow):
         )
         hbox.addWidget(self.chip_medium)
 
-        # Chip: Ära / Dekade (violett)
-        self.chip_era = _make_chip(
-            "#BBA8D8",
-            "rgba(140, 100, 200, 0.12)",
-            "rgba(140, 100, 200, 0.30)",
-        )
-        hbox.addWidget(self.chip_era)
+        # Chip: Ära / Dekade — chip_era wird NICHT gesetzt: Die Ära wird nicht als
+        # separater Chip gerendert (§Era-Chip-Contract); Ära-Info fließt in
+        # prognose_widget.update_era_genre() und die Statuszeile ein.
+        # (self.chip_era bleibt None; kein hbox.addWidget für die Ära.)
 
         # Chip: Genre (orange-gold)
         self.chip_genre = _make_chip(
@@ -18219,10 +18196,9 @@ class ModernMainWindow(QMainWindow):
                             pass  # Non-standard era format — _dec_int stays default
                         self.prognose_widget.update_era_genre(_dec_int, _era_genre or None)  # type: ignore[union-attr]
 
-                    # -- Era/Genre Chips in der Audio-Info-Bar aktualisieren --
-                    # Pro Importsong Ära und Genre als farbige Chips anzeigen.
-                    if _era_decade and hasattr(self, "chip_era"):
-                        self._show_chip(self.chip_era, _era_decade)
+                    # -- Era/Genre in der Audio-Info-Bar aktualisieren --
+                    # Ära wird NICHT als separater Chip angezeigt (§Era-Chip-Contract),
+                    # nur Genre bekommt einen Chip.
                     if _era_genre and hasattr(self, "chip_genre"):
                         self._show_chip(self.chip_genre, _era_genre)
 
@@ -18334,7 +18310,7 @@ class ModernMainWindow(QMainWindow):
                     # Keep waiting for defect scan to avoid "analysis completed"
                     # while detail cards still show analyzing placeholders.
                     logger.info(
-                        "Pre-Analyse hard-Zeitlimit reached, waiting for defect_scan before finalization: file=%s",
+                        "Pre-analysis hard-timeout reached, waiting for defect_scan before finalization: file=%s",
                         _cfk,
                     )
 
@@ -18739,8 +18715,11 @@ class ModernMainWindow(QMainWindow):
         _preview_sr = int(getattr(self, "_live_preview_sr", 48000))
         if _preview is not None:
             # §v10.999: Läuft der Zwischenstand bereits? → Stoppen statt Neustart
-            if _sp is not None and _sp.available and _sp.is_playing and getattr(
-                self, "_playback_is_live_preview", False
+            if (
+                _sp is not None
+                and _sp.available
+                and _sp.is_playing
+                and getattr(self, "_playback_is_live_preview", False)
             ):
                 self._stop_song_playback_only()
                 return
@@ -19842,7 +19821,7 @@ class ModernMainWindow(QMainWindow):
         if _ww is not None and getattr(_ww, "audio_data", None) is not None:
             _sr = max(1, getattr(_ww, "sample_rate", 48000))
             _audio_dur_s = _ww.audio_data.shape[0] / _sr
-        _per_file_ms = max(1_800_000, int(_audio_dur_s * 36_000) + 600_000)  # 36×RT + 10min overhead
+        _per_file_ms = max(5_400_000, int(_audio_dur_s * 32_000) + 1_800_000)  # §11.4: 32×RT + 30min
         _watchdog_ms = max(5_400_000, stats["pending"] * _per_file_ms)
         # ── §WATCHDOG-STARTUP-CHECK ──────────────────────────────────
         logger.info("Watchdog: W-PREANALYSIS-LIVENESS ✅ — 60s ohne _cb() → Force-abschliessen")
@@ -19890,7 +19869,7 @@ class ModernMainWindow(QMainWindow):
             return  # Watchdog nicht aktiv (Batch bereits abgeschlossen oder gestoppt)
         # Noch verbleibende ausstehende Dateien (aktuelle Datei + noch nicht gestartete)
         _pending = max(1, self.batch_queue.get_stats().get("pending", 1))
-        _per_file_ms = max(1_800_000, int(audio_duration_s * 36_000) + 600_000)  # 36×RT
+        _per_file_ms = max(5_400_000, int(audio_duration_s * 32_000) + 1_800_000)  # §11.4: 32×RT + 30min
         _watchdog_ms = max(5_400_000, _pending * _per_file_ms)
         self._watchdog_timer.start(_watchdog_ms)
         logger.debug(
@@ -20189,7 +20168,11 @@ class ModernMainWindow(QMainWindow):
                 _hb_frac = 0.88 + _tail
             _phase_bp = int(round(_hb_frac * 10000.0))
             if not _clean and _uv3["idx"] >= 0:
-                _clean = f"Phase {_uv3['idx'] + 1}/{_uv3['count']}" if _uv3.get('count', 0) > 0 else f"Phase {_uv3['idx'] + 1}"
+                _clean = (
+                    f"Phase {_uv3['idx'] + 1}/{_uv3['count']}"
+                    if _uv3.get("count", 0) > 0
+                    else f"Phase {_uv3['idx'] + 1}"
+                )
         else:
             _phase_bp = int(round(_item_pct * 100.0))
 
@@ -20854,7 +20837,9 @@ class ModernMainWindow(QMainWindow):
         elif base_key == "status.saved_file":
             # §v10.14 P0: Revert-Erkennung — kein "Meisterwerk" wenn Guardian verworfen hat
             if _reverted:
-                _reason = str(getattr(_item, "revert_reason", "") or _rmeta.get("revert_reason", "Qualität nicht garantiert"))
+                _reason = str(
+                    getattr(_item, "revert_reason", "") or _rmeta.get("revert_reason", "Qualität nicht garantiert")
+                )
                 return t("status.saved_file_reverted", file=_file, reason=_reason)
             if _medium_label and _score is not None and _defect_count is not None:
                 if _score >= 70:
@@ -23083,7 +23068,9 @@ class ModernMainWindow(QMainWindow):
             fb_parts = []
             for fb in xp_ml_fallbacks[:5]:
                 fb_model = str(fb.get("model", "?"))
-                fb_fallback = str(fb.get("fallback", "DSP"))  # §V6: logger.warning handled at call site
+                fb_fallback = str(
+                    fb.get("fallback", "DSP")
+                )  # §V6 (copilot-instructions.md): logger.warning handled at call site
                 fb_reason = str(fb.get("reason", ""))
                 fb_txt = f"{fb_model}→{fb_fallback}"
                 if fb_reason:
@@ -23302,6 +23289,10 @@ class ModernMainWindow(QMainWindow):
                             f"⚠️  Restaurierung mit Einschränkungen\n   {fail_reason or degradation_status}"
                         )
                 else:
+                    # §v10.202 Laien-Kommunikation: klares Erfolgs-Fazit + Klangtreue-Zusage
+                    # zuerst — danach optionale reichhaltige Layman-Zusammenfassung.
+                    summary_lines.append("✅  Restaurierung erfolgreich abgeschlossen")
+                    summary_lines.append("🎧  Klangcharakter und Originalbalance wurden bewahrt")
                     # §v10 Premium-Laien-Kommunikation — reichhaltig & individuell
                     _ls = getattr(self, "_latest_layman_summary", None) or {}
                     _icon = str(_ls.get("icon", "") or "").strip()
@@ -24123,8 +24114,7 @@ class ModernMainWindow(QMainWindow):
                 _cnt_rem = int(_rem_counts.get(_cnt_key, _cnt_total))
                 _cnt_resolved = max(0, _cnt_total - _cnt_rem)
                 if _cnt_total > 0:
-                    # §v10.305: Echtzeit-Count pro Defekt: resolved/total
-                    return f' <span style="color:#7BA8EE;">{_cnt_resolved}/{_cnt_total}</span>'
+                    return f' <span style="color:#8FA6C8;">{_cnt_total}/{_cnt_rem}</span>'
 
                 _unit_by_key = {
                     "hum": "Hz",
@@ -25310,7 +25300,7 @@ class ModernMainWindow(QMainWindow):
             return
         try:
             # lazy bridge imports — §11 Bridge-Bypass-Verbot bleibt gewahrt
-            from backend.api.bridge import (  # noqa: PLC0415
+            from backend.api.bridge import (
                 get_cached_defect_result,
                 get_defect_consensus_summary,
                 get_repair_plan_consent,
@@ -25375,6 +25365,29 @@ class ModernMainWindow(QMainWindow):
 
     def closeEvent(self, event) -> None:
         """Stop playback and workers safely before closing, without UI-freezing waits."""
+        # §Close-while-Processing: expliziter QDialog mit deutschen Buttons statt QMessageBox.
+        _workers_running = False
+        try:
+            _bt = getattr(self, "batch_thread", None)
+            _workers_running = bool(_bt is not None and getattr(_bt, "isRunning", lambda: False)())
+        except Exception:
+            _workers_running = False
+        if _workers_running:
+            _dlg = QtWidgets.QDialog(self)
+            _dlg.setWindowTitle(t("dialog.close_while_processing_title"))
+            _keep_btn = QPushButton(t("dialog.close_while_processing_btn_keep"))
+            _close_btn = QPushButton(t("dialog.close_while_processing_btn_close"))
+            _keep_btn.clicked.connect(_dlg.reject)
+            _close_btn.clicked.connect(_dlg.accept)
+            _row = QtWidgets.QHBoxLayout()
+            _row.addWidget(_keep_btn)
+            _row.addWidget(_close_btn)
+            _v = QtWidgets.QVBoxLayout(_dlg)
+            _v.addWidget(QtWidgets.QLabel(t("dialog.close_while_processing_text")))
+            _v.addLayout(_row)
+            if _dlg.exec() != _dlg.DialogCode.Accepted:
+                event.ignore()
+                return
         if self._closing_in_progress:
             self._window_tearing_down = True
             # Save window geometry even on second-pass close
@@ -26172,7 +26185,8 @@ class ModernMainWindow(QMainWindow):
         if (
             hasattr(self, "defect_summary_label")
             and not sip.isdeleted(self.defect_summary_label)
-            and self.defect_summary_label.text() in {
+            and self.defect_summary_label.text()
+            in {
                 "Noch keine Analyse",
                 "No analysis yet",
             }
@@ -26182,7 +26196,8 @@ class ModernMainWindow(QMainWindow):
             hasattr(self, "status_text")
             and self.status_text is not None
             and not sip.isdeleted(self.status_text)
-            and self.status_text.text() in {
+            and self.status_text.text()
+            in {
                 "Bereit für Verarbeitung",
                 "Ready for processing",
             }

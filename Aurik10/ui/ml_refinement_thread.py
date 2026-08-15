@@ -378,7 +378,7 @@ def _write_audio(audio: np.ndarray, sr: int, path: str) -> None:
         logger.debug("KMV _write_audio: soundfile write fehlgeschlagen, nutze scipy-Ersatzpfad", exc_info=True)
     import scipy.io.wavfile as _wf  # pylint: disable=import-outside-toplevel
 
-    _a = (audio * 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+    _a = (audio * 32767).astype(np.int16)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
     _wf.write(path, sr, _a)
 
 

@@ -19,12 +19,11 @@ from PyQt6.QtWidgets import (
 class MetricCard(QFrame):
     """Eine einzelne Metrik-Karte mit Label, Vorher- und Nachher-Wert."""
 
-    def __init__(self, title: str, before: str, after: str, improved: bool = True,
-                 parent: QWidget | None = None) -> None:
+    def __init__(
+        self, title: str, before: str, after: str, improved: bool = True, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
-        self.setStyleSheet(
-            "MetricCard { background: #1A2030; border-radius: 6px; padding: 6px; }"
-        )
+        self.setStyleSheet("MetricCard { background: #1A2030; border-radius: 6px; padding: 6px; }")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 4, 8, 4)
         layout.setSpacing(2)
@@ -86,37 +85,45 @@ class BeforeAfterWidget(QWidget):
         _def_before = int(before.get("defects", 0))
         _def_after = int(after.get("defects", 0))
         _def_delta = _def_before - _def_after
-        self._cards_layout.addWidget(MetricCard(
-            "Störungen",
-            str(_def_before),
-            str(_def_after) + (f" (−{_def_delta})" if _def_delta > 0 else ""),
-            improved=_def_after < _def_before,
-        ))
+        self._cards_layout.addWidget(
+            MetricCard(
+                "Störungen",
+                str(_def_before),
+                str(_def_after) + (f" (−{_def_delta})" if _def_delta > 0 else ""),
+                improved=_def_after < _def_before,
+            )
+        )
 
         _bw_before = float(before.get("bandwidth_hz", 0))
         _bw_after = float(after.get("bandwidth_hz", 0))
-        self._cards_layout.addWidget(MetricCard(
-            "Bandbreite",
-            f"{_bw_before:.0f} Hz" if _bw_before > 0 else "—",
-            f"{_bw_after:.0f} Hz" if _bw_after > 0 else "—",
-            improved=_bw_after > _bw_before,
-        ))
+        self._cards_layout.addWidget(
+            MetricCard(
+                "Bandbreite",
+                f"{_bw_before:.0f} Hz" if _bw_before > 0 else "—",
+                f"{_bw_after:.0f} Hz" if _bw_after > 0 else "—",
+                improved=_bw_after > _bw_before,
+            )
+        )
 
         _q_before = float(before.get("quality", 0))
         _q_after = float(after.get("quality", 0))
-        self._cards_layout.addWidget(MetricCard(
-            "Qualität",
-            f"{_q_before:.0f}%" if _q_before > 0 else "—",
-            f"{_q_after:.0f}%" if _q_after > 0 else "—",
-            improved=_q_after > _q_before,
-        ))
+        self._cards_layout.addWidget(
+            MetricCard(
+                "Qualität",
+                f"{_q_before:.0f}%" if _q_before > 0 else "—",
+                f"{_q_after:.0f}%" if _q_after > 0 else "—",
+                improved=_q_after > _q_before,
+            )
+        )
 
         _lu_before = float(before.get("lufs", 0))
         _lu_after = float(after.get("lufs", 0))
         if _lu_before != 0 or _lu_after != 0:
-            self._cards_layout.addWidget(MetricCard(
-                "Lautheit",
-                f"{_lu_before:.1f} LUFS" if _lu_before != 0 else "—",
-                f"{_lu_after:.1f} LUFS" if _lu_after != 0 else "—",
-                improved=abs(_lu_after - (-14.0)) < abs(_lu_before - (-14.0)) if _lu_before != 0 else True,
-            ))
+            self._cards_layout.addWidget(
+                MetricCard(
+                    "Lautheit",
+                    f"{_lu_before:.1f} LUFS" if _lu_before != 0 else "—",
+                    f"{_lu_after:.1f} LUFS" if _lu_after != 0 else "—",
+                    improved=abs(_lu_after - (-14.0)) < abs(_lu_before - (-14.0)) if _lu_before != 0 else True,
+                )
+            )
