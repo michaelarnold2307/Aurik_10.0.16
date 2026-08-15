@@ -335,14 +335,52 @@ class VocalEnhancement(PhaseInterface):
         """
         start_time = time.time()
         self.validate_input(audio)
+        # §2.51/Zero-Strength-Passthrough: strength=0 muss das Signal bit-genau
+        # durchreichen — VOR SOTA-Pipeline und DSP-Kette (kein Eingriff).
+        _p42_strength_early = float(kwargs.get("strength", 1.0))
+        if _p42_strength_early <= 0.0:
+            _audio_out = np.asarray(audio, dtype=np.float32)
+            return PhaseResult(
+                success=True,
+                audio=_audio_out.copy(),
+                execution_time_seconds=0.0,
+                metadata={
+                    "processing": "skipped_zero_strength",
+                    "algorithm": "skipped_zero_strength",
+                    "effective_strength": 0.0,
+                    "strength": 0.0,
+                    "material": material.name,
+                },
+                warnings=[],
+            )
         # §v10.210: SOTA Vocal Pipeline — 10 DSP-Module koordiniert
         # Läuft VOR der bestehenden DSP-Kette und liefert Register/Sibilance-Analyse.
         try:
             from backend.core.sota_vocal_pipeline import SOTAVocalPipeline
 
             _vocal_pipeline = SOTAVocalPipeline()
-            _vocal_result = _vocal_pipeline.process(audio, int(sample_rate))
-            audio = _vocal_result.audio
+            _vocal_result = None
+            if audio.ndim == 2:
+                # §2.51 Stereo-Layout-Erhalt: SOTAVocalPipeline ist mono-only —
+                # je Kanal verarbeiten und Originallayout wiederherstellen.
+                if audio.shape[0] == 2 and audio.shape[1] != 2:
+                    _chunks = [audio[0], audio[1]]  # channels-first (2, N)
+                    _res = [
+                        _vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate))
+                        for _c in _chunks
+                    ]
+                    audio = np.stack([_r.audio for _r in _res], axis=0).astype(np.float32)
+                else:
+                    _chunks = [audio[:, 0], audio[:, 1]]  # channels-last (N, 2)
+                    _res = [
+                        _vocal_pipeline.process(np.ascontiguousarray(_c), int(sample_rate))
+                        for _c in _chunks
+                    ]
+                    audio = np.stack([_r.audio for _r in _res], axis=1).astype(np.float32)
+                _vocal_result = _res[0]
+            else:
+                _vocal_result = _vocal_pipeline.process(audio, int(sample_rate))
+                audio = _vocal_result.audio
             logger.info(
                 "Phase 42: SOTA Vocal Pipeline register=%s deess=%.1fdB harmonic=%.0f%% time=%.1fs",
                 _vocal_result.profile.register,
