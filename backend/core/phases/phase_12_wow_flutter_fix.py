@@ -524,8 +524,27 @@ class WowFlutterFix(PhaseInterface):
             _effective_strength = 0.0  # Keine Pitch-Detektion, nur Transport-Repair
 
         if _effective_strength <= 0.0:
+            # §2.74: Transport-Defekte (tape_head_level_dip/transport_bump) werden auch
+            # bei Wow/Flutter-Skip repariert — kein Pitch-Tracking nötig.
+            _TAPE_MATS_Z = {MaterialType.TAPE, MaterialType.REEL_TAPE, MaterialType.CASSETTE}
+            _mat_z = material if isinstance(material, MaterialType) else None
+            _dl_z = kwargs.get("defect_locations") or {}
+            _has_dip_z = bool(_dl_z.get("tape_head_level_dip") or _dl_z.get("transport_bump"))
+            _n_dips_z = 0
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
             passthrough = np.clip(passthrough, -1.0, 1.0)
+            if _mat_z in _TAPE_MATS_Z or _has_dip_z:
+                passthrough, _n_dips_z = self._stabilize_tape_level(
+                    passthrough,
+                    sample_rate,
+                    1.0,
+                    is_primary_tape=(_mat_z in _TAPE_MATS_Z),
+                    confirmed_tape_dip=_has_dip_z,
+                    protected_zones=self._collect_vfa_protected_zones(kwargs),
+                )
+                passthrough = np.clip(
+                    np.nan_to_num(passthrough, nan=0.0, posinf=0.0, neginf=0.0), -1.0, 1.0
+                )
             return PhaseResult(
                 success=True,
                 audio=passthrough,
@@ -533,10 +552,11 @@ class WowFlutterFix(PhaseInterface):
                 metrics={
                     "wow_flutter_detected": False,
                     "max_deviation_percent": 0.0,
-                    "correction_applied": 0.0,
+                    "correction_applied": 1.0 if _n_dips_z > 0 else 0.0,
                     "material": material.value,
                     "mean_confidence": 0.0,
                     "quality_mode": kwargs.get("quality_mode", "balanced"),
+                    "tape_level_dips_repaired": _n_dips_z,
                 },
                 execution_time_seconds=time.time() - start_time,
                 metadata={
