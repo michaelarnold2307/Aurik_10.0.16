@@ -4,8 +4,8 @@
 Prüft vor jedem Commit:
   §V25: Keine hartcodierten Schwellwerte ohne CalibrationContext-Ableitung
   §V26: Keine diskreten Lookup-Tabellen oder if/elif-Buckets
-  §G79: Kalibrierungs-Audit-Log vorhanden
-  §G80: Unkalibrierte Fallbacks mit WARNING
+  §G79 (GEBOTE.md): Kalibrierungs-Audit-Log vorhanden
+  §G80 (GEBOTE.md): Unkalibrierte Fallbacks mit WARNING
 
 Exit 0 = sauber, Exit 1 = Verstoss.
 
@@ -217,7 +217,7 @@ def main() -> int:
         print("   → §V25: Keine hartcodierten Schwellwerte ohne CalibrationContext")
         print("   → §V26: Keine diskreten Lookup-Tabellen")
         print("   → §V27: Keine Kalibrierungs-Silos")
-        print("   → §G79: Kalibrierungs-Audit-Log erforderlich")
+        print("   → §G79 (GEBOTE.md): Kalibrierungs-Audit-Log erforderlich")
         return 1
 
 

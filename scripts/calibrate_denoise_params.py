@@ -47,8 +47,8 @@ def _load_eval_files(max_files: int = 3) -> list[Path]:
 
 def calibrate() -> dict:
     """Führt den Kalibrierungs-Sweep durch."""
-    from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
     from backend.core.perceptual_closed_loop import PerceptualClosedLoop
+    from backend.core.sota_denoise_pipeline import SOTADenoisePipeline
 
     loop = PerceptualClosedLoop()
     pipeline = SOTADenoisePipeline()
@@ -63,8 +63,7 @@ def calibrate() -> dict:
     calibrated: dict[str, float] = {}
     print("=" * 60)
     print("§v10.710 Parameter-Kalibrierung (UTMOS-basiert)")
-    print(f"  {len(eval_files)} Referenz-Dateien × {len(STRENGTH_GRID)} Strengths "
-          f"× {len(GENRES_TO_CALIBRATE)} Genres")
+    print(f"  {len(eval_files)} Referenz-Dateien × {len(STRENGTH_GRID)} Strengths × {len(GENRES_TO_CALIBRATE)} Genres")
     print("=" * 60)
 
     for genre in GENRES_TO_CALIBRATE:
@@ -87,7 +86,10 @@ def calibrate() -> dict:
 
                     # Denoise mit diesem Strength
                     result = pipeline.process(
-                        chunk, sr, auto_params=False, override_strength=strength,
+                        chunk,
+                        sr,
+                        auto_params=False,
+                        override_strength=strength,
                     )
                     # MOS messen
                     mos = loop.estimate_mos(result.audio, sr)

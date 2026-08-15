@@ -68,8 +68,9 @@ def export(model_id: str) -> Path:
     if model_id == "95m" and legacy_path.exists():
         legacy_backup = out_dir / "mert.onnx.bak"
         import shutil
+
         shutil.copy2(legacy_path, legacy_backup)
-        print(f"      Backed up existing mert.onnx → mert.onnx.bak")
+        print("      Backed up existing mert.onnx → mert.onnx.bak")
 
     # ------------------------------------------------------------------
     # 1. Load model
@@ -156,7 +157,7 @@ def export(model_id: str) -> Path:
     sha = sha256_of_file(int8_path)
     print(f"      SHA-256: {sha}")
     print(f"\n✅  MERT-{model_id.upper()} ONNX saved → {int8_path}")
-    
+
     # Create/update symlink for plugin compatibility (mert.onnx → variant file)
     if model_id == "95m":
         if legacy_path.is_symlink():
@@ -165,7 +166,7 @@ def export(model_id: str) -> Path:
             legacy_path.rename(legacy_path.with_suffix(".onnx.pre_multivariant"))
         legacy_path.symlink_to(int8_path.name)
         print(f"      Symlink: mert.onnx → {int8_path.name}")
-    
+
     return int8_path, sha  # type: ignore[return-value]
 
 

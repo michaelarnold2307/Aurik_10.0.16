@@ -162,7 +162,7 @@ def main() -> int:
             ts_fallback = (ROOT / "models/sgmse_plus/sgmse_plus.ts").exists()
             resolved_by = (
                 "primary" if file_exists else ("torchscript_fallback" if ts_fallback else "wpe_dsp_fallback")
-            )  # §V6: logger.warning handled at call site
+            )  # §V6 (copilot-instructions.md): logger.warning handled at call site
             release_mode = "primary" if file_exists else "fallback"
         elif a.name == "versa":
             runtime_ready = True

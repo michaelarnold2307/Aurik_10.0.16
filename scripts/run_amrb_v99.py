@@ -154,7 +154,7 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
             processing_applied = True
             logger.debug("_dsp_wiederherstellen: shellac path (SNR=%.1f dB, f0=%.0f Hz)", snr_est_db, f0_est)
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("_dsp_wiederherstellen shellac fehlgeschlagen: %s", exc)
 
     # ── Step 2b: VOCAL path — WOW-Inversion + Harmonic-Aware Wiener + Smoothing ─
@@ -229,7 +229,7 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                                         wow_depth_est * 100,
                                     )
         except Exception as exc:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("_dsp_wiederherstellen vocal WOW: %s", exc)
         # Wiener-NR mit Temporal Smoothing (5 Frames) — verhindert Musical Noise.
         # Floor=0.65 (uniform, max 35 % NR): bewahrt spektrale Form (NSIM-kritisch).
@@ -260,7 +260,7 @@ def _dsp_restore(audio: np.ndarray, sr: int) -> np.ndarray:
                 length=len(audio_f),
             )
         except Exception:
-            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+            logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
             logger.debug("_dsp_wiederherstellen: Wiener-NR + Temporal-Smooth (SNR=%.1f dB)", snr_est_db)
         except Exception as exc:
             logger.debug("_dsp_wiederherstellen Wiener-NR: %s", exc)
@@ -310,7 +310,7 @@ def make_restoration_fn(mode: str = "quality"):
                 result = restorer.restore(audio, sr, mode=mode)
                 return result.audio if hasattr(result, "audio") else result
             except Exception as exc:
-                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+                logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
                 logger.debug("wiederherstellen-Fehler (DSP-Ersatzpfad): %s", exc)
                 return _dsp_restore(audio, sr)
 

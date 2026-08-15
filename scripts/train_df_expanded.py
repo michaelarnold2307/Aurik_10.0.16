@@ -7,14 +7,19 @@ Nutzt den PyTorch-GPU-Pfad direkt (ONNX-ROCm ist auf gfx1100 blockiert).
 
 from __future__ import annotations
 
-import argparse, random, sys, time
+import argparse
+import random
+import sys
+import time
 from pathlib import Path
 
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import librosa
+import numpy as np
 import soundfile as sf
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -34,21 +39,28 @@ CHECKPOINT_DIR = _PROJECT / "models" / "deepfilternet_v3_ii" / "finetuned"
 BEST_PT = CHECKPOINT_DIR / "dfn_expanded_best.pt"
 LATEST_PT = CHECKPOINT_DIR / "dfn_expanded_latest.pt"
 
+
 # ERB filterbank
 def _build_erb_fb(n_fft=N_FFT, n_erb=N_ERB, sr=float(SR)):
     n_bins = n_fft // 2 + 1
     freqs = np.linspace(0, sr / 2, n_bins)
-    def hz2erb(f): return 21.4 * np.log10(1.0 + f / 229.0 + 1e-9)
+
+    def hz2erb(f):
+        return 21.4 * np.log10(1.0 + f / 229.0 + 1e-9)
+
     erb_max = hz2erb(np.array([sr / 2]))[0]
     edges = np.linspace(hz2erb(np.array([0.0]))[0], erb_max, n_erb + 1)
     fb = np.zeros((n_erb, n_bins), dtype=np.float32)
     for b in range(n_erb):
         lo, hi = edges[b], edges[b + 1]
         mask = (hz2erb(freqs) >= lo) & (hz2erb(freqs) < hi)
-        if mask.sum() > 0: fb[b, mask] = 1.0 / mask.sum()
+        if mask.sum() > 0:
+            fb[b, mask] = 1.0 / mask.sum()
     return fb
 
+
 _ERB_FB_NP = _build_erb_fb()
+
 
 class DFNFeatureExtractor:
     def __init__(self, device="cpu"):
@@ -71,6 +83,7 @@ class DFNFeatureExtractor:
 
 class AudioDenoiseDataset(Dataset):
     """Loads clean audio from any source, adds noise."""
+
     def __init__(self, files, noise_files=None):
         self.files = files
         self.noise_files = noise_files or []
@@ -85,8 +98,9 @@ class AudioDenoiseDataset(Dataset):
             max_start = max(0, snd.frames - chunk_native)
             start_frame = random.randint(0, max_start) if max_start > 0 else 0
             snd.seek(start_frame)
-            y = snd.read(chunk_native, dtype='float32')
-            if y.ndim > 1: y = y.mean(axis=1)
+            y = snd.read(chunk_native, dtype="float32")
+            if y.ndim > 1:
+                y = y.mean(axis=1)
         if sr != SR:
             y = librosa.resample(y, orig_sr=sr, target_sr=SR)
         y = y.astype(np.float32)
@@ -101,11 +115,14 @@ class AudioDenoiseDataset(Dataset):
             try:
                 n = self._load(random.choice(self.noise_files))
                 return n / (np.abs(n).max() + np.float32(1e-8))
-            except Exception: pass
+            except Exception:
+                pass
         n = np.random.randn(length).astype(np.float32)
         c = random.choice(["white", "pink", "brown"])
-        if c == "pink": n = np.cumsum(n)
-        elif c == "brown": n = np.cumsum(np.cumsum(n))
+        if c == "pink":
+            n = np.cumsum(n)
+        elif c == "brown":
+            n = np.cumsum(np.cumsum(n))
         return n / (np.abs(n).max() + np.float32(1e-8))
 
     def __getitem__(self, idx):
@@ -122,11 +139,13 @@ class AudioDenoiseDataset(Dataset):
         snr_db = random.uniform(*SNR_RANGE)
         cr = np.sqrt(np.mean(clean**2) + np.float32(1e-8))
         nr = np.sqrt(np.mean(noise**2) + np.float32(1e-8))
-        noise = noise * (cr / np.float32(10**(snr_db/20))) / (nr + np.float32(1e-8))
+        noise = noise * (cr / np.float32(10 ** (snr_db / 20))) / (nr + np.float32(1e-8))
         degraded = clean + noise
         dp = np.abs(degraded).max() + np.float32(1e-8)
-        return {"clean": torch.from_numpy((clean / dp).astype(np.float32)),
-                "degraded": torch.from_numpy((degraded / dp).astype(np.float32))}
+        return {
+            "clean": torch.from_numpy((clean / dp).astype(np.float32)),
+            "degraded": torch.from_numpy((degraded / dp).astype(np.float32)),
+        }
 
 
 def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
@@ -168,14 +187,19 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
 
     train_ds = AudioDenoiseDataset(train_files, noise_files)
     val_ds = AudioDenoiseDataset(val_files, noise_files)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=2, drop_last=True, prefetch_factor=2)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
-                            num_workers=2, drop_last=True, prefetch_factor=2)
+    train_loader = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True, num_workers=2, drop_last=True, prefetch_factor=2
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False, num_workers=2, drop_last=True, prefetch_factor=2
+    )
 
     # ── Model (PyTorch GPU directly) ──
-    from df.config import config; config.use_defaults()
+    from df.config import config
+
+    config.use_defaults()
     from df.deepfilternet3 import init_model
+
     model = init_model().to(device)
     n_p = sum(p.numel() for p in model.parameters()) / 1e6
     print(f"Model: DeepFilterNet3 ({n_p:.2f}M) | Device: {device}")
@@ -183,7 +207,7 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
     if resume:
         ckpt = torch.load(resume, map_location=device, weights_only=True)
         model.load_state_dict(ckpt["model_state_dict"])
-        print(f"  Loaded from {resume} (epoch {ckpt.get('epoch','?')}, val_loss={ckpt.get('val_loss','?'):.4f})")
+        print(f"  Loaded from {resume} (epoch {ckpt.get('epoch', '?')}, val_loss={ckpt.get('val_loss', '?'):.4f})")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
@@ -198,7 +222,8 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
         t0 = time.time()
 
         for step, batch in enumerate(train_loader):
-            if step >= steps_per_epoch: break
+            if step >= steps_per_epoch:
+                break
             clean = batch["clean"].to(device)
             noisy = batch["degraded"].to(device)
 
@@ -216,8 +241,11 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
             if (step + 1) % 50 == 0:
                 e = time.time() - t0
                 eta = e / (step + 1) * (steps_per_epoch - step - 1) if step > 0 else 0
-                print(f"  Ep {epoch+1:3d}/{epochs} | St {step+1:3d}/{steps_per_epoch} | "
-                      f"L {train_loss/(step+1):.4f} | {e:.0f}s/{eta:.0f}s", flush=True)
+                print(
+                    f"  Ep {epoch + 1:3d}/{epochs} | St {step + 1:3d}/{steps_per_epoch} | "
+                    f"L {train_loss / (step + 1):.4f} | {e:.0f}s/{eta:.0f}s",
+                    flush=True,
+                )
 
         scheduler.step()
         avg_train = train_loss / min(steps_per_epoch, len(train_loader))
@@ -227,7 +255,8 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
         val_loss, vn = 0.0, 0
         with torch.no_grad():
             for vb in val_loader:
-                if vn >= 20: break
+                if vn >= 20:
+                    break
                 cv = vb["clean"].to(device)
                 nv = vb["degraded"].to(device)
                 feb_n2, fsp_n2, spec_n2 = extractor(nv)
@@ -237,16 +266,26 @@ def train(epochs=50, batch_size=64, lr=1e-4, steps_per_epoch=300, resume=None):
                 vn += 1
         avg_val = val_loss / max(vn, 1)
 
-        print(f"Ep {epoch+1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
-              f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time()-t0:.0f}s", flush=True)
+        print(
+            f"Ep {epoch + 1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
+            f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
-        torch.save({"model_state_dict": model.state_dict(), "epoch": epoch+1,
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "scheduler_state_dict": scheduler.state_dict(),
-                    "train_loss": avg_train, "val_loss": avg_val}, LATEST_PT)
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "epoch": epoch + 1,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
+                "train_loss": avg_train,
+                "val_loss": avg_val,
+            },
+            LATEST_PT,
+        )
         if avg_val < best_val:
             best_val = avg_val
-            torch.save({"model_state_dict": model.state_dict(), "epoch": epoch+1, "val_loss": avg_val}, BEST_PT)
+            torch.save({"model_state_dict": model.state_dict(), "epoch": epoch + 1, "val_loss": avg_val}, BEST_PT)
             print(f"  >> Best: {best_val:.4f}")
 
     print(f"\nDone. Best val: {best_val:.4f} | {BEST_PT}")

@@ -32,7 +32,10 @@ _LOG_ARTIFACT = _PROJECT / "logs" / "fullsuite_latest.log"
 _SUMMARY_ARTIFACT = _PROJECT / "reports" / "fullsuite_summary.md"
 MAX_ARTIFACT_AGE_DAYS = 7
 
-_SUMMARY_LINE_RE = re.compile(r"^\s*(?:-\s*)?(?:[A-Za-zÄÖÜäöü]+\s*:\s*)?(\d+)\s+failed,\s+(\d+)\s+passed(?:,\s+(\d+)\s+skipped)?(?:,\s+(\d+)\s+deselected)?", re.MULTILINE)
+_SUMMARY_LINE_RE = re.compile(
+    r"^\s*(?:-\s*)?(?:[A-Za-zÄÖÜäöü]+\s*:\s*)?(\d+)\s+failed,\s+(\d+)\s+passed(?:,\s+(\d+)\s+skipped)?(?:,\s+(\d+)\s+deselected)?",
+    re.MULTILINE,
+)
 _EXIT_LINE_RE = re.compile(r"VOLLSUITE(?:\d)?\s+ENDE.*Exit\s+(\d+)", re.IGNORECASE)
 _HEAD_LINE_RE = re.compile(r"HEAD\s+([0-9a-f]{7,40})", re.IGNORECASE)
 

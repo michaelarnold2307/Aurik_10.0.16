@@ -29,8 +29,8 @@ _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
 
 SR = 48000
-CHUNK_SEC = 4.0        # Erste 4s pro Datei (Benchmark-Geschwindigkeit)
-FILES_PER_MEDIUM = 2   # Stichprobe: 2 Dateien pro Medium
+CHUNK_SEC = 4.0  # Erste 4s pro Datei (Benchmark-Geschwindigkeit)
+FILES_PER_MEDIUM = 2  # Stichprobe: 2 Dateien pro Medium
 
 
 @dataclass
@@ -45,7 +45,7 @@ class FileResult:
     mos_damaged: float
     mos_restored: float
     mos_clean: float
-    verdict: str          # improved / degraded / neutral
+    verdict: str  # improved / degraded / neutral
     processing_time: float
 
 
@@ -95,14 +95,14 @@ def _load_chunk(path: Path, sr: int = SR) -> np.ndarray:
 
 def _snr_db(reference: np.ndarray, signal: np.ndarray) -> float:
     noise = signal - reference
-    ref_power = float(np.mean(reference ** 2)) + 1e-10
-    noise_power = float(np.mean(noise ** 2)) + 1e-10
+    ref_power = float(np.mean(reference**2)) + 1e-10
+    noise_power = float(np.mean(noise**2)) + 1e-10
     return float(10 * np.log10(ref_power / noise_power))
 
 
 def run_benchmark() -> BenchmarkReport:
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlanner
     from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
-    from backend.core.coordinated_repair import RepairPlanner, CoordinatedRepair
     from backend.core.perceptual_closed_loop import PerceptualClosedLoop
 
     consensus = DefectConsensusPipeline()
@@ -136,7 +136,9 @@ def run_benchmark() -> BenchmarkReport:
             t_step = time.time()
             try:
                 manifest = consensus.analyze(
-                    damaged, SR, metadata={"material": medium, "is_digital": medium == "digital"},
+                    damaged,
+                    SR,
+                    metadata={"material": medium, "is_digital": medium == "digital"},
                 )
                 planner = RepairPlanner()
                 plan = planner.plan(manifest, len(damaged))
@@ -207,7 +209,7 @@ def main() -> int:
     print(f"Gesamtzeit: {report.total_time:.0f}s")
 
     # Per-Medium-Bilanz
-    print(f"\nPer Medium:")
+    print("\nPer Medium:")
     by_medium: dict[str, list[FileResult]] = {}
     for r in report.results:
         by_medium.setdefault(r.medium, []).append(r)

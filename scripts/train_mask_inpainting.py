@@ -15,14 +15,18 @@ Kanal 1 (Maske) mit Null-Gewichten — der Pretrained-Zustand bleibt exakt erhal
 
 from __future__ import annotations
 
-import argparse, random, sys, time
+import argparse
+import random
+import sys
+import time
 from pathlib import Path
 
-import numpy as np
-import torch, torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import librosa
+import numpy as np
 import soundfile as sf
+import torch
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -51,13 +55,13 @@ def make_harmonic_mask(audio: np.ndarray, sr: int = SR) -> np.ndarray:
         s = i * hop
         if s + n_fft > len(audio):
             break
-        frame = audio[s:s + n_fft] * window
+        frame = audio[s : s + n_fft] * window
         spec = np.abs(np.fft.rfft(frame)) + 1e-12
         # Harmonisch = spektrale Konzentration (wenige starke Peaks)
         top = np.sort(spec)[::-1]
         concentration = top[:10].sum() / (spec.sum() + 1e-12)
         if concentration > 0.5:
-            mask[s:s + n_fft] = 1.0
+            mask[s : s + n_fft] = 1.0
     return mask
 
 
@@ -124,8 +128,9 @@ def train(epochs: int = 20, lr: float = 5e-5):
     train_files, val_files = files[:n_train], files[n_train:]
     print(f"Files: {len(files)} → Train {len(train_files)}, Val {len(val_files)}")
 
-    train_loader = DataLoader(MaskInpaintingDataset(train_files), batch_size=1,
-                              shuffle=True, num_workers=2, drop_last=True, prefetch_factor=2)
+    train_loader = DataLoader(
+        MaskInpaintingDataset(train_files), batch_size=1, shuffle=True, num_workers=2, drop_last=True, prefetch_factor=2
+    )
 
     # 2-Kanal-Modell + Pretrained-Gewichte für Kanal 0
     model = FlowMatchingDiT(in_channels=2).to(device)
@@ -148,7 +153,8 @@ def train(epochs: int = 20, lr: float = 5e-5):
         trainable = (
             "patch_embed" in name
             or any(f"blocks.{i}." in name for i in range(15, 18))
-            or "final_ada" in name or "output_proj" in name
+            or "final_ada" in name
+            or "output_proj" in name
         )
         param.requires_grad = trainable
     n_t = sum(p.numel() for p in model.parameters() if p.requires_grad) / 1e6
@@ -192,7 +198,7 @@ def train(epochs: int = 20, lr: float = 5e-5):
             n_steps += 1
 
         avg = train_loss / max(n_steps, 1)
-        print(f"Ep {epoch+1:3d}/{epochs} | Loss {avg:.6f} | {time.time()-t0:.0f}s", flush=True)
+        print(f"Ep {epoch + 1:3d}/{epochs} | Loss {avg:.6f} | {time.time() - t0:.0f}s", flush=True)
 
         torch.save({"model_state_dict": model.state_dict(), "epoch": epoch + 1, "val_loss": avg}, MASK_BEST)
         if avg < best_val:

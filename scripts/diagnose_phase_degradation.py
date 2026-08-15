@@ -55,8 +55,10 @@ def main() -> int:
 
     t0 = time.time()
     manifest = DefectConsensusPipeline().analyze(damaged, sr)
-    print(f"Consensus: {len(manifest.defects)} Defekte, {manifest.module_count} Module "
-          f"({time.time() - t0:.0f}s)", flush=True)
+    print(
+        f"Consensus: {len(manifest.defects)} Defekte, {manifest.module_count} Module ({time.time() - t0:.0f}s)",
+        flush=True,
+    )
     for d in manifest.defects:
         print(f"  - {d.category} sev={d.severity:.2f} conf={d.confidence:.2f}", flush=True)
 
@@ -71,8 +73,7 @@ def main() -> int:
     # Kanal-Normalisierung (Time-major-Fix) statt roher _execute_step-Aufrufe.
     for step in plan.steps:
         if step.phase_id in SKIP_PHASES:
-            print(f"  ⏭ {step.phase_id:<36} ÜBERSPRUNGEN "
-                  f"SNR={_snr_db(current, clean):+.2f} dB", flush=True)
+            print(f"  ⏭ {step.phase_id:<36} ÜBERSPRUNGEN SNR={_snr_db(current, clean):+.2f} dB", flush=True)
             continue
         try:
             from backend.core.coordinated_repair import RepairPlan
@@ -86,13 +87,15 @@ def main() -> int:
             current = out
             snr_now = _snr_db(current, clean)
             guards = getattr(report, "guard_violations", {}) or {}
-            print(f"  {step.phase_id:<36} changed={str(changed):<5} SNR={snr_now:+.2f} dB "
-                  f"guards={guards}", flush=True)
+            print(f"  {step.phase_id:<36} changed={str(changed):<5} SNR={snr_now:+.2f} dB guards={guards}", flush=True)
         except Exception as exc:
             print(f"  ❌ {step.phase_id}: {exc}", flush=True)
 
-    print(f"\nENDE: SNR(restored vs clean) = {_snr_db(current, clean):+.2f} dB "
-          f"(damaged: {_snr_db(damaged, clean):+.2f} dB)", flush=True)
+    print(
+        f"\nENDE: SNR(restored vs clean) = {_snr_db(current, clean):+.2f} dB "
+        f"(damaged: {_snr_db(damaged, clean):+.2f} dB)",
+        flush=True,
+    )
     return 0
 
 

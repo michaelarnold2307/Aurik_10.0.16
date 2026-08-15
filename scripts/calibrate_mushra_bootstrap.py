@@ -117,7 +117,7 @@ def run_bootstrap_calibration(force: bool = False) -> bool:
         print(f"      → {CALIBRATION_FILE} (R²={calibration['r2_score']:.3f})")
 
     except ImportError:
-        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
+        logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6 (copilot-instructions.md)
         print("      ⚠ sklearn nicht verfügbar — Fallback: Default-Gewichte")
         calibration = {
             "stage": 1,

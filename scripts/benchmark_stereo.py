@@ -39,7 +39,7 @@ def _load_stereo(path: Path) -> tuple[np.ndarray, int]:
 def _snr_db(reference: np.ndarray, signal: np.ndarray) -> float:
     n = np.asarray(signal) - np.asarray(reference)
     ref = np.asarray(reference)
-    return float(10 * np.log10((np.mean(ref ** 2) + 1e-10) / (np.mean(n ** 2) + 1e-10)))
+    return float(10 * np.log10((np.mean(ref**2) + 1e-10) / (np.mean(n**2) + 1e-10)))
 
 
 def _channel_correlation(audio: np.ndarray) -> float:
@@ -67,8 +67,8 @@ def _phase_coherence(audio: np.ndarray, sr: int = SR) -> float:
         s = i * hop
         if s + n_fft > len(l):
             break
-        spec_l[i] = np.fft.rfft(l[s:s + n_fft] * window)
-        spec_r[i] = np.fft.rfft(r[s:s + n_fft] * window)
+        spec_l[i] = np.fft.rfft(l[s : s + n_fft] * window)
+        spec_r[i] = np.fft.rfft(r[s : s + n_fft] * window)
     freqs = np.fft.rfftfreq(n_fft, 1 / sr)
     band = (freqs >= 300) & (freqs <= 3000)
     # Phase-Differenz im Band
@@ -85,8 +85,8 @@ def _side_energy_ratio(audio: np.ndarray) -> float:
     l, r = audio[0], audio[1]
     side = (l - r) / 2
     mid = (l + r) / 2
-    side_e = float(np.mean(side ** 2))
-    mid_e = float(np.mean(mid ** 2))
+    side_e = float(np.mean(side**2))
+    mid_e = float(np.mean(mid**2))
     return side_e / (side_e + mid_e + 1e-10)
 
 
@@ -107,8 +107,8 @@ class StereoResult:
 
 
 def run_stereo_benchmark() -> list[StereoResult]:
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlanner
     from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
-    from backend.core.coordinated_repair import RepairPlanner, CoordinatedRepair
 
     results: list[StereoResult] = []
 
@@ -142,7 +142,9 @@ def run_stereo_benchmark() -> list[StereoResult]:
             # Konsens auf Mono-Mittel (Detektion ist Mono-basiert)
             mono = damaged.mean(axis=0)
             manifest = consensus.analyze(
-                mono, sr, metadata={"material": medium, "is_digital": medium == "digital"},
+                mono,
+                sr,
+                metadata={"material": medium, "is_digital": medium == "digital"},
             )
             plan = RepairPlanner().plan(manifest, min_len)
             executor = CoordinatedRepair()
@@ -164,15 +166,22 @@ def run_stereo_benchmark() -> list[StereoResult]:
             side_drop = abs(side_a - side_b)
             stereo_ok = corr_drop < 0.2 and side_drop < 0.2
 
-            results.append(StereoResult(
-                file=damaged_path.name,
-                corr_before=corr_b, corr_after=corr_a,
-                phase_before=phase_b, phase_after=phase_a,
-                side_before=side_b, side_after=side_a,
-                snr_l_before=snr_l_b, snr_l_after=snr_l_a,
-                snr_r_before=snr_r_b, snr_r_after=snr_r_a,
-                stereo_ok=stereo_ok,
-            ))
+            results.append(
+                StereoResult(
+                    file=damaged_path.name,
+                    corr_before=corr_b,
+                    corr_after=corr_a,
+                    phase_before=phase_b,
+                    phase_after=phase_a,
+                    side_before=side_b,
+                    side_after=side_a,
+                    snr_l_before=snr_l_b,
+                    snr_l_after=snr_l_a,
+                    snr_r_before=snr_r_b,
+                    snr_r_after=snr_r_a,
+                    stereo_ok=stereo_ok,
+                )
+            )
 
             print(
                 f"{medium:10s} {damaged_path.name[:38]:38s} "
@@ -196,10 +205,7 @@ def main() -> int:
     if results:
         corr_drops = [abs(r.corr_after - r.corr_before) for r in results]
         print(f"Ø Korrelations-Drift: {np.mean(corr_drops):.3f}")
-        snr_deltas = [
-            ((r.snr_l_after + r.snr_r_after) / 2) - ((r.snr_l_before + r.snr_r_before) / 2)
-            for r in results
-        ]
+        snr_deltas = [((r.snr_l_after + r.snr_r_after) / 2) - ((r.snr_l_before + r.snr_r_before) / 2) for r in results]
         print(f"Ø SNR-Änderung (L+R gemittelt): {np.mean(snr_deltas):+.2f} dB")
     print(f"Dauer: {time.time() - t0:.0f}s")
     return 0

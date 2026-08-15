@@ -14,14 +14,21 @@ Vorteil: 20-30 Epochen statt 500+ — 95% weniger Training.
 
 from __future__ import annotations
 
-import argparse, random, sys, time, os, math
+import argparse
+import math
+import os
+import random
+import sys
+import time
 from pathlib import Path
 
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import librosa
+import numpy as np
 import soundfile as sf
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -46,6 +53,7 @@ PRETRAINED_DIT = _PROJECT / "models" / "miipher_dit" / "checkpoint_best_epoch120
 # ═════════════════════════════════════════════════════════════════════════════
 # Harmonic Mask Generator
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class HarmonicMaskGenerator:
     """
@@ -73,7 +81,7 @@ class HarmonicMaskGenerator:
 
         for i in range(n_frames):
             start = i * self.hop
-            frame = audio[start:start + self.n_fft] * window
+            frame = audio[start : start + self.n_fft] * window
             specgram[i] = np.abs(np.fft.rfft(frame))
 
         # Identifiziere harmonische Peaks (oberhalb des spektralen Medians)
@@ -83,7 +91,7 @@ class HarmonicMaskGenerator:
         for freq_bin in range(1, self.n_fft // 2 + 1):
             if median_spec[freq_bin] > np.median(median_spec) * 2.5:
                 # Harmonischer Peak
-                harmonic_mask_freq[max(0, freq_bin - 2):freq_bin + 3] = True
+                harmonic_mask_freq[max(0, freq_bin - 2) : freq_bin + 3] = True
 
         # Erzeuge zeitabhängige Dämpfung: nur bei lauten Frames dämpfen
         frame_energy = specgram.mean(axis=1)
@@ -97,7 +105,7 @@ class HarmonicMaskGenerator:
                 end = min(start + self.n_fft, len(audio))
                 # Dämpfe: 30-60% Reduktion in harmonischen Bändern
                 attenuation = np.random.uniform(0.3, 0.6)
-                mask[start:end] = attenuation * window[:end - start]
+                mask[start:end] = attenuation * window[: end - start]
 
         # Attenuiere das Audio
         attenuated = audio * (1.0 - mask)
@@ -111,6 +119,7 @@ class HarmonicMaskGenerator:
 # ═════════════════════════════════════════════════════════════════════════════
 # Inpainting Dataset
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class InpaintingDataset(Dataset):
     """Lädt saubere Musik, simuliert DFN-Dämpfung, erzeugt Inpainting-Targets."""
@@ -130,7 +139,7 @@ class InpaintingDataset(Dataset):
                 max_start = max(0, snd.frames - chunk_native)
                 start_frame = random.randint(0, max_start) if max_start > 0 else 0
                 snd.seek(start_frame)
-                y = snd.read(chunk_native, dtype='float32')
+                y = snd.read(chunk_native, dtype="float32")
                 if y.ndim > 1:
                     y = y.mean(axis=1)
             if sr != SR:
@@ -164,6 +173,7 @@ class InpaintingDataset(Dataset):
 # Training
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
     device = torch.device("cuda")
 
@@ -188,10 +198,12 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
 
     train_ds = InpaintingDataset(train_files)
     val_ds = InpaintingDataset(val_files)
-    train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True,
-                              num_workers=2, drop_last=True, prefetch_factor=2)
-    val_loader = DataLoader(val_ds, batch_size=BATCH_SIZE, shuffle=False,
-                            num_workers=2, drop_last=True, prefetch_factor=2)
+    train_loader = DataLoader(
+        train_ds, batch_size=BATCH_SIZE, shuffle=True, num_workers=2, drop_last=True, prefetch_factor=2
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=BATCH_SIZE, shuffle=False, num_workers=2, drop_last=True, prefetch_factor=2
+    )
 
     # Modell: vortrainiertes DiT laden
     print(f"Loading pretrained DiT from {PRETRAINED_DIT}...", flush=True)
@@ -218,7 +230,8 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
 
     optimizer = torch.optim.AdamW(
         [p for p in model.parameters() if p.requires_grad],
-        lr=lr, weight_decay=1e-5,
+        lr=lr,
+        weight_decay=1e-5,
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
@@ -234,10 +247,11 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
         optimizer.zero_grad()
 
         for step, batch in enumerate(train_loader):
-            if step >= steps_per_epoch: break
-            clean = batch["clean"].to(device).unsqueeze(-1)       # [B, T, 1]
+            if step >= steps_per_epoch:
+                break
+            clean = batch["clean"].to(device).unsqueeze(-1)  # [B, T, 1]
             attenuated = batch["attenuated"].to(device).unsqueeze(-1)
-            mask = batch["mask"].to(device).unsqueeze(-1)          # [B, T, 1]
+            mask = batch["mask"].to(device).unsqueeze(-1)  # [B, T, 1]
 
             # Flow-Matching: sample random t
             t_vals = torch.rand(BATCH_SIZE, device=device)
@@ -245,7 +259,7 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
             # Target velocity: clean - attenuated (direction to restore)
             # But we ONLY care about the mask region
             target = clean - attenuated  # [B, T, 1]
-            target = target * mask        # [B, T, 1] — nur Inpainting-Region
+            target = target * mask  # [B, T, 1] — nur Inpainting-Region
 
             # Interpolate noisy towards clean
             noise = torch.randn_like(attenuated)
@@ -262,7 +276,8 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
 
             if (step + 1) % ACCUM_STEPS == 0:
                 torch.nn.utils.clip_grad_norm_(
-                    [p for p in model.parameters() if p.requires_grad], 1.0,
+                    [p for p in model.parameters() if p.requires_grad],
+                    1.0,
                 )
                 optimizer.step()
                 optimizer.zero_grad()
@@ -272,8 +287,10 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
             if (step + 1) % 50 == 0:
                 e = time.time() - t0
                 avg_l = train_loss / (step + 1)
-                print(f"  Ep {epoch+1:3d}/{epochs} | St {step+1:3d}/{len(train_loader)} | "
-                      f"L {avg_l:.6f} | {e:.0f}s", flush=True)
+                print(
+                    f"  Ep {epoch + 1:3d}/{epochs} | St {step + 1:3d}/{len(train_loader)} | L {avg_l:.6f} | {e:.0f}s",
+                    flush=True,
+                )
 
             if step >= 200:  # Limit steps per epoch
                 break
@@ -303,22 +320,31 @@ def train(epochs: int = EPOCHS, lr: float = LR, steps_per_epoch: int = 200):
 
         avg_val = val_loss / max(vn, 1)
 
-        print(f"Ep {epoch+1:3d}/{epochs} | Tr {avg_train:.6f} | Val {avg_val:.6f} | "
-              f"LR {optimizer.param_groups[0]['lr']:.1e} | {time.time()-t0:.0f}s", flush=True)
+        print(
+            f"Ep {epoch + 1:3d}/{epochs} | Tr {avg_train:.6f} | Val {avg_val:.6f} | "
+            f"LR {optimizer.param_groups[0]['lr']:.1e} | {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
-        torch.save({
-            "model_state_dict": model.state_dict(),
-            "epoch": epoch + 1,
-            "val_loss": avg_val,
-        }, LATEST_PT)
-
-        if avg_val < best_val:
-            best_val = avg_val
-            torch.save({
+        torch.save(
+            {
                 "model_state_dict": model.state_dict(),
                 "epoch": epoch + 1,
                 "val_loss": avg_val,
-            }, BEST_PT)
+            },
+            LATEST_PT,
+        )
+
+        if avg_val < best_val:
+            best_val = avg_val
+            torch.save(
+                {
+                    "model_state_dict": model.state_dict(),
+                    "epoch": epoch + 1,
+                    "val_loss": avg_val,
+                },
+                BEST_PT,
+            )
             print(f"  >> Best: {best_val:.6f}")
 
     print(f"\nDone. Best val: {best_val:.6f} | {BEST_PT}")

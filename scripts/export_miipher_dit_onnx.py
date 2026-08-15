@@ -20,13 +20,13 @@ import argparse
 import sys
 from pathlib import Path
 
-import torch
 import onnx
+import torch
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models.miipher_dit.dit_model import create_miipher_dit, FlowMatchingDiTExportWrapper
+from models.miipher_dit.dit_model import FlowMatchingDiTExportWrapper, create_miipher_dit
 
 
 def export_to_onnx(
@@ -84,7 +84,7 @@ def export_to_onnx(
         dynamic_axes=dynamic_axes,
     )
 
-    print(f"✅ ONNX model exported")
+    print("✅ ONNX model exported")
 
     # Validate
     onnx_model = onnx.load(output_path)
@@ -97,15 +97,13 @@ def export_to_onnx(
     print(f"📦 Model size: {size_mb:.1f} MB ({size_gb:.2f} GB)")
 
     # Verify inputs/outputs
-    print(f"📋 Graph inputs:")
+    print("📋 Graph inputs:")
     for inp in onnx_model.graph.input:
-        shape = [d.dim_value if d.dim_value else f"dynamic({d.dim_param})"
-                 for d in inp.type.tensor_type.shape.dim]
+        shape = [d.dim_value if d.dim_value else f"dynamic({d.dim_param})" for d in inp.type.tensor_type.shape.dim]
         print(f"    {inp.name}: {shape} ({inp.type.tensor_type.elem_type})")
-    print(f"📋 Graph outputs:")
+    print("📋 Graph outputs:")
     for out in onnx_model.graph.output:
-        shape = [d.dim_value if d.dim_value else f"dynamic({d.dim_param})"
-                 for d in out.type.tensor_type.shape.dim]
+        shape = [d.dim_value if d.dim_value else f"dynamic({d.dim_param})" for d in out.type.tensor_type.shape.dim]
         print(f"    {out.name}: {shape} ({out.type.tensor_type.elem_type})")
 
     return output_path
@@ -179,9 +177,7 @@ def export_fresh(output_path: str, **kwargs):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Export FlowMatchingDiT → ONNX (§v10.14)"
-    )
+    parser = argparse.ArgumentParser(description="Export FlowMatchingDiT → ONNX (§v10.14)")
     parser.add_argument(
         "--checkpoint",
         type=str,

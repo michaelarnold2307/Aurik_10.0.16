@@ -12,14 +12,19 @@ Training: MUSDB18-HQ, 48kHz, komplexe STFT.
 
 from __future__ import annotations
 
-import argparse, random, sys, time
+import argparse
+import random
+import sys
+import time
 from pathlib import Path
 
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import librosa
+import numpy as np
 import soundfile as sf
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -41,11 +46,13 @@ LATEST_PT = CHECKPOINT_DIR / "whisper_denoiser_latest.pt"
 # Whisper Feature Extractor (frozen)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class WhisperFeatureExtractor:
     """Extract frozen Whisper encoder features. Input: 16kHz mono audio."""
 
     def __init__(self, device="cpu", model_name="openai/whisper-tiny"):
         from transformers import WhisperModel
+
         self.device = device
         print(f"  Loading Whisper {model_name}...", flush=True)
         self.model = WhisperModel.from_pretrained(model_name).to(device)
@@ -67,6 +74,7 @@ class WhisperFeatureExtractor:
 # ═════════════════════════════════════════════════════════════════════════════
 # Lightweight Decoder
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class LightweightDecoder(nn.Module):
     """Project Whisper features + expand to conditioned UNet input."""
@@ -100,8 +108,10 @@ class ConditionedUNet(nn.Module):
         self.enc4 = nn.Sequential(nn.Conv2d(192, 256, 3, padding=1, stride=2), nn.GELU())
 
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(256 + c, 256, 3, padding=1), nn.GELU(),
-            nn.Conv2d(256, 256, 3, padding=1), nn.GELU(),
+            nn.Conv2d(256 + c, 256, 3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.GELU(),
         )
 
         self.dec4_conv = nn.Sequential(nn.Conv2d(256, 192, 3, padding=1), nn.GELU())
@@ -159,10 +169,11 @@ class RXApproximator(nn.Module):
         gain_map = (band_gains.unsqueeze(1) * torch.exp(-dist * 10)).sum(dim=0)  # [F_bins]
 
         # Noise floor estimation (smoothed version)
-        noise_floor = F.avg_pool1d(
-            log_mag_spec.permute(0, 2, 1).reshape(B * T, 1, F_bins),
-            kernel_size=11, stride=1, padding=5
-        ).reshape(B, T, F_bins).permute(0, 2, 1)
+        noise_floor = (
+            F.avg_pool1d(log_mag_spec.permute(0, 2, 1).reshape(B * T, 1, F_bins), kernel_size=11, stride=1, padding=5)
+            .reshape(B, T, F_bins)
+            .permute(0, 2, 1)
+        )
 
         alpha = 0.8
         cleaned = log_mag_spec - alpha * noise_floor
@@ -174,6 +185,7 @@ class RXApproximator(nn.Module):
 # ═════════════════════════════════════════════════════════════════════════════
 # Full Model
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class WhisperDenoiser(nn.Module):
     def __init__(self, device="cpu"):
@@ -194,6 +206,7 @@ class WhisperDenoiser(nn.Module):
         # Simple approach: use torchaudio if available, else manual
         try:
             import torchaudio
+
             audio_16k = torchaudio.functional.resample(audio_48k, SR, WHISPER_SR)
         except Exception:
             # Fallback: librosa on CPU
@@ -209,20 +222,23 @@ class WhisperDenoiser(nn.Module):
 
         # Compute 80-bin log-Mel spectrogram (same as WhisperProcessor)
         with torch.no_grad():
-            if not hasattr(self, '_whisper_mel_fb'):
+            if not hasattr(self, "_whisper_mel_fb"):
                 # Build mel filterbank once
                 n_fft_w = 400  # 25ms at 16kHz
-                hop_w = 160    # 10ms at 16kHz
+                hop_w = 160  # 10ms at 16kHz
                 self._whisper_mel_fb = torchaudio.functional.melscale_fbanks(
-                    n_freqs=n_fft_w // 2 + 1, f_min=0, f_max=WHISPER_SR // 2,
-                    n_mels=80, sample_rate=WHISPER_SR
+                    n_freqs=n_fft_w // 2 + 1, f_min=0, f_max=WHISPER_SR // 2, n_mels=80, sample_rate=WHISPER_SR
                 ).to(self.device)
                 self._whisper_n_fft = n_fft_w
                 self._whisper_hop = hop_w
 
-            spec_w = torch.stft(audio_16k_padded, n_fft=self._whisper_n_fft,
-                                hop_length=self._whisper_hop, return_complex=True,
-                                window=torch.hann_window(self._whisper_n_fft, device=self.device))
+            spec_w = torch.stft(
+                audio_16k_padded,
+                n_fft=self._whisper_n_fft,
+                hop_length=self._whisper_hop,
+                return_complex=True,
+                window=torch.hann_window(self._whisper_n_fft, device=self.device),
+            )
             mag_w = spec_w.abs()  # [B, 201, T_w]
             mel_w = torch.matmul(self._whisper_mel_fb.T.unsqueeze(0), mag_w)  # [1,80,201]@[B,201,T]→[B,80,T]
             log_mel = torch.log1p(mel_w)  # Log scale
@@ -245,8 +261,9 @@ class WhisperDenoiser(nn.Module):
         B = noisy_audio.shape[0]
 
         # 1. STFT
-        spec = torch.stft(noisy_audio, n_fft=N_FFT, hop_length=HOP,
-                          window=self.window.to(noisy_audio.device), return_complex=True)
+        spec = torch.stft(
+            noisy_audio, n_fft=N_FFT, hop_length=HOP, window=self.window.to(noisy_audio.device), return_complex=True
+        )
         T_s = spec.shape[2]
         F_bins = spec.shape[1]  # 481
 
@@ -267,8 +284,13 @@ class WhisperDenoiser(nn.Module):
         enhanced_spec = torch.complex(enhanced[:, 0], enhanced[:, 1])  # [B, F, T]
 
         # 5. iSTFT
-        clean_audio = torch.istft(enhanced_spec, n_fft=N_FFT, hop_length=HOP,
-                                  window=self.window.to(noisy_audio.device), length=noisy_audio.shape[1])
+        clean_audio = torch.istft(
+            enhanced_spec,
+            n_fft=N_FFT,
+            hop_length=HOP,
+            window=self.window.to(noisy_audio.device),
+            length=noisy_audio.shape[1],
+        )
 
         if return_specs:
             return clean_audio, enhanced_spec, spec
@@ -281,12 +303,18 @@ class WhisperDenoiser(nn.Module):
 
         # Multi-band spectral MSE — bands weighted by bin count (no artificial scaling)
         F_bins = pred_spec.shape[1]
-        f_low = F_bins // 6       # 0-80 bins (bass)
-        f_mid = F_bins // 3       # 80-160 bins (vocals)
+        f_low = F_bins // 6  # 0-80 bins (bass)
+        f_mid = F_bins // 3  # 80-160 bins (vocals)
         # Each band's MSE is naturally weighted by its bin count
-        loss_low = F.mse_loss(pred_spec.real[:, :f_low], clean_spec_gt.real[:, :f_low]) +                    F.mse_loss(pred_spec.imag[:, :f_low], clean_spec_gt.imag[:, :f_low])
-        loss_mid = F.mse_loss(pred_spec.real[:, f_low:f_mid], clean_spec_gt.real[:, f_low:f_mid]) +                    F.mse_loss(pred_spec.imag[:, f_low:f_mid], clean_spec_gt.imag[:, f_low:f_mid])
-        loss_high = F.mse_loss(pred_spec.real[:, f_mid:], clean_spec_gt.real[:, f_mid:]) +                     F.mse_loss(pred_spec.imag[:, f_mid:], clean_spec_gt.imag[:, f_mid:])
+        loss_low = F.mse_loss(pred_spec.real[:, :f_low], clean_spec_gt.real[:, :f_low]) + F.mse_loss(
+            pred_spec.imag[:, :f_low], clean_spec_gt.imag[:, :f_low]
+        )
+        loss_mid = F.mse_loss(pred_spec.real[:, f_low:f_mid], clean_spec_gt.real[:, f_low:f_mid]) + F.mse_loss(
+            pred_spec.imag[:, f_low:f_mid], clean_spec_gt.imag[:, f_low:f_mid]
+        )
+        loss_high = F.mse_loss(pred_spec.real[:, f_mid:], clean_spec_gt.real[:, f_mid:]) + F.mse_loss(
+            pred_spec.imag[:, f_mid:], clean_spec_gt.imag[:, f_mid:]
+        )
         # Reconstruct full MSE from per-band components (bin-count weighted)
         n_low, n_mid, n_high = f_low, f_mid - f_low, F_bins - f_mid
         loss_mse = (loss_low * n_low + loss_mid * n_mid + loss_high * n_high) / F_bins
@@ -294,10 +322,7 @@ class WhisperDenoiser(nn.Module):
         # BarkLoss on log magnitude
         pred_mag = torch.log1p(pred_spec.abs())
         clean_mag = torch.log1p(clean_spec_gt.abs())
-        loss_bark = F.l1_loss(
-            self._bark_projection(pred_mag),
-            self._bark_projection(clean_mag)
-        )
+        loss_bark = F.l1_loss(self._bark_projection(pred_mag), self._bark_projection(clean_mag))
 
         loss = 0.7 * loss_mse + 0.3 * loss_bark
         return loss, loss_mse.item(), loss_bark.item()
@@ -307,9 +332,30 @@ class WhisperDenoiser(nn.Module):
         B, F, T = mag.shape
         n_bins = F
         proj = torch.zeros_like(mag)
-        bark_freqs = [80, 150, 250, 400, 550, 700, 900, 1100,
-                      1350, 1650, 2000, 2400, 2850, 3400, 4000, 4650,
-                      5400, 6200, 7050, 8000, 9000, 10000]
+        bark_freqs = [
+            80,
+            150,
+            250,
+            400,
+            550,
+            700,
+            900,
+            1100,
+            1350,
+            1650,
+            2000,
+            2400,
+            2850,
+            3400,
+            4000,
+            4650,
+            5400,
+            6200,
+            7050,
+            8000,
+            9000,
+            10000,
+        ]
         for bf in bark_freqs:
             idx = int((bf / 24000) * n_bins)  # SR/2 = 24000
             if 0 <= idx < n_bins:
@@ -322,6 +368,7 @@ class WhisperDenoiser(nn.Module):
 # ═════════════════════════════════════════════════════════════════════════════
 # Dataset
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class MusicDenoiseDataset(Dataset):
     def __init__(self, audio_files, noise_files=None):
@@ -338,7 +385,7 @@ class MusicDenoiseDataset(Dataset):
             max_start = max(0, snd.frames - chunk_native)
             start_frame = random.randint(0, max_start)
             snd.seek(start_frame)
-            y = snd.read(chunk_native, dtype='float32')
+            y = snd.read(chunk_native, dtype="float32")
             if y.ndim > 1:
                 y = y.mean(axis=1)
         if sr != SR:
@@ -359,8 +406,10 @@ class MusicDenoiseDataset(Dataset):
                 pass
         n = np.random.randn(length).astype(np.float32)
         c = random.choice(["white", "pink", "brown"])
-        if c == "pink": n = np.cumsum(n)
-        elif c == "brown": n = np.cumsum(np.cumsum(n))
+        if c == "pink":
+            n = np.cumsum(n)
+        elif c == "brown":
+            n = np.cumsum(np.cumsum(n))
         return n / (np.abs(n).max() + np.float32(1e-8))
 
     def __getitem__(self, idx):
@@ -376,7 +425,7 @@ class MusicDenoiseDataset(Dataset):
         snr_db = random.uniform(*SNR_RANGE)
         cr = np.sqrt(np.mean(clean**2) + np.float32(1e-8))
         nr = np.sqrt(np.mean(noise**2) + np.float32(1e-8))
-        noise = noise * (cr / np.float32(10**(snr_db/20))) / (nr + np.float32(1e-8))
+        noise = noise * (cr / np.float32(10 ** (snr_db / 20))) / (nr + np.float32(1e-8))
         degraded = clean + noise
 
         dp = np.abs(degraded).max() + np.float32(1e-8)
@@ -390,6 +439,7 @@ class MusicDenoiseDataset(Dataset):
 # Training
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -401,10 +451,11 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
     noise_files = sorted(corpus.rglob("*.wav")) if corpus.is_dir() else []
     noise_files = [f for f in noise_files if "clean" not in f.stem.lower()]
     corpus_clean = sorted(corpus.rglob("*clean*.wav")) if corpus.is_dir() else []
-    all_files = vocals + instruments[:len(vocals)] + corpus_clean
+    all_files = vocals + instruments[: len(vocals)] + corpus_clean
 
     if not all_files:
-        print("ERROR: No files found"); return
+        print("ERROR: No files found")
+        return
 
     n_train = int(0.8 * len(all_files))
     rng = random.Random(42)
@@ -413,10 +464,12 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
     train_files, val_files = shuffled[:n_train], shuffled[n_train:]
     train_ds = MusicDenoiseDataset(train_files, noise_files)
     val_ds = MusicDenoiseDataset(val_files, noise_files)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=4, drop_last=True, prefetch_factor=2)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
-                            num_workers=4, drop_last=True, prefetch_factor=2)
+    train_loader = DataLoader(
+        train_ds, batch_size=batch_size, shuffle=True, num_workers=4, drop_last=True, prefetch_factor=2
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=batch_size, shuffle=False, num_workers=4, drop_last=True, prefetch_factor=2
+    )
 
     # Model
     print(f"WhisperDenoiser | Files: {len(all_files)} | Noise: {len(noise_files)}")
@@ -426,8 +479,7 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
     print(f"  Trainable params: {n_p:.2f}M (Whisper 39M frozen)")
 
     optimizer = torch.optim.AdamW(
-        list(model.unet.parameters()) + list(model.decoder.parameters()),
-        lr=lr, weight_decay=1e-5
+        list(model.unet.parameters()) + list(model.decoder.parameters()), lr=lr, weight_decay=1e-5
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, epochs)
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
@@ -447,7 +499,7 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
         model.train()
         train_loss = 0.0
         t0 = time.time()
-        print(f"Epoch {epoch+1}/{epochs} — LR {scheduler.get_last_lr()[0]:.1e} — starting", flush=True)
+        print(f"Epoch {epoch + 1}/{epochs} — LR {scheduler.get_last_lr()[0]:.1e} — starting", flush=True)
 
         for step, batch in enumerate(train_loader):
             if step >= steps_per_epoch:
@@ -466,9 +518,12 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
             if (step + 1) % 10 == 0:
                 e = time.time() - t0
                 eta = e / (step + 1) * (steps_per_epoch - step - 1) if step > 0 else 0
-                print(f"  Ep {epoch+1:3d}/{epochs} | St {step+1:3d}/{steps_per_epoch} | "
-                      f"L {train_loss/(step+1):.4f} (spec {loss_spec:.4f} rx {loss_rx:.4f}) | "
-                      f"{e:.0f}s/{eta:.0f}s", flush=True)
+                print(
+                    f"  Ep {epoch + 1:3d}/{epochs} | St {step + 1:3d}/{steps_per_epoch} | "
+                    f"L {train_loss / (step + 1):.4f} (spec {loss_spec:.4f} rx {loss_rx:.4f}) | "
+                    f"{e:.0f}s/{eta:.0f}s",
+                    flush=True,
+                )
 
         scheduler.step()
         avg_train = train_loss / min(steps_per_epoch, len(train_loader))
@@ -478,36 +533,45 @@ def train(epochs=50, batch_size=32, lr=1e-4, steps_per_epoch=200, resume=None):
         val_loss, vn = 0.0, 0
         with torch.no_grad():
             for vb in val_loader:
-                if vn >= 20: break
+                if vn >= 20:
+                    break
                 cv = vb["clean"].to(device)
                 nv = vb["degraded"].to(device)
                 _, pred_spec, _ = model(nv, return_specs=True)
                 _, _, clean_spec = model(cv, return_specs=True)
-                val_loss += (F.mse_loss(pred_spec.real, clean_spec.real) +
-                             F.mse_loss(pred_spec.imag, clean_spec.imag)).item()
+                val_loss += (
+                    F.mse_loss(pred_spec.real, clean_spec.real) + F.mse_loss(pred_spec.imag, clean_spec.imag)
+                ).item()
                 vn += 1
         avg_val = val_loss / max(vn, 1)
 
-        print(f"Ep {epoch+1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
-              f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time()-t0:.0f}s", flush=True)
+        print(
+            f"Ep {epoch + 1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
+            f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
-        torch.save({
-            "unet_state_dict": model.unet.state_dict(),
-            "decoder_state_dict": model.decoder.state_dict(),
-            
-            "epoch": epoch + 1,
-            "val_loss": avg_val,
-            "train_loss": avg_train,
-        }, LATEST_PT)
-        if avg_val < best_val:
-            best_val = avg_val
-            torch.save({
+        torch.save(
+            {
                 "unet_state_dict": model.unet.state_dict(),
                 "decoder_state_dict": model.decoder.state_dict(),
-                
                 "epoch": epoch + 1,
                 "val_loss": avg_val,
-            }, BEST_PT)
+                "train_loss": avg_train,
+            },
+            LATEST_PT,
+        )
+        if avg_val < best_val:
+            best_val = avg_val
+            torch.save(
+                {
+                    "unet_state_dict": model.unet.state_dict(),
+                    "decoder_state_dict": model.decoder.state_dict(),
+                    "epoch": epoch + 1,
+                    "val_loss": avg_val,
+                },
+                BEST_PT,
+            )
             print(f"  >> Best: {best_val:.4f}")
 
     print(f"\nDone. Best val: {best_val:.4f} | {BEST_PT}")

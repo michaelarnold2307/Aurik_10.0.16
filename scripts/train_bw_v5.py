@@ -263,10 +263,8 @@ def hf_band_loss(pred_wave, target_wave, cutoff_hz=8000.0, sr=SR):
     n_fft = 1024
     hop = n_fft // 4
     win = torch.hann_window(n_fft, device=pred_wave.device)
-    pred_spec = torch.stft(pred_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
-                           window=win, return_complex=True)
-    target_spec = torch.stft(target_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
-                             window=win, return_complex=True)
+    pred_spec = torch.stft(pred_wave.squeeze(1), n_fft=n_fft, hop_length=hop, window=win, return_complex=True)
+    target_spec = torch.stft(target_wave.squeeze(1), n_fft=n_fft, hop_length=hop, window=win, return_complex=True)
     freqs = torch.fft.rfftfreq(n_fft, 1 / sr).to(pred_wave.device)
     mask = (freqs > cutoff_hz).float().unsqueeze(-1)  # [F, 1]
     pred_hf = pred_spec.abs() * mask

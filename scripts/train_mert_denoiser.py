@@ -12,14 +12,21 @@ Key fixes from v10.127:
 
 from __future__ import annotations
 
-import argparse, random, sys, time, os, math
+import argparse
+import math
+import os
+import random
+import sys
+import time
 from pathlib import Path
 
-import numpy as np
-import torch, torch.nn as nn, torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
 import librosa
+import numpy as np
 import soundfile as sf
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -41,30 +48,33 @@ LATEST_PT = CHECKPOINT_DIR / "mert_denoiser_latest.pt"
 # MERT Feature Extractor (frozen, ONNX GPU)
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class MERTFeatureExtractor:
     def __init__(self, device="cuda"):
         import onnxruntime as ort
+
         model_path = _PROJECT / "models" / "mert" / "mert.onnx"
         self._session = ort.InferenceSession(
             str(model_path),
-            providers=['ROCMExecutionProvider', 'CPUExecutionProvider'],
-            provider_options=[{'device_id': '0'}, {}],
+            providers=["ROCMExecutionProvider", "CPUExecutionProvider"],
+            provider_options=[{"device_id": "0"}, {}],
         )
         self.device = device
-        gpu = 'ROCM' in str(self._session.get_providers())
+        gpu = "ROCM" in str(self._session.get_providers())
         print(f"  MERT: ONNX {'GPU' if gpu else 'CPU'}")
 
     @torch.no_grad()
     def __call__(self, audio_16k: np.ndarray) -> np.ndarray:
         peak = np.abs(audio_16k).max(axis=1, keepdims=True) + 1e-10
         audio_norm = audio_16k / peak
-        outputs = self._session.run(None, {'input_values': audio_norm.astype(np.float32)})
+        outputs = self._session.run(None, {"input_values": audio_norm.astype(np.float32)})
         return outputs[0]
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Decoder
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class MERTConditionedDecoder(nn.Module):
     def __init__(self, mert_dim=768, cond_dim=256):
@@ -75,8 +85,10 @@ class MERTConditionedDecoder(nn.Module):
         self.enc3 = nn.Sequential(nn.Conv2d(96, 192, 3, padding=1, stride=2), nn.GELU())
         self.enc4 = nn.Sequential(nn.Conv2d(192, 256, 3, padding=1, stride=2), nn.GELU())
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(256 + cond_dim, 256, 3, padding=1), nn.GELU(),
-            nn.Conv2d(256, 256, 3, padding=1), nn.GELU(),
+            nn.Conv2d(256 + cond_dim, 256, 3, padding=1),
+            nn.GELU(),
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.GELU(),
         )
         self.dec4 = nn.Sequential(nn.Conv2d(256, 192, 3, padding=1), nn.GELU())
         self.dec3 = nn.Sequential(nn.Conv2d(192 + 192, 96, 3, padding=1), nn.GELU())
@@ -90,8 +102,7 @@ class MERTConditionedDecoder(nn.Module):
         e2 = self.enc2(e1)
         e3 = self.enc3(e2)
         e4 = self.enc4(e3)
-        cond_up = F.interpolate(cond, size=(e4.shape[2], e4.shape[3]),
-                                mode="bilinear", align_corners=False)
+        cond_up = F.interpolate(cond, size=(e4.shape[2], e4.shape[3]), mode="bilinear", align_corners=False)
         b = self.bottleneck(torch.cat([e4, cond_up], dim=1))
         d4 = self.dec4(b)
         d4_up = F.interpolate(d4, size=e3.shape[2:], mode="bilinear", align_corners=False)
@@ -106,6 +117,7 @@ class MERTConditionedDecoder(nn.Module):
 # ═════════════════════════════════════════════════════════════════════════════
 # Full Model
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 class MERTDenoiser(nn.Module):
     def __init__(self, device="cuda"):
@@ -122,18 +134,26 @@ class MERTDenoiser(nn.Module):
         return w.pow(2).sum()
 
     def forward(self, noisy_audio_48k, return_spec=False):
-        spec = torch.stft(noisy_audio_48k, n_fft=N_FFT, hop_length=HOP,
-                          window=self.window.to(noisy_audio_48k.device),
-                          return_complex=True)
+        spec = torch.stft(
+            noisy_audio_48k,
+            n_fft=N_FFT,
+            hop_length=HOP,
+            window=self.window.to(noisy_audio_48k.device),
+            return_complex=True,
+        )
         audio_16k = noisy_audio_48k[:, ::3].cpu().numpy()
         mert_feat = self.mert(audio_16k)
         mert_feat = torch.from_numpy(mert_feat).float().to(noisy_audio_48k.device)
         spec_ri = torch.stack([spec.real, spec.imag], dim=1)
         enhanced = self.decoder(spec_ri, mert_feat)
         enhanced_spec = torch.complex(enhanced[:, 0], enhanced[:, 1])
-        clean_audio = torch.istft(enhanced_spec, n_fft=N_FFT, hop_length=HOP,
-                                  window=self.window.to(noisy_audio_48k.device),
-                                  length=noisy_audio_48k.shape[1])
+        clean_audio = torch.istft(
+            enhanced_spec,
+            n_fft=N_FFT,
+            hop_length=HOP,
+            window=self.window.to(noisy_audio_48k.device),
+            length=noisy_audio_48k.shape[1],
+        )
         if return_spec:
             return clean_audio, enhanced_spec
         return clean_audio
@@ -142,7 +162,9 @@ class MERTDenoiser(nn.Module):
         _, pred_spec = self.forward(noisy_audio, return_spec=True)
         # Ground truth clean STFT
         clean_spec = torch.stft(
-            clean_audio, n_fft=N_FFT, hop_length=HOP,
+            clean_audio,
+            n_fft=N_FFT,
+            hop_length=HOP,
             window=self.window.to(clean_audio.device),
             return_complex=True,
         )
@@ -164,9 +186,11 @@ class MERTDenoiser(nn.Module):
 # Dataset with validation
 # ═════════════════════════════════════════════════════════════════════════════
 
+
 class SafeAudioDenoiseDataset(Dataset):
     """Loads random chunks, adds noise, returns clean/degraded pair.
     Falls back to silence for broken files instead of noise."""
+
     def __init__(self, files):
         self.files = files
 
@@ -181,7 +205,7 @@ class SafeAudioDenoiseDataset(Dataset):
                 max_start = max(0, snd.frames - chunk_native)
                 start_frame = random.randint(0, max_start) if max_start > 0 else 0
                 snd.seek(start_frame)
-                y = snd.read(chunk_native, dtype='float32')
+                y = snd.read(chunk_native, dtype="float32")
                 if y.ndim > 1:
                     y = y.mean(axis=1)
             if sr != SR:
@@ -216,16 +240,19 @@ class SafeAudioDenoiseDataset(Dataset):
         snr_db = random.uniform(*SNR_RANGE)
         cr = np.sqrt(np.mean(clean**2) + np.float32(1e-8))
         nr = np.sqrt(np.mean(noise**2) + np.float32(1e-8))
-        noise = noise * (cr / np.float32(10**(snr_db/20))) / (nr + np.float32(1e-8))
+        noise = noise * (cr / np.float32(10 ** (snr_db / 20))) / (nr + np.float32(1e-8))
         degraded = clean + noise
         cp = np.abs(clean).max() + np.float32(1e-8)
-        return {"clean": torch.from_numpy((clean / cp).astype(np.float32)),
-                "degraded": torch.from_numpy((degraded / cp).astype(np.float32))}
+        return {
+            "clean": torch.from_numpy((clean / cp).astype(np.float32)),
+            "degraded": torch.from_numpy((degraded / cp).astype(np.float32)),
+        }
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # Training
 # ═════════════════════════════════════════════════════════════════════════════
+
 
 def train(epochs=50, micro_batch=4, accum_steps=8, lr=1e-4, steps_per_epoch=200, resume=None):
     device = torch.device("cuda")
@@ -258,10 +285,12 @@ def train(epochs=50, micro_batch=4, accum_steps=8, lr=1e-4, steps_per_epoch=200,
 
     train_ds = SafeAudioDenoiseDataset(train_files)
     val_ds = SafeAudioDenoiseDataset(val_files)
-    train_loader = DataLoader(train_ds, batch_size=micro_batch, shuffle=True,
-                              num_workers=2, drop_last=True, prefetch_factor=2)
-    val_loader = DataLoader(val_ds, batch_size=micro_batch, shuffle=False,
-                            num_workers=2, drop_last=True, prefetch_factor=2)
+    train_loader = DataLoader(
+        train_ds, batch_size=micro_batch, shuffle=True, num_workers=2, drop_last=True, prefetch_factor=2
+    )
+    val_loader = DataLoader(
+        val_ds, batch_size=micro_batch, shuffle=False, num_workers=2, drop_last=True, prefetch_factor=2
+    )
 
     # Model
     model = MERTDenoiser(device=device).to(device)
@@ -298,7 +327,7 @@ def train(epochs=50, micro_batch=4, accum_steps=8, lr=1e-4, steps_per_epoch=200,
         if epoch < 2:
             warmup_factor = (epoch + 1) / 2.0
             for pg in optimizer.param_groups:
-                pg['lr'] = lr * warmup_factor
+                pg["lr"] = lr * warmup_factor
 
         for step, batch in enumerate(train_loader):
             if step >= steps_per_epoch:
@@ -327,8 +356,11 @@ def train(epochs=50, micro_batch=4, accum_steps=8, lr=1e-4, steps_per_epoch=200,
                 e = time.time() - t0
                 avg_l = (train_loss.item() / n_steps) if n_steps > 0 else 0
                 eta = e / (step + 1) * (steps_per_epoch - step - 1) if step > 0 else 0
-                print(f"  Ep {epoch+1:3d}/{epochs} | St {step+1:3d}/{steps_per_epoch} | "
-                      f"L {avg_l:.3f} | {e:.0f}s/{eta:.0f}s", flush=True)
+                print(
+                    f"  Ep {epoch + 1:3d}/{epochs} | St {step + 1:3d}/{steps_per_epoch} | "
+                    f"L {avg_l:.3f} | {e:.0f}s/{eta:.0f}s",
+                    flush=True,
+                )
 
         if epoch >= 2:
             scheduler.step()
@@ -348,28 +380,44 @@ def train(epochs=50, micro_batch=4, accum_steps=8, lr=1e-4, steps_per_epoch=200,
                 cv = vb["clean"].to(device)
                 nv = vb["degraded"].to(device)
                 _, pred_spec = model(nv, return_spec=True)
-                clean_spec_gt = torch.stft(cv, n_fft=N_FFT, hop_length=HOP,
-                                           window=model.window.to(device),
-                                           return_complex=True)
-                val_loss += (F.mse_loss(pred_spec.real, clean_spec_gt.real) +
-                             F.mse_loss(pred_spec.imag, clean_spec_gt.imag)).item()
+                clean_spec_gt = torch.stft(
+                    cv, n_fft=N_FFT, hop_length=HOP, window=model.window.to(device), return_complex=True
+                )
+                val_loss += (
+                    F.mse_loss(pred_spec.real, clean_spec_gt.real) + F.mse_loss(pred_spec.imag, clean_spec_gt.imag)
+                ).item()
                 vn += 1
         avg_val = val_loss / max(vn, 1)
 
         # Restore training weights
         model.decoder.load_state_dict({k: v.to(device) for k, v in current_weights.items()})
 
-        print(f"Ep {epoch+1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
-              f"LR {optimizer.param_groups[0]['lr']:.1e} | {time.time()-t0:.0f}s", flush=True)
+        print(
+            f"Ep {epoch + 1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
+            f"LR {optimizer.param_groups[0]['lr']:.1e} | {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
-        torch.save({"decoder_state_dict": {k: v.cpu() for k, v in model.decoder.state_dict().items()},
-                    "ema_state": ema_state,
-                    "epoch": epoch + 1, "val_loss": avg_val}, LATEST_PT)
+        torch.save(
+            {
+                "decoder_state_dict": {k: v.cpu() for k, v in model.decoder.state_dict().items()},
+                "ema_state": ema_state,
+                "epoch": epoch + 1,
+                "val_loss": avg_val,
+            },
+            LATEST_PT,
+        )
         if avg_val < best_val:
             best_val = avg_val
-            torch.save({"decoder_state_dict": {k: v.cpu() for k, v in model.decoder.state_dict().items()},
-                        "ema_state": ema_state,
-                        "epoch": epoch + 1, "val_loss": avg_val}, BEST_PT)
+            torch.save(
+                {
+                    "decoder_state_dict": {k: v.cpu() for k, v in model.decoder.state_dict().items()},
+                    "ema_state": ema_state,
+                    "epoch": epoch + 1,
+                    "val_loss": avg_val,
+                },
+                BEST_PT,
+            )
             print(f"  >> Best: {best_val:.4f}")
 
     print(f"\nDone. Best val: {best_val:.4f} | {BEST_PT}")

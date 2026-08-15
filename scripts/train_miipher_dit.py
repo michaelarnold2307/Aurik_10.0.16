@@ -28,38 +28,36 @@ from __future__ import annotations
 
 import argparse
 import random
-import time
-from pathlib import Path
-from typing import Optional
-
-import numpy as np
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader, random_split
-
-import librosa
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Project imports
 # ═══════════════════════════════════════════════════════════════════════════
-
 import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+import librosa
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.utils.data import DataLoader, Dataset, random_split
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from models.miipher_dit.dit_model import create_miipher_dit, FlowMatchingDiTExportWrapper
-
+from models.miipher_dit.dit_model import FlowMatchingDiTExportWrapper, create_miipher_dit
 
 # ═══════════════════════════════════════════════════════════════════════════
 # Configuration
 # ═══════════════════════════════════════════════════════════════════════════
 
-SR = 48000                              # Model native sample rate
-CHUNK_SEC = 4.0                         # Training chunk duration
-CHUNK_SAMPLES = int(CHUNK_SEC * SR)     # 192,000 samples per chunk
-PATCH_SIZE = 256                        # DiT patch size (must match model)
-SNR_RANGE_DB = (5.0, 12.0)             # SNR range for degradation
-GRADIENT_ACCUM_STEPS = 4               # Effective batch = B * accum
+SR = 48000  # Model native sample rate
+CHUNK_SEC = 4.0  # Training chunk duration
+CHUNK_SAMPLES = int(CHUNK_SEC * SR)  # 192,000 samples per chunk
+PATCH_SIZE = 256  # DiT patch size (must match model)
+SNR_RANGE_DB = (5.0, 12.0)  # SNR range for degradation
+GRADIENT_ACCUM_STEPS = 4  # Effective batch = B * accum
 CHECKPOINT_DIR = Path("models/miipher_dit")
 ONNX_OUTPUT = CHECKPOINT_DIR / "flow_matching_dit.onnx"
 BEST_PT = CHECKPOINT_DIR / "checkpoint_best.pt"
@@ -69,6 +67,7 @@ LATEST_PT = CHECKPOINT_DIR / "checkpoint_latest.pt"
 # ═══════════════════════════════════════════════════════════════════════════
 # Data loading
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 def _collect_vocal_files(musdb_root: Path) -> list[Path]:
     """Collect all vocal.wav files from MUSDB18-HQ train set."""
@@ -170,8 +169,8 @@ class MiipherDiTDataset(Dataset):
 
         # Mix at random SNR
         snr_db = random.uniform(*SNR_RANGE_DB)
-        clean_rms = np.sqrt(np.mean(clean ** 2) + 1e-8)
-        noise_rms = np.sqrt(np.mean(noise ** 2) + 1e-8)
+        clean_rms = np.sqrt(np.mean(clean**2) + 1e-8)
+        noise_rms = np.sqrt(np.mean(noise**2) + 1e-8)
         target_noise_rms = clean_rms / (10 ** (snr_db / 20))
         noise = noise * (target_noise_rms / (noise_rms + 1e-8))
         degraded = clean + noise
@@ -183,8 +182,8 @@ class MiipherDiTDataset(Dataset):
         clean = clean / degraded_peak
 
         return {
-            "clean": torch.from_numpy(clean).unsqueeze(0),       # [1, T]
-            "degraded": torch.from_numpy(degraded).unsqueeze(0), # [1, T]
+            "clean": torch.from_numpy(clean).unsqueeze(0),  # [1, T]
+            "degraded": torch.from_numpy(degraded).unsqueeze(0),  # [1, T]
         }
 
 
@@ -214,10 +213,11 @@ def _find_noise_files(corpus_root: Path) -> list[Path]:
 # Flow Matching Loss
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def flow_matching_loss(
     model: nn.Module,
-    clean: torch.Tensor,       # [B, 1, T]
-    degraded: torch.Tensor,    # [B, 1, T]
+    clean: torch.Tensor,  # [B, 1, T]
+    degraded: torch.Tensor,  # [B, 1, T]
     device: torch.device,
 ) -> torch.Tensor:
     """Flow matching training step.
@@ -242,8 +242,8 @@ def flow_matching_loss(
     # Model prediction
     # DiT expects [B, T, 1] input
     x_t_transposed = x_t.transpose(1, 2)  # [B, T, 1]
-    v_pred = model(x_t_transposed, t)     # [B, T, 1]
-    v_pred = v_pred.transpose(1, 2)       # [B, 1, T]
+    v_pred = model(x_t_transposed, t)  # [B, T, 1]
+    v_pred = v_pred.transpose(1, 2)  # [B, 1, T]
 
     # L1 loss on velocity field
     loss = F.l1_loss(v_pred, v_target)
@@ -255,6 +255,7 @@ def flow_matching_loss(
 # Multi-Resolution STFT Loss (optional augmentation)
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def mr_stft_loss(pred_wave: torch.Tensor, target_wave: torch.Tensor) -> torch.Tensor:
     """Multi-resolution STFT loss for waveform quality."""
     loss = torch.tensor(0.0, device=pred_wave.device)
@@ -264,13 +265,9 @@ def mr_stft_loss(pred_wave: torch.Tensor, target_wave: torch.Tensor) -> torch.Te
         if hop < 1:
             continue
         window = torch.hann_window(n_fft, device=pred_wave.device)
-        pred_spec = torch.stft(
-            pred_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
-            window=window, return_complex=True
-        )
+        pred_spec = torch.stft(pred_wave.squeeze(1), n_fft=n_fft, hop_length=hop, window=window, return_complex=True)
         target_spec = torch.stft(
-            target_wave.squeeze(1), n_fft=n_fft, hop_length=hop,
-            window=window, return_complex=True
+            target_wave.squeeze(1), n_fft=n_fft, hop_length=hop, window=window, return_complex=True
         )
         sc = (pred_spec - target_spec).abs().pow(2).sum() / (target_spec.abs().pow(2).sum() + 1e-8)
         mag = F.l1_loss(pred_spec.abs(), target_spec.abs())
@@ -283,6 +280,7 @@ def mr_stft_loss(pred_wave: torch.Tensor, target_wave: torch.Tensor) -> torch.Te
 # Training loop
 # ═══════════════════════════════════════════════════════════════════════════
 
+
 def train(
     epochs: int = 500,
     batch_size: int = 8,
@@ -290,7 +288,7 @@ def train(
     steps_per_epoch: int = 200,
     use_stft_loss: bool = True,
     stft_weight: float = 0.1,
-    resume: Optional[str] = None,
+    resume: str | None = None,
 ):
     """Main training loop for FlowMatchingDiT."""
 
@@ -338,12 +336,20 @@ def train(
     val_dataset = MiipherDiTDataset(val_files, noise_files)
 
     train_loader = DataLoader(
-        train_dataset, batch_size=batch_size, shuffle=True,
-        num_workers=0, pin_memory=False, drop_last=True,
+        train_dataset,
+        batch_size=batch_size,
+        shuffle=True,
+        num_workers=0,
+        pin_memory=False,
+        drop_last=True,
     )
     val_loader = DataLoader(
-        val_dataset, batch_size=batch_size, shuffle=False,
-        num_workers=0, pin_memory=False, drop_last=True,
+        val_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=0,
+        pin_memory=False,
+        drop_last=True,
     )
 
     effective_batch = batch_size * GRADIENT_ACCUM_STEPS
@@ -358,9 +364,7 @@ def train(
 
     # Optimizer
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-5, betas=(0.9, 0.999))
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-        optimizer, T_0=50, T_mult=2, eta_min=1e-6
-    )
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=50, T_mult=2, eta_min=1e-6)
 
     # Resume from checkpoint if specified
     start_epoch = 0
@@ -373,29 +377,29 @@ def train(
         if "optimizer_state_dict" in ckpt:
             try:
                 optimizer.load_state_dict(ckpt["optimizer_state_dict"])
-                print(f"Resumed optimizer state")
+                print("Resumed optimizer state")
             except Exception:
-                print(f"⚠️  Optimizer state mismatch — starting fresh optimizer")
+                print("⚠️  Optimizer state mismatch — starting fresh optimizer")
         # Restore scheduler state (LR cycle position)
         if "scheduler_state_dict" in ckpt:
             try:
                 scheduler.load_state_dict(ckpt["scheduler_state_dict"])
-                print(f"Resumed scheduler state")
+                print("Resumed scheduler state")
             except Exception:
-                print(f"⚠️  Scheduler state mismatch — starting fresh schedule")
+                print("⚠️  Scheduler state mismatch — starting fresh schedule")
         best_val_loss = ckpt.get("val_loss", float("inf"))
         print(f"Resumed from epoch {start_epoch} (best val_loss={best_val_loss:.4f})")
 
     # Create output directory
     CHECKPOINT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Training: {epochs} epochs, {steps_per_epoch} steps/epoch")
     print(f"LR: {lr} → {scheduler.eta_min} (CosineAnnealingWarmRestarts)")
     print(f"Chunk: {CHUNK_SAMPLES} samples ({CHUNK_SEC}s @ {SR}Hz)")
     print(f"SNR range: {SNR_RANGE_DB[0]}–{SNR_RANGE_DB[1]} dB")
     print(f"AMP: {use_amp}, STFT loss: {use_stft_loss} (×{stft_weight})")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     for epoch in range(start_epoch, epochs):
         model.train()
@@ -407,8 +411,8 @@ def train(
             if step >= steps_per_epoch:
                 break
 
-            clean = batch["clean"].to(device)          # [B, 1, T]
-            degraded = batch["degraded"].to(device)    # [B, 1, T]
+            clean = batch["clean"].to(device)  # [B, 1, T]
+            degraded = batch["degraded"].to(device)  # [B, 1, T]
 
             # Flow matching loss
             if use_amp and device.type == "cuda":
@@ -463,8 +467,8 @@ def train(
                 steps_done = step + 1
                 eta = elapsed / steps_done * (steps_per_epoch - steps_done) if steps_done > 0 else 0
                 print(
-                    f"  Epoch {epoch+1:3d}/{epochs} | Step {step+1:3d}/{steps_per_epoch} | "
-                    f"Loss {train_loss/(step+1):.4f} | {elapsed:.0f}s elapsed, {eta:.0f}s ETA",
+                    f"  Epoch {epoch + 1:3d}/{epochs} | Step {step + 1:3d}/{steps_per_epoch} | "
+                    f"Loss {train_loss / (step + 1):.4f} | {elapsed:.0f}s elapsed, {eta:.0f}s ETA",
                     flush=True,
                 )
 
@@ -494,7 +498,7 @@ def train(
         current_lr = scheduler.get_last_lr()[0]
 
         print(
-            f"Epoch {epoch+1:3d}/{epochs} | "
+            f"Epoch {epoch + 1:3d}/{epochs} | "
             f"Train {avg_train_loss:.4f} | Val {avg_val_loss:.4f} | "
             f"LR {current_lr:.1e} | {elapsed:.0f}s",
             flush=True,
@@ -587,9 +591,7 @@ def _export_trained_to_onnx(checkpoint_path: str, output_path: str, device: torc
 # ═══════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Train FlowMatchingDiT for MIIPHER vocal enhancement (§v10.14)"
-    )
+    parser = argparse.ArgumentParser(description="Train FlowMatchingDiT for MIIPHER vocal enhancement (§v10.14)")
     parser.add_argument("--epochs", type=int, default=500, help="Training epochs (default: 500)")
     parser.add_argument("--batch-size", type=int, default=2, help="Batch size (default: 2, RX 7900 XTX safe)")
     parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4)")

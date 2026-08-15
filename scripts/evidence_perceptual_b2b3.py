@@ -99,8 +99,10 @@ def main() -> int:
     from backend.core.unified_restorer_v3 import UnifiedRestorerV3
 
     corpus = Path(args.corpus)
-    materials = [args.material] if args.material else sorted(
-        d.name for d in corpus.iterdir() if d.is_dir() and (d / "damaged").is_dir()
+    materials = (
+        [args.material]
+        if args.material
+        else sorted(d.name for d in corpus.iterdir() if d.is_dir() and (d / "damaged").is_dir())
     )
     files: list[tuple[str, Path]] = []
     for mat in materials:

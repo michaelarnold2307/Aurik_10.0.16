@@ -16,9 +16,9 @@ import ast
 import os
 import re
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Callable
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -172,25 +172,25 @@ def gebot(gebot_id: str, title: str, description: str, category: str = ""):
 # ── Kategorie I: Individuelle Song-Maximierung ────────────────────────────────
 
 
-@gebot("§G1", "Pro-Song-Kalibrierung", "Jeder Song durchläuft eine isolierte SongCalibration.")
+@gebot("§G1 (GEBOTE.md)", "Pro-Song-Kalibrierung", "Jeder Song durchläuft eine isolierte SongCalibration.")
 def check_g1() -> tuple[bool, str]:
     ok = _find_in_code(r"song_calibration|SongCalibration|_song_calibration_profile")
     return ok, "SongCalibration im Code referenziert" if ok else "SongCalibration nicht gefunden"
 
 
-@gebot("§G2", "Defekt-Vollständigkeit", "Alle 62 DefectTypes werden gescannt.")
+@gebot("§G2 (GEBOTE.md)", "Defekt-Vollständigkeit", "Alle 62 DefectTypes werden gescannt.")
 def check_g2() -> tuple[bool, str]:
     ok = _function_exists("backend/core/defect_scanner.py", "scan_defect_presence")
     return ok, "scan_defect_presence() existiert" if ok else "scan_defect_presence() fehlt"
 
 
-@gebot("§G3", "Gesangsintegrität", "Vocal-Safety-Wrapper aktiv für Frequenzen 80 Hz–8 kHz.")
+@gebot("§G3 (GEBOTE.md)", "Gesangsintegrität", "Vocal-Safety-Wrapper aktiv für Frequenzen 80 Hz–8 kHz.")
 def check_g3() -> tuple[bool, str]:
     ok = _find_in_code(r"vocal_safety|VocalSafety|vocal_protection|panns_singing")
     return ok, "Vocal-Safety-Mechanismen im Code" if ok else "Keine Vocal-Safety gefunden"
 
 
-@gebot("§G4", "Ghost-Echo-Freiheit", "PhaseCoherentSTFT muss in allen Modi laufen (§2.60 STCG).")
+@gebot("§G4 (GEBOTE.md)", "Ghost-Echo-Freiheit", "PhaseCoherentSTFT muss in allen Modi laufen (§2.60 STCG).")
 def check_g4() -> tuple[bool, str]:
     ok = _method_exists("backend/core/dsp/phase_coherent_stft.py", "PhaseCoherentSTFT", "capture")
     and_restore = _method_exists("backend/core/dsp/phase_coherent_stft.py", "PhaseCoherentSTFT", "restore")
@@ -206,7 +206,7 @@ def check_g4() -> tuple[bool, str]:
     return False, "PhaseCoherentSTFT capture/restore fehlen"
 
 
-@gebot("§G7", "Interchannel-Lag", "LAG_PROBE an ≥3 Positionen gemessen.")
+@gebot("§G7 (GEBOTE.md)", "Interchannel-Lag", "LAG_PROBE an ≥3 Positionen gemessen.")
 def check_g7() -> tuple[bool, str]:
     count = len(re.findall(r"LAG_PROBE", (ROOT / "backend/core/unified_restorer_v3.py").read_text()))
     return count >= 3, f"LAG_PROBE {count}× referenziert (≥3 erforderlich)"

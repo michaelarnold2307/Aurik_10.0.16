@@ -28,6 +28,9 @@ WATCHED_FILES = [
     "scripts/release_must_coverage_check.py",
     "scripts/compliance_check.py",
     "scripts/check_musical_goals.py",
+    ".github/ID_REGISTRY.md",
+    "docs/ID_COLLISION_MAP.md",
+    "AGENTS.md",
 ]
 
 BASELINE = ROOT / "reports" / "spec_drift_baseline.json"

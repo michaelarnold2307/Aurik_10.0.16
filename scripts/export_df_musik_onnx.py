@@ -16,8 +16,9 @@ Usage:
 
 import sys
 from pathlib import Path
-import torch
+
 import onnx
+import torch
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -31,6 +32,7 @@ OUT_DIR = _PROJECT / "models/deepfilternet_v3_ii/finetuned"
 def load_model(checkpoint_path: str, device="cpu"):
     """Load DeepFilterNet3 with fine-tuned weights."""
     from df.config import config
+
     config.use_defaults()
     from df.deepfilternet3 import init_model
 
@@ -45,12 +47,14 @@ def load_model(checkpoint_path: str, device="cpu"):
 def export_enc(model, out_path: str):
     """Export encoder: feat_erb + feat_spec → e0,e1,e2,e3,emb,c0"""
     print("Exporting encoder (enc.onnx)...")
-    dummy_erb = torch.randn(1, 1, 100, 32)   # [B, 1, T, 32]
-    dummy_spec = torch.randn(1, 2, 100, 96)   # [B, 2, T, 96]
+    dummy_erb = torch.randn(1, 1, 100, 32)  # [B, 1, T, 32]
+    dummy_spec = torch.randn(1, 2, 100, 96)  # [B, 2, T, 96]
 
     # The encoder forward: enc(feat_erb, feat_spec) → e0,e1,e2,e3,emb,c0,lsnr
     torch.onnx.export(
-        model.enc, (dummy_erb, dummy_spec), out_path,
+        model.enc,
+        (dummy_erb, dummy_spec),
+        out_path,
         input_names=["feat_erb", "feat_spec"],
         output_names=["e0", "e1", "e2", "e3", "emb", "c0", "lsnr"],
         dynamic_axes={
@@ -75,14 +79,16 @@ def export_erb_dec(model, out_path: str):
     """Export ERB decoder: emb + e3,e2,e1,e0 → mask"""
     print("Exporting ERB decoder (erb_dec.onnx)...")
     # Correct shapes from encoder output (conv_ch=16)
-    dummy_emb = torch.randn(1, 100, 128)   # [B, T, emb_dim=128]
-    dummy_e3 = torch.randn(1, 16, 100, 8)   # [B, 16, T, F/4=8]
-    dummy_e2 = torch.randn(1, 16, 100, 8)   # [B, 16, T, F/4=8]
+    dummy_emb = torch.randn(1, 100, 128)  # [B, T, emb_dim=128]
+    dummy_e3 = torch.randn(1, 16, 100, 8)  # [B, 16, T, F/4=8]
+    dummy_e2 = torch.randn(1, 16, 100, 8)  # [B, 16, T, F/4=8]
     dummy_e1 = torch.randn(1, 16, 100, 16)  # [B, 16, T, F/2=16]
     dummy_e0 = torch.randn(1, 16, 100, 32)  # [B, 16, T, F=32]
 
     torch.onnx.export(
-        model.erb_dec, (dummy_emb, dummy_e3, dummy_e2, dummy_e1, dummy_e0), out_path,
+        model.erb_dec,
+        (dummy_emb, dummy_e3, dummy_e2, dummy_e1, dummy_e0),
+        out_path,
         input_names=["emb", "e3", "e2", "e1", "e0"],
         output_names=["erb_mask"],
         dynamic_axes={
@@ -103,11 +109,13 @@ def export_erb_dec(model, out_path: str):
 def export_dec(model, out_path: str):
     """Export DF decoder: emb + c0 → coefs"""
     print("Exporting DF decoder (dec.onnx)...")
-    dummy_emb = torch.randn(1, 100, 128)   # [B, T, emb_dim=128]
+    dummy_emb = torch.randn(1, 100, 128)  # [B, T, emb_dim=128]
     dummy_c0 = torch.randn(1, 16, 100, 96)  # [B, conv_ch=16, T, 96]
 
     torch.onnx.export(
-        model.df_dec, (dummy_emb, dummy_c0), out_path,
+        model.df_dec,
+        (dummy_emb, dummy_c0),
+        out_path,
         input_names=["emb", "c0"],
         output_names=["coefs"],
         dynamic_axes={
@@ -125,6 +133,7 @@ def export_dec(model, out_path: str):
 
 def main():
     import argparse
+
     p = argparse.ArgumentParser(description="Export DeepFilterNet3 → ONNX")
     p.add_argument("--checkpoint", type=str, default=str(CHECKPOINT_PATH))
     args = p.parse_args()

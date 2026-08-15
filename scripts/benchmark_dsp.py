@@ -197,7 +197,7 @@ def benchmark_cython():
     print("\n2. Group Clicks (event grouping)")
     print("-" * 80)
 
-    clicks = np.random.randint(0, len(audio), size=100).astype(np.int32)  # type: ignore[arg-type]  # §V5 Dither applied at export level
+    clicks = np.random.randint(0, len(audio), size=100).astype(np.int32)  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
     clicks = np.sort(clicks)
 
     def python_group_clicks(clicks, max_gap):
@@ -223,7 +223,7 @@ def benchmark_cython():
         cython_loops.group_clicks_fast,
         clicks.astype(np.int32),
         max_gap,
-        iterations=100,  # type: ignore[arg-type]  # §V5 Dither applied at export level
+        iterations=100,  # type: ignore[arg-type]  # §V5 (copilot-instructions.md) Dither applied at export level
     )
     speedup = python_time / cython_time
 

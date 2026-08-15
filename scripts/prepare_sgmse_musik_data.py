@@ -17,11 +17,13 @@ Usage:
         --sr 48000 --chunk 4.0 --snr 5,20
 """
 
-import argparse, random, sys
+import argparse
+import random
+import sys
 from pathlib import Path
 
-import numpy as np
 import librosa
+import numpy as np
 import soundfile as sf
 
 
@@ -40,8 +42,9 @@ def prepare(
 
     # Collect all stem files
     audio_files = sorted(
-        f for f in musdb.rglob("*.wav") if f.is_file()
-        and any(s in f.stem for s in ["vocals", "drums", "bass", "other"])
+        f
+        for f in musdb.rglob("*.wav")
+        if f.is_file() and any(s in f.stem for s in ["vocals", "drums", "bass", "other"])
     )
     if not audio_files:
         print(f"ERROR: No stem files found in {musdb}")
@@ -79,7 +82,7 @@ def prepare(
 
             for si in range(samples_per_file):
                 start = random.randint(0, max(0, len(y) - chunk))
-                clean = y[start:start + chunk].copy()
+                clean = y[start : start + chunk].copy()
                 peak = np.abs(clean).max() + 1e-8
                 clean = clean / peak
 
@@ -93,8 +96,8 @@ def prepare(
                 noise = noise / (np.abs(noise).max() + 1e-8)
 
                 snr_db = random.uniform(*snr_range)
-                cr = np.sqrt(np.mean(clean ** 2) + 1e-8)
-                nr = np.sqrt(np.mean(noise ** 2) + 1e-8)
+                cr = np.sqrt(np.mean(clean**2) + 1e-8)
+                nr = np.sqrt(np.mean(noise**2) + 1e-8)
                 noise = noise * (cr / (10 ** (snr_db / 20))) / (nr + 1e-8)
                 degraded = clean + noise
 
@@ -106,7 +109,7 @@ def prepare(
                 sf.write(str(clean_dir / fname), clean, sr)
                 sf.write(str(noisy_dir / fname), degraded, sr)
 
-        print(f"  {split}: {len(files)} stems × {samples_per_file} = {len(files)*samples_per_file} pairs")
+        print(f"  {split}: {len(files)} stems × {samples_per_file} = {len(files) * samples_per_file} pairs")
 
     # Create dataset config
     (out / "dataset_info.txt").write_text(
@@ -116,8 +119,8 @@ def prepare(
         f"Chunk: {chunk_sec}s ({chunk} samples)\n"
         f"SNR Range: {snr_range[0]}-{snr_range[1]} dB\n"
         f"Samples per file: {samples_per_file}\n"
-        f"Train files: {len(train_files)} → {len(train_files)*samples_per_file} pairs\n"
-        f"Val files: {len(val_files)} → {len(val_files)*samples_per_file} pairs\n"
+        f"Train files: {len(train_files)} → {len(train_files) * samples_per_file} pairs\n"
+        f"Val files: {len(val_files)} → {len(val_files) * samples_per_file} pairs\n"
     )
     print(f"\nDone: {out}")
 
@@ -133,5 +136,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     snr_lo, snr_hi = map(float, args.snr.split(","))
-    prepare(args.musdb, args.output, args.sr, args.chunk, (snr_lo, snr_hi),
-            samples_per_file=args.samples_per_file)
+    prepare(args.musdb, args.output, args.sr, args.chunk, (snr_lo, snr_hi), samples_per_file=args.samples_per_file)

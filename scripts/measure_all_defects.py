@@ -80,9 +80,7 @@ def make_defects(clean: np.ndarray, sr: int) -> dict[str, np.ndarray]:
     t_new = np.cumsum(mod) / sr
     t_new = t_new - t_new[0]
     t_new = t_new / t_new[-1] * (n - 1) / sr
-    wow = np.stack(
-        [np.interp(t_new, t_axis, clean[:, c]) for c in range(clean.shape[1])], axis=1
-    ).astype(np.float32)
+    wow = np.stack([np.interp(t_new, t_axis, clean[:, c]) for c in range(clean.shape[1])], axis=1).astype(np.float32)
     defects["wow_flutter"] = wow
 
     # print_through: verzögerte Kopie (+100 ms, alpha 0.15)
@@ -136,23 +134,25 @@ def main() -> int:
             executor = CoordinatedRepair()
             out, report = executor.execute(damaged, plan, manifest, sr, material="unknown")
             snr_out = _snr_db(out, clean)
-            results.append({
-                "defect": name,
-                "snr_in_db": round(snr_in, 2),
-                "snr_out_db": round(snr_out, 2),
-                "snr_delta_db": round(snr_out - snr_in, 2),
-                "steps": len(getattr(report, "completed_steps", []) or []),
-                "failed": [f[0] for f in getattr(report, "failed_steps", []) or []],
-                "guards": dict(getattr(report, "guard_violations", {}) or {}),
-                "detected": [
-                    f"{str(d.category).split('.')[-1]}({d.severity:.2f})"
-                    for d in manifest.defects[:6]
-                ],
-                "seconds": round(time.time() - t0, 1),
-            })
-            print(f"  SNR {snr_in:+.1f} → {snr_out:+.1f} dB "
-                  f"({snr_out - snr_in:+.2f} dB) · {len(getattr(report, 'completed_steps', []))} Schritte "
-                  f"· Guards {getattr(report, 'guard_violations', {})}", flush=True)
+            results.append(
+                {
+                    "defect": name,
+                    "snr_in_db": round(snr_in, 2),
+                    "snr_out_db": round(snr_out, 2),
+                    "snr_delta_db": round(snr_out - snr_in, 2),
+                    "steps": len(getattr(report, "completed_steps", []) or []),
+                    "failed": [f[0] for f in getattr(report, "failed_steps", []) or []],
+                    "guards": dict(getattr(report, "guard_violations", {}) or {}),
+                    "detected": [f"{str(d.category).split('.')[-1]}({d.severity:.2f})" for d in manifest.defects[:6]],
+                    "seconds": round(time.time() - t0, 1),
+                }
+            )
+            print(
+                f"  SNR {snr_in:+.1f} → {snr_out:+.1f} dB "
+                f"({snr_out - snr_in:+.2f} dB) · {len(getattr(report, 'completed_steps', []))} Schritte "
+                f"· Guards {getattr(report, 'guard_violations', {})}",
+                flush=True,
+            )
         except Exception as exc:
             print(f"  ❌ {exc}", flush=True)
             results.append({"defect": name, "error": str(exc), "snr_in_db": round(snr_in, 2)})

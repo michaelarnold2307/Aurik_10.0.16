@@ -108,9 +108,7 @@ def main() -> int:
             if covered:
                 release_must_covered += 1
             else:
-                findings.append(
-                    {"level": "warn", "where": rel, "what": f"RELEASE_MUST ohne Test-Marker: {key}"}
-                )
+                findings.append({"level": "warn", "where": rel, "what": f"RELEASE_MUST ohne Test-Marker: {key}"})
     for spec in sorted(_SPEC_DIR.glob("*.md")):
         for m in _RELEASE_MUST_RE.finditer(_read(spec)):
             release_must_total += 1
@@ -119,16 +117,24 @@ def main() -> int:
                 release_must_covered += 1
             else:
                 findings.append(
-                    {"level": "warn", "where": str(spec.relative_to(_PROJECT)), "what": f"RELEASE_MUST ohne Test-Marker: {key}"}
+                    {
+                        "level": "warn",
+                        "where": str(spec.relative_to(_PROJECT)),
+                        "what": f"RELEASE_MUST ohne Test-Marker: {key}",
+                    }
                 )
 
     # ── 2. VERBOTEN V01–V52 ↔ Linter ──────────────────────────────────
-    verboten_txt = _read(_PROJECT / ".github" / "VERBOTEN.md") if (_PROJECT / ".github" / "VERBOTEN.md").exists() else ""
+    verboten_txt = (
+        _read(_PROJECT / ".github" / "VERBOTEN.md") if (_PROJECT / ".github" / "VERBOTEN.md").exists() else ""
+    )
     documented_v = set(_VERBOTEN_ID_RE.findall(verboten_txt))
     hardcoded_v = _hardcoded_verboten_rules()
     missing_in_linter = sorted(documented_v - hardcoded_v)
     for v in missing_in_linter:
-        findings.append({"level": "warn", "where": "VERBOTEN.md", "what": f"{v} dokumentiert, aber nicht im Linter-Katalog"})
+        findings.append(
+            {"level": "warn", "where": "VERBOTEN.md", "what": f"{v} dokumentiert, aber nicht im Linter-Katalog"}
+        )
 
     # ── 3. GEBOTE ↔ Verifier ──────────────────────────────────────────
     gebote_txt = _read(_PROJECT / ".github" / "GEBOTE.md") if (_PROJECT / ".github" / "GEBOTE.md").exists() else ""
@@ -137,7 +143,11 @@ def main() -> int:
     missing_in_verifier = sorted({int(g) for g in documented_g if int(g) > 9} - hardcoded_g)
     for g in missing_in_verifier:
         findings.append(
-            {"level": "info", "where": "GEBOTE.md", "what": f"§G{g} dokumentiert, aber nicht in der hartkodierten Verifier-Teilmenge (laut AGENTS.md zulässig — Referenzcharakter)"}
+            {
+                "level": "info",
+                "where": "GEBOTE.md",
+                "what": f"§G{g} dokumentiert, aber nicht in der hartkodierten Verifier-Teilmenge (laut AGENTS.md zulässig — Referenzcharakter)",
+            }
         )
 
     # ── 4. Advisory-Marker-Statistik ──────────────────────────────────
@@ -167,14 +177,17 @@ def main() -> int:
         f"- VERBOTEN V dokumentiert: {len(documented_v)} | im Linter-Katalog: {len(hardcoded_v)} | fehlend: {missing_in_linter}\n"
         f"- GEBOTE außerhalb Verifier-Teilmenge (Info): {missing_in_verifier}\n"
         f"- advisory-Marker: {advisory_count}\n\n"
-        "## Findings\n\n" + "".join(f"- [{f['level']}] {f['where']}: {f['what']}\n" for f in findings)
+        "## Findings\n\n"
+        + "".join(f"- [{f['level']}] {f['where']}: {f['what']}\n" for f in findings)
         or "## Findings\n\n_(keine)_\n",
         encoding="utf-8",
     )
     _REPORT_JSON.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     warnings = [f for f in findings if f["level"] == "warn"]
-    print(f"Rule-Machine-Coverage: {len(warnings)} Warnungen, {len(findings)} Findings — Report: {_REPORT_MD.relative_to(_PROJECT)}")
+    print(
+        f"Rule-Machine-Coverage: {len(warnings)} Warnungen, {len(findings)} Findings — Report: {_REPORT_MD.relative_to(_PROJECT)}"
+    )
     if _FAIL_CLOSED and warnings:
         print("FAIL-CLOSED: Warnungen vorhanden → Exit 1")
         return 1

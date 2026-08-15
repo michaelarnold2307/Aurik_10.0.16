@@ -20,6 +20,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import numpy as np
+
 from backend.core.evaluation_system import (
     EvalCase,
     EvalReport,
@@ -27,8 +29,6 @@ from backend.core.evaluation_system import (
     ListeningTestExporter,
     discover_corpus_cases,
 )
-
-import numpy as np
 
 
 def _load_case(paths: dict) -> EvalCase | None:
@@ -38,8 +38,11 @@ def _load_case(paths: dict) -> EvalCase | None:
         damaged, sr = sf.read(paths["damaged_path"], dtype="float32", always_2d=False)
         clean, sr2 = sf.read(paths["clean_path"], dtype="float32", always_2d=False)
         case = EvalCase(
-            case_id=paths["case_id"], material=paths["material"],
-            damaged=damaged, clean=clean, sample_rate=int(sr),
+            case_id=paths["case_id"],
+            material=paths["material"],
+            damaged=damaged,
+            clean=clean,
+            sample_rate=int(sr),
         )
         if paths.get("restored_path"):
             restored, sr3 = sf.read(paths["restored_path"], dtype="float32", always_2d=False)
@@ -58,8 +61,12 @@ def _make_synthetic_case(index: int, degraded: bool = False) -> EvalCase:
     damaged = clean + noise
     restored = clean if not degraded else damaged + noise * 2.0
     return EvalCase(
-        case_id=f"synthetic_{index:02d}", material="synthetic",
-        damaged=damaged, clean=clean, restored=restored, sample_rate=48000,
+        case_id=f"synthetic_{index:02d}",
+        material="synthetic",
+        damaged=damaged,
+        clean=clean,
+        restored=restored,
+        sample_rate=48000,
     )
 
 
@@ -115,9 +122,15 @@ def _run_objective(args: argparse.Namespace) -> EvalReport:
                 cases.append(case)
     if not cases:
         print("Keine Fälle gefunden — SKIP")
-        return EvalReport(mode="objective", verdict="SKIP",
-                          gates=[__import__("backend.core.evaluation_system", fromlist=["GateResult"]).GateResult(
-                              "objective", True, {"reason": "keine Fälle"})])
+        return EvalReport(
+            mode="objective",
+            verdict="SKIP",
+            gates=[
+                __import__("backend.core.evaluation_system", fromlist=["GateResult"]).GateResult(
+                    "objective", True, {"reason": "keine Fälle"}
+                )
+            ],
+        )
     print(f"Bewerte {len(cases)} Fälle …")
     report = system.run_objective(cases, gates=True)
     for c in report.cases:
@@ -154,25 +167,20 @@ def _run_all(args: argparse.Namespace) -> EvalReport:
     objective.mode = "all"
     objective.cases.extend(competitive.cases)
     objective.gates.extend(competitive.gates)
-    objective.verdict = (
-        "PASS"
-        if all(g.passed for g in objective.gates)
-        else "FAIL"
-    )
+    objective.verdict = "PASS" if all(g.passed for g in objective.gates) else "FAIL"
     return objective
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="§v10.995 Aurik Evaluation")
-    parser.add_argument("--mode", default="objective",
-                        choices=["objective", "competitive", "all"])
+    parser.add_argument("--mode", default="objective", choices=["objective", "competitive", "all"])
     parser.add_argument("--corpus", default="corpus")
     parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--synthetic", action="store_true")
-    parser.add_argument("--restore", action="store_true",
-                        help="§v10.998: Fehlende restored/-Dateien mit der SOTA-Kette erzeugen")
-    parser.add_argument("--material", default=None,
-                        help="Nur Fälle dieses Materials bewerten (z.B. reverb)")
+    parser.add_argument(
+        "--restore", action="store_true", help="§v10.998: Fehlende restored/-Dateien mit der SOTA-Kette erzeugen"
+    )
+    parser.add_argument("--material", default=None, help="Nur Fälle dieses Materials bewerten (z.B. reverb)")
     parser.add_argument("--cases", type=int, default=4)
     parser.add_argument("--out", default=None)
     parser.add_argument("--gate", action="store_true", help="Exit 1 bei FAIL")

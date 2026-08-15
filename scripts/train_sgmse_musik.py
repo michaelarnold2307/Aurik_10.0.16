@@ -22,16 +22,19 @@ Usage:
     python scripts/train_sgmse_musik.py --epochs 200 --batch-size 4 --lr 3e-5
 """
 
-import argparse, random, sys, time
+import argparse
+import random
+import sys
+import time
 from pathlib import Path
 from typing import Optional
 
+import librosa
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import Dataset, DataLoader
-import librosa
+from torch.utils.data import DataLoader, Dataset
 
 _PROJECT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_PROJECT))
@@ -70,6 +73,7 @@ _install_lightning_stub()
 
 
 # ── SDE (Ornstein-Uhlenbeck Variance Exploding) ────────────────────────────
+
 
 class OUVESDE:
     """Minimal OUV SDE for score matching. Matches sgmse.sdes.OUVESDE."""
@@ -112,11 +116,12 @@ class OUVESDE:
         # cat (nicht stack!) entlang Kanal-Dim → [B, 2, F, T] komplex
         cond = torch.cat([x_t, x_noisy], dim=1)
         score_pred = model(cond, t)
-        target = -(x_t - x_clean) / (sigma ** 2 + 1e-8)
+        target = -(x_t - x_clean) / (sigma**2 + 1e-8)
         return F.mse_loss(score_pred.real, target.real) + F.mse_loss(score_pred.imag, target.imag)
 
 
 # ── Feature Extraction ──────────────────────────────────────────────────────
+
 
 class STFTExtractor:
     """Compute complex STFT for SGMSE+ input."""
@@ -132,12 +137,12 @@ class STFTExtractor:
 
     def __call__(self, audio):
         """audio: [B, T] → spec: [B, 2, F, T] complex"""
-        spec = torch.stft(audio, n_fft=self.n_fft, hop_length=self.hop,
-                          window=self.window, return_complex=True)
+        spec = torch.stft(audio, n_fft=self.n_fft, hop_length=self.hop, window=self.window, return_complex=True)
         return spec.unsqueeze(1)  # [B, 1, F, T] → stack as [B, 2, F, T]?
 
 
 # ── Dataset (streaming from MUSDB18, no pre-generation needed) ──────────────
+
 
 class SGMSE_Dataset(Dataset):
     """Streaming dataset: loads MUSDB18 stems directly, mixes noise on-the-fly."""
@@ -156,7 +161,7 @@ class SGMSE_Dataset(Dataset):
         if len(y) < 192000:  # 4s @ 48kHz
             y = np.pad(y, (0, 192000 - len(y)), mode="reflect")
         start = random.randint(0, max(0, len(y) - 192000))
-        return y[start:start + 192000]
+        return y[start : start + 192000]
 
     def __getitem__(self, idx):
         clean = self._load(self.files[idx % len(self.files)])
@@ -166,22 +171,24 @@ class SGMSE_Dataset(Dataset):
         # Noise at random SNR
         noise = np.random.randn(192000).astype(np.float32)
         c = random.choice(["white", "pink", "brown"])
-        if c == "pink": noise = np.cumsum(noise)
-        elif c == "brown": noise = np.cumsum(np.cumsum(noise))
+        if c == "pink":
+            noise = np.cumsum(noise)
+        elif c == "brown":
+            noise = np.cumsum(np.cumsum(noise))
         noise = noise / (np.abs(noise).max() + 1e-8)
 
         snr_db = random.uniform(5.0, 20.0)
         cr = np.sqrt(np.mean(clean**2) + 1e-8)
         nr = np.sqrt(np.mean(noise**2) + 1e-8)
-        noise = noise * (cr / (10**(snr_db/20))) / (nr + 1e-8)
+        noise = noise * (cr / (10 ** (snr_db / 20))) / (nr + 1e-8)
         degraded = clean + noise
 
         dp = np.abs(degraded).max() + 1e-8
-        return {"clean": torch.from_numpy(clean / dp),
-                "noisy": torch.from_numpy(degraded / dp)}
+        return {"clean": torch.from_numpy(clean / dp), "noisy": torch.from_numpy(degraded / dp)}
 
 
 # ── Training ────────────────────────────────────────────────────────────────
+
 
 def train(
     epochs=200,
@@ -197,8 +204,9 @@ def train(
     # Data — streaming directly from MUSDB18, no pre-generation
     musdb = _PROJECT / "data" / "musdb18hq" / "train"
     all_files = sorted(
-        f for f in musdb.rglob("*.wav") if f.is_file()
-        and any(s in f.stem for s in ["vocals", "drums", "bass", "other"])
+        f
+        for f in musdb.rglob("*.wav")
+        if f.is_file() and any(s in f.stem for s in ["vocals", "drums", "bass", "other"])
     )
     if not all_files:
         print(f"ERROR: No stem files found in {musdb}")
@@ -210,13 +218,12 @@ def train(
 
     train_ds = SGMSE_Dataset(train_files)
     val_ds = SGMSE_Dataset(val_files)
-    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True,
-                              num_workers=0, drop_last=True)
-    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False,
-                            num_workers=0, drop_last=True)
+    train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=0, drop_last=True)
+    val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False, num_workers=0, drop_last=True)
 
     # Model
     from sgmse.backbones.ncsnpp_48k import NCSNpp_48k
+
     model = NCSNpp_48k().to(device)
     sde = OUVESDE()
 
@@ -239,8 +246,11 @@ def train(
         else:
             sd = state
         # Filter to backbone parameters only (NCSNpp hält alles in all_modules)
-        model_sd = {k: v for k, v in sd.items() if any(
-            k.startswith(p) for p in ["all_modules", "enc", "dec", "output", "act", "norm"])}
+        model_sd = {
+            k: v
+            for k, v in sd.items()
+            if any(k.startswith(p) for p in ["all_modules", "enc", "dec", "output", "act", "norm"])
+        }
         if model_sd:
             model.load_state_dict(model_sd, strict=False)
             print(f"  Loaded {len(model_sd)} backbone parameters")
@@ -298,8 +308,11 @@ def train(
             if (step + 1) % 40 == 0:
                 e = time.time() - t0
                 eta = e / (step + 1) * (steps_per_epoch - step - 1) if step > 0 else 0
-                print(f"  Ep {epoch+1:3d}/{epochs} | St {step+1:3d}/{steps_per_epoch} | "
-                      f"L {train_loss/(step+1):.4f} | {e:.0f}s/{eta:.0f}s", flush=True)
+                print(
+                    f"  Ep {epoch + 1:3d}/{epochs} | St {step + 1:3d}/{steps_per_epoch} | "
+                    f"L {train_loss / (step + 1):.4f} | {e:.0f}s/{eta:.0f}s",
+                    flush=True,
+                )
 
         scheduler.step()
         avg_train = train_loss / min(steps_per_epoch, len(train_loader))
@@ -309,7 +322,8 @@ def train(
         val_loss, vn = 0.0, 0
         with torch.no_grad():
             for vb in val_loader:
-                if vn >= 20: break
+                if vn >= 20:
+                    break
                 cv, nv = vb["clean"].to(device), vb["noisy"].to(device)
                 sc = torch.stft(cv, n_fft=1022, hop_length=256, window=window, return_complex=True).unsqueeze(1)
                 sn = torch.stft(nv, n_fft=1022, hop_length=256, window=window, return_complex=True).unsqueeze(1)
@@ -317,16 +331,27 @@ def train(
                 vn += 1
         avg_val = val_loss / max(vn, 1)
 
-        print(f"Ep {epoch+1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
-              f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time()-t0:.0f}s", flush=True)
+        print(
+            f"Ep {epoch + 1:3d}/{epochs} | Tr {avg_train:.4f} | Val {avg_val:.4f} | "
+            f"LR {scheduler.get_last_lr()[0]:.1e} | {time.time() - t0:.0f}s",
+            flush=True,
+        )
 
-        torch.save({"model_state_dict": model.state_dict(), "epoch": epoch+1,
-                    "optimizer_state_dict": optimizer.state_dict(), "val_loss": avg_val},
-                   out_dir / "checkpoint_latest.pt")
+        torch.save(
+            {
+                "model_state_dict": model.state_dict(),
+                "epoch": epoch + 1,
+                "optimizer_state_dict": optimizer.state_dict(),
+                "val_loss": avg_val,
+            },
+            out_dir / "checkpoint_latest.pt",
+        )
         if avg_val < best_val:
             best_val = avg_val
-            torch.save({"model_state_dict": model.state_dict(), "epoch": epoch+1, "val_loss": avg_val},
-                       out_dir / "sgmse_musik_best.pt")
+            torch.save(
+                {"model_state_dict": model.state_dict(), "epoch": epoch + 1, "val_loss": avg_val},
+                out_dir / "sgmse_musik_best.pt",
+            )
             print(f"  >> Best: {best_val:.4f}")
 
     print(f"\nDone. Best val: {best_val:.4f} | {out_dir}")
@@ -341,5 +366,4 @@ if __name__ == "__main__":
     p.add_argument("--ckpt", type=str, default="models/sgmse_plus/sgmse_plus_src_1.ckpt")
     p.add_argument("--resume", type=str, default=None)
     args = p.parse_args()
-    train(args.epochs, args.batch_size, args.lr, args.steps_per_epoch,
-          args.ckpt, args.resume)
+    train(args.epochs, args.batch_size, args.lr, args.steps_per_epoch, args.ckpt, args.resume)

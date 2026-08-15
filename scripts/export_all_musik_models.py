@@ -21,7 +21,9 @@ Models:
   mp_senet       MP-SENet (~1M)         → models/mp_senet/mp_senet_musik.onnx
 """
 
-import argparse, sys, subprocess
+import argparse
+import subprocess
+import sys
 from pathlib import Path
 
 _PROJECT = Path(__file__).resolve().parent.parent
@@ -29,14 +31,14 @@ MODELS_DIR = _PROJECT / "models"
 
 
 def run(cmd: list[str], desc: str):
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  {desc}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     result = subprocess.run(cmd, cwd=str(_PROJECT))
     if result.returncode != 0:
         print(f"  ❌ Failed with code {result.returncode}")
     else:
-        print(f"  ✅ Done")
+        print("  ✅ Done")
 
 
 def export_all(python: str = "python3", only: str | None = None):
@@ -48,11 +50,17 @@ def export_all(python: str = "python3", only: str | None = None):
         ckpt = MODELS_DIR / "miipher_dit" / "checkpoint_best.pt"
         onnx_out = MODELS_DIR / "miipher_dit" / "flow_matching_dit.onnx"
         if ckpt.exists():
-            run([
-                python, "scripts/export_miipher_dit_onnx.py",
-                "--checkpoint", str(ckpt),
-                "--output", str(onnx_out),
-            ], "MIIPHER-DiT → ONNX")
+            run(
+                [
+                    python,
+                    "scripts/export_miipher_dit_onnx.py",
+                    "--checkpoint",
+                    str(ckpt),
+                    "--output",
+                    str(onnx_out),
+                ],
+                "MIIPHER-DiT → ONNX",
+            )
         else:
             print(f"\n  ⚠️  MIIPHER-DiT checkpoint not found: {ckpt}")
 
@@ -60,10 +68,15 @@ def export_all(python: str = "python3", only: str | None = None):
     if only in (None, "dfn", "deepfilternet"):
         ckpt = MODELS_DIR / "deepfilternet_v3_ii" / "finetuned" / "dfn_musik_best.pt"
         if ckpt.exists():
-            run([
-                python, "scripts/export_df_musik_onnx.py",
-                "--checkpoint", str(ckpt),
-            ], "DeepFilterNet Musik → ONNX (enc, dec, erb_dec)")
+            run(
+                [
+                    python,
+                    "scripts/export_df_musik_onnx.py",
+                    "--checkpoint",
+                    str(ckpt),
+                ],
+                "DeepFilterNet Musik → ONNX (enc, dec, erb_dec)",
+            )
         else:
             print(f"\n  ⚠️  DFN checkpoint not found: {ckpt}")
 
@@ -72,9 +85,9 @@ def export_all(python: str = "python3", only: str | None = None):
         ckpt = MODELS_DIR / "sgmse_plus" / "finetuned" / "sgmse_musik_best.pt"
         ts_out = MODELS_DIR / "sgmse_plus" / "sgmse_musik.ts"
         if ckpt.exists():
-            print(f"\n  ⚠️  SGMSE+ TorchScript export requires manual script.")
+            print("\n  ⚠️  SGMSE+ TorchScript export requires manual script.")
             print(f"     Checkpoint: {ckpt}")
-            print(f"     Run: python scripts/train_sgmse_musik.py --export-only")
+            print("     Run: python scripts/train_sgmse_musik.py --export-only")
         else:
             print(f"\n  ⚠️  SGMSE+ checkpoint not found: {ckpt}")
 
@@ -83,16 +96,16 @@ def export_all(python: str = "python3", only: str | None = None):
         ckpt = MODELS_DIR / "mp_senet" / "finetuned" / "mp_senet_musik_best.pt"
         onnx_out = MODELS_DIR / "mp_senet" / "mp_senet_musik.onnx"
         if ckpt.exists():
-            print(f"\n  ⚠️  MP-SENet uses existing export script.")
+            print("\n  ⚠️  MP-SENet uses existing export script.")
             print(f"     Checkpoint: {ckpt}")
-            print(f"     Run: python scripts/export_mp_senet_onnx.py")
+            print("     Run: python scripts/export_mp_senet_onnx.py")
         else:
             print(f"\n  ⚠️  MP-SENet checkpoint not found: {ckpt}")
 
     # ── Summary ───────────────────────────────────────────────────────
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("  Export pipeline complete")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     _print_status()
 
 
@@ -105,7 +118,7 @@ def _print_status():
         ("MP-SENet Musik", "mp_senet/finetuned/mp_senet_musik_best.pt", "mp_senet/mp_senet_musik.onnx"),
     ]
     print(f"\n  {'Model':<18} {'Checkpoint':<12} {'ONNX/TorchScript':<12}")
-    print(f"  {'-'*18} {'-'*12} {'-'*12}")
+    print(f"  {'-' * 18} {'-' * 12} {'-' * 12}")
     for name, ckpt_rel, onnx_rel in models:
         ckpt_ok = "✅" if (MODELS_DIR / ckpt_rel).exists() else "❌"
         onnx_ok = "✅" if (MODELS_DIR / onnx_rel).exists() else "❌"

@@ -25,7 +25,7 @@ SR = 48000
 def _snr_db(reference: np.ndarray, signal: np.ndarray) -> float:
     n = np.asarray(signal) - np.asarray(reference)
     ref = np.asarray(reference)
-    return float(10 * np.log10((np.mean(ref ** 2) + 1e-10) / (np.mean(n ** 2) + 1e-10)))
+    return float(10 * np.log10((np.mean(ref**2) + 1e-10) / (np.mean(n**2) + 1e-10)))
 
 
 def _load(path: Path, chunk_s: float = 4.0) -> tuple[np.ndarray, int]:
@@ -37,8 +37,8 @@ def _load(path: Path, chunk_s: float = 4.0) -> tuple[np.ndarray, int]:
 
 
 def ablate(medium: str, damaged_name: str, clean_name: str):
+    from backend.core.coordinated_repair import CoordinatedRepair, RepairPlanner
     from backend.core.defect_consensus_pipeline import DefectConsensusPipeline
-    from backend.core.coordinated_repair import RepairPlanner, CoordinatedRepair
 
     dmg, sr = _load(_PROJECT / "corpus" / medium / "damaged" / damaged_name)
     clean, _ = _load(_PROJECT / "corpus" / medium / "clean" / clean_name)

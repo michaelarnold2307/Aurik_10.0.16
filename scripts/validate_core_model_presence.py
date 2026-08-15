@@ -58,12 +58,12 @@ def _runtime_ready_checks() -> list[dict[str, str | bool]]:
 
     # Fallbacks / operational checks
     fcpe_fallback = _exists("models/crepe/crepe.onnx") or _exists("models/rmvpe/rmvpe.onnx")
-    sgmse_fallback = True  # wpe_plugin.py is local DSP fallback.  # §V6: logger.warning handled at call site
+    sgmse_fallback = True  # wpe_plugin.py is local DSP fallback.  # §V6 (copilot-instructions.md): logger.warning handled at call site
     sgmse_checkpoint = _exists("models/sgmse_plus/sgmse_wsj0_reverb.ckpt")
     sgmse_torchscript = _exists("models/sgmse_plus/sgmse_plus.ts")
-    versa_fallback = True  # versa_plugin.py has PQS-DSP fallback.  # §V6: logger.warning handled at call site
+    versa_fallback = True  # versa_plugin.py has PQS-DSP fallback.  # §V6 (copilot-instructions.md): logger.warning handled at call site
     flow_fallback = _exists("models/cqtdiff/score_network.pt") or _exists("models/diffwave/diffwave_model.onnx")
-    gacela_fallback = True  # gacela_plugin.py has DSP exciter fallback.  # §V6: logger.warning handled at call site
+    gacela_fallback = True  # gacela_plugin.py has DSP exciter fallback.  # §V6 (copilot-instructions.md): logger.warning handled at call site
 
     return [
         {
@@ -94,7 +94,7 @@ def _runtime_ready_checks() -> list[dict[str, str | bool]]:
                 if sgmse_primary
                 else (
                     "torchscript_fallback" if sgmse_torchscript else "wpe_dsp_fallback"
-                )  # §V6: logger.warning handled at call site
+                )  # §V6 (copilot-instructions.md): logger.warning handled at call site
             ),
         },
         {
