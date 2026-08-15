@@ -8,9 +8,10 @@ Aufruf-Konventionen:
   - Phase 11 + 25: MaterialType ist PFLICHTARG
 """
 
+import types
+
 import numpy as np
 from scipy import signal
-import types
 
 np.random.seed(42)  # §5.4 Reproduzierbarkeit
 import pytest
