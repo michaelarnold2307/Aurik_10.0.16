@@ -680,10 +680,10 @@ def limit_quiet_edge_boost(
             scale = 1.0
             if cand_edge_db > ref_edge_db + max_edge_boost_db:
                 scale = min(scale, float(10.0 ** ((ref_edge_db + max_edge_boost_db - cand_edge_db) / 20.0)))
-            if cand_edge_peak_db > ref_edge_peak_db + max_edge_boost_db + 1.0:
+            if cand_edge_peak_db > ref_edge_peak_db + max_edge_boost_db + 0.02:
                 scale = min(
                     scale,
-                    float(10.0 ** ((ref_edge_peak_db + max_edge_boost_db + 1.0 - cand_edge_peak_db) / 20.0)),
+                    float(10.0 ** ((ref_edge_peak_db + max_edge_boost_db + 0.02 - cand_edge_peak_db) / 20.0)),
                 )
             out = _scale_audio_region(
                 out,

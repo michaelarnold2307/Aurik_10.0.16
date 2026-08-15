@@ -563,7 +563,9 @@ class WowFlutterFix(PhaseInterface):
                     "algorithm": "skipped_zero_strength",
                     "version": "4.1_locality",
                     "phase_locality_factor": phase_locality_factor,
-                    "effective_strength": _effective_strength,
+                    # §2.51 Locality-Vertrag: die skalierte Soll-Stärke bleibt sichtbar,
+                    # auch wenn der §v10.96-Skip-Gate die Verarbeitung überspringt.
+                    "effective_strength": float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0)),
                     "rms_drop_db": 0.0,
                     "loudness_makeup_db": 0.0,
                 },

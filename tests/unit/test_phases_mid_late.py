@@ -10,6 +10,7 @@ Aufruf-Konventionen:
 
 import numpy as np
 from scipy import signal
+import types
 
 np.random.seed(42)  # §5.4 Reproduzierbarkeit
 import pytest
@@ -454,8 +455,14 @@ class TestPhase20ReverbReduction:
         )  # ensure ML path is taken regardless of machine load
         monkeypatch.setattr(phase20_mod, "HybridDereverb", _ExplodingHybrid)
 
+        # §v10.14 Universal-Passthrough verlangt Reverb-Evidenz (severity ≥ 0.02) —
+        # der Test injiziert sie über defect_result, damit der ML-Pfad erreichbar ist.
+        _dr = types.SimpleNamespace(
+            defects=[types.SimpleNamespace(defect_type="reverb", severity=0.6)]
+        )
+
         # First call hits ML failure once and should switch phase instance to DSP-only.
-        result1 = self.phase.process(mono, SR, MaterialType.TAPE, quality_mode="quality")
+        result1 = self.phase.process(mono, SR, MaterialType.TAPE, quality_mode="quality", defect_result=_dr)
         _assert_phase_result(result1, mono, check_clipping=False)
         assert self.phase._force_dsp_only_due_ml_error is True
 
@@ -471,7 +478,7 @@ class TestPhase20ReverbReduction:
         monkeypatch.setattr(phase20_mod, "HybridDereverb", _CountingHybrid)
 
         # Second call must stay DSP-only and not instantiate HybridDereverb again.
-        result2 = self.phase.process(mono, SR, MaterialType.TAPE, quality_mode="quality")
+        result2 = self.phase.process(mono, SR, MaterialType.TAPE, quality_mode="quality", defect_result=_dr)
         _assert_phase_result(result2, mono, check_clipping=False)
         assert calls["n"] == 0
 

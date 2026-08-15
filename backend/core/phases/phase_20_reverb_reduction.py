@@ -336,7 +336,7 @@ class ReverbReduction(PhaseInterface):
         phase_locality_factor = float(kwargs.get("phase_locality_factor", 1.0))
         phase_locality_factor = float(np.clip(phase_locality_factor, 0.35, 1.0))
         _pmgg_strength = float(kwargs.get("strength", 1.0))
-        _effective_strength = float(np.clip(_pmgg_strength * phase_locality_factor, 0.0, 1.0))
+        _effective_strength = float(np.clip(_pmgg_strength, 0.0, 1.0))
 
         # §V40 NMR-Feedback: NR-Stärke adaptiv anpassen (FeedbackChain-aware).
         try:
@@ -363,6 +363,10 @@ class ReverbReduction(PhaseInterface):
             )
         except Exception as _nmr_exc_20:  # pylint: disable=broad-except
             logger.debug("Verarbeitungsschritt20 §V40 NMR nicht blockierend: %s", _nmr_exc_20)
+
+        # §2.51 Locality: der Faktor dämpft die FINALE Stärke (auch ohne NMR-Feedback) —
+        # locality < 1 garantiert eff < 1.
+        _effective_strength = float(np.clip(_effective_strength * phase_locality_factor, 0.0, 1.0))
 
         if _effective_strength <= 0.0:
             passthrough = np.nan_to_num(audio.copy(), nan=0.0, posinf=0.0, neginf=0.0)
@@ -530,6 +534,9 @@ class ReverbReduction(PhaseInterface):
                     "algorithm": "passthrough_primum_non_nocere_v10_14",
                     "reverb_severity": _reverb_severity_ph20,
                     "skip_reason": "reverb_below_detectable_threshold_all_materials",
+                    # §2.51 Locality-Vertrag: skalierte Soll-Stärke bleibt sichtbar.
+                    "phase_locality_factor": phase_locality_factor,
+                    "effective_strength": _effective_strength,
                 },
             )
 
