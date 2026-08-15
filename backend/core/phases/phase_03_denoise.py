@@ -681,6 +681,7 @@ class DenoisePhase(PhaseInterface):
         # noise reduction is unnecessary and risks introducing artifacts.
         # Quick SNR estimate via IMCRA minimum statistics on a center segment.
         _snr_bypass = False
+        _tonal_clean = False  # §2.47b: tonal/sauber → ML-Zweige sperren, DSP läuft weiter
         _est_snr_db: float | None = None  # preserved for SGMSE+ sigma calibration below
         try:
             if audio.ndim == 2:
@@ -710,6 +711,26 @@ class DenoisePhase(PhaseInterface):
                             "Dry-Signal bypass (clean signal, no denoising needed)",
                             _est_snr_db,
                         )
+            # §2.47b Tonalitäts-Bypass: reine Sinus-/tonale Signale sind stationär —
+            # der 5-Prozent-Perzentil-Rauschboden schätzt dann Signal=Rauschen (SNR 0 dB)
+            # und der SNR-Bypass greift nicht. Spectral Flatness trennt tonal (→0)
+            # von breitbandigem Rauschen (→1): flatness < 0.05 = tonal/sauber.
+            try:
+                _snr_win_f = min(2048, max(64, len(_snr_chunk) // 2))
+                _snr_freqs, _snr_psd = signal.welch(
+                    _snr_chunk, fs=sample_rate, nperseg=_snr_win_f, window="hann"
+                )
+                _snr_band = np.sqrt(np.maximum(_snr_psd[_snr_freqs >= 100.0], 1e-12))
+                _snr_flatness = float(np.exp(np.mean(np.log(_snr_band))) / (np.mean(_snr_band) + 1e-12))
+                if _snr_flatness < 0.05:
+                    _tonal_clean = True
+                    logger.info(
+                        "§2.47 Verarbeitungsschritt 03: spectral flatness=%.4f < 0.05 → "
+                        "ML-Zweige gesperrt (tonales/sauberes Signal), DSP-Kette läuft",
+                        _snr_flatness,
+                    )
+            except Exception as _flat_exc:
+                logger.debug("Spectral-flatness bypass fehlgeschlagen (nicht blockierend): %s", _flat_exc)
         except Exception as _snr_exc:
             logger.debug("SNR bypass estimation fehlgeschlagen (nicht blockierend): %s", _snr_exc)
 
@@ -1210,7 +1231,7 @@ class DenoisePhase(PhaseInterface):
         # §0p [RELEASE_MUST]: HNR-Blend after MIIPHER when ΔHNR > 3 dB.
         # §2.46e [RELEASE_MUST]: Hallucination-Guard after MIIPHER (spectral_novelty > 0.15).
         _miipher_applied = False
-        if _era_nr_routing == "miipher_primary" and not use_lightweight:
+        if _era_nr_routing == "miipher_primary" and not use_lightweight and not _tonal_clean:
             try:
                 from plugins.miipher_plugin import get_miipher_plugin  # pylint: disable=import-outside-toplevel
 
@@ -1297,6 +1318,7 @@ class DenoisePhase(PhaseInterface):
             and _panns_singing >= 0.25
             and quality_mode in ("quality", "maximum")
             and not use_lightweight
+            and not _tonal_clean
             and _era_nr_routing
             in (
                 "dfn_primary",
@@ -1468,6 +1490,7 @@ class DenoisePhase(PhaseInterface):
         _sota_eligible = (
             not _is_vocal_material
             and not use_lightweight
+            and not _tonal_clean
             and _era_nr_routing == "sota_4layer"
             and not _miipher_applied
         )
@@ -1488,6 +1511,7 @@ class DenoisePhase(PhaseInterface):
             quality_mode in ("quality", "maximum")
             and _is_non_digital
             and not use_lightweight
+            and not _tonal_clean
             and not _dfn_applied
             and not _miipher_applied  # §4.4: MIIPHER already applied
             and _era_nr_routing != "omlsa_only"  # §4.4: no ML NR for acoustic/digital era
@@ -1591,6 +1615,7 @@ class DenoisePhase(PhaseInterface):
             ML_HYBRID_AVAILABLE
             and quality_mode in ["balanced", "quality", "maximum"]
             and not use_lightweight
+            and not _tonal_clean
             and not _dfn_applied
         )
 
