@@ -233,6 +233,17 @@ class HybridMLDenoiser:
         if self.config.strategy != DenoiseStrategy.ADAPTIVE:
             return self.config.strategy
 
+        # §23-TONALITY (Vorschlag 01): tonales/sauberes Signal ⇒ kein generatives ML;
+        # OMLSA (transparent auf Tonalem) reicht vollständig.
+        try:
+            from backend.core.dsp.tonality_gate import is_tonal_clean  # pylint: disable=import-outside-toplevel
+
+            if is_tonal_clean(audio, _sample_rate):
+                logger.info("Tonal/clean audio (tonality_gate) → OMLSA_ONLY")
+                return DenoiseStrategy.OMLSA_ONLY
+        except Exception as _tg_exc:  # nicht blockierend
+            logger.debug("hybrid_ml_denoiser: tonality_gate nicht verfügbar (%s)", _tg_exc)
+
         # Analyze noise level to decide strategy
         noise_level = self._estimate_noise_level(audio)
 

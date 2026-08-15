@@ -109,6 +109,19 @@ class SpectralDenoiser:
         if x.ndim not in (1, 2) or x.size == 0:
             return audio.copy()
 
+        # §23-TONALITY (Vorschlag 01): tonales/sauberes Signal ⇒ DSP-NR überspringen
+        # (Passthrough). Mit ml_output greift das Gate nicht — der ML-Ausgang wird
+        # dann bewusst über die Hybrid-Naht geblendet.
+        if ml_output is None:
+            try:
+                from backend.core.dsp.tonality_gate import is_tonal_clean  # pylint: disable=import-outside-toplevel
+
+                if is_tonal_clean(x, sr):
+                    logger.info("spectral_denoiser: tonality_gate → Passthrough (tonales/sauberes Signal)")
+                    return audio.copy()
+            except Exception as _tg_exc:  # nicht blockierend
+                logger.debug("spectral_denoiser: tonality_gate nicht verfügbar (%s)", _tg_exc)
+
         # Channels-last-Normalisierung: (T,) oder (T, C)
         ch_first = x.ndim == 2 and x.shape[0] == 2 and x.shape[1] > 2
         if ch_first:
