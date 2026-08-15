@@ -440,10 +440,15 @@ class StereoImagingFixer:
             _, left_out = signal.istft(Zl_fixed, fs=sr, nperseg=nperseg, noverlap=noverlap)
             _, right_out = signal.istft(Zr_fixed, fs=sr, nperseg=nperseg, noverlap=noverlap)
 
-            # Match length
-            min_len = min(len(left), len(left_out), len(right_out))
-            left_out = left_out[:min_len]
-            right_out = right_out[:min_len]
+            # Match length: istft kann kürzer als die Eingabe liefern → auf
+            # Original-Länge auffüllen bzw. beschneiden (§Längen-Invariante).
+            n_orig = len(left)
+            left_out = np.asarray(left_out, dtype=np.float32)[:n_orig]
+            right_out = np.asarray(right_out, dtype=np.float32)[:n_orig]
+            if len(left_out) < n_orig:
+                left_out = np.pad(left_out, (0, n_orig - len(left_out)))
+            if len(right_out) < n_orig:
+                right_out = np.pad(right_out, (0, n_orig - len(right_out)))
 
             return left_out, right_out
 

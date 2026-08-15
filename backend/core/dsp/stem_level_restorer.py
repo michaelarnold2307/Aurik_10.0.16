@@ -367,11 +367,16 @@ class StemLevelRestorer:
             from scipy.signal import butter, sosfiltfilt
 
             _sos = butter(4, [150.0, 8000.0], btype="bandpass", fs=sample_rate, output="sos")
-            _vocal = sosfiltfilt(_sos, audio, axis=0).astype(np.float32)
+            if audio.ndim == 2 and audio.shape[0] == 2 and audio.shape[1] > 2:
+                # §2.51: channels-first → temporär channels-last für Filterung entlang der Zeitachse
+                _cl = audio.T
+                _vocal = sosfiltfilt(_sos, _cl, axis=0).astype(np.float32).T
+            else:
+                _vocal = sosfiltfilt(_sos, audio, axis=0).astype(np.float32)
             _instr = (audio - _vocal).astype(np.float32)
+            return _vocal, _instr
         except Exception as _sos_exc:  # pylint: disable=broad-except
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-        except Exception as _sos_exc:  # pylint: disable=broad-except
             logger.debug("§SLR-1 DSP stem split fehlgeschlagen: %s", _sos_exc)
             # Last resort: equal split
             _half = (audio * 0.5).astype(np.float32)

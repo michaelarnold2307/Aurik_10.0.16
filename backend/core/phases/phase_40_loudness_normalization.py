@@ -276,7 +276,8 @@ class LoudnessNormalizationPhase(PhaseInterface):
         try:
             import pyloudnorm as _pyln
 
-            _p0_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+            # audio ist hier channels-last (Zeile 245) → Kanalachse = 1.
+            _p0_mono = audio if audio.ndim == 1 else audio.mean(axis=1)
             _p0_meter = _pyln.Meter(sample_rate)
             _p0_lufs = float(_p0_meter.integrated_loudness(_p0_mono.astype(np.float64)))
             if abs(_p0_lufs - (-14.0)) < 3.0 and not _amplitude_drift_requested:
@@ -293,6 +294,13 @@ class LoudnessNormalizationPhase(PhaseInterface):
                 )
         except ImportError:
             pass
+        except ValueError as _p0_short_exc:
+            # Kurzsignale < Blockgröße (0.4 s) können pyln nicht messen →
+            # Near-Target-Skip überspringen, Verarbeitung läuft normal weiter.
+            logger.debug(
+                "Verarbeitungsschritt40 pyln-Messung nicht möglich (kurzes Signal): %s",
+                _p0_short_exc,
+            )
         except Exception as _p0_skip_exc:
             # z.B. zu kurzes Audio (< 400 ms Block-Size) — Fast-Path einfach überspringen.
             logger.debug("§v10.303.36 Loudness-ueberspringen-Messung übersprungen: %s", _p0_skip_exc)
@@ -481,7 +489,7 @@ class LoudnessNormalizationPhase(PhaseInterface):
         try:
             import pyloudnorm as _pyln
 
-            _p40_mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+            _p40_mono = audio if audio.ndim == 1 else audio.mean(axis=1)
             _p40_meter = _pyln.Meter(sample_rate)
             integrated_lufs = float(_p40_meter.integrated_loudness(_p40_mono.astype(np.float64)))
             # LRA via pyloudnorm (wenn verfügbar) oder konservativer Default
@@ -492,7 +500,8 @@ class LoudnessNormalizationPhase(PhaseInterface):
             momentary_max = integrated_lufs  # pyloudnorm misst kein Momentary
             short_term_max = integrated_lufs
             logger.debug("Phase 40: pyloudnorm LUFS=%.1f LRA=%.1f (<0.1s)", integrated_lufs, lra)
-        except ImportError:
+        except (ImportError, ValueError):
+            # ValueError: pyln kann Kurzsignale (< Blockgröße 0.4 s) nicht messen.
             integrated_lufs, lra, momentary_max, short_term_max = self._measure_loudness_full(audio, sample_rate)
 
         # Calculate gain adjustment
@@ -599,14 +608,14 @@ class LoudnessNormalizationPhase(PhaseInterface):
         try:
             import pyloudnorm as _pyln2
 
-            _p40_final_mono = normalized if normalized.ndim == 1 else normalized.mean(axis=0)
+            _p40_final_mono = normalized if normalized.ndim == 1 else normalized.mean(axis=1)
             _p40_final_meter = _pyln2.Meter(sample_rate)
             final_lufs = float(_p40_final_meter.integrated_loudness(_p40_final_mono.astype(np.float64)))
             try:
                 final_lra = float(_p40_final_meter.loudness_range(_p40_final_mono.astype(np.float64)))
             except (AttributeError, TypeError):
                 final_lra = lra
-        except ImportError:
+        except (ImportError, ValueError):
             final_lufs, final_lra, _, _ = self._measure_loudness_full(normalized, sample_rate)
         final_true_peak_db = self._measure_true_peak(normalized, sample_rate)
 

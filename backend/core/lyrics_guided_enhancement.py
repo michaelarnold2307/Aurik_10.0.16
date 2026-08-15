@@ -1111,10 +1111,18 @@ class LyricsGuidedEnhancement:
         if _xfade > 2:
             _kern = np.hanning(_xfade * 2 + 1)
             _kern /= _kern.sum() + 1e-12
-            eq_low = np.convolve(eq_low, _kern, mode="same").astype(np.float32)
-            eq_mid = np.convolve(eq_mid, _kern, mode="same").astype(np.float32)
-            eq_high = np.convolve(eq_high, _kern, mode="same").astype(np.float32)
-            dyn_curve = np.convolve(dyn_curve, _kern, mode="same").astype(np.float32)
+
+            def _smooth_curve(_c: np.ndarray) -> np.ndarray:
+                # np.convolve(mode="same") gibt bei längerem Kernel die KERNELLÄNGE
+                # zurück (48001) → full-Convolution zentriert auf n_samples croppen.
+                _full = np.convolve(_c, _kern, mode="full")
+                _off = (len(_full) - n_samples) // 2
+                return _full[_off : _off + n_samples].astype(np.float32)
+
+            eq_low = _smooth_curve(eq_low)
+            eq_mid = _smooth_curve(eq_mid)
+            eq_high = _smooth_curve(eq_high)
+            dyn_curve = _smooth_curve(dyn_curve)
 
         # Apply EQ via STFT three-band gain
         from scipy import signal as _sig
@@ -1741,7 +1749,7 @@ class LyricsGuidedEnhancement:
                 if plosive_ratio >= 0.20:
                     return "plosive"
                 if fricative_ratio >= 0.30:
-                    return "fricative"
+                    return "fricative_stressed" if is_stressed else "fricative_unstressed"
         except Exception as _phoneme_exc:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
             logger.debug("LGE phoneme DSP classifier nicht verfuegbar (unkritisch): %s", _phoneme_exc)

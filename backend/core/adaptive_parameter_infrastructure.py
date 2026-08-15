@@ -15,6 +15,15 @@ from __future__ import annotations
 import numpy as np
 
 
+def _mono(audio: np.ndarray) -> np.ndarray:
+    """§2.51 Layout-sichere Mono-Konversion: mean(axis=0) kollabierte channels-last (N,2) auf (2,)."""
+    if audio.ndim == 1:
+        return np.asarray(audio)
+    from backend.core.audio_utils import safe_to_mono  # local import: vermeidet Zyklen
+
+    return np.asarray(safe_to_mono(audio))
+
+
 def derive_noise_floor(audio: np.ndarray, sr: int) -> dict:
     """Ermittelt adaptiven Noise-Floor aus dem Signal.
 
@@ -22,7 +31,7 @@ def derive_noise_floor(audio: np.ndarray, sr: int) -> dict:
         dict mit noise_floor_db, signal_peak_db, estimated_snr_db,
              optimal_threshold_db, band_reduction_factors
     """
-    mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+    mono = _mono(audio)
     mono = np.asarray(mono, dtype=np.float64)
     _n = len(mono)
 
@@ -88,7 +97,7 @@ def derive_transient_sensitivity(audio: np.ndarray, sr: int) -> dict:
     Returns:
         dict mit onset_threshold, min_gap_ms, attack_preserve_factor
     """
-    mono = audio if audio.ndim == 1 else audio.mean(axis=0)
+    mono = _mono(audio)
     mono = np.asarray(mono, dtype=np.float64)
 
     # Energie-Hüllkurve
@@ -125,8 +134,8 @@ def verify_output_quality(original: np.ndarray, processed: np.ndarray, sr: int) 
     Returns:
         dict mit passed, rms_change_db, peak_change_db, spectral_correlation
     """
-    orig = original if original.ndim == 1 else original.mean(axis=0)
-    proc = processed if processed.ndim == 1 else processed.mean(axis=0)
+    orig = _mono(original)
+    proc = _mono(processed)
     n = min(len(orig), len(proc))
     orig = np.asarray(orig[:n], dtype=np.float64)
     proc = np.asarray(proc[:n], dtype=np.float64)

@@ -293,6 +293,7 @@ class StereoTemporalCoherenceGuard:
 
     _cumulative_correction_samples: float = 0.0
     _last_audio_id: int = 0
+    _last_applied_samples: float = 0.0
 
     # ------------------------------------------------------------------
     # 1. Inter-channel delay correction (L vs R)
@@ -378,7 +379,11 @@ class StereoTemporalCoherenceGuard:
                     else 0.0
                 )
                 _single_corr = _single_corr if np.isfinite(_single_corr) else 0.0
-                if _single_corr >= 0.60 and abs(_single_lag) < sr // 100:  # < 10 ms
+                # §G13/F2: Globales Limit = 20 ms — der Ersatzpfad darf echte
+                # Lags ≤ 20 ms nicht verwerfen (vorher 10 ms → echte 15-ms-Lags
+                # wurden unkorrigiert durchgereicht).
+                _sp_max_lag = int(sr * _GLOBAL_MAX_MS / 1000.0)
+                if _single_corr >= 0.60 and abs(_single_lag) < _sp_max_lag:
                     delay = float(_single_lag)
                     _mp_spread = 0
                     logger.info(
@@ -445,7 +450,11 @@ class StereoTemporalCoherenceGuard:
             else 1.0
         )
         _mean_corr = abs(_mean_corr) if np.isfinite(_mean_corr) else 1.0
-        if _mean_corr < 0.40:
+        # Multi-Point-Verifikation (≥2 Punkte, konsistenter Lag) schlägt die
+        # Korrelations-Veto: Echtes Hardware-Lag auf Rauschsignalen hat corr≈0,
+        # ist aber via GCC-PHAT-Peak konsistent verifiziert.
+        _mp_num = int(_mp_verified.get("num_points", 0))
+        if _mean_corr < 0.40 and _mp_num < 2:
             logger.info(
                 "STCG [%s]: inter-channel correlation=%.3f < 0.40 — "
                 "channels contain different material (stereo panning), NOT a timing error — skipping",
@@ -474,24 +483,34 @@ class StereoTemporalCoherenceGuard:
         )
 
         # §v10.16 Cumulative correction: track total applied shift.
-        # If we've already shifted > 5 ms cumulatively for this audio, skip.
+        # §G13/F2: Das kumulative Budget entspricht dem globalen Limit
+        # (_GLOBAL_MAX_MS = 20 ms) — echte Lags ≤ 20 ms müssen korrigiert
+        # werden; erst darüber hinaus greift der Kombfilter-Schutz.
         self._cumulative_correction_samples += abs(delay)
         _audio_id = hash(ch_l[:1024].tobytes()) if len(ch_l) >= 1024 else 0
         if _audio_id != self._last_audio_id:
             self._cumulative_correction_samples = abs(delay)
             self._last_audio_id = _audio_id
-        if self._cumulative_correction_samples > 240:  # > 5 ms total
+        elif abs(abs(delay) - self._last_applied_samples) <= 2:
+            # Identischer Lag auf identischem Audio-Fingerprint: die vorherige
+            # Korrektur wurde offenbar nicht übernommen (Neuinjektion/Test) →
+            # Budget zurücksetzen statt fälschlich zu kumulieren.
+            self._cumulative_correction_samples = abs(delay)
+        _cum_limit = int(sr * _GLOBAL_MAX_MS / 1000.0)  # 20 ms
+        if self._cumulative_correction_samples > _cum_limit:
             logger.info(
-                "STCG [%s]: cumulative correction %.1f ms exceeds 5 ms limit — "
+                "STCG [%s]: cumulative correction %.1f ms exceeds %.0f ms limit — "
                 "skipping to prevent comb filtering from accumulated shifts",
                 phase_id,
                 self._cumulative_correction_samples / sr * 1000,
+                _GLOBAL_MAX_MS,
             )
             self._cumulative_correction_samples = 0.0
             return audio
 
         # Positive delay means R is AHEAD of L → shift R to the right (delay R) to align
         ch_r_corrected = _apply_correction_shift(ch_r, shift_samples=delay)
+        self._last_applied_samples = abs(delay)
 
         orig_dtype = audio.dtype
         if channels_first:
