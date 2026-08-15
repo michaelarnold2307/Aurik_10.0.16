@@ -60,6 +60,45 @@ def hybrid_ml_apply(
     dry = np.nan_to_num(dry, nan=0.0, posinf=0.0, neginf=0.0)
     wet = np.nan_to_num(wet, nan=0.0, posinf=0.0, neginf=0.0)
 
+    # §V53 ML-NAHT-GUARDS (Vorschlag 03, docs/proposals): Polarity + Lag —
+    # deterministisch, vor allen übrigen Gates. Konstantenquelle:
+    # CalibratedConstants (getattr-Fallback bis zur Übernahme).
+    try:
+        from backend.core import calibrated_constants as _cc
+
+        _max_lag = int(getattr(_cc, "MAX_ML_LAG_SAMPLES", 128))
+    except Exception:  # nicht blockierend
+        _max_lag = 128
+
+    # 1. Polarity-Guard: Pearson-Korrelation (zentriert) < 0 ⇒ invertiert.
+    _flat_dry = dry.ravel().astype(np.float64)
+    _flat_wet = wet.ravel().astype(np.float64)
+    _d_c = _flat_dry - np.mean(_flat_dry)
+    _w_c = _flat_wet - np.mean(_flat_wet)
+    _dot = float(np.dot(_d_c, _w_c))
+    if _dot < 0.0:
+        logger.warning(
+            "hybrid_ml_apply: Polarity-Guard — invertierte ML-Ausgabe erkannt (dot=%.3g) — Vorzeichen korrigiert",
+            _dot,
+        )
+        wet = -wet
+
+    # 2. Lag-Guard: Kreuzkorrelationsmaximum; |lag| > MAX_ML_LAG_SAMPLES ⇒ dry.
+    _n = _flat_dry.size
+    if _n >= 1024:
+        _step = max(1, _n // 16384)
+        _d_ds = _d_c[::_step]
+        _w_ds = _w_c[::_step]
+        _corr = np.correlate(_w_ds, _d_ds, mode="full")
+        _lag = int(np.argmax(_corr) - (_d_ds.size - 1)) * _step
+        if abs(_lag) > _max_lag:
+            logger.warning(
+                "hybrid_ml_apply: Lag-Guard — ML-Ausgabe um %d Samples versetzt (> %d) — dry zurück",
+                _lag,
+                _max_lag,
+            )
+            return dry.copy()
+
     # §G104 Perceptual-JND-Gate: unhörbare Änderung → Rollback auf dry.
     try:
         from backend.core.dsp.perceptual_gate import should_skip_phase
