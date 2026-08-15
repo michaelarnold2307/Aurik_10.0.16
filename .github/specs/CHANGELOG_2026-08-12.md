@@ -40,7 +40,6 @@
 | onnx2torch | 1.5.15 | ONNX→PyTorch-Konvertierung |
 | loguru | 0.7.3 | DFN-Abhängigkeit |
 
-
 ## Modell-Status (alle 53 ONNX geladen)
 
 | Status | Anzahl | Modelle |

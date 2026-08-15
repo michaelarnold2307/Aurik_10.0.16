@@ -1,5 +1,8 @@
 # Aurik 10 — Weltklasse-Audio-Restaurierung
 
+> **Universeller Einstiegspunkt für alle Agenten: [`AGENTS.md`](AGENTS.md) (Repo-Root).**
+> Diese Datei liefert Projekt-Kontext und v10-Invarianten; bei Widersprüchen gilt die in `AGENTS.md` definierte normative Kette (copilot-instructions → VERBOTEN → Specs/Instructions).
+
 **Ziel:** Intelligente Musikwiederherstellung mit psychoakustischer Präzision, deterministischer Reproduzierbarkeit und vollständiger Ausrichtung auf den natürlichen Wohlklang für das menschliche Ohr.
 
 ## 🚀 v10 Invarianten
@@ -227,9 +230,9 @@ Siehe `.github/VERBOTEN.md` — nicht verhandelbarer Sicherheits- & Qualitäts-K
 - **Kontextbewusste Kommunikation**: Jeder Importsong bekommt individuelle Status-Botschaften via `_build_context_status()`. Medium, Ära, Genre, Score fließen ein. Generische „Aurik arbeitet an {file}" ist nur Fallback.
 - **i18n-Pflicht**: Jeder benutzersichtbare String MUSS via `t()` internationalisiert sein. Hardcodierte Strings sind VERBOTEN (§G84).
 - **Cache-Safety**: Launcher mit `python3 -B` starten. `.pyc`-Caches können Source-Änderungen verschleiern.
-- **Lock-Disziplin**: `threading.Lock` DARF NICHT während `import`-Statements gehalten werden (§G72). Importe gehören VOR den Lock.
-- **Event-Garantie**: Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden (§G71).
-- **Plugin-Namen-Validierung**: Alle Zugriffsnamen in `warmup_models_background._plugins` MÜSSEN mit tatsächlichen Funktionen übereinstimmen (§G73).
-- **Watchdog-Selbsttest**: Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist (§G74).
+- **Lock-Disziplin**: `threading.Lock` DARF NICHT während `import`-Statements gehalten werden (§G174). Importe gehören VOR den Lock.
+- **Event-Garantie**: Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden (§G173).
+- **Plugin-Namen-Validierung**: Alle Zugriffsnamen in `warmup_models_background._plugins` MÜSSEN mit tatsächlichen Funktionen übereinstimmen (§G175).
+- **Watchdog-Selbsttest**: Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist (§G176).
 - Instruktionen: `.github/instructions/`
 - Copilot-Verhaltensrichtlinien: `.github/copilot-instructions.md`

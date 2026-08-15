@@ -1,8 +1,10 @@
 # Aurik Spezifikation — §-Referenz-Index
 
 > **852 eindeutige §-Referenzen** in `backend/core/`, `denker/`, `forensics/`.
-> Dieser Index dokumentiert die häufigsten und architektonisch wichtigsten.
-> Neue §-Referenzen MÜSSEN hier eingetragen werden (Pre-Commit-Check).
+> Dieser Index ist eine **Referenzhilfe** — er dokumentiert die häufigsten und
+> architektonisch wichtigsten §-Referenzen. Verbindlich sind `AGENTS.md`
+> (Repo-Root) und die dort definierte normative Kette; Einträge hier werden
+> von **keinem** Pre-Commit-Hook erzwungen.
 
 ## §-Kategorien
 
@@ -75,7 +77,7 @@
 |---|---|---|
 | `§6.2a` | Carrier-Chain-Invariante (Tape-Stufe in mp3-Chain) | UV3 |
 | `§6.2c` | Dolby-NR-Erkennung | MD |
-| `§6.3` | DefectScanner: 54+ DefectTypes | DS |
+| `§6.3` | DefectScanner: 62 DefectTypes | DS |
 | `§6.7` | Medium-Detector: Bayesian-Fusion (v10.0.0) | MD |
 | `§6.7b` | File-Extension-Prior (Digital vs Analog) | MD |
 | `§6.8` | Era-Precursor (reel_tape-Injektion) | UV3 |
@@ -133,7 +135,8 @@
 ## Wie neue §-Referenzen hinzufügen
 
 1. Im Code: `# §2.XX Beschreibung`
-2. In diesem Dokument: Eintrag unter der passenden Kategorie
-3. Pre-Commit-Hook prüft: `scripts/compliance/check_spec_refs.py`
+2. In diesem Dokument: Eintrag unter der passenden Kategorie (Konvention, kein Gate)
 
-**Commit-Regel:** Kein Merge, wenn neue `§`-Referenzen nicht hier dokumentiert sind.
+Hinweis: `scripts/compliance/check_spec_refs.py` existiert, ist aber **nicht** im
+Pre-Commit verdrahtet. Beachte die ID-Zitierdisziplin aus `AGENTS.md` §5:
+immer mit Fundstelle zitieren, nie nackte IDs.

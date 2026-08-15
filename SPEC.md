@@ -791,7 +791,6 @@ Die Monotonie-Garantie (§G86) ist in `set_novelty_crit_threshold()` implementie
 | `.github/specs/09_global_calibration_matrix.md` | Detaillierte Dispatch-Implementierung |
 | `.github/specs/17_sft_novelty_adaptive_calibration.md` | SFT-Adaptivität und Defekt-Audibilität |
 
-
 ---
 
 ## 16. Frontend↔Backend-Harmonisierung & Evaluation (§v10.990–§v10.999, 2026-08-13)

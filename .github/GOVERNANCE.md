@@ -1,8 +1,8 @@
-# Community-Governance — Aurik 10.0.8
+# Community-Governance — Aurik 10
 
 ## Projektstatus
 
-Aurik 10.0.8 ist ein Open-Source-Desktop-Projekt (Apache-2.0).
+Aurik 10 ist ein Open-Source-Desktop-Projekt (Apache-2.0).
 Der Hauptentwickler ist Michael Arnold. Externe Beiträge sind herzlich willkommen.
 
 ---
@@ -53,14 +53,14 @@ Fork → Feature-Branch → Pre-Commit läuft durch → Tests grün → PR öffn
 - [ ] `pytest tests/unit -q --timeout=30` grün
 - [ ] Keine neuen ruff/mypy-Fehler
 - [ ] Musical Goals: kein Ziel schlechter als vor dem PR
-- [ ] Neues Modul: `≥ 20 Unit-Tests` (§5.1 copilot-instructions)
+- [ ] Neues Modul: `≥ 20 Unit-Tests` (Phasen/Plugins) bzw. `≥ 35` (Kernmodule)
 - [ ] CHANGELOG.md-Eintrag geschrieben
 
 ---
 
 ## Plugin-API Versioning
 
-Aurik 10.0.8 verpflichtet sich zu **Plugin-API-Stabilität** innerhalb einer Hauptversion (10.x):
+Aurik 10 verpflichtet sich zu **Plugin-API-Stabilität** innerhalb einer Hauptversion (10.x):
 
 ```
 10.x.y → PhaseInterface, RestorationResult, MusicalGoalsChecker API stabil
@@ -102,4 +102,4 @@ Gespendete Mittel fließen in:
 
 ---
 
-_Stand: Juli 2026 — Aurik 10.0.8_
+_Stand: Juli 2026 — Aurik 10_

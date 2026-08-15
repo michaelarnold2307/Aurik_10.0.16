@@ -1,6 +1,10 @@
-# Aurik 10 — VERBOTE (Normativer Katalog)
+# Aurik 10 — VERBOTE (veraltet — nicht mehr normativ)
 
-> **Status:** Normativ | **Version:** 10.0.10 | **Stand:** 10. August 2026
+> **Status: VERALTET — nicht mehr normativ.** Normativ ist ausschließlich
+> `.github/VERBOTEN.md` (V01–V52, Quelle des Verbots-Linters). Dieses Dokument
+> verwendet kollidierende §V-IDs und wird von keinem Tool referenziert.
+> Einstiegspunkt für Agenten: `AGENTS.md` (Repo-Root).
+> **Version:** 10.0.10 | **Stand:** 10. August 2026
 >
 > Dieser Katalog definiert alle unverhandelbaren VERBOTE — Handlungen, die Aurik
 > **niemals** ausführen darf. Jedes Verbot hat eine eindeutige ID (§V1, §V2 usw.).

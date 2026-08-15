@@ -246,17 +246,17 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 | §G85 | **Rekalibrierungs-Audit** | Jede Rekalibrierung MUSS im Log dokumentiert werden: `"§RECALIB phase=%s: rs %.1f→%.1f SNR %.1f→%.1f dB → NOVELTY_CRIT %.3f→%.3f"`. Dies macht sichtbar, WIE sich Auriks Sicherheitsparameter während der Pipeline an das zunehmend sauberere Audio anpassen. |
 | §G86 | **Monotonie-Garantie** | Die NOVELTY_CRIT-Schwelle darf während der Pipeline NUR sinken (konservativer werden) oder gleich bleiben — NIE steigen. Ein saubereres Signal rechtfertigt keine LASCHERE Toleranz. Die Monotonie MUSS im CalibrationContext erzwungen werden: `_NOVELTY_CRIT = min(current_calculation, previous_value)`. |
 
-## Kategorie XI-b — Maschinelle Durchsetzung (§G122–§G124)
+## Kategorie XI-b — Maschinelle Durchsetzung (§G183–§G187, früher §G122–§G126)
 
 > **Prämisse:** Die GEBOTE der Kategorien X und XI formulieren architektonische Wahrheiten. Aber ohne maschinelle Durchsetzung sind sie Appelle. Jeder Default-Parameter `transfer_chain_depth: int = 1` ist eine Verletzung von §G76 und §G78, die darauf wartet, bei der nächsten Refaktorierung stillschweigend zuzuschlagen (§v10.131).
 
 | ID | Regel | Beschreibung |
 | ---- | ------- | ------------- |
-| §G122 | **CalibrationContext-Dataclass** | Es MUSS eine einzige, zentrale `CalibrationContext`-Dataclass in `backend/core/calibration_context.py` geben, die ALLE Pre-Analysis-Messwerte als Felder deklariert. JEDE Funktion, die einen Schwellwert berechnet, MUSS einen `CalibrationContext` (oder die benötigten Einzelfelder daraus) als explizites Argument erhalten. Der Default `=1` für `transfer_chain_depth` ist AUSSCHLIESSLICH in dieser Dataclass erlaubt (§G76, §G78). |
-| §G123 | **Linter-Baseline** | Ein automatisierter Test (`test_calibration_context_linter.py`) MUSS den gesamten Code auf verbotene Default-Parameter (`transfer_chain_depth: int = 1`) scannen und gegen eine Baseline-Datei abgleichen. NEUE Verstöße (nicht in der Baseline) lassen den Test FEHLSCHLAGEN. Die Baseline wird bei bewusster Schuldenreduktion aktualisiert. Dies verhindert, dass der nächste Refactor denselben Fehler neu einführt. |
-| §G124 | **Cross-Depth-Validierung** | Ein parametrisierter Test (`test_cross_depth_validation.py`) MUSS für JEDE Chain-Depth (1–5) und JEDES Material validieren, dass ALLE depth-abhängigen Schwellwerte (GDD, artifact_freedom, REGRESSION_THRESHOLD) physikalisch plausible, monotone Werte liefern. Keine Depth-Stufe darf eine LASCHERE Toleranz haben als die vorherige. Der Test MUSS nach jeder Änderung an chain_factor-Formeln ausgeführt werden. |
-| §G125 | **Kalibrierte Konstanten** | ALLE Schwellwerte, Caps, Floors und Blend-Faktoren MÜSSEN in `calibrated_constants.py` als Properties der `CalibratedConstants`-Klasse definiert sein. JEDE Property MUSS ihren Wert AUSSCHLIESSLICH aus dem übergebenen `CalibrationContext` ableiten. Numerische Literale sind NUR in dieser Datei erlaubt. Module importieren `get_constants(ctx)` statt eigene Konstanten zu definieren. |
-| §G126 | **Blindtest-Pflicht** | JEDE Änderung an einer chain_factor-Formel oder einem depth-abhängigen Schwellwert MUSS durch einen automatisierten Blindtest (`blindtest_framework.py`) validiert werden. Der Test MUSS zeigen, dass die neue Formel auf synthetisch degradiertem Material eine messbare Verbesserung (PESQ ≥ 0.05 Zuwachs) gegenüber der alten Formel erzielt. Ohne diesen Nachweis darf die Formel nicht geändert werden. |
+| §G183 | **CalibrationContext-Dataclass** | Es MUSS eine einzige, zentrale `CalibrationContext`-Dataclass in `backend/core/calibration_context.py` geben, die ALLE Pre-Analysis-Messwerte als Felder deklariert. JEDE Funktion, die einen Schwellwert berechnet, MUSS einen `CalibrationContext` (oder die benötigten Einzelfelder daraus) als explizites Argument erhalten. Der Default `=1` für `transfer_chain_depth` ist AUSSCHLIESSLICH in dieser Dataclass erlaubt (§G76, §G78). |
+| §G184 | **Linter-Baseline** | Ein automatisierter Test (`test_calibration_context_linter.py`) MUSS den gesamten Code auf verbotene Default-Parameter (`transfer_chain_depth: int = 1`) scannen und gegen eine Baseline-Datei abgleichen. NEUE Verstöße (nicht in der Baseline) lassen den Test FEHLSCHLAGEN. Die Baseline wird bei bewusster Schuldenreduktion aktualisiert. Dies verhindert, dass der nächste Refactor denselben Fehler neu einführt. |
+| §G185 | **Cross-Depth-Validierung** | Ein parametrisierter Test (`test_cross_depth_validation.py`) MUSS für JEDE Chain-Depth (1–5) und JEDES Material validieren, dass ALLE depth-abhängigen Schwellwerte (GDD, artifact_freedom, REGRESSION_THRESHOLD) physikalisch plausible, monotone Werte liefern. Keine Depth-Stufe darf eine LASCHERE Toleranz haben als die vorherige. Der Test MUSS nach jeder Änderung an chain_factor-Formeln ausgeführt werden. |
+| §G186 | **Kalibrierte Konstanten** | ALLE Schwellwerte, Caps, Floors und Blend-Faktoren MÜSSEN in `calibrated_constants.py` als Properties der `CalibratedConstants`-Klasse definiert sein. JEDE Property MUSS ihren Wert AUSSCHLIESSLICH aus dem übergebenen `CalibrationContext` ableiten. Numerische Literale sind NUR in dieser Datei erlaubt. Module importieren `get_constants(ctx)` statt eigene Konstanten zu definieren. |
+| §G187 | **Blindtest-Pflicht** | JEDE Änderung an einer chain_factor-Formel oder einem depth-abhängigen Schwellwert MUSS durch einen automatisierten Blindtest (`blindtest_framework.py`) validiert werden. Der Test MUSS zeigen, dass die neue Formel auf synthetisch degradiertem Material eine messbare Verbesserung (PESQ ≥ 0.05 Zuwachs) gegenüber der alten Formel erzielt. Ohne diesen Nachweis darf die Formel nicht geändert werden. |
 
 ## Kategorie XII — Noise-Floor-Brücke Phase_03→Phase_26 (§G87)
 
@@ -275,109 +275,6 @@ audio = _apply_cd_noise_profile(audio, sr, mask=erb_mask)
 | ID | Regel | Beschreibung |
 | ---- | ------- | ------------- |
 | §G89 | **Soft-Clipping-Pflicht für alle 71 Phasen (68 + 3 Phase-0)** | Jede Phase MUSS ihre Ausgabe via `apply_soft_clip()` (tanh-basiert, material-adaptiv) statt `np.clip(audio, -1.0, 1.0)` begrenzen (§v10.62). Hard-Clipping auf ±1.0 erzeugt ein Rechteck-Fenster im Zeitbereich → sinc-Spektrum mit hörbaren Obertönen bis Nyquist. Tanh-Soft-Clipping erzeugt nur ungerade Harmonische, die das Ohr als „analoge Sättigung" statt „digitalen Clip" wahrnimmt. Die zentrale Durchsetzung erfolgt in `PhaseResult.__post_init__` und `create_phase_result()` — damit sind alle Phasen-Ausgaben automatisch geschützt. Material-adaptive Knee: Shellac/Vinyl 1.2 dB, Tape/Cassette 0.8 dB, Digital 0.4 dB. |
-
-## Kategorie XVIII — Startup-Integration & Kommunikation (§G71–§G80 spec_constitution, §v10.305)
-
-| ID | Regel | Beschreibung |
-| ---- | ------- | ------------- |
-| §SC-G71 | **Event-Garantie** | Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden. Kein Codepfad darf das Event ungesetzt lassen. Betrifft: `_detection_complete` in `MLDeviceManager.__init__`. |
-| §SC-G72 | **Lock-freie Importe** | `threading.Lock` DARF NICHT während `import`-Statements gehalten werden. Importe dauern 5–10s (pkg_resources, webrtcvad). Währenddessen sind alle anderen Lock-Warter blockiert. Betrifft: `try_allocate` in `ml_memory_budget.py`. |
-| §SC-G73 | **Plugin-Namen-Validierung** | Jeder Zugriffsname in `warmup_models_background._plugins` MUSS mit einer tatsächlichen Funktion im Zielmodul übereinstimmen. `_failed > 0` nach Warmup MUSS ein `logger.warning` auslösen. Betrifft: `bridge.py`. |
-| §SC-G74 | **Watchdog-Selbsttest** | Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist. `getattr(self, "_preanalysis_pending", False)` muss auf `self` gesetzt sein. Betrifft: `_preanalysis_liveness_check`. |
-| §SC-G75 | **Cache-Safety** | Launcher MUSS mit `python3 -B` starten. `.pyc`-Caches können nach Source-Änderungen veralteten Code ausführen. Betrifft: `main.py`, Shell-Launcher. |
-| §SC-G76 | **Happy-Path-Gate** | Mindestens ein Codepfad MUSS die Analyse-Labels (`detected_medium_label`, `restorability_banner`, `mode_recommendation_label`) setzen. Jeder Guard, der einen Pfad verwirft, MUSS ein `logger.warning` ausgeben. Betrifft: `_update_all`. |
-| §SC-G77 | **Startup-Smoke-Test** | Ein schneller (<60s) Test MUSS GPU-Erkennung, Warmup und Pre-Analysis prüfen. Betrifft: `tests/test_startup_smoke.py` (6 Assertions). |
-| §SC-G78 | **Import-Check** | Jedes Modul MUSS alle verwendeten Standard-Imports haben. `ruff F821` (undefined name) ist Null-Toleranz. Betrifft: `ml_device_manager.py` (`import os` fehlte). |
-| §SC-G79 | **GPU-Detection Safety** | GPU-Erkennung DARF KEINE blockierenden Operationen ausführen. `torch.zeros(device="cuda")` ist VERBOTEN. Nur Properties: `is_available()`, `version.hip`, `get_device_properties()`. Betrifft: `ml_device_manager.py._detect_cuda_or_rocm`. |
-| §SC-G80 | **Unified Progress** | Beide Fortschrittsbalken MÜSSEN aus derselben Methode (`_sync_unified_progress()`) aktualisiert werden. Fragmentierte Update-Pfade sind VERBOTEN. Defekt-Counts in Chips alle ~800ms refreshen. Betrifft: `_tick_heartbeat`. |
-
----
-
----
-
-## Kategorie XXII — Architektonische Qualitäts-Garantien: Metrik-Hierarchie & Guard-Disziplin (§G150–§G155)
-
-> §v10.704 — Prämisse: 20 Bugs in der Produktionsanalyse haben drei systemische
-> Schwachstellen offengelegt: (1) Guards widersprechen sich mangels Metrik-Hierarchie,
-> (2) Guards kennen den Phasen-Kontext nicht, (3) Schwellwerte sind hartcodiert statt
-> adaptiv. Diese Kategorie kodifiziert die architektonischen Heilungsmaßnahmen.
-
-| ID | Regel | Beschreibung |
-| ---- | ------- | ------------- |
-| §G150 | **Metrik-Hierarchie-Pflicht** | Aurik MUSS eine definitive Hierarchie der Qualitätsmetriken einhalten: Priorität 1 = MUSHRA/HPI (perzeptuell), Priorität 2 = Defekt-Reduktion (B2-Daten), Priorität 3 = artifact_freedom (nur VETO bei >5 Artefakten), Priorität 4 = BlindQuality (NUR Diagnostik, NIE Quality-Gate). Keine niedrigere Metrik darf das Urteil einer höheren überschreiben. |
-| §G151 | **MUSHRA-Primat** | Wenn MUSHRA > 0 (perzeptuelle Daten verfügbar), MUSS MUSHRA die primäre Ground Truth für ALLE Quality-Gate-Entscheidungen sein. artifact_freedom und BlindQuality dürfen NIEMALS ein positives MUSHRA-Urteil negieren. |
-| §G152 | **BlindQuality-Diagnostik-Verbot** | Der BlindQualityScore (SNR/THD/Bandbreite) darf AUSSCHLIESSLICH für technische Diagnostik verwendet werden. Er darf NIEMALS in `quality_guaranteed`, `verdict` oder `export_gate` einfließen. Verstoß → §V40 (bestehend). |
-| §G153 | **Guard-Phasen-Whitelist-Pflicht** | Jeder Quality-Guard (AFG, VocalNoHarm, FormantGuard, CIG, SFT, PMGG) MUSS deklarieren, für welche Phasen-Familien er zuständig ist. Eine Phase, deren Familie nicht in der Whitelist des Guards steht, wird von diesem Guard ÜBERSPRUNGEN. Kein Guard läuft盲 auf allen Phasen. |
-| §G154 | **Adaptive-Schwellwert-Pflicht** | Jeder Schwellwert in Quality-Gates MUSS aus Material-Typ, Transfer-Chain-Depth und Phasen-Familie ABGELEITET werden — NIEMALS hartcodiert. Formel: `threshold = base_threshold × material_factor × depth_factor × phase_factor`. Die Tabelle der Material/Depth/Phase-Faktoren MUSS zentral in `calibrated_constants.py` definiert sein. |
-| §G155 | **Quality-Entscheidungs-Narrativ-Pflicht** | Jede Quality-Gate-Entscheidung (Verdict, Rollback, Skip) MUSS im GUI-Narrativ BEGRÜNDET werden — mit Bezug auf die konkrete Metrik, den Schwellwert und die Phasen-Familie. Kein „NO IMPROVEMENT" ohne Erklärung. Kein Rollback ohne „Warum". Der Nutzer MUSS verstehen, WARUM Aurik so entschieden hat. |
-
-### Neue VERBOTE — Architektonische Qualitäts-Garantien (§V47–§V49)
-
-| ID | Verbot | Beschreibung |
-| ---- | -------- | ------------- |
-| §V47 | **Metrik-Unterordnung-Verbot** | Es ist VERBOTEN, dass eine niedrigprioritäre Metrik (artifact_freedom, BlindQuality) das Urteil einer höherprioritären Metrik (MUSHRA, HPI) überschreibt oder negiert. |
-| §V48 | **Guard-Kontext-Ignoranz-Verbot** | Es ist VERBOTEN, einen Quality-Guard auf einer Phase laufen zu lassen, deren Phasen-Familie nicht in der Whitelist des Guards deklariert ist. |
-| §V49 | **Hartcodierter-Schwellwert-Verbot** | Es ist VERBOTEN, einen Quality-Gate-Schwellwert hart zu codieren. Alle Schwellwerte MÜSSEN via `calibrated_constants.py` aus Material+Depth+Phase abgeleitet werden. |
-
-## Kategorie XXIII — Restorability-Gate & Bugfixes B19–B30 (§G156–§G166)
-
-> §v10.704 — Prämisse: Zwei Produktionsläufe mit 5-stufiger Transferkette
-> (restorability=66) zeigten eine systematische Failure-Kaskade: De-Esser produzierte
-> artifact_freedom=0.494 → HPI-Gate verwarf gesamte Restauration → 0 Phasen wirksam.
-> Sechs Root-Cause-Fixes (B19–B30) durchbrechen diese Kaskade.
-
-| ID | Regel | Beschreibung |
-| ---- | ------- | ------------- |
-| §G156 | **Depth+Restorability-adaptiver HPI-Gate** | Der artifact_freedom-Mindestwert MUSS aus Depth UND Restorability abgeleitet werden: `af_min = base(depth) − (100−rs) × 0.0045`, floor=0.32. Depth≥5→0.48, depth≥4→0.58, depth=3→0.72, depth=2→0.82, depth=1→0.88. (§v10.704 B30) |
-| §G157 | **Sample-Axis-Robustheit für B3-Phase-2** | Der Defect-Presence-Scan MUSS beide Audio-Layouts korrekt erkennen: (2,N) und (N,2). `shape[-1]` bei (N,2) = Kanäle, nicht Samples. (§v10.704 B26) |
-| §G158 | **MUSHRA/HPI-Forwarding an MQA** | MushraEvaluator und HPI MÜSSEN ihre Scores an MQA weiterleiten. Ohne Forwarding: MQA sieht 0 → "NO IMPROVEMENT" trotz OQS=84.0. (§v10.704 B27) |
-| §G159 | **De-Esser-Dynamics-Threshold** | AFG-Threshold für De-Esser: 0.40 (Schwelle 0.38). Alte 0.55 erzwang Rollback trotz unhörbarer Artefakte auf Kassettenmaterial. (§v10.704 B19) |
-| §G160 | **Chunked-Mode-Längenwarnung** | Post-Pipeline-Check MUSS `self._in_chunked` erkennen und bei >100k Samples Diff von WARNING auf DEBUG herabstufen. (§v10.704 B28) |
-| §G161 | **P5-Exception-Traceback-Pflicht** | "setting an array element"-Exceptions MÜSSEN mit vollständigem Traceback (2000 Zeichen) als WARNING geloggt werden. (§v10.704 B29) |
-| §G162 | **HPI-Gate-Restorability-Kontinuität** | `(100−rs) × 0.0045`. Diskrete Buckets sind VERBOTEN. (§G77, §v10.704 B30) |
-| §G163 | **Floor-Absolut-Garantie** | artifact_freedom-Mindestwert NIEMALS < 0.32. (§v10.704 B30) |
-| §G164 | **Studio-Master-Floor-Invariante** | depth=1, rs=100: af_min UNVERÄNDERT 0.88. (§v10.704 B30) |
-| §G165 | **Spec-Constitution-Synchronisation** | Jede AF/HPI-Änderung MUSS in `check_violations`, `is_export_blocked` UND `_get_depth_adaptive_af_min` nachgezogen werden. (§v10.704) |
-| §G166 | **Drei-Quellen-Synchronisation** | AF/HPI-Schwellwerte existieren an DREI Orten. Alle MÜSSEN identische Formeln verwenden. (§v10.704) |
-
-### Neue VERBOTE — Restorability-Gate (§V50–§V51)
-
-| ID | Verbot | Beschreibung |
-| ---- | -------- | ------------- |
-| §V50 | **Restorability-Ignoranz-Verbot** | Es ist VERBOTEN, einen HPI-Gate-Schwellwert ohne `restorability_score` zu berechnen. |
-| §V51 | **Sample-Axis-Raten-Verbot** | Es ist VERBOTEN, `audio.shape[-1]` als Sample-Anzahl zu interpretieren, ohne (N,2) vs (2,N) zu prüfen. |
-
-### Neue GEBOTE — Denker-IQ & Material-Awareness (§G167–§G172, §v10.706)
-
-| ID | Gebot | Beschreibung |
-| ---- | ------- | ------------- |
-| §G167 | **Export-Gate-B30-Komplettierung** | ALLE Export-Gates (ArtifactFreedomGate, FinalExportAudioGate, QualityGateRegistry) MÜSSEN die B30-Formel `af_min = base(depth) − (100−rs)×0.0045` verwenden. Hartcodierte 0.95 sind VERBOTEN. |
-| §G168 | **SourceMediumProfile-Kalibrierungspflicht** | SongCalibration MUSS `get_medium_profile()` konsultieren. `is_compressed`, `hiss_reduction_max_strength`, `harmonic_max_order`, `deesser_skip_saturation_conf` fließen in `family_scalars` ein. |
-| §G169 | **Per-Phase-SMP-Cap** | Jede Phase mit medium-spezifischen Limits MUSS `SourceMediumProfile` als Hard-Cap konsultieren: Phase_29 (`hiss_reduction_max_strength`), Phase_07 (`harmonic_max_order`), Phase_26 (`is_compressed`), Phase_36 (`has_soft_saturation`), Phase_54 (`is_compressed`). |
-| §G170 | **Chain-Depth-Budget-Adaption** | StrategieDenker MUSS das Zeitbudget mit `chain_depth` skalieren: +15% pro Generation, +0.5% pro Restorability-Punkt unter 100. |
-| §G171 | **Material-Fremdlauf-Transparenz** | Läuft eine für Medium X designte Phase auf Medium Y (durch Chain-Injection), MUSS dies als INFO geloggt werden. Kein Block, kein Strip — ActiveIntervention entscheidet. |
-| §G172 | **OneTakeExport-ISP-Margin** | Brickwall-Ceiling MUSS −1.0 dBTP betragen (ISP-Margin für inter-sample peaks). −0.3 dBTP ist VERBOTEN — TruePeak-Messung erfasst ISP, die der Sample-Peak-Limiter nicht eliminiert. |
-
-### Neues VERBOT — Material-Awareness (§V52)
-
-| ID | Verbot | Beschreibung |
-| ---- | -------- | ------------- |
-| §V52 | **Material-Nivellierungs-Verbot** | Es ist VERBOTEN, `"tape"`, `"cassette"` und `"reel_tape"` in Kalibrierung oder Phasen-Logik identisch zu behandeln. Jedes Medium hat eigene physikalische Limiten via SourceMediumProfile. |
-
-## Änderungshistorie
-
-| Version | Datum | Änderung |
-| --------- | ------- | ---------- |
-| 10.0.13 | 2026-08-03 | §G89: Soft-Clipping-Pflicht für alle 71 Phasen (68 + 3 Phase-0) (§v10.62). `apply_soft_clip()` + `crossfade_to_bypass()` in audio_utils.py. Kategorie XIV. |
-| 10.0.12 | 2026-08-03 | §G88: Defektbehebungs-Module (Phase_07/19/23/43) mit Depth-adaptiven DSP-Fallbacks. Kategorie XIII. |
-| 10.0.11 | 2026-08-03 | §G87: Phase_26 Per-Band-Noise-Floor-Guard (D1–D3). Schließt Phase_03→Phase_26 Noise-Floor-Lücke. Kategorie XII. |
-| 10.0.10 | 2026-07-19 | §G82–§G86: Laufzeit-Rekalibrierung. Lebendiger CalibrationContext, NOVELTY_CRIT-Nachführung, Monotonie-Garantie. Kategorie XI. |
-| 10.0.9 | 2026-07-19 | §G76–§G81: Kalibrierungs-Dispatch. Zentraler CalibrationContext, kontinuierliche Ableitung aller Schwellwerte, Kalibrierungs-Audit. Kategorie X. |
-| 10.14.0 | 2026-07-19 | §G68–§G75: SFT-Adaptivität, Defekt-Audibilität, Repair-Klassifikation. Kategorie IX. |
-| 10.0.7 | 2026-07-13 | §G60–§G67 + §V27–§V33. Lag-Integritäts-Architektur nach Root-Cause-Analyse (8 Bugs, 13 Commits). Kategorie VII + VIII. |
-| 10.0.6 | 2026-07-13 | §G46–§G59 (Metriken & Qualitätssicherung). Kategorie VI. |
-| 10.0.5 | 2026-07-13 | §G30–§G39 (CD-Rauschprofil & Export, ML-Device, Test-Assertion). §V16–§V24. |
-| 10.0.4 | 2026-07-13 | Initiale Formalisierung. CD-Rauschprofil (§G8, §G15–§G19, §V5, §V11–§V15). Kategorie I–III strukturiert. |
 
 ---
 
@@ -472,7 +369,7 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 | §G129 | **Rollback-Sanity-Pflicht** | Nach JEDEM Rollback (HPI, AFG, CIG, SFT) MUSS validate_rollback_audio() das Ziel-Audio prüfen. RMS <−60 dBFS, NaN, Inf oder Peak <1e−6 → CRITICAL + Fallback auf Original. (§v10.701 D4) |
 | §G130 | **PresenceEmbedding-Export-Pflicht** | Jeder Export MUSS PresenceScore berechnen (5 Sub-Scorer: Vocal Formant Coherence, Transient Immediacy, Room Tone Continuity, Microdynamic Liveliness, Spectral Air Authenticity). Score ≥0.70 = hörbare Verbesserung. Im Quality Report ausweisen. (§v10.701 D3) |
 
-## Kategorie XIX — SOTA-Reproduzierbarkeit: Kritische Bugfixes B1/B2/B3 (§G131–§G136)
+## Kategorie XIX — SOTA-Reproduzierbarkeit: Kritische Bugfixes B1/B2/B3 (§G131–§G137)
 
 > §v10.702 B1/B2/B3 — Prämisse: Drei kritische Bugs verhinderten die vollständige
 > Reproduzierbarkeit und korrekte Qualitätsbewertung von Importsongs. Diese Kategorie
@@ -568,10 +465,73 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 | §V48 | **Guard-Kontext-Ignoranz-Verbot** | Es ist VERBOTEN, einen Quality-Guard auf einer Phase laufen zu lassen, deren Phasen-Familie nicht in der Whitelist des Guards deklariert ist. |
 | §V49 | **Hartcodierter-Schwellwert-Verbot** | Es ist VERBOTEN, einen Quality-Gate-Schwellwert hart zu codieren. Alle Schwellwerte MÜSSEN via `calibrated_constants.py` aus Material+Depth+Phase abgeleitet werden. |
 
+## Kategorie XXIII — Restorability-Gate & Bugfixes B19–B30 (§G156–§G166)
+
+> §v10.704 — Prämisse: Zwei Produktionsläufe mit 5-stufiger Transferkette
+> (restorability=66) zeigten eine systematische Failure-Kaskade: De-Esser produzierte
+> artifact_freedom=0.494 → HPI-Gate verwarf gesamte Restauration → 0 Phasen wirksam.
+> Sechs Root-Cause-Fixes (B19–B30) durchbrechen diese Kaskade.
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G156 | **Depth+Restorability-adaptiver HPI-Gate** | Der artifact_freedom-Mindestwert MUSS aus Depth UND Restorability abgeleitet werden: `af_min = base(depth) − (100−rs) × 0.0045`, floor=0.32. Depth≥5→0.48, depth≥4→0.58, depth=3→0.72, depth=2→0.82, depth=1→0.88. (§v10.704 B30) |
+| §G157 | **Sample-Axis-Robustheit für B3-Phase-2** | Der Defect-Presence-Scan MUSS beide Audio-Layouts korrekt erkennen: (2,N) und (N,2). `shape[-1]` bei (N,2) = Kanäle, nicht Samples. (§v10.704 B26) |
+| §G158 | **MUSHRA/HPI-Forwarding an MQA** | MushraEvaluator und HPI MÜSSEN ihre Scores an MQA weiterleiten. Ohne Forwarding: MQA sieht 0 → "NO IMPROVEMENT" trotz OQS=84.0. (§v10.704 B27) |
+| §G159 | **De-Esser-Dynamics-Threshold** | AFG-Threshold für De-Esser: 0.40 (Schwelle 0.38). Alte 0.55 erzwang Rollback trotz unhörbarer Artefakte auf Kassettenmaterial. (§v10.704 B19) |
+| §G160 | **Chunked-Mode-Längenwarnung** | Post-Pipeline-Check MUSS `self._in_chunked` erkennen und bei >100k Samples Diff von WARNING auf DEBUG herabstufen. (§v10.704 B28) |
+| §G161 | **P5-Exception-Traceback-Pflicht** | "setting an array element"-Exceptions MÜSSEN mit vollständigem Traceback (2000 Zeichen) als WARNING geloggt werden. (§v10.704 B29) |
+| §G162 | **HPI-Gate-Restorability-Kontinuität** | `(100−rs) × 0.0045`. Diskrete Buckets sind VERBOTEN. (§G77, §v10.704 B30) |
+| §G163 | **Floor-Absolut-Garantie** | artifact_freedom-Mindestwert NIEMALS < 0.32. (§v10.704 B30) |
+| §G164 | **Studio-Master-Floor-Invariante** | depth=1, rs=100: af_min UNVERÄNDERT 0.88. (§v10.704 B30) |
+| §G165 | **Spec-Constitution-Synchronisation** | Jede AF/HPI-Änderung MUSS in `check_violations`, `is_export_blocked` UND `_get_depth_adaptive_af_min` nachgezogen werden. (§v10.704) |
+| §G166 | **Drei-Quellen-Synchronisation** | AF/HPI-Schwellwerte existieren an DREI Orten. Alle MÜSSEN identische Formeln verwenden. (§v10.704) |
+
+### Neue VERBOTE — Restorability-Gate (§V50–§V51)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V50 | **Restorability-Ignoranz-Verbot** | Es ist VERBOTEN, einen HPI-Gate-Schwellwert ohne `restorability_score` zu berechnen. |
+| §V51 | **Sample-Axis-Raten-Verbot** | Es ist VERBOTEN, `audio.shape[-1]` als Sample-Anzahl zu interpretieren, ohne (N,2) vs (2,N) zu prüfen. |
+
+### Neue GEBOTE — Denker-IQ & Material-Awareness (§G167–§G172, §v10.706)
+
+| ID | Gebot | Beschreibung |
+| ---- | ------- | ------------- |
+| §G167 | **Export-Gate-B30-Komplettierung** | ALLE Export-Gates (ArtifactFreedomGate, FinalExportAudioGate, QualityGateRegistry) MÜSSEN die B30-Formel `af_min = base(depth) − (100−rs)×0.0045` verwenden. Hartcodierte 0.95 sind VERBOTEN. |
+| §G168 | **SourceMediumProfile-Kalibrierungspflicht** | SongCalibration MUSS `get_medium_profile()` konsultieren. `is_compressed`, `hiss_reduction_max_strength`, `harmonic_max_order`, `deesser_skip_saturation_conf` fließen in `family_scalars` ein. |
+| §G169 | **Per-Phase-SMP-Cap** | Jede Phase mit medium-spezifischen Limits MUSS `SourceMediumProfile` als Hard-Cap konsultieren: Phase_29 (`hiss_reduction_max_strength`), Phase_07 (`harmonic_max_order`), Phase_26 (`is_compressed`), Phase_36 (`has_soft_saturation`), Phase_54 (`is_compressed`). |
+| §G170 | **Chain-Depth-Budget-Adaption** | StrategieDenker MUSS das Zeitbudget mit `chain_depth` skalieren: +15% pro Generation, +0.5% pro Restorability-Punkt unter 100. |
+| §G171 | **Material-Fremdlauf-Transparenz** | Läuft eine für Medium X designte Phase auf Medium Y (durch Chain-Injection), MUSS dies als INFO geloggt werden. Kein Block, kein Strip — ActiveIntervention entscheidet. |
+| §G172 | **OneTakeExport-ISP-Margin** | Brickwall-Ceiling MUSS −1.0 dBTP betragen (ISP-Margin für inter-sample peaks). −0.3 dBTP ist VERBOTEN — TruePeak-Messung erfasst ISP, die der Sample-Peak-Limiter nicht eliminiert. |
+
+### Neues VERBOT — Material-Awareness (§V52)
+
+| ID | Verbot | Beschreibung |
+| ---- | -------- | ------------- |
+| §V52 | **Material-Nivellierungs-Verbot** | Es ist VERBOTEN, `"tape"`, `"cassette"` und `"reel_tape"` in Kalibrierung oder Phasen-Logik identisch zu behandeln. Jedes Medium hat eigene physikalische Limiten via SourceMediumProfile. |
+
+---
+
+## Kategorie XXIV — Startup-Integration & Kommunikation (§G173–§G182, früher §SC-G71–§SC-G80, §v10.305)
+
+| ID | Regel | Beschreibung |
+| ---- | ------- | ------------- |
+| §G173 | **Event-Garantie** (früher §SC-G71) | Jedes `threading.Event` MUSS in `finally` oder garantiertem Exception-Handler gesetzt werden. Kein Codepfad darf das Event ungesetzt lassen. Betrifft: `_detection_complete` in `MLDeviceManager.__init__`. |
+| §G174 | **Lock-freie Importe** (früher §SC-G72) | `threading.Lock` DARF NICHT während `import`-Statements gehalten werden. Importe dauern 5–10s (pkg_resources, webrtcvad). Währenddessen sind alle anderen Lock-Warter blockiert. Betrifft: `try_allocate` in `ml_memory_budget.py`. |
+| §G175 | **Plugin-Namen-Validierung** (früher §SC-G73) | Jeder Zugriffsname in `warmup_models_background._plugins` MUSS mit einer tatsächlichen Funktion im Zielmodul übereinstimmen. `_failed > 0` nach Warmup MUSS ein `logger.warning` auslösen. Betrifft: `bridge.py`. |
+| §G176 | **Watchdog-Selbsttest** (früher §SC-G74) | Jeder Watchdog MUSS prüfen, dass seine Aktivierungsbedingung tatsächlich erreichbar ist. `getattr(self, "_preanalysis_pending", False)` muss auf `self` gesetzt sein. Betrifft: `_preanalysis_liveness_check`. |
+| §G177 | **Cache-Safety** (früher §SC-G75) | Launcher MUSS mit `python3 -B` starten. `.pyc`-Caches können nach Source-Änderungen veralteten Code ausführen. Betrifft: `main.py`, Shell-Launcher. |
+| §G178 | **Happy-Path-Gate** (früher §SC-G76) | Mindestens ein Codepfad MUSS die Analyse-Labels (`detected_medium_label`, `restorability_banner`, `mode_recommendation_label`) setzen. Jeder Guard, der einen Pfad verwirft, MUSS ein `logger.warning` ausgeben. Betrifft: `_update_all`. |
+| §G179 | **Startup-Smoke-Test** (früher §SC-G77) | Ein schneller (<60s) Test MUSS GPU-Erkennung, Warmup und Pre-Analysis prüfen. Betrifft: `tests/test_startup_smoke.py` (6 Assertions). |
+| §G180 | **Import-Check** (früher §SC-G78) | Jedes Modul MUSS alle verwendeten Standard-Imports haben. `ruff F821` (undefined name) ist Null-Toleranz. Betrifft: `ml_device_manager.py` (`import os` fehlte). |
+| §G181 | **GPU-Detection Safety** (früher §SC-G79) | GPU-Erkennung DARF KEINE blockierenden Operationen ausführen. `torch.zeros(device="cuda")` ist VERBOTEN. Nur Properties: `is_available()`, `version.hip`, `get_device_properties()`. Betrifft: `ml_device_manager.py._detect_cuda_or_rocm`. |
+| §G182 | **Unified Progress** (früher §SC-G80) | Beide Fortschrittsbalken MÜSSEN aus derselben Methode (`_sync_unified_progress()`) aktualisiert werden. Fragmentierte Update-Pfade sind VERBOTEN. Defekt-Counts in Chips alle ~800ms refreshen. Betrifft: `_tick_heartbeat`. |
+
 ## Änderungshistorie
 
 | Version | Datum | Änderung |
 | --------- | ------- | ---------- |
+| 10.0.19 | 2026-08 | **ID-Bereinigung Phase 1:** §SC-G71–§SC-G80 → §G173–§G182 (Kategorie XXIV), XI-b → §G183–§G187, XXII-Duplikat entfernt, XIX-Bereich auf §G131–§G137 korrigiert, Kategorien-Reihenfolge bereinigt, Änderungshistorien zusammengeführt. |
 | 10.17.0 | 2026-08-03 | **§G167–§G172 + §V52: Denker-IQ & Material-Awareness.** B30-Komplettierung (3 Export-Gates). B5: MERT-MUSHRA-Fix. B6–B10: Chain-Injection + PID-Validierung + StrategieDenker-Budget. B11: SourceMediumProfile → SongCalibration. B12–B16: SMP in Phase_29/07/26/54/36. B17: OneTakeExport ISP-Margin. Drei-Schicht-Material-Intelligenz. 10 Dateien. (§v10.706) |
 | 10.16.1 | 2026-08-02 | **§G156–§G166 + §V50–§V51: Restorability-Gate & Bugfixes B19–B30.** B30: Depth+Restorability-adaptiver HPI-Gate. B26: Sample-Axis-Fix. B27: MUSHRA/HPI→MQA. B19: AFG-Threshold. B28: Chunked-Längenwarnung. B29: P5-Traceback-Diagnostik. Drei-Quellen-Synchronisation. Kategorie XXIII. (§v10.704) |
 | 10.16.0 | 2026-08-03 | **§G150–§G155 + §V47–§V49: Metrik-Hierarchie & Guard-Disziplin.** S1: Metrik-Hierarchie in MQA. S2: Guard-Phasen-Whitelist (AFG). S3: Adaptive-Schwellwert-Pflicht. S4: Quality-Entscheidungs-Narrativ. Kategorie XXII. (§v10.704) |
@@ -583,4 +543,14 @@ Der ExcellenceOptimizer ist auf iZotope-RX11-Niveau kalibriert (Naturalness 0.86
 | 10.0.16 | 2026 | §G113–§G120: Universelle Phasen-Sicherheit & Excellence-Kalibrierung. RMS-Guard, Transient-Shift, Hallucination-Guard, Formant-Guard, Groove-Guard, HPI-Gate, Silence-Guard, RX11-Kalibrierung. Kategorie XVII. (§v10.112–§v10.117) |
 | 10.14.0 | 2026-08-10 | §G100–§G112 + §V34–§V38: Perzeptuelle Architektur §v10.101. |
 | 10.0.14 | 2026-08-10 | §G90–§G99: Non-Plus-Ultra. Blinder Referenz-Vektor, Exception-Proxies, Cross-Phase-Koordination, NaN-Guards, Material-Vollständigkeit. Kategorie XV. |
-| 10.0.14 | 2026-07-30 | **§G71–§G80 (spec_constitution): Startup-Integration & Kommunikation.** GPU-Detection failsafe, Lock-Disziplin, Plugin-Namen-Validierung, Watchdog-Selbsttest, Cache-Safety, Happy-Path-Gate, Startup-Smoke-Test, Import-Check, Event-Garantie, Probe-Invocation. Kategorie XII. (§v10.305) |
+| 10.0.14 | 2026-07-30 | **§G173–§G182 (früher §SC-G71–§SC-G80): Startup-Integration & Kommunikation.** GPU-Detection failsafe, Lock-Disziplin, Plugin-Namen-Validierung, Watchdog-Selbsttest, Cache-Safety, Happy-Path-Gate, Startup-Smoke-Test, Import-Check, Event-Garantie, Probe-Invocation. Kategorie XXIV. (§v10.305) |
+| 10.0.13 | 2026-08-03 | §G89: Soft-Clipping-Pflicht für alle 71 Phasen (68 + 3 Phase-0) (§v10.62). `apply_soft_clip()` + `crossfade_to_bypass()` in audio_utils.py. Kategorie XIV. |
+| 10.0.12 | 2026-08-03 | §G88: Defektbehebungs-Module (Phase_07/19/23/43) mit Depth-adaptiven DSP-Fallbacks. Kategorie XIII. |
+| 10.0.11 | 2026-08-03 | §G87: Phase_26 Per-Band-Noise-Floor-Guard (D1–D3). Schließt Phase_03→Phase_26 Noise-Floor-Lücke. Kategorie XII. |
+| 10.0.10 | 2026-07-19 | §G82–§G86: Laufzeit-Rekalibrierung. Lebendiger CalibrationContext, NOVELTY_CRIT-Nachführung, Monotonie-Garantie. Kategorie XI. |
+| 10.0.9 | 2026-07-19 | §G76–§G81: Kalibrierungs-Dispatch. Zentraler CalibrationContext, kontinuierliche Ableitung aller Schwellwerte, Kalibrierungs-Audit. Kategorie X. |
+| 10.14.0 | 2026-07-19 | §G68–§G75: SFT-Adaptivität, Defekt-Audibilität, Repair-Klassifikation. Kategorie IX. |
+| 10.0.7 | 2026-07-13 | §G60–§G67 + §V27–§V33. Lag-Integritäts-Architektur nach Root-Cause-Analyse (8 Bugs, 13 Commits). Kategorie VII + VIII. |
+| 10.0.6 | 2026-07-13 | §G46–§G59 (Metriken & Qualitätssicherung). Kategorie VI. |
+| 10.0.5 | 2026-07-13 | §G30–§G39 (CD-Rauschprofil & Export, ML-Device, Test-Assertion). §V16–§V24. |
+| 10.0.4 | 2026-07-13 | Initiale Formalisierung. CD-Rauschprofil (§G8, §G15–§G19, §V5, §V11–§V15). Kategorie I–III strukturiert. |

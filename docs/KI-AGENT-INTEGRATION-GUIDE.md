@@ -17,7 +17,7 @@ Dieses Dokument liefert **praktische Ergänzungen** zu den Richtlinien.
 ### Die 5 absoluten Regeln (Kurzfassung)
 
 1. **Anti-Parallelwelten**: Vor jeder Implementierung bestehende Module in `core/`, `plugins/`, `dsp/` prüfen
-2. **14 Musical Goals**: Nach jeder Restaurierung über `MusicalGoalsChecker.measure_all()` prüfen — Regression macht das Feature ungültig
+2. **15 Musical Goals**: Nach jeder Restaurierung über `MusicalGoalsChecker.measure_all()` prüfen — Regression macht das Feature ungültig
 3. **48 kHz überall**: `assert sample_rate == 48000` in jeder Phase und jedem Plugin
 4. **CPU + optionale AMD-GPU**: Kein CUDA — `providers=["CPUExecutionProvider", "ROCMExecutionProvider"]`, `model.to("cpu")`
 5. **NaN/Inf verboten**: `np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)` nach jeder numerischen Operation
@@ -77,7 +77,7 @@ Eingang (beliebige SR, mono/stereo)
 
 ---
 
-## 🎯 14 Musical Goals — Pflicht-Integration
+## 🎯 15 Musical Goals — Pflicht-Integration
 
 ```python
 from backend.core.musical_goals.musical_goals_metrics import MusicalGoalsChecker
@@ -296,7 +296,7 @@ def meine_convenience_funktion(audio: np.ndarray, sr: int) -> "MeinResult":
 ❌ `result = np.fft.rfft(audio)` ohne NaN-Guard
 ✅ `result = np.nan_to_num(result, nan=0.0, posinf=0.0, neginf=0.0)` nach jeder FFT
 
-### Fallstrick #3: Kein Musical-Goals-Check (14 Ziele, nicht 7!)
+### Fallstrick #3: Kein Musical-Goals-Check (15 Ziele, nicht 7!)
 
 ❌ Neue Phase implementiert, Musical Goals nicht geprüft → Bug unbemerkt
 ✅ `MusicalGoalsChecker.measure_all()` nach jeder neuen Verarbeitungsoperation im Test
@@ -442,7 +442,7 @@ Jede neue DSP-Funktion MUSS auf mindestens einem dieser Prinzipien basieren:
 □ logger = logging.getLogger(__name__)
 □ ≥ 35 Unit-Tests (Kernmodule) / ≥ 20 (Phasen / Plugins)
 □ Test: Shape, NaN, Bounds, Edge-Cases, Mono, Stereo, Konsistenz, Thread-Safe
-□ Alle 14 Musical Goals nach neuer Funktion nicht schlechter
+□ Alle 15 Musical Goals nach neuer Funktion nicht schlechter
 □ GrooveMetric: kein Timing-Flattening (DTW ≤ 8 ms RMS)
 □ SOFT_SATURATION nicht als CLIPPING behandelt
 □ Beide Modi (Restoration + Studio 2026) getestet

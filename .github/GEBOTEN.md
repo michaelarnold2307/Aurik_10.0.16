@@ -1,8 +1,9 @@
 # Aurik 10 — Vollständige GEBOTEN-Tabelle
 
-> **Normative Quelle** für verpflichtende Patterns.
-> Ergänzt `.github/VERBOTEN.md` und `.github/copilot-instructions.md`.
-> Generiert aus der Betriebssicherheits-Analyse vom 12. Juli 2026.
+> **Status: Referenz — von keinem Tool enforced.** Normative Quellen für
+> verpflichtende Patterns sind `.github/VERBOTEN.md` und
+> `.github/copilot-instructions.md`. Einstiegspunkt für Agenten: `AGENTS.md`
+> (Repo-Root). Generiert aus der Betriebssicherheits-Analyse vom 12. Juli 2026.
 
 ---
 
