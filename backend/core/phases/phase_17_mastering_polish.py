@@ -329,14 +329,14 @@ class MasteringPolishPhase(PhaseInterface):
                 audio=audio.copy(),
                 execution_time_seconds=time.time() - start_time,
                 metadata={
-                    "algorithm": "skipped_low_strength_mode",
+                    "algorithm": "skipped_zero_strength",
                     "material": material.name,
                     "mode": _mode_raw,
                     "effective_strength": _effective_strength,
                     "rms_drop_db": 0.0,
                 },
                 metrics={"rms_change_db": 0.0},
-                modifications={"algorithm": "skipped_low_strength_mode"},
+                modifications={"algorithm": "skipped_zero_strength"},
             )
 
         if _effective_strength <= 0.0:
