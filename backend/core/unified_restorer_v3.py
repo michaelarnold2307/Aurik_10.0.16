@@ -431,7 +431,7 @@ def _resolve_vocal_confidence_threshold(
 def _resolve_noise_texture_rollback_threshold(
     material_key: str,
     transfer_chain: list[str] | None = None,
-    restorability_score: float = 70.0,
+    restorability_score: float = 100.0,
     transfer_chain_depth: int = 1,
     *,
     calibration_context: Any | None = None,
@@ -7393,7 +7393,7 @@ class UnifiedRestorerV3:
         _vocal_gate = bool(vocal_gate_active) or _panns >= 0.35
         _is_studio = str(mode).strip().lower() in {"studio", "studio2026", "studio_2026"}
 
-        if _af < 0.90:  # §v10.101: 0.90 statt 0.95 — beschädigtes Material hat inhärent Restartefakte
+        if _af < 0.95:  # §40zzj: 0.95-Veto — Event-Schwelle und Bedingung konsistent
             _events.append(
                 {
                     "id": "artifact_freedom_veto",
@@ -8720,7 +8720,13 @@ class UnifiedRestorerV3:
             # (nur Terminal-Carrier) wird die vollständige Effective Chain aus dem
             # Restoration-Context übergeben → chain-adaptive Threshold-Merging aktiv.
             _eff_chain = list(self._restoration_context.get("transfer_chain", []) or [])
-            if _eff_chain:
+            # §40d Pre-Analysis-Handoff: das Original-Objekt aus
+            # pre_analysis_result.medium wird UNVERÄNDERT an den Scanner
+            # durchgereicht (identitäts-erhaltend, kein Rebuild).
+            _pre_medium_obj = getattr(_pre_analysis, "medium", None)
+            if _eff_chain and _pre_medium_obj is not None:
+                self._forensic_chain_result = _pre_medium_obj
+            elif _eff_chain:
                 import types
 
                 _fcr = types.SimpleNamespace()
