@@ -161,6 +161,17 @@ class TestMQABaseline:
         assert result["mqa_report"] is not None
         assert result["medium_type"] == "VINYL_33"
 
+    def test_passthrough_verdict_when_intensity_below_5_percent(self, coordinator, vinyl_audio):
+        """§VERDICT-PASSTHROUGH (Vorschlag 02): 1 Modul (< 5 % Intensität)
+        ⇒ no_processing-Verdikt, musical_improvement exakt 0.0."""
+        audio, sr = vinyl_audio
+        coordinator.register_module(name="DummyModule", module_class=MockNeutralModule, priority=ModulePriority.NORMAL)
+        result = coordinator.execute(audio, sr, processing_mode="restoration", medium_type=MediumType.VINYL_33)
+        mqa = result["mqa_report"]
+        assert mqa is not None
+        assert mqa.verdict.startswith("NO_PROCESSING_APPLIED")
+        assert mqa.musical_improvement == 0.0
+
     def test_baseline_establishment_tape(self, coordinator, tape_audio):
         """Test baseline for tape."""
         audio, sr = tape_audio

@@ -1285,6 +1285,13 @@ class MusicalQualityAssurance:
             and _minimal_improvement
         )
 
+        # §VERDICT-PASSTHROUGH (Vorschlag 02, docs/proposals): < 5 % Verarbeitung
+        # ⇒ Passthrough-Verdikt, musical_improvement exakt 0.0. Kein
+        # Qualitäts-Urteil über den Eingang („43→43"-Fehlinterpretation).
+        _no_processing = processing_intensity < 0.05
+        if _no_processing:
+            musical_improvement = 0.0
+
         # Generate verdict
         # §v10.704 S4 Quality-Entscheidungs-Narrativ (§G155):
         # Jedes Verdict MUSS erklären WARUM — mit Bezug auf die Metrik-Hierarchie.
@@ -1302,7 +1309,12 @@ class MusicalQualityAssurance:
         except Exception as _bir_exc:
             logger.debug("MQA: BIR-Vektor nicht verfügbar (%s)", _bir_exc)
 
-        if quality_guaranteed:
+        if _no_processing:
+            verdict = (
+                f"NO_PROCESSING_APPLIED — Passthrough ({processing_intensity:.1%} Intensität): "
+                "kein Qualitäts-Urteil, Eingang wurde nicht verarbeitet"
+            )
+        elif quality_guaranteed:
             _mushra_note = f" MUSHRA={_mushra:.0f}" if _mushra > 0 else ""
             _hpi_note = f" HPI={_hpi:.2f}" if _hpi > 0 else ""
             _bir_note = f" BIR={_bir_score:.3f}" if _bir_score > 0 else ""
