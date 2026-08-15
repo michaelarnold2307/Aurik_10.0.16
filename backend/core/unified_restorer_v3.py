@@ -11880,10 +11880,13 @@ class UnifiedRestorerV3:
                         if isinstance(getattr(self, "_conductor_strength_hints", None), dict):
                             self._conductor_strength_hints["phase_07_harmonic_restoration"] = 0.25  # safe start
 
+                    # §Vocal-Analog-Restoration: NOVELTY_CRIT/HNR_DROP/ECHO-Lagen dürfen
+                    # nicht durch Mastering-Polish verschärft werden → Phase 17 wird
+                    # vollständig aus dem Prerisk-Set entfernt (§0a-Preflight).
                     if "phase_17_mastering_polish" in _sel_set_prerisk:
-                        _risk_reduced_phases.append("phase_17_mastering_polish")
+                        _sel_set_prerisk.remove("phase_17_mastering_polish")
                         if isinstance(getattr(self, "_conductor_strength_hints", None), dict):
-                            self._conductor_strength_hints["phase_17_mastering_polish"] = 0.20  # safe start
+                            self._conductor_strength_hints.pop("phase_17_mastering_polish", None)
 
                     if "phase_50_spectral_repair" in _sel_set_prerisk:
                         _risk_reduced_phases.append("phase_50_spectral_repair")
@@ -34330,7 +34333,6 @@ class UnifiedRestorerV3:
 
                             except Exception:
                                 logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-                            except Exception:
                                 _novelty_crit_sft = 0.35  # Konservativer Fallback
                             _excess_novelty = float(max(0.0, _sft_novelty_val - _novelty_crit_sft))
                             # §v10.210 Restoration-Mode: höhere SFT-Wet-Floors da Audibility
