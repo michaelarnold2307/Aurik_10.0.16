@@ -1401,7 +1401,6 @@ class WowFlutterFix(PhaseInterface):
             _norm_r = np.sqrt(np.sum(_chroma_rest**2)) + 1e-10
         except Exception:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-        except Exception:
             _chroma_pearson = 1.0  # fallback: assume OK
 
         if _chroma_pearson < 0.95:
@@ -3659,8 +3658,8 @@ class WowFlutterFix(PhaseInterface):
             result = (1.0 - blend) * audio_f + blend * out
         except Exception as _c3_fallback_exc:
             logger.warning("ML→DSP-Fallback aktiviert", exc_info=True)  # §V6
-            return result.astype(audio.dtype, copy=False)  # type: ignore[no-any-return]
-        except Exception as _c3_fallback_exc:
+            if "result" in locals():
+                return result.astype(audio.dtype, copy=False)  # type: ignore[no-any-return]
             logger.debug("§C3 emergency smoothing Ersatzpfad fehlgeschlagen: %s", _c3_fallback_exc)
             return audio.copy()
 
