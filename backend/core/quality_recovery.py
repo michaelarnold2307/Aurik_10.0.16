@@ -489,6 +489,12 @@ class QualityRecoverySystem:
         del medium_type
         problems = []
 
+        # §v10.703 QUALITY_UNCERTAIN: MQA kann bei fehlenden perzeptuellen Daten
+        # (MUSHRA/HPI) keinen Report erzeugen und liefert None. Der Recovery-
+        # Flow darf dann nicht crashen — generischer Fallback übernimmt.
+        if quality_report is None:
+            return problems
+
         # Check SNR
         if not quality_report.gates_passed:
             for warning in quality_report.warnings:
@@ -554,7 +560,12 @@ class QualityRecoverySystem:
         return actions
 
     def _describe_problem(self, problem_type: ProblemType, quality_report: MusicalQualityReport) -> str:
-        """Generiert human-readable problem description."""
+        """Beschreibt das Problem menschenlesbar (§v10.703-sicher bei None-Report)."""
+        if quality_report is None:
+            return (
+                "Quality-Report nicht verfügbar — perzeptuelle Daten (MUSHRA/HPI) fehlen; "
+                "konservative Wiederherstellung wird angewendet"
+            )
         descriptions = {
             ProblemType.LOW_SNR: f"SNR too low ({quality_report.output_quality.snr_db:.1f} dB)",
             ProblemType.OVERBRIGHTENING: (

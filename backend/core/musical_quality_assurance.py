@@ -1134,7 +1134,7 @@ class MusicalQualityAssurance:
 
         return result
 
-    def validate_final_quality(  # type: ignore[return]
+    def validate_final_quality(
         self,
         original_audio: np.ndarray,
         processed_audio: np.ndarray,
@@ -1398,6 +1398,7 @@ class MusicalQualityAssurance:
             for rec in recommendations:
                 logger.info("  → %s", rec)
 
+        return report
     # ═══════════════════════════════════════════════════════════════════════════
     # §v10.703 Step 2: Export-Garantie — Zero Audible Defects Gate
     # ═══════════════════════════════════════════════════════════════════════════

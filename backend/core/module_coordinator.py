@@ -695,23 +695,28 @@ class ModuleCoordinator:
             mqa_report = self._mqa_system.validate_final_quality(
                 audio, current_audio, sample_rate, detected_medium, quality_mode, modules_applied
             )
-            quality_guaranteed = mqa_report.quality_guaranteed
-
-            if not quality_guaranteed:
-                logger.warning("⚠ QUALITY NOT GUARANTEED: %s", mqa_report.verdict)
-                for warning in mqa_report.warnings:
-                    logger.warning("  - %s", warning)
-
-                # If completely failed, consider rollback to best checkpoint
-                if mqa_report.integrity_result.should_rollback:
-                    logger.error("  → ROLLBACK RECOMMENDED")
-                    # Find best checkpoint
-                    if len(self._audio_checkpoints) >= 2:
-                        best_checkpoint = self._audio_checkpoints[-2]  # Second to last
-                        logger.info("  → Rolling back to: %s", best_checkpoint[0])
-                        current_audio = best_checkpoint[1]
+            # §v10.703 QUALITY_UNCERTAIN: validate_final_quality kann None liefern,
+            # wenn keine perzeptuellen Daten (MUSHRA/HPI) verfügbar sind.
+            if mqa_report is None:
+                logger.warning("⚠ QUALITY NOT GUARANTEED: MQA-Report nicht verfügbar (perzeptuelle Daten fehlen)")
             else:
-                logger.info("✓ QUALITY GUARANTEED: %s", mqa_report.verdict)
+                quality_guaranteed = mqa_report.quality_guaranteed
+
+                if not quality_guaranteed:
+                    logger.warning("⚠ QUALITY NOT GUARANTEED: %s", mqa_report.verdict)
+                    for warning in mqa_report.warnings:
+                        logger.warning("  - %s", warning)
+
+                    # If completely failed, consider rollback to best checkpoint
+                    if mqa_report.integrity_result.should_rollback:
+                        logger.error("  → ROLLBACK RECOMMENDED")
+                        # Find best checkpoint
+                        if len(self._audio_checkpoints) >= 2:
+                            best_checkpoint = self._audio_checkpoints[-2]  # Second to last
+                            logger.info("  → Rolling back to: %s", best_checkpoint[0])
+                            current_audio = best_checkpoint[1]
+                else:
+                    logger.info("✓ QUALITY GUARANTEED: %s", mqa_report.verdict)
 
         # Generate report
         report = {
