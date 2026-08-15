@@ -135,7 +135,42 @@ class PsychoAcousticMetrics:
 
     def calculate_naturalness_score(self, audio: np.ndarray, reference: np.ndarray | None = None) -> dict[str, float]:
         result = self._get_calculator().compute_all(audio, reference)
-        return result.to_dict()  # type: ignore[no-any-return]
+        _d = result.to_dict()
+        # Nur endliche Zahlen zurückgeben — to_dict() kann verschachtelte
+        # Objekt-Referenzen enthalten, die math.isfinite() crashen lassen.
+        return {
+            str(k): float(v)
+            for k, v in _d.items()
+            if isinstance(v, (int, float)) and not isinstance(v, bool)
+        }
+
+    def calculate_temporal_smoothness(self, audio: np.ndarray) -> float:
+        """Zeitliche Glätte: 1 − normalisierte Streuung der Frame-RMS (0–1)."""
+        audio = np.nan_to_num(np.asarray(audio, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+        n = len(audio)
+        frame = max(64, self.sample_rate // 50)
+        n_frames = n // frame
+        if n_frames < 2:
+            return 1.0
+        rms = np.sqrt(np.mean(audio[: n_frames * frame].reshape(n_frames, frame) ** 2, axis=1) + 1e-12)
+        spread = float(np.std(rms) / (np.mean(rms) + 1e-12))
+        return float(np.clip(1.0 - min(spread, 1.0), 0.0, 1.0))
+
+    def calculate_noise_floor_consistency(self, audio: np.ndarray) -> float:
+        """Konsistenz des Rauschbodens über Segmente (0–1, 1 = konstant)."""
+        audio = np.nan_to_num(np.asarray(audio, dtype=np.float64), nan=0.0, posinf=0.0, neginf=0.0)
+        n = len(audio)
+        frame = max(64, self.sample_rate // 50)
+        n_frames = n // frame
+        if n_frames < 2:
+            return 1.0
+        floors = np.percentile(np.abs(audio[: n_frames * frame].reshape(n_frames, frame)), 5, axis=1)
+        spread = float(np.std(floors) / (np.mean(floors) + 1e-12))
+        return float(np.clip(1.0 - min(spread, 1.0), 0.0, 1.0))
+
+    def calculate_roughness_zwicker_detailed(self, audio: np.ndarray) -> float:
+        """Detaillierte Zwicker-Rauhigkeit — delegiert an den Roughness-Pfad."""
+        return self.calculate_roughness(audio)
 
 
 @dataclass

@@ -929,7 +929,7 @@ class TestPsychoAcousticMetrics:
         assert math.isfinite(val) and val >= 0.0
 
     def test_13_measure_quality_improvement(self):
-        from backend.core.comprehensive_metrics import measure_quality_improvement  # type: ignore[attr-defined]
+        from backend.core.psychoacoustic_metrics import measure_quality_improvement
 
         ref = _sine(440.0, 1.0)
         test = ref + _noise(1.0, amp=0.05)
