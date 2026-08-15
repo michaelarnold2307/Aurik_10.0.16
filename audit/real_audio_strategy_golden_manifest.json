@@ -217,6 +217,1233 @@
         "phase_06_frequency_restoration",
         "phase_03_denoise"
       ]
+    },
+    {
+      "case_id": "real_shellac_1908_caruso_rigoletto_la_donna_e_mobile",
+      "path": "corpus/shellac/damaged/shellac_1908_caruso_rigoletto_la_donna_e_mobile.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "speed_calibration_error",
+        "groove_echo"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 190
+    },
+    {
+      "case_id": "real_shellac_1911_caruso_celeste_aida",
+      "path": "corpus/shellac/damaged/shellac_1911_caruso_celeste_aida.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "vocal_stem_noise"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 191
+    },
+    {
+      "case_id": "real_shellac_1916_caruso_o_sole_mio",
+      "path": "corpus/shellac/damaged/shellac_1916_caruso_o_sole_mio.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_31_speed_pitch_correction",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "room_mode_resonance",
+        "speed_calibration_error",
+        "bandwidth_loss"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 191
+    },
+    {
+      "case_id": "real_shellac_1919_samuels_dance_orch_taxi",
+      "path": "corpus/shellac/damaged/shellac_1919_samuels_dance_orch_taxi.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_28_surface_noise_profiling"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "inner_groove_distortion",
+        "stylus_damage"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert).",
+      "era_decade": 191
+    },
+    {
+      "case_id": "real_shellac_1922_kaufman_eddie_leonard_blues",
+      "path": "corpus/shellac/damaged/shellac_1922_kaufman_eddie_leonard_blues.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_01_click_removal",
+        "phase_27_click_pop_removal"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "inner_groove_distortion",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1923_bessie_smith_far_away_blues",
+      "path": "corpus/shellac/damaged/shellac_1923_bessie_smith_far_away_blues.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_01_click_removal"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "room_mode_resonance",
+        "vinyl_warp"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1923_jolson_style_dirty_hands_dirty_face",
+      "path": "corpus/shellac/damaged/shellac_1923_jolson_style_dirty_hands_dirty_face.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "speed_calibration_error",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1924_schachmeister_slik_pinden",
+      "path": "corpus/shellac/damaged/shellac_1924_schachmeister_slik_pinden.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_31_speed_pitch_correction",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "speed_calibration_error",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert).",
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1924_two_franks_rock_a_bye_blues",
+      "path": "corpus/shellac/damaged/shellac_1924_two_franks_rock_a_bye_blues.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vocal_stem_noise",
+        "inner_groove_distortion"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1924_virtuoso_string_quartet_op59_no2_mvt3",
+      "path": "corpus/shellac/damaged/shellac_1924_virtuoso_string_quartet_op59_no2_mvt3.flac",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "speed_calibration_error",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert).",
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1925_caruso_vesti_la_giubba",
+      "path": "corpus/shellac/damaged/shellac_1925_caruso_vesti_la_giubba.mp3",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "speed_calibration_error",
+        "vocal_stem_noise"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert). Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_shellac_1925_covent_garden_scheherazade_pt3",
+      "path": "corpus/shellac/damaged/shellac_1925_covent_garden_scheherazade_pt3.flac",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "clicks",
+        "speed_calibration_error"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Echte Public-Domain-78rpm-Aufnahme (Internet Archive, verifiziert).",
+      "era_decade": 192
+    },
+    {
+      "case_id": "real_vinyl_blues_1950s_hiss_hum",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_hiss_hum.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_31_speed_pitch_correction"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 195
+    },
+    {
+      "case_id": "real_vinyl_soul_1970s_wow_flutter",
+      "path": "corpus/vinyl/damaged/vinyl_soul_1970s_wow_flutter.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_vinyl_rock_1970s_clicks",
+      "path": "corpus/vinyl/damaged/vinyl_rock_1970s_clicks.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_01_click_removal"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_vinyl_classical_1960s_hiss_hum_wow",
+      "path": "corpus/vinyl/damaged/vinyl_classical_1960s_hiss_hum_wow.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_23_spectral_repair",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter"
+      ],
+      "accepted_causes": [
+        "vinyl_warp",
+        "riaa_curve_error",
+        "proximity_effect_excess"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_vinyl_jazz_1960s_hiss_crackle",
+      "path": "corpus/vinyl/damaged/vinyl_jazz_1960s_hiss_crackle.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_01_click_removal"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_vinyl_classical_1960s_surface_noise",
+      "path": "corpus/vinyl/damaged/vinyl_classical_1960s_surface_noise.wav",
+      "material_type": "vinyl",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_23_spectral_repair",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "vinyl_warp",
+        "riaa_curve_error"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_tape_country_1960s_hiss",
+      "path": "corpus/tape/damaged/tape_country_1960s_hiss.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction",
+        "phase_12_wow_flutter_fix"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "transport_bump"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_tape_country_1960s_dropouts",
+      "path": "corpus/tape/damaged/tape_country_1960s_dropouts.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "sticky_shed_residue"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_tape_folk_1970s_hiss_hum",
+      "path": "corpus/tape/damaged/tape_folk_1970s_hiss_hum.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_tape_folk_1970s_wow_flutter",
+      "path": "corpus/tape/damaged/tape_folk_1970s_wow_flutter.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_tape_rock_1980s_hiss",
+      "path": "corpus/tape/damaged/tape_rock_1980s_hiss.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 198
+    },
+    {
+      "case_id": "real_tape_rock_1980s_dropouts_hiss",
+      "path": "corpus/tape/damaged/tape_rock_1980s_dropouts_hiss.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "flutter_spectral_sidebands",
+        "tape_start_instability",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 198
+    },
+    {
+      "case_id": "real_tape_jazz_1950s_hiss_hum",
+      "path": "corpus/tape/damaged/tape_jazz_1950s_hiss_hum.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_23_spectral_repair",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "tape_start_instability",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 195
+    },
+    {
+      "case_id": "real_tape_classical_1970s_hiss",
+      "path": "corpus/tape/damaged/tape_classical_1970s_hiss.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "flutter_spectral_sidebands",
+        "tape_start_instability"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_tape_classical_1970s_dropouts_hum",
+      "path": "corpus/tape/damaged/tape_classical_1970s_dropouts_hum.wav",
+      "material_type": "tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "flutter_spectral_sidebands",
+        "tape_start_instability"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 197
+    },
+    {
+      "case_id": "real_cassette_rock_1990s_hiss_wow",
+      "path": "corpus/cassette/damaged/cassette_rock_1990s_hiss_wow.wav",
+      "material_type": "cassette",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "head_misalignment",
+        "digital_clip",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 199
+    },
+    {
+      "case_id": "real_cassette_rock_1990s_dropouts",
+      "path": "corpus/cassette/damaged/cassette_rock_1990s_dropouts.wav",
+      "material_type": "cassette",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "head_misalignment",
+        "digital_clip",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 199
+    },
+    {
+      "case_id": "real_cassette_hiphop_1980s_hiss",
+      "path": "corpus/cassette/damaged/cassette_hiphop_1980s_hiss.wav",
+      "material_type": "cassette",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction",
+        "phase_03_denoise"
+      ],
+      "accepted_causes": [
+        "head_misalignment",
+        "digital_clip",
+        "room_mode_resonance"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 198
+    },
+    {
+      "case_id": "real_cassette_hiphop_1980s_wow_flutter",
+      "path": "corpus/cassette/damaged/cassette_hiphop_1980s_wow_flutter.wav",
+      "material_type": "cassette",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_31_speed_pitch_correction"
+      ],
+      "accepted_causes": [
+        "head_misalignment",
+        "digital_clip",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 198
+    },
+    {
+      "case_id": "real_reel_jazz_1950s_hiss_hum",
+      "path": "corpus/reel_tape/damaged/reel_jazz_1950s_hiss_hum.wav",
+      "material_type": "reel_tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_23_spectral_repair",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_07_harmonic_restoration"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "head_misalignment",
+        "digital_clip"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 195
+    },
+    {
+      "case_id": "real_reel_jazz_1950s_dropouts",
+      "path": "corpus/reel_tape/damaged/reel_jazz_1950s_dropouts.wav",
+      "material_type": "reel_tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_23_spectral_repair",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "head_misalignment",
+        "digital_clip"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 195
+    },
+    {
+      "case_id": "real_reel_classical_1960s_hiss",
+      "path": "corpus/reel_tape/damaged/reel_classical_1960s_hiss.wav",
+      "material_type": "reel_tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "head_misalignment",
+        "digital_clip"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_reel_classical_1960s_wow_flutter",
+      "path": "corpus/reel_tape/damaged/reel_classical_1960s_wow_flutter.wav",
+      "material_type": "reel_tape",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "head_misalignment",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 196
+    },
+    {
+      "case_id": "real_digital_pop_2000s_clicks",
+      "path": "corpus/digital/damaged/digital_pop_2000s_clicks.wav",
+      "material_type": "cd_digital",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_23_spectral_repair",
+        "phase_63_intermodulation_reduction",
+        "phase_12_wow_flutter_fix"
+      ],
+      "accepted_causes": [
+        "digital_clip",
+        "print_through",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 200
+    },
+    {
+      "case_id": "real_digital_pop_2000s_mp3_artifacts",
+      "path": "corpus/digital/damaged/digital_pop_2000s_mp3_artifacts.wav",
+      "material_type": "cd_digital",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_04_eq_correction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "digital_clip",
+        "print_through",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 200
+    },
+    {
+      "case_id": "real_digital_jazz_2010s_clicks",
+      "path": "corpus/digital/damaged/digital_jazz_2010s_clicks.wav",
+      "material_type": "cd_digital",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_23_spectral_repair",
+        "phase_63_intermodulation_reduction",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "digital_clip",
+        "print_through",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 201
+    },
+    {
+      "case_id": "real_digital_jazz_2010s_mp3_artifacts",
+      "path": "corpus/digital/damaged/digital_jazz_2010s_mp3_artifacts.wav",
+      "material_type": "cd_digital",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "digital_clip",
+        "print_through",
+        "soft_saturation"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 201
+    },
+    {
+      "case_id": "real_shellac_blues_1930s_hiss_crackle_hum",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum.wav",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "room_mode_resonance",
+        "vocal_stem_noise"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 193
+    },
+    {
+      "case_id": "real_shellac_blues_1930s_surface_noise",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_surface_noise.wav",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_05_rumble_filter",
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "room_mode_resonance",
+        "bandwidth_loss"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion. Vokal.",
+      "requires_vocal_gate": true,
+      "era_decade": 193
+    },
+    {
+      "case_id": "real_shellac_classical_1940s_crackle",
+      "path": "corpus/shellac/damaged/shellac_classical_1940s_crackle.wav",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_03_denoise",
+        "phase_29_tape_hiss_reduction",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair",
+        "phase_49_advanced_dereverb",
+        "phase_20_reverb_reduction"
+      ],
+      "accepted_causes": [
+        "vinyl_crackle",
+        "room_mode_resonance",
+        "vocal_stem_noise"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 194
+    },
+    {
+      "case_id": "real_shellac_classical_1940s_hiss_hum",
+      "path": "corpus/shellac/damaged/shellac_classical_1940s_hiss_hum.wav",
+      "material_type": "shellac",
+      "max_seconds": 20.0,
+      "required_phases": [
+        "phase_07_harmonic_restoration",
+        "phase_06_frequency_restoration",
+        "phase_04_eq_correction",
+        "phase_05_rumble_filter",
+        "phase_12_wow_flutter_fix",
+        "phase_23_spectral_repair"
+      ],
+      "accepted_causes": [
+        "proximity_effect_excess",
+        "speed_calibration_error",
+        "bandwidth_loss"
+      ],
+      "cause_top_k": 3,
+      "forbidden_phases": [
+        "phase_35_multiband_compression",
+        "phase_42_vocal_enhancement",
+        "phase_21_exciter"
+      ],
+      "ordered_before": [],
+      "description": "Synthetische CC0-Corpus-Referenz mit bekannter Defekt-Injektion.",
+      "era_decade": 194
     }
   ],
   "description": "Real-audio Golden-Set annotations for autonomous defect-to-strategy planning.",

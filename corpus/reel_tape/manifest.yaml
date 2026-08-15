@@ -26,6 +26,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - reel_tape
 - checksum_sha256: e2a6f8a41e87521cbe49f179e7fe632bda87487c4c597e25b1c65a63d3931af8
   defect_description: Dropouts
   defect_types:
@@ -39,6 +41,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - reel_tape
 - file: clean/reel_jazz_1950s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -69,6 +73,8 @@ entries:
   defect_types:
   - hiss
   - hum
+  chain:
+  - reel_tape
 - file: damaged/reel_jazz_1950s_dropouts.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -84,6 +90,8 @@ entries:
   checksum_sha256: cb5fcba0451ca64022540b07aa2d385c99271839ed5fc320b4356e005e0fa924
   defect_types:
   - dropouts
+  chain:
+  - reel_tape
 - file: clean/reel_classical_1960s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -113,6 +121,8 @@ entries:
   checksum_sha256: 6acd2d9860c926e17896456c98bda58bed6f0707548e9885c286d178c951b10c
   defect_types:
   - hiss
+  chain:
+  - reel_tape
 - file: damaged/reel_classical_1960s_wow_flutter.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -129,3 +139,5 @@ entries:
   defect_types:
   - wow
   - flutter
+  chain:
+  - reel_tape

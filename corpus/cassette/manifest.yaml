@@ -26,6 +26,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - cassette
 - checksum_sha256: 5e597db6df4f273ae36607e5105d6a5496df21c5e8e05bad6798641e594db1c1
   defect_description: Hiss + Clicks + Dropouts
   defect_types:
@@ -41,6 +43,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - cassette
 - file: clean/cassette_rock_1990s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -71,6 +75,8 @@ entries:
   defect_types:
   - hiss
   - wow
+  chain:
+  - cassette
 - file: damaged/cassette_rock_1990s_dropouts.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -86,6 +92,8 @@ entries:
   checksum_sha256: 05ebb4d96f16e996885eeb40e02c78d13cea1ab0227760efbf0faae4a7c750e7
   defect_types:
   - dropouts
+  chain:
+  - cassette
 - file: clean/cassette_hiphop_1980s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -115,6 +123,8 @@ entries:
   checksum_sha256: 5878e3ebafda09e428e12e85e1d0a3894d1947e059d158ab3ca8911459aa8f9e
   defect_types:
   - hiss
+  chain:
+  - cassette
 - file: damaged/cassette_hiphop_1980s_wow_flutter.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -131,3 +141,5 @@ entries:
   defect_types:
   - wow
   - flutter
+  chain:
+  - cassette

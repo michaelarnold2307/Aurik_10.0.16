@@ -1,308 +1,245 @@
 {
-  "cases": [
-    {
-      "case_id": "real_vinyl_jazz_1950s_scratched",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.6011,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "vinyl",
-        "path": "test_audio/vinyl/jazz_1950s_scratched.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.660759501554582,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "frisson_goosebumps_protection",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_vinyl_classical_1960s_hiss",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.6195,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "vinyl",
-        "path": "test_audio/vinyl/classical_1960s_hiss.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.6883687154967506,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "frisson_goosebumps_protection",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_vinyl_rock_1970s_worn",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": true,
-      "hpi": 0.6144,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "vinyl",
-        "path": "test_audio/vinyl/rock_1970s_worn.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.6826429154165836,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_tape_reel_1940s_dropout",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": true,
-      "hpi": 0.6082,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "tape",
-        "path": "test_audio/tape/reel_1940s_dropout.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.6767428725550049,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_tape_cassette_1980s_wow",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.5795,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "tape",
-        "path": "test_audio/tape/cassette_1980s_wow.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.6823636793171626,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "frisson_goosebumps_protection",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_digital_mp3_64kbps_artifacts",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.5639,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "mp3_low",
-        "path": "test_audio/digital/mp3_64kbps_artifacts.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.7109769370751744,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "frisson_goosebumps_protection",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_digital_streaming_glitches",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "NOISE_TEXTURE_INCOHERENT"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.5731,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "streaming",
-        "path": "test_audio/digital/streaming_glitches.wav",
-        "vocal_required": false
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": false,
-      "non_degraded_export": false,
-      "quality_estimate": 0.7647108771912762,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "noise_texture_repair",
-        "frisson_goosebumps_protection",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": true,
-      "vqi": null,
-      "vqi_floor": null
-    },
-    {
-      "case_id": "real_vocal_choir_breaths_hiss",
-      "fail_reasons": [
-        "MUSICAL_GOALS_VIOLATION",
-        "GOOSEBUMPS_LOW",
-        "VQI_BELOW_THRESHOLD"
-      ],
-      "final_quality_passed": false,
-      "goosebumps_passed": false,
-      "hpi": 0.5529,
-      "metadata": {
-        "degradation_status": "degraded",
-        "export_strategy": "blocked",
-        "material": "vinyl",
-        "path": "test_audio/vocals/choir_breaths.wav",
-        "vocal_required": true
-      },
-      "musical_goals_passed": false,
-      "noise_texture_passed": true,
-      "non_degraded_export": false,
-      "quality_estimate": 0.6949716967962339,
-      "required_actions": [
-        "productive_non_degraded_export_recovery",
-        "goal_directed_candidate_recovery",
-        "frisson_goosebumps_protection",
-        "vocal_vqi_recovery",
-        "hpi_quality_candidate_ranking"
-      ],
-      "unblocked_export": false,
-      "vocal_floor_passed": false,
-      "vqi": 0.6579638813604952,
-      "vqi_floor": 0.72
-    }
-  ],
-  "elapsed_seconds": 0.00177764892578125,
-  "execution_report_path": "/media/michael/Software 4TB/Aurik_Standalone/audit/real_audio_execution_golden_report.json",
   "gate": {
+    "passed": false,
+    "non_degraded_export_rate": 0.625,
+    "unblocked_export_rate": 0.625,
+    "musical_goal_case_pass_rate": 0.75,
+    "noise_texture_case_pass_rate": 1.0,
+    "goosebumps_case_pass_rate": 0.75,
+    "final_quality_case_pass_rate": 0.625,
+    "vocal_floor_pass_rate": 1.0,
+    "hpi_average": 0.943775,
+    "quality_estimate_average": 0.6500506305788772,
+    "runtime_factor": 32.75710804462433,
+    "real_audio_cases": 8,
+    "vocal_cases": 1,
     "external_benchmark_cases": 0,
     "fail_reasons": [
-      "non_degraded_export_rate 0.000 < 0.500",
-      "unblocked_export_rate 0.000 < 0.500",
-      "musical_goal_case_pass_rate 0.000 < 0.850",
-      "noise_texture_case_pass_rate 0.125 < 0.900",
-      "goosebumps_case_pass_rate 0.250 < 0.850",
-      "vocal_floor_pass_rate 0.000 < 1.000",
-      "hpi_average 0.589 < 0.720",
-      "quality_estimate_average 0.695 < 0.800",
-      "runtime_factor 19.568 > 12.000",
+      "musical_goal_case_pass_rate 0.750 < 0.850",
+      "goosebumps_case_pass_rate 0.750 < 0.850",
+      "final_quality_case_pass_rate 0.625 < 0.850",
+      "quality_estimate_average 0.650 < 0.800",
+      "runtime_factor 32.757 > 12.000",
       "real_audio_cases 8 < 50",
       "vocal_cases 1 < 20",
       "external_benchmark_cases 0 < 10"
     ],
-    "goosebumps_case_pass_rate": 0.25,
-    "hpi_average": 0.589075,
-    "musical_goal_case_pass_rate": 0.0,
-    "noise_texture_case_pass_rate": 0.125,
-    "non_degraded_export_rate": 0.0,
-    "passed": false,
     "prioritized_actions": [
       "create_real_audio_restoration_quality_gate",
       "goal_directed_candidate_recovery",
-      "noise_texture_repair",
       "frisson_goosebumps_protection",
-      "vocal_vqi_recovery",
       "phase_minimalism_runtime_budget",
-      "hpi_quality_candidate_ranking",
       "expand_real_audio_golden_set",
       "add_external_rx_top_tool_benchmark",
       "productive_non_degraded_export_recovery"
-    ],
-    "quality_estimate_average": 0.695192149425346,
-    "real_audio_cases": 8,
-    "runtime_factor": 19.56798552473386,
-    "unblocked_export_rate": 0.0,
-    "vocal_cases": 1,
-    "vocal_floor_pass_rate": 0.0
+    ]
   },
-  "manifest_path": "/media/michael/Software 4TB/Aurik_Standalone/audit/real_audio_strategy_golden_manifest.json"
+  "cases": [
+    {
+      "case_id": "real_vinyl_jazz_1950s_scratched",
+      "non_degraded_export": true,
+      "unblocked_export": true,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": true,
+      "hpi": 0.9616,
+      "quality_estimate": 0.6898203893795382,
+      "vqi": null,
+      "vqi_floor": null,
+      "fail_reasons": [],
+      "required_actions": [],
+      "metadata": {
+        "path": "test_audio/vinyl/jazz_1950s_scratched.wav",
+        "material": "vinyl",
+        "degradation_status": "ok",
+        "export_strategy": "success",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_vinyl_classical_1960s_hiss",
+      "non_degraded_export": true,
+      "unblocked_export": true,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": true,
+      "hpi": 0.9642,
+      "quality_estimate": 0.7011696222719312,
+      "vqi": null,
+      "vqi_floor": null,
+      "fail_reasons": [],
+      "required_actions": [],
+      "metadata": {
+        "path": "test_audio/vinyl/classical_1960s_hiss.wav",
+        "material": "vinyl",
+        "degradation_status": "ok",
+        "export_strategy": "success",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_vinyl_rock_1970s_worn",
+      "non_degraded_export": true,
+      "unblocked_export": true,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": true,
+      "hpi": 0.9685,
+      "quality_estimate": 0.6905465295287434,
+      "vqi": null,
+      "vqi_floor": null,
+      "fail_reasons": [],
+      "required_actions": [],
+      "metadata": {
+        "path": "test_audio/vinyl/rock_1970s_worn.wav",
+        "material": "vinyl",
+        "degradation_status": "ok",
+        "export_strategy": "success",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_tape_reel_1940s_dropout",
+      "non_degraded_export": true,
+      "unblocked_export": true,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": true,
+      "hpi": 0.9377,
+      "quality_estimate": 0.6988206109813174,
+      "vqi": null,
+      "vqi_floor": null,
+      "fail_reasons": [],
+      "required_actions": [],
+      "metadata": {
+        "path": "test_audio/tape/reel_1940s_dropout.wav",
+        "material": "tape",
+        "degradation_status": "ok",
+        "export_strategy": "success",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_tape_cassette_1980s_wow",
+      "non_degraded_export": false,
+      "unblocked_export": false,
+      "musical_goals_passed": false,
+      "noise_texture_passed": true,
+      "goosebumps_passed": false,
+      "vocal_floor_passed": true,
+      "final_quality_passed": false,
+      "hpi": 0.9,
+      "quality_estimate": 0.46208583101609,
+      "vqi": 0.9,
+      "vqi_floor": null,
+      "fail_reasons": [
+        "MUSICAL_GOALS_VIOLATION",
+        "GOOSEBUMPS_LOW"
+      ],
+      "required_actions": [
+        "productive_non_degraded_export_recovery",
+        "goal_directed_candidate_recovery",
+        "frisson_goosebumps_protection"
+      ],
+      "metadata": {
+        "path": "test_audio/tape/cassette_1980s_wow.wav",
+        "material": "tape",
+        "degradation_status": "degraded",
+        "export_strategy": "blocked",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_digital_mp3_64kbps_artifacts",
+      "non_degraded_export": false,
+      "unblocked_export": false,
+      "musical_goals_passed": false,
+      "noise_texture_passed": true,
+      "goosebumps_passed": false,
+      "vocal_floor_passed": true,
+      "final_quality_passed": false,
+      "hpi": 0.9,
+      "quality_estimate": 0.4752726984136455,
+      "vqi": 0.9,
+      "vqi_floor": null,
+      "fail_reasons": [
+        "MUSICAL_GOALS_VIOLATION",
+        "GOOSEBUMPS_LOW",
+        "STEREO_SAFETY_HARD_FAIL"
+      ],
+      "required_actions": [
+        "productive_non_degraded_export_recovery",
+        "goal_directed_candidate_recovery",
+        "frisson_goosebumps_protection"
+      ],
+      "metadata": {
+        "path": "test_audio/digital/mp3_64kbps_artifacts.wav",
+        "material": "mp3_low",
+        "degradation_status": "degraded",
+        "export_strategy": "blocked",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_digital_streaming_glitches",
+      "non_degraded_export": true,
+      "unblocked_export": true,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": true,
+      "hpi": 0.9875,
+      "quality_estimate": 0.7788354343363142,
+      "vqi": null,
+      "vqi_floor": null,
+      "fail_reasons": [],
+      "required_actions": [],
+      "metadata": {
+        "path": "test_audio/digital/streaming_glitches.wav",
+        "material": "streaming",
+        "degradation_status": "ok",
+        "export_strategy": "success",
+        "vocal_required": false
+      }
+    },
+    {
+      "case_id": "real_vocal_choir_breaths_hiss",
+      "non_degraded_export": false,
+      "unblocked_export": false,
+      "musical_goals_passed": true,
+      "noise_texture_passed": true,
+      "goosebumps_passed": true,
+      "vocal_floor_passed": true,
+      "final_quality_passed": false,
+      "hpi": 0.9307,
+      "quality_estimate": 0.7038539287034373,
+      "vqi": 0.7239694310170397,
+      "vqi_floor": 0.72,
+      "fail_reasons": [
+        "VQI_BELOW_MAXIMUM_ALIGNMENT"
+      ],
+      "required_actions": [
+        "productive_non_degraded_export_recovery"
+      ],
+      "metadata": {
+        "path": "test_audio/vocals/choir_breaths.wav",
+        "material": "vinyl",
+        "degradation_status": "degraded",
+        "export_strategy": "blocked",
+        "vocal_required": true
+      }
+    }
+  ],
+  "execution_report_path": "/media/michael/Software 4TB/Aurik_Standalone/audit/real_audio_execution_golden_report.json",
+  "manifest_path": "/media/michael/Software 4TB/Aurik_Standalone/audit/real_audio_strategy_golden_manifest.json",
+  "elapsed_seconds": 0.008293628692626953
 }

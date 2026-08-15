@@ -1,0 +1,567 @@
+{
+  "protocol": "MUSHRA ITU-R BS.1534-3",
+  "margin_points": 5.0,
+  "min_listeners": 10,
+  "items": [
+    {
+      "item_id": "cassette_hiphop_1980s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "cassette_hiphop_1980s_wow_flutter",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "cassette_pop_1980s_combined",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "cassette_pop_1980s_hiss_wow",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "cassette_rock_1990s_dropouts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "cassette_rock_1990s_hiss_wow",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_electronic_2000s_clicks",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_electronic_2000s_clicks_chain_digital_mp3_low",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_electronic_2000s_mp3",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_jazz_2010s_clicks",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_jazz_2010s_mp3_artifacts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_pop_2000s_clicks",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "digital_pop_2000s_mp3_artifacts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_classical_1960s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_classical_1960s_wow_flutter",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_jazz_1950s_dropouts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_jazz_1950s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_soul_1960s_dropouts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "reel_soul_1960s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_blues_1930s_surface_noise",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_classical_1940s_crackle",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_classical_1940s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_jazz_1920s_crackle",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "shellac_jazz_1920s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_blues_1970s_hiss_dropout",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_blues_1970s_hiss_dropout_chain_tape_reel_tape",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_blues_1970s_wow",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_classical_1970s_dropouts_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_classical_1970s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_country_1960s_dropouts",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_country_1960s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_folk_1970s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_folk_1970s_wow_flutter",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_jazz_1950s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_jazz_1950s_wow_flutter",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_rock_1980s_dropouts_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "tape_rock_1980s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_blues_1950s_crackle",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_cassette",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_blues_1950s_hiss_hum",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_classical_1960s_hiss_hum_wow",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_classical_1960s_surface_noise",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_jazz_1960s_hiss_crackle",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_jazz_1960s_surface_noise",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_rock_1960s_clicks",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_rock_1960s_hum_crackle",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_rock_1970s_clicks",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_rock_1970s_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_soul_1970s_crackle_hiss",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    },
+    {
+      "item_id": "vinyl_soul_1970s_wow_flutter",
+      "scores": [
+        {
+          "listener": "P01",
+          "anchor": 0.0,
+          "candidate": 0.0
+        }
+      ]
+    }
+  ]
+}

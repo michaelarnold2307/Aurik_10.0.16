@@ -1,50 +1,60 @@
 {
-  "generated_at": "2026-04-14T19:19:04.888529",
+  "generated_at": "2026-08-15T07:45:07.614224",
+  "status": "ready",
   "latest": {
-    "date": "2026-04-14",
+    "date": "2026-05-11",
+    "source_file": "uat_results_2026-05-11.json",
+    "recommendation": "GO",
     "gates": {
       "passed": 7,
       "total": 7
     },
     "r5_r12": {
-      "pass_rate": 0.875,
-      "passed": 7,
-      "total": 8
-    },
-    "recommendation": "GO",
-    "source_file": "uat_results_2026-04-14.json"
+      "passed": 8,
+      "total": 8,
+      "pass_rate": 1.0
+    }
   },
-  "status": "attention",
   "trend": [
     {
       "date": "2026-03-28",
+      "source_file": "uat_results_2026-03-28.json",
+      "recommendation": "CONDITIONAL",
       "gates_passed": 6,
       "gates_total": 7,
-      "r5_r12_pass_rate": 0.125,
       "r5_r12_passed": 1,
       "r5_r12_total": 8,
-      "recommendation": "CONDITIONAL",
-      "source_file": "uat_results_2026-03-28.json"
+      "r5_r12_pass_rate": 0.125
     },
     {
       "date": "2026-04-12",
+      "source_file": "uat_results_2026-04-12.json",
+      "recommendation": "GO",
       "gates_passed": 7,
       "gates_total": 7,
-      "r5_r12_pass_rate": 1.0,
       "r5_r12_passed": 8,
       "r5_r12_total": 8,
-      "recommendation": "GO",
-      "source_file": "uat_results_2026-04-12.json"
+      "r5_r12_pass_rate": 1.0
     },
     {
       "date": "2026-04-14",
+      "source_file": "uat_results_2026-04-14.json",
+      "recommendation": "GO",
       "gates_passed": 7,
       "gates_total": 7,
-      "r5_r12_pass_rate": 0.875,
       "r5_r12_passed": 7,
       "r5_r12_total": 8,
+      "r5_r12_pass_rate": 0.875
+    },
+    {
+      "date": "2026-05-11",
+      "source_file": "uat_results_2026-05-11.json",
       "recommendation": "GO",
-      "source_file": "uat_results_2026-04-14.json"
+      "gates_passed": 7,
+      "gates_total": 7,
+      "r5_r12_passed": 8,
+      "r5_r12_total": 8,
+      "r5_r12_pass_rate": 1.0
     }
   ]
 }

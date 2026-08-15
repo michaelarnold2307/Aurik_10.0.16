@@ -27,6 +27,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - tape
 - checksum_sha256: 9968f59aabd84525fe8f091f3de1d6859c77cce29e768a8b6a68f9525300d7b5
   defect_description: Wow/Flutter 0.3%
   defect_types: []
@@ -39,6 +41,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - tape
 - file: clean/tape_country_1960s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -68,6 +72,8 @@ entries:
   checksum_sha256: 40e39792062670ccca0f41a2186f7c8ea9fabaae4644aa9e675e86d2b6baea50
   defect_types:
   - hiss
+  chain:
+  - tape
 - file: damaged/tape_country_1960s_dropouts.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -83,6 +89,8 @@ entries:
   checksum_sha256: 5c7455fd599bffd16c993f2172ac605fc53d819d3b57d5fed2cd0399c9143ebc
   defect_types:
   - dropouts
+  chain:
+  - tape
 - file: clean/tape_folk_1970s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -113,6 +121,8 @@ entries:
   defect_types:
   - hiss
   - hum
+  chain:
+  - tape
 - file: damaged/tape_folk_1970s_wow_flutter.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -129,6 +139,8 @@ entries:
   defect_types:
   - wow
   - flutter
+  chain:
+  - tape
 - file: clean/tape_rock_1980s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -158,6 +170,8 @@ entries:
   checksum_sha256: f04d9079d51fca21337665f6364a09b6cc06f67fc127b23d2dd3481d070b9a8b
   defect_types:
   - hiss
+  chain:
+  - tape
 - file: damaged/tape_rock_1980s_dropouts_hiss.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -174,6 +188,8 @@ entries:
   defect_types:
   - dropouts
   - hiss
+  chain:
+  - tape
 - file: clean/tape_jazz_1950s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -204,6 +220,8 @@ entries:
   defect_types:
   - hiss
   - hum
+  chain:
+  - tape
 - file: damaged/tape_jazz_1950s_wow_flutter.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -220,6 +238,8 @@ entries:
   defect_types:
   - wow
   - flutter
+  chain:
+  - tape
 - file: clean/tape_classical_1970s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -249,6 +269,8 @@ entries:
   checksum_sha256: a8fea5f46c244dd66d10342d40242c15b65a6599e467d8a8cfa33be8d6bc6bf2
   defect_types:
   - hiss
+  chain:
+  - tape
 - file: damaged/tape_classical_1970s_dropouts_hum.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -265,3 +287,36 @@ entries:
   defect_types:
   - dropouts
   - hum
+  chain:
+  - tape
+- file: damaged/tape_blues_1970s_hiss_dropout_chain_tape_reel_tape.wav
+  duration_s: 10.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1975
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: 3af4a10732aeeb37c01d4f1088b41b17a12b33182e6f5444e7097dbfb35cb28b
+  chain:
+  - tape
+  - reel_tape
+- file: damaged/tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low.wav
+  duration_s: 10.0
+  sample_rate: 48000
+  material: tape
+  era_year: 1975
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: c598c6fbafb7b415fd93453d103bdd0e5143a16eb0ec659e387a5ec7ffa84ef6
+  chain:
+  - tape
+  - cassette
+  - mp3_low

@@ -1,6 +1,8 @@
 corpus_version: 1.0.0
 material: shellac
-description: Synthetic shellac recordings for Aurik real-audio validation (CC0)
+description: 'Shellac-Corpus: synthetische CC0-Referenzen + 12 echte Public-Domain-Aufnahmen
+  (Internet Archive 78rpm Collection, 1905-1925, US-Public-Domain). Defekt-Labels
+  der PD-Aufnahmen: DefectScanner-Messung auf 15s-Exzerpt + Medium-Wissen.'
 entries:
 - checksum_sha256: a7d79ff68b176bf8c21fc4e31a52f338be82662a4170b4ec05f4454ce4684954
   defect_types: []
@@ -25,6 +27,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - shellac
 - checksum_sha256: a197391157fb083a4dc8222ce017f6ab8b3508bea436d7ed641a872ad6e67d43
   defect_description: Hiss + 50Hz Brumm + 8kHz BW
   defect_types:
@@ -38,6 +42,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - shellac
 - file: clean/shellac_blues_1930s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -69,6 +75,8 @@ entries:
   - hiss
   - crackle
   - hum
+  chain:
+  - shellac
 - file: damaged/shellac_blues_1930s_surface_noise.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -85,6 +93,8 @@ entries:
   defect_types:
   - surface
   - noise
+  chain:
+  - shellac
 - file: clean/shellac_classical_1940s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -114,6 +124,8 @@ entries:
   checksum_sha256: 854b62f9e43b3e7255ee3cffef7bfcee675382b634a750d9bb17619aefdb93a6
   defect_types:
   - crackle
+  chain:
+  - shellac
 - file: damaged/shellac_classical_1940s_hiss_hum.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -130,3 +142,251 @@ entries:
   defect_types:
   - hiss
   - hum
+  chain:
+  - shellac
+- file: damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1932
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: 474046b11ebfe7c7e83ec057ccda41369c0ed106c9cc65aa613869b511bd3f1d
+  chain:
+  - shellac
+  - vinyl
+  - reel_tape
+- file: damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: shellac
+  era_year: 1932
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: 1ab34d365e07aee6c6863c4a007bbc32cae72bff0b593f8f28ab9aa18e7df94a
+  chain:
+  - shellac
+  - vinyl
+  - reel_tape
+  - mp3_low
+- file: damaged/shellac_1908_caruso_rigoletto_la_donna_e_mobile.mp3
+  duration_s: 139.572
+  sample_rate: 44100
+  material: shellac
+  era_year: 1908
+  genre: opera
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/enrico-caruso-giuseppe-vesrdi-rigoletto-la-donna-emobile-gramophone-da-1303
+  source_attribution: 'Enrico Caruso — Rigoletto: La donna è mobile (Gramophone DA
+    1303) — Enrico Caruso (Internet Archive, 78rpm Collection)'
+  checksum_sha256: 3f993f8e6e4e495e6da92fd23dfb42ad363ea474abab1831886a6015026aba9f
+  defect_types:
+  - surface_noise
+  - wow
+- file: damaged/shellac_1911_caruso_celeste_aida.mp3
+  duration_s: 289.176
+  sample_rate: 48000
+  material: shellac
+  era_year: 1911
+  genre: opera
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/78_ada-celeste-ada-heavenly-aida_enrico-caruso-giueseppi-verdi_gbia0290541a
+  source_attribution: Aïda — Celeste Aïda (Heavenly Aida!) — Enrico Caruso (Internet
+    Archive, 78rpm Collection)
+  checksum_sha256: 8314a045b9ed5e7739b49506671a1caf8e156525fbf66a789f5b6d70c5d40f41
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+- file: damaged/shellac_1916_caruso_o_sole_mio.mp3
+  duration_s: 203.377
+  sample_rate: 44100
+  material: shellac
+  era_year: 1916
+  genre: opera
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/enrico-caruso-eduardo-di-capuai-osole-mio-gramophone-da-1303
+  source_attribution: O Sole Mio (Gramophone DA 1303) — Enrico Caruso (Internet Archive,
+    78rpm Collection)
+  checksum_sha256: 21f121b120342dfabb52e0d326f0f054496245709208cf421ef84ae258df5f04
+  defect_types:
+  - surface_noise
+  - wow
+- file: damaged/shellac_1919_samuels_dance_orch_taxi.mp3
+  duration_s: 204.408
+  sample_rate: 48000
+  material: shellac
+  era_year: 1919
+  genre: jazz
+  condition: damaged
+  channels: 2
+  vocal: false
+  license: Public Domain
+  source_url: https://archive.org/details/1919-USA-Archives-1919-07-00-Joseph-Samuels-Dance-Orch-Taxi
+  source_attribution: Taxi — Joseph Samuels' Dance Orchestra (Internet Archive, 78rpm
+    Collection)
+  checksum_sha256: 22c9470135135c65d54d73dc6e08eaeffda6052b072d1cc4cfe08fd57d88cdfa
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+  - crackle
+- file: damaged/shellac_1922_kaufman_eddie_leonard_blues.mp3
+  duration_s: 187.992
+  sample_rate: 48000
+  material: shellac
+  era_year: 1922
+  genre: jazz
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/78_eddie-leonard-blues_irving-kaufman-v-l-stanton_gbia0286489b
+  source_attribution: Eddie Leonard Blues — Irving Kaufman (Internet Archive, 78rpm
+    Collection)
+  checksum_sha256: 7232cbd9457984134effbf32a9c0ad25e7f3e1493c0cf61d86e5acefe7175b1a
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+- file: damaged/shellac_1923_bessie_smith_far_away_blues.mp3
+  duration_s: 183.641
+  sample_rate: 44100
+  material: shellac
+  era_year: 1923
+  genre: blues
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/farawaybluesraw
+  source_attribution: Far Away Blues — Bessie Smith & Clara Smith, Gesang; Fletcher
+    Henderson (Internet Archive, 78rpm Collection)
+  checksum_sha256: 50af240e00b5c138b8199490e34102592afd0f3b8f5af55a37b650b52410897e
+  defect_types:
+  - surface_noise
+  - wow
+- file: damaged/shellac_1923_jolson_style_dirty_hands_dirty_face.mp3
+  duration_s: 198.216
+  sample_rate: 48000
+  material: shellac
+  era_year: 1923
+  genre: jazz
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/78_dirty-hands-dirty-face_bob-thomas-jolson-clark-leslie_gbia0086661a
+  source_attribution: Dirty Hands! Dirty Face! — Bob Thomas (Jolson) (Internet Archive,
+    78rpm Collection)
+  checksum_sha256: bff0a1479a2d8d2c9e2ff2d593253804f009647efba498a2677199eb1e461238
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+- file: damaged/shellac_1924_schachmeister_slik_pinden.mp3
+  duration_s: 185.783
+  sample_rate: 44100
+  material: shellac
+  era_year: 1924
+  genre: jazz
+  condition: damaged
+  channels: 1
+  vocal: false
+  license: Public Domain
+  source_url: https://archive.org/details/78_slik-pinden-danse-orkester-efim-schachmeister-edward
+  source_attribution: Slik-pinden — Efim Schachmeister Danse Orkester (Internet Archive,
+    78rpm Collection)
+  checksum_sha256: 37eed9f6192215474368f1606eb18a82ab95988d751f5bafde078d15a90becce
+  defect_types:
+  - surface_noise
+  - wow
+- file: damaged/shellac_1924_two_franks_rock_a_bye_blues.mp3
+  duration_s: 214.008
+  sample_rate: 48000
+  material: shellac
+  era_year: 1924
+  genre: jazz
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/78_rock-a-bye-my-baby-blues_frank-wright-and-frank-bessinger-the-two-franks-hill-yoe_gbia0236696b
+  source_attribution: Rock-A-Bye My Baby Blues — The Two Franks (Frank Wright & Frank
+    Bessinger) (Internet Archive, 78rpm Collection)
+  checksum_sha256: 548339eaa104978674851b95f6c4ba40abf99aefae8ecf51d7c6ed2dfe35d59f
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+- file: damaged/shellac_1924_virtuoso_string_quartet_op59_no2_mvt3.flac
+  duration_s: 260.881
+  sample_rate: 44100
+  material: shellac
+  era_year: 1924
+  genre: classical
+  condition: damaged
+  channels: 1
+  vocal: false
+  license: Public Domain
+  source_url: https://archive.org/details/78_quartet-emin-op59-no2-3rd-mvt-allegretto_virtuoso-string-quartet
+  source_attribution: 'Beethoven: Streichquartett op. 59 Nr. 2, 3. Satz (Allegretto)
+    — Virtuoso String Quartet (Internet Archive, 78rpm Collection)'
+  checksum_sha256: 66a905a5fc65f9e9d39cd4e456d0cf9532242bb01538c78310c372204d417513
+  defect_types:
+  - surface_noise
+  - wow
+  bit_depth: 16
+- file: damaged/shellac_1925_caruso_vesti_la_giubba.mp3
+  duration_s: 195.504
+  sample_rate: 48000
+  material: shellac
+  era_year: 1925
+  genre: opera
+  condition: damaged
+  channels: 2
+  vocal: true
+  license: Public Domain
+  source_url: https://archive.org/details/78_vesti-la-giubba_sig-caruso-leoncavallo_gbia7002950a
+  source_attribution: Pagliacci — Vesti la giubba — Enrico Caruso (Sig. Caruso) (Internet
+    Archive, 78rpm Collection)
+  checksum_sha256: d715cfae7b596f70065d6494fa1ed79717d8062e36b21e3d1afe4986bdd6b17d
+  defect_types:
+  - surface_noise
+  - wow
+  - hiss
+- file: damaged/shellac_1925_covent_garden_scheherazade_pt3.flac
+  duration_s: 263.835
+  sample_rate: 44100
+  material: shellac
+  era_year: 1925
+  genre: classical
+  condition: damaged
+  channels: 1
+  vocal: false
+  license: Public Domain
+  source_url: https://archive.org/details/78_scherazade-op35-pt3_royal-opera-house-orchestra-covent-garden
+  source_attribution: 'Rimski-Korsakow: Scheherazade op. 35, Teil 3 — Royal Opera
+    House Orchestra, Covent Garden (Internet Archive, 78rpm Collection)'
+  checksum_sha256: 4b1bcc5eab7546bdf756d850218ef13d18e3a129191c56f2af6cda40457a78e3
+  defect_types:
+  - surface_noise
+  - wow
+  bit_depth: 16

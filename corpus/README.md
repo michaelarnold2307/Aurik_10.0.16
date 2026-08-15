@@ -58,6 +58,19 @@ Public-Domain-Material von vertrauenswürdigen Quellen herunterzuladen.
 | Library of Congress | <https://loc.gov/audio/> | Historische Aufnahmen |
 | Europeana Sounds | <https://www.europeana.eu> | Europäisches Audio-Erbe |
 
+## Bereits integrierte Public-Domain-Aufnahmen (verifiziert 2026-08-15)
+
+`corpus/shellac/damaged/` enthält 12 echte Public-Domain-Aufnahmen aus der
+Internet Archive 78rpm Collection (1905–1925, US-Public-Domain, Public Domain
+Mark 1.0). Alle Einträge tragen `source_url` (archive.org/details/…),
+`source_attribution` und eine verifizierte `checksum_sha256`
+(`test_corpus_integrity` grün). Die downloadbaren URLs liegen in
+`scripts/generate_corpus_from_public_domain.py`.
+
+Die übrigen Material-Kategorien (Vinyl, Tape, Kassette, Digital) enthalten
+selbst generierte CC0-Referenzen (`scripts/generate_corpus.py`), da für diese
+Formate (nach 1930) faktisch keine gemeinfreien Aufnahmen existieren.
+
 ## Manifest
 
 Jedes Unterverzeichnis führt eine `manifest.yaml` nach dem Schema in

@@ -1,0 +1,1485 @@
+{
+  "version": 1,
+  "description": "Goldenes Hör-Set (docs/guides/GOLDEN_LISTENING_SET.md)",
+  "items": [
+    {
+      "id": "cassette_hiphop_1980s_hiss",
+      "path": "corpus/cassette/damaged/cassette_hiphop_1980s_hiss.wav",
+      "material": "cassette",
+      "era_year": 1987,
+      "genre": "hiphop",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.8830342053989748,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=vinyl (conf=0.8830342053989748)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "cassette_hiphop_1980s_wow_flutter",
+      "path": "corpus/cassette/damaged/cassette_hiphop_1980s_wow_flutter.wav",
+      "material": "cassette",
+      "era_year": 1987,
+      "genre": "hiphop",
+      "defect_types": [
+        "wow",
+        "flutter"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "4+",
+      "detected_restorability_score": 53,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.3636408267406206,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=lacquer_disc (conf=0.3636408267406206)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "cassette_pop_1980s_combined",
+      "path": "corpus/cassette/damaged/cassette_pop_1980s_combined.wav",
+      "material": "cassette",
+      "era_year": 1985,
+      "genre": "pop",
+      "defect_types": [
+        "clicks",
+        "hiss",
+        "dropout"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "1",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9999305710961668,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=vinyl (conf=0.9999305710961668)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "cassette_pop_1980s_hiss_wow",
+      "path": "corpus/cassette/damaged/cassette_pop_1980s_hiss_wow.wav",
+      "material": "cassette",
+      "era_year": 1985,
+      "genre": "pop",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "1",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9998803803048829,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=vinyl (conf=0.9998803803048829)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "cassette_rock_1990s_dropouts",
+      "path": "corpus/cassette/damaged/cassette_rock_1990s_dropouts.wav",
+      "material": "cassette",
+      "era_year": 1992,
+      "genre": "rock",
+      "defect_types": [
+        "dropouts"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.6000944091801438,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=shellac (conf=0.6000944091801438)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "cassette_rock_1990s_hiss_wow",
+      "path": "corpus/cassette/damaged/cassette_rock_1990s_hiss_wow.wav",
+      "material": "cassette",
+      "era_year": 1992,
+      "genre": "rock",
+      "defect_types": [
+        "hiss",
+        "wow"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "cassette"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9711763313306225,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=cassette, Detektor=vinyl (conf=0.9711763313306225)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_electronic_2000s_clicks",
+      "path": "corpus/digital/damaged/digital_electronic_2000s_clicks.wav",
+      "material": "digital",
+      "era_year": 2005,
+      "genre": "electronic",
+      "defect_types": [
+        "clicks"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "reel_tape",
+      "detected_confidence": 0.4641562343511306,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=reel_tape (conf=0.4641562343511306)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_electronic_2000s_clicks_chain_digital_mp3_low",
+      "path": "corpus/digital/damaged/digital_electronic_2000s_clicks_chain_digital_mp3_low.wav",
+      "material": "digital",
+      "era_year": 2005,
+      "genre": "electronic",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "digital",
+        "mp3_low"
+      ],
+      "depth": "2",
+      "restorability_score": 75,
+      "detected_depth": "2",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.7480333362007546,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=vinyl (conf=0.7480333362007546)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_electronic_2000s_mp3",
+      "path": "corpus/digital/damaged/digital_electronic_2000s_mp3.wav",
+      "material": "digital",
+      "era_year": 2005,
+      "genre": "electronic",
+      "defect_types": [],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "1",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9999753603117624,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=vinyl (conf=0.9999753603117624)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_jazz_2010s_clicks",
+      "path": "corpus/digital/damaged/digital_jazz_2010s_clicks.wav",
+      "material": "digital",
+      "era_year": 2014,
+      "genre": "jazz",
+      "defect_types": [
+        "clicks"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9192307595187702,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=vinyl (conf=0.9192307595187702)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_jazz_2010s_mp3_artifacts",
+      "path": "corpus/digital/damaged/digital_jazz_2010s_mp3_artifacts.wav",
+      "material": "digital",
+      "era_year": 2014,
+      "genre": "jazz",
+      "defect_types": [
+        "mp3",
+        "artifacts"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.4536029321797259,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=lacquer_disc (conf=0.4536029321797259)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_pop_2000s_clicks",
+      "path": "corpus/digital/damaged/digital_pop_2000s_clicks.wav",
+      "material": "digital",
+      "era_year": 2003,
+      "genre": "pop",
+      "defect_types": [
+        "clicks"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.747636240369818,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=vinyl (conf=0.747636240369818)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "digital_pop_2000s_mp3_artifacts",
+      "path": "corpus/digital/damaged/digital_pop_2000s_mp3_artifacts.wav",
+      "material": "digital",
+      "era_year": 2003,
+      "genre": "pop",
+      "defect_types": [
+        "mp3",
+        "artifacts"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "digital"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "4+",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.31038459127079027,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=digital, Detektor=shellac (conf=0.31038459127079027)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_classical_1960s_hiss",
+      "path": "corpus/reel_tape/damaged/reel_classical_1960s_hiss.wav",
+      "material": "reel_tape",
+      "era_year": 1964,
+      "genre": "classical",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9802632131585585,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=vinyl (conf=0.9802632131585585)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_classical_1960s_wow_flutter",
+      "path": "corpus/reel_tape/damaged/reel_classical_1960s_wow_flutter.wav",
+      "material": "reel_tape",
+      "era_year": 1964,
+      "genre": "classical",
+      "defect_types": [
+        "wow",
+        "flutter"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8602419279753739,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=shellac (conf=0.8602419279753739)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_jazz_1950s_dropouts",
+      "path": "corpus/reel_tape/damaged/reel_jazz_1950s_dropouts.wav",
+      "material": "reel_tape",
+      "era_year": 1955,
+      "genre": "jazz",
+      "defect_types": [
+        "dropouts"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8481045983117049,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=shellac (conf=0.8481045983117049)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_jazz_1950s_hiss_hum",
+      "path": "corpus/reel_tape/damaged/reel_jazz_1950s_hiss_hum.wav",
+      "material": "reel_tape",
+      "era_year": 1955,
+      "genre": "jazz",
+      "defect_types": [
+        "hiss",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9808970691984676,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=vinyl (conf=0.9808970691984676)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_soul_1960s_dropouts",
+      "path": "corpus/reel_tape/damaged/reel_soul_1960s_dropouts.wav",
+      "material": "reel_tape",
+      "era_year": 1968,
+      "genre": "soul",
+      "defect_types": [
+        "dropout"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5388560598209993,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=shellac (conf=0.5388560598209993)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "reel_soul_1960s_hiss_hum",
+      "path": "corpus/reel_tape/damaged/reel_soul_1960s_hiss_hum.wav",
+      "material": "reel_tape",
+      "era_year": 1968,
+      "genre": "soul",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "reel_tape"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.5395388492266315,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=reel_tape, Detektor=lacquer_disc (conf=0.5395388492266315)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_blues_1930s_hiss_crackle_hum",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum.wav",
+      "material": "shellac",
+      "era_year": 1932,
+      "genre": "blues",
+      "defect_types": [
+        "hiss",
+        "crackle",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.3981302639418802,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=vinyl (conf=0.3981302639418802)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape.wav",
+      "material": "shellac",
+      "era_year": 1932,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "shellac",
+        "vinyl",
+        "reel_tape"
+      ],
+      "depth": "3",
+      "restorability_score": 62,
+      "detected_depth": "4+",
+      "detected_restorability_score": 62,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.5116276009723414,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=lacquer_disc (conf=0.5116276009723414)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low.wav",
+      "material": "shellac",
+      "era_year": 1932,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "shellac",
+        "vinyl",
+        "reel_tape",
+        "mp3_low"
+      ],
+      "depth": "4+",
+      "restorability_score": 62,
+      "detected_depth": "2",
+      "detected_restorability_score": 62,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.7867176961385564,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=lacquer_disc (conf=0.7867176961385564)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_blues_1930s_surface_noise",
+      "path": "corpus/shellac/damaged/shellac_blues_1930s_surface_noise.wav",
+      "material": "shellac",
+      "era_year": 1932,
+      "genre": "blues",
+      "defect_types": [
+        "surface",
+        "noise"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5865681448573511,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_classical_1940s_crackle",
+      "path": "corpus/shellac/damaged/shellac_classical_1940s_crackle.wav",
+      "material": "shellac",
+      "era_year": 1945,
+      "genre": "classical",
+      "defect_types": [
+        "crackle"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.876310424896829,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=vinyl (conf=0.876310424896829)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_classical_1940s_hiss_hum",
+      "path": "corpus/shellac/damaged/shellac_classical_1940s_hiss_hum.wav",
+      "material": "shellac",
+      "era_year": 1945,
+      "genre": "classical",
+      "defect_types": [
+        "hiss",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9613254269603064,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=vinyl (conf=0.9613254269603064)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_jazz_1920s_crackle",
+      "path": "corpus/shellac/damaged/shellac_jazz_1920s_crackle.wav",
+      "material": "shellac",
+      "era_year": 1925,
+      "genre": "jazz",
+      "defect_types": [],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 73,
+      "detected_depth": "4+",
+      "detected_restorability_score": 73,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.6171458315337732,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=lacquer_disc (conf=0.6171458315337732)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "shellac_jazz_1920s_hiss_hum",
+      "path": "corpus/shellac/damaged/shellac_jazz_1920s_hiss_hum.wav",
+      "material": "shellac",
+      "era_year": 1925,
+      "genre": "jazz",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "shellac"
+      ],
+      "depth": "1",
+      "restorability_score": 73,
+      "detected_depth": "1",
+      "detected_restorability_score": 73,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9987194730172348,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=shellac, Detektor=vinyl (conf=0.9987194730172348)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_blues_1970s_hiss_dropout",
+      "path": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout.wav",
+      "material": "tape",
+      "era_year": 1975,
+      "genre": "blues",
+      "defect_types": [
+        "hiss",
+        "dropout"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "1",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9998948584009081,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.9998948584009081)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low",
+      "path": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low.wav",
+      "material": "tape",
+      "era_year": 1975,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "tape",
+        "cassette",
+        "mp3_low"
+      ],
+      "depth": "3",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.3853720372683194,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=lacquer_disc (conf=0.3853720372683194)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_blues_1970s_hiss_dropout_chain_tape_reel_tape",
+      "path": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout_chain_tape_reel_tape.wav",
+      "material": "tape",
+      "era_year": 1975,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "tape",
+        "reel_tape"
+      ],
+      "depth": "2",
+      "restorability_score": 75,
+      "detected_depth": "2",
+      "detected_restorability_score": 75,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.752643819525743,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.752643819525743)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_blues_1970s_wow",
+      "path": "corpus/tape/damaged/tape_blues_1970s_wow.wav",
+      "material": "tape",
+      "era_year": 1975,
+      "genre": "blues",
+      "defect_types": [],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "shellac",
+      "detected_confidence": 0.43147215685260226,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=shellac (conf=0.43147215685260226)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_classical_1970s_dropouts_hum",
+      "path": "corpus/tape/damaged/tape_classical_1970s_dropouts_hum.wav",
+      "material": "tape",
+      "era_year": 1976,
+      "genre": "classical",
+      "defect_types": [
+        "dropouts",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5670803015447233,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=shellac (conf=0.5670803015447233)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_classical_1970s_hiss",
+      "path": "corpus/tape/damaged/tape_classical_1970s_hiss.wav",
+      "material": "tape",
+      "era_year": 1976,
+      "genre": "classical",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9744872434185963,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.9744872434185963)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_country_1960s_dropouts",
+      "path": "corpus/tape/damaged/tape_country_1960s_dropouts.wav",
+      "material": "tape",
+      "era_year": 1965,
+      "genre": "country",
+      "defect_types": [
+        "dropouts"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.6206772400463781,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=shellac (conf=0.6206772400463781)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_country_1960s_hiss",
+      "path": "corpus/tape/damaged/tape_country_1960s_hiss.wav",
+      "material": "tape",
+      "era_year": 1965,
+      "genre": "country",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.8375486628122908,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.8375486628122908)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_folk_1970s_hiss_hum",
+      "path": "corpus/tape/damaged/tape_folk_1970s_hiss_hum.wav",
+      "material": "tape",
+      "era_year": 1973,
+      "genre": "folk",
+      "defect_types": [
+        "hiss",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9719489857035191,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.9719489857035191)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_folk_1970s_wow_flutter",
+      "path": "corpus/tape/damaged/tape_folk_1970s_wow_flutter.wav",
+      "material": "tape",
+      "era_year": 1973,
+      "genre": "folk",
+      "defect_types": [
+        "wow",
+        "flutter"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5899215691778722,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=shellac (conf=0.5899215691778722)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_jazz_1950s_hiss_hum",
+      "path": "corpus/tape/damaged/tape_jazz_1950s_hiss_hum.wav",
+      "material": "tape",
+      "era_year": 1958,
+      "genre": "jazz",
+      "defect_types": [
+        "hiss",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9567892912436031,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.9567892912436031)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_jazz_1950s_wow_flutter",
+      "path": "corpus/tape/damaged/tape_jazz_1950s_wow_flutter.wav",
+      "material": "tape",
+      "era_year": 1958,
+      "genre": "jazz",
+      "defect_types": [
+        "wow",
+        "flutter"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8906629700101096,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=shellac (conf=0.8906629700101096)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_rock_1980s_dropouts_hiss",
+      "path": "corpus/tape/damaged/tape_rock_1980s_dropouts_hiss.wav",
+      "material": "tape",
+      "era_year": 1982,
+      "genre": "rock",
+      "defect_types": [
+        "dropouts",
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9935145691625649,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.9935145691625649)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "tape_rock_1980s_hiss",
+      "path": "corpus/tape/damaged/tape_rock_1980s_hiss.wav",
+      "material": "tape",
+      "era_year": 1982,
+      "genre": "rock",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "tape"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.971435976452618,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=tape, Detektor=vinyl (conf=0.971435976452618)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_blues_1950s_crackle",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle.wav",
+      "material": "vinyl",
+      "era_year": 1954,
+      "genre": "blues",
+      "defect_types": [
+        "crackle"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8852970577381559,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.8852970577381559)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_blues_1950s_crackle_chain_vinyl_cassette",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_cassette.wav",
+      "material": "vinyl",
+      "era_year": 1954,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "vinyl",
+        "cassette"
+      ],
+      "depth": "2",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5005736819399007,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.5005736819399007)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low.wav",
+      "material": "vinyl",
+      "era_year": 1954,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "vinyl",
+        "reel_tape",
+        "cassette",
+        "mp3_low"
+      ],
+      "depth": "4+",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5893661511678263,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.5893661511678263)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low.wav",
+      "material": "vinyl",
+      "era_year": 1954,
+      "genre": "blues",
+      "defect_types": [
+        "chain_artifacts"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "vinyl",
+        "reel_tape",
+        "mp3_low"
+      ],
+      "depth": "3",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.551638214224185,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.551638214224185)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_blues_1950s_hiss_hum",
+      "path": "corpus/vinyl/damaged/vinyl_blues_1950s_hiss_hum.wav",
+      "material": "vinyl",
+      "era_year": 1954,
+      "genre": "blues",
+      "defect_types": [
+        "hiss",
+        "hum"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9715731783575807,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_classical_1960s_hiss_hum_wow",
+      "path": "corpus/vinyl/damaged/vinyl_classical_1960s_hiss_hum_wow.wav",
+      "material": "vinyl",
+      "era_year": 1961,
+      "genre": "classical",
+      "defect_types": [
+        "hiss",
+        "hum",
+        "wow"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.5646415873843028,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=lacquer_disc (conf=0.5646415873843028)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_classical_1960s_surface_noise",
+      "path": "corpus/vinyl/damaged/vinyl_classical_1960s_surface_noise.wav",
+      "material": "vinyl",
+      "era_year": 1961,
+      "genre": "classical",
+      "defect_types": [
+        "surface",
+        "noise"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8311926115020154,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.8311926115020154)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_jazz_1960s_hiss_crackle",
+      "path": "corpus/vinyl/damaged/vinyl_jazz_1960s_hiss_crackle.wav",
+      "material": "vinyl",
+      "era_year": 1963,
+      "genre": "jazz",
+      "defect_types": [
+        "hiss",
+        "crackle"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9480052034873245,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_jazz_1960s_surface_noise",
+      "path": "corpus/vinyl/damaged/vinyl_jazz_1960s_surface_noise.wav",
+      "material": "vinyl",
+      "era_year": 1963,
+      "genre": "jazz",
+      "defect_types": [
+        "surface",
+        "noise"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "2",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.8865481737581782,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.8865481737581782)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_rock_1960s_clicks",
+      "path": "corpus/vinyl/damaged/vinyl_rock_1960s_clicks.wav",
+      "material": "vinyl",
+      "era_year": 1965,
+      "genre": "rock",
+      "defect_types": [
+        "clicks"
+      ],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "3",
+      "detected_restorability_score": 75,
+      "detected_material": "reel_tape",
+      "detected_confidence": 0.46394464992559836,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=reel_tape (conf=0.46394464992559836)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_rock_1960s_hum_crackle",
+      "path": "corpus/vinyl/damaged/vinyl_rock_1960s_hum_crackle.wav",
+      "material": "vinyl",
+      "era_year": 1965,
+      "genre": "rock",
+      "defect_types": [],
+      "license": "CC0 (generated)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 75,
+      "detected_depth": "4+",
+      "detected_restorability_score": 75,
+      "detected_material": "lacquer_disc",
+      "detected_confidence": 0.6111371302335815,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=lacquer_disc (conf=0.6111371302335815)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_rock_1970s_clicks",
+      "path": "corpus/vinyl/damaged/vinyl_rock_1970s_clicks.wav",
+      "material": "vinyl",
+      "era_year": 1972,
+      "genre": "rock",
+      "defect_types": [
+        "clicks"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.943246033365146,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_rock_1970s_hiss",
+      "path": "corpus/vinyl/damaged/vinyl_rock_1970s_hiss.wav",
+      "material": "vinyl",
+      "era_year": 1972,
+      "genre": "rock",
+      "defect_types": [
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "1",
+      "detected_restorability_score": 53,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.9791771445412596,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_soul_1970s_crackle_hiss",
+      "path": "corpus/vinyl/damaged/vinyl_soul_1970s_crackle_hiss.wav",
+      "material": "vinyl",
+      "era_year": 1975,
+      "genre": "soul",
+      "defect_types": [
+        "crackle",
+        "hiss"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 70,
+      "detected_depth": "1",
+      "detected_restorability_score": 70,
+      "detected_material": "vinyl",
+      "detected_confidence": 0.8496397352647492,
+      "classification_issues": [],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    },
+    {
+      "id": "vinyl_soul_1970s_wow_flutter",
+      "path": "corpus/vinyl/damaged/vinyl_soul_1970s_wow_flutter.wav",
+      "material": "vinyl",
+      "era_year": 1975,
+      "genre": "soul",
+      "defect_types": [
+        "wow",
+        "flutter"
+      ],
+      "license": "CC0 (synthetisch generiert)",
+      "declared_chain": [
+        "vinyl"
+      ],
+      "depth": "1",
+      "restorability_score": 53,
+      "detected_depth": "3",
+      "detected_restorability_score": 53,
+      "detected_material": "shellac",
+      "detected_confidence": 0.5857507056814364,
+      "classification_issues": [
+        "Material-Mismatch: Corpus=vinyl, Detektor=shellac (conf=0.5857507056814364)"
+      ],
+      "classification_verified": true,
+      "verified_by": "kun-agent",
+      "verified_at": "2026-08-15T17:09:38+00:00"
+    }
+  ],
+  "last_verdicts": null
+}

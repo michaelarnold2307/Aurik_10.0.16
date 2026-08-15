@@ -26,6 +26,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - vinyl
 - checksum_sha256: 4e94a946e0bdbd99b9fff4e8e9daa9736ee0fe41d9bf31655af5f60a27636205
   defect_description: 60Hz Brumm + Knistern
   defect_types: []
@@ -38,6 +40,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - vinyl
 - file: clean/vinyl_blues_1950s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -68,6 +72,8 @@ entries:
   defect_types:
   - hiss
   - hum
+  chain:
+  - vinyl
 - file: damaged/vinyl_blues_1950s_crackle.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -83,6 +89,8 @@ entries:
   checksum_sha256: 07d980d189f5bc3237817bd5e7e68e6d91bc93578a96cba92a872e9c35d2cb43
   defect_types:
   - crackle
+  chain:
+  - vinyl
 - file: clean/vinyl_jazz_1960s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -113,6 +121,8 @@ entries:
   defect_types:
   - hiss
   - crackle
+  chain:
+  - vinyl
 - file: damaged/vinyl_jazz_1960s_surface_noise.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -129,6 +139,8 @@ entries:
   defect_types:
   - surface
   - noise
+  chain:
+  - vinyl
 - file: clean/vinyl_rock_1970s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -158,6 +170,8 @@ entries:
   checksum_sha256: 8cd59330d7a01601d699f10f3f4f24c68edd26077d221eef8029467e1d683c4e
   defect_types:
   - clicks
+  chain:
+  - vinyl
 - file: damaged/vinyl_rock_1970s_hiss.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -173,6 +187,8 @@ entries:
   checksum_sha256: 2b7ca8f40bcd0371e979ed47b882622e1fc5d242825d11a5c3f5698aebf678d7
   defect_types:
   - hiss
+  chain:
+  - vinyl
 - file: clean/vinyl_classical_1960s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -204,6 +220,8 @@ entries:
   - hiss
   - hum
   - wow
+  chain:
+  - vinyl
 - file: damaged/vinyl_classical_1960s_surface_noise.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -220,6 +238,8 @@ entries:
   defect_types:
   - surface
   - noise
+  chain:
+  - vinyl
 - file: clean/vinyl_soul_1970s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -250,6 +270,8 @@ entries:
   defect_types:
   - crackle
   - hiss
+  chain:
+  - vinyl
 - file: damaged/vinyl_soul_1970s_wow_flutter.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -266,3 +288,53 @@ entries:
   defect_types:
   - wow
   - flutter
+  chain:
+  - vinyl
+- file: damaged/vinyl_blues_1950s_crackle_chain_vinyl_cassette.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: d69ee1b87b018e1e5ec7c868aedf1a047cc146bd200a914e6092240533742a12
+  chain:
+  - vinyl
+  - cassette
+- file: damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: ae5350a47f7908e658f703f964adc53fa28766ff8a75d24eb7789861660c5e7e
+  chain:
+  - vinyl
+  - reel_tape
+  - mp3_low
+- file: damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low.wav
+  duration_s: 15.0
+  sample_rate: 48000
+  material: vinyl
+  era_year: 1954
+  genre: blues
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: 70a1dcf587c9f70b3d2b2026616c59f664e1b357335830d9082ceb19f063b451
+  chain:
+  - vinyl
+  - reel_tape
+  - cassette
+  - mp3_low

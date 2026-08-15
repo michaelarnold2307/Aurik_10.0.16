@@ -25,6 +25,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - digital
 - checksum_sha256: 3bd95eb96ae359feeeeb210c9c2a649aede21a07466254642f5919058d3f5edc
   defect_description: 12 Clicks/s (digitale Störungen)
   defect_types:
@@ -38,6 +40,8 @@ entries:
   sample_rate: 48000
   source: Synthetic (Aurik Corpus Generator)
   source_attribution: Synthetic Corpus Generator (CC0)
+  chain:
+  - digital
 - file: clean/digital_pop_2000s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -67,6 +71,8 @@ entries:
   checksum_sha256: c10ddbc908922bb39aeeca3f2ade13fea12dfc01a65af32189d036d0480384b6
   defect_types:
   - clicks
+  chain:
+  - digital
 - file: damaged/digital_pop_2000s_mp3_artifacts.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -83,6 +89,8 @@ entries:
   defect_types:
   - mp3
   - artifacts
+  chain:
+  - digital
 - file: clean/digital_jazz_2010s_clean.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -112,6 +120,8 @@ entries:
   checksum_sha256: 7c210a00bd3a9f7209a643cb3fc99cf2f6c55069a173f7b8bb75af63e11d5036
   defect_types:
   - clicks
+  chain:
+  - digital
 - file: damaged/digital_jazz_2010s_mp3_artifacts.wav
   duration_s: 15.0
   sample_rate: 48000
@@ -128,3 +138,20 @@ entries:
   defect_types:
   - mp3
   - artifacts
+  chain:
+  - digital
+- file: damaged/digital_electronic_2000s_clicks_chain_digital_mp3_low.wav
+  duration_s: 10.0
+  sample_rate: 48000
+  material: digital
+  era_year: 2005
+  genre: electronic
+  defect_types:
+  - chain_artifacts
+  license: CC0 (generated)
+  source: Synthetic (Aurik Corpus Generator) — chain synthesis (deterministic)
+  source_attribution: Synthetic Corpus Generator (CC0)
+  checksum_sha256: 9f2d6b62ef5963fdc174281a7c6d8327c07ed86c54ca2d387ff51547573a64c2
+  chain:
+  - digital
+  - mp3_low

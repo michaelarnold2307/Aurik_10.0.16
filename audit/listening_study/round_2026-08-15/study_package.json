@@ -1,0 +1,1015 @@
+{
+  "round_seed": 42,
+  "items": 56,
+  "problems": [],
+  "trials": [
+    {
+      "trial_id": "golden_cassette_hiphop_1980s_hiss",
+      "item_id": "cassette_hiphop_1980s_hiss",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_hiphop_1980s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_hiphop_1980s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_hiphop_1980s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_cassette_hiphop_1980s_wow_flutter",
+      "item_id": "cassette_hiphop_1980s_wow_flutter",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_hiphop_1980s_wow_flutter.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_hiphop_1980s_wow_flutter_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_hiphop_1980s_wow_flutter.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_cassette_pop_1980s_combined",
+      "item_id": "cassette_pop_1980s_combined",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_pop_1980s_combined.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_pop_1980s_combined_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_pop_1980s_combined.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_cassette_pop_1980s_hiss_wow",
+      "item_id": "cassette_pop_1980s_hiss_wow",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_pop_1980s_hiss_wow.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_pop_1980s_hiss_wow_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_pop_1980s_hiss_wow.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_cassette_rock_1990s_dropouts",
+      "item_id": "cassette_rock_1990s_dropouts",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_rock_1990s_dropouts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_rock_1990s_dropouts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_rock_1990s_dropouts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_cassette_rock_1990s_hiss_wow",
+      "item_id": "cassette_rock_1990s_hiss_wow",
+      "material": "cassette",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/cassette/damaged/cassette_rock_1990s_hiss_wow.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/cassette_rock_1990s_hiss_wow_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_cassette_rock_1990s_hiss_wow.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_electronic_2000s_clicks",
+      "item_id": "digital_electronic_2000s_clicks",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_electronic_2000s_clicks.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_electronic_2000s_clicks_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_electronic_2000s_clicks.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_electronic_2000s_clicks_chain_digital_mp3_low",
+      "item_id": "digital_electronic_2000s_clicks_chain_digital_mp3_low",
+      "material": "digital",
+      "depth": "2",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_electronic_2000s_clicks_chain_digital_mp3_low.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_electronic_2000s_clicks_chain_digital_mp3_low_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_electronic_2000s_clicks_chain_digital_mp3_low.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_electronic_2000s_mp3",
+      "item_id": "digital_electronic_2000s_mp3",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_electronic_2000s_mp3.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_electronic_2000s_mp3_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_electronic_2000s_mp3.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_jazz_2010s_clicks",
+      "item_id": "digital_jazz_2010s_clicks",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_jazz_2010s_clicks.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_jazz_2010s_clicks_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_jazz_2010s_clicks.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_jazz_2010s_mp3_artifacts",
+      "item_id": "digital_jazz_2010s_mp3_artifacts",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_jazz_2010s_mp3_artifacts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_jazz_2010s_mp3_artifacts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_jazz_2010s_mp3_artifacts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_pop_2000s_clicks",
+      "item_id": "digital_pop_2000s_clicks",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_pop_2000s_clicks.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_pop_2000s_clicks_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_pop_2000s_clicks.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_digital_pop_2000s_mp3_artifacts",
+      "item_id": "digital_pop_2000s_mp3_artifacts",
+      "material": "digital",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/digital/damaged/digital_pop_2000s_mp3_artifacts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/digital_pop_2000s_mp3_artifacts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_digital_pop_2000s_mp3_artifacts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_classical_1960s_hiss",
+      "item_id": "reel_classical_1960s_hiss",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_classical_1960s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_classical_1960s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_classical_1960s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_classical_1960s_wow_flutter",
+      "item_id": "reel_classical_1960s_wow_flutter",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_classical_1960s_wow_flutter.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_classical_1960s_wow_flutter_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_classical_1960s_wow_flutter.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_jazz_1950s_dropouts",
+      "item_id": "reel_jazz_1950s_dropouts",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_jazz_1950s_dropouts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_jazz_1950s_dropouts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_jazz_1950s_dropouts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_jazz_1950s_hiss_hum",
+      "item_id": "reel_jazz_1950s_hiss_hum",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_jazz_1950s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_jazz_1950s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_jazz_1950s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_soul_1960s_dropouts",
+      "item_id": "reel_soul_1960s_dropouts",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_soul_1960s_dropouts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_soul_1960s_dropouts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_soul_1960s_dropouts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "hidden_ref",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_reel_soul_1960s_hiss_hum",
+      "item_id": "reel_soul_1960s_hiss_hum",
+      "material": "reel_tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/reel_tape/damaged/reel_soul_1960s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/reel_soul_1960s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_reel_soul_1960s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_blues_1930s_hiss_crackle_hum",
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_blues_1930s_hiss_crackle_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_blues_1930s_hiss_crackle_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape",
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape",
+      "material": "shellac",
+      "depth": "3",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low",
+      "item_id": "shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low",
+      "material": "shellac",
+      "depth": "4+",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_blues_1930s_hiss_crackle_hum_chain_shellac_vinyl_reel_tape_mp3_low.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_blues_1930s_surface_noise",
+      "item_id": "shellac_blues_1930s_surface_noise",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_blues_1930s_surface_noise.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_blues_1930s_surface_noise_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_blues_1930s_surface_noise.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_classical_1940s_crackle",
+      "item_id": "shellac_classical_1940s_crackle",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_classical_1940s_crackle.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_classical_1940s_crackle_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_classical_1940s_crackle.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "hidden_ref",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_classical_1940s_hiss_hum",
+      "item_id": "shellac_classical_1940s_hiss_hum",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_classical_1940s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_classical_1940s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_classical_1940s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_jazz_1920s_crackle",
+      "item_id": "shellac_jazz_1920s_crackle",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_jazz_1920s_crackle.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_jazz_1920s_crackle_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_jazz_1920s_crackle.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_shellac_jazz_1920s_hiss_hum",
+      "item_id": "shellac_jazz_1920s_hiss_hum",
+      "material": "shellac",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/shellac/damaged/shellac_jazz_1920s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/shellac_jazz_1920s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_shellac_jazz_1920s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_blues_1970s_hiss_dropout",
+      "item_id": "tape_blues_1970s_hiss_dropout",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_blues_1970s_hiss_dropout_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_blues_1970s_hiss_dropout.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low",
+      "item_id": "tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low",
+      "material": "tape",
+      "depth": "3",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_blues_1970s_hiss_dropout_chain_tape_cassette_mp3_low.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_blues_1970s_hiss_dropout_chain_tape_reel_tape",
+      "item_id": "tape_blues_1970s_hiss_dropout_chain_tape_reel_tape",
+      "material": "tape",
+      "depth": "2",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_blues_1970s_hiss_dropout_chain_tape_reel_tape.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_blues_1970s_hiss_dropout_chain_tape_reel_tape_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_blues_1970s_hiss_dropout_chain_tape_reel_tape.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "hidden_ref",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_blues_1970s_wow",
+      "item_id": "tape_blues_1970s_wow",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_blues_1970s_wow.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_blues_1970s_wow_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_blues_1970s_wow.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_classical_1970s_dropouts_hum",
+      "item_id": "tape_classical_1970s_dropouts_hum",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_classical_1970s_dropouts_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_classical_1970s_dropouts_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_classical_1970s_dropouts_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_classical_1970s_hiss",
+      "item_id": "tape_classical_1970s_hiss",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_classical_1970s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_classical_1970s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_classical_1970s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_country_1960s_dropouts",
+      "item_id": "tape_country_1960s_dropouts",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_country_1960s_dropouts.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_country_1960s_dropouts_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_country_1960s_dropouts.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_country_1960s_hiss",
+      "item_id": "tape_country_1960s_hiss",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_country_1960s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_country_1960s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_country_1960s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "hidden_ref",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_folk_1970s_hiss_hum",
+      "item_id": "tape_folk_1970s_hiss_hum",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_folk_1970s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_folk_1970s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_folk_1970s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_folk_1970s_wow_flutter",
+      "item_id": "tape_folk_1970s_wow_flutter",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_folk_1970s_wow_flutter.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_folk_1970s_wow_flutter_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_folk_1970s_wow_flutter.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_jazz_1950s_hiss_hum",
+      "item_id": "tape_jazz_1950s_hiss_hum",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_jazz_1950s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_jazz_1950s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_jazz_1950s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_jazz_1950s_wow_flutter",
+      "item_id": "tape_jazz_1950s_wow_flutter",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_jazz_1950s_wow_flutter.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_jazz_1950s_wow_flutter_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_jazz_1950s_wow_flutter.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_rock_1980s_dropouts_hiss",
+      "item_id": "tape_rock_1980s_dropouts_hiss",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_rock_1980s_dropouts_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_rock_1980s_dropouts_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_rock_1980s_dropouts_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_tape_rock_1980s_hiss",
+      "item_id": "tape_rock_1980s_hiss",
+      "material": "tape",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/tape/damaged/tape_rock_1980s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/tape_rock_1980s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_tape_rock_1980s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_blues_1950s_crackle",
+      "item_id": "vinyl_blues_1950s_crackle",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_blues_1950s_crackle_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_blues_1950s_crackle.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "hidden_ref",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_blues_1950s_crackle_chain_vinyl_cassette",
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_cassette",
+      "material": "vinyl",
+      "depth": "2",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_cassette.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_blues_1950s_crackle_chain_vinyl_cassette_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_blues_1950s_crackle_chain_vinyl_cassette.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low",
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low",
+      "material": "vinyl",
+      "depth": "4+",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_cassette_mp3_low.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low",
+      "item_id": "vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low",
+      "material": "vinyl",
+      "depth": "3",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_blues_1950s_crackle_chain_vinyl_reel_tape_mp3_low.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_blues_1950s_hiss_hum",
+      "item_id": "vinyl_blues_1950s_hiss_hum",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_blues_1950s_hiss_hum.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_blues_1950s_hiss_hum_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_blues_1950s_hiss_hum.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_classical_1960s_hiss_hum_wow",
+      "item_id": "vinyl_classical_1960s_hiss_hum_wow",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_classical_1960s_hiss_hum_wow.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_classical_1960s_hiss_hum_wow_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_classical_1960s_hiss_hum_wow.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_classical_1960s_surface_noise",
+      "item_id": "vinyl_classical_1960s_surface_noise",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_classical_1960s_surface_noise.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_classical_1960s_surface_noise_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_classical_1960s_surface_noise.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_jazz_1960s_hiss_crackle",
+      "item_id": "vinyl_jazz_1960s_hiss_crackle",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_jazz_1960s_hiss_crackle.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_jazz_1960s_hiss_crackle_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_jazz_1960s_hiss_crackle.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_jazz_1960s_surface_noise",
+      "item_id": "vinyl_jazz_1960s_surface_noise",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_jazz_1960s_surface_noise.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_jazz_1960s_surface_noise_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_jazz_1960s_surface_noise.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "anchor",
+        "candidate"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_rock_1960s_clicks",
+      "item_id": "vinyl_rock_1960s_clicks",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_rock_1960s_clicks.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_rock_1960s_clicks_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_rock_1960s_clicks.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "candidate",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_rock_1960s_hum_crackle",
+      "item_id": "vinyl_rock_1960s_hum_crackle",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_rock_1960s_hum_crackle.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_rock_1960s_hum_crackle_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_rock_1960s_hum_crackle.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "candidate",
+        "anchor",
+        "hidden_ref"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_rock_1970s_clicks",
+      "item_id": "vinyl_rock_1970s_clicks",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_rock_1970s_clicks.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_rock_1970s_clicks_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_rock_1970s_clicks.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_rock_1970s_hiss",
+      "item_id": "vinyl_rock_1970s_hiss",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_rock_1970s_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_rock_1970s_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_rock_1970s_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_soul_1970s_crackle_hiss",
+      "item_id": "vinyl_soul_1970s_crackle_hiss",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_soul_1970s_crackle_hiss.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_soul_1970s_crackle_hiss_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_soul_1970s_crackle_hiss.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "hidden_ref",
+        "candidate",
+        "anchor"
+      ]
+    },
+    {
+      "trial_id": "golden_vinyl_soul_1970s_wow_flutter",
+      "item_id": "vinyl_soul_1970s_wow_flutter",
+      "material": "vinyl",
+      "depth": "1",
+      "conditions": {
+        "hidden_ref": "corpus/vinyl/damaged/vinyl_soul_1970s_wow_flutter.wav",
+        "candidate": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/candidates/vinyl_soul_1970s_wow_flutter_candidate.wav",
+        "anchor": "/media/michael/Software 4TB/Aurik_Standalone/audit/listening_study/round_2026-08-15/anchors/anchor_3500.0hz_vinyl_soul_1970s_wow_flutter.wav"
+      },
+      "hidden_ref_key": "hidden_ref",
+      "anchor_key": "anchor",
+      "display_order": [
+        "anchor",
+        "hidden_ref",
+        "candidate"
+      ]
+    }
+  ]
+}
